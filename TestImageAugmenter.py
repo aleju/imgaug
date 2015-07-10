@@ -3,6 +3,7 @@ import numpy as np
 from ImageAugmenter import ImageAugmenter
 import random
 from scipy import misc # to show images
+from skimage import data
 
 random.seed(123456789)
 
@@ -47,20 +48,55 @@ class TestImageAugmenter(unittest.TestCase):
     
     def test_scaling(self):
         """Test zooming/scaling on an image that should change upon zooming."""
-        image_before = [[0, 0, 0], [0, 255, 0], [0, 0, 0]]
-        image_target = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
+        #image_before = [[0, 0, 0], [0, 255, 0], [0, 0, 0]]
+        #image_target = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
+        
+        """
+        img = data.camera()
+        ia = ImageAugmenter(img.shape[0], img.shape[1], scale_to_percent=(4.0, 4.0), scale_axis_equally=True)
+        img_after = ia.augment_batch(np.array([img]))[0]
+        misc.imshow(img)
+        misc.imshow(img_after)
+        """
+        
+        size_x = 4
+        size_y = 4
+        image_before = np.zeros((size_x,size_y))
+        image_before[1:size_x-1, 1:size_y-1] = 255
+        image_target = np.zeros((size_x,size_y))
+        image_target[0:size_x, 0:size_y] = 1.0
+        
+        """image_before = [[0,   0,   0,   0, 0],
+                        [0, 255, 255, 255, 0],
+                        [0, 255, 255, 255, 0],
+                        [0, 255, 255, 255, 0],
+                        [0,   0,   0,   0, 0]]"""
+        """
+        image_target = [[1.0, 1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0, 1.0]]
+        """
+        
         images = np.array([image_before]).astype(np.uint8)
-        ia = ImageAugmenter(3, 3, scale_to_percent=(1.9, 1.9), scale_axis_equally=True)
+        ia = ImageAugmenter(size_x, size_y, scale_to_percent=(1.99, 1.99), scale_axis_equally=True)
+        
+        image_after = ia.augment_batch(images)[0]
+        misc.imshow(image_after)
+        self.assertTrue(np.sum(image_after) > np.sum(image_before)/255)
         
         # at least one should be similar to target
+        """
         one_similar = False
         for _ in range(1000):
             image_after = ia.augment_batch(images)[0]
-            #misc.imshow(image_after)
+            misc.imshow(image_after)
             if np.allclose(image_target, image_after):
                 one_similar = True
                 break
         self.assertTrue(one_similar)
+        """
     
     def test_shear(self):
         """Very rough test of shear: It simply measures whether an image tends

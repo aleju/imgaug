@@ -96,18 +96,22 @@ def create_aug_matrices(nb_matrices, img_width_px, img_height_px,
         # moves it back to the center.
         # The movement is neccessary, because rotation is applied to the top left
         # and not to the image's center.
+        
         matrix_to_topleft = transform.SimilarityTransform(translation=[-shift_x, -shift_y])
         matrix_transforms = transform.AffineTransform(scale=(scale_x, scale_y), rotation=rotation, shear=shear, translation=(translation_x, translation_y))
         matrix_to_center = transform.SimilarityTransform(translation=[shift_x, shift_y])
         
         # Combine the three matrices to one affine transformation (one matrix)
         matrix = matrix_to_topleft + matrix_transforms + matrix_to_center
+        #matrix = matrix_to_topleft + matrix_transforms
+        
+        #matrix = transform.AffineTransform(scale=(scale_x, scale_y), rotation=rotation, shear=shear, translation=(translation_x, translation_y))
         
         result.append(matrix.inverse)
 
     return result
 
-def apply_aug_matrices(images, matrices, transform_channels_equally=True, channel_is_first_axis=True, random_order=True):
+def apply_aug_matrices(images, matrices, transform_channels_equally=True, channel_is_first_axis=True, random_order=True, mode="constant", cval=1.0, interpolation_order=5):
     # images must be numpy array
     assert type(images).__module__ == np.__name__, "Expected numpy array for parameter 'images'."
     
@@ -147,15 +151,15 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True, channe
     for img_idx, image in enumerate(images):
         if not has_channels:
             matrix = matrices[order_indices[matrix_number]]
-            result[img_idx, ...] = transform.warp(image, matrix)
+            result[img_idx, ...] = transform.warp(image, matrix, mode=mode, cval=cval, order=interpolation_order)
             matrix_number += 1
         else:
             for channel_idx in range(nb_channels):
                 matrix = matrices[order_indices[matrix_number]]
                 if channel_is_first_axis:
-                    result[img_idx, channel_idx, ...] = transform.warp(image[channel_idx], matrix)
+                    result[img_idx, channel_idx, ...] = transform.warp(image[channel_idx], matrix, mode=mode, cval=cval, order=interpolation_order)
                 else:
-                    result[img_idx, ..., channel_idx] = transform.warp(image[..., channel_idx], matrix)
+                    result[img_idx, ..., channel_idx] = transform.warp(image[..., channel_idx], matrix, mode=mode, cval=cval, order=interpolation_order)
                 
                 if not transform_channels_equally:
                     matrix_number += 1
@@ -230,6 +234,22 @@ class ImageAugmenter(object):
         self.transform_channels_equally = transform_channels_equally
     
     def augment_batch(self, images, seed=None):
+        s = images.shape
+        if len(s) == 3:
+            assert s[1] == self.img_width_px
+            assert s[2] == self.img_height_px
+        elif len(s) == 4:
+            if not self.channel_is_first_axis:
+                assert s[1] == self.img_width_px
+                assert s[2] == self.img_height_px
+            else:
+                assert s[2] == self.img_width_px
+                assert s[3] == self.img_height_px
+        else:
+            raise Exception("""Mismatch between images shape %s and
+                predefined image width/height (%d/%d).""" % (str(s),
+                self.img_width_px, self.img_height_px))
+        
         # generate transformation matrices
         matrices = create_aug_matrices(images.shape[0],
                     self.img_width_px,
