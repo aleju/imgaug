@@ -111,7 +111,7 @@ def create_aug_matrices(nb_matrices, img_width_px, img_height_px,
 
     return result
 
-def apply_aug_matrices(images, matrices, transform_channels_equally=True, channel_is_first_axis=True, random_order=True, mode="constant", cval=1.0, interpolation_order=5):
+def apply_aug_matrices(images, matrices, transform_channels_equally=True, channel_is_first_axis=True, random_order=True, mode="constant", cval=0.0, interpolation_order=1):
     # images must be numpy array
     assert type(images).__module__ == np.__name__, "Expected numpy array for parameter 'images'."
     
@@ -141,6 +141,20 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True, channe
     # 0 to nb_images, but restart at 0 if index is beyond number of matrices
     len_indices = nb_images if transform_channels_equally else nb_images * nb_channels
     if random_order:
+        # Notice: This way to choose random matrices is concise, but can create
+        # problems if there is a low amount of images and matrices.
+        # E.g. suppose that 2 images are ought to be transformed by either
+        # 0px translation on the x-axis or 1px translation. So 50% of all
+        # matrices translate by 0px and 50% by 1px. The following method
+        # will randomly choose a combination of the two matrices for the
+        # two images (matrix 0 for image 0 and matrix 0 for image 1,
+        # matrix 0 for image 0 and matrix 1 for image 1, ...).
+        # In 50% of these cases, a different matrix will be chosen for image 0
+        # and image 1 (matrices 0, 1 or matrices 1, 0). But 50% of these
+        # "different" matrices (different index) will be the same, as 50%
+        # translate by 1px and 50% by 0px. As a result, 75% of all augmentations
+        # will transform both images in the same way.
+        # The effect decreases if more matrices or images are chosen.
         order_indices = np.random.random_integers(0, len(matrices) - 1, len_indices)
     else:
         order_indices = np.arange(0, len_indices) % len(matrices)
@@ -155,6 +169,7 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True, channe
             matrix_number += 1
         else:
             for channel_idx in range(nb_channels):
+                #print("channel %d, mn %d, choosing %d" % (channel_idx, matrix_number, order_indices[matrix_number]))
                 matrix = matrices[order_indices[matrix_number]]
                 if channel_is_first_axis:
                     result[img_idx, channel_idx, ...] = transform.warp(image[channel_idx], matrix, mode=mode, cval=cval, order=interpolation_order)
@@ -235,23 +250,32 @@ class ImageAugmenter(object):
     
     def augment_batch(self, images, seed=None):
         s = images.shape
+        nb_channels = 0
         if len(s) == 3:
             assert s[1] == self.img_width_px
             assert s[2] == self.img_height_px
+            nb_channels = 1
         elif len(s) == 4:
             if not self.channel_is_first_axis:
                 assert s[1] == self.img_width_px
                 assert s[2] == self.img_height_px
+                nb_channels = s[3]
             else:
                 assert s[2] == self.img_width_px
                 assert s[3] == self.img_height_px
+                nb_channels = s[1]
         else:
             raise Exception("""Mismatch between images shape %s and
                 predefined image width/height (%d/%d).""" % (str(s),
                 self.img_width_px, self.img_height_px))
         
         # generate transformation matrices
-        matrices = create_aug_matrices(images.shape[0],
+        if self.transform_channels_equally:
+            nb_matrices = s[0]
+        else:
+            nb_matrices = s[0] * nb_channels
+        
+        matrices = create_aug_matrices(nb_matrices,
                     self.img_width_px,
                     self.img_height_px,
                     scale_to_percent=self.scale_to_percent,

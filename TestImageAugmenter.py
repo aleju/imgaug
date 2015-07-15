@@ -6,6 +6,7 @@ from scipy import misc # to show images
 from skimage import data
 
 random.seed(123456789)
+np.random.seed(123456789)
 
 #def np_array_similar(arr1, arr2, **kwargs):
 #    return np.allclose(arr1, arr2, kwargs)
@@ -21,9 +22,10 @@ class TestImageAugmenter(unittest.TestCase):
                         [1.0, 1.0, 1.0],
                         [0, 0, 0]]
         images = np.array([image_before]).astype(np.uint8)
-        ia = ImageAugmenter(2, 2, rotation_deg=(90,90))
+        ia = ImageAugmenter(3, 3, rotation_deg=(90,90))
         
         image_after = ia.augment_batch(images)[0]
+        #misc.imshow(image_after)
         self.assertTrue(np.allclose(image_target, image_after))
     
     def test_rotation_b(self):
@@ -42,6 +44,7 @@ class TestImageAugmenter(unittest.TestCase):
         for _ in range(100):
             image_after = ia.augment_batch(images)[0]
             #print(image_after)
+            #misc.imshow(image_after)
             if np.allclose(image_target, image_after, atol=0.1):
                 nb_similar += 1
         self.assertEquals(nb_similar, 100)
@@ -83,7 +86,7 @@ class TestImageAugmenter(unittest.TestCase):
         ia = ImageAugmenter(size_x, size_y, scale_to_percent=(1.99, 1.99), scale_axis_equally=True)
         
         image_after = ia.augment_batch(images)[0]
-        misc.imshow(image_after)
+        #misc.imshow(image_after)
         self.assertTrue(np.sum(image_after) > np.sum(image_before)/255)
         
         # at least one should be similar to target
@@ -119,19 +122,33 @@ class TestImageAugmenter(unittest.TestCase):
     def test_translation_x(self):
         """Testing translation on the x-axis."""
         
-        image_before = [[255, 0], [255, 0]]
-        image_target = [[0, 1.0], [0, 1.0]]
+        #image_before = data.camera()
+        #ia = ImageAugmenter(image_before.shape[0], image_before.shape[1], translation_x_px=(3,3))
+        #image_after = ia.augment_batch(np.array([image_before]).astype(np.uint8))[0]
+        #misc.imshow(image_after)
+        
+        image_before = [[255,   0, 0, 0],
+                        [255,   0, 0, 0],
+                        [255,   0, 0, 0],
+                        [255, 255, 0, 0]]
+        image_target = [[0, 1.0,   0, 0],
+                        [0, 1.0,   0, 0],
+                        [0, 1.0,   0, 0],
+                        [0, 1.0, 1.0, 0]]
         images = np.array([image_before]).astype(np.uint8)
-        ia = ImageAugmenter(2, 2, translation_x_px=1)
+        ia = ImageAugmenter(4, 4, translation_x_px=(1,1))
         
         # at least one should be similar
         one_similar = False
+        nb_similar = 0
         for _ in range(100):
             image_after = ia.augment_batch(images)[0]
+            #print(image_after)
             if np.allclose(image_target, image_after):
-                one_similar = True
-                break
-        self.assertTrue(one_similar)
+                nb_similar += 1
+                #one_similar = True
+                #break
+        self.assertEqual(nb_similar, 100)
     
     def test_translation_y(self):
         """Testing translation on the y-axis."""
@@ -170,7 +187,7 @@ class TestImageAugmenter(unittest.TestCase):
         """Tests augmentation of images with two channels (either first or last
         axis of each image). Tested using x-translation."""
         # two channels, channel is first axis of each image
-        ia = ImageAugmenter(2, 2, translation_x_px=1)
+        ia = ImageAugmenter(2, 2, translation_x_px=(1,1))
         
         image_before = np.zeros((2, 2, 2)).astype(np.uint8)
         image_before[0][0][0] = 255
@@ -201,8 +218,10 @@ class TestImageAugmenter(unittest.TestCase):
         nb_similar = 0
         for _ in range(100):
             image_after = ia.augment_batch(images)[0]
+            #print(image_after)
             if np.allclose(image_target, image_after):
                 nb_similar += 1
+        #print("similar:",nb_similar)
         self.assertTrue(nb_similar > (33-10) and nb_similar < (33+10))
         
         
@@ -245,33 +264,27 @@ class TestImageAugmenter(unittest.TestCase):
 
     def test_transform_channels_unequally(self):
         # two channels, channel is first axis of each image
-        ia = ImageAugmenter(2, 2, translation_x_px=1,
+        ia = ImageAugmenter(3, 3, translation_x_px=(0,1),
                             transform_channels_equally=False)
         
-        image_before = np.zeros((2, 2, 2)).astype(np.uint8)
-        image_before[0][0][0] = 255
-        image_before[0][0][1] = 255
-        image_before[0][1][0] = 0
-        image_before[0][1][1] = 0
+        image_before = np.zeros((2, 3, 3)).astype(np.uint8)
+        image_before[0] = [[255,   0,   0],
+                           [  0,   0,   0],
+                           [  0,   0,   0]]
         
-        image_before[1][0][0] = 0
-        image_before[1][0][1] = 255
-        image_before[1][1][0] = 0
-        image_before[1][1][1] = 0
-        #            ^        channel
-        #               ^     x
-        #                  ^  y
+        image_before[1] = [[  0,   0,   0],
+                           [  0,   0,   0],
+                           [  0, 255,   0]]
+        #            ^ channel
         
-        image_target = np.zeros((2, 2, 2)).astype(np.float32)
-        image_target[0][0][0] = 0
-        image_target[0][0][1] = 0
-        image_target[0][1][0] = 1.0
-        image_target[0][1][1] = 1.0
+        image_target = np.zeros((2, 3, 3)).astype(np.float32)
+        image_target[0] = [[  0, 1.0,   0],
+                           [  0,   0,   0],
+                           [  0,   0,   0]]
         
-        image_target[1][0][0] = 0
-        image_target[1][0][1] = 0
-        image_target[1][1][0] = 0
-        image_target[1][1][1] = 1.0
+        image_target[1] = [[  0,   0,   0],
+                           [  0,   0,   0],
+                           [  0,   0, 1.0]]
         
         images = np.array([image_before]).astype(np.uint8)
         nb_similar_channel_0 = 0
@@ -279,26 +292,40 @@ class TestImageAugmenter(unittest.TestCase):
         nb_equally_transformed = 0
         nb_unequally_transformed = 0
         
+        nb_augment = 1000
+        images_augmented = ia.augment_batch(np.resize(images, (nb_augment, 2, 3, 3)))
+        
         # augment 100 times and count how often the channels were transformed
         # in equal or unequal ways. Assumption: as equal transformation was
         # deactivated, the channels should be transformed in similar ways in
         # roughly 1/3 of all cases (as translation-x of 1 means a choice between
         # -1, 0 or +1)
-        for _ in range(100):
-            image_after = ia.augment_batch(images)[0]
+        for image_after in images_augmented:
+            #image_after = ia.augment_batch(images)[0]
+            
             similar_channel_0 = np.allclose(image_target[0], image_after[0])
             similar_channel_1 = np.allclose(image_target[1], image_after[1])
             if similar_channel_0:
                 nb_similar_channel_0 += 1
+                #print("channel 0 moved 0")
+            else:
+                #print("channel 0 moved 1")
+                pass
             if similar_channel_1:
                 nb_similar_channel_1 += 1
+                #print("channel 1 moved 0")
+            else:
+                #print("channel 1 moved 1")
+                pass
             if similar_channel_0 == similar_channel_1:
                 nb_equally_transformed += 1
             else:
                 nb_unequally_transformed += 1
-        self.assertTrue(nb_similar_channel_0 > (33-10) and nb_similar_channel_0 < (33+10))
-        self.assertTrue(nb_similar_channel_1 > (33-10) and nb_similar_channel_1 < (33+10))
-        self.assertTrue(nb_equally_transformed > (33-10) and nb_equally_transformed < (33+10))
+            #print(image_after)
+        # each one should be around 50%
+        self.assertTrue(nb_similar_channel_0 > 0.40*nb_augment and nb_similar_channel_0 < 0.60*nb_augment)
+        self.assertTrue(nb_similar_channel_1 > 0.40*nb_augment and nb_similar_channel_1 < 0.60*nb_augment)
+        self.assertTrue(nb_equally_transformed > 0.40*nb_augment and nb_equally_transformed < 0.60*nb_augment)
 
 if __name__ == '__main__':
     unittest.main()
