@@ -121,8 +121,8 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True, channe
     # 3 axis total (2 per image) for grayscale,
     # 4 axis total (3 per image) for RGB (usually)
     assert len(images.shape) in [3, 4], """Expected 'images' parameter to have either
-        shape (image index, x, y) for greyscale
-        or (image index, channel, x, y) / (image index, x, y, channel)
+        shape (image index, y, x) for greyscale
+        or (image index, channel, y, x) / (image index, y, x, channel)
         for multi-channel (usually color) images."""
     
     nb_images = images.shape[0]
@@ -231,8 +231,8 @@ class BareboneImageAugmenter(object):
                     channel_is_first_axis=channel_is_first_axis)
 
 class ImageAugmenter(object):
-    def __init__(self, img_width_px, img_height_px,
-                 channel_is_first_axis=True,
+    def __init__(self, img_width_px, img_height_px, channel_is_first_axis=True,
+                 hflip=False, vflip=False,
                  scale_to_percent=1.0, scale_axis_equally=False,
                  rotation_deg=0, shear_deg=0,
                  translation_x_px=0, translation_y_px=0,
@@ -240,6 +240,29 @@ class ImageAugmenter(object):
         self.img_width_px = img_width_px
         self.img_height_px = img_height_px
         self.channel_is_first_axis = channel_is_first_axis
+        
+        self.hflip_prob = 0.0
+        if hflip == True:
+            self.hflip_prob = 0.5
+        elif hflip == False:
+            self.hflip_prob = 0.0
+        elif isinstance(hflip, float):
+            assert hflip >= 0.0 and hflip <= 1.0
+            self.hflip_prob = hflip
+        else:
+            raise Exception("Unexpected value for parameter 'hflip'.")
+        
+        self.vflip_prob = 0.0
+        if vflip == True:
+            self.vflip_prob = 0.5
+        elif vflip == False:
+            self.vflip_prob = 0.0
+        elif isinstance(vflip, float):
+            assert vflip >= 0.0 and vflip <= 1.0
+            self.vflip_prob = vflip
+        else:
+            raise Exception("Unexpected value for parameter 'vflip'.")
+        
         self.scale_to_percent = scale_to_percent
         self.scale_axis_equally = scale_axis_equally
         self.rotation_deg = rotation_deg
@@ -247,27 +270,59 @@ class ImageAugmenter(object):
         self.translation_x_px = translation_x_px
         self.translation_y_px = translation_y_px
         self.transform_channels_equally = transform_channels_equally
+        self.cval = 0.0
+        self.interpolation_order = 1
     
     def augment_batch(self, images, seed=None):
         s = images.shape
         nb_channels = 0
         if len(s) == 3:
-            assert s[1] == self.img_width_px
-            assert s[2] == self.img_height_px
+            # shape like (image_index, y-axis, x-axis)
+            assert s[1] == self.img_height_px
+            assert s[2] == self.img_width_px
             nb_channels = 1
         elif len(s) == 4:
             if not self.channel_is_first_axis:
-                assert s[1] == self.img_width_px
-                assert s[2] == self.img_height_px
+                # shape like (image-index, y-axis, x-axis, channel-index)
+                assert s[1] == self.img_height_px
+                assert s[2] == self.img_width_px
                 nb_channels = s[3]
             else:
-                assert s[2] == self.img_width_px
-                assert s[3] == self.img_height_px
+                # shape like (image-index, channel-index, y-axis, x-axis)
+                assert s[2] == self.img_height_px
+                assert s[3] == self.img_width_px
                 nb_channels = s[1]
         else:
             raise Exception("""Mismatch between images shape %s and
                 predefined image width/height (%d/%d).""" % (str(s),
                 self.img_width_px, self.img_height_px))
+        
+        # flip/mirror horizontally (y-axis/left to right)
+        # or vertically (x-axis/up to down)
+        # This should be done before applying the affine matrices, as otherwise
+        # contents of image might already be rotated/translate out of the image.
+        # It is done with numpy instead of the affine matrices, because
+        # scikit-image doesn't offer a nice interface for that and the numpy
+        # operations are O(1). They also won't suffer from interpolation
+        # problems.
+        if self.hflip_prob > 0 or self.vflip_prob > 0:
+            images_flipped = []
+            y_p = self.hflip_prob
+            x_p = self.vflip_prob
+            for image in images:
+                if random.random() < y_p:
+                    images_flipped.append(np.fliplr(image))
+                else:
+                    images_flipped.append(image)
+                # flipping vertically is a rather rare choice, so first check if
+                # x-flip probability is non-zero before generating a random value,
+                # should usually be faster
+                if x_p > 0 and random.random() < x_p:
+                    images_flipped.append(np.flipud(image))
+                else:
+                    images_flipped.append(image)
+            images = np.array(images_flipped, dtype=np.uint8)
+                    
         
         # generate transformation matrices
         if self.transform_channels_equally:
@@ -289,4 +344,5 @@ class ImageAugmenter(object):
         # apply transformation matrices (i.e. augment images)
         return apply_aug_matrices(images, matrices,
                     transform_channels_equally=self.transform_channels_equally,
-                    channel_is_first_axis=self.channel_is_first_axis)
+                    channel_is_first_axis=self.channel_is_first_axis,
+                    cval=self.cval, interpolation_order=self.interpolation_order)
