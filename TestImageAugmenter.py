@@ -8,9 +8,6 @@ from skimage import data
 random.seed(123456789)
 np.random.seed(123456789)
 
-#def np_array_similar(arr1, arr2, **kwargs):
-#    return np.allclose(arr1, arr2, kwargs)
-
 class TestImageAugmenter(unittest.TestCase):
     def test_rotation_a(self):
         """Test rotation of 90 degrees on an image that should change

@@ -511,17 +511,15 @@ class ImageAugmenter(object):
             y_p = self.hflip_prob
             x_p = self.vflip_prob
             for image in images:
+                img = image
                 if random.random() < y_p:
-                    images_flipped.append(np.fliplr(image))
-                else:
-                    images_flipped.append(image)
+                    img = np.fliplr(image)
                 # flipping vertically is a rather rare choice, so first check if
                 # x-flip probability is non-zero before generating a random value,
                 # should usually be faster
                 if x_p > 0 and random.random() < x_p:
-                    images_flipped.append(np.flipud(image))
-                else:
-                    images_flipped.append(image)
+                    img = np.flipud(image)
+                images_flipped.append(img)
             images = np.array(images_flipped, dtype=np.uint8)
 
         # --------------------------------
@@ -552,3 +550,65 @@ class ImageAugmenter(object):
                                   transform_channels_equally=self.transform_channels_equally,
                                   channel_is_first_axis=self.channel_is_first_axis,
                                   cval=self.cval, interpolation_order=self.interpolation_order)
+
+    """
+    def show_images(self, images, augment=False):
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+
+        if augment:
+            images = self.augment_batch(images)
+
+        nb_cols = 5
+        nb_rows = 1 + int(len(images) / 3)
+        #fig = plt.figure(figsize=(nb_cols, nb_rows))
+        #fig = plt.figure(figsize=(10, 10))
+        fig, ax = plt.subplots(nrows=nb_rows, ncols=nb_cols, sharex=True, sharey=True)
+
+        for i, image in enumerate(images):
+            image = images[i]
+
+            plot_number = i + 1
+            #ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[], yticklabels=[])
+            #ax.autoscale(False)
+            #ax.set_adjustable('box-forced')
+            #ax.set_axis_off()
+            #imgplot = plt.imshow(image, cmap=cm.Greys_r, aspect="equal")
+            ax[int(i / nb_cols)][i % nb_cols].imshow(image, cmap=cm.Greys_r)
+
+        plt.grid(False)
+        plt.show()
+    """
+
+    def show_images(self, images, augment=False):
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+
+        print(images.shape)
+        if augment:
+            images = self.augment_batch(images)
+
+        nb_cols = 10
+        nb_rows = 1 + int(images.shape[0] / nb_cols)
+        print(images.shape, nb_rows)
+        #fig = plt.figure(figsize=(nb_cols, nb_rows))
+        fig = plt.figure(figsize=(10, 10))
+        #fig, ax = plt.subplots(nrows=nb_rows, ncols=nb_cols, sharex=True, sharey=True)
+        last_ax = None
+
+        for i, image in enumerate(images):
+            image = images[i]
+
+            plot_number = i + 1
+            #if last_ax is None:
+            ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[], yticklabels=[])
+            #else:
+            #    ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[], yticklabels=[], sharex=last_ax, sharey=last_ax)
+            #last_ax = ax
+            #ax.autoscale(False)
+            #ax.set_adjustable('box-forced')
+            ax.set_axis_off()
+            imgplot = plt.imshow(image, cmap=cm.Greys_r, aspect="equal")
+
+        plt.grid(False)
+        plt.show()
