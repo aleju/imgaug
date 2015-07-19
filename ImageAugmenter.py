@@ -417,24 +417,27 @@ class ImageAugmenter(object):
         self.channel_is_first_axis = channel_is_first_axis
 
         self.hflip_prob = 0.0
-        if hflip == True:
+        # note: we have to check first for floats, otherwise "hflip == True"
+        # will evaluate to true if hflip is 1.0. So chosing 1.0 (100%) would
+        # result in hflip_prob to be set to 0.5 (50%).
+        if isinstance(hflip, float):
+            assert hflip >= 0.0 and hflip <= 1.0
+            self.hflip_prob = hflip
+        elif hflip == True:
             self.hflip_prob = 0.5
         elif hflip == False:
             self.hflip_prob = 0.0
-        elif isinstance(hflip, float):
-            assert hflip >= 0.0 and hflip <= 1.0
-            self.hflip_prob = hflip
         else:
             raise Exception("Unexpected value for parameter 'hflip'.")
 
         self.vflip_prob = 0.0
-        if vflip == True:
+        if isinstance(vflip, float):
+            assert vflip >= 0.0 and vflip <= 1.0
+            self.vflip_prob = vflip
+        elif vflip == True:
             self.vflip_prob = 0.5
         elif vflip == False:
             self.vflip_prob = 0.0
-        elif isinstance(vflip, float):
-            assert vflip >= 0.0 and vflip <= 1.0
-            self.vflip_prob = vflip
         else:
             raise Exception("Unexpected value for parameter 'vflip'.")
 
@@ -447,6 +450,24 @@ class ImageAugmenter(object):
         self.transform_channels_equally = transform_channels_equally
         self.cval = 0.0
         self.interpolation_order = 1
+        self.pregenerated_matrices = None
+
+    def pregenerate_matrices(self, nb_matrices, seed=None):
+        assert nb_matrices >= 0
+        if nb_matrices == 0:
+            self.pregenerated_matrices = None
+        else:
+            matrices = create_aug_matrices(nb_matrices,
+                                           self.img_width_px,
+                                           self.img_height_px,
+                                           scale_to_percent=self.scale_to_percent,
+                                           scale_axis_equally=self.scale_axis_equally,
+                                           rotation_deg=self.rotation_deg,
+                                           shear_deg=self.shear_deg,
+                                           translation_x_px=self.translation_x_px,
+                                           translation_y_px=self.translation_y_px,
+                                           seed=seed)
+            self.pregenerated_matrices = matrices
 
     def augment_batch(self, images, seed=None):
         """Augments a batch of images.
@@ -507,41 +528,57 @@ class ImageAugmenter(object):
             # TODO this currently ignores the setting in
             # transform_channels_equally and will instead always flip all
             # channels equally
-            images_flipped = []
+
+            # if this is simply a view, then the input array gets flipped too
+            # for some reason
+            images_flipped = np.copy(images)
+            #images_flipped = images.view()
+
+            if len(shape) == 4 and self.channel_is_first_axis:
+                # roll channel to the last axis
+                # swapaxes doesnt work here, because
+                #  (image index, channel, y, x)
+                # would be turned into
+                #  (image index, x, y, channel)
+                # and y needs to come before x
+                images_flipped = np.rollaxis(images_flipped, 1, 4)
+
             y_p = self.hflip_prob
             x_p = self.vflip_prob
-            for image in images:
-                img = image
-                if random.random() < y_p:
-                    img = np.fliplr(image)
-                # flipping vertically is a rather rare choice, so first check if
-                # x-flip probability is non-zero before generating a random value,
-                # should usually be faster
+            for i in range(images.shape[0]):
+                if y_p > 0 and random.random() < y_p:
+                    images_flipped[i] = np.fliplr(images_flipped[i])
                 if x_p > 0 and random.random() < x_p:
-                    img = np.flipud(image)
-                images_flipped.append(img)
-            images = np.array(images_flipped, dtype=np.uint8)
+                    images_flipped[i] = np.flipud(images_flipped[i])
+
+            if len(shape) == 4 and self.channel_is_first_axis:
+                # roll channel back to the second axis (index 1)
+                images_flipped = np.rollaxis(images_flipped, 3, 1)
+            images = images_flipped
 
         # --------------------------------
         # generate transformation matrices
         # --------------------------------
-        # estimate the number of matrices required
-        if self.transform_channels_equally:
-            nb_matrices = shape[0]
+        if self.pregenerated_matrices is not None:
+            matrices = self.pregenerated_matrices
         else:
-            nb_matrices = shape[0] * nb_channels
+            # estimate the number of matrices required
+            if self.transform_channels_equally:
+                nb_matrices = shape[0]
+            else:
+                nb_matrices = shape[0] * nb_channels
 
-        # generate matrices
-        matrices = create_aug_matrices(nb_matrices,
-                                       self.img_width_px,
-                                       self.img_height_px,
-                                       scale_to_percent=self.scale_to_percent,
-                                       scale_axis_equally=self.scale_axis_equally,
-                                       rotation_deg=self.rotation_deg,
-                                       shear_deg=self.shear_deg,
-                                       translation_x_px=self.translation_x_px,
-                                       translation_y_px=self.translation_y_px,
-                                       seed=seed)
+            # generate matrices
+            matrices = create_aug_matrices(nb_matrices,
+                                           self.img_width_px,
+                                           self.img_height_px,
+                                           scale_to_percent=self.scale_to_percent,
+                                           scale_axis_equally=self.scale_axis_equally,
+                                           rotation_deg=self.rotation_deg,
+                                           shear_deg=self.shear_deg,
+                                           translation_x_px=self.translation_x_px,
+                                           translation_y_px=self.translation_y_px,
+                                           seed=seed)
 
         # --------------------------------
         # apply transformation matrices (i.e. augment images)
@@ -551,64 +588,47 @@ class ImageAugmenter(object):
                                   channel_is_first_axis=self.channel_is_first_axis,
                                   cval=self.cval, interpolation_order=self.interpolation_order)
 
-    """
-    def show_images(self, images, augment=False):
+    def plot_image(self, image, nb_repeat=1, augment=False, show_plot=True):
+        if len(image.shape) == 2:
+            images = np.resize(image, (nb_repeat, image.shape[0], image.shape[1]))
+        else:
+            images = np.resize(image, (nb_repeat, image.shape[0], image.shape[1], image.shape[2]))
+        return self.plot_images(images, augment=augment, show_plot=show_plot)
+
+    def plot_images(self, images, augment=False, show_plot=True):
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
 
         if augment:
             images = self.augment_batch(images)
 
-        nb_cols = 5
-        nb_rows = 1 + int(len(images) / 3)
-        #fig = plt.figure(figsize=(nb_cols, nb_rows))
-        #fig = plt.figure(figsize=(10, 10))
-        fig, ax = plt.subplots(nrows=nb_rows, ncols=nb_cols, sharex=True, sharey=True)
-
-        for i, image in enumerate(images):
-            image = images[i]
-
-            plot_number = i + 1
-            #ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[], yticklabels=[])
-            #ax.autoscale(False)
-            #ax.set_adjustable('box-forced')
-            #ax.set_axis_off()
-            #imgplot = plt.imshow(image, cmap=cm.Greys_r, aspect="equal")
-            ax[int(i / nb_cols)][i % nb_cols].imshow(image, cmap=cm.Greys_r)
-
-        plt.grid(False)
-        plt.show()
-    """
-
-    def show_images(self, images, augment=False):
-        import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
-
-        print(images.shape)
-        if augment:
-            images = self.augment_batch(images)
+        # (Lists of) Grayscale images have the shape (image index, y, x)
+        # Multi-Channel images therefore must have 4 or more axes here
+        if len(images.shape) >= 4:
+            # The color-channel is expected to be the last axis by matplotlib
+            # therefore exchange the axes, if its the first one here
+            # TODO this is untested but is the same as in augment_batch
+            # so it should work
+            if self.channel_is_first_axis:
+                images = np.rollaxis(images, 1, 4)
 
         nb_cols = 10
         nb_rows = 1 + int(images.shape[0] / nb_cols)
-        print(images.shape, nb_rows)
-        #fig = plt.figure(figsize=(nb_cols, nb_rows))
         fig = plt.figure(figsize=(10, 10))
-        #fig, ax = plt.subplots(nrows=nb_rows, ncols=nb_cols, sharex=True, sharey=True)
-        last_ax = None
 
         for i, image in enumerate(images):
             image = images[i]
 
             plot_number = i + 1
-            #if last_ax is None:
-            ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[], yticklabels=[])
-            #else:
-            #    ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[], yticklabels=[], sharex=last_ax, sharey=last_ax)
-            #last_ax = ax
-            #ax.autoscale(False)
-            #ax.set_adjustable('box-forced')
+            ax = fig.add_subplot(nb_rows, nb_cols, plot_number, xticklabels=[],
+                                 yticklabels=[])
             ax.set_axis_off()
+            # "cmap" should restrict the color map to grayscale, but strangely
+            # also works well with color images
             imgplot = plt.imshow(image, cmap=cm.Greys_r, aspect="equal")
 
-        plt.grid(False)
-        plt.show()
+        # not showing the plot might be useful e.g. on clusters
+        if show_plot:
+            plt.show()
+
+        return fig

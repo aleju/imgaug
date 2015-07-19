@@ -144,6 +144,26 @@ class TestImageAugmenter(unittest.TestCase):
     def test_single_channel(self):
         """Tests images with channels (e.g. RGB channels)."""
         # One single channel
+        # channel is last axis
+        # test by translating an image with one channel on the x-axis (1 px)
+        image_before = np.zeros((2, 2, 1), dtype=np.uint8)
+        image_before[0, 0, 0] = 255
+        image_before[1, 0, 0] = 255
+
+        image_target = np.zeros((2, 2, 1), dtype=np.float32)
+        image_target[0, 1, 0] = 1.0
+        image_target[1, 1, 0] = 1.0
+
+        images = np.array([image_before]).astype(np.uint8)
+        ia = ImageAugmenter(2, 2, translation_x_px=(1,1))
+        
+        # all must be similar
+        for _ in range(100):
+            image_after = ia.augment_batch(images)[0]
+            self.assertTrue(np.allclose(image_target, image_after))
+
+        # One single channel
+        # channel is first axis
         # test by translating an image with one channel on the x-axis (1 px)
         image_before = np.zeros((1, 2, 2), dtype=np.uint8)
         image_before[0] = [[255, 0],
@@ -154,7 +174,7 @@ class TestImageAugmenter(unittest.TestCase):
                            [0, 1.0]]
 
         images = np.array([image_before]).astype(np.uint8)
-        ia = ImageAugmenter(2, 2, translation_x_px=(1,1))
+        ia = ImageAugmenter(2, 2, translation_x_px=(1,1), channel_is_first_axis=True)
         
         # all must be similar
         for _ in range(100):
@@ -169,7 +189,8 @@ class TestImageAugmenter(unittest.TestCase):
         # two channels,
         # channel is the FIRST axis of each image
         # -----------------------------------------------
-        ia = ImageAugmenter(2, 2, translation_y_px=(0,1))
+        ia = ImageAugmenter(2, 2, translation_y_px=(0,1),
+                            channel_is_first_axis=True)
         
         image_before = np.zeros((2, 2, 2)).astype(np.uint8)
         # 1st channel: top row white, bottom row black
@@ -261,7 +282,8 @@ class TestImageAugmenter(unittest.TestCase):
     def test_transform_channels_unequally(self):
         # two channels, channel is first axis of each image
         ia = ImageAugmenter(3, 3, translation_x_px=(0,1),
-                            transform_channels_equally=False)
+                            transform_channels_equally=False,
+                            channel_is_first_axis=True)
         
         image_before = np.zeros((2, 3, 3)).astype(np.uint8)
         image_before[0] = [[255,   0,   0],
@@ -380,6 +402,7 @@ class TestImageAugmenter(unittest.TestCase):
         nb_augment = 100
         images = np.resize([image_before], (nb_augment, 5, 5))
         ia = ImageAugmenter(5, 5,
+                 hflip=True, vflip=True,
                  scale_to_percent=1.5,
                  rotation_deg=25, shear_deg=10,
                  translation_x_px=5, translation_y_px=5
@@ -398,7 +421,7 @@ class TestImageAugmenter(unittest.TestCase):
                         [1.0, 1.0,    0],
                         [1.0,   0,    0]]
         image_target = np.array(image_target, dtype=np.float32)
-        nb_augment = 100
+        nb_augment = 1000
         images = np.resize([image_before], (nb_augment, 3, 3))
         
         # Test using just "False" for hflip (should be exactly 0%)
@@ -427,7 +450,31 @@ class TestImageAugmenter(unittest.TestCase):
         for image_after in images_augmented:
             if np.allclose(image_after, image_target):
                 nb_similar += 1
-        self.assertTrue(nb_similar > nb_augment*0.8 and nb_similar < nb_augment*1.0)
+        self.assertTrue(nb_similar > nb_augment*0.8 and nb_similar <= nb_augment*1.0)
+
+        # Test with multiple channels
+        image_before = np.zeros((2, 3, 3), dtype=np.uint8)
+        image_before[0] = [[255,   0,   0],
+                           [255,   0,   0],
+                           [  0,   0,   0]]
+        image_before[1] = [[  0,   0,   0],
+                           [255, 255,   0],
+                           [  0,   0,   0]]
+        image_target = np.zeros((2, 3, 3), dtype=np.float32)
+        image_target[0] = [[  0,   0, 1.0],
+                           [  0,   0, 1.0],
+                           [  0,   0,   0]]
+        image_target[1] = [[  0,   0,   0],
+                           [  0, 1.0, 1.0],
+                           [  0,   0,   0]]
+        images = np.resize([image_before], (nb_augment, 2, 3, 3))
+        ia = ImageAugmenter(3, 3, hflip=1.0, channel_is_first_axis=True)
+        images_augmented = ia.augment_batch(images)
+        nb_similar = 0
+        for image_after in images_augmented:
+            if np.allclose(image_after, image_target):
+                nb_similar += 1
+        self.assertTrue(nb_similar > nb_augment*0.9 and nb_similar <= nb_augment*1.0)
 
     def test_vertical_flipping(self):
         """Tests vertical flipping of images (mirror on x-axis)."""
@@ -440,7 +487,7 @@ class TestImageAugmenter(unittest.TestCase):
                         [  0, 1.0,  1.0],
                         [1.0,   0,    0]]
         image_target = np.array(image_target, dtype=np.float32)
-        nb_augment = 100
+        nb_augment = 1000
         images = np.resize([image_before], (nb_augment, 3, 3))
         
         # Test using just "False" for vflip (should be exactly 0%)
@@ -469,7 +516,31 @@ class TestImageAugmenter(unittest.TestCase):
         for image_after in images_augmented:
             if np.allclose(image_after, image_target):
                 nb_similar += 1
-        self.assertTrue(nb_similar > nb_augment*0.8 and nb_similar < nb_augment*1.0)
+        self.assertTrue(nb_similar > nb_augment*0.8 and nb_similar <= nb_augment*1.0)
+
+        # Test with multiple channels
+        image_before = np.zeros((2, 3, 3), dtype=np.uint8)
+        image_before[0] = [[255, 255,   0],
+                           [255,   0,   0],
+                           [  0,   0,   0]]
+        image_before[1] = [[  0, 255,   0],
+                           [  0, 255,   0],
+                           [  0,   0, 255]]
+        image_target = np.zeros((2, 3, 3), dtype=np.float32)
+        image_target[0] = [[  0,   0,   0],
+                           [1.0,   0,   0],
+                           [1.0, 1.0,   0]]
+        image_target[1] = [[  0,   0, 1.0],
+                           [  0, 1.0,   0],
+                           [  0, 1.0,   0]]
+        images = np.resize([image_before], (nb_augment, 2, 3, 3))
+        ia = ImageAugmenter(3, 3, vflip=1.0, channel_is_first_axis=True)
+        images_augmented = ia.augment_batch(images)
+        nb_similar = 0
+        for image_after in images_augmented:
+            if np.allclose(image_after, image_target):
+                nb_similar += 1
+        self.assertTrue(nb_similar > nb_augment*0.9 and nb_similar <= nb_augment*1.0)
 
 if __name__ == '__main__':
     unittest.main()
