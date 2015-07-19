@@ -453,6 +453,31 @@ class ImageAugmenter(object):
         self.pregenerated_matrices = None
 
     def pregenerate_matrices(self, nb_matrices, seed=None):
+        """Pregenerate/cache augmentation matrices.
+
+        If matrices are pregenerated, augment_batch() will reuse them on
+        each call. The augmentations will not always be the same,
+        as the order of the matrices will be randomized (when
+        they are applied to the images). The requirement for that is though
+        that you pregenerate enough of them (e.g. a couple thousand).
+
+        Note that generating the augmentation matrices is usually fast
+        and only starts to make sense if you process millions of small images
+        or many tens of thousands of big images.
+
+        Each call to this method results in pregenerating a new set of matrices,
+        e.g. to replace a list of matrices that has been used often enough.
+
+        Calling this method with nb_matrices set to 0 will remove the
+        pregenerated matrices and augment_batch() returns to its default
+        behaviour of generating new matrices on each call.
+
+        Args:
+            nb_matrices: The number of matrices to pregenerate. E.g. a few
+                thousand. If set to 0, the matrices will be generated again on
+                each call of augment_batch().
+            seed: A random seed to use.
+        """
         assert nb_matrices >= 0
         if nb_matrices == 0:
             self.pregenerated_matrices = None
@@ -588,14 +613,55 @@ class ImageAugmenter(object):
                                   channel_is_first_axis=self.channel_is_first_axis,
                                   cval=self.cval, interpolation_order=self.interpolation_order)
 
-    def plot_image(self, image, nb_repeat=1, augment=False, show_plot=True):
+    def plot_image(self, image, nb_repeat=40, show_plot=True):
+        """Plot augmented variations of an image.
+
+        This method takes an image and plots it by default in 40 differently
+        augmented versions.
+
+        This method is intended to visualize the strength of your chosen
+        augmentations (so for debugging).
+
+        Args:
+            image: The image to plot.
+            nb_repeat: How often to plot the image. Each time it is plotted,
+                the chosen augmentation will be different. (Default: 40).
+            show_plot: Whether to show the plot. False makes sense if you
+                don't have a graphical user interface on the machine.
+                (Default: True)
+
+        Returns:
+            The figure of the plot.
+            Use figure.savefig() to save the image.
+        """
         if len(image.shape) == 2:
             images = np.resize(image, (nb_repeat, image.shape[0], image.shape[1]))
         else:
-            images = np.resize(image, (nb_repeat, image.shape[0], image.shape[1], image.shape[2]))
+            images = np.resize(image, (nb_repeat, image.shape[0], image.shape[1],
+                               image.shape[2]))
         return self.plot_images(images, augment=augment, show_plot=show_plot)
 
-    def plot_images(self, images, augment=False, show_plot=True):
+    def plot_images(self, images, augment, show_plot=True):
+        """Plot augmented variations of images.
+
+        The images will all be shown in the same window.
+        It is recommended to not plot too many of them (i.e. stay below 100).
+
+        This method is intended to visualize the strength of your chosen
+        augmentations (so for debugging).
+
+        Args:
+            images: A numpy array of images. See augment_batch().
+            augment: Whether to augment the images (True) or just display
+                them in the way they are (False).
+            show_plot: Whether to show the plot. False makes sense if you
+                don't have a graphical user interface on the machine.
+                (Default: True)
+
+        Returns:
+            The figure of the plot.
+            Use figure.savefig() to save the image.
+        """
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
 

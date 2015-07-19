@@ -2,14 +2,13 @@ import unittest
 import numpy as np
 from ImageAugmenter import ImageAugmenter
 import random
-from scipy import misc # to show images
 from skimage import data
 
 random.seed(123456789)
 np.random.seed(123456789)
 
 class TestImageAugmenter(unittest.TestCase):
-    def test_rotation_a(self):
+    def test_rotation(self):
         """Test rotation of 90 degrees on an image that should change
         upon rotation."""
         image_before = [[0, 255, 0],
@@ -25,7 +24,7 @@ class TestImageAugmenter(unittest.TestCase):
         image_after = ia.augment_batch(images)[0]
         self.assertTrue(np.allclose(image_target, image_after))
     
-    def test_rotation_b(self):
+    def test_rotation_invariant(self):
         """Test rotation of -90 to 90 degrees on an rotation invariant image."""
         image_before = [[0,   0, 0],
                         [0, 255, 0],
