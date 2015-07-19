@@ -12,7 +12,7 @@ def main():
                         rotation_deg=25, shear_deg=10,
                         translation_x_px=5, translation_y_px=5)
 
-    ia.plot_image(image, 100, augment=True)
+    ia.plot_image(image, 100)
 
 if __name__ == "__main__":
     main()
