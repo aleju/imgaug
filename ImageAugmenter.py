@@ -18,7 +18,6 @@ from __future__ import division
 from skimage import transform as tf
 import numpy as np
 import random
-#import warnings
 
 def is_minmax_tuple(param):
     """Returns whether the parameter is a tuple containing two values.
@@ -639,7 +638,7 @@ class ImageAugmenter(object):
         else:
             images = np.resize(image, (nb_repeat, image.shape[0], image.shape[1],
                                image.shape[2]))
-        return self.plot_images(images, augment=augment, show_plot=show_plot)
+        return self.plot_images(images, True, show_plot=show_plot)
 
     def plot_images(self, images, augment, show_plot=True):
         """Plot augmented variations of images.
@@ -673,8 +672,6 @@ class ImageAugmenter(object):
         if len(images.shape) >= 4:
             # The color-channel is expected to be the last axis by matplotlib
             # therefore exchange the axes, if its the first one here
-            # TODO this is untested but is the same as in augment_batch
-            # so it should work
             if self.channel_is_first_axis:
                 images = np.rollaxis(images, 1, 4)
 
