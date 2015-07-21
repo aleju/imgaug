@@ -30,6 +30,9 @@ Lena, augmented 50 times with all augmentation options activated:
 Load an image and apply augmentations to it:
 
 ```python
+from ImageAugmenter import ImageAugmenter
+from scipy import misc
+
 image = misc.imread("example.png")
 height = image.shape[0]
 width = image.shape[1]
@@ -45,12 +48,12 @@ augmenter = ImageAugmenter(width, height, # width and height of the image (must 
                            )
 
 # augment a batch containing only this image
-# the input array must have dtype uint8 (0-255)
-# the output array will have dtype float32 and can be fed directly into a neural network
+# the input array must have dtype uint8 (ie. values 0-255), as is the case for scipy's imread()
+# the output array will have dtype float32 (0.0-1.0) and can be fed directly into a neural network
 augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
 ```
 
-Set the minimum and maximum values of the augmentation parameters:
+You can set minimum and maximum values of the augmentation parameters by using tuples:
 
 ```python
 image = misc.imread("example.png")
@@ -81,7 +84,7 @@ augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
 ```
 
 You can pregenerate some augmentation matrices, which will later on be applied to the images (in random order).
-This will speed up the augmentation process a bit, because the transformation matrices can be reused multiple times.
+This will speed up the augmentation process a little bit, because the transformation matrices can be reused multiple times.
 
 ```python
 augmenter = ImageAugmenter(height, width, rotation_deg=10)
@@ -109,10 +112,10 @@ augmenter.plot_image(image, nb_repeat=50)
 # Special use cases
 
 By default the class expects your images to have one of the following two shapes:
-* (y, x) for grayscale images
-* (y, x, channel) for images with multiple channels (RGB)
-If your images have their channel in the first axis instead of the last, i.e. (channel, y, x) then you can
-use the parameter channel_is_first_axis in the ImageAugmenter's init function:
+* (y, x) for grayscale images.
+* (y, x, channel) for images with multiple channels (e.g. RGB).
+
+If your images have their channel in the first axis instead of the last, i.e. (channel, y, x), then you can use the parameter channel_is_first_axis in the ImageAugmenter's init function:
 
 ```python
 augmenter = ImageAugmenter(width, height, channel_is_first_axis=True)
@@ -144,4 +147,4 @@ python CheckPerformance.py
 python CheckPlotImages.py
 ```
 
-where CheckPerformance.py measures the performance of the class on you machine and CheckPlotImages.py shows some plots with example augmentations.
+where CheckPerformance.py measures the performance of the class on your machine and CheckPlotImages.py shows some plots with example augmentations.
