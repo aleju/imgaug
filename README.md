@@ -9,7 +9,7 @@ Possible augmentations are:
 * Horizontal flipping/mirroring
 * Vertical flipping/mirroring
 
-The class is build as a wrapper around scikit-image's AffineTransform.
+The class is build as a wrapper around scikit-image's `AffineTransform`.
 Most augmentations (all except flipping) are combined into one affine transformation, making the augmentation process reasonably fast.
 
 # Example
@@ -25,6 +25,17 @@ Lena, augmented 50 times with all augmentation options activated:
 * scipy (optional, required for some of the tests)
 * matplotlib (optional, required if you want to see a plot containing various example images showing the effects of your chosen augmentation settings)
 
+# Usage
+
+There is no pip-installer or setup.py for this class. Simply copy `ImageAugmenter.py` to your project.
+Then import it, create a new `ImageAugmenter` object and use `ImageAugmenter.augment_batch()` to augment an array of images.
+The function expects a numpy array (of dtype **numpy.uint8** with values between 0 and 255) of images.
+The expected shape of that array is any of the following:
+* `(image-index, y, x)`, automatically detected
+* `(image-index, y, x, image channel)`, automatically detected
+* `(image-index, channel, y, x)`, set `channel_is_first_axis=True` in the constructor if that is the case for you.
+The return type is a numpy array of dtype **numpy.float32** with values between 0.0 and 1.0.
+
 # Examples
 
 Load an image and apply augmentations to it:
@@ -32,6 +43,7 @@ Load an image and apply augmentations to it:
 ```python
 from ImageAugmenter import ImageAugmenter
 from scipy import misc
+import numpy as np
 
 image = misc.imread("example.png")
 height = image.shape[0]
@@ -70,7 +82,7 @@ augmenter = ImageAugmenter(width, height,
 augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
 ```
 
-Example with a synthetic image (grayscale):
+Example with a synthetic image (grayscale, so no channels):
 
 ```python
 image = [[0, 255, 0],
@@ -96,8 +108,8 @@ augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
 # Plotting your augmentations
 
 For debugging purposes you can show/plot examples of your augmentation settings (i.e. what images look like if you apply these settings to them).
-Use either the method ImageAugmenter.plot_image(image) for that or alternatively ImageAugmenter.plot_images(images, augment).
-Example for plot_image:
+Use either the method `ImageAugmenter.plot_image(numpy.array image)` for that or alternatively `ImageAugmenter.plot_images(numpy.array images, boolean augment)`. (For `plot_images` set `augment` to `False` if the images are already augmented, otherwise to `True`.)
+Example for `plot_image()`:
 
 ```python
 image = misc.imread("example.png")
@@ -112,17 +124,17 @@ augmenter.plot_image(image, nb_repeat=50)
 # Special use cases
 
 By default the class expects your images to have one of the following two shapes:
-* (y, x) for grayscale images.
-* (y, x, channel) for images with multiple channels (e.g. RGB).
+* `(y, x)` for grayscale images.
+* `(y, x, channel)` for images with multiple channels (e.g. RGB).
 
-If your images have their channel in the first axis instead of the last, i.e. (channel, y, x), then you can use the parameter channel_is_first_axis in the ImageAugmenter's init function:
+If your images have their channel in the first axis instead of the last, i.e. `(channel, y, x)`, then you can use the parameter `channel_is_first_axis` in the `ImageAugmenter`'s `__init__` function:
 
 ```python
 augmenter = ImageAugmenter(width, height, channel_is_first_axis=True)
 ```
 
 The augmenter is able to augment every channel individually, e.g. rotating the red-channel by 20 degrees and rotating the blue-channel (of the same image) by -5 degrees.
-To do that, simply set the flag transform_channels_equally to False in the constructor:
+To do that, simply set the flag `transform_channels_equally` to `False` in the constructor:
 
 ```python
 augmenter = ImageAugmenter(width, height, transform_channels_equally=False)
@@ -138,7 +150,7 @@ Larger images will require more time. The required time seems to grow linearly w
 
 # Tests
 
-The tests and checks are in the tests/ directory.
+The tests and checks are in the `tests/` directory.
 You can run them using (from within that directory):
 
 ```python
@@ -147,4 +159,4 @@ python CheckPerformance.py
 python CheckPlotImages.py
 ```
 
-where CheckPerformance.py measures the performance of the class on your machine and CheckPlotImages.py shows some plots with example augmentations.
+where `CheckPerformance.py` measures the performance of the class on your machine and `CheckPlotImages.py` shows some plots with example augmentations.
