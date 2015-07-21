@@ -12,11 +12,11 @@ Possible augmentations are:
 The class is build as a wrapper around scikit-image's `AffineTransform`.
 Most augmentations (all except flipping) are combined into one affine transformation, making the augmentation process reasonably fast.
 
-# Example
+# Example output
 
-Lena, augmented 50 times with all augmentation options activated:
+Lena, augmented 100 times with all augmentation options activated:
 
-![50 augmented versions of Lena](lena_augmented.jpg?raw=true "50 augmented versions of Lena")
+![100 augmented versions of Lena](lena_augmented.jpg?raw=true "100 augmented versions of Lena")
 
 # Requirements
 
