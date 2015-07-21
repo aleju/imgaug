@@ -271,6 +271,10 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True,
         else:
             nb_channels = images.shape[3] # last axis within each image
 
+    # whether to apply the transformations directly to the whole image
+    # array (True) or for each channel individually (False)
+    apply_directly = not has_channels or (transform_channels_equally
+                                          and not channel_is_first_axis)
 
     # We generate here the order in which the matrices may be applied.
     # At the end, order_indices will contain the index of the matrix to use
@@ -281,7 +285,7 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True,
     # matrix per channel instead of per image.
 
     # 0 to nb_images, but restart at 0 if index is beyond number of matrices
-    len_indices = nb_images if transform_channels_equally else nb_images * nb_channels
+    len_indices = nb_images if apply_directly else nb_images * nb_channels
     if random_order:
         # Notice: This way to choose random matrices is concise, but can create
         # problems if there is a low amount of images and matrices.
@@ -309,7 +313,7 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True,
     # iterate over every image, find out which matrix to apply and then use
     # that matrix to augment the image
     for img_idx, image in enumerate(images):
-        if not has_channels:
+        if apply_directly:
             matrix = matrices[order_indices[matrix_number]]
             result[img_idx, ...] = tf.warp(image, matrix, mode=mode, cval=cval,
                                            order=interpolation_order)

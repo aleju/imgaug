@@ -10,6 +10,7 @@ import numpy as np
 from ImageAugmenter import ImageAugmenter, create_aug_matrices
 from scipy import misc
 from skimage import data
+from skimage import transform as tf
 import time
 
 def main():
@@ -20,6 +21,7 @@ def main():
     nb_runs = 20
 
     # Measure time required to generate 100k augmentation matrices
+    """
     print("Generating 100 times 1000 augmentation matrices of size 64x64...")
     start = time.time()
     for _ in range(100):
@@ -28,6 +30,7 @@ def main():
                             rotation_deg=20, shear_deg=20,
                             translation_x_px=5, translation_y_px=5)
     print("Done in %.8f" % (time.time() - start,))
+    """
 
     # Test Performance on 64 images of size 512x512 pixels
     image = data.lena()
@@ -66,23 +69,44 @@ def main():
     print("")
 
     # Time required to augment 1,000,000 images of size 32x32
+    print("Augmenting 1000 batches of 1000 lena images (1 million total)" \
+          ", each of size 32x32...")
     image = data.lena()
     image = misc.imresize(image, (32, 32))
     batch_size = 1000
     images = np.resize(image, (batch_size, image.shape[0], image.shape[1], image.shape[2]))
-    augmenter = ImageAugmenter(image.shape[0], image.shape[1],
+    augmenter = ImageAugmenter(image.shape[1], image.shape[0],
                                hflip=True, vflip=True,
                                scale_to_percent=1.3, scale_axis_equally=False,
                                rotation_deg=25, shear_deg=10,
                                translation_x_px=5, translation_y_px=5)
     augmenter.pregenerate_matrices(1000)
 
-    print("Augmenting 1000 batches of 1000 lena images (1 million total)" \
-          ", each of size 32x32...")
     start = time.time()
     for _ in range(1000):
         augmenter.augment_batch(images)
-    print("Done in %.8f" % (time.time() - start,))
+    print("Done in %.8fs" % (time.time() - start,))
+    print("")
+
+    # Time required to augment 1,000,000 images of size 32x32
+    # but using only one matrix without the class (no library overhead from
+    # ImageAugmenter)
+    # Notice that this does not include horizontal and vertical flipping,
+    # which is done via numpy in the ImageAugmenter class.
+    print("Augmenting 1000 batches of 1000 lena images (1 million total)" \
+          ", each of size 32x32, using one matrix directly (no ImageAugmenter " \
+          "class)...")
+    matrices = create_aug_matrices(1, image.shape[1], image.shape[0],
+                                   scale_to_percent=1.3, scale_axis_equally=False,
+                                   rotation_deg=25, shear_deg=10,
+                                   translation_x_px=5, translation_y_px=5)
+    matrix = matrices[0]
+
+    start = time.time()
+    for _ in range(1000):
+        for image in images:
+            augmented_image = tf.warp(image, matrix)
+    print("Done in %.8fs" % (time.time() - start,))
 
 
 def run_tests(augmenter, images, nb_runs):
