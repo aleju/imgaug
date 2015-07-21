@@ -12,17 +12,24 @@ Possible augmentations are:
 The class is build as a wrapper around scikit-image's AffineTransform.
 Most augmentations (all except flipping) are combined into one affine transformation, making the augmentation process reasonably fast.
 
+# Example
+
+Lena, augmented 50 times with all augmentation options activated:
+
+![50 augmented versions of Lena](lena_augmented.jpg?raw=true "50 augmented versions of Lena")
+
 # Requirements
 
 * numpy
 * scikit-image
-* scipy (optional, for some of the tests)
-* matplotlib (optional, if you want to see a plot containing various example images showing the effects of your chosen augmentation settings)
+* scipy (optional, required for some of the tests)
+* matplotlib (optional, required if you want to see a plot containing various example images showing the effects of your chosen augmentation settings)
 
 # Examples
 
 Load an image and apply augmentations to it:
-`
+
+```python
 image = misc.imread("example.png")
 height = image.shape[0]
 width = image.shape[1]
@@ -41,10 +48,11 @@ augmenter = ImageAugmenter(width, height, # width and height of the image (must 
 # the input array must have dtype uint8 (0-255)
 # the output array will have dtype float32 and can be fed directly into a neural network
 augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
-`
+```
 
 Set the minimum and maximum values of the augmentation parameters:
-`
+
+```python
 image = misc.imread("example.png")
 width = image.shape[1]
 height = image.shape[0]
@@ -57,10 +65,11 @@ augmenter = ImageAugmenter(width, height,
                            )
 
 augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
-`
+```
 
 Example with a synthetic image (grayscale):
-`
+
+```python
 image = [[0, 255, 0],
          [0, 255, 0],
          [0, 255, 0]]
@@ -69,23 +78,25 @@ images = np.array([image]).astype(np.uint8)
 # set width to 3, height to 3, rotate always exactly by 45 degrees
 augmenter = ImageAugmenter(3, 3, rotation_deg=(45, 45))
 augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
-`
+```
 
 You can pregenerate some augmentation matrices, which will later on be applied to the images (in random order).
 This will speed up the augmentation process a bit, because the transformation matrices can be reused multiple times.
-`
+
+```python
 augmenter = ImageAugmenter(height, width, rotation_deg=10)
 # pregenerate 10,000 matrices
 augmenter.pregenerate_matrices(10000)
 augmented_images = augmenter.augment_batch(np.array([image], dtype=np.uint8))
-`
+```
 
 # Plotting your augmentations
 
 For debugging purposes you can show/plot examples of your augmentation settings (i.e. what images look like if you apply these settings to them).
 Use either the method ImageAugmenter.plot_image(image) for that or alternatively ImageAugmenter.plot_images(images, augment).
 Example for plot_image:
-`
+
+```python
 image = misc.imread("example.png")
 width = image.shape[1]
 height = image.shape[0]
@@ -93,7 +104,7 @@ augmenter = ImageAugmenter(width, height, rotation_deg=20)
 # This will show the image 50 times, each one with a random augmentation as defined in the constructor,
 # i.e. each image being rotated by any random value between -20 and +20 degrees.
 augmenter.plot_image(image, nb_repeat=50)
-`
+```
 
 # Special use cases
 
@@ -102,15 +113,35 @@ By default the class expects your images to have one of the following two shapes
 * (y, x, channel) for images with multiple channels (RGB)
 If your images have their channel in the first axis instead of the last, i.e. (channel, y, x) then you can
 use the parameter channel_is_first_axis in the ImageAugmenter's init function:
+
+```python
 augmenter = ImageAugmenter(width, height, channel_is_first_axis=True)
+```
+
+The augmenter is able to augment every channel individually, e.g. rotating the red-channel by 20 degrees and rotating the blue-channel (of the same image) by -5 degrees.
+To do that, simply set the flag transform_channels_equally to False in the constructor:
+
+```python
+augmenter = ImageAugmenter(width, height, transform_channels_equally=False)
+```
+
+Note that this setting currently does not affect vertical and horizontal flipping.
+Those will always be applied to all channels of an image equally.
+
+# Performance
+
+Required time to augment 1 million images of size 32x32 (3 channels) is about 4 minutes when tested on an 3.5ghz i7 (haswell).
+Larger images will require more time. The required time seems to grow linearly with the number of pixels in an image.
 
 # Tests
 
 The tests and checks are in the tests/ directory.
 You can run them using (from within that directory):
-`
+
+```python
 python TestImageAugmenter.py
 python CheckPerformance.py
 python CheckPlotImages.py
-`
+```
+
 where CheckPerformance.py measures the performance of the class on you machine and CheckPlotImages.py shows some plots with example augmentations.
