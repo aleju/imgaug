@@ -314,11 +314,19 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True,
     # that matrix to augment the image
     for img_idx, image in enumerate(images):
         if apply_directly:
+            # we can apply the matrix to the whole numpy array of the image
+            # at the same time, so we do that to save time (instead of eg. three
+            # steps for three channels as in the else-part)
             matrix = matrices[order_indices[matrix_number]]
             result[img_idx, ...] = tf.warp(image, matrix, mode=mode, cval=cval,
                                            order=interpolation_order)
             matrix_number += 1
         else:
+            # we cant apply the matrix to the whole image in one step, instead
+            # we have to apply it to each channel individually. that happens
+            # if the channel is the first axis of each image (incompatible with
+            # tf.warp()) or if it was explicitly requested via
+            # transform_channels_equally=False.
             for channel_idx in range(nb_channels):
                 matrix = matrices[order_indices[matrix_number]]
                 if channel_is_first_axis:
