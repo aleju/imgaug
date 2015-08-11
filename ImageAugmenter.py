@@ -193,7 +193,8 @@ def create_aug_matrices(nb_matrices, img_width_px, img_height_px,
 
 def apply_aug_matrices(images, matrices, transform_channels_equally=True,
                        channel_is_first_axis=False, random_order=True,
-                       mode="constant", cval=0.0, interpolation_order=1):
+                       mode="constant", cval=0.0, interpolation_order=1,
+                       seed=None):
     """Augment the given images using the given augmentation matrices.
 
     This function is a wrapper around scikit-image's transform.warp().
@@ -243,6 +244,7 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True,
             scikit-image. Defines the order of all interpolations used to
             generate the new/augmented image. See their documentation for
             further details.
+        seed: Seed to use for python's and numpy's random functions.
     """
     # images must be numpy array
     assert type(images).__module__ == np.__name__, "Expected numpy array for " \
@@ -257,6 +259,9 @@ def apply_aug_matrices(images, matrices, transform_channels_equally=True,
         either shape (image index, y, x) for greyscale
         or (image index, channel, y, x) / (image index, y, x, channel)
         for multi-channel (usually color) images."""
+
+    if seed:
+        np.random.seed(seed)
 
     nb_images = images.shape[0]
 
@@ -520,8 +525,8 @@ class ImageAugmenter(object):
                 channels, where the channel is the last index.
                 If your shape is (image-index, channel, width, height) then
                 you must also set channel_is_first_axis=True in the constructor.
-            seed: A seed to be used when calling the function to generate
-                the augmentation matrices. Default is None (dont use a seed).
+            seed: Seed to use for python's and numpy's random functions.
+                Default is None (dont use a seed).
 
         Returns:
             Augmented images as numpy array of dtype float32 (i.e. values
@@ -549,6 +554,10 @@ class ImageAugmenter(object):
             msg = "Mismatch between images shape %s and " \
                   "predefined image width/height (%d/%d)."
             raise Exception(msg % (str(shape), self.img_width_px, self.img_height_px))
+
+        if seed:
+            random.seed(seed)
+            np.random.seed(seed)
 
         # --------------------------------
         # horizontal and vertical flipping/mirroring
@@ -593,6 +602,16 @@ class ImageAugmenter(object):
             images = images_flipped
 
         # --------------------------------
+        # if no augmentation has been chosen, stop early
+        # for improved performance (evade applying matrices)
+        # --------------------------------
+        if self.pregenerated_matrices is None \
+           and self.scale_to_percent == 1.0 and self.rotation_deg == 0 \
+           and self.shear_deg == 0 \
+           and self.translation_x_px == 0 and self.translation_y_px == 0:
+            return np.array(images, dtype=np.float32) / 255
+
+        # --------------------------------
         # generate transformation matrices
         # --------------------------------
         if self.pregenerated_matrices is not None:
@@ -622,7 +641,8 @@ class ImageAugmenter(object):
         return apply_aug_matrices(images, matrices,
                                   transform_channels_equally=self.transform_channels_equally,
                                   channel_is_first_axis=self.channel_is_first_axis,
-                                  cval=self.cval, interpolation_order=self.interpolation_order)
+                                  cval=self.cval, interpolation_order=self.interpolation_order,
+                                  seed=seed)
 
     def plot_image(self, image, nb_repeat=40, show_plot=True):
         """Plot augmented variations of an image.
@@ -652,7 +672,7 @@ class ImageAugmenter(object):
                                image.shape[2]))
         return self.plot_images(images, True, show_plot=show_plot)
 
-    def plot_images(self, images, augment, show_plot=True):
+    def plot_images(self, images, augment, show_plot=True, figure=None):
         """Plot augmented variations of images.
 
         The images will all be shown in the same window.
@@ -668,6 +688,10 @@ class ImageAugmenter(object):
             show_plot: Whether to show the plot. False makes sense if you
                 don't have a graphical user interface on the machine.
                 (Default: True)
+            figure: The figure of the plot in which to draw the images.
+                Provide the return value of this function (from a prior call)
+                to draw in the same plot window again. Chosing 'None' will
+                create a new figure. (Default is None.)
 
         Returns:
             The figure of the plot.
@@ -689,7 +713,12 @@ class ImageAugmenter(object):
 
         nb_cols = 10
         nb_rows = 1 + int(images.shape[0] / nb_cols)
-        fig = plt.figure(figsize=(10, 10))
+        if figure is not None:
+            fig = figure
+            plt.figure(fig.number)
+            fig.clear()
+        else:
+            fig = plt.figure(figsize=(10, 10))
 
         for i, image in enumerate(images):
             image = images[i]
