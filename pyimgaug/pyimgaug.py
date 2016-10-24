@@ -56,7 +56,7 @@ class Uniform(StochasticParameter):
             self.a = a
             self.b = b
         else:
-            raise Exception("Expected two float values or Uniform object, got %s, %s." % (type(a), type(b)))
+            raise Exception("Expected two float/int values or Uniform object, got %s, %s." % (type(a), type(b)))
 
     def draw_samples(self, n, random_state=None):
         rng = random_state if random_state is not None else np.random
@@ -67,6 +67,29 @@ class Uniform(StochasticParameter):
 
     def __str__(self):
         return "Uniform(%.6f, %.6f)" % (self.a, self.b)
+
+class DiscreteUniform(StochasticParameter):
+    def __init__(self, a, b=None):
+        if isinstance(a, DiscreteUniform):
+            self.a = a.a
+            self.b = a.b
+        elif isinstance(a, int):
+            assert b is not None and isinstance(b, int)
+            assert a <= b
+            self.a = a
+            self.b = b
+        else:
+            raise Exception("Expected two int values or DiscreteUniform object, got %s, %s." % (type(a), type(b)))
+
+    def draw_samples(self, n, random_state=None):
+        rng = random_state if random_state is not None else np.random
+        return rng.randint(self.a, self.b, n)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "DiscreteUniform(%d, %d)" % (self.a, self.b)
 
 class Deterministic(StochasticParameter):
     def __init__(self, value):
@@ -322,100 +345,174 @@ def Multiply(Augmenter):
     def get_parameters(self):
         return [self.mul]
 
-def AffineTransformation(Augmenter):
+def Affine(Augmenter):
     def __init__(self, scale=1.0, translate=0, rotate=0.0, shear=0.0, name=None):
+        Augmenter.__init__(self, name=name)
+        self.warp_args = warp_args if warp_args is not None else dict()
+
         # scale
         # float | (float, float) | [float, float] | StochasticParameter
         def scale_handle_param(param, allow_dict):
-            if isinstance(scale, StochasticParameter):
-                self.scale = scale
-            elif isinstance(scale, float):
-                assert scale > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (scale,)
-                self.scale = Deterministic(scale)
-            elif isinstance(scale, (tuple, list)):
-                assert len(scale) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (str(len(scale)),)
-                assert scale[0] > 0.0 and scale[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (scale[0], scale[1])
-                self.scale = Uniform(scale[0], scale[1])
-            elif allow_dict and isinstance(scale, dict):
-                assert "x" in scale or "y" in scale
-                x = scale.get("x")
-                y = scale.get("y")
+            if isinstance(param, StochasticParameter):
+                return param
+            elif isinstance(param, float):
+                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (param,)
+                return Deterministic(param)
+            elif isinstance(param, (tuple, list)):
+                assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (str(len(param)),)
+                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                return Uniform(param[0], param[1])
+            elif allow_dict and isinstance(param, dict):
+                assert "x" in param or "y" in param
+                x = param.get("x")
+                y = param.get("y")
 
-                if x is None and y is None:
-                    x = y = 1.0
-                else:
-                    x = x if x is not None else y
-                    y = y if y is not None else x
-
-                if isinstance(scale, float):
-                    assert scale > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (scale,)
-                    self.scale = Deterministic(scale)
-                elif isinstance(scale, (tuple, list)):
-                    assert len(scale) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (str(len(scale)),)
-                    assert scale[0] > 0.0 and scale[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (scale[0], scale[1])
-                    self.scale = Uniform(scale[0], scale[1])
-                elif isinstance(scale, StochasticParameter):
-                    self.scale = scale
-            else:
-                raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(scale),))
-
-        """
-        if isinstance(scale, float):
-            assert scale > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (scale,)
-            self.scale = Deterministic(scale)
-        elif isinstance(scale, (tuple, list)):
-            assert len(scale) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (str(len(scale)),)
-            assert scale[0] > 0.0 and scale[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (scale[0], scale[1])
-            self.scale = Uniform(scale[0], scale[1])
-        elif isinstance(scale, dict):
-            assert "x" in scale or "y" in scale
-            x = scale.get("x")
-            y = scale.get("y")
-            if x is None and y is None:
-                x = y = 1.0
-            else:
                 x = x if x is not None else y
                 y = y if y is not None else x
 
-            if isinstance(scale, float):
-                assert scale > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (scale,)
-                self.scale = Deterministic(scale)
-            elif isinstance(scale, (tuple, list)):
-                assert len(scale) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (str(len(scale)),)
-                assert scale[0] > 0.0 and scale[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (scale[0], scale[1])
-                self.scale = Uniform(scale[0], scale[1])
-            elif isinstance(scale, StochasticParameter):
-                self.scale = scale
-
-        elif isinstance(scale, StochasticParameter):
-            self.scale = scale
-        else:
-            raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(scale),))
-        """
+                return (scale_handle_param(x, Fale), scale_handle_param(y, False))
+            else:
+                raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
+        self.scale = scale_handle_param(scale, True)
 
         # translate
         # float | int | (float, float) | (int, int) | [float, float] | [int, int] | StochasticParameter
-        if isinstance(translate, float):
-            assert translate > 0.0, "Expected translate to have range (0, inf), got value %.4f." % (translate,)
-            self.translate = Deterministic(translate)
-        elif isinstance(translate, int):
-            self.translate = Deterministic(translate)
-        elif isinstance(translate, (tuple, list)):
-            assert len(translate) == 2, "Expected translate tuple/list with 2 entries, got %d entries." % (str(len(translate)),)
-            types_unique = set([type(val) for val in translate])
-            assert len(types_unique) == 1, "Expected translate tuple/list to have either int or float datatype, got %s." % (str(types_unique),)
-            assert types_unique in ["int", "float"], "Expected translate tuple/list to have either int or float datatype, got %s." % (str(types_unique),)
+        def translate_handle_param(param, allow_dict):
+            if isinstance(param, float):
+                assert param > 0.0, "Expected translate to have range (0, inf), got value %.4f." % (param,)
+                self.param = Deterministic(param)
+            elif isinstance(param, int):
+                self.param = Deterministic(param)
+            elif isinstance(param, (tuple, list)):
+                assert len(param) == 2, "Expected translate tuple/list with 2 entries, got %d entries." % (str(len(param)),)
+                types_unique = set([type(val) for val in param])
+                assert len(types_unique) == 1, "Expected translate tuple/list to have either int or float datatype, got %s." % (str(types_unique),)
+                assert types_unique in ["int", "float"], "Expected translate tuple/list to have either int or float datatype, got %s." % (str(types_unique),)
 
-            if types_unique[0] == "int":
-                self.translate = DiscreteUniform(translate[0], translate[1])
-            else: # float
-                assert translate[0] > 0.0 and translate[1] > 0.0, "Expected translate tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (translate[0], translate[1])
-                self.translate = Uniform(translate[0], translate[1])
-        elif isinstance(translate, StochasticParameter):
-            self.translate = translate
+                if types_unique[0] == "int":
+                    self.translate = DiscreteUniform(param[0], param[1])
+                else: # float
+                    assert param[0] > 0.0 and param[1] > 0.0, "Expected translate tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    self.translate = Uniform(param[0], param[1])
+            elif allow_dict and isinstance(parm, dict):
+                assert "x" in param or "y" in param
+                x = param.get("x")
+                y = param.get("y")
+
+                x = x if x is not None else y
+                y = y if y is not None else x
+
+                return (translate_handle_param(x, Fale), translate_handle_param(y, False))
+            elif isinstance(param, StochasticParameter):
+                self.translate = param
+            else:
+                raise Exception("Expected float, or int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
+        self.translate = translate_handle_param(translate, True)
+
+        # rotate
+        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
+        if isinstance(rotate, StochasticParameter):
+            self.rotate = rotate
+        elif isinstance(rotate, (float, int)):
+            self.rotate = rotate
+        elif isinstance(rotate, (tuple, list)):
+            assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (str(len(rotate)),)
+            types = [type(r) for r in rotate]
+            assert all([val in ["float", "int"] for val in types), "Expected floats/ints in rotate tuple/list, got %s." % (str(types),)
+            self.rotate = Uniform(rotate[0], rotate[1])
         else:
-            raise Exception("Expected float, or int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(translate),))
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
 
+        # shear
+        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
+        if isinstance(shear, StochasticParameter):
+            self.shear = shear
+        elif isinstance(shear, (float, int)):
+            self.shear = shear
+        elif isinstance(shear, (tuple, list)):
+            assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (str(len(shear)),)
+            types = [type(r) for r in rotate]
+            assert all([val in ["float", "int"] for val in types), "Expected floats/ints in shear tuple/list, got %s." % (str(types),)
+            self.shear = Uniform(shear[0], shear[1])
+        else:
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
 
+    def _transform(self, images):
+        # skimage's warp() converts to 0-1 range, so we use float here and then convert
+        # at the end
+        result = np.copy(images).astype(np.float32, copy=False)
 
-    def
+        nb_images, height, width = images.shape[0], images.shape[1], images.shape[2]
+
+        scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images)
+
+        shift_x = int(width / 2.0)
+        shift_y = int(height / 2.0)
+
+        for i in xrange(nb_images):
+            scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
+            translate_x_px, translate_y_px = translate_samples_px[0][i], translate_samples_px[1][i]
+            rotate = rotate_samples[i]
+            shear = shear_samples[i]
+            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
+                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+                matrix_transforms = tf.AffineTransform(
+                    scale=(scale_x, scale_y),
+                    translation=(translate_x, translate_y),
+                    rotation=rotate,
+                    shear=shear
+                )
+                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center).inverse
+                result[i, ...] = tf.warp(result[i, ...], matrix, **self.warp_args)
+
+        return (result * 255.0).astype(copy=False)
+
+    def _to_deterministic(self, n):
+        scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(n)
+        augs = []
+        for i in range(n):
+            augs.append(
+                Affine(
+                    scale=(scale_samples[0][i], scale_samples[1][i]),
+                    translate=(translate_samples_px[0][i], translate_samples_px[1][i]),
+                    rotate=rotate_samples[i],
+                    shear=shear_samples[i],
+                    name=self.name,
+                    warp_args=self.warp_args
+                )
+            )
+        return augs
+
+    def get_parameters(self):
+        return [self.scale, self.translate, self.rotate, self.shear]
+
+    def _draw_samples(self, nb_samples):
+        if isinstance(self.scale, tuple):
+            scale_samples = (self.scale[0].draw_samples(nb_samples), self.scale[1].draw_samples(nb_samples))
+        else:
+            scale_samples = self.scale.draw_samples(nb_samples)
+            scale_samples = (scale_samples, scale_samples)
+
+        if isinstance(self.translate, tuple):
+            translate_samples = (self.translate[0].draw_samples(nb_samples), self.translate[1].draw_samples(nb_samples))
+        else:
+            translate_samples = self.translate.draw_samples(nb_samples)
+            translate_samples = (translate_samples, translate_samples)
+
+        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
+        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
+        translate_samples_px = [None, None]
+        if translate_samples[0].dtype in [np.float32, np.float64]:
+            translate_samples_px[0] = translate_samples[0] * width
+        else:
+            translate_samples_px[0] = translate_samples[0]
+        if translate_samples[1].dtype in [np.float32, np.float64]:
+            translate_samples_px[1] = translate_samples[1] * height
+        else:
+            translate_samples_px[1] = translate_samples[1]
+
+        rotate_samples = self.rotate.draw_samples(nb_images)
+        shear_samples = self.shear.draw_samples(nb_images)
+
+        return scale_samples, translate_samples_px, rotate_samples, shear_samples
