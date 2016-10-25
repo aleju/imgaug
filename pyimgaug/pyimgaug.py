@@ -45,29 +45,6 @@ class Binomial(StochasticParameter):
     def __str__(self):
         return "Binomial(%.4f)" % (self.p,)
 
-class Uniform(StochasticParameter):
-    def __init__(self, a, b=None):
-        if isinstance(a, Uniform):
-            self.a = a.a
-            self.b = a.b
-        elif isinstance(a, (float, int)):
-            assert b is not None and isinstance(b, (float, int))
-            assert a <= b
-            self.a = a
-            self.b = b
-        else:
-            raise Exception("Expected two float/int values or Uniform object, got %s, %s." % (type(a), type(b)))
-
-    def draw_samples(self, n, random_state=None):
-        rng = random_state if random_state is not None else np.random
-        return rng.uniform(self.a, self.b, n)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        return "Uniform(%.6f, %.6f)" % (self.a, self.b)
-
 class DiscreteUniform(StochasticParameter):
     def __init__(self, a, b=None):
         if isinstance(a, DiscreteUniform):
@@ -91,6 +68,52 @@ class DiscreteUniform(StochasticParameter):
     def __str__(self):
         return "DiscreteUniform(%d, %d)" % (self.a, self.b)
 
+class Normal(StochasticParameter):
+    def __init__(self, mean, std=None):
+        if isinstance(mean, Normal):
+            self.mean = mean.mean
+            self.std = mean.std
+        elif isinstance(mean, (float, int)):
+            assert std is not None and isinstance(std, (float, int))
+            assert std >= 0
+            self.mean = mean
+            self.std = std
+        else:
+            raise Exception("Expected two float/int values or Normal object, got %s, %s." % (type(mean), type(std)))
+
+    def draw_samples(self, n, random_state=None):
+        rng = random_state if random_state is not None else np.random
+        return rng.normal(self.mean, self.std, size=n)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Normal(mean=%.6f, std=%.6f)" % (self.mean, self.std)
+
+class Uniform(StochasticParameter):
+    def __init__(self, a, b=None):
+        if isinstance(a, Uniform):
+            self.a = a.a
+            self.b = a.b
+        elif isinstance(a, (float, int)):
+            assert b is not None and isinstance(b, (float, int))
+            assert a <= b
+            self.a = a
+            self.b = b
+        else:
+            raise Exception("Expected two float/int values or Uniform object, got %s, %s." % (type(a), type(b)))
+
+    def draw_samples(self, n, random_state=None):
+        rng = random_state if random_state is not None else np.random
+        return rng.uniform(self.a, self.b, n)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Uniform(%.6f, %.6f)" % (self.a, self.b)
+
 class Deterministic(StochasticParameter):
     def __init__(self, value):
         if isinstance(value, StochasticParameter):
@@ -111,6 +134,38 @@ class Deterministic(StochasticParameter):
             return "Deterministic(int %d)" % (self.value,)
         else:
             return "Deterministic(float %.8f)" % (self.value,)
+
+class Clip(StochasticParameter):
+    def __init__(self, other_param, minval=None, maxval=None):
+        self.other_param = other_param
+        self.minval = minval
+        self.maxval = maxval
+
+    def draw_samples(self, n, random_state=None):
+        samples = self.other_param.draw_samples(n, random_state=random_state)
+        if self.minval is not None and self.maxval is not None:
+            np.clip(samples, self.minval, self.maxval, out=samples)
+        elif self.minval is not None:
+            np.clip(samples, self.minval, np.max(samples), out=samples)
+        elif self.maxval is not None:
+            np.clip(samples, np.min(samples), self.maxval, out=samples)
+        else:
+            pass
+        return samples
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = self.other_param.__str()__
+        if self.minval is not None and self.maxval is not None:
+            return "Clip(%s, %.6f, %.6f)" % (opstr, float(self.minval), float(self.maxval))
+        elif self.minval is not None:
+            return "Clip(%s, %.6f, None)" % (opstr, float(self.minval))
+        elif self.maxval is not None:
+            return "Clip(%s, None, %.6f)" % (opstr, float(self.maxval))
+        else:
+            return "Clip(%s, None, None)" % (opstr,)
 
 class Augmenter(object):
     __metaclass__ = ABCMeta
@@ -234,7 +289,7 @@ class Noop(Augmenter):
         return images
 
     def _to_deterministic(self, n):
-        return [Noop(name=name) for i in n]
+        return [Noop(name=name) for _ in xrange(n)]
 
     def get_parameters(self):
         return []
