@@ -84,16 +84,36 @@ class AugmenterSequence(Augmenter):
 class Sometimes(Augmenter):
     def __init__(self, p, then_list=None, else_list=None, name=None):
         Augmenter.__init__(self, name=name)
-        self.p = Binomial(p)
+        if isinstance(p, (float, int)) and 0 <= p <= 1:
+            self.p = Binomial(p)
+        elif isinstance(p, StochasticParameter):
+            self.p = p
+        else:
+            raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
 
-        assert then_list is None or isinstance(then_list, (AugmenterSequence, list, tuple))
-        assert else_list is None or isinstance(else_list, (AugmenterSequence, list, tuple))
-        then_list = then_list if then_list is not None else []
-        else_list = else_list if else_list is not None else []AugmenterSequence(name="%s-else" % (self.name,))
-        then_list = AugmenterSequence(augmenters=then_list, name="%s-then" % (self.name,)) if isinstance(then_list, (list, tuple)) else then_list
-        else_list = AugmenterSequence(augmenters=else_list, name="%s-else" % (self.name,)) if isinstance(else_list, (list, tuple)) else else_list
-        self.then_list = then_list
-        self.else_list = else_list
+        if then_list is None:
+            self.then_list = None
+        elif isinstance(then_list, Augmenter):
+            self.then_list = then_list
+        elif isinstance(then_list, (list, tuple)):
+            if len(then_list) == 0:
+                self.then_list = None
+            else:
+                self.then_list = AugmenterSequence(then_list, name="%s-then" % (self.name,))
+        else:
+            raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
+
+        if else_list is None:
+            self.else_list = None
+        elif isinstance(else_list, Augmenter):
+            self.else_list = else_list
+        elif isinstance(else_list, (list, tuple)):
+            if len(else_list) == 0:
+                self.else_list = None
+            else:
+                self.else_list = AugmenterSequence(else_list, name="%s-else" % (self.name,))
+        else:
+            raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
     def _transform(self, images):
         result = np.copy(images)
@@ -132,10 +152,64 @@ class Noop(Augmenter):
     def get_parameters(self):
         return []
 
-class Fliplr(Augmenter):
-    def __init__(self, p=0.5, name=None):
+class Lambda(Augmenter):
+    def __init__(self, func, name=None):
         Augmenter.__init__(self, name=name)
-        self.p = Binomial(p)
+        self.func = func
+
+    def _transform(self, images):
+        images = func(images)
+        return images
+
+    def _to_deterministic(self, n):
+        return [Lambda(self.func, name=name) for _ in range(n)]
+
+    def get_parameters(self):
+        return []
+
+def AssertLambda(func, name=None):
+    def func_assert(images):
+        assert func(images)
+        return images
+    if name is None:
+        name = "UnnamedAssertLambda"
+    return Lambda(func_assert, name=name)
+
+def AssertShape(shape, name=None):
+    assert len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape))
+
+    def func(images):
+        assert len(images.shape) == 4, "Expected image's shape to have length 4, got %d with shape: %s." % (len(images.shape), str(images.shape))
+        for i in range(4):
+            expected = shape[i]
+            observed = images.shape[i]
+            if expected is not None:
+                if isinstance(expected, int):
+                    assert observed == expected, "Expected dim %d to have value %d, got %d." % (i, expected, observed)
+                elif isinstance(expected, tuple):
+                    assert len(expected) == 2
+                    assert expected[0] <= observed < expected[1], "Expected dim %d to have value in range [%d, %d), got %d." % (i, expected[0], expected[1], observed)
+                elif isinstance(expected, list):
+                    assert any([observed == val for val in expected]), "Expected dim %d to have any value of %s, got %d." % (i, str(expected), observed)
+                else:
+                    raise Exception("Invalid datatype for shape entry %d, expected each entry to be an integer, a tuple (with two entries) or a list, got %s." % (type(expected),))
+        return images
+
+    if name is None:
+        name = "UnnamedAssertShape"
+
+    return Lambda(func, name=name)
+
+class Fliplr(Augmenter):
+    def __init__(self, p=0, name=None):
+        Augmenter.__init__(self, name=name)
+
+        if isinstance(p, float):
+            self.p = Binomial(p)
+        elif isinstance(p, StochasticParameter):
+            self.p = p
+        else:
+            raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
     def _transform(self, images):
         result = np.copy(images)
@@ -153,9 +227,15 @@ class Fliplr(Augmenter):
         return [self.p]
 
 class Flipud(Augmenter):
-    def __init__(self, p=0.5, name=None):
+    def __init__(self, p=0, name=None):
         Augmenter.__init__(self, name=name)
-        self.p = Binomial(p)
+
+        if isinstance(p, float):
+            self.p = Binomial(p)
+        elif isinstance(p, StochasticParameter):
+            self.p = p
+        else:
+            raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
     def _transform(self, images):
         result = np.copy(images)
@@ -203,7 +283,7 @@ class GaussianBlur(Augmenter):
     def get_parameters(self):
         return [self.sigma]
 
-def GaussianNoise(Augmenter):
+class GaussianNoise(Augmenter):
     def __init__(self, loc=0, scale=0, clip=True, name=None):
         Augmenter.__init__(self, name=name)
 
@@ -251,7 +331,44 @@ def GaussianNoise(Augmenter):
     def get_parameters(self):
         return [self.loc, self.scale]
 
-def Multiply(Augmenter):
+class Dropout(Augmenter):
+    def __init__(self, p=0, rng_seed=None, name=None):
+        Augmenter.__init__(self, name=name)
+
+        if isinstance(p, float):
+            self.p = Binomial(p)
+        elif isinstance(p, StochasticParameter):
+            self.p = p
+        else:
+            raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
+
+        self.rng_seed = None
+
+    def _transform(self, images):
+        result = np.copy(images)
+        nb_images, height, width, channels = images.shape
+        if self.rng_seed is None:
+            samples = self.p.draw_samples(nb_images, height * width * channels).reshape(nb_images, height, width, channels)
+            return result * samples
+        else:
+            images_seed_gen = np.random.RandomState(seed=self.rng_seed)
+            max_seed = 2**23 # ~8 million
+            for i in range(nb_images):
+                img_seed = images_seed_gen.randint(max_seed)
+                samples_gen = np.random.RandomState(seed=img_seed)
+                samples = self.p.draw_samples(height * width * channels, random_state=samples_gen).reshape(height, width, channels)
+                result[i] = result[i] * samples
+            return result
+
+    def _to_deterministic(self, n):
+        max_seed = 2**23 # ~8 million
+        rng_seeds = np.random.randint(max_seed, size=(n,))
+        return [Dropout(p=self.p, rng_seed=rng_seed, name=self.name) for rng_seed in rng_seeds]
+
+    def get_parameters(self):
+        return [self.p]
+
+class Multiply(Augmenter):
     def __init__(self, mul=1.0, clip=True, name=None):
         Augmenter.__init__(self, name=name)
         if isinstance(mul, float):
@@ -281,7 +398,7 @@ def Multiply(Augmenter):
     def get_parameters(self):
         return [self.mul]
 
-def Affine(Augmenter):
+class Affine(Augmenter):
     def __init__(self, scale=1.0, translate=0, rotate=0.0, shear=0.0, name=None):
         Augmenter.__init__(self, name=name)
         self.warp_args = warp_args if warp_args is not None else dict()
