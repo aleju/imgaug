@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
 import copy
+import pyimgaug as ia
 
 try:
     xrange
@@ -18,8 +19,12 @@ class StochasticParameter(object):
     def draw_sample(self, random_state=None):
         return self.draw_samples(1, random_state=random_state)[0]
 
+    def draw_samples(self, size, random_state=None):
+        random_state = random_state if random_state is not None else ia.current_random_state()
+        return self._draw_samples(size, random_state)
+
     @abstractmethod
-    def draw_samples(self, n, random_state=None):
+    def _draw_samples(self, size, random_state):
         raise NotImplemented()
 
 class Binomial(StochasticParameter):
@@ -32,9 +37,8 @@ class Binomial(StochasticParameter):
         else:
             raise Exception("Expected float value or Binomial object, got %s." % (type(p),))
 
-    def draw_samples(self, n, random_state=None):
-        rng = random_state if random_state is not None else np.random
-        return rng.binomial(1, self.p, n)
+    def _draw_samples(self, size, random_state):
+        return random_state.binomial(1, self.p, size)
 
     def __repr__(self):
         return self.__str__()
@@ -55,9 +59,8 @@ class DiscreteUniform(StochasticParameter):
         else:
             raise Exception("Expected two int values or DiscreteUniform object, got %s, %s." % (type(a), type(b)))
 
-    def draw_samples(self, n, random_state=None):
-        rng = random_state if random_state is not None else np.random
-        return rng.randint(self.a, self.b, n)
+    def _draw_samples(self, size, random_state):
+        return random_state.randint(self.a, self.b, size)
 
     def __repr__(self):
         return self.__str__()
@@ -78,9 +81,8 @@ class Normal(StochasticParameter):
         else:
             raise Exception("Expected two float/int values or Normal object, got %s, %s." % (type(mean), type(std)))
 
-    def draw_samples(self, n, random_state=None):
-        rng = random_state if random_state is not None else np.random
-        return rng.normal(self.mean, self.std, size=n)
+    def _draw_samples(self, size, random_state):
+        return random_state.normal(self.mean, self.std, size=size)
 
     def __repr__(self):
         return self.__str__()
@@ -101,9 +103,8 @@ class Uniform(StochasticParameter):
         else:
             raise Exception("Expected two float/int values or Uniform object, got %s, %s." % (type(a), type(b)))
 
-    def draw_samples(self, n, random_state=None):
-        rng = random_state if random_state is not None else np.random
-        return rng.uniform(self.a, self.b, n)
+    def _draw_samples(self, size, random_state):
+        return random_state.uniform(self.a, self.b, size)
 
     def __repr__(self):
         return self.__str__()
@@ -120,8 +121,8 @@ class Deterministic(StochasticParameter):
         else:
             raise Exception("Expected StochasticParameter object or float or int as value, got %s." % (type(value),))
 
-    def draw_samples(self, n, random_state=None):
-        return np.repeat(np.array([self.value]), n)
+    def _draw_samples(self, size, random_state):
+        return np.repeat(np.array([self.value]), size)
 
     def __repr__(self):
         return self.__str__()
@@ -138,8 +139,8 @@ class Clip(StochasticParameter):
         self.minval = minval
         self.maxval = maxval
 
-    def draw_samples(self, n, random_state=None):
-        samples = self.other_param.draw_samples(n, random_state=random_state)
+    def _draw_samples(self, size, random_state):
+        samples = self.other_param.draw_samples(size, random_state=random_state)
         if self.minval is not None and self.maxval is not None:
             np.clip(samples, self.minval, self.maxval, out=samples)
         elif self.minval is not None:
@@ -154,7 +155,7 @@ class Clip(StochasticParameter):
         return self.__str__()
 
     def __str__(self):
-        opstr = self.other_param.__str()__
+        opstr = str(self.other_param)
         if self.minval is not None and self.maxval is not None:
             return "Clip(%s, %.6f, %.6f)" % (opstr, float(self.minval), float(self.maxval))
         elif self.minval is not None:

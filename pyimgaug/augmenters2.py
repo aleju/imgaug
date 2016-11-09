@@ -3,10 +3,8 @@ from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
 import copy
+import pyimgaug as ia
 from parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform
-
-def copy_random_state(random_state):
-    return np.random.RandomState(random_state.get_state())
 
 class Augmenter(object):
     __metaclass__ = ABCMeta
@@ -20,7 +18,7 @@ class Augmenter(object):
         self.deterministic = deterministic
 
         if random_state is None:
-            self.random_state = np.random.get_state()
+            self.random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
             self.random_state = random_state
         else:
@@ -32,7 +30,7 @@ class Augmenter(object):
 
         if isinstance(images, (list, tuple)):
             images_tf = self.transform(np.array(images))
-        elif is_np_array(images):
+        elif ia.is_np_array(images):
             assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, rgb), got shape %s" % (str(images.shape),)
             #assert images.shape[3] == 3, "Expected RGB images, i.e. shape[3] == 3, got shape %s" % (str(images.shape),)
             assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
@@ -57,7 +55,7 @@ class Augmenter(object):
 
     def _to_deterministic(self):
         aug = copy.copy(self)
-        aug.random_state = np.random.RandomState()
+        aug.random_state = ia.new_random_state()
         aug.deterministic = True
         return aug
 
@@ -78,19 +76,16 @@ class Sequence(Augmenter):
     def _transform(self, images, random_state):
         result = images
         for augmenter in self.children:
-            result = augmenter._transform(result)
+            result = augmenter.transform(result)
         return result
 
-    def _to_deterministic(self, n):
-        seqs = []
-        for i in xrange(n):
-            augs = [aug.to_deterministic() for aug in self.children]
-            seq = copy.copy(self)
-            seq.children = augs
-            seq.random_state = np.random.RandomState()
-            seq.deterministic = True
-            seqs.append(seq)
-        return seqs
+    def _to_deterministic(self):
+        augs = [aug.to_deterministic() for aug in self.children]
+        seq = copy.copy(self)
+        seq.children = augs
+        seq.random_state = ia.new_random_state()
+        seq.deterministic = True
+        return seq
 
     def get_parameters(self):
         return []
@@ -100,11 +95,11 @@ class Sequence(Augmenter):
         return self
 
     def extend(self, augmenters):
-        self.augmenters.extend(augmenters)
+        self.children.extend(augmenters)
         return self
 
     def __str__(self):
-        augs_str = ", ".join([aug.__str__() for aug in self.augmenters])
+        augs_str = ", ".join([aug.__str__() for aug in self.children])
         return "AugmenterSequence(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
 
 class Sometimes(Augmenter):
@@ -125,7 +120,7 @@ class Sometimes(Augmenter):
             if len(then_list) == 0:
                 self.then_list = None
             else:
-                self.then_list = Sequence(then_list, name="%s-then" % (self.name,), random_state=self.random_state.randint(0, 10**6))
+                self.then_list = Sequence(then_list, name="%s-then" % (self.name,), random_state=ia.new_random_state())
         else:
             raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
 
@@ -137,7 +132,7 @@ class Sometimes(Augmenter):
             if len(else_list) == 0:
                 self.else_list = None
             else:
-                self.else_list = Sequence(else_list, name="%s-else" % (self.name,), random_state=self.random_state.randint(0, 10**6))
+                self.else_list = Sequence(else_list, name="%s-else" % (self.name,), random_state=ia.new_random_state())
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
@@ -168,7 +163,7 @@ class Sometimes(Augmenter):
         aug.then_list = aug.then_list.to_deterministic()
         aug.else_list = aug.else_list.to_deterministic()
         aug.deterministic = True
-        aug.random_state = np.random.RandomState(self.random_state.randint(0, 10**6))
+        aug.random_state = ia.new_random_state()
         return aug
 
     def get_parameters(self):
@@ -336,9 +331,9 @@ class AdditiveGaussianNoise(Augmenter):
         result = np.copy(images)
         nb_images = images.shape[0]
         nb_channels = images.shape[3]
-        samples_seeds = copy_random_state(random_state).randint(0, 10**6, size=(nb_images,))
-        samples_loc = self.loc.draw_samples(nb_images, random_state=copy_random_state(random_state))
-        samples_scale = self.scale.draw_samples(nb_images, random_state=copy_random_state(random_state))
+        samples_seeds = ia.copy_random_state(random_state).randint(0, 10**6, size=(nb_images,))
+        samples_loc = self.loc.draw_samples(nb_images, random_state=ia.copy_random_state(random_state))
+        samples_scale = self.scale.draw_samples(nb_images, random_state=ia.copy_random_state(random_state))
         for i in xrange(nb_images):
             sample_seed = samples_seeds[i]
             sample_loc = samples_loc[i]
@@ -358,8 +353,13 @@ class AdditiveGaussianNoise(Augmenter):
     def get_parameters(self):
         return [self.loc, self.scale]
 
+class MultiplicativeGaussianNoise(Augmenter):
+    # todo
+    pass
+
 class ReplacingGaussianNoise(Augmenter):
     # todo
+    pass
 
 class Dropout(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
@@ -486,7 +486,7 @@ class Affine(Augmenter):
         elif isinstance(rotate, (tuple, list)):
             assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (str(len(rotate)),)
             types = [type(r) for r in rotate]
-            assert all([val in ["float", "int"] for val in types), "Expected floats/ints in rotate tuple/list, got %s." % (str(types),)
+            assert all([val in ["float", "int"] for val in types]), "Expected floats/ints in rotate tuple/list, got %s." % (str(types),)
             self.rotate = Uniform(rotate[0], rotate[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
@@ -500,7 +500,7 @@ class Affine(Augmenter):
         elif isinstance(shear, (tuple, list)):
             assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (str(len(shear)),)
             types = [type(r) for r in rotate]
-            assert all([val in ["float", "int"] for val in types), "Expected floats/ints in shear tuple/list, got %s." % (str(types),)
+            assert all([val in ["float", "int"] for val in types]), "Expected floats/ints in shear tuple/list, got %s." % (str(types),)
             self.shear = Uniform(shear[0], shear[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
@@ -544,20 +544,20 @@ class Affine(Augmenter):
     def _draw_samples(self, nb_samples, random_state):
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=copy_random_state(random_state)),
-                self.scale[1].draw_samples((nb_samples,), random_state=copy_random_state(random_state)),
+                self.scale[0].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
+                self.scale[1].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=copy_random_state(random_state)))
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state))
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=copy_random_state(random_state)),
-                self.translate[1].draw_samples((nb_samples,), random_state=copy_random_state(random_state)),
+                self.translate[0].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
+                self.translate[1].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=copy_random_state(random_state))
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state))
             translate_samples = (translate_samples, translate_samples)
 
         assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
@@ -572,7 +572,11 @@ class Affine(Augmenter):
         else:
             translate_samples_px[1] = translate_samples[1]
 
-        rotate_samples = self.rotate.draw_samples((nb_images,), random_state=copy_random_state(random_state))
-        shear_samples = self.shear.draw_samples((nb_images,), random_state=copy_random_state(random_state))
+        rotate_samples = self.rotate.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
+        shear_samples = self.shear.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
 
         return scale_samples, translate_samples_px, rotate_samples, shear_samples
+
+class ElasticTransformation(Augmenter):
+    # todo
+    pass

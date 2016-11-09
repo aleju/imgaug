@@ -12,6 +12,21 @@ except NameError:  # python3
 def is_np_array(val):
     return isinstance(val, (np.ndarray, np.generic))
 
+def current_random_state():
+    return np.random
+
+def new_random_state():
+    # sample manually a seed instead of just RandomState(), because the latter one
+    # is way slower.
+    return np.random.RandomState(np.random.randint(0, 10**6, 1)[0])
+
+def dummy_random_state():
+    return np.random.RandomState(1)
+
+def copy_random_state(random_state):
+    rs_copy = dummy_random_state()
+    rs_copy.set_state(random_state.get_state())
+    return rs_copy
 
 class BackgroundAugmenter(object):
     def __init__(self, image_source, augmenter, maxlen, nb_workers=1):
