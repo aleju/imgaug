@@ -4,6 +4,7 @@ import random
 import numpy as np
 import copy
 import pyimgaug as ia
+import copy
 
 try:
     xrange
@@ -27,90 +28,124 @@ class StochasticParameter(object):
     def _draw_samples(self, size, random_state):
         raise NotImplemented()
 
+    def copy():
+        return copy.copy(self)
+
+    def deepcopy():
+        return copy.deepcopy(self)
+
 class Binomial(StochasticParameter):
     def __init__(self, p):
-        if isinstance(p, float):
-            assert 0 <= p <= 1.0
+        if isinstance(p, StochasticParameter):
             self.p = p
-        elif isinstance(p, BinomialParameter):
-            self.p = p.p
+        elif isinstance(p, float):
+            assert 0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,)
+            self.p = Deterministic(p)
         else:
-            raise Exception("Expected float value or Binomial object, got %s." % (type(p),))
+            raise Exception("Expected StochasticParameter or float value, got %s." % (type(p),))
 
     def _draw_samples(self, size, random_state):
-        return random_state.binomial(1, self.p, size)
+        p = self.p.draw_sample(random_state=random_state)
+        assert 0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,)
+        return random_state.binomial(1, p, size)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "Binomial(%.4f)" % (self.p,)
+        if isinstance(self.p, float):
+            return "Binomial(%.4f)" % (self.p,)
+        else:
+            return "Binomial(%s)" % (self.p,)
 
 class DiscreteUniform(StochasticParameter):
-    def __init__(self, a, b=None):
-        if isinstance(a, DiscreteUniform):
-            self.a = a.a
-            self.b = a.b
-        elif isinstance(a, int):
-            assert b is not None and isinstance(b, int)
-            assert a <= b
-            self.a = a
-            self.b = b
+    def __init__(self, a, b):
+        assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
+        assert isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),)
+
+        if isinstance(a, int):
+            self.a = Deterministic(a)
         else:
-            raise Exception("Expected two int values or DiscreteUniform object, got %s, %s." % (type(a), type(b)))
+            self.a = a
+
+        if isinstance(b, int):
+            self.b = Deterministic(b)
+        else:
+            self.b = b
 
     def _draw_samples(self, size, random_state):
-        return random_state.randint(self.a, self.b, size)
+        a = self.a.draw_sample(random_state=random_state)
+        b = self.b.draw_sample(random_state=random_state)
+        if a > b:
+            a, b = b, a
+        elif a == b:
+            return np.tile(np.array([a]), size)
+        return random_state.randint(a, b, size)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "DiscreteUniform(%d, %d)" % (self.a, self.b)
+        return "DiscreteUniform(%s, %s)" % (self.a, self.b)
 
 class Normal(StochasticParameter):
-    def __init__(self, mean, std=None):
-        if isinstance(mean, Normal):
-            self.mean = mean.mean
-            self.std = mean.std
-        elif isinstance(mean, (float, int)):
-            assert std is not None and isinstance(std, (float, int))
-            assert std >= 0
+    def __init__(self, mean, std):
+        if isinstance(mean, StochasticParameter):
             self.mean = mean
-            self.std = std
+        elif isinstance(mean, (float, int)):
+            self.mean = Deterministic(mean)
         else:
-            raise Exception("Expected two float/int values or Normal object, got %s, %s." % (type(mean), type(std)))
+            raise Exception("Expected float, int or StochasticParameter as mean, got %s, %s." % (type(mean),))
+
+        if isinstance(std, StochasticParameter):
+            self.std = std
+        elif isinstance(std, (float, int)):
+            assert std > 0, "Expected std to be higher than 0, got %s (type %s)." % (std, type(std))
+            self.std = Deterministic(std)
+        else:
+            raise Exception("Expected float, int or StochasticParameter as std, got %s, %s." % (type(std),))
 
     def _draw_samples(self, size, random_state):
-        return random_state.normal(self.mean, self.std, size=size)
+        mean = self.mean.draw_sample(random_state=random_state)
+        std = self.std.draw_sample(random_state=random_state)
+        assert std > 0, "Expected std to be higher than 0, got %s." % (std,)
+        return random_state.normal(mean, std, size=size)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "Normal(mean=%.6f, std=%.6f)" % (self.mean, self.std)
+        return "Normal(mean=%s, std=%s)" % (self.mean, self.std)
 
 class Uniform(StochasticParameter):
-    def __init__(self, a, b=None):
-        if isinstance(a, Uniform):
-            self.a = a.a
-            self.b = a.b
-        elif isinstance(a, (float, int)):
-            assert b is not None and isinstance(b, (float, int))
-            assert a <= b
-            self.a = a
-            self.b = b
+    def __init__(self, a, b):
+        assert isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),)
+        assert isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),)
+
+        if isinstance(a, (int, float)):
+            self.a = Deterministic(a)
         else:
-            raise Exception("Expected two float/int values or Uniform object, got %s, %s." % (type(a), type(b)))
+            self.a = a
+
+        if isinstance(b, (int, float)):
+            self.b = Deterministic(b)
+        else:
+            self.b = b
 
     def _draw_samples(self, size, random_state):
-        return random_state.uniform(self.a, self.b, size)
+        a = self.a.draw_sample(random_state=random_state)
+        b = self.b.draw_sample(random_state=random_state)
+        if a > b:
+            a, b = b, a
+        elif a == b:
+            return np.tile(np.array([a]), size)
+        return random_state.uniform(a, b, size)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "Uniform(%.6f, %.6f)" % (self.a, self.b)
+        return "Uniform(%s, %s)" % (self.a, self.b)
 
 class Deterministic(StochasticParameter):
     def __init__(self, value):
@@ -122,7 +157,7 @@ class Deterministic(StochasticParameter):
             raise Exception("Expected StochasticParameter object or float or int as value, got %s." % (type(value),))
 
     def _draw_samples(self, size, random_state):
-        return np.repeat(np.array([self.value]), size)
+        return np.tile(np.array([self.value]), size)
 
     def __repr__(self):
         return self.__str__()
