@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
 import copy
+import re
 import pyimgaug as ia
 from parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform
 
@@ -18,34 +19,73 @@ class Augmenter(object):
         self.deterministic = deterministic
 
         if random_state is None:
-            self.random_state = ia.current_random_state()
+            if self.deterministic:
+                self.random_state = ia.new_random_state()
+            else:
+                self.random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
             self.random_state = random_state
         else:
             self.random_state = np.random.RandomState(random_state)
+
+        self.deactivated = False
 
     def transform(self, images):
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
         if isinstance(images, (list, tuple)):
-            images_tf = self.transform(np.array(images))
+            assert all([len(image.shape) == 3 for image in images])
+            images_tf = list(images)
         elif ia.is_np_array(images):
-            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, rgb), got shape %s" % (str(images.shape),)
-            #assert images.shape[3] == 3, "Expected RGB images, i.e. shape[3] == 3, got shape %s" % (str(images.shape),)
+            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s" % (str(images.shape),)
             assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
-            images_tf = self._transform(images, random_state=self.random_state)
+            images_tf = images
         else:
             raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
+
+        if self.deactivated:
+            if isinstance(images_tf, list):
+                images_result = [np.copy(image) for image in images]
+            else:
+                images_result = np.copy(images_tf)
+        else:
+            if isinstance(images_tf, list):
+                images_result = []
+                for image in images_tf:
+                    images_result.append(self._transform(np.copy(np.array([image])), random_state=ia.copy_random_state(self.random_state)))
+                    self.random_state.randint(0, 10**6)
+            else:
+                images_result = self._transform(np.copy(images_tf), random_state=ia.copy_random_state(self.random_state))
+                self.random_state.randint(0, 10**6)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
-        return images_tf
+        return images_result
 
     @abstractmethod
     def _transform(self, images, random_state):
         raise NotImplemented()
+
+    def transform_augjob(self, augjob):
+        has_deactivator = (augjob.deactivator is not None)
+        if (has_deactivator and augjob.deactivator(self, augjob)) or (not has_deactivator and self.deactivated):
+            augjob.add_history(self, augjob.images, augjob.images, {})
+            return augjob
+        else:
+            before = augjob.images
+
+            if augjob.preprocessor is not None:
+                augjob = augjob.preprocessor(self, augjob)
+
+            augjob_transformed, changes = self._transform_augjob(augjob)
+
+            if augjob.postprocessor is not None:
+                augjob = augjob.postprocessor(self, augjob, augjob_transformed, changes)
+            augjob.add_history(self, augjob.images, augjob_transformed.images, changes)
+
+            return augjob_transformed
 
     def to_deterministic(self, n=None):
         if n is None:
@@ -63,24 +103,105 @@ class Augmenter(object):
     def get_parameters(self):
         raise NotImplemented()
 
+    def get_children_lists(self):
+        return []
+
+    def find_augmenters(self, func, flat=True):
+        return self._find(func, parents=[], flat=flat)
+
+    def _find_augmenters(self, func, parents, flat):
+        result = []
+        if func(self, parents):
+            result.append(self)
+
+        subparents = parents + [self]
+        for lst in self.get_children_lists():
+            for aug in lst:
+                if flat:
+                    result.extend(aug._find_augmenters(func, parents=subparents, flat=flat))
+                else:
+                    result.append(aug._find_augmenters(func, parents=subparents, flat=flat))
+        return result
+
+    def find_augmenters_by_name(self, name, regex=False, flat=True):
+        return self.find_augmenters_by_names([name], regex=regex, flat=flat)
+
+    def find_augmenters_by_names(self, names, regex=False, flat=True):
+        if regex:
+            def comparer(aug, parents):
+                for pattern in names:
+                    if re.match(pattern, aug.name):
+                        return True
+                return False
+
+            return self.find_augmenters(comparer, flat=flat)
+        else:
+            return self.find_augmenters(lambda aug, parents: aug.name in names, flat=flat)
+
+    def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
+        if func(self, []):
+            if not copy:
+                raise Exception("Inplace removal of topmost augmenter requested, which is currently not possible.")
+
+            if noop_if_topmost:
+                return Noop()
+            else:
+                return None
+        else:
+            aug = self if not copy else self.deepcopy()
+            aug._remove_augmenters_inplace(func, parents=[])
+            return aug
+
+    def _remove_augmenters_inplace(self, func, parents):
+        subparents = parents + [self]
+        for lst in self.get_children_lists():
+            to_remove = []
+            for i, aug in enumerate(lst):
+                if func(aug, subparents):
+                    to_remove.append((i, aug))
+
+            for count_removed, (i, aug) in enumerate(to_remove):
+                self._remove_augmenters_inplace_from_list(lst, aug, i, i - count_removed)
+
+            for aug in lst:
+                aug._remove_augmenters_inplace(func, subparents)
+
+    def _remove_augmenters_inplace_from_list(self, lst, aug, index, index_adjusted):
+        del lst[index_adjusted]
+
+    def to_json(self):
+        #TODO
+        pass
+
     def __str__(self):
         params = self.get_parameters()
         params_str = ", ".join([param.__str__() for param in params])
         return "%s(name=%s, parameters=[%s], deterministic=%s)" % (self.__class__.__name__, self.name, params_str, self.deterministic)
 
-class Sequence(Augmenter):
-    def __init__(self, children=None, name=None, deterministic=False, random_state=None):
+class Sequential(Augmenter, list):
+    def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        self.children = children if children is not None else []
+        list.__init__(self, children if children is not None else [])
+        #self.children = children if children is not None else []
+        self.random_order = random_order
 
     def _transform(self, images, random_state):
-        result = images
-        for augmenter in self.children:
-            result = augmenter.transform(result)
-        return result
+        if self.random_order:
+            result = images
+            #for augmenter in self.children:
+            for index in random_state.permute(len(self)):
+                result = self[index].transform(result)
+            return result
+        else:
+            result = images
+            #for augmenter in self.children:
+            for augmenter in self:
+                result = augmenter.transform(result)
+            return result
 
     def _to_deterministic(self):
-        augs = [aug.to_deterministic() for aug in self.children]
+        #augs = [aug.to_deterministic() for aug in self.children]
+        augs = [aug.to_deterministic() for aug in self]
         seq = copy.copy(self)
         seq.children = augs
         seq.random_state = ia.new_random_state()
@@ -90,16 +211,23 @@ class Sequence(Augmenter):
     def get_parameters(self):
         return []
 
-    def append(self, augmenter):
-        self.children.append(augmenter)
-        return self
+    def add(self, augmenter):
+        self.append(augmenter)
 
-    def extend(self, augmenters):
-        self.children.extend(augmenters)
+    #def append(self, augmenter):
+    #    self.children.append(augmenter)
+    #    return self
+
+    #def extend(self, augmenters):
+    #    self.children.extend(augmenters)
+    #    return self
+
+    def get_children_lists(self):
         return self
 
     def __str__(self):
-        augs_str = ", ".join([aug.__str__() for aug in self.children])
+        #augs_str = ", ".join([aug.__str__() for aug in self.children])
+        augs_str = ", ".join([aug.__str__() for aug in self])
         return "AugmenterSequence(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
 
 class Sometimes(Augmenter):
@@ -117,10 +245,7 @@ class Sometimes(Augmenter):
         elif isinstance(then_list, Augmenter):
             self.then_list = then_list
         elif isinstance(then_list, (list, tuple)):
-            if len(then_list) == 0:
-                self.then_list = None
-            else:
-                self.then_list = Sequence(then_list, name="%s-then" % (self.name,), random_state=ia.new_random_state())
+            self.then_list = Sequential(then_list, name="%s-then" % (self.name,), random_state=ia.new_random_state())
         else:
             raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
 
@@ -129,15 +254,12 @@ class Sometimes(Augmenter):
         elif isinstance(else_list, Augmenter):
             self.else_list = else_list
         elif isinstance(else_list, (list, tuple)):
-            if len(else_list) == 0:
-                self.else_list = None
-            else:
-                self.else_list = Sequence(else_list, name="%s-else" % (self.name,), random_state=ia.new_random_state())
+            self.else_list = Sequential(else_list, name="%s-else" % (self.name,), random_state=ia.new_random_state())
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images = images.shape[0]
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
@@ -168,6 +290,9 @@ class Sometimes(Augmenter):
 
     def get_parameters(self):
         return [self.p]
+
+    def get_children_lists(self):
+        return [self.then_list, self.else_list]
 
     def __str__(self):
         return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
@@ -239,7 +364,7 @@ class Fliplr(Augmenter):
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images = images.shape[0]
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
@@ -262,7 +387,7 @@ class Flipud(Augmenter):
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images = images.shape[0]
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
@@ -287,7 +412,7 @@ class GaussianBlur(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images = images.shape[0]
         nb_channels = images.shape[3]
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
@@ -328,7 +453,7 @@ class AdditiveGaussianNoise(Augmenter):
         self.clip = clip
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images = images.shape[0]
         nb_channels = images.shape[3]
         samples_seeds = ia.copy_random_state(random_state).randint(0, 10**6, size=(nb_images,))
@@ -345,8 +470,6 @@ class AdditiveGaussianNoise(Augmenter):
                 result[i] += (255 * noise)
         if self.clip:
             np.clip(result, 0, 255, out=result)
-
-        random_state.randint(0, 10**6) # move random state forward
 
         return result
 
@@ -373,7 +496,7 @@ class Dropout(Augmenter):
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images, height, width, nb_channels = images.shape
         samples_seeds = random_state.randint(0, 10**6, size=(nb_images,))
         for i in range(nb_images):
@@ -402,7 +525,7 @@ class Multiply(Augmenter):
         self.clip = clip
 
     def _transform(self, images, random_state):
-        result = np.copy(images)
+        result = images
         nb_images = result.shape[0]
         samples = self.mul.draw_samples((nb_images,), random_state=random_state)
         result = result * samples
@@ -508,7 +631,7 @@ class Affine(Augmenter):
     def _transform(self, images, random_state):
         # skimage's warp() converts to 0-1 range, so we use float here and then convert
         # at the end
-        result = np.copy(images).astype(np.float32, copy=False)
+        result = images.astype(np.float32, copy=False)
 
         nb_images, height, width = images.shape[0], images.shape[1], images.shape[2]
 
@@ -542,22 +665,24 @@ class Affine(Augmenter):
         return [self.scale, self.translate, self.rotate, self.shear]
 
     def _draw_samples(self, nb_samples, random_state):
+        seed = random_state.randint(0, 10**6, 1)[0]
+
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
-                self.scale[1].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
+                self.scale[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 10)),
+                self.scale[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 20)),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state))
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 30))
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
-                self.translate[1].draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state)),
+                self.translate[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 40)),
+                self.translate[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 50)),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.copy_random_state(random_state))
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
             translate_samples = (translate_samples, translate_samples)
 
         assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
@@ -572,8 +697,8 @@ class Affine(Augmenter):
         else:
             translate_samples_px[1] = translate_samples[1]
 
-        rotate_samples = self.rotate.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        shear_samples = self.shear.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
+        rotate_samples = self.rotate.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 70))
+        shear_samples = self.shear.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 80))
 
         return scale_samples, translate_samples_px, rotate_samples, shear_samples
 
