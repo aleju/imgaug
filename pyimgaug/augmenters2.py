@@ -28,14 +28,20 @@ class Augmenter(object):
         else:
             self.random_state = np.random.RandomState(random_state)
 
-        self.deactivated = False
+        self.activated = True
 
-    def transform(self, images):
+    def augment_images(self, images):
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
         if isinstance(images, (list, tuple)):
-            assert all([len(image.shape) == 3 for image in images])
+            #assert all([len(image.shape) == 3 for image in images])
+            if len(images) > 0:
+                # dont check all images, only the first one
+                # that's faster and usually all are affected by the same problem anyways
+                # AssertShape exists for more thorough checks
+                assert len(images[0].shape) == 3, "Expected list of images with each image having shape length 3, got length %d." % (len(images[0].shape),)
+                assert images[0].dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images[0].dtype),)
             images_tf = list(images)
         elif ia.is_np_array(images):
             assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s" % (str(images.shape),)
@@ -44,20 +50,19 @@ class Augmenter(object):
         else:
             raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
 
-        if self.deactivated:
-            if isinstance(images_tf, list):
-                images_result = [np.copy(image) for image in images]
-            else:
-                images_result = np.copy(images_tf)
+        if isinstance(images_tf, list):
+            images_copy = [np.copy(image) for image in images]
         else:
-            if isinstance(images_tf, list):
-                images_result = []
-                for image in images_tf:
-                    images_result.append(self._transform(np.copy(np.array([image])), random_state=ia.copy_random_state(self.random_state)))
-                    self.random_state.randint(0, 10**6)
+            images_copy = np.copy(images)
+
+        if self.activated:
+            if len(images) > 0:
+                images_result = self._augment_images(images_copy, random_state=ia.copy_random_state(self.random_state))
+                self.random_state.random()
             else:
-                images_result = self._transform(np.copy(images_tf), random_state=ia.copy_random_state(self.random_state))
-                self.random_state.randint(0, 10**6)
+                images_result = images_copy
+        else:
+            images_result = images_copy
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -65,12 +70,12 @@ class Augmenter(object):
         return images_result
 
     @abstractmethod
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         raise NotImplemented()
 
     def transform_augjob(self, augjob):
-        has_deactivator = (augjob.deactivator is not None)
-        if (has_deactivator and augjob.deactivator(self, augjob)) or (not has_deactivator and self.deactivated):
+        has_activator = (augjob.activator is not None)
+        if (has_activator and augjob.activator(self, augjob)) or (not has_activator and self.activator):
             augjob.add_history(self, augjob.images, augjob.images, {})
             return augjob
         else:
@@ -185,19 +190,16 @@ class Sequential(Augmenter, list):
         #self.children = children if children is not None else []
         self.random_order = random_order
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         if self.random_order:
-            result = images
             #for augmenter in self.children:
             for index in random_state.permute(len(self)):
-                result = self[index].transform(result)
-            return result
+                images = self[index].augment_images(images)
         else:
-            result = images
             #for augmenter in self.children:
             for augmenter in self:
-                result = augmenter.transform(result)
-            return result
+                images = augmenter.augment_images(images)
+        return images
 
     def _to_deterministic(self):
         #augs = [aug.to_deterministic() for aug in self.children]
@@ -258,17 +260,17 @@ class Sometimes(Augmenter):
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images = images.shape[0]
+        nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
             subimage = images[i]
             subimage = subimage[np.newaxis, ...] # convert image to batch
             if samples[i] == 1:
-                result[i] = self.if_list._transform(subimage)[0]
+                result[i] = self.if_list.augment_images(subimage)[0]
             else:
-                result[i] = self.else_list._transform(subimage)[0]
+                result[i] = self.else_list.augment_images(subimage)[0]
         return result
 
     """
@@ -301,7 +303,7 @@ class Noop(Augmenter):
     def __init__(self, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         return images
 
     def get_parameters(self):
@@ -312,7 +314,7 @@ class Lambda(Augmenter):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         self.func = func
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         images = func(images, random_state)
         return images
 
@@ -330,21 +332,37 @@ def AssertLambda(func, name=None, deterministic=False, random_state=None):
 def AssertShape(shape, name=None, deterministic=False, random_state=None):
     assert len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape))
 
+    def compare(observed, expected, dimension, image_index):
+        if expected is not None:
+            if isinstance(expected, int):
+                assert observed == expected, "Expected dim %d (image: %s) to have value %d, got %d." % (dimension, image_index, expected, observed)
+            elif isinstance(expected, tuple):
+                assert len(expected) == 2
+                assert expected[0] <= observed < expected[1], "Expected dim %d (image: %s) to have value in range [%d, %d), got %d." % (dimension, image_index expected[0], expected[1], observed)
+            elif isinstance(expected, list):
+                assert any([observed == val for val in expected]), "Expected dim %d (image: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed)
+            else:
+                raise Exception("Invalid datatype for shape entry %d, expected each entry to be an integer, a tuple (with two entries) or a list, got %s." % (dimension, type(expected),))
+
     def func(images, random_state):
-        assert len(images.shape) == 4, "Expected image's shape to have length 4, got %d with shape: %s." % (len(images.shape), str(images.shape))
-        for i in range(4):
-            expected = shape[i]
-            observed = images.shape[i]
-            if expected is not None:
-                if isinstance(expected, int):
-                    assert observed == expected, "Expected dim %d to have value %d, got %d." % (i, expected, observed)
-                elif isinstance(expected, tuple):
-                    assert len(expected) == 2
-                    assert expected[0] <= observed < expected[1], "Expected dim %d to have value in range [%d, %d), got %d." % (i, expected[0], expected[1], observed)
-                elif isinstance(expected, list):
-                    assert any([observed == val for val in expected]), "Expected dim %d to have any value of %s, got %d." % (i, str(expected), observed)
-                else:
-                    raise Exception("Invalid datatype for shape entry %d, expected each entry to be an integer, a tuple (with two entries) or a list, got %s." % (type(expected),))
+        #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
+        if isinstance(images, list):
+            if shape[0] is not None:
+                compare(len(images), shape[0], i, "ALL")
+
+            for i in xrange(images):
+                image = images[i]
+                assert len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape))
+                for j in xrange(len(shape)):
+                    expected = shape[j+1]
+                    observed = image.shape[j]
+                    compare(observed, expected, j, i)
+        else:
+            assert len(images.shape) == 4, "Expected image's shape to have length 4, got %d (shape: %s)." % (len(images.shape), str(images.shape))
+            for i in range(4):
+                expected = shape[i]
+                observed = images.shape[i]
+                compare(observed, expected, i, "ALL")
         return images
 
     if name is None:
@@ -363,9 +381,9 @@ class Fliplr(Augmenter):
         else:
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images = images.shape[0]
+        nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
             if samples[i] == 1:
@@ -386,9 +404,9 @@ class Flipud(Augmenter):
         else:
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images = images.shape[0]
+        nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
             if samples[i] == 1:
@@ -411,16 +429,16 @@ class GaussianBlur(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images = images.shape[0]
-        nb_channels = images.shape[3]
+        nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
+            nb_channels = images[i].shape[2]
             sig = samples[i]
             if sig > 0:
-                for channel in range(nb_channels):
-                    result[i, :, :, channel] = ndimage.gaussian_filter(result[i, :, :, channel], sig)
+                for channel in xrange(nb_channels):
+                    result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
 
     def get_parameters(self):
@@ -452,14 +470,14 @@ class AdditiveGaussianNoise(Augmenter):
 
         self.clip = clip
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images = images.shape[0]
-        nb_channels = images.shape[3]
+        nb_images = len(images)
         samples_seeds = ia.copy_random_state(random_state).randint(0, 10**6, size=(nb_images,))
         samples_loc = self.loc.draw_samples(nb_images, random_state=ia.copy_random_state(random_state))
         samples_scale = self.scale.draw_samples(nb_images, random_state=ia.copy_random_state(random_state))
         for i in xrange(nb_images):
+            nb_channels = images[i].shape[2]
             sample_seed = samples_seeds[i]
             sample_loc = samples_loc[i]
             sample_scale = samples_scale[i]
@@ -468,8 +486,8 @@ class AdditiveGaussianNoise(Augmenter):
                 rs = np.random.RandomState(sample_seed)
                 noise = rs.normal(sample_loc, sample_scale, size=images[i].shape)
                 result[i] += (255 * noise)
-        if self.clip:
-            np.clip(result, 0, 255, out=result)
+            if self.clip:
+                np.clip(result[i], 0, 255, out=result[i])
 
         return result
 
@@ -495,11 +513,12 @@ class Dropout(Augmenter):
         else:
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images, height, width, nb_channels = images.shape
+        nb_images = len(images)
         samples_seeds = random_state.randint(0, 10**6, size=(nb_images,))
         for i in range(nb_images):
+            height, width, nb_channels = images[i].shape
             seed = samples_seeds[i]
             rs_image = np.random.RandomState(seed)
             samples = self.p.draw_samples((height, width, nb_channels), random_state=rs_image)
@@ -524,13 +543,14 @@ class Multiply(Augmenter):
             raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
         self.clip = clip
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         result = images
-        nb_images = result.shape[0]
+        nb_images = len(images)
         samples = self.mul.draw_samples((nb_images,), random_state=random_state)
-        result = result * samples
-        if self.clip:
-            np.clip(result, 0, 255, out=result)
+        for i in xrange(nb_images):
+            result[i] *= samples[i]
+            if self.clip:
+                np.clip(result[i], 0, 255, out=result[i])
         return result
 
     def get_parameters(self):
@@ -628,12 +648,12 @@ class Affine(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
 
-    def _transform(self, images, random_state):
+    def _augment_images(self, images, random_state):
         # skimage's warp() converts to 0-1 range, so we use float here and then convert
         # at the end
         result = images.astype(np.float32, copy=False)
 
-        nb_images, height, width = images.shape[0], images.shape[1], images.shape[2]
+        nb_images = len(images)
 
         scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images, random_state)
 
@@ -641,6 +661,7 @@ class Affine(Augmenter):
         shift_y = int(height / 2.0)
 
         for i in xrange(nb_images):
+            height, width = result[i].shape[0], result[i].shape[1]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x_px, translate_y_px = translate_samples_px[0][i], translate_samples_px[1][i]
             rotate = rotate_samples[i]
@@ -657,9 +678,15 @@ class Affine(Augmenter):
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center).inverse
                 result[i, ...] = tf.warp(result[i, ...], matrix, **self.warp_args)
 
-        random_state.randint(0, 10**6) # move random state forward
+            result[i] *= 255.0
+            np.clip(result[i], 0, 255, out=result[i])
 
-        return (result * 255.0).astype(np.uint8, copy=False)
+        if isinstance(images, list):
+            result = [image.astype(np.uint8, copy=False) for image in result]
+        else:
+            result = result.astype(np.uint8, copy=False)
+
+        return result
 
     def get_parameters(self):
         return [self.scale, self.translate, self.rotate, self.shear]
