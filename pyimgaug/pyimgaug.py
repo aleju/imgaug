@@ -38,14 +38,93 @@ def from_json(json_str):
     #TODO
     pass
 
+class HooksImages(object):
+    def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
+        self.activator = activator
+        self.propagator = propagator
+        self.preprocessor = preprocessor
+        self.postprocessor = postprocessor
+
+    def is_activated(self, images, augmenter, parents):
+        if self.activator is None:
+            return augmenter.activated
+        else:
+            return self.activator(images, augmenter, parents)
+
+    def is_propagating(self, images, augmenter, parents, default=True):
+        if self.propagator is None:
+            if default is None:
+                return True
+            else:
+                return default
+        else:
+            return self.propagator(images, augmenter, parents, default)
+
+    def preprocess(self, images, augmenter, parents):
+        if self.preprocessor is None:
+            return images
+        else:
+            return self.preprocessor(images, augmenter, parents)
+
+    def postprocess(self, images, augmenter, parents):
+        if self.postprocessor is None:
+            return images
+        else:
+            return self.postprocessor(images, augmenter, parents)
+
+class HooksKeypoints(HooksImages):
+    pass
+
+class Keypoint(object):
+    def __init__(self, x, y):
+        assert isinstance(x, int)
+        assert isinstance(y, int)
+        self.x = x
+        self.y = y
+
+class KeypointsOnImage(object):
+    def __init__(self, keypoints, shape):
+        self.keypoints = keypoints
+        if is_np_array(shape):
+            self.shape = shape.shape
+        else:
+            assert isinstance(shape, (tuple, list))
+            self.shape = tuple(shape)
+
+    @property
+    def height(self):
+        return self.shape[0]
+
+    @property
+    def width(self):
+        return self.shape[1]
+
+    def get_coords_array(self):
+        result = np.zeros((len(self.keypoints), 2), np.int32)
+        for i, keypoint in enumerate(keypoints):
+            result[i, 0] = keypoint.x
+            result[i, 1] = keypoint.y
+        return result
+
+    @staticmethod
+    def from_coords_array(self, coords, shape):
+        keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in xrange(coords.shape[0])]
+        return KeypointsOnImage(keypoints, shape)
+
+    def copy(self):
+        return copy.copy(self)
+
+    def deepcopy(self):
+        return copy.deepcopy(self)
+
+"""
 class AugJob(object):
-    def __init__(self, images, routes=None, preprocessor=None, postprocessor=None, deactivator=None, random_state=None, track_history=False, history=None):
+    def __init__(self, images, routes=None, preprocessor=None, postprocessor=None, activator=None, track_history=False, history=None):
         self.images = images
         self.routes = routes if routes is not None else []
         self.preprocessor = preprocessor
         self.postprocessor = postprocessor
-        self.deactivator = deactivator
-        self.random_state = random_state
+        self.activator = activator
         self.track_history = track_history
         self.history = history if history is not None else []
 
@@ -80,6 +159,7 @@ class AugJob(object):
         if images is not None:
             job.images = images
         return job
+"""
 
 class BackgroundAugmenter(object):
     def __init__(self, image_source, augmenter, maxlen, nb_workers=1):

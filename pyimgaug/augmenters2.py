@@ -30,9 +30,15 @@ class Augmenter(object):
 
         self.activated = True
 
-    def augment_images(self, images):
+    def augment_images(self, images, parents=None, hooks=None):
         if self.deterministic:
             state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
+        if hooks is None:
+            hooks = ia.HooksImages()
 
         if isinstance(images, (list, tuple)):
             #assert all([len(image.shape) == 3 for image in images])
@@ -55,14 +61,23 @@ class Augmenter(object):
         else:
             images_copy = np.copy(images)
 
-        if self.activated:
+        images_copy = hooks.preprocess(images, augmenter=augmenter, parents=parents)
+
+        if hooks.is_activated(images_copy, augmenter=augmenter, parents=parents):
             if len(images) > 0:
-                images_result = self._augment_images(images_copy, random_state=ia.copy_random_state(self.random_state))
+                images_result = self._augment_images(
+                    images_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
                 self.random_state.random()
             else:
                 images_result = images_copy
         else:
             images_result = images_copy
+
+        images_result = hooks.postprocess(images_result, augmenter=augmenter, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -70,9 +85,52 @@ class Augmenter(object):
         return images_result
 
     @abstractmethod
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         raise NotImplemented()
 
+    def augment_keypoints(keypoints_on_images, parents=None, hooks=None):
+        if self.deterministic:
+            state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
+        if hooks is None:
+            hooks = ia.HooksKeypoints()
+
+        assert isinstance(keypoints_on_images, list)
+        assert all([isinstance(keypoints_on_image, KeypointsOnImage) for keypoints_on_image in keypoints_on_images])
+
+        keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
+
+        keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=augmenter, parents=parents)
+
+        if hooks.is_activated(keypoints_on_images_copy, augmenter=augmenter, parents=parents):
+            if len(keypoints_on_images_copy) > 0:
+                keypoints_on_images_result = self._augment_keypoints(
+                    keypoints_on_images_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
+                self.random_state.random()
+            else:
+                images_result = keypoints_on_images_copy
+        else:
+            images_result = keypoints_on_images_copy
+
+        keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=augmenter, parents=parents)
+
+        if self.deterministic:
+            self.random_state.set_state(state_orig)
+
+        return keypoints_on_images_result
+
+    @abstractmethod
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        raise NotImplemented()
+
+    """
     def transform_augjob(self, augjob):
         has_activator = (augjob.activator is not None)
         if (has_activator and augjob.activator(self, augjob)) or (not has_activator and self.activator):
@@ -91,6 +149,7 @@ class Augmenter(object):
             augjob.add_history(self, augjob.images, augjob_transformed.images, changes)
 
             return augjob_transformed
+    """
 
     def to_deterministic(self, n=None):
         if n is None:
@@ -190,16 +249,45 @@ class Sequential(Augmenter, list):
         #self.children = children if children is not None else []
         self.random_order = random_order
 
-    def _augment_images(self, images, random_state):
-        if self.random_order:
-            #for augmenter in self.children:
-            for index in random_state.permute(len(self)):
-                images = self[index].augment_images(images)
-        else:
-            #for augmenter in self.children:
-            for augmenter in self:
-                images = augmenter.augment_images(images)
+    def _augment_images(self, images, random_state, parents, hooks):
+        if hooks.is_propagating(images, augmenter=self, parents=parents):
+            if self.random_order:
+                #for augmenter in self.children:
+                for index in random_state.permute(len(self)):
+                    images = self[index].augment_images(
+                        images=images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                #for augmenter in self.children:
+                for augmenter in self:
+                    images = augmenter.augment_images(
+                        images=images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
         return images
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
+            if self.random_order:
+                #for augmenter in self.children:
+                for index in random_state.permute(len(self)):
+                    keypoints_on_images = self[index].augment_keypoints(
+                        keypoints_on_images=keypoints_on_images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                #for augmenter in self.children:
+                for augmenter in self:
+                    keypoints_on_images = augmenter.augment_keypoints(
+                        keypoints_on_images=keypoints_on_images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+        return keypoints_on_images
 
     def _to_deterministic(self):
         #augs = [aug.to_deterministic() for aug in self.children]
@@ -260,17 +348,80 @@ class Sometimes(Augmenter):
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        nb_images = len(images)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i in xrange(nb_images):
-            subimage = images[i]
-            subimage = subimage[np.newaxis, ...] # convert image to batch
-            if samples[i] == 1:
-                result[i] = self.if_list.augment_images(subimage)[0]
+        if hooks.is_propagating(images, augmenter=self, parents=parents):
+            nb_images = len(images)
+            samples = self.p.draw_samples((nb_images,), random_state=random_state)
+
+            # create lists/arrays of images for if and else lists (one for each)
+            indices_if_list = np.where(samples == 1)
+            indices_else_list = np.where(samples == 0)
+            if isinstance(images, list):
+                images_if_list = [images[i] for i in indices_if_list]
+                images_else_list = [images[i] for i in indices_else_list]
             else:
-                result[i] = self.else_list.augment_images(subimage)[0]
+                images_if_list = images[indices_if_list]
+                images_else_list = images[indices_else_list]
+
+            # augment according to if and else list
+            result_if_list = self.if_list.augment_images(
+                images=images_if_list,
+                parents=parents + [self],
+                propagator=propagator
+            )
+            result_else_list = self.else_list.augment_images(
+                images=images_else_list,
+                parents=parents + [self],
+                propagator=propagator
+            )
+
+            # map results of if/else lists back to their initial positions (in "images" variable)
+            result = [None] * len(images)
+            for idx_result_if_list, idx_images in enumerate(result_if_list):
+                result[idx_images] = result_if_list[idx_result_if_list]
+            for idx_result_else_list, idx_images in enumerate(result_else_list):
+                result[idx_images] = result_else_list[idx_result_else_list]
+
+            # if input was a list, keep the output as a list too,
+            # otherwise it was a numpy array, so make the output a numpy array too
+            if not isinstance(images, list):
+                result = np.array(images, dtype=np.uint8)
+
+        return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        # TODO this is mostly copy pasted from _augment_images, make dry
+        result = keypoints_on_images
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
+            nb_images = len(images)
+            samples = self.p.draw_samples((nb_images,), random_state=random_state)
+
+            # create lists/arrays of images for if and else lists (one for each)
+            indices_if_list = np.where(samples == 1)
+            indices_else_list = np.where(samples == 0)
+            images_if_list = [keypoints_on_images[i] for i in indices_if_list]
+            images_else_list = [keypoints_on_images[i] for i in indices_else_list]
+
+            # augment according to if and else list
+            result_if_list = self.if_list.augment_keypoints(
+                keypoints_on_images=images_if_list,
+                parents=parents + [self],
+                propagator=propagator
+            )
+            result_else_list = self.else_list.augment_keypoints(
+                keypoints_on_images=images_else_list,
+                parents=parents + [self],
+                propagator=propagator
+            )
+
+            # map results of if/else lists back to their initial positions (in "images" variable)
+            result = [None] * len(keypoints_on_images)
+            for idx_result_if_list, idx_images in enumerate(result_if_list):
+                result[idx_images] = result_if_list[idx_result_if_list]
+            for idx_result_else_list, idx_images in enumerate(result_else_list):
+                result[idx_images] = result_else_list[idx_result_else_list]
+
         return result
 
     """
@@ -303,67 +454,91 @@ class Noop(Augmenter):
     def __init__(self, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, hooks):
         return images
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
 
     def get_parameters(self):
         return []
 
 class Lambda(Augmenter):
-    def __init__(self, func, name=None, deterministic=False, random_state=None):
+    def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        self.func = func
+        self.func_images = func_images
+        self.func_keypoints = func_keypoints
 
-    def _augment_images(self, images, random_state):
-        images = func(images, random_state)
-        return images
+    def _augment_images(self, images, random_state, parents, hooks):
+        return self.func_images(images, random_state, parents=parents, hooks=hooks)
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
 
     def get_parameters(self):
         return []
 
-def AssertLambda(func, name=None, deterministic=False, random_state=None):
-    def func_assert(images, random_state):
-        assert func(images)
+def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, random_state=None):
+    def func_images_assert(images, random_state, parents, hooks):
+        assert func_images(images, random_state, parents=parents, hooks=hooks)
+        return images
+    def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
+        assert func_keypoints(images, random_state, parents=parents, hooks=hooks)
         return images
     if name is None:
         name = "UnnamedAssertLambda"
-    return Lambda(func_assert, name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
 
-def AssertShape(shape, name=None, deterministic=False, random_state=None):
+def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deterministic=False, random_state=None):
     assert len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape))
 
     def compare(observed, expected, dimension, image_index):
         if expected is not None:
             if isinstance(expected, int):
-                assert observed == expected, "Expected dim %d (image: %s) to have value %d, got %d." % (dimension, image_index, expected, observed)
+                assert observed == expected, "Expected dim %d (entry index: %s) to have value %d, got %d." % (dimension, image_index, expected, observed)
             elif isinstance(expected, tuple):
                 assert len(expected) == 2
-                assert expected[0] <= observed < expected[1], "Expected dim %d (image: %s) to have value in range [%d, %d), got %d." % (dimension, image_index expected[0], expected[1], observed)
+                assert expected[0] <= observed < expected[1], "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (dimension, image_index expected[0], expected[1], observed)
             elif isinstance(expected, list):
-                assert any([observed == val for val in expected]), "Expected dim %d (image: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed)
+                assert any([observed == val for val in expected]), "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed)
             else:
                 raise Exception("Invalid datatype for shape entry %d, expected each entry to be an integer, a tuple (with two entries) or a list, got %s." % (dimension, type(expected),))
 
-    def func(images, random_state):
-        #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
-        if isinstance(images, list):
-            if shape[0] is not None:
-                compare(len(images), shape[0], i, "ALL")
+    def func_images(images, random_state, parents, hooks):
+        if check_images:
+            #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
+            if isinstance(images, list):
+                if shape[0] is not None:
+                    compare(len(images), shape[0], i, "ALL")
 
-            for i in xrange(images):
-                image = images[i]
-                assert len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape))
-                for j in xrange(len(shape)):
-                    expected = shape[j+1]
-                    observed = image.shape[j]
-                    compare(observed, expected, j, i)
-        else:
-            assert len(images.shape) == 4, "Expected image's shape to have length 4, got %d (shape: %s)." % (len(images.shape), str(images.shape))
-            for i in range(4):
-                expected = shape[i]
-                observed = images.shape[i]
-                compare(observed, expected, i, "ALL")
+                for i in xrange(images):
+                    image = images[i]
+                    assert len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape))
+                    for j in xrange(len(shape)):
+                        expected = shape[j+1]
+                        observed = image.shape[j]
+                        compare(observed, expected, j, i)
+            else:
+                assert len(images.shape) == 4, "Expected image's shape to have length 4, got %d (shape: %s)." % (len(images.shape), str(images.shape))
+                for i in range(4):
+                    expected = shape[i]
+                    observed = images.shape[i]
+                    compare(observed, expected, i, "ALL")
         return images
+
+    def func_keypoints(keypoints_on_images, random_state, parents, hooks):
+        if check_keypoints:
+            #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
+            if shape[0] is not None:
+                compare(len(keypoints_on_images), shape[0], i, "ALL")
+
+            for i in xrange(keypoints_on_images):
+                keypoints_on_image = keypoints_on_images[i]
+                for j in xrange(len(shape[0:2])):
+                    expected = shape[j+1]
+                    observed = keypoints_on_image.shape[j]
+                    compare(observed, expected, j, i)
+        return keypoints_on_images
 
     if name is None:
         name = "UnnamedAssertShape"
@@ -381,7 +556,7 @@ class Fliplr(Augmenter):
         else:
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
@@ -389,6 +564,13 @@ class Fliplr(Augmenter):
             if samples[i] == 1:
                 result[i] = np.fliplr(images[i])
         return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        for keypoints_on_image in keypoints_on_images:
+            height, width = keypoints_on_image.shape[0:2]
+            for keypoint in keypoints_on_image.keypoints:
+                keypoint.x = width - keypoint.x
+        return keypoints_on_images
 
     def get_parameters(self):
         return [self.p]
@@ -404,7 +586,7 @@ class Flipud(Augmenter):
         else:
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
@@ -412,6 +594,13 @@ class Flipud(Augmenter):
             if samples[i] == 1:
                 result[i] = np.flipud(images[i])
         return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        for keypoints_on_image in keypoints_on_images:
+            height, width = keypoints_on_image.shape[0:2]
+            for keypoint in keypoints_on_image.keypoints:
+                keypoint.y = height - keypoint.y
+        return keypoints_on_images
 
     def get_parameters(self):
         return [self.p]
@@ -429,7 +618,7 @@ class GaussianBlur(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
@@ -440,6 +629,9 @@ class GaussianBlur(Augmenter):
                 for channel in xrange(nb_channels):
                     result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
 
     def get_parameters(self):
         return [self.sigma]
@@ -470,7 +662,7 @@ class AdditiveGaussianNoise(Augmenter):
 
         self.clip = clip
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples_seeds = ia.copy_random_state(random_state).randint(0, 10**6, size=(nb_images,))
@@ -490,6 +682,9 @@ class AdditiveGaussianNoise(Augmenter):
                 np.clip(result[i], 0, 255, out=result[i])
 
         return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
 
     def get_parameters(self):
         return [self.loc, self.scale]
@@ -513,7 +708,7 @@ class Dropout(Augmenter):
         else:
             raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples_seeds = random_state.randint(0, 10**6, size=(nb_images,))
@@ -524,6 +719,9 @@ class Dropout(Augmenter):
             samples = self.p.draw_samples((height, width, nb_channels), random_state=rs_image)
             result[i] = result[i] * samples
         return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
 
     def get_parameters(self):
         return [self.p]
@@ -543,7 +741,7 @@ class Multiply(Augmenter):
             raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
         self.clip = clip
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples = self.mul.draw_samples((nb_images,), random_state=random_state)
@@ -553,13 +751,18 @@ class Multiply(Augmenter):
                 np.clip(result[i], 0, 255, out=result[i])
         return result
 
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
     def get_parameters(self):
         return [self.mul]
 
 class Affine(Augmenter):
-    def __init__(self, scale=1.0, translate=0, rotate=0.0, shear=0.0, name=None, deterministic=False, random_state=None):
+    def __init__(self, scale=1.0, translate=0, rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant", name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        self.warp_args = warp_args if warp_args is not None else dict()
+        self.order = order
+        self.cval = cval
+        self.mode = mode
 
         # scale
         # float | (float, float) | [float, float] | StochasticParameter
@@ -648,7 +851,7 @@ class Affine(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
 
-    def _augment_images(self, images, random_state):
+    def _augment_images(self, images, random_state, parents, hooks):
         # skimage's warp() converts to 0-1 range, so we use float here and then convert
         # at the end
         result = images.astype(np.float32, copy=False)
@@ -657,11 +860,10 @@ class Affine(Augmenter):
 
         scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images, random_state)
 
-        shift_x = int(width / 2.0)
-        shift_y = int(height / 2.0)
-
         for i in xrange(nb_images):
             height, width = result[i].shape[0], result[i].shape[1]
+            shift_x = int(width / 2.0)
+            shift_y = int(height / 2.0)
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x_px, translate_y_px = translate_samples_px[0][i], translate_samples_px[1][i]
             rotate = rotate_samples[i]
@@ -676,7 +878,13 @@ class Affine(Augmenter):
                 )
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center).inverse
-                result[i, ...] = tf.warp(result[i, ...], matrix, **self.warp_args)
+                result[i, ...] = tf.warp(
+                    result[i, ...],
+                    matrix,
+                    order=self.order,
+                    mode=self.mode,
+                    cval=self.cval
+                )
 
             result[i] *= 255.0
             np.clip(result[i], 0, 255, out=result[i])
@@ -686,6 +894,35 @@ class Affine(Augmenter):
         else:
             result = result.astype(np.uint8, copy=False)
 
+        return result
+
+    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+        result = []
+        nb_images = len(keypoints_on_images)
+        scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images, random_state)
+
+        for keypoints_on_image in keypoints_on_images:
+            height, width = keypoints_on_image.height, keypoints_on_image.width
+            shift_x = int(width / 2.0)
+            shift_y = int(height / 2.0)
+            scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
+            translate_x_px, translate_y_px = translate_samples_px[0][i], translate_samples_px[1][i]
+            rotate = rotate_samples[i]
+            shear = shear_samples[i]
+            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
+                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+                matrix_transforms = tf.AffineTransform(
+                    scale=(scale_x, scale_y),
+                    translation=(translate_x, translate_y),
+                    rotation=rotate,
+                    shear=shear
+                )
+                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center).inverse
+
+                coords = keypoints_on_image.get_coords_array()
+                coords_aug = tf.matrix_transform(coords, matrix)
+                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=keypoints_on_image.shape))
         return result
 
     def get_parameters(self):
