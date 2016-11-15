@@ -61,9 +61,9 @@ class Augmenter(object):
         else:
             images_copy = np.copy(images)
 
-        images_copy = hooks.preprocess(images, augmenter=augmenter, parents=parents)
+        images_copy = hooks.preprocess(images_copy, augmenter=self, parents=parents)
 
-        if hooks.is_activated(images_copy, augmenter=augmenter, parents=parents):
+        if hooks.is_activated(images_copy, augmenter=self, parents=parents):
             if len(images) > 0:
                 images_result = self._augment_images(
                     images_copy,
@@ -71,13 +71,13 @@ class Augmenter(object):
                     parents=parents,
                     hooks=hooks
                 )
-                self.random_state.random()
+                self.random_state.uniform()
             else:
                 images_result = images_copy
         else:
             images_result = images_copy
 
-        images_result = hooks.postprocess(images_result, augmenter=augmenter, parents=parents)
+        images_result = hooks.postprocess(images_result, augmenter=self, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -88,7 +88,7 @@ class Augmenter(object):
     def _augment_images(self, images, random_state, parents, hooks):
         raise NotImplemented()
 
-    def augment_keypoints(keypoints_on_images, parents=None, hooks=None):
+    def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
@@ -99,13 +99,13 @@ class Augmenter(object):
             hooks = ia.HooksKeypoints()
 
         assert isinstance(keypoints_on_images, list)
-        assert all([isinstance(keypoints_on_image, KeypointsOnImage) for keypoints_on_image in keypoints_on_images])
+        assert all([isinstance(keypoints_on_image, ia.KeypointsOnImage) for keypoints_on_image in keypoints_on_images])
 
         keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
 
-        keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=augmenter, parents=parents)
+        keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
 
-        if hooks.is_activated(keypoints_on_images_copy, augmenter=augmenter, parents=parents):
+        if hooks.is_activated(keypoints_on_images_copy, augmenter=self, parents=parents):
             if len(keypoints_on_images_copy) > 0:
                 keypoints_on_images_result = self._augment_keypoints(
                     keypoints_on_images_copy,
@@ -113,13 +113,13 @@ class Augmenter(object):
                     parents=parents,
                     hooks=hooks
                 )
-                self.random_state.random()
+                self.random_state.uniform()
             else:
                 images_result = keypoints_on_images_copy
         else:
             images_result = keypoints_on_images_copy
 
-        keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=augmenter, parents=parents)
+        keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=self, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -127,7 +127,7 @@ class Augmenter(object):
         return keypoints_on_images_result
 
     @abstractmethod
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         raise NotImplemented()
 
     """
@@ -269,7 +269,7 @@ class Sequential(Augmenter, list):
                     )
         return images
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
             if self.random_order:
                 #for augmenter in self.children:
@@ -390,7 +390,7 @@ class Sometimes(Augmenter):
 
         return result
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         # TODO this is mostly copy pasted from _augment_images, make dry
         result = keypoints_on_images
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
@@ -454,10 +454,10 @@ class Noop(Augmenter):
     def __init__(self, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-    def _augment_images(self, images, random_state, hooks):
+    def _augment_images(self, images, random_state, parents, hooks):
         return images
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
@@ -472,7 +472,7 @@ class Lambda(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return self.func_images(images, random_state, parents=parents, hooks=hooks)
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
 
     def get_parameters(self):
@@ -498,7 +498,7 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
                 assert observed == expected, "Expected dim %d (entry index: %s) to have value %d, got %d." % (dimension, image_index, expected, observed)
             elif isinstance(expected, tuple):
                 assert len(expected) == 2
-                assert expected[0] <= observed < expected[1], "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (dimension, image_index expected[0], expected[1], observed)
+                assert expected[0] <= observed < expected[1], "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (dimension, image_index, expected[0], expected[1], observed)
             elif isinstance(expected, list):
                 assert any([observed == val for val in expected]), "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed)
             else:
@@ -509,12 +509,12 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
             #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
             if isinstance(images, list):
                 if shape[0] is not None:
-                    compare(len(images), shape[0], i, "ALL")
+                    compare(len(images), shape[0], 0, "ALL")
 
-                for i in xrange(images):
+                for i in xrange(len(images)):
                     image = images[i]
                     assert len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape))
-                    for j in xrange(len(shape)):
+                    for j in xrange(len(shape)-1):
                         expected = shape[j+1]
                         observed = image.shape[j]
                         compare(observed, expected, j, i)
@@ -530,9 +530,9 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
         if check_keypoints:
             #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
             if shape[0] is not None:
-                compare(len(keypoints_on_images), shape[0], i, "ALL")
+                compare(len(keypoints_on_images), shape[0], 0, "ALL")
 
-            for i in xrange(keypoints_on_images):
+            for i in xrange(len(keypoints_on_images)):
                 keypoints_on_image = keypoints_on_images[i]
                 for j in xrange(len(shape[0:2])):
                     expected = shape[j+1]
@@ -543,33 +543,35 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
     if name is None:
         name = "UnnamedAssertShape"
 
-    return Lambda(func, name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)
 
 class Fliplr(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(p, float):
+        if isinstance(p, (float, int)):
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
         else:
-            raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
+            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
             if samples[i] == 1:
-                result[i] = np.fliplr(images[i])
-        return result
+                images[i] = np.fliplr(images[i])
+        return images
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
-        for keypoints_on_image in keypoints_on_images:
-            height, width = keypoints_on_image.shape[0:2]
-            for keypoint in keypoints_on_image.keypoints:
-                keypoint.x = width - keypoint.x
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        nb_images = len(keypoints_on_images)
+        samples = self.p.draw_samples((nb_images,), random_state=random_state)
+        for i, keypoints_on_image in enumerate(keypoints_on_images):
+            if samples[i] == 1:
+                height, width = keypoints_on_image.shape[0:2]
+                for keypoint in keypoints_on_image.keypoints:
+                    keypoint.x = (width - 1) - keypoint.x
         return keypoints_on_images
 
     def get_parameters(self):
@@ -579,27 +581,29 @@ class Flipud(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(p, float):
+        if isinstance(p, (float, int)):
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
         else:
-            raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
+            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
             if samples[i] == 1:
-                result[i] = np.flipud(images[i])
-        return result
+                images[i] = np.flipud(images[i])
+        return images
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
-        for keypoints_on_image in keypoints_on_images:
-            height, width = keypoints_on_image.shape[0:2]
-            for keypoint in keypoints_on_image.keypoints:
-                keypoint.y = height - keypoint.y
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        nb_images = len(keypoints_on_images)
+        samples = self.p.draw_samples((nb_images,), random_state=random_state)
+        for i, keypoints_on_image in enumerate(keypoints_on_images):
+            if samples[i] == 1:
+                height, width = keypoints_on_image.shape[0:2]
+                for keypoint in keypoints_on_image.keypoints:
+                    keypoint.y = (height - 1) - keypoint.y
         return keypoints_on_images
 
     def get_parameters(self):
@@ -630,7 +634,7 @@ class GaussianBlur(Augmenter):
                     result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
@@ -640,7 +644,7 @@ class AdditiveGaussianNoise(Augmenter):
     def __init__(self, loc=0, scale=0, clip=True, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(loc, float):
+        if isinstance(loc, (float, int)):
             self.loc = Deterministic(loc)
         elif isinstance(loc, (tuple, list)):
             assert len(loc) == 2, "Expected tuple/list with 2 entries for argument 'loc', got %d entries." % (str(len(scale)),)
@@ -648,9 +652,9 @@ class AdditiveGaussianNoise(Augmenter):
         elif isinstance(loc, StochasticParameter):
             self.loc = loc
         else:
-            raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter for argument 'loc'. Got %s." % (type(loc),))
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'loc'. Got %s." % (type(loc),))
 
-        if isinstance(scale, float):
+        if isinstance(scale, (float, float)):
             self.scale = Deterministic(scale)
         elif isinstance(scale, (tuple, list)):
             assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (str(len(scale)),)
@@ -658,7 +662,7 @@ class AdditiveGaussianNoise(Augmenter):
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
         else:
-            raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
 
         self.clip = clip
 
@@ -683,7 +687,7 @@ class AdditiveGaussianNoise(Augmenter):
 
         return result
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
@@ -701,12 +705,12 @@ class Dropout(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(p, float):
+        if isinstance(p, (float, int)):
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
         else:
-            raise Exception("Expected p to be float or StochasticParameter, got %s." % (type(p),))
+            raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -720,7 +724,7 @@ class Dropout(Augmenter):
             result[i] = result[i] * samples
         return result
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
@@ -729,7 +733,7 @@ class Dropout(Augmenter):
 class Multiply(Augmenter):
     def __init__(self, mul=1.0, clip=True, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        if isinstance(mul, float):
+        if isinstance(mul, (float, int)):
             assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
             self.mul = Deterministic(mul)
         elif isinstance(mul, (tuple, list)):
@@ -738,7 +742,7 @@ class Multiply(Augmenter):
         elif isinstance(mul, StochasticParameter):
             self.mul = mul
         else:
-            raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
         self.clip = clip
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -751,7 +755,7 @@ class Multiply(Augmenter):
                 np.clip(result[i], 0, 255, out=result[i])
         return result
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
@@ -769,7 +773,7 @@ class Affine(Augmenter):
         def scale_handle_param(param, allow_dict):
             if isinstance(param, StochasticParameter):
                 return param
-            elif isinstance(param, float):
+            elif isinstance(param, (float, int)):
                 assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (param,)
                 return Deterministic(param)
             elif isinstance(param, (tuple, list)):
@@ -786,7 +790,7 @@ class Affine(Augmenter):
 
                 return (scale_handle_param(x, Fale), scale_handle_param(y, False))
             else:
-                raise Exception("Expected float, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
+                raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
         self.scale = scale_handle_param(scale, True)
 
         # translate
@@ -820,7 +824,7 @@ class Affine(Augmenter):
             elif isinstance(param, StochasticParameter):
                 self.translate = param
             else:
-                raise Exception("Expected float, or int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
+                raise Exception("Expected float, int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
         self.translate = translate_handle_param(translate, True)
 
         # rotate
@@ -896,7 +900,7 @@ class Affine(Augmenter):
 
         return result
 
-    def _augment_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
         scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images, random_state)
