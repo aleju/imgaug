@@ -15,8 +15,10 @@ def main():
     test_Noop()
 
     # Lambda
+    test_Lambda()
 
     # AssertLambda
+    test_AssertLambda()
 
     # AssertShape
     test_AssertShape()
@@ -28,8 +30,10 @@ def main():
     test_Flipud()
 
     # GaussianBlur
+    test_GaussianBlur()
 
     # AdditiveGaussianNoise
+    test_AdditiveGaussianNoise()
 
     # MultiplicativeGaussianNoise
 
@@ -74,10 +78,156 @@ def test_Noop():
     assert keypoints_equal(observed, expected)
 
 def test_Lambda():
-    pass
+    base_img = np.array([[0, 0, 1],
+                         [0, 0, 1],
+                         [0, 1, 1]], dtype=np.uint8)
+    base_img = base_img[:, :, np.newaxis]
+    images = np.array([base_img])
+    images_list = [base_img]
+
+    images_aug = images + 1
+    images_aug_list = [image + 1 for image in images_list]
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=1), ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
+
+    def func_images(images, random_state, parents, hooks):
+        if isinstance(images, list):
+            images = [image + 1 for image in images]
+        else:
+            images = images + 1
+        return images
+
+    def func_keypoints(keypoints_on_images, random_state, parents, hooks):
+        for keypoints_on_image in keypoints_on_images:
+            for kp in keypoints_on_image.keypoints:
+                kp.x = (kp.x + 1) % 3
+        return keypoints_on_images
+
+    aug = iaa.Lambda(func_images, func_keypoints)
+    aug_det = aug.to_deterministic()
+
+    # check once that the augmenter can handle lists correctly
+    observed = aug.augment_images(images_list)
+    expected = images_aug_list
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = images_aug_list
+    assert array_equal_lists(observed, expected)
+
+    for _ in range(10):
+        observed = aug.augment_images(images)
+        expected = images_aug
+        assert np.array_equal(observed, expected)
+
+        observed = aug_det.augment_images(images)
+        expected = images_aug
+        assert np.array_equal(observed, expected)
+
+        observed = aug.augment_keypoints(keypoints)
+        expected = keypoints_aug
+        assert keypoints_equal(observed, expected)
+
+        observed = aug_det.augment_keypoints(keypoints)
+        expected = keypoints_aug
+        assert keypoints_equal(observed, expected)
 
 def test_AssertLambda():
-    pass
+    base_img = np.array([[0, 0, 1],
+                         [0, 0, 1],
+                         [0, 1, 1]], dtype=np.uint8)
+    base_img = base_img[:, :, np.newaxis]
+    images = np.array([base_img])
+    images_list = [base_img]
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    def func_images_succeeds(images, random_state, parents, hooks):
+        return images[0][0, 0] == 0 and images[0][2, 2] == 1
+
+    def func_images_fails(images, random_state, parents, hooks):
+        return images[0][0, 0] == 1
+
+    def func_keypoints_succeeds(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images[0].keypoints[0].x == 0 and keypoints_on_images[0].keypoints[2].x == 2
+
+    def func_keypoints_fails(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images[0].keypoints[0].x == 2
+
+    aug_succeeds = iaa.AssertLambda(func_images_succeeds, func_keypoints_succeeds)
+    aug_succeeds_det = aug_succeeds.to_deterministic()
+    aug_fails = iaa.AssertLambda(func_images_fails, func_keypoints_fails)
+    aug_fails_det = aug_fails.to_deterministic()
+
+    # images as numpy array
+    observed = aug_succeeds.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    try:
+        observed = aug_fails.augment_images(images)
+        errored = False
+    except AssertionError, e:
+        errored = True
+    assert errored
+
+    observed = aug_succeeds_det.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    try:
+        observed = aug_fails.augment_images(images)
+        errored = False
+    except AssertionError, e:
+        errored = True
+    assert errored
+
+    # Lists of images
+    observed = aug_succeeds.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    try:
+        observed = aug_fails.augment_images(images_list)
+        errored = False
+    except AssertionError, e:
+        errored = True
+    assert errored
+
+    observed = aug_succeeds_det.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    try:
+        observed = aug_fails.augment_images(images_list)
+        errored = False
+    except AssertionError, e:
+        errored = True
+    assert errored
+
+    # keypoints
+    observed = aug_succeeds.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    try:
+        observed = aug_fails.augment_keypoints(keypoints)
+        errored = False
+    except AssertionError, e:
+        errored = True
+    assert errored
+
+    observed = aug_succeeds_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    try:
+        observed = aug_fails.augment_keypoints(keypoints)
+        errored = False
+    except AssertionError, e:
+        errored = True
+    assert errored
 
 def test_AssertShape():
     base_img = np.array([[0, 0, 1, 0],
@@ -472,10 +622,213 @@ def test_Flipud():
         assert val in [0, nb_iterations]
 
 def test_GaussianBlur():
-    pass
+    base_img = np.array([[0, 0, 0],
+                         [0, 255, 0],
+                         [0, 0, 0]], dtype=np.uint8)
+    base_img = base_img[:, :, np.newaxis]
+
+    images = np.array([base_img])
+    images_list = [base_img]
+    outer_pixels = ([], [])
+    for i in range(base_img.shape[0]):
+        for j in range(base_img.shape[1]):
+            if i != j:
+                outer_pixels[0].append(i)
+                outer_pixels[1].append(j)
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no blur, shouldnt change anything
+    aug = iaa.GaussianBlur(sigma=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    # weak blur of center pixel
+    aug = iaa.GaussianBlur(sigma=0.5)
+    aug_det = aug.to_deterministic()
+
+    #np.set_printoptions(formatter={'float_kind': lambda x: "%.6f" % x})
+    #from scipy import ndimage
+    #images2 = np.copy(images).astype(np.float32)
+    #images2[0, ...] = ndimage.gaussian_filter(images2[0, ...], 0.4)
+    #print(images2)
+
+    # images as numpy array
+    observed = aug.augment_images(images)
+    assert 100 < observed[0][1, 1] < 255
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 0).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 50).all()
+
+    observed = aug_det.augment_images(images)
+    assert 100 < observed[0][1, 1] < 255
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 0).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 50).all()
+
+    # images as list
+    observed = aug.augment_images(images_list)
+    assert 100 < observed[0][1, 1] < 255
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 0).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 50).all()
+
+    observed = aug_det.augment_images(images_list)
+    assert 100 < observed[0][1, 1] < 255
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 0).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 50).all()
+
+    # keypoints shouldnt be changed
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    # varying blur sigmas
+    aug = iaa.GaussianBlur(sigma=(0, 1))
+    aug_det = aug.to_deterministic()
+
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.8)
+    assert nb_changed_aug_det == 0
 
 def test_AdditiveGaussianNoise():
-    pass
+    #base_img = np.array([[128, 128, 128],
+    #                     [128, 128, 128],
+    #                     [128, 128, 128]], dtype=np.uint8)
+    base_img = np.ones((16, 16, 1), dtype=np.uint8) * 128
+    #base_img = base_img[:, :, np.newaxis]
+
+    images = np.array([base_img])
+    images_list = [base_img]
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no noise, shouldnt change anything
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    # zero-centered noise
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert not np.array_equal(observed, images)
+
+    observed = aug_det.augment_images(images)
+    assert not np.array_equal(observed, images)
+
+    observed = aug.augment_images(images_list)
+    assert not array_equal_lists(observed, images_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert not array_equal_lists(observed, images_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints)
+
+    # std correct?
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2)
+    aug_det = aug.to_deterministic()
+    images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
+    nb_iterations = 10000
+    values = []
+    for i in range(nb_iterations):
+        images_aug = aug.augment_images(images)
+        values.append(images_aug[0, 0, 0, 0])
+    values = np.array(values)
+    assert np.min(values) == 0
+    assert 0.1 < np.std(values) / 255.0 < 0.4
+
+    # non-zero loc
+    aug = iaa.AdditiveGaussianNoise(loc=0.25, scale=0.01)
+    aug_det = aug.to_deterministic()
+    images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
+    nb_iterations = 10000
+    values = []
+    for i in range(nb_iterations):
+        images_aug = aug.augment_images(images)
+        values.append(images_aug[0, 0, 0, 0] - 128)
+    values = np.array(values)
+    assert 54 < np.average(values) < 74 # loc=0.25 should be around 255*0.25=64 average
+
+    # varying locs
+    aug = iaa.AdditiveGaussianNoise(loc=(0, 0.5), scale=0.0001)
+    aug_det = aug.to_deterministic()
+    images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.95)
+    assert nb_changed_aug_det == 0
+
+    # varying stds
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=(0.01, 0.2))
+    aug_det = aug.to_deterministic()
+    images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.95)
+    assert nb_changed_aug_det == 0
+
 
 def test_MultiplicativeGaussianNoise():
     pass

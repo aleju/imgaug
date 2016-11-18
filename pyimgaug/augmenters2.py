@@ -4,6 +4,7 @@ import random
 import numpy as np
 import copy
 import re
+from scipy import misc, ndimage
 import pyimgaug as ia
 from parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform
 
@@ -473,7 +474,10 @@ class Lambda(Augmenter):
         return self.func_images(images, random_state, parents=parents, hooks=hooks)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
+        result = self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
+        assert isinstance(result, list)
+        assert all([isinstance(el, ia.KeypointsOnImage) for el in result])
+        return result
 
     def get_parameters(self):
         return []
@@ -483,8 +487,8 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
         assert func_images(images, random_state, parents=parents, hooks=hooks)
         return images
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
-        assert func_keypoints(images, random_state, parents=parents, hooks=hooks)
-        return images
+        assert func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
+        return keypoints_on_images
     if name is None:
         name = "UnnamedAssertLambda"
     return Lambda(func_images_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
@@ -654,7 +658,7 @@ class AdditiveGaussianNoise(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'loc'. Got %s." % (type(loc),))
 
-        if isinstance(scale, (float, float)):
+        if isinstance(scale, (float, int)):
             self.scale = Deterministic(scale)
         elif isinstance(scale, (tuple, list)):
             assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (str(len(scale)),)
@@ -681,7 +685,8 @@ class AdditiveGaussianNoise(Augmenter):
             if sample_loc != 0 or sample_scale > 0:
                 rs = np.random.RandomState(sample_seed)
                 noise = rs.normal(sample_loc, sample_scale, size=images[i].shape)
-                result[i] += (255 * noise)
+                noise = (noise * 255).astype(np.uint8)
+                result[i] += noise
             if self.clip:
                 np.clip(result[i], 0, 255, out=result[i])
 
