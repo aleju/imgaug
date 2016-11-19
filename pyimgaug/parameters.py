@@ -38,11 +38,11 @@ class Binomial(StochasticParameter):
     def __init__(self, p):
         if isinstance(p, StochasticParameter):
             self.p = p
-        elif isinstance(p, float):
+        elif isinstance(p, (float, int)):
             assert 0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,)
-            self.p = Deterministic(p)
+            self.p = Deterministic(float(p))
         else:
-            raise Exception("Expected StochasticParameter or float value, got %s." % (type(p),))
+            raise Exception("Expected StochasticParameter or float/int value, got %s." % (type(p),))
 
     def _draw_samples(self, size, random_state):
         p = self.p.draw_sample(random_state=random_state)
@@ -60,6 +60,7 @@ class Binomial(StochasticParameter):
 
 class DiscreteUniform(StochasticParameter):
     def __init__(self, a, b):
+        # for two ints the samples will be from range a <= x <= b
         assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),)
 
@@ -80,7 +81,7 @@ class DiscreteUniform(StochasticParameter):
             a, b = b, a
         elif a == b:
             return np.tile(np.array([a]), size)
-        return random_state.randint(a, b, size)
+        return random_state.randint(a, b + 1, size)
 
     def __repr__(self):
         return self.__str__()

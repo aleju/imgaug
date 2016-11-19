@@ -7,6 +7,27 @@ import numpy as np
 import time
 
 def main():
+    # float/int functions
+    assert ia.is_single_integer("A") == False
+    assert ia.is_single_integer(None) == False
+    assert ia.is_single_integer(1.2) == False
+    assert ia.is_single_integer(1.0) == False
+    assert ia.is_single_integer(np.ones((1,), dtype=np.float32)[0]) == False
+    assert ia.is_single_integer(1) == True
+    assert ia.is_single_integer(1234) == True
+    assert ia.is_single_integer(np.ones((1,), dtype=np.uint8)[0]) == True
+    assert ia.is_single_integer(np.ones((1,), dtype=np.int32)[0]) == True
+
+    assert ia.is_single_float("A") == False
+    assert ia.is_single_float(None) == False
+    assert ia.is_single_float(1.2) == True
+    assert ia.is_single_float(1.0) == True
+    assert ia.is_single_float(np.ones((1,), dtype=np.float32)[0]) == True
+    assert ia.is_single_float(1) == False
+    assert ia.is_single_float(1234) == False
+    assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
+    assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
+
     # Sequential
 
     # Sometimes
@@ -40,10 +61,13 @@ def main():
     # ReplacingGaussianNoise
 
     # Dropout
+    test_Dropout()
 
     # Multiply
+    test_Multiply()
 
     # Affine
+    test_Affine()
 
     # ElasticTransformation
 
@@ -837,13 +861,632 @@ def test_ReplacingGaussianNoise():
     pass
 
 def test_Dropout():
-    pass
+    base_img = np.ones((512, 512, 1), dtype=np.uint8) * 255
+
+    images = np.array([base_img])
+    images_list = [base_img]
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no dropout, shouldnt change anything
+    aug = iaa.Dropout(p=0)
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    # 100% dropout, should drop everything
+    aug = iaa.Dropout(p=1.0)
+    observed = aug.augment_images(images)
+    expected = np.zeros((1, 512, 512, 1), dtype=np.uint8)
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.zeros((512, 512, 1), dtype=np.uint8)]
+    assert array_equal_lists(observed, expected)
+
+    # 50% dropout
+    aug = iaa.Dropout(p=0.5)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert not np.array_equal(observed, images)
+    percent_nonzero = len(observed.flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    assert 0.35 <= (1 - percent_nonzero) <= 0.65
+
+    observed = aug_det.augment_images(images)
+    assert not np.array_equal(observed, images)
+    percent_nonzero = len(observed.flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    assert 0.35 <= (1 - percent_nonzero) <= 0.65
+
+    observed = aug.augment_images(images_list)
+    assert not array_equal_lists(observed, images_list)
+    percent_nonzero = len(observed[0].flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    assert 0.35 <= (1 - percent_nonzero) <= 0.65
+
+    observed = aug_det.augment_images(images_list)
+    assert not array_equal_lists(observed, images_list)
+    percent_nonzero = len(observed[0].flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    assert 0.35 <= (1 - percent_nonzero) <= 0.65
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints)
+
+    # varying p
+    aug = iaa.Dropout(p=(0.0, 1.0))
+    aug_det = aug.to_deterministic()
+    images = np.ones((1, 8, 8, 1), dtype=np.uint8) * 255
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.95)
+    assert nb_changed_aug_det == 0
 
 def test_Multiply():
-    pass
+    base_img = np.ones((3, 3, 1), dtype=np.uint8) * 100
+    images = np.array([base_img])
+    images_list = [base_img]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no multiply, shouldnt change anything
+    aug = iaa.Multiply(mul=1.0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    # multiply >1.0
+    aug = iaa.Multiply(mul=1.2)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 120
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 120]
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 120
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 120]
+    assert array_equal_lists(observed, expected)
+
+    # multiply <1.0
+    aug = iaa.Multiply(mul=0.8)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
+    assert array_equal_lists(observed, expected)
+
+    # keypoints shouldnt be changed
+    aug = iaa.Multiply(mul=1.2)
+    aug_det = iaa.Multiply(mul=1.2)
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    # varying multiply factors
+    aug = iaa.Multiply(mul=(0, 2.0))
+    aug_det = aug.to_deterministic()
+
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.95)
+    assert nb_changed_aug_det == 0
 
 def test_Affine():
-    pass
+    base_img = np.array([[0, 0, 0],
+                         [0, 255, 0],
+                         [0, 0, 0]], dtype=np.uint8)
+    base_img = base_img[:, :, np.newaxis]
+
+    images = np.array([base_img])
+    images_list = [base_img]
+    outer_pixels = ([], [])
+    for i in range(base_img.shape[0]):
+        for j in range(base_img.shape[1]):
+            if i != j:
+                outer_pixels[0].append(i)
+                outer_pixels[1].append(j)
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no translation/scale/rotate/shear, shouldnt change nothing
+    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    # ---------------------
+    # scale
+    # ---------------------
+    # zoom in
+    aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    observed = aug_det.augment_images(images)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    observed = aug.augment_images(images_list)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    observed = aug_det.augment_images(images_list)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    observed = aug.augment_keypoints(keypoints)
+    assert observed[0].keypoints[0].x < 0
+    assert observed[0].keypoints[0].y < 0
+    assert observed[0].keypoints[1].x == 1
+    assert observed[0].keypoints[1].y == 1
+    assert observed[0].keypoints[2].x > 2
+    assert observed[0].keypoints[2].y > 2
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert observed[0].keypoints[0].x < 0
+    assert observed[0].keypoints[0].y < 0
+    assert observed[0].keypoints[1].x == 1
+    assert observed[0].keypoints[1].y == 1
+    assert observed[0].keypoints[2].x > 2
+    assert observed[0].keypoints[2].y > 2
+
+    # zoom in only on x axis
+    aug = iaa.Affine(scale={"x": 1.75, "y": 1.0}, translate_px=0, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[1, 1], [0, 2]] > 20).all()
+    assert (observed[0][[1, 1], [0, 2]] < 150).all()
+    assert (observed[0][0, :] < 5).all()
+    assert (observed[0][2, :] < 5).all()
+
+    observed = aug_det.augment_images(images)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[1, 1], [0, 2]] > 20).all()
+    assert (observed[0][[1, 1], [0, 2]] < 150).all()
+    assert (observed[0][0, :] < 5).all()
+    assert (observed[0][2, :] < 5).all()
+
+    observed = aug.augment_images(images_list)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[1, 1], [0, 2]] > 20).all()
+    assert (observed[0][[1, 1], [0, 2]] < 150).all()
+    assert (observed[0][0, :] < 5).all()
+    assert (observed[0][2, :] < 5).all()
+
+    observed = aug_det.augment_images(images_list)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[1, 1], [0, 2]] > 20).all()
+    assert (observed[0][[1, 1], [0, 2]] < 150).all()
+    assert (observed[0][0, :] < 5).all()
+    assert (observed[0][2, :] < 5).all()
+
+    observed = aug.augment_keypoints(keypoints)
+    assert observed[0].keypoints[0].x < 0
+    assert observed[0].keypoints[0].y == 0
+    assert observed[0].keypoints[1].x == 1
+    assert observed[0].keypoints[1].y == 1
+    assert observed[0].keypoints[2].x > 2
+    assert observed[0].keypoints[2].y == 2
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert observed[0].keypoints[0].x < 0
+    assert observed[0].keypoints[0].y == 0
+    assert observed[0].keypoints[1].x == 1
+    assert observed[0].keypoints[1].y == 1
+    assert observed[0].keypoints[2].x > 2
+    assert observed[0].keypoints[2].y == 2
+
+    # zoom in only on y axis
+    aug = iaa.Affine(scale={"x": 1.0, "y": 1.75}, translate_px=0, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[0, 2], [1, 1]] > 20).all()
+    assert (observed[0][[0, 2], [1, 1]] < 150).all()
+    assert (observed[0][:, 0] < 5).all()
+    assert (observed[0][:, 2] < 5).all()
+
+    observed = aug_det.augment_images(images)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[0, 2], [1, 1]] > 20).all()
+    assert (observed[0][[0, 2], [1, 1]] < 150).all()
+    assert (observed[0][:, 0] < 5).all()
+    assert (observed[0][:, 2] < 5).all()
+
+    observed = aug.augment_images(images_list)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[0, 2], [1, 1]] > 20).all()
+    assert (observed[0][[0, 2], [1, 1]] < 150).all()
+    assert (observed[0][:, 0] < 5).all()
+    assert (observed[0][:, 2] < 5).all()
+
+    observed = aug_det.augment_images(images_list)
+    assert observed[0][1, 1] > 250
+    assert (observed[0][[0, 2], [1, 1]] > 20).all()
+    assert (observed[0][[0, 2], [1, 1]] < 150).all()
+    assert (observed[0][:, 0] < 5).all()
+    assert (observed[0][:, 2] < 5).all()
+
+    observed = aug.augment_keypoints(keypoints)
+    assert observed[0].keypoints[0].x == 0
+    assert observed[0].keypoints[0].y < 0
+    assert observed[0].keypoints[1].x == 1
+    assert observed[0].keypoints[1].y == 1
+    assert observed[0].keypoints[2].x == 2
+    assert observed[0].keypoints[2].y > 2
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert observed[0].keypoints[0].x == 0
+    assert observed[0].keypoints[0].y < 0
+    assert observed[0].keypoints[1].x == 1
+    assert observed[0].keypoints[1].y == 1
+    assert observed[0].keypoints[2].x == 2
+    assert observed[0].keypoints[2].y > 2
+
+    # zoom out
+    # this one uses a 4x4 area of all 255, which is zoomed out to a 4x4 area
+    # in which the center 2x2 area is 255
+    # zoom in should probably be adapted to this style
+    # no seperate tests here for x/y axis, should work fine if zoom in works with that
+    aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.ones((4, 4, 1), dtype=np.uint8) * 255
+    images = np.array([image])
+    images_list = [image]
+    outer_pixels = ([], [])
+    for y in range(4):
+        xs = range(4) if y in [0, 3] else [0, 3]
+        for x in xs:
+            outer_pixels[0].append(y)
+            outer_pixels[1].append(x)
+    inner_pixels = ([1, 1, 2, 2], [1, 2, 1, 2])
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=0), ia.Keypoint(x=0, y=3), ia.Keypoint(x=3, y=3)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1), ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    observed = aug.augment_images(images)
+    assert (observed[0][outer_pixels] < 25).all()
+    assert (observed[0][inner_pixels] > 200).all()
+
+    observed = aug_det.augment_images(images)
+    assert (observed[0][outer_pixels] < 25).all()
+    assert (observed[0][inner_pixels] > 200).all()
+
+    observed = aug.augment_images(images_list)
+    assert (observed[0][outer_pixels] < 25).all()
+    assert (observed[0][inner_pixels] > 200).all()
+
+    observed = aug_det.augment_images(images_list)
+    assert (observed[0][outer_pixels] < 25).all()
+    assert (observed[0][inner_pixels] > 200).all()
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # varying scales
+    aug = iaa.Affine(scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, translate_px=0, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.array([[0, 0, 0, 0, 0],
+                      [0, 1, 1, 1, 0],
+                      [0, 1, 2, 1, 0],
+                      [0, 1, 1, 1, 0],
+                      [0, 0, 0, 0, 0]], dtype=np.uint8) * 100
+    image = image[:, :, np.newaxis]
+    images_list = [image]
+    images = np.array([image])
+
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.8)
+    assert nb_changed_aug_det == 0
+
+    # ---------------------
+    # translate
+    # ---------------------
+    # move one pixel to the right
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.zeros((3, 3, 1), dtype=np.uint8)
+    image_aug = np.copy(image)
+    image[1, 1] = 255
+    image_aug[1, 2] = 255
+    images = np.array([image])
+    images_aug = np.array([image_aug])
+    images_list = [image]
+    images_aug_list = [image_aug]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=1)], shape=base_img.shape)]
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # move one pixel to the bottom
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.zeros((3, 3, 1), dtype=np.uint8)
+    image_aug = np.copy(image)
+    image[1, 1] = 255
+    image_aug[2, 1] = 255
+    images = np.array([image])
+    images_aug = np.array([image_aug])
+    images_list = [image]
+    images_aug_list = [image_aug]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=base_img.shape)]
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # move 33% (one pixel) to the right
+    aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0}, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.zeros((3, 3, 1), dtype=np.uint8)
+    image_aug = np.copy(image)
+    image[1, 1] = 255
+    image_aug[1, 2] = 255
+    images = np.array([image])
+    images_aug = np.array([image_aug])
+    images_list = [image]
+    images_aug_list = [image_aug]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=1)], shape=base_img.shape)]
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # move 33% (one pixel) to the bottom
+    aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333}, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.zeros((3, 3, 1), dtype=np.uint8)
+    image_aug = np.copy(image)
+    image[1, 1] = 255
+    image_aug[2, 1] = 255
+    images = np.array([image])
+    images_aug = np.array([image_aug])
+    images_list = [image]
+    images_aug_list = [image_aug]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=base_img.shape)]
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # 0-1px to left/right and 0-1px to top/bottom
+    aug = iaa.Affine(scale=1.0, translate_px={"x": (-1, 1), "y": (-1, 1)}, rotate=0, shear=0)
+    aug_det = aug.to_deterministic()
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    centers_aug = np.copy(image).astype(np.int32) * 0
+    centers_aug_det = np.copy(image).astype(np.int32) * 0
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        assert len(observed_aug[0].nonzero()[0]) == 1
+        assert len(observed_aug_det[0].nonzero()[0]) == 1
+        centers_aug += (observed_aug[0] > 0)
+        centers_aug_det += (observed_aug_det[0] > 0)
+
+    assert nb_changed_aug >= int(nb_iterations * 0.7)
+    assert nb_changed_aug_det == 0
+    assert (centers_aug > int(nb_iterations * (1/9 * 0.6))).all()
+    assert (centers_aug < int(nb_iterations * (1/9 * 1.4))).all()
+
+    # ---------------------
+    # rotate
+    # ---------------------
+
+    # ---------------------
+    # shear
+    # ---------------------
+
+    # ---------------------
+    # cval
+    # ---------------------
+
 
 def test_ElasticTransformation():
     pass

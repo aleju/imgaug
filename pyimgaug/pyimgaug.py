@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
 import copy
+import numbers
 
 try:
     xrange
@@ -11,6 +12,21 @@ except NameError:  # python3
 
 def is_np_array(val):
     return isinstance(val, (np.ndarray, np.generic))
+
+def is_single_integer(val):
+    return isinstance(val, numbers.Integral)
+
+def is_single_float(val):
+    return isinstance(val, numbers.Real) and not is_single_integer(val)
+
+def is_single_number(val):
+    return is_single_integer(val) or is_single_float(val)
+
+def is_iterable(val):
+    return isinstance(val, (tuple, list))
+
+def is_integer_array(val):
+    return issubclass(val.dtype.type, np.integer)
 
 def current_random_state():
     return np.random
@@ -77,10 +93,18 @@ class HooksKeypoints(HooksImages):
 
 class Keypoint(object):
     def __init__(self, x, y):
-        assert isinstance(x, int)
-        assert isinstance(y, int)
+        #assert isinstance(x, int), type(x)
+        #assert isinstance(y, int), type(y)
+        assert is_single_integer(x), type(x)
+        assert is_single_integer(y), type(y)
         self.x = x
         self.y = y
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Keypoint(x=%d, y=%d)" % (self.x, self.y)
 
 class KeypointsOnImage(object):
     def __init__(self, keypoints, shape):
@@ -101,13 +125,14 @@ class KeypointsOnImage(object):
 
     def get_coords_array(self):
         result = np.zeros((len(self.keypoints), 2), np.int32)
-        for i, keypoint in enumerate(keypoints):
+        for i, keypoint in enumerate(self.keypoints):
             result[i, 0] = keypoint.x
             result[i, 1] = keypoint.y
         return result
 
     @staticmethod
-    def from_coords_array(self, coords, shape):
+    def from_coords_array(coords, shape):
+        assert is_integer_array(coords), coords.dtype
         keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
@@ -116,6 +141,13 @@ class KeypointsOnImage(object):
 
     def deepcopy(self):
         return copy.deepcopy(self)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        #print(type(self.keypoints), type(self.shape))
+        return "KeypointOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
 """
 class AugJob(object):
