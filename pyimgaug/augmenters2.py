@@ -4,9 +4,16 @@ import random
 import numpy as np
 import copy
 import re
+import math
 from scipy import misc, ndimage
+from skimage import transform as tf
 import pyimgaug as ia
-from parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform
+from parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform
+
+try:
+    xrange
+except NameError:  # python3
+    xrange = range
 
 class Augmenter(object):
     __metaclass__ = ABCMeta
@@ -41,7 +48,11 @@ class Augmenter(object):
         if hooks is None:
             hooks = ia.HooksImages()
 
-        if isinstance(images, (list, tuple)):
+        if ia.is_np_array(images):
+            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s" % (str(images.shape),)
+            assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
+            images_tf = images
+        elif ia.is_iterable(images):
             #assert all([len(image.shape) == 3 for image in images])
             if len(images) > 0:
                 # dont check all images, only the first one
@@ -50,10 +61,6 @@ class Augmenter(object):
                 assert len(images[0].shape) == 3, "Expected list of images with each image having shape length 3, got length %d." % (len(images[0].shape),)
                 assert images[0].dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images[0].dtype),)
             images_tf = list(images)
-        elif ia.is_np_array(images):
-            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s" % (str(images.shape),)
-            assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
-            images_tf = images
         else:
             raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
 
@@ -99,7 +106,7 @@ class Augmenter(object):
         if hooks is None:
             hooks = ia.HooksKeypoints()
 
-        assert isinstance(keypoints_on_images, list)
+        assert ia.is_iterable(keypoints_on_images)
         assert all([isinstance(keypoints_on_image, ia.KeypointsOnImage) for keypoints_on_image in keypoints_on_images])
 
         keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
@@ -254,7 +261,7 @@ class Sequential(Augmenter, list):
         if hooks.is_propagating(images, augmenter=self, parents=parents):
             if self.random_order:
                 #for augmenter in self.children:
-                for index in random_state.permute(len(self)):
+                for index in random_state.permutation(len(self)):
                     images = self[index].augment_images(
                         images=images,
                         parents=parents + [self],
@@ -274,7 +281,7 @@ class Sequential(Augmenter, list):
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
             if self.random_order:
                 #for augmenter in self.children:
-                for index in random_state.permute(len(self)):
+                for index in random_state.permutation(len(self)):
                     keypoints_on_images = self[index].augment_keypoints(
                         keypoints_on_images=keypoints_on_images,
                         parents=parents + [self],
@@ -294,7 +301,7 @@ class Sequential(Augmenter, list):
         #augs = [aug.to_deterministic() for aug in self.children]
         augs = [aug.to_deterministic() for aug in self]
         seq = copy.copy(self)
-        seq.children = augs
+        seq[:] = augs
         seq.random_state = ia.new_random_state()
         seq.deterministic = True
         return seq
@@ -319,12 +326,13 @@ class Sequential(Augmenter, list):
     def __str__(self):
         #augs_str = ", ".join([aug.__str__() for aug in self.children])
         augs_str = ", ".join([aug.__str__() for aug in self])
-        return "AugmenterSequence(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
+        return "Sequential(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
 
 class Sometimes(Augmenter):
     def __init__(self, p, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        if isinstance(p, (float, int)) and 0 <= p <= 1:
+        if ia.is_single_float(p) or ia.is_single_integer(p):
+            assert 0 <= p <= 1
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
@@ -335,7 +343,7 @@ class Sometimes(Augmenter):
             self.then_list = None
         elif isinstance(then_list, Augmenter):
             self.then_list = then_list
-        elif isinstance(then_list, (list, tuple)):
+        elif ia.is_iterable(then_list):
             self.then_list = Sequential(then_list, name="%s-then" % (self.name,), random_state=ia.new_random_state())
         else:
             raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
@@ -344,7 +352,7 @@ class Sometimes(Augmenter):
             self.else_list = None
         elif isinstance(else_list, Augmenter):
             self.else_list = else_list
-        elif isinstance(else_list, (list, tuple)):
+        elif ia.is_iterable(else_list):
             self.else_list = Sequential(else_list, name="%s-else" % (self.name,), random_state=ia.new_random_state())
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
@@ -498,7 +506,7 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
 
     def compare(observed, expected, dimension, image_index):
         if expected is not None:
-            if isinstance(expected, int):
+            if ia.is_single_integer(expected):
                 assert observed == expected, "Expected dim %d (entry index: %s) to have value %d, got %d." % (dimension, image_index, expected, observed)
             elif isinstance(expected, tuple):
                 assert len(expected) == 2
@@ -553,7 +561,7 @@ class Fliplr(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(p, (float, int)):
+        if ia.is_single_number(p):
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
@@ -585,7 +593,7 @@ class Flipud(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(p, (float, int)):
+        if ia.is_single_number(p):
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
@@ -616,9 +624,9 @@ class Flipud(Augmenter):
 class GaussianBlur(Augmenter):
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        if isinstance(sigma, (float, int)):
+        if ia.is_single_number(sigma):
             self.sigma = Deterministic(sigma)
-        elif isinstance(sigma, (tuple, list)):
+        elif ia.is_iterable(sigma):
             assert len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(sigma)),)
             self.sigma = Uniform(sigma[0], sigma[1])
         elif isinstance(sigma, StochasticParameter):
@@ -645,12 +653,12 @@ class GaussianBlur(Augmenter):
         return [self.sigma]
 
 class AdditiveGaussianNoise(Augmenter):
-    def __init__(self, loc=0, scale=0, clip=True, name=None, deterministic=False, random_state=None):
+    def __init__(self, loc=0, scale=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(loc, (float, int)):
+        if ia.is_single_number(loc):
             self.loc = Deterministic(loc)
-        elif isinstance(loc, (tuple, list)):
+        elif ia.is_iterable(loc):
             assert len(loc) == 2, "Expected tuple/list with 2 entries for argument 'loc', got %d entries." % (str(len(scale)),)
             self.loc = Uniform(loc[0], loc[1])
         elif isinstance(loc, StochasticParameter):
@@ -658,17 +666,15 @@ class AdditiveGaussianNoise(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'loc'. Got %s." % (type(loc),))
 
-        if isinstance(scale, (float, int)):
+        if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
-        elif isinstance(scale, (tuple, list)):
+        elif ia.is_iterable(scale):
             assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (str(len(scale)),)
             self.scale = Uniform(scale[0], scale[1])
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
-
-        self.clip = clip
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -686,9 +692,9 @@ class AdditiveGaussianNoise(Augmenter):
                 rs = np.random.RandomState(sample_seed)
                 noise = rs.normal(sample_loc, sample_scale, size=images[i].shape)
                 noise = (noise * 255).astype(np.uint8)
-                result[i] += noise
-            if self.clip:
-                np.clip(result[i], 0, 255, out=result[i])
+                after_noise = images[i] + noise
+                np.clip(after_noise, 0, 255, out=after_noise)
+                result[i] = after_noise
 
         return result
 
@@ -710,8 +716,14 @@ class Dropout(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
-        if isinstance(p, (float, int)):
+        if ia.is_single_number(p):
             self.p = Binomial(p)
+        elif ia.is_iterable(p):
+            assert len(p) == 2
+            assert p[0] < p[1]
+            assert 0 <= p[0] <= 1.0
+            assert 0 <= p[1] <= 1.0
+            self.p = Binomial(Uniform(p[0], p[1]))
         elif isinstance(p, StochasticParameter):
             self.p = p
         else:
@@ -726,7 +738,7 @@ class Dropout(Augmenter):
             seed = samples_seeds[i]
             rs_image = np.random.RandomState(seed)
             samples = self.p.draw_samples((height, width, nb_channels), random_state=rs_image)
-            result[i] = result[i] * samples
+            result[i] = result[i] * (1 - samples)
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -736,28 +748,27 @@ class Dropout(Augmenter):
         return [self.p]
 
 class Multiply(Augmenter):
-    def __init__(self, mul=1.0, clip=True, name=None, deterministic=False, random_state=None):
+    def __init__(self, mul=1.0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        if isinstance(mul, (float, int)):
+        if ia.is_single_number(mul):
             assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
             self.mul = Deterministic(mul)
-        elif isinstance(mul, (tuple, list)):
+        elif ia.is_iterable(mul):
             assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(mul)),)
             self.mul = Uniform(mul[0], mul[1])
         elif isinstance(mul, StochasticParameter):
             self.mul = mul
         else:
             raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
-        self.clip = clip
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
         samples = self.mul.draw_samples((nb_images,), random_state=random_state)
         for i in xrange(nb_images):
-            result[i] *= samples[i]
-            if self.clip:
-                np.clip(result[i], 0, 255, out=result[i])
+            after_multiply = images[i] * samples[i]
+            np.clip(after_multiply, 0, 255, out=after_multiply)
+            result[i] = after_multiply.astype(np.uint8)
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -767,132 +778,242 @@ class Multiply(Augmenter):
         return [self.mul]
 
 class Affine(Augmenter):
-    def __init__(self, scale=1.0, translate=0, rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant", name=None, deterministic=False, random_state=None):
+    def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant", name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        self.order = order
-        self.cval = cval
-        self.mode = mode
+
+        if order == ia.ALL:
+            self.order = DiscreteUniform(0, 5)
+        elif ia.is_single_integer(order):
+            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            self.order = Deterministic(order)
+        elif isinstance(order, list):
+            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
+            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            self.order = Choice(order)
+        elif isinstance(order, StochasticParameter):
+            self.order = order
+        else:
+            raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
+
+        if cval == ia.ALL:
+            self.cval = Uniform(0, 1.0)
+        elif ia.is_single_number(cval):
+            assert 0 <= cval <= 1.0
+            self.cval = Deterministic(cval)
+        elif ia.is_iterable(cval):
+            assert len(cval) == 2
+            assert 0 <= cval[0] <= 1.0
+            assert 0 <= cval[1] <= 1.0
+            self.cval = Uniform(cval[0], cval[1])
+        elif isinstance(cval, StochasticParameter):
+            self.cval = cval
+        else:
+            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+
+        # constant, edge, symmetric, reflect, wrap
+        if mode == ia.ALL:
+            self.mode = Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
+        elif ia.is_string(mode):
+            self.mode = Deterministic(mode)
+        elif isinstance(mode, "list"):
+            assert all([ia.is_string(val) for val in mode])
+            self.mode = Choice(mode)
+        elif isinstance(mode, StochasticParameter):
+            self.mode = mode
+        else:
+            raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
 
         # scale
         # float | (float, float) | [float, float] | StochasticParameter
         def scale_handle_param(param, allow_dict):
             if isinstance(param, StochasticParameter):
                 return param
-            elif isinstance(param, (float, int)):
-                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f." % (param,)
+            elif ia.is_single_number(param):
+                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,)
                 return Deterministic(param)
-            elif isinstance(param, (tuple, list)):
+            elif ia.is_iterable(param) and not isinstance(param, dict):
                 assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (str(len(param)),)
-                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1])
                 return Uniform(param[0], param[1])
             elif allow_dict and isinstance(param, dict):
                 assert "x" in param or "y" in param
                 x = param.get("x")
                 y = param.get("y")
 
-                x = x if x is not None else y
-                y = y if y is not None else x
+                x = x if x is not None else 1.0
+                y = y if y is not None else 1.0
 
-                return (scale_handle_param(x, Fale), scale_handle_param(y, False))
+                return (scale_handle_param(x, False), scale_handle_param(y, False))
             else:
                 raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
         self.scale = scale_handle_param(scale, True)
 
         # translate
-        # float | int | (float, float) | (int, int) | [float, float] | [int, int] | StochasticParameter
-        def translate_handle_param(param, allow_dict):
-            if isinstance(param, float):
-                assert param > 0.0, "Expected translate to have range (0, inf), got value %.4f." % (param,)
-                self.param = Deterministic(param)
-            elif isinstance(param, int):
-                self.param = Deterministic(param)
-            elif isinstance(param, (tuple, list)):
-                assert len(param) == 2, "Expected translate tuple/list with 2 entries, got %d entries." % (str(len(param)),)
-                types_unique = set([type(val) for val in param])
-                assert len(types_unique) == 1, "Expected translate tuple/list to have either int or float datatype, got %s." % (str(types_unique),)
-                assert types_unique in ["int", "float"], "Expected translate tuple/list to have either int or float datatype, got %s." % (str(types_unique),)
+        if translate_percent is None and translate_px is None:
+            translate_px = 0
 
-                if types_unique[0] == "int":
-                    self.translate = DiscreteUniform(param[0], param[1])
+        assert translate_percent is None or translate_px is None
+
+        if translate_percent is not None:
+            # translate by percent
+            def translate_handle_param(param, allow_dict):
+                if ia.is_single_number(param):
+                    return Deterministic(float(param))
+                elif ia.is_iterable(param) and not isinstance(param, dict):
+                    assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (str(len(param)),)
+                    all_numbers = all([ia.is_single_number(p) for p in param])
+                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) in param]),)
+                    #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    return Uniform(param[0], param[1])
+                elif allow_dict and isinstance(param, dict):
+                    assert "x" in param or "y" in param
+                    x = param.get("x")
+                    y = param.get("y")
+
+                    x = x if x is not None else 0
+                    y = y if y is not None else 0
+
+                    return (translate_handle_param(x, False), translate_handle_param(y, False))
+                elif isinstance(param, StochasticParameter):
+                    return param
+                else:
+                    raise Exception("Expected float, int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
+            self.translate = translate_handle_param(translate_percent, True)
+        else:
+            # translate by pixels
+            def translate_handle_param(param, allow_dict):
+                if ia.is_single_integer(param):
+                    return Deterministic(param)
+                elif ia.is_iterable(param) and not isinstance(param, dict):
+                    assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (str(len(param)),)
+                    all_integer = all([ia.is_single_integer(p) for p in param])
+                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) in param]),)
+                    return DiscreteUniform(param[0], param[1])
+                elif allow_dict and isinstance(param, dict):
+                    assert "x" in param or "y" in param
+                    x = param.get("x")
+                    y = param.get("y")
+
+                    x = x if x is not None else 0
+                    y = y if y is not None else 0
+
+                    return (translate_handle_param(x, False), translate_handle_param(y, False))
+                elif isinstance(param, StochasticParameter):
+                    return param
+                else:
+                    raise Exception("Expected int or tuple/list with 2 ints or StochasticParameter. Got %s." % (type(param),))
+            self.translate = translate_handle_param(translate_px, True)
+
+        # float | int | (float, float) | (int, int) | [float, float] | [int, int] | StochasticParameter
+        """
+        def translate_handle_param(param, allow_dict):
+            if ia.is_single_number(param):
+                return Deterministic(param)
+            elif ia.is_iterable(param) and not isinstance(param, dict):
+                assert len(param) == 2, "Expected translate tuple/list with 2 entries, got %d entries." % (str(len(param)),)
+                all_integer = all([ia.is_single_integer(p) for p in param])
+                all_float = all([ia.is_single_float(p) for p in param])
+                assert all_integer or all_float, "Expected translate tuple/list to have either int or float datatype, got types %s." % (str([type(p) in param]),)
+
+                if all_integer:
+                    return DiscreteUniform(param[0], param[1])
                 else: # float
                     assert param[0] > 0.0 and param[1] > 0.0, "Expected translate tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
-                    self.translate = Uniform(param[0], param[1])
-            elif allow_dict and isinstance(parm, dict):
+                    return Uniform(param[0], param[1])
+            elif allow_dict and isinstance(param, dict):
                 assert "x" in param or "y" in param
                 x = param.get("x")
                 y = param.get("y")
 
-                x = x if x is not None else y
-                y = y if y is not None else x
+                x = x if x is not None else 0
+                y = y if y is not None else 0
 
-                return (translate_handle_param(x, Fale), translate_handle_param(y, False))
+                return (translate_handle_param(x, False), translate_handle_param(y, False))
             elif isinstance(param, StochasticParameter):
-                self.translate = param
+                return param
             else:
                 raise Exception("Expected float, int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
         self.translate = translate_handle_param(translate, True)
+        """
 
         # rotate
         # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
         if isinstance(rotate, StochasticParameter):
             self.rotate = rotate
-        elif isinstance(rotate, (float, int)):
-            self.rotate = rotate
-        elif isinstance(rotate, (tuple, list)):
+        elif ia.is_single_number(rotate):
+            self.rotate = Deterministic(rotate)
+        elif ia.is_iterable(rotate):
             assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (str(len(rotate)),)
-            types = [type(r) for r in rotate]
-            assert all([val in ["float", "int"] for val in types]), "Expected floats/ints in rotate tuple/list, got %s." % (str(types),)
+            assert all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list"
             self.rotate = Uniform(rotate[0], rotate[1])
         else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
 
         # shear
         # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
         if isinstance(shear, StochasticParameter):
             self.shear = shear
-        elif isinstance(shear, (float, int)):
-            self.shear = shear
-        elif isinstance(shear, (tuple, list)):
+        elif ia.is_single_number(shear):
+            self.shear = Deterministic(shear)
+        elif ia.is_iterable(shear):
             assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (str(len(shear)),)
-            types = [type(r) for r in rotate]
-            assert all([val in ["float", "int"] for val in types]), "Expected floats/ints in shear tuple/list, got %s." % (str(types),)
+            assert all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list."
             self.shear = Uniform(shear[0], shear[1])
         else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
         # skimage's warp() converts to 0-1 range, so we use float here and then convert
         # at the end
-        result = images.astype(np.float32, copy=False)
+        # float images are expected by skimage's warp() to be in range 0-1, so we divide by 255
+        if isinstance(images, list):
+            result = [image.astype(np.float32, copy=False) for image in images]
+            result = [image / 255.0 for image in images]
+        else:
+            result = images.astype(np.float32, copy=False)
+            result = result / 255.0
 
         nb_images = len(images)
 
-        scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
 
         for i in xrange(nb_images):
             height, width = result[i].shape[0], result[i].shape[1]
             shift_x = int(width / 2.0)
             shift_y = int(height / 2.0)
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
-            translate_x_px, translate_y_px = translate_samples_px[0][i], translate_samples_px[1][i]
+            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            #assert isinstance(translate_x, (float, int))
+            #assert isinstance(translate_y, (float, int))
+            if ia.is_single_float(translate_y):
+                translate_y_px = int(round(translate_y * images[i].shape[0]))
+            else:
+                translate_y_px = translate_y
+            if ia.is_single_float(translate_x):
+                translate_x_px = int(round(translate_x * images[i].shape[1]))
+            else:
+                translate_x_px = translate_x
             rotate = rotate_samples[i]
             shear = shear_samples[i]
+            cval = cval_samples[i]
+            mode = mode_samples[i]
+            order = order_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
                 matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
                     scale=(scale_x, scale_y),
-                    translation=(translate_x, translate_y),
-                    rotation=rotate,
-                    shear=shear
+                    translation=(translate_x_px, translate_y_px),
+                    rotation=math.radians(rotate),
+                    shear=math.radians(shear)
                 )
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
-                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center).inverse
-                result[i, ...] = tf.warp(
-                    result[i, ...],
-                    matrix,
-                    order=self.order,
-                    mode=self.mode,
-                    cval=self.cval
+                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+                result[i] = tf.warp(
+                    result[i],
+                    matrix.inverse,
+                    order=order,
+                    mode=mode,
+                    cval=cval
                 )
 
             result[i] *= 255.0
@@ -908,30 +1029,49 @@ class Affine(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        scale_samples, translate_samples_px, rotate_samples, shear_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
 
-        for keypoints_on_image in keypoints_on_images:
+        for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width
             shift_x = int(width / 2.0)
             shift_y = int(height / 2.0)
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
-            translate_x_px, translate_y_px = translate_samples_px[0][i], translate_samples_px[1][i]
+            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            #assert isinstance(translate_x, (float, int))
+            #assert isinstance(translate_y, (float, int))
+            if ia.is_single_float(translate_y):
+                translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
+            else:
+                translate_y_px = translate_y
+            if ia.is_single_float(translate_x):
+                translate_x_px = int(round(translate_x * keypoints_on_image.shape[1]))
+            else:
+                translate_x_px = translate_x
             rotate = rotate_samples[i]
             shear = shear_samples[i]
+            #cval = cval_samples[i]
+            #mode = mode_samples[i]
+            #order = order_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
                 matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
                     scale=(scale_x, scale_y),
-                    translation=(translate_x, translate_y),
-                    rotation=rotate,
-                    shear=shear
+                    translation=(translate_x_px, translate_y_px),
+                    rotation=math.radians(rotate),
+                    shear=math.radians(shear)
                 )
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
-                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center).inverse
+                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
 
                 coords = keypoints_on_image.get_coords_array()
-                coords_aug = tf.matrix_transform(coords, matrix)
-                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=keypoints_on_image.shape))
+                #print("coords", coords)
+                #print("matrix", matrix.params)
+                coords_aug = tf.matrix_transform(coords, matrix.params)
+                #print("coords before", coords)
+                #print("coordsa ftre", coords_aug, np.around(coords_aug).astype(np.int32))
+                result.append(ia.KeypointsOnImage.from_coords_array(np.around(coords_aug).astype(np.int32), shape=keypoints_on_image.shape))
+            else:
+                result.append(keypoints_on_image)
         return result
 
     def get_parameters(self):
@@ -960,20 +1100,15 @@ class Affine(Augmenter):
 
         assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
         assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
-        translate_samples_px = [None, None]
-        if translate_samples[0].dtype in [np.float32, np.float64]:
-            translate_samples_px[0] = translate_samples[0] * width
-        else:
-            translate_samples_px[0] = translate_samples[0]
-        if translate_samples[1].dtype in [np.float32, np.float64]:
-            translate_samples_px[1] = translate_samples[1] * height
-        else:
-            translate_samples_px[1] = translate_samples[1]
 
-        rotate_samples = self.rotate.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 70))
-        shear_samples = self.shear.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 80))
+        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
+        shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
 
-        return scale_samples, translate_samples_px, rotate_samples, shear_samples
+        cval_samples = self.cval.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 90))
+        mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
+        order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
+
+        return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples
 
 class ElasticTransformation(Augmenter):
     # todo
