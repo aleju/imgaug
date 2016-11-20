@@ -71,6 +71,7 @@ def main():
     test_Sequential()
 
     # Sometimes
+    test_Sometimes()
 
     print("Finished.")
 
@@ -1713,7 +1714,7 @@ def test_Sequential():
         assert np.array_equal(observed_aug, images) or np.array_equal(observed_aug, images_lr) or np.array_equal(observed_aug, images_ud) or np.array_equal(observed_aug, images_lr_ud)
         assert np.array_equal(observed_aug_det, images) or np.array_equal(observed_aug_det, images_lr) or np.array_equal(observed_aug_det, images_ud) or np.array_equal(observed_aug_det, images_lr_ud)
 
-    assert (0.25 - 0.05) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.25 + 0.05) # should be the same in roughly 25% of all cases
+    assert (0.25 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.25 + 0.10) # should be the same in roughly 25% of all cases
     assert nb_changed_aug_det == 0
 
     # random order
@@ -1836,7 +1837,172 @@ def test_Sequential():
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
 
 def test_Sometimes():
-    pass
+    image = np.array([[0, 1, 1],
+                      [0, 0, 1],
+                      [0, 0, 1]], dtype=np.uint8) * 255
+    image = image[:, :, np.newaxis]
+    images_list = [image]
+    images = np.array([image])
+
+    image_lr = np.array([[1, 1, 0],
+                         [1, 0, 0],
+                         [1, 0, 0]], dtype=np.uint8) * 255
+    image_lr = image_lr[:, :, np.newaxis]
+    images_lr_list = [image_lr]
+    images_lr = np.array([image_lr])
+
+    image_ud = np.array([[0, 0, 1],
+                         [0, 0, 1],
+                         [0, 1, 1]], dtype=np.uint8) * 255
+    image_ud = image_ud[:, :, np.newaxis]
+    images_ud_list = [image_ud]
+    images_ud = np.array([image_ud])
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0), ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints_lr = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=0, y=0), ia.Keypoint(x=0, y=1)], shape=image.shape)]
+    keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2), ia.Keypoint(x=2, y=1)], shape=image.shape)]
+
+    # 100% chance of if-branch
+    aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_lr)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_lr)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_lr_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_lr_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_lr)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_lr)
+
+    # 100% chance of else-branch
+    aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_ud)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_ud)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_ud_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_ud_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_ud)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_ud)
+
+    # 50% if branch, 50% else branch
+    aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+    aug_det = aug.to_deterministic()
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    nb_images_if_branch = 0
+    nb_images_else_branch = 0
+    nb_keypoints_if_branch = 0
+    nb_keypoints_else_branch = 0
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        keypoints_aug = aug.augment_keypoints(keypoints)
+        keypoints_aug_det = aug.augment_keypoints(keypoints)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        if np.array_equal(observed_aug, images_lr):
+            nb_images_if_branch += 1
+        elif np.array_equal(observed_aug, images_ud):
+            nb_images_else_branch += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if keypoints_equal(keypoints_aug, keypoints_lr):
+            nb_keypoints_if_branch += 1
+        elif keypoints_equal(keypoints_aug, keypoints_ud):
+            nb_keypoints_else_branch += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+    assert (0.50 - 0.10) <= nb_images_if_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_images_else_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_keypoints_if_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
+    assert nb_changed_aug_det == 0
+
+    # 50% if branch, otherwise no change
+    aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
+    aug_det = aug.to_deterministic()
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    nb_images_if_branch = 0
+    nb_images_else_branch = 0
+    nb_keypoints_if_branch = 0
+    nb_keypoints_else_branch = 0
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        keypoints_aug = aug.augment_keypoints(keypoints)
+        keypoints_aug_det = aug.augment_keypoints(keypoints)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        if np.array_equal(observed_aug, images_lr):
+            nb_images_if_branch += 1
+        elif np.array_equal(observed_aug, images):
+            nb_images_else_branch += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if keypoints_equal(keypoints_aug, keypoints_lr):
+            nb_keypoints_if_branch += 1
+        elif keypoints_equal(keypoints_aug, keypoints):
+            nb_keypoints_else_branch += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+    assert (0.50 - 0.10) <= nb_images_if_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_images_else_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_keypoints_if_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
+    assert nb_changed_aug_det == 0
 
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)

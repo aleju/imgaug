@@ -7,6 +7,7 @@ import re
 import math
 from scipy import misc, ndimage
 from skimage import transform as tf
+import itertools
 import pyimgaug as ia
 from parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform
 
@@ -90,6 +91,11 @@ class Augmenter(object):
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
+        if isinstance(images_result, list):
+            assert all([image.dtype == np.uint8 for image in images_result]), "Expected list of dtype uint8 as augmenter result, got %s." % ([image.dtype for image in images_result],)
+        else:
+            assert images_result.dtype == np.uint8, "Expected dtype uint8 as augmenter result, got %s." % (images_result.dtype,)
+
         return images_result
 
     @abstractmethod
@@ -123,9 +129,9 @@ class Augmenter(object):
                 )
                 self.random_state.uniform()
             else:
-                images_result = keypoints_on_images_copy
+                keypoints_on_images_result = keypoints_on_images_copy
         else:
-            images_result = keypoints_on_images_copy
+            keypoints_on_images_result = keypoints_on_images_copy
 
         keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=self, parents=parents)
 
@@ -137,6 +143,36 @@ class Augmenter(object):
     @abstractmethod
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         raise NotImplemented()
+
+    def draw_grid(self, images, rows, cols):
+        if ia.is_np_array(images):
+            assert len(images.shape) == 3
+            images = [images]
+        assert isinstance(images, list)
+
+        det = self if self.deterministic else self.to_deterministic()
+        augs = []
+        for image in images:
+            augs.append(det.augment_images([image] * (rows * cols)))
+
+        augs_flat = list(itertools.chain(*augs))
+        cell_height = max([image.shape[0] for image in images] + [image.shape[0] for image in augs_flat])
+        cell_width = max([image.shape[1] for image in images] + [image.shape[1] for image in augs_flat])
+        width = cell_width * cols
+        height = cell_height * (rows * len(images))
+        grid = np.zeros((height, width, 3))
+        for row_idx in range(rows):
+            for img_idx, image in enumerate(images):
+                for col_idx in range(cols):
+                    image_aug = augs[img_idx][(row_idx * cols) + col_idx]
+                    cell_y1 = cell_height * (row_idx * len(images) + img_idx)
+                    cell_y2 = cell_y1 + image_aug.shape[0]
+                    cell_x1 = cell_width * col_idx
+                    cell_x2 = cell_x1 + image_aug.shape[1]
+                    grid[cell_y1:cell_y2, cell_x1:cell_x2, :] = image_aug
+
+        return grid
+
 
     """
     def transform_augjob(self, augjob):
@@ -245,6 +281,28 @@ class Augmenter(object):
         #TODO
         pass
 
+    def copy(self):
+        return copy.copy(self)
+
+    def deepcopy(self):
+        # this had to be written rather weird because RandomState apparently
+        # cannot be deepcopied, throws
+        #     AttributeError: 'NoneType' object has no attribute 'update'
+        # So here we temporarily set RandomState to None, then deepcopy, then
+        # manually copy the RandomState
+        # TODO build a custom class of RandomState with __deepcopy__ function
+        #return copy.copy(self)
+        #print("----------")
+        #print(self.random_state)
+        rs = self.random_state
+        #print(rs)
+        self.random_state = None
+        #print(rs)
+        aug = copy.deepcopy(self)
+        aug.random_state = ia.copy_random_state(rs)
+        self.random_state = rs
+        return aug
+
     def __str__(self):
         params = self.get_parameters()
         params_str = ", ".join([param.__str__() for param in params])
@@ -340,7 +398,7 @@ class Sometimes(Augmenter):
             raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
 
         if then_list is None:
-            self.then_list = None
+            self.then_list = Sequential([], name="%s-then" % (self.name,), random_state=ia.new_random_state())
         elif isinstance(then_list, Augmenter):
             self.then_list = then_list
         elif ia.is_iterable(then_list):
@@ -349,7 +407,7 @@ class Sometimes(Augmenter):
             raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
 
         if else_list is None:
-            self.else_list = None
+            self.else_list = Sequential([], name="%s-else" % (self.name,), random_state=ia.new_random_state())
         elif isinstance(else_list, Augmenter):
             self.else_list = else_list
         elif ia.is_iterable(else_list):
@@ -364,38 +422,38 @@ class Sometimes(Augmenter):
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)
-            indices_if_list = np.where(samples == 1)
-            indices_else_list = np.where(samples == 0)
+            indices_then_list = np.where(samples == 1)[0] # np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            indices_else_list = np.where(samples == 0)[0]
             if isinstance(images, list):
-                images_if_list = [images[i] for i in indices_if_list]
+                images_then_list = [images[i] for i in indices_then_list]
                 images_else_list = [images[i] for i in indices_else_list]
             else:
-                images_if_list = images[indices_if_list]
+                images_then_list = images[indices_then_list]
                 images_else_list = images[indices_else_list]
 
             # augment according to if and else list
-            result_if_list = self.if_list.augment_images(
-                images=images_if_list,
+            result_then_list = self.then_list.augment_images(
+                images=images_then_list,
                 parents=parents + [self],
-                propagator=propagator
+                hooks=hooks
             )
             result_else_list = self.else_list.augment_images(
                 images=images_else_list,
                 parents=parents + [self],
-                propagator=propagator
+                hooks=hooks
             )
 
             # map results of if/else lists back to their initial positions (in "images" variable)
             result = [None] * len(images)
-            for idx_result_if_list, idx_images in enumerate(result_if_list):
-                result[idx_images] = result_if_list[idx_result_if_list]
-            for idx_result_else_list, idx_images in enumerate(result_else_list):
+            for idx_result_then_list, idx_images in enumerate(indices_then_list):
+                result[idx_images] = result_then_list[idx_result_then_list]
+            for idx_result_else_list, idx_images in enumerate(indices_else_list):
                 result[idx_images] = result_else_list[idx_result_else_list]
 
             # if input was a list, keep the output as a list too,
             # otherwise it was a numpy array, so make the output a numpy array too
             if not isinstance(images, list):
-                result = np.array(images, dtype=np.uint8)
+                result = np.array(result, dtype=np.uint8)
 
         return result
 
@@ -403,32 +461,32 @@ class Sometimes(Augmenter):
         # TODO this is mostly copy pasted from _augment_images, make dry
         result = keypoints_on_images
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
-            nb_images = len(images)
+            nb_images = len(keypoints_on_images)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)
-            indices_if_list = np.where(samples == 1)
-            indices_else_list = np.where(samples == 0)
-            images_if_list = [keypoints_on_images[i] for i in indices_if_list]
+            indices_then_list = np.where(samples == 1)[0] # np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            indices_else_list = np.where(samples == 0)[0]
+            images_then_list = [keypoints_on_images[i] for i in indices_then_list]
             images_else_list = [keypoints_on_images[i] for i in indices_else_list]
 
             # augment according to if and else list
-            result_if_list = self.if_list.augment_keypoints(
-                keypoints_on_images=images_if_list,
+            result_then_list = self.then_list.augment_keypoints(
+                keypoints_on_images=images_then_list,
                 parents=parents + [self],
-                propagator=propagator
+                hooks=hooks
             )
             result_else_list = self.else_list.augment_keypoints(
                 keypoints_on_images=images_else_list,
                 parents=parents + [self],
-                propagator=propagator
+                hooks=hooks
             )
 
             # map results of if/else lists back to their initial positions (in "images" variable)
             result = [None] * len(keypoints_on_images)
-            for idx_result_if_list, idx_images in enumerate(result_if_list):
-                result[idx_images] = result_if_list[idx_result_if_list]
-            for idx_result_else_list, idx_images in enumerate(result_else_list):
+            for idx_result_then_list, idx_images in enumerate(indices_then_list):
+                result[idx_images] = result_then_list[idx_result_then_list]
+            for idx_result_else_list, idx_images in enumerate(indices_else_list):
                 result[idx_images] = result_else_list[idx_result_else_list]
 
         return result
@@ -738,7 +796,8 @@ class Dropout(Augmenter):
             seed = samples_seeds[i]
             rs_image = np.random.RandomState(seed)
             samples = self.p.draw_samples((height, width, nb_channels), random_state=rs_image)
-            result[i] = result[i] * (1 - samples)
+            image_drop = result[i] * (1 - samples)
+            result[i] = image_drop.astype(np.uint8) # for some reason image_drop is int64
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
