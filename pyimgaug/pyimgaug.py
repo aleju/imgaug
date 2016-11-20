@@ -10,6 +10,8 @@ try:
 except NameError:  # python3
     xrange = range
 
+ALL = "ALL"
+
 def is_np_array(val):
     return isinstance(val, (np.ndarray, np.generic))
 
@@ -24,6 +26,9 @@ def is_single_number(val):
 
 def is_iterable(val):
     return isinstance(val, (tuple, list))
+
+def is_string(val):
+    return isinstance(val, str) or isinstance(val, unicode)
 
 def is_integer_array(val):
     return issubclass(val.dtype.type, np.integer)

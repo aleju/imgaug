@@ -28,10 +28,6 @@ def main():
     assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
 
-    # Sequential
-
-    # Sometimes
-
     # Noop
     test_Noop()
 
@@ -71,13 +67,12 @@ def main():
 
     # ElasticTransformation
 
+    # Sequential
+    test_Sequential()
+
+    # Sometimes
+
     print("Finished.")
-
-def test_Sequential():
-    pass
-
-def test_Sometimes():
-    pass
 
 def test_Noop():
     images = create_random_images((16, 70, 50, 3))
@@ -1478,17 +1473,369 @@ def test_Affine():
     # ---------------------
     # rotate
     # ---------------------
+    # rotate by 45 degrees
+    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+    aug_det = aug.to_deterministic()
+
+    image = np.zeros((3, 3, 1), dtype=np.uint8)
+    image_aug = np.copy(image)
+    image[1, :] = 255
+    image_aug[0, 1] = 255
+    image_aug[1, 1] = 255
+    image_aug[2, 1] = 255
+    images = np.array([image])
+    images_aug = np.array([image_aug])
+    images_list = [image]
+    images_aug_list = [image_aug]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=1, y=2)], shape=base_img.shape)]
+
+    observed = aug.augment_images(images)
+    observed[observed >= 100] = 255
+    observed[observed < 100] = 0
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug_det.augment_images(images)
+    observed[observed >= 100] = 255
+    observed[observed < 100] = 0
+    assert np.array_equal(observed, images_aug)
+
+    observed = aug.augment_images(images_list)
+    observed[0][observed[0] >= 100] = 255
+    observed[0][observed[0] < 100] = 0
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug_det.augment_images(images_list)
+    observed[0][observed[0] >= 100] = 255
+    observed[0][observed[0] < 100] = 0
+    assert array_equal_lists(observed, images_aug_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # random rotation 0-364 degrees
+    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=(0, 364), shear=0)
+    aug_det = aug.to_deterministic()
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    pixels_sums_aug = np.copy(image).astype(np.int32) * 0
+    pixels_sums_aug_det = np.copy(image).astype(np.int32) * 0
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        #assert len(observed_aug[0].nonzero()[0]) == 1
+        #assert len(observed_aug_det[0].nonzero()[0]) == 1
+        pixels_sums_aug += (observed_aug[0] > 100)
+        pixels_sums_aug_det += (observed_aug_det[0] > 100)
+
+    assert nb_changed_aug >= int(nb_iterations * 0.9)
+    assert nb_changed_aug_det == 0
+    # center pixel, should always be white when rotating line around center
+    assert pixels_sums_aug[1, 1] > (nb_iterations * 0.98)
+    assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
+
+    # outer pixels, should sometimes be white
+    # the values here had to be set quite tolerant, the middle pixels at top/left/bottom/right get more activation than expected
+    outer_pixels = ([0, 0, 0, 1, 1, 2, 2, 2], [0, 1, 2, 0, 2, 0, 1, 2])
+    assert (pixels_sums_aug[outer_pixels] > int(nb_iterations * (2/8 * 0.4))).all()
+    assert (pixels_sums_aug[outer_pixels] < int(nb_iterations * (2/8 * 2.0))).all()
 
     # ---------------------
     # shear
     # ---------------------
+    print("[Note] There is currently no test for shear in test_Affine().")
 
     # ---------------------
     # cval
     # ---------------------
+    # cval of 0.5 (= 128)
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0.5)
+    aug_det = aug.to_deterministic()
+
+    image = np.ones((3, 3, 1), dtype=np.uint8) * 255
+    image_aug = np.copy(image)
+    images = np.array([image])
+    images_list = [image]
+
+    observed = aug.augment_images(images)
+    assert (observed[0] > 128 - 30).all()
+    assert (observed[0] < 128 + 30).all()
+
+    observed = aug_det.augment_images(images)
+    assert (observed[0] > 128 - 30).all()
+    assert (observed[0] < 128 + 30).all()
+
+    observed = aug.augment_images(images_list)
+    assert (observed[0] > 128 - 30).all()
+    assert (observed[0] < 128 + 30).all()
+
+    observed = aug_det.augment_images(images_list)
+    assert (observed[0] > 128 - 30).all()
+    assert (observed[0] < 128 + 30).all()
+
+    # random cvals
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=(0, 1.0))
+    aug_det = aug.to_deterministic()
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    averages = []
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        averages.append(int(np.average(observed_aug)))
+
+    assert nb_changed_aug >= int(nb_iterations * 0.9)
+    assert nb_changed_aug_det == 0
+    # center pixel, should always be white when rotating line around center
+    assert pixels_sums_aug[1, 1] > (nb_iterations * 0.98)
+    assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
+    assert len(set(averages)) > 200
+
+    # ---------------------
+    # order
+    # ---------------------
+    print("[Note] There is currently no test for (interpolation) order in test_Affine().")
 
 
 def test_ElasticTransformation():
+    pass
+
+def test_Sequential():
+    image = np.array([[0, 1, 1],
+                      [0, 0, 1],
+                      [0, 0, 1]], dtype=np.uint8) * 255
+    image = image[:, :, np.newaxis]
+    images_list = [image]
+    images = np.array([image])
+
+    image_lr = np.array([[1, 1, 0],
+                         [1, 0, 0],
+                         [1, 0, 0]], dtype=np.uint8) * 255
+    image_lr = image_lr[:, :, np.newaxis]
+    images_lr = np.array([image_lr])
+
+    image_ud = np.array([[0, 0, 1],
+                         [0, 0, 1],
+                         [0, 1, 1]], dtype=np.uint8) * 255
+    image_ud = image_ud[:, :, np.newaxis]
+    images_ud = np.array([image_ud])
+
+    image_lr_ud = np.array([[1, 0, 0],
+                            [1, 0, 0],
+                            [1, 1, 0]], dtype=np.uint8) * 255
+    image_lr_ud = image_lr_ud[:, :, np.newaxis]
+    images_lr_ud_list = [image_lr_ud]
+    images_lr_ud = np.array([image_lr_ud])
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0), ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=0, y=2), ia.Keypoint(x=0, y=1)], shape=image.shape)]
+
+    aug = iaa.Sequential([
+        iaa.Fliplr(1.0),
+        iaa.Flipud(1.0)
+    ])
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_lr_ud)
+
+    observed = aug_det.augment_images(images)
+    assert np.array_equal(observed, images_lr_ud)
+
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_lr_ud_list)
+
+    observed = aug_det.augment_images(images_list)
+    assert array_equal_lists(observed, images_lr_ud_list)
+
+    observed = aug.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    assert keypoints_equal(observed, keypoints_aug)
+
+    # 50% horizontal flip, 50% vertical flip
+    aug = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5)
+    ])
+    aug_det = aug.to_deterministic()
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in range(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        assert np.array_equal(observed_aug, images) or np.array_equal(observed_aug, images_lr) or np.array_equal(observed_aug, images_ud) or np.array_equal(observed_aug, images_lr_ud)
+        assert np.array_equal(observed_aug_det, images) or np.array_equal(observed_aug_det, images_lr) or np.array_equal(observed_aug_det, images_ud) or np.array_equal(observed_aug_det, images_lr_ud)
+
+    assert (0.25 - 0.05) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.25 + 0.05) # should be the same in roughly 25% of all cases
+    assert nb_changed_aug_det == 0
+
+    # random order
+    image = np.array([[0, 1, 1],
+                      [0, 0, 1],
+                      [0, 0, 1]], dtype=np.uint8)
+    image = image[:, :, np.newaxis]
+    images = np.array([image])
+
+    images_first_second = (images + 10) * 10
+    images_second_first = (images * 10) + 10
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=image.shape)]
+    keypoints_first_second = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=image.shape)]
+    keypoints_second_first = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0)], shape=image.shape)]
+
+    def images_first(images, random_state, parents, hooks):
+        return images + 10
+
+    def images_second(images, random_state, parents, hooks):
+        return images * 10
+
+    def keypoints_first(keypoints_on_images, random_state, parents, hooks):
+        for keypoints_on_image in keypoints_on_images:
+            for keypoint in keypoints_on_image.keypoints:
+                keypoint.x = keypoint.x + 1
+        return keypoints_on_images
+
+    def keypoints_second(keypoints_on_images, random_state, parents, hooks):
+        for keypoints_on_image in keypoints_on_images:
+            for keypoint in keypoints_on_image.keypoints:
+                keypoint.y = keypoint.y + keypoint.x
+        return keypoints_on_images
+
+    aug_unrandom = iaa.Sequential([
+        iaa.Lambda(images_first, keypoints_first),
+        iaa.Lambda(images_second, keypoints_second)
+    ], random_order=False)
+    aug_unrandom_det = aug.to_deterministic()
+    aug_random = iaa.Sequential([
+        iaa.Lambda(images_first, keypoints_first),
+        iaa.Lambda(images_second, keypoints_second)
+    ], random_order=True)
+    aug_random_det = aug.to_deterministic()
+
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+
+    nb_images_first_second_unrandom = 0
+    nb_images_second_first_unrandom = 0
+    nb_images_first_second_random = 0
+    nb_images_second_first_random = 0
+    nb_keypoints_first_second_unrandom = 0
+    nb_keypoints_second_first_unrandom = 0
+    nb_keypoints_first_second_random = 0
+    nb_keypoints_second_first_random = 0
+
+    for i in range(nb_iterations):
+        observed_aug_unrandom = aug_unrandom.augment_images(images)
+        observed_aug_unrandom_det = aug_unrandom_det.augment_images(images)
+        observed_aug_random = aug_random.augment_images(images)
+        observed_aug_random_det = aug_random_det.augment_images(images)
+
+        keypoints_aug_unrandom = aug_unrandom.augment_keypoints(keypoints)
+        keypoints_aug_unrandom_det = aug_unrandom_det.augment_keypoints(keypoints)
+        keypoints_aug_random = aug_random.augment_keypoints(keypoints)
+        keypoints_aug_random_det = aug_random_det.augment_keypoints(keypoints)
+
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+
+        if np.array_equal(observed_aug_unrandom, images_first_second):
+            nb_images_first_second_unrandom += 1
+        elif np.array_equal(observed_aug_unrandom, images_second_first):
+            nb_images_second_first_unrandom += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if np.array_equal(observed_aug_random, images_first_second):
+            nb_images_first_second_random += 1
+        elif np.array_equal(observed_aug_random, images_second_first):
+            nb_images_second_first_random += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if keypoints_equal(keypoints_aug_unrandom, keypoints_first_second):
+            nb_keypoints_first_second_unrandom += 1
+        elif keypoints_equal(keypoints_aug_unrandom, keypoints_second_first):
+            nb_keypoints_second_first_unrandom += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if keypoints_equal(keypoints_aug_random, keypoints_first_second):
+            nb_keypoints_first_second_random += 1
+        elif keypoints_equal(keypoints_aug_random, keypoints_second_first):
+            nb_keypoints_second_first_random += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+    assert nb_changed_aug == 0
+    assert nb_changed_aug_det == 0
+    assert nb_images_first_second_unrandom == nb_iterations
+    assert nb_images_second_first_unrandom == 0
+    assert nb_keypoints_first_second_unrandom == nb_iterations
+    assert nb_keypoints_second_first_unrandom == 0
+    assert (0.50 - 0.1) <= nb_images_first_second_random / nb_iterations <= (0.50 + 0.1)
+    assert (0.50 - 0.1) <= nb_images_second_first_random / nb_iterations <= (0.50 + 0.1)
+    assert (0.50 - 0.1) <= nb_keypoints_first_second_random / nb_iterations <= (0.50 + 0.1)
+    assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
+
+def test_Sometimes():
     pass
 
 def create_random_images(size):

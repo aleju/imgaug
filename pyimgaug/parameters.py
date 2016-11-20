@@ -58,6 +58,21 @@ class Binomial(StochasticParameter):
         else:
             return "Binomial(%s)" % (self.p,)
 
+class Choice(StochasticParameter):
+    def __init__(self, a, replace=True, p=None):
+        self.a = a
+        self.replace = replace
+        self.p = p
+
+    def _draw_samples(self, size, random_state):
+        return random_state.choice(self.a, size, replace=self.replace, p=self.p)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Choice(a=%s, replace=%s, p=%s)" % (str(self.a), str(self.replace), str(self.p),)
+
 class DiscreteUniform(StochasticParameter):
     def __init__(self, a, b):
         # for two ints the samples will be from range a <= x <= b
@@ -152,10 +167,10 @@ class Deterministic(StochasticParameter):
     def __init__(self, value):
         if isinstance(value, StochasticParameter):
             self.value = value.draw_sample()
-        elif isinstance(value, (float, int)):
+        elif ia.is_single_number(value) or ia.is_string(value):
             self.value = value
         else:
-            raise Exception("Expected StochasticParameter object or float or int as value, got %s." % (type(value),))
+            raise Exception("Expected StochasticParameter object or number or string, got %s." % (type(value),))
 
     def _draw_samples(self, size, random_state):
         return np.tile(np.array([self.value]), size)
