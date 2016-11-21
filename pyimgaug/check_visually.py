@@ -15,6 +15,8 @@ def main():
 
     augmenters = [
         iaa.Noop(name="Noop"),
+        iaa.Crop(px=(0, 8), name="Crop-px"),
+        iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),
         iaa.Flipud(0.5, name="Flipud"),
         iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
@@ -30,7 +32,8 @@ def main():
             cval=(0, 1.0),
             mode=ia.ALL,
             name="Affine"
-        )
+        ),
+        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0)
     ]
 
     #for i, aug in enumerate(augmenters):

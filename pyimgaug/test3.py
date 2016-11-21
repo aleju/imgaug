@@ -7,7 +7,33 @@ import numpy as np
 import time
 
 def main():
-    # float/int functions
+    test_is_single_integer()
+    test_is_single_float()
+
+    test_find()
+    test_remove()
+
+    test_Noop()
+    test_Lambda()
+    test_AssertLambda()
+    test_AssertShape()
+    test_Crop()
+    test_Fliplr()
+    test_Flipud()
+    test_GaussianBlur()
+    test_AdditiveGaussianNoise()
+    # MultiplicativeGaussianNoise
+    # ReplacingGaussianNoise
+    test_Dropout()
+    test_Multiply()
+    test_Affine()
+    test_ElasticTransformation()
+    test_Sequential()
+    test_Sometimes()
+
+    print("Finished without errors.")
+
+def test_is_single_integer():
     assert ia.is_single_integer("A") == False
     assert ia.is_single_integer(None) == False
     assert ia.is_single_integer(1.2) == False
@@ -18,6 +44,7 @@ def main():
     assert ia.is_single_integer(np.ones((1,), dtype=np.uint8)[0]) == True
     assert ia.is_single_integer(np.ones((1,), dtype=np.int32)[0]) == True
 
+def test_is_single_float():
     assert ia.is_single_float("A") == False
     assert ia.is_single_float(None) == False
     assert ia.is_single_float(1.2) == True
@@ -28,52 +55,77 @@ def main():
     assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
 
-    # Noop
-    test_Noop()
+def test_find():
+    noop1 = iaa.Noop(name="Noop")
+    fliplr = iaa.Fliplr(name="Fliplr")
+    flipud = iaa.Flipud(name="Flipud")
+    noop2 = iaa.Noop(name="Noop2")
+    seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
+    seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
 
-    # Lambda
-    test_Lambda()
+    augs = seq1.find_augmenters_by_name("Seq")
+    assert len(augs) == 1
+    assert augs[0] == seq1
 
-    # AssertLambda
-    test_AssertLambda()
+    augs = seq1.find_augmenters_by_name("Seq2")
+    assert len(augs) == 1
+    assert augs[0] == seq2
 
-    # AssertShape
-    test_AssertShape()
+    augs = seq1.find_augmenters_by_names(["Seq", "Seq2"])
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == seq2
 
-    # Fliplr
-    test_Fliplr()
+    augs = seq1.find_augmenters_by_name(r"Seq.*", regex=True)
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == seq2
 
-    # Flipud
-    test_Flipud()
+    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"])
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == seq2
 
-    # GaussianBlur
-    test_GaussianBlur()
+    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"] and len(parents) > 0)
+    assert len(augs) == 1
+    assert augs[0] == seq2
 
-    # AdditiveGaussianNoise
-    test_AdditiveGaussianNoise()
+    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"], flat=False)
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == [seq2]
 
-    # MultiplicativeGaussianNoise
+def test_remove():
+    def get_seq():
+        noop1 = iaa.Noop(name="Noop")
+        fliplr = iaa.Fliplr(name="Fliplr")
+        flipud = iaa.Flipud(name="Flipud")
+        noop2 = iaa.Noop(name="Noop2")
+        seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
+        seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
+        return seq1
 
-    # ReplacingGaussianNoise
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq2")
+    seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
+    assert len(seqs) == 1
+    assert seqs[0].name == "Seq"
 
-    # Dropout
-    test_Dropout()
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq2" and len(parents) == 0)
+    seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
+    assert len(seqs) == 2
+    assert seqs[0].name == "Seq"
+    assert seqs[1].name == "Seq2"
 
-    # Multiply
-    test_Multiply()
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: True)
+    assert augs is not None
+    assert isinstance(augs, iaa.Noop)
 
-    # Affine
-    test_Affine()
-
-    # ElasticTransformation
-
-    # Sequential
-    test_Sequential()
-
-    # Sometimes
-    test_Sometimes()
-
-    print("Finished.")
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: True, noop_if_topmost=False)
+    assert augs is None
 
 def test_Noop():
     images = create_random_images((16, 70, 50, 3))
@@ -412,6 +464,140 @@ def test_AssertShape():
             errored = True
         assert errored
 
+def test_Crop():
+    base_img = np.array([[0, 0, 0],
+                         [0, 1, 0],
+                         [0, 0, 0]], dtype=np.uint8)
+    base_img = base_img[:, :, np.newaxis]
+
+    images = np.array([base_img])
+    images_list = [base_img]
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # test crop by 1 pixel on each side
+    crops = [
+        (1, 0, 0, 0),
+        (0, 1, 0, 0),
+        (0, 0, 1, 0),
+        (0, 0, 0, 1),
+    ]
+    for crop in crops:
+        top, right, bottom, left = crop
+        height, width = base_img.shape[0:2]
+        aug = iaa.Crop(px=crop, resize=False)
+        base_img_cropped = base_img[top:height-bottom, left:width-right, :]
+        observed = aug.augment_images(images)
+        assert np.array_equal(observed, np.array([base_img_cropped]))
+
+        observed = aug.augment_images(images_list)
+        assert array_equal_lists(observed, [base_img_cropped])
+
+        keypoints_moved = [keypoints[0].shift(x=-left, y=-top)]
+        observed = aug.augment_keypoints(keypoints)
+        assert keypoints_equal(observed, keypoints_moved)
+
+    # test crop by range of pixels
+    crops = [
+        ((0, 2), 0, 0, 0),
+        (0, (0, 2), 0, 0),
+        (0, 0, (0, 2), 0),
+        (0, 0, 0, (0, 2)),
+    ]
+    for crop in crops:
+        top, right, bottom, left = crop
+        height, width = base_img.shape[0:2]
+        aug = iaa.Crop(px=crop, resize=False)
+        aug_det = aug.to_deterministic()
+
+        images_cropped = []
+        keypoints_cropped = []
+        top_range = top if isinstance(top, tuple) else (top, top)
+        right_range = right if isinstance(right, tuple) else (right, right)
+        bottom_range = bottom if isinstance(bottom, tuple) else (bottom, bottom)
+        left_range = left if isinstance(left, tuple) else (left, left)
+        for top_val in range(top_range[0], top_range[1]+1):
+            for right_val in range(right_range[0], right_range[1]+1):
+                for bottom_val in range(bottom_range[0], bottom_range[1]+1):
+                    for left_val in range(left_range[0], left_range[1]+1):
+
+                        images_cropped.append(base_img[top_val:height-bottom_val, left_val:width-right_val, :])
+                        keypoints_cropped.append(keypoints[0].shift(x=-left_val, y=-top_val))
+
+        movements = []
+        movements_det = []
+        for i in range(100):
+            observed = aug.augment_images(images)
+
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            movements.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug_det.augment_images(images)
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            movements_det.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug.augment_images(images_list)
+            assert any([array_equal_lists(observed, [base_img_cropped]) for base_img_cropped in images_cropped])
+
+            observed = aug.augment_keypoints(keypoints)
+            assert any([keypoints_equal(observed, [kp]) for kp in keypoints_cropped])
+
+        assert len(set(movements)) == 3
+        assert len(set(movements_det)) == 1
+
+    # test crop by list of exact pixel values
+    crops = [
+        ([0, 2], 0, 0, 0),
+        (0, [0, 2], 0, 0),
+        (0, 0, [0, 2], 0),
+        (0, 0, 0, [0, 2]),
+    ]
+    for crop in crops:
+        top, right, bottom, left = crop
+        height, width = base_img.shape[0:2]
+        aug = iaa.Crop(px=crop, resize=False)
+        aug_det = aug.to_deterministic()
+
+        images_cropped = []
+        keypoints_cropped = []
+        top_range = top if isinstance(top, list) else [top]
+        right_range = right if isinstance(right, list) else [right]
+        bottom_range = bottom if isinstance(bottom, list) else [bottom]
+        left_range = left if isinstance(left, list) else [left]
+        for top_val in top_range:
+            for right_val in right_range:
+                for bottom_val in bottom_range:
+                    for left_val in left_range:
+                        images_cropped.append(base_img[top_val:height-bottom_val, left_val:width-right_val, :])
+                        keypoints_cropped.append(keypoints[0].shift(x=-left_val, y=-top_val))
+
+        movements = []
+        movements_det = []
+        for i in range(100):
+            observed = aug.augment_images(images)
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            movements.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug_det.augment_images(images)
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            movements_det.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug.augment_images(images_list)
+            assert any([array_equal_lists(observed, [base_img_cropped]) for base_img_cropped in images_cropped])
+
+            observed = aug.augment_keypoints(keypoints)
+            assert any([keypoints_equal(observed, [kp]) for kp in keypoints_cropped])
+
+        assert len(set(movements)) == 2
+        assert len(set(movements_det)) == 1
+
+    # TODO
+    print("[Note] Crop by percentages is currently not tested.")
+    print("[Note] Landmark projection after crop with resize is currently not tested.")
 
 def test_Fliplr():
     base_img = np.array([[0, 0, 1],
@@ -1561,6 +1747,7 @@ def test_Affine():
     # ---------------------
     # shear
     # ---------------------
+    # TODO
     print("[Note] There is currently no test for shear in test_Affine().")
 
     # ---------------------
@@ -1626,11 +1813,13 @@ def test_Affine():
     # ---------------------
     # order
     # ---------------------
+    # TODO
     print("[Note] There is currently no test for (interpolation) order in test_Affine().")
 
 
 def test_ElasticTransformation():
-    pass
+    # TODO
+    print("[Note] Elastic Transformations are currently not tested.")
 
 def test_Sequential():
     image = np.array([[0, 1, 1],
