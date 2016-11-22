@@ -45,6 +45,10 @@ class Augmenter(object):
 
         self.activated = True
 
+    def augment_batches(self, batches, hooks=None):
+        assert isinstance(batches, list)
+        return [self.augment_images(batch, hooks=hooks) for batch in batches]
+
     def augment_images(self, images, parents=None, hooks=None):
         if self.deterministic:
             state_orig = self.random_state.get_state()
@@ -152,8 +156,14 @@ class Augmenter(object):
 
     def draw_grid(self, images, rows, cols):
         if ia.is_np_array(images):
-            assert len(images.shape) == 3
-            images = [images]
+            if len(images.shape) == 4:
+                images = [images[i] for i in range(images.shape[0])]
+            elif len(images.shape) == 3:
+                images = [images]
+            elif len(images.shape) == 2:
+                images = [images[:, :, np.newaxis]]
+            else:
+                raise Exception("Unexpected images shape, expected 2-, 3- or 4-dimensional array, got shape %s." % (images.shape,))
         assert isinstance(images, list)
 
         det = self if self.deterministic else self.to_deterministic()
@@ -179,6 +189,9 @@ class Augmenter(object):
 
         return grid
 
+    def show_grid(self, images, rows, cols):
+        grid = self.draw_grid(images, rows, cols)
+        misc.imshow(grid)
 
     """
     def transform_augjob(self, augjob):
@@ -212,6 +225,22 @@ class Augmenter(object):
         aug.random_state = ia.new_random_state()
         aug.deterministic = True
         return aug
+
+    def reseed(self, deterministic_too=False, random_state=None):
+        if random_state is None:
+            random_state = ia.current_random_state()
+        elif isinstance(random_state, np.random.RandomState):
+            pass # just use the provided random state without change
+        else:
+            random_state = ia.new_random_state(random_state)
+
+        if not self.deterministic or deterministic_too:
+            seed = random_state.randint(0, 10**6, 1)[0]
+            self.random_state = ia.new_random_state(seed)
+
+        for lst in self.get_children_lists():
+            for aug in lst:
+                aug.reseed(deterministic_too=deterministic_too, random_state=random_state)
 
     @abstractmethod
     def get_parameters(self):
@@ -393,20 +422,20 @@ class Sometimes(Augmenter):
             raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
 
         if then_list is None:
-            self.then_list = Sequential([], name="%s-then" % (self.name,), random_state=ia.new_random_state())
-        elif isinstance(then_list, Augmenter):
-            self.then_list = then_list
+            self.then_list = Sequential([], name="%s-then" % (self.name,))
         elif ia.is_iterable(then_list):
-            self.then_list = Sequential(then_list, name="%s-then" % (self.name,), random_state=ia.new_random_state())
+            self.then_list = Sequential(then_list, name="%s-then" % (self.name,))
+        elif isinstance(then_list, Augmenter):
+            self.then_list = Sequential([then_list], name="%s-then" % (self.name,))
         else:
             raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
 
         if else_list is None:
-            self.else_list = Sequential([], name="%s-else" % (self.name,), random_state=ia.new_random_state())
-        elif isinstance(else_list, Augmenter):
-            self.else_list = else_list
+            self.else_list = Sequential([], name="%s-else" % (self.name,))
         elif ia.is_iterable(else_list):
-            self.else_list = Sequential(else_list, name="%s-else" % (self.name,), random_state=ia.new_random_state())
+            self.else_list = Sequential(else_list, name="%s-else" % (self.name,))
+        elif isinstance(else_list, Augmenter):
+            self.else_list = Sequential([else_list], name="%s-else" % (self.name,))
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
@@ -950,10 +979,10 @@ class AdditiveGaussianNoise(Augmenter):
                     height, width, nb_channels = images[i].shape
                     noise = rs.normal(sample_loc, sample_scale, size=(height, width, 1))
                     noise = np.tile(noise, (1, 1, nb_channels))
-                noise = (noise * 255).astype(np.uint8)
+                noise = (noise * 255).astype(np.int32)
                 after_noise = images[i] + noise
                 np.clip(after_noise, 0, 255, out=after_noise)
-                result[i] = after_noise
+                result[i] = after_noise.astype(np.uint8)
 
         return result
 
@@ -1082,7 +1111,7 @@ class Affine(Augmenter):
             self.mode = Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
-        elif isinstance(mode, "list"):
+        elif isinstance(mode, list):
             assert all([ia.is_string(val) for val in mode])
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):

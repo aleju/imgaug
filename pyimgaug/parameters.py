@@ -105,33 +105,33 @@ class DiscreteUniform(StochasticParameter):
         return "DiscreteUniform(%s, %s)" % (self.a, self.b)
 
 class Normal(StochasticParameter):
-    def __init__(self, mean, std):
-        if isinstance(mean, StochasticParameter):
-            self.mean = mean
-        elif isinstance(mean, (float, int)):
-            self.mean = Deterministic(mean)
+    def __init__(self, loc, scale):
+        if isinstance(loc, StochasticParameter):
+            self.loc = loc
+        elif isinstance(loc, (float, int)):
+            self.loc = Deterministic(loc)
         else:
-            raise Exception("Expected float, int or StochasticParameter as mean, got %s, %s." % (type(mean),))
+            raise Exception("Expected float, int or StochasticParameter as loc, got %s, %s." % (type(loc),))
 
-        if isinstance(std, StochasticParameter):
-            self.std = std
-        elif isinstance(std, (float, int)):
-            assert std > 0, "Expected std to be higher than 0, got %s (type %s)." % (std, type(std))
-            self.std = Deterministic(std)
+        if isinstance(scale, StochasticParameter):
+            self.scale = scale
+        elif isinstance(scale, (float, int)):
+            assert scale > 0, "Expected scale to be higher than 0, got %s (type %s)." % (scale, type(scale))
+            self.scale = Deterministic(scale)
         else:
-            raise Exception("Expected float, int or StochasticParameter as std, got %s, %s." % (type(std),))
+            raise Exception("Expected float, int or StochasticParameter as scale, got %s, %s." % (type(scale),))
 
     def _draw_samples(self, size, random_state):
-        mean = self.mean.draw_sample(random_state=random_state)
-        std = self.std.draw_sample(random_state=random_state)
-        assert std > 0, "Expected std to be higher than 0, got %s." % (std,)
-        return random_state.normal(mean, std, size=size)
+        loc = self.loc.draw_sample(random_state=random_state)
+        scale = self.scale.draw_sample(random_state=random_state)
+        assert scale > 0, "Expected scale to be higher than 0, got %s." % (scale,)
+        return random_state.normal(loc, scale, size=size)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "Normal(mean=%s, std=%s)" % (self.mean, self.std)
+        return "Normal(loc=%s, scale=%s)" % (self.loc, self.scale)
 
 class Uniform(StochasticParameter):
     def __init__(self, a, b):

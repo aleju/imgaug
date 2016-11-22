@@ -84,13 +84,13 @@ def copy_random_state(random_state, force_copy=False):
 def current_random_state():
     return CURRENT_RANDOM_STATE
 
-def new_random_state(seed=None):
+def new_random_state(seed=None, fully_random=False):
     if seed is None:
-        # sample manually a seed instead of just RandomState(), because the latter one
-        # is way slower.
-        return np.random.RandomState(np.random.randint(0, 10**6, 1)[0])
-    else:
-        return np.random.RandomState(seed)
+        if not fully_random:
+            # sample manually a seed instead of just RandomState(), because the latter one
+            # is way slower.
+            seed = CURRENT_RANDOM_STATE.randint(0, 10**6, 1)[0]
+    return np.random.RandomState(seed)
 
 def dummy_random_state():
     return np.random.RandomState(1)
