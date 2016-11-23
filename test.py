@@ -303,7 +303,7 @@ def test_AssertLambda():
     try:
         observed = aug_fails.augment_images(images)
         errored = False
-    except AssertionError, e:
+    except AssertionError as e:
         errored = True
     assert errored
 
@@ -314,7 +314,7 @@ def test_AssertLambda():
     try:
         observed = aug_fails.augment_images(images)
         errored = False
-    except AssertionError, e:
+    except AssertionError as e:
         errored = True
     assert errored
 
@@ -326,7 +326,7 @@ def test_AssertLambda():
     try:
         observed = aug_fails.augment_images(images_list)
         errored = False
-    except AssertionError, e:
+    except AssertionError as e:
         errored = True
     assert errored
 
@@ -337,7 +337,7 @@ def test_AssertLambda():
     try:
         observed = aug_fails.augment_images(images_list)
         errored = False
-    except AssertionError, e:
+    except AssertionError as e:
         errored = True
     assert errored
 
@@ -349,7 +349,7 @@ def test_AssertLambda():
     try:
         observed = aug_fails.augment_keypoints(keypoints)
         errored = False
-    except AssertionError, e:
+    except AssertionError as e:
         errored = True
     assert errored
 
@@ -360,7 +360,7 @@ def test_AssertLambda():
     try:
         observed = aug_fails.augment_keypoints(keypoints)
         errored = False
-    except AssertionError, e:
+    except AssertionError as e:
         errored = True
     assert errored
 
@@ -414,14 +414,14 @@ def test_AssertShape():
         try:
             observed = aug.augment_images(images_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
         try:
             observed = aug.augment_keypoints(keypoints_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
@@ -448,14 +448,14 @@ def test_AssertShape():
         try:
             observed = aug.augment_images(images_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
         try:
             observed = aug.augment_keypoints(keypoints_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
@@ -482,14 +482,14 @@ def test_AssertShape():
         try:
             observed = aug.augment_images(images_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
         try:
             observed = aug.augment_keypoints(keypoints_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
@@ -516,14 +516,14 @@ def test_AssertShape():
         try:
             observed = aug.augment_images(images_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
         try:
             observed = aug.augment_keypoints(keypoints_h4)
             errored = False
-        except AssertionError, e:
+        except AssertionError as e:
             errored = True
         assert errored
 
@@ -548,7 +548,7 @@ def test_Crop():
     for crop in crops:
         top, right, bottom, left = crop
         height, width = base_img.shape[0:2]
-        aug = iaa.Crop(px=crop, resize=False)
+        aug = iaa.Crop(px=crop, keep_size=False)
         base_img_cropped = base_img[top:height-bottom, left:width-right, :]
         observed = aug.augment_images(images)
         assert np.array_equal(observed, np.array([base_img_cropped]))
@@ -570,7 +570,7 @@ def test_Crop():
     for crop in crops:
         top, right, bottom, left = crop
         height, width = base_img.shape[0:2]
-        aug = iaa.Crop(px=crop, resize=False)
+        aug = iaa.Crop(px=crop, keep_size=False)
         aug_det = aug.to_deterministic()
 
         images_cropped = []
@@ -620,7 +620,7 @@ def test_Crop():
     for crop in crops:
         top, right, bottom, left = crop
         height, width = base_img.shape[0:2]
-        aug = iaa.Crop(px=crop, resize=False)
+        aug = iaa.Crop(px=crop, keep_size=False)
         aug_det = aug.to_deterministic()
 
         images_cropped = []
@@ -1024,7 +1024,7 @@ def test_AdditiveGaussianNoise():
     assert keypoints_equal(observed, keypoints)
 
     # std correct?
-    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2)
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2 * 255)
     aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     nb_iterations = 10000
@@ -1037,7 +1037,7 @@ def test_AdditiveGaussianNoise():
     assert 0.1 < np.std(values) / 255.0 < 0.4
 
     # non-zero loc
-    aug = iaa.AdditiveGaussianNoise(loc=0.25, scale=0.01)
+    aug = iaa.AdditiveGaussianNoise(loc=0.25 * 255, scale=0.01 * 255)
     aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     nb_iterations = 10000
@@ -1049,7 +1049,7 @@ def test_AdditiveGaussianNoise():
     assert 54 < np.average(values) < 74 # loc=0.25 should be around 255*0.25=64 average
 
     # varying locs
-    aug = iaa.AdditiveGaussianNoise(loc=(0, 0.5), scale=0.0001)
+    aug = iaa.AdditiveGaussianNoise(loc=(0, 0.5 * 255), scale=0.0001 * 255)
     aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     last_aug = None
@@ -1074,7 +1074,7 @@ def test_AdditiveGaussianNoise():
     assert nb_changed_aug_det == 0
 
     # varying stds
-    aug = iaa.AdditiveGaussianNoise(loc=0, scale=(0.01, 0.2))
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=(0.01 * 255, 0.2 * 255))
     aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     last_aug = None
