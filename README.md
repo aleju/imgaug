@@ -16,6 +16,8 @@ The image below shows examples for each availabe augmentation technique. ("Noop"
 
 ![Available augmenters](examples.jpg?raw=true "Effects of all available augmenters")
 
+*Noop is an augmenter that does nothing. Values for crop are (top pixel, right px, bottom px, left px). Other values written in form (a, b) mean that the value was randomly picked from the range (a, b).*
+
 # Requirements and installation
 
 Required dependencies:
@@ -57,30 +59,36 @@ from imgaug import augmenters as iaa
 # random example images
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
-# Sometimes(0.5, ...) applies the given augmenter only in 50% of all cases,
-# e.g. Sometimes(0.5, GaussianBlur(0.3)) would blur every second image.
-sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+# Sometimes(0.5, ...) applies the given augmenter in 50% of all cases,
+# e.g. Sometimes(0.5, GaussianBlur(0.3)) would blur roughly every second image.
+st = lambda aug: iaa.Somtimes(0.5, aug)
 
+# Define our sequence of augmentation steps that will be applied to every image
+# All augmenters with per_channel=0.5 will sample one value _per image_
+# in 50% of all cases. In all other cases they will sample new values
+# _per channel_.
 seq = iaa.Sequential([
-          sometimes(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
-          iaa.Fliplr(0.5), # horizontally flip 50% of all images
-          iaa.Flipud(0.5), # vertically flip 50% of all images
-          sometimes(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
-          sometimes(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2))), # add gaussian noise to images
-          sometimes(iaa.Dropout((0.0, 0.1))), # randomly remove up to 10% of the pixels
-          sometimes(iaa.Multiply((0.5, 1.5))), # change brightness of images (50-150% of original value)
-          sometimes(iaa.Affine(
-              scale={"x": (0.8, 1.2), "y": (0.8, 1.2)}, # scale images to 80-120% of their size, individually per axis
-              translate_px={"x": (-16, 16), "y": (-16, 16)}, # translate by -16 to +16 pixels (per axis)
-              rotate=(-45, 45), # rotate by -45 to +45 degrees
-              shear=(-16, 16), # shear by -16 to +16 degrees
-              order=ia.ALL, # use any of scikit-image's interpolation methods
-              cval=(0, 1.0), # if mode is constant, use a cval between 0 and 1.0
-              mode=ia.ALL # use any of scikit-image's warping modes (see 2nd image from the top for examples)
-          )),
-          sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)) # apply elastic transformations with random strengths
-      ],
-      random_order=True # do all of the above in random order
+        iaa.Fliplr(0.5), # horizontally flip 50% of all images
+        iaa.Flipud(0.5), # vertically flip 50% of all images
+        st(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
+        st(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
+        st(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)), # add gaussian noise to images
+        st(iaa.Dropout((0.0, 0.1), per_channel=0.5)), # randomly remove up to 10% of the pixels
+        st(iaa.Add((-10, 10), per_channel=0.5)), # change brightness of images (by -10 to 10 of original value)
+        st(iaa.Multiply((0.5, 1.5), per_channel=0.5)), # change brightness of images (50-150% of original value)
+        st(iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5)), # improve or worsen the contrast
+        st(iaa.Affine(
+            scale={"x": (0.8, 1.2), "y": (0.8, 1.2)}, # scale images to 80-120% of their size, individually per axis
+            translate_px={"x": (-16, 16), "y": (-16, 16)}, # translate by -16 to +16 pixels (per axis)
+            rotate=(-45, 45), # rotate by -45 to +45 degrees
+            shear=(-16, 16), # shear by -16 to +16 degrees
+            order=ia.ALL, # use any of scikit-image's interpolation methods
+            cval=(0, 1.0), # if mode is constant, use a cval between 0 and 1.0
+            mode=ia.ALL # use any of scikit-image's warping modes (see 2nd image from the top for examples)
+        )),
+        st(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)) # apply elastic transformations with random strengths
+    ],
+    random_order=True # do all of the above in random order
 )
 
 images_aug = seq.augment_images(images)
