@@ -1,6 +1,6 @@
 from __future__ import print_function, division
-import pyimgaug as ia
-import augmenters2 as iaa
+import imgaug as ia
+import augmenters as iaa
 import parameters as iap
 #from skimage import
 import numpy as np
@@ -23,6 +23,7 @@ def main():
         iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.1), name="AdditiveGaussianNoise"),
         iaa.Dropout((0.0, 0.1), name="Dropout"),
         iaa.Multiply((0.5, 1.5), name="Multiply"),
+        iaa.ContrastChange(alpha=(0.5, 2.0)),
         iaa.Affine(
             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
             translate_px={"x": (-16, 16), "y": (-16, 16)},
