@@ -104,9 +104,9 @@ def copy_random_state(random_state, force_copy=False):
         rs_copy.set_state(orig_state)
         return rs_copy
 
-def from_json(json_str):
-    #TODO
-    pass
+# TODO
+#def from_json(json_str):
+#    pass
 
 def imresize_many_images(images, sizes=None, interpolation=None):
     s = images.shape
@@ -162,18 +162,15 @@ class HooksImages(object):
         self.preprocessor = preprocessor
         self.postprocessor = postprocessor
 
-    def is_activated(self, images, augmenter, parents):
+    def is_activated(self, images, augmenter, parents, default):
         if self.activator is None:
-            return augmenter.activated
+            return default
         else:
-            return self.activator(images, augmenter, parents)
+            return self.activator(images, augmenter, parents, default)
 
-    def is_propagating(self, images, augmenter, parents, default=True):
+    def is_propagating(self, images, augmenter, parents, default):
         if self.propagator is None:
-            if default is None:
-                return True
-            else:
-                return default
+            return default
         else:
             return self.propagator(images, augmenter, parents, default)
 
