@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
 import copy
-import pyimgaug as ia
+import imgaug as ia
 import copy
 
 try:
