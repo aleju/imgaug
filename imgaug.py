@@ -40,47 +40,6 @@ def is_string(val):
 def is_integer_array(val):
     return issubclass(val.dtype.type, np.integer)
 
-"""
-def current_np_random_state():
-    return np.random
-
-def new_np_random_state(seed=None):
-    if seed is None:
-        # sample manually a seed instead of just RandomState(), because the latter one
-        # is way slower.
-        return np.random.RandomState(np.random.randint(0, 10**6, 1)[0])
-    else:
-        return np.random.RandomState(seed)
-
-def dummy_np_random_state():
-    return np.random.RandomState(1)
-
-def copy_np_random_state(random_state, force_copy=False):
-    if random_state == np.random and not force_copy:
-        return random_state
-    else:
-        rs_copy = dummy_np_random_state()
-        print("random_state", random_state)
-        print("rs_copy", rs_copy)
-        orig_state = random_state.get_state()
-        rs_copy.set_state(orig_state)
-        return rs_copy
-
-def current_random_state():
-    return AugmenterRandomState(None)
-
-def new_random_state(seed=None):
-    rs = new_np_random_state(seed=seed)
-    return AugmenterRandomState(rs)
-
-def dummy_random_state():
-    return new_random_state(1)
-
-def copy_random_state(random_state, force_copy=False):
-    assert isinstance(random_state, AugmenterRandomState)
-    return AugmenterRandomState(copy_np_random_state(random_state))
-"""
-
 def current_random_state():
     return CURRENT_RANDOM_STATE
 
@@ -191,8 +150,6 @@ class HooksKeypoints(HooksImages):
 
 class Keypoint(object):
     def __init__(self, x, y):
-        #assert isinstance(x, int), type(x)
-        #assert isinstance(y, int), type(y)
         assert is_single_integer(x), type(x)
         assert is_single_integer(y), type(y)
         self.x = x
@@ -239,6 +196,26 @@ class KeypointsOnImage(object):
 
         keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
         return KeypointsOnImage(keypoints, shape)
+
+    def draw_on_image(self, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False):
+        if copy:
+            image = np.copy(image)
+
+        height, width = image.shape[0:2]
+
+        for keypoint in self.keypoints:
+            y, x = keypoint.y, keypoint.x
+            if 0 <= y < height and 0 <= x < width:
+                x1 = max(x - size//2, 0)
+                x2 = min(x + 1 + size//2, width - 1)
+                y1 = max(y - size//2, 0)
+                y2 = min(y + 1 + size//2, height - 1)
+                image[y1:y2, x1:x2] = color
+            else:
+                if raise_if_out_of_image:
+                    raise Exception("Cannot draw keypoint x=%d, y=%d on image with shape %s." % (y, x, image.shape))
+
+        return image
 
     def shift(self, x, y):
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
@@ -316,89 +293,7 @@ class KeypointsOnImage(object):
         #print(type(self.keypoints), type(self.shape))
         return "KeypointOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
-"""
-class AugmenterRandomState(object):
-    def __init__(self, random_state=None):
-        assert random_state is None or isinstance(random_state, np.random.RandomState)
-        self.random_state = random_state
-
-    def __getattr__(self, attr, *args, **kwargs):
-        print("__gettr__", attr)
-        if self.random_state is None:
-            rs = np.random
-        else:
-            rs = self.random_state
-        print("rs", rs)
-
-        if attr == "random_state":
-            print("attr == random_state")
-            return self.random_state
-        else:
-            orig_attr = rs.__getattribute__(attr)
-            print("orig_attr", orig_attr)
-            if callable(orig_attr):
-                print("callable")
-                return orig_attr(*args, **kwargs)
-            else:
-                print("attribute")
-                return orig_attr
-
-    def __deepcopy__(self, memo):
-        not_there = []
-        existing = memo.get(self, not_there)
-        if existing is not not_there:
-            return existing
-        else:
-            if self.random_state is None:
-                return AugmenterRandomState()
-            else:
-                return AugmenterRandomState(copy_np_random_state(self.random_state))
-"""
-
-"""
-class AugJob(object):
-    def __init__(self, images, routes=None, preprocessor=None, postprocessor=None, activator=None, track_history=False, history=None):
-        self.images = images
-        self.routes = routes if routes is not None else []
-        self.preprocessor = preprocessor
-        self.postprocessor = postprocessor
-        self.activator = activator
-        self.track_history = track_history
-        self.history = history if history is not None else []
-
-    @property
-    def nb_images(self):
-        return self.images.shape[0]
-
-    @property
-    def height(self):
-        return self.images.shape[1]
-
-    @property
-    def width(self):
-        return self.images.shape[2]
-
-    @property
-    def nb_channels(self):
-        return self.images.shape[3]
-
-    def add_to_history(self, augmenter, changes, before, after):
-        if self.track_history:
-            self.history.append((augmenter, changes, np.copy(before), np.copy(after)))
-
-    def copy(self, images=None):
-        job = copy.copy(self)
-        if images is not None:
-            job.images = images
-        return job
-
-    def deepcopy(self, images=None):
-        job = copy.deepcopy(self)
-        if images is not None:
-            job.images = images
-        return job
-"""
-
+# TODO
 """
 class BackgroundAugmenter(object):
     def __init__(self, image_source, augmenter, maxlen, nb_workers=1):
