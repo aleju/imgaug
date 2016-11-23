@@ -49,6 +49,10 @@ class Augmenter(object):
         assert isinstance(batches, list)
         return [self.augment_images(batch, hooks=hooks) for batch in batches]
 
+    def augment_image(self, image, hooks=None):
+        assert len(image.shape) == 3, "Expected image to have shape (height, width, channels), got shape %s." % (image.shape,)
+        return self.augment_images([image], hooks=hooks)[0]
+
     def augment_images(self, images, parents=None, hooks=None):
         if self.deterministic:
             state_orig = self.random_state.get_state()
@@ -60,17 +64,13 @@ class Augmenter(object):
             hooks = ia.HooksImages()
 
         if ia.is_np_array(images):
-            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s" % (str(images.shape),)
+            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s." % (str(images.shape),)
             assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
             images_tf = images
         elif ia.is_iterable(images):
-            #assert all([len(image.shape) == 3 for image in images])
             if len(images) > 0:
-                # dont check all images, only the first one
-                # that's faster and usually all are affected by the same problem anyways
-                # AssertShape exists for more thorough checks
-                assert len(images[0].shape) == 3, "Expected list of images with each image having shape length 3, got length %d." % (len(images[0].shape),)
-                assert images[0].dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images[0].dtype),)
+                assert all([len(image.shape) == 3 for image in images]), "Expected list of images with each image having shape (height, width, channels), got shapes %s." % ([image.shape for image in images],)
+                assert all([image.dtype == np.uint8 for image in images]), "Expected dtype uint8 (with value range 0 to 255), got dtypes %s." % ([str(image.dtype) for image in images],)
             images_tf = list(images)
         else:
             raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
@@ -82,7 +82,7 @@ class Augmenter(object):
 
         images_copy = hooks.preprocess(images_copy, augmenter=self, parents=parents)
 
-        if hooks.is_activated(images_copy, augmenter=self, parents=parents):
+        if hooks.is_activated(images_copy, augmenter=self, parents=parents, default=self.activated):
             if len(images) > 0:
                 images_result = self._augment_images(
                     images_copy,
@@ -129,7 +129,7 @@ class Augmenter(object):
 
         keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
 
-        if hooks.is_activated(keypoints_on_images_copy, augmenter=self, parents=parents):
+        if hooks.is_activated(keypoints_on_images_copy, augmenter=self, parents=parents, default=self.activated):
             if len(keypoints_on_images_copy) > 0:
                 keypoints_on_images_result = self._augment_keypoints(
                     keypoints_on_images_copy,
@@ -340,7 +340,7 @@ class Sequential(Augmenter, list):
         self.random_order = random_order
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if hooks.is_propagating(images, augmenter=self, parents=parents):
+        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.random_order:
                 #for augmenter in self.children:
                 for index in random_state.permutation(len(self)):
@@ -360,7 +360,7 @@ class Sequential(Augmenter, list):
         return images
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             if self.random_order:
                 #for augmenter in self.children:
                 for index in random_state.permutation(len(self)):
@@ -441,7 +441,7 @@ class Sometimes(Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        if hooks.is_propagating(images, augmenter=self, parents=parents):
+        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             nb_images = len(images)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
@@ -484,7 +484,7 @@ class Sometimes(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         # TODO this is mostly copy pasted from _augment_images, make dry
         result = keypoints_on_images
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents):
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             nb_images = len(keypoints_on_images)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 

@@ -12,6 +12,7 @@ def main():
 
     test_find()
     test_remove()
+    test_hooks()
 
     test_Noop()
     test_Lambda()
@@ -126,6 +127,68 @@ def test_remove():
     augs = get_seq()
     augs = augs.remove_augmenters(lambda aug, parents: True, noop_if_topmost=False)
     assert augs is None
+
+def test_hooks():
+    image = np.array([[0, 0, 1],
+                      [0, 0, 1],
+                      [0, 1, 1]], dtype=np.uint8)
+    image_lr = np.array([[1, 0, 0],
+                         [1, 0, 0],
+                         [1, 1, 0]], dtype=np.uint8)
+    image_ud = np.array([[0, 1, 1],
+                         [0, 0, 1],
+                         [0, 0, 1]], dtype=np.uint8)
+    image_lrud = np.array([[1, 1, 0],
+                           [1, 0, 0],
+                           [1, 0, 0]], dtype=np.uint8)
+    image = image[:, :, np.newaxis]
+    image_lr = image_lr[:, :, np.newaxis]
+    image_ud = image_ud[:, :, np.newaxis]
+    image_lrud = image_lrud[:, :, np.newaxis]
+
+    seq = iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)])
+
+    # preprocessing
+    def preprocessor(images, augmenter, parents):
+        img = np.copy(images)
+        img[0][1, 1, 0] += 1
+        return img
+    hooks = ia.HooksImages(preprocessor=preprocessor)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    expected = np.copy(image_lrud)
+    expected[1, 1, 0] = 3
+    assert np.array_equal(images_aug[0], expected)
+
+    # postprocessing
+    def postprocessor(images, augmenter, parents):
+        img = np.copy(images)
+        img[0][1, 1, 0] += 1
+        return img
+    hooks = ia.HooksImages(postprocessor=postprocessor)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    expected = np.copy(image_lrud)
+    expected[1, 1, 0] = 3
+    assert np.array_equal(images_aug[0], expected)
+
+    # propagating
+    def propagator(images, augmenter, parents, default):
+        if "Seq" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksImages(propagator=propagator)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    assert np.array_equal(images_aug[0], image)
+
+    # activation
+    def activator(images, augmenter, parents, default):
+        if "Flipud" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksImages(activator=activator)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    assert np.array_equal(images_aug[0], image_lr)
 
 def test_Noop():
     images = create_random_images((16, 70, 50, 3))
