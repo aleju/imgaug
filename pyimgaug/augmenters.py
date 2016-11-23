@@ -2,7 +2,7 @@ from __future__ import print_function, division
 from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
-import copy
+import copy as copy_module
 import re
 import math
 from scipy import misc, ndimage
@@ -110,7 +110,7 @@ class Augmenter(object):
 
     @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
         if self.deterministic:
@@ -152,7 +152,7 @@ class Augmenter(object):
 
     @abstractmethod
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def draw_grid(self, images, rows, cols):
         if ia.is_np_array(images):
@@ -221,7 +221,8 @@ class Augmenter(object):
             return [self._to_deterministic() for _ in xrange(n)]
 
     def _to_deterministic(self):
-        aug = copy.copy(self)
+        #aug = copy_module.copy(self)
+        aug = self.copy()
         aug.random_state = ia.new_random_state()
         aug.deterministic = True
         return aug
@@ -244,15 +245,15 @@ class Augmenter(object):
 
     @abstractmethod
     def get_parameters(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def get_children_lists(self):
         return []
 
-    def find_augmenters(self, func, flat=True):
-        return self._find_augmenters(func, parents=[], flat=flat)
+    def find_augmenters(self, func, parents=None, flat=True):
+        if parents is None:
+            parents = []
 
-    def _find_augmenters(self, func, parents, flat):
         result = []
         if func(self, parents):
             result.append(self)
@@ -294,10 +295,10 @@ class Augmenter(object):
                 return None
         else:
             aug = self if not copy else self.deepcopy()
-            aug._remove_augmenters_inplace(func, parents=[])
+            aug.remove_augmenters_inplace(func, parents=[])
             return aug
 
-    def _remove_augmenters_inplace(self, func, parents):
+    def remove_augmenters_inplace(self, func, parents):
         subparents = parents + [self]
         for lst in self.get_children_lists():
             to_remove = []
@@ -306,23 +307,24 @@ class Augmenter(object):
                     to_remove.append((i, aug))
 
             for count_removed, (i, aug) in enumerate(to_remove):
-                self._remove_augmenters_inplace_from_list(lst, aug, i, i - count_removed)
+                #self._remove_augmenters_inplace_from_list(lst, aug, i, i - count_removed)
+                del lst[i - count_removed]
 
             for aug in lst:
-                aug._remove_augmenters_inplace(func, subparents)
+                aug.remove_augmenters_inplace(func, subparents)
 
-    def _remove_augmenters_inplace_from_list(self, lst, aug, index, index_adjusted):
-        del lst[index_adjusted]
+    #def _remove_augmenters_inplace_from_list(self, lst, aug, index, index_adjusted):
+    #    del lst[index_adjusted]
 
     # TODO
     #def to_json(self):
     #    pass
 
     def copy(self):
-        return copy.copy(self)
+        return copy_module.copy(self)
 
     def deepcopy(self):
-        return copy.deepcopy(self)
+        return copy_module.deepcopy(self)
 
     def __repr__(self):
         return self.__str__()
@@ -382,7 +384,8 @@ class Sequential(Augmenter, list):
     def _to_deterministic(self):
         #augs = [aug.to_deterministic() for aug in self.children]
         augs = [aug.to_deterministic() for aug in self]
-        seq = copy.copy(self)
+        #seq = copy.copy(self)
+        seq = self.copy()
         seq[:] = augs
         seq.random_state = ia.new_random_state()
         seq.deterministic = True
@@ -525,7 +528,8 @@ class Sometimes(Augmenter):
         return seqs
     """
     def _to_deterministic(self):
-        aug = copy.copy(self)
+        #aug = copy.copy(self)
+        aug = self.copy()
         aug.then_list = aug.then_list.to_deterministic()
         aug.else_list = aug.else_list.to_deterministic()
         aug.deterministic = True
@@ -862,7 +866,7 @@ class Fliplr(Augmenter):
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if samples[i] == 1:
-                height, width = keypoints_on_image.shape[0:2]
+                width = keypoints_on_image.shape[1]
                 for keypoint in keypoints_on_image.keypoints:
                     keypoint.x = (width - 1) - keypoint.x
         return keypoints_on_images
@@ -894,7 +898,7 @@ class Flipud(Augmenter):
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if samples[i] == 1:
-                height, width = keypoints_on_image.shape[0:2]
+                height = keypoints_on_image.shape[0]
                 for keypoint in keypoints_on_image.keypoints:
                     keypoint.y = (height - 1) - keypoint.y
         return keypoints_on_images
@@ -1158,7 +1162,7 @@ class Affine(Augmenter):
                 elif ia.is_iterable(param) and not isinstance(param, dict):
                     assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (str(len(param)),)
                     all_numbers = all([ia.is_single_number(p) for p in param])
-                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) in param]),)
+                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),)
                     #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
                     return Uniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
@@ -1183,7 +1187,7 @@ class Affine(Augmenter):
                 elif ia.is_iterable(param) and not isinstance(param, dict):
                     assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (str(len(param)),)
                     all_integer = all([ia.is_single_integer(p) for p in param])
-                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) in param]),)
+                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),)
                     return DiscreteUniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
                     assert "x" in param or "y" in param
@@ -1440,13 +1444,10 @@ class ElasticTransformation(Augmenter):
         alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
         sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
         for i in xrange(nb_images):
-            seed = seeds[i]
-            alpha = alphas[i]
-            sigma = sigmas[i]
             image = images[i]
             image_first_channel = np.squeeze(image[..., 0])
-            indices_x, indices_y = self._generate_indices(image_first_channel.shape, alpha=alpha, sigma=sigma, random_state=ia.new_random_state(seed))
-            result[i] = self._map_coordinates(images[i], indices_x, indices_y)
+            indices_x, indices_y = ElasticTransformation.generate_indices(image_first_channel.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+            result[i] = ElasticTransformation.map_coordinates(images[i], indices_x, indices_y)
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -1460,20 +1461,18 @@ class ElasticTransformation(Augmenter):
         alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
         sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
         for keypoints_on_image in keypoints_on_images:
-            seed = seeds[i]
-            alpha = alphas[i]
-            sigma = sigmas[i]
-            indices_x, indices_y = self._generate_indices(keypoints_on_image.shape, alpha=alpha, sigma=sigma, random_state=ia.new_random_state(seed))
+            indices_x, indices_y = ElasticTransformation.generate_indices(keypoints_on_image.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
             keypoint_image = keypoints_on_image.to_keypoint_image()
-            keypoint_image_aug = self._map_coordinates(keypoint_image, indices_x, indices_y)
-            keypoints_aug = KeypointsOnImage.from_keypoint_image(keypoint_image_aug)
+            keypoint_image_aug = ElasticTransformation.map_coordinates(keypoint_image, indices_x, indices_y)
+            keypoints_aug = ia.KeypointsOnImage.from_keypoint_image(keypoint_image_aug)
             result.append(keypoints_aug)
         return result
 
     def get_parameters(self):
         return [self.alpha, self.sigma]
 
-    def _generate_indices(self, shape, alpha, sigma, random_state):
+    @staticmethod
+    def generate_indices(shape, alpha, sigma, random_state):
         """Elastic deformation of images as described in [Simard2003]_.
         .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
            Convolutional Neural Networks applied to Visual Document Analysis", in
@@ -1488,7 +1487,8 @@ class ElasticTransformation(Augmenter):
         x, y = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), indexing='ij')
         return np.reshape(x+dx, (-1, 1)), np.reshape(y+dy, (-1, 1))
 
-    def _map_coordinates(self, image, indices_x, indices_y):
+    @staticmethod
+    def map_coordinates(image, indices_x, indices_y):
         assert len(image.shape) == 3
         result = np.copy(image)
         height, width = image.shape[0:2]

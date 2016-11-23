@@ -1,10 +1,8 @@
 from __future__ import print_function, division
 from abc import ABCMeta, abstractmethod
-import random
 import numpy as np
-import copy
 import imgaug as ia
-import copy
+import copy as copy_module
 
 try:
     xrange
@@ -26,16 +24,18 @@ class StochasticParameter(object):
 
     @abstractmethod
     def _draw_samples(self, size, random_state):
-        raise NotImplemented()
+        raise NotImplementedError()
 
-    def copy():
-        return copy.copy(self)
+    def copy(self):
+        return copy_module.copy(self)
 
-    def deepcopy():
-        return copy.deepcopy(self)
+    def deepcopy(self):
+        return copy_module.deepcopy(self)
 
 class Binomial(StochasticParameter):
     def __init__(self, p):
+        StochasticParameter.__init__(self)
+
         if isinstance(p, StochasticParameter):
             self.p = p
         elif isinstance(p, (float, int)):
@@ -60,6 +60,8 @@ class Binomial(StochasticParameter):
 
 class Choice(StochasticParameter):
     def __init__(self, a, replace=True, p=None):
+        StochasticParameter.__init__(self)
+
         self.a = a
         self.replace = replace
         self.p = p
@@ -75,6 +77,8 @@ class Choice(StochasticParameter):
 
 class DiscreteUniform(StochasticParameter):
     def __init__(self, a, b):
+        StochasticParameter.__init__(self)
+
         # for two ints the samples will be from range a <= x <= b
         assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),)
@@ -106,6 +110,8 @@ class DiscreteUniform(StochasticParameter):
 
 class Normal(StochasticParameter):
     def __init__(self, loc, scale):
+        StochasticParameter.__init__(self)
+
         if isinstance(loc, StochasticParameter):
             self.loc = loc
         elif isinstance(loc, (float, int)):
@@ -135,6 +141,8 @@ class Normal(StochasticParameter):
 
 class Uniform(StochasticParameter):
     def __init__(self, a, b):
+        StochasticParameter.__init__(self)
+
         assert isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),)
 
@@ -165,6 +173,8 @@ class Uniform(StochasticParameter):
 
 class Deterministic(StochasticParameter):
     def __init__(self, value):
+        StochasticParameter.__init__(self)
+
         if isinstance(value, StochasticParameter):
             self.value = value.draw_sample()
         elif ia.is_single_number(value) or ia.is_string(value):
@@ -186,6 +196,8 @@ class Deterministic(StochasticParameter):
 
 class Clip(StochasticParameter):
     def __init__(self, other_param, minval=None, maxval=None):
+        StochasticParameter.__init__(self)
+
         self.other_param = other_param
         self.minval = minval
         self.maxval = maxval

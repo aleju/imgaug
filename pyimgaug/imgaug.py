@@ -232,7 +232,7 @@ class KeypointsOnImage(object):
         return self.shape[1]
 
     def on(self, image):
-        if ia.is_np_array:
+        if is_np_array(image):
             shape = image.shape
         else:
             shape = image
@@ -269,7 +269,7 @@ class KeypointsOnImage(object):
         return image
 
     @staticmethod
-    def from_keypoint_image(self, image, if_not_found_coords={"x": -1, "y": -1}, threshold=1):
+    def from_keypoint_image(image, if_not_found_coords={"x": -1, "y": -1}, threshold=1):
         assert len(image.shape) == 3
         height, width, nb_keypoints = image.shape
 
@@ -399,6 +399,7 @@ class AugJob(object):
         return job
 """
 
+"""
 class BackgroundAugmenter(object):
     def __init__(self, image_source, augmenter, maxlen, nb_workers=1):
         self.augmenter = augmenter
@@ -421,3 +422,4 @@ class BackgroundAugmenter(object):
     def _augment(self, image_source, augmenter, result_queue):
         batch = next(image_source)
         self.result_queue.put(augmenter.transform(batch))
+"""
