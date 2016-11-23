@@ -152,6 +152,12 @@ class Noop(Augmenter):
     def get_parameters(self):
         return []
 
+class SelectChannels(AugmenterSequence):
+    # todo
+
+class RandomOrder(AugmenterSequence):
+    # todo
+
 class Lambda(Augmenter):
     def __init__(self, func, name=None):
         Augmenter.__init__(self, name=name)
