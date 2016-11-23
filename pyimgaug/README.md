@@ -5,8 +5,14 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 ![64 quokkas](examples_grid.jpg?raw=true "64 quokkas")
 
-The library currently support most commonly used augmentation techniques and can apply them to both images and landmarks.
-The image below shows each of these techniques.
+Features:
+* Most standard augmentation techniques available.
+* Techniques can be applied to both images and landmarks on images.
+* Define your augmentation sequence once at the start of the experiment, then apply it many times.
+* Define flexible stochastic ranges for each augmentation, e.g. "rotate each image by a value between -45 and 45 degrees" or "rotate each image by a value sampled from the normal distribution N(0, 5.0)".
+* Easily convert all stochastic ranges to deterministic values to augment different batches of images in the exactly identical way (e.g. images and their heatmaps).
+
+The image below shows examples for each availabe augmentation technique. ("Noop" is an augmenter that doesn't change the image at all.)
 
 ![Available augmenters](examples.jpg?raw=true "Effects of all available augmenters")
 
@@ -165,20 +171,20 @@ from imgaug import augmenters as iaa
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
 flipper = iaa.Fliplr(1.0) # always horizontally flip each input image
-images[0] = flipper.augment_images([images[0]])[0] # horizontally flip image 0
+images[0] = flipper.augment_image(images[0]) # horizontally flip image 0
 
 vflipper = iaa.Flipud(0.9) # vertically flip each input image with 90% probability
-images[1] = vflipper.augment_images([images[1]])[0] # probably vertically flip image 1
+images[1] = vflipper.augment_image(images[1]) # probably vertically flip image 1
 
 blurer = iaa.GaussianBlur(3.0)
-images[2] = blurer.augment_images([images[2]])[0] # blur image 2 by a sigma of 3.0
-images[3] = blurer.augment_images([images[3]])[0] # blur image 3 by a sigma of 3.0 too
+images[2] = blurer.augment_image(images[2]) # blur image 2 by a sigma of 3.0
+images[3] = blurer.augment_image(images[3]) # blur image 3 by a sigma of 3.0 too
 
 translater = iaa.Affine(translate_px={"x": -16}) # move each input image by 16px to the left
-images[4] = translater.augment_images([images[4]])[0] # move image 4 to the left
+images[4] = translater.augment_image(images[4]) # move image 4 to the left
 
 scaler = iaa.Affine(scale={"y": (0.8, 1.2)}) # scale each input image to 80-120% on the y axis
-images[5] = scaler.augment_images([images[5]])[0] # scale image 5 by 80-120% on the y axis
+images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y axis
 ```
 
 Use unusual distributions for the stochastic parameters of each augmenter:
