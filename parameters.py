@@ -38,7 +38,7 @@ class Binomial(StochasticParameter):
 
         if isinstance(p, StochasticParameter):
             self.p = p
-        elif isinstance(p, (float, int)):
+        elif ia.is_single_number(p):
             assert 0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,)
             self.p = Deterministic(float(p))
         else:
@@ -83,12 +83,12 @@ class DiscreteUniform(StochasticParameter):
         assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),)
 
-        if isinstance(a, int):
+        if ia.is_single_integer(a):
             self.a = Deterministic(a)
         else:
             self.a = a
 
-        if isinstance(b, int):
+        if ia.is_single_integer(b):
             self.b = Deterministic(b)
         else:
             self.b = b
@@ -114,15 +114,15 @@ class Normal(StochasticParameter):
 
         if isinstance(loc, StochasticParameter):
             self.loc = loc
-        elif isinstance(loc, (float, int)):
+        elif ia.is_single_number(loc):
             self.loc = Deterministic(loc)
         else:
             raise Exception("Expected float, int or StochasticParameter as loc, got %s, %s." % (type(loc),))
 
         if isinstance(scale, StochasticParameter):
             self.scale = scale
-        elif isinstance(scale, (float, int)):
-            assert scale > 0, "Expected scale to be higher than 0, got %s (type %s)." % (scale, type(scale))
+        elif ia.is_single_number(scale):
+            assert scale >= 0, "Expected scale to be in range [0, inf) got %s (type %s)." % (scale, type(scale))
             self.scale = Deterministic(scale)
         else:
             raise Exception("Expected float, int or StochasticParameter as scale, got %s, %s." % (type(scale),))
@@ -130,8 +130,11 @@ class Normal(StochasticParameter):
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
         scale = self.scale.draw_sample(random_state=random_state)
-        assert scale > 0, "Expected scale to be higher than 0, got %s." % (scale,)
-        return random_state.normal(loc, scale, size=size)
+        assert scale >= 0, "Expected scale to be in rnage [0, inf), got %s." % (scale,)
+        if scale == 0:
+            return np.tile(loc, size)
+        else:
+            return random_state.normal(loc, scale, size=size)
 
     def __repr__(self):
         return self.__str__()
@@ -146,12 +149,12 @@ class Uniform(StochasticParameter):
         assert isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),)
 
-        if isinstance(a, (int, float)):
+        if ia.is_single_number(a):
             self.a = Deterministic(a)
         else:
             self.a = a
 
-        if isinstance(b, (int, float)):
+        if ia.is_single_number(b):
             self.b = Deterministic(b)
         else:
             self.b = b
@@ -197,6 +200,10 @@ class Deterministic(StochasticParameter):
 class Clip(StochasticParameter):
     def __init__(self, other_param, minval=None, maxval=None):
         StochasticParameter.__init__(self)
+
+        assert isinstance(other_param, StochasticParameter)
+        assert minval is None or ia.is_single_number(minval)
+        assert maxval is None or ia.is_single_number(maxval)
 
         self.other_param = other_param
         self.minval = minval
