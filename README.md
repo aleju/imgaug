@@ -54,14 +54,16 @@ for batch_idx in range(1000):
 
 Apply heavy augmentations to images (used to create the image at the very top of this readme):
 ```python
+import imgaug as ia
 from imgaug import augmenters as iaa
+import numpy as np
 
 # random example images
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
 # Sometimes(0.5, ...) applies the given augmenter in 50% of all cases,
 # e.g. Sometimes(0.5, GaussianBlur(0.3)) would blur roughly every second image.
-st = lambda aug: iaa.Somtimes(0.5, aug)
+st = lambda aug: iaa.Sometimes(0.5, aug)
 
 # Define our sequence of augmentation steps that will be applied to every image
 # All augmenters with per_channel=0.5 will sample one value _per image_
@@ -97,6 +99,7 @@ images_aug = seq.augment_images(images)
 Quickly show example results of your augmentation sequence:
 ```python
 from imgaug import augmenters as iaa
+import numpy as np
 
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
@@ -113,6 +116,7 @@ seq.show_grid([images[0], images[1]], cols=8, rows=8)
 Augment grayscale images:
 ```python
 from imgaug import augmenters as iaa
+import numpy as np
 images = np.random.randint(0, 255, (16, 128, 128), dtype=np.uint8)
 seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
 # The library expects a list of images (3D inputs) or a single array (4D inputs).
@@ -129,7 +133,7 @@ from imgaug import augmenters as iaa
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 heatmaps = np.random.randint(0, 255, (16, 128, 128, 21), dtype=np.uint8)
 
-seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
+seq = iaa.Sequential([iaa.GaussianBlur((0, 3.0)), iaa.Affine(translate_px={"x": (-40, 40)})])
 
 # Convert the stochastic sequence of augmenters to a deterministic one.
 # The deterministic sequence will always apply the exactly same effects to the images.
@@ -143,39 +147,45 @@ Augment images *and* landmarks on these images:
 import imgaug as ia
 from imgaug import augmenters as iaa
 from scipy import misc
-images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
+import random
+import numpy as np
+images = np.random.randint(0, 50, (4, 128, 128, 3), dtype=np.uint8)
 
 # Generate random keypoints.
 # The augmenters expect a list of imgaug.KeypointsOnImage.
 keypoints_on_images = []
-for _ in range(images.shape[0]):
+for image in images:
+    height, width = image.shape[0:2]
     keypoints = []
-    for _ in range(images.shape[1]):
-        x = random.randint(0, width)
-        y = random.randint(0, height)
+    for _ in range(4):
+        x = random.randint(0, width-1)
+        y = random.randint(0, height-1)
         keypoints.append(ia.Keypoint(x=x, y=y))
-    keypoints_on_images.append(ia.KeypointsOnImage(keypoints, shape=images[i].shape))
+    keypoints_on_images.append(ia.KeypointsOnImage(keypoints, shape=image.shape))
 
-seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.Affine(scale=(0.8, 1.2))])
+seq = iaa.Sequential([iaa.GaussianBlur((0, 3.0)), iaa.Affine(scale=(0.5, 0.7))])
 seq_det = seq.to_deterministic() # call this for each batch again, NOT only once at the start
 
 # augment keypoints and images
 images_aug = seq_det.augment_images(images)
-keypoints_aug = seq_det.augment_keypoints(keypoints)
+keypoints_aug = seq_det.augment_keypoints(keypoints_on_images)
 
 # Example code to show each image and print the new keypoints coordinates
-for img_idx, (image, keypoints_on_image) in enumerate(zip(images_aug, keypoints_aug)):
-    misc.imshow(image)
-    for kp_idx, keypoint in enumerate(keypoints_on_image.keypoints):
+for img_idx, (image_before, image_after, keypoints_before, keypoints_after) in enumerate(zip(images, images_aug, keypoints_on_images, keypoints_aug)):
+    image_before = keypoints_before.draw_on_image(image_before)
+    image_after = keypoints_after.draw_on_image(image_after)
+    misc.imshow(np.concatenate((image_before, image_after), axis=1)) # before and after
+    for kp_idx, keypoint in enumerate(keypoints_after.keypoints):
         keypoint_old = keypoints_on_images[img_idx].keypoints[kp_idx]
         x_old, y_old = keypoint_old.x, keypoint_old.y
         x_new, y_new = keypoint.x, keypoint.y
-        print("[Keypoint %d] before aug: x=%d y=%d | after aug: x=%d y=%d" % (i, x_old, y_old, x_new, y_new))
+        print("[Keypoints for image #%d] before aug: x=%d y=%d | after aug: x=%d y=%d" % (img_idx, x_old, y_old, x_new, y_new))
 ```
 
 Apply single augmentations to images:
 ```python
 from imgaug import augmenters as iaa
+import numpy as np
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
 flipper = iaa.Fliplr(1.0) # always horizontally flip each input image
@@ -195,10 +205,11 @@ scaler = iaa.Affine(scale={"y": (0.8, 1.2)}) # scale each input image to 80-120%
 images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y axis
 ```
 
-Use unusual distributions for the stochastic parameters of each augmenter:
+You can use more unusual distributions for the stochastic parameters of each augmenter:
 ```python
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+import numpy as np
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
 # Blur by a value sigma which is sampled from a uniform distribution
@@ -226,4 +237,43 @@ images_aug = blurer.augment_images(images)
 # i.e. sigma will have any of the following values: 1, 2, 3, 4, 5.
 blurer = iaa.GaussianBlur(iap.DiscreteUniform(1, 5))
 images_aug = blurer.augment_images(images)
+```
+
+You can dynamically deactivate augmenters in an already defined sequence:
+```python
+import imgaug as ia
+from imgaug import augmenters as iaa
+import numpy as np
+
+# images and heatmaps, just arrays filled with value 30
+images = np.ones((16, 128, 128, 3), dtype=np.uint8) * 30
+heatmaps = np.ones((16, 128, 128, 21), dtype=np.uint8) * 30
+
+# add vertical lines to see the effect of flip
+images[:, 16:128-16, 120:124, :] = 120
+heatmaps[:, 16:128-16, 120:124, :] = 120
+
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5, name="Flipper"),
+  iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
+  iaa.Dropout(0.02, name="Dropout"),
+  iaa.AdditiveGaussianNoise(scale=0.01*255, name="MyLittleNoise"),
+  iaa.AdditiveGaussianNoise(loc=32, scale=0.0001*255, name="SomeOtherNoise"),
+  iaa.Affine(translate_px={"x": (-40, 40)}, name="Affine")
+])
+
+# change the activated augmenters for heatmaps,
+# we only want to execute horizontal flip, affine transformation and one of
+# the gaussian noises
+def activator_heatmaps(images, augmenter, parents, default):
+    if augmenter.name in ["GaussianBlur", "Dropout", "MyLittleNoise"]:
+        return False
+    else:
+        # default value for all other augmenters
+        return default
+hooks_heatmaps = ia.HooksImages(activator=activator_heatmaps)
+
+seq_det = seq.to_deterministic() # call this for each batch again, NOT only once at the start
+images_aug = seq_det.augment_images(images)
+heatmaps_aug = seq_det.augment_images(heatmaps, hooks=hooks_heatmaps)
 ```
