@@ -1,10 +1,13 @@
+"""
+Automatically running tests for this library.
+Run these from the project directory (i.e. parent directory) via
+    python -m tests/test
+"""
 from __future__ import print_function, division
 import imgaug as ia
 import augmenters as iaa
 import parameters as iap
-#from skimage import
 import numpy as np
-import time
 
 def main():
     test_is_single_integer()

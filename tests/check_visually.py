@@ -1,8 +1,12 @@
+"""
+Tests to visually inspect the results of the library's functionality.
+Run these checks from the project directory (i.e. parent directory) via
+    python -m tests/check_visually
+"""
 from __future__ import print_function, division
 import imgaug as ia
 import augmenters as iaa
 import parameters as iap
-#from skimage import
 import numpy as np
 from scipy import ndimage, misc
 from skimage import data
