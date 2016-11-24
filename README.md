@@ -1,32 +1,33 @@
 # About
 
-This library helps you with augmenting images for your machine learning projects.
+This python library helps you with augmenting images for your machine learning projects.
 It converts a set of input images into a new, much larger set of slightly altered images.
 
 ![64 quokkas](examples_grid.jpg?raw=true "64 quokkas")
 
 Features:
 * Most standard augmentation techniques available.
-* Techniques can be applied to both images and landmarks on images.
+* Techniques can be applied to both images and keypoints/landmarks on images.
 * Define your augmentation sequence once at the start of the experiment, then apply it many times.
 * Define flexible stochastic ranges for each augmentation, e.g. "rotate each image by a value between -45 and 45 degrees" or "rotate each image by a value sampled from the normal distribution N(0, 5.0)".
 * Easily convert all stochastic ranges to deterministic values to augment different batches of images in the exactly identical way (e.g. images and their heatmaps).
 
-The image below shows examples for each availabe augmentation technique. ("Noop" is an augmenter that doesn't change the image at all.)
+The image below shows examples for each availabe augmentation technique.
 
 ![Available augmenters](examples.jpg?raw=true "Effects of all available augmenters")
 
-*Noop is an augmenter that does nothing. Values for crop are (top pixel, right px, bottom px, left px). Other values written in form (a, b) mean that the value was randomly picked from the range (a, b).*
+*Noop is an augmenter that does nothing. Values for crop are (top pixel, right px, bottom px, left px). Other values written in the form (a, b) mean that each value x was randomly picked from the range a <= x <= b.*
 
 # Requirements and installation
 
 Required dependencies:
 * numpy
 * scipy
-* scikit-image
+* scikit-image (`pip install -U scikit-image`)
 * OpenCV
 
 Currently only tested in python2.7.
+No installer available right now, copy the files `imgaug.py`, `augmenters.py` and `parameters.py` into your project.
 
 # Examples
 
