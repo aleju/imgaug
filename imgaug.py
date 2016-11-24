@@ -5,6 +5,8 @@ import numpy as np
 import copy
 import numbers
 import cv2
+import math
+from scipy import misc
 
 try:
     xrange
@@ -114,6 +116,47 @@ def imresize_single_image(image, sizes, interpolation=None):
     else:
         return rs[0, ...]
 
+def draw_grid(images, rows=None, cols=None):
+    if is_np_array(images):
+        assert len(images.shape) == 4
+    else:
+        assert is_iterable(images)
+
+    nb_images = len(images)
+    cell_height = max([image.shape[0] for image in images])
+    cell_width = max([image.shape[1] for image in images])
+    channels = set([image.shape[2] for image in images])
+    assert len(channels) == 1
+    nb_channels = list(channels)[0]
+    if rows is None and cols is None:
+        rows = cols = int(math.ceil(math.sqrt(nb_images)))
+    elif rows is not None:
+        cols = int(math.ceil(nb_images / rows))
+    elif cols is not None:
+        rows = int(math.ceil(nb_images / cols))
+    assert rows * cols >= nb_images
+
+    width = cell_width * cols
+    height = cell_height * rows
+    grid = np.zeros((height, width, nb_channels))
+    cell_idx = 0
+    for row_idx in range(rows):
+        for col_idx in range(cols):
+            if cell_idx < nb_images:
+                image = images[cell_idx]
+                cell_y1 = cell_height * row_idx
+                cell_y2 = cell_y1 + image.shape[0]
+                cell_x1 = cell_width * col_idx
+                cell_x2 = cell_x1 + image.shape[1]
+                grid[cell_y1:cell_y2, cell_x1:cell_x2, :] = image
+            cell_idx += 1
+
+    return grid
+
+def show_grid(images, rows=None, cols=None):
+    grid = draw_grid(images, rows=rows, cols=cols)
+    misc.imshow(grid)
+
 class HooksImages(object):
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
@@ -127,6 +170,8 @@ class HooksImages(object):
         else:
             return self.activator(images, augmenter, parents, default)
 
+    # TODO is a propagating hook necessary? seems to be covered by activated
+    # hook already
     def is_propagating(self, images, augmenter, parents, default):
         if self.propagator is None:
             return default

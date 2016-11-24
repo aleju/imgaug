@@ -148,6 +148,7 @@ class Augmenter(object):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         raise NotImplementedError()
 
+    # TODO most of the code of this function could be replaced with ia.draw_grid()
     def draw_grid(self, images, rows, cols):
         if ia.is_np_array(images):
             if len(images.shape) == 4:
