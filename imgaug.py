@@ -195,17 +195,22 @@ class HooksKeypoints(HooksImages):
 
 class Keypoint(object):
     def __init__(self, x, y):
-        assert is_single_integer(x), type(x)
-        assert is_single_integer(y), type(y)
+        # these checks are currently removed because they are very slow for some
+        # reason
+        #assert is_single_integer(x), type(x)
+        #assert is_single_integer(y), type(y)
         self.x = x
         self.y = y
 
     def project(self, from_shape, to_shape):
-        from_height, from_width = from_shape[0:2]
-        to_height, to_width = to_shape[0:2]
-        x = int(round((self.x / from_width) * to_width))
-        y = int(round((self.y / from_height) * to_height))
-        return Keypoint(x=x, y=y)
+        if from_shape[0:2] == to_shape[0:2]:
+            return Keypoint(x=self.x, y=self.y)
+        else:
+            from_height, from_width = from_shape[0:2]
+            to_height, to_width = to_shape[0:2]
+            x = int(round((self.x / from_width) * to_width))
+            y = int(round((self.y / from_height) * to_height))
+            return Keypoint(x=x, y=y)
 
     def shift(self, x, y):
         return Keypoint(self.x + x, self.y + y)
@@ -239,8 +244,11 @@ class KeypointsOnImage(object):
         else:
             shape = image
 
-        keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
-        return KeypointsOnImage(keypoints, shape)
+        if shape[0:2] == self.shape[0:2]:
+            return self.deepcopy()
+        else:
+            keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
+            return KeypointsOnImage(keypoints, shape)
 
     def draw_on_image(self, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False):
         if copy:
@@ -329,7 +337,10 @@ class KeypointsOnImage(object):
         return copy.copy(self)
 
     def deepcopy(self):
-        return copy.deepcopy(self)
+        # for some reason deepcopy is way slower here than manual copy
+        #return copy.deepcopy(self)
+        kps = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
+        return KeypointsOnImage(kps, tuple(self.shape))
 
     def __repr__(self):
         return self.__str__()

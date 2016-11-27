@@ -4,6 +4,11 @@ Run these checks from the project directory (i.e. parent directory) via
     python -m tests/check_performance
 """
 from __future__ import print_function, division
+
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import imgaug as ia
 import augmenters as iaa
 #import parameters as iap
@@ -11,6 +16,7 @@ import numpy as np
 #from scipy import ndimage, misc
 #from skimage import data
 import time
+import random
 
 """
 [Augmenter: Noop]
@@ -69,11 +75,40 @@ def main():
         iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),
         iaa.Flipud(0.5, name="Flipud"),
+        iaa.Grayscale((0.0, 1.0), name="Grayscale"),
         iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
         iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.1), name="AdditiveGaussianNoise"),
         iaa.Dropout((0.0, 0.1), name="Dropout"),
         iaa.Multiply((0.5, 1.5), name="Multiply"),
-        iaa.ContrastNormalization(alpha=(0.5, 2.0)),
+        iaa.ContrastNormalization(alpha=(0.5, 2.0), name="ContrastNormalization"),
+        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation"),
+        iaa.Affine(
+            scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+            translate_px={"x": (-16, 16), "y": (-16, 16)},
+            rotate=(-45, 45),
+            shear=(-16, 16),
+            order=0,
+            cval=(0, 1.0),
+            mode="constant",
+            name="AffineOrder0ModeConstant"
+        )
+    ]
+
+    for order in [0, 1]:
+        augmenters.append(
+            iaa.Affine(
+                scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                translate_px={"x": (-16, 16), "y": (-16, 16)},
+                rotate=(-45, 45),
+                shear=(-16, 16),
+                order=order,
+                cval=(0, 1.0),
+                mode=ia.ALL,
+                name="AffineOrder%d" % (order,)
+            )
+        )
+
+    augmenters.append(
         iaa.Affine(
             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
             translate_px={"x": (-16, 16), "y": (-16, 16)},
@@ -82,20 +117,54 @@ def main():
             order=ia.ALL,
             cval=(0, 1.0),
             mode=ia.ALL,
-            name="Affine"
-        ),
-        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation")
-    ]
+            name="AffineAll"
+        )
+    )
+
+    kps = []
+    for _ in range(20):
+        x = random.randint(0, 31)
+        y = random.randint(0, 31)
+        kps.append(ia.Keypoint(x=x, y=y))
+    kps = ia.KeypointsOnImage(kps, shape=(32, 32, 3))
+    #small_keypoints_one = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=3, y=3)], shape=(4, 4, 3))
+    #medium_keypoints_one = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=16, y=16), ia.Keypoint(x=31, y=31)], shape=(32, 32, 3))
+    #large_keypoints_one = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=128, y=128), ia.Keypoint(x=255, y=255)], shape=(256, 256, 3))
+    small_keypoints_one = kps.on((4, 4, 3))
+    medium_keypoints_one = kps.on((32, 32, 3))
+    large_keypoints_one = kps.on((256, 256, 3))
+    small_keypoints = [small_keypoints_one.deepcopy() for _ in range(16)]
+    medium_keypoints = [medium_keypoints_one.deepcopy() for _ in range(16)]
+    large_keypoints = [large_keypoints_one.deepcopy() for _ in range(16)]
 
     small_images = np.random.randint(0, 255, (16, 4, 4, 3)).astype(np.uint8)
     medium_images = np.random.randint(0, 255, (16, 32, 32, 3)).astype(np.uint8)
     large_images = np.random.randint(0, 255, (16, 256, 256, 3)).astype(np.uint8)
 
+    print("---------------------------")
+    print("Keypoints")
+    print("---------------------------")
+    for augmenter in augmenters:
+        print("[Augmenter: %s]" % (augmenter.name,))
+        for keypoints in [small_keypoints, medium_keypoints, large_keypoints]:
+            times = []
+            for i in range(100):
+                time_start = time.time()
+                img_aug = augmenter.augment_keypoints(keypoints)
+                time_end = time.time()
+                times.append(time_end - time_start)
+            times = np.array(times)
+            img_str = "{:20s}".format(keypoints[0].shape)
+            print("%s | SUM %.5fs | PER ITER avg %.5fs, min %.5fs, max %.5fs" % (img_str, np.sum(times), np.average(times), np.min(times), np.max(times)))
+
+    print("---------------------------")
+    print("Images")
+    print("---------------------------")
     for augmenter in augmenters:
         print("[Augmenter: %s]" % (augmenter.name,))
         for images in [small_images, medium_images, large_images]:
             times = []
-            for i in range(1000):
+            for i in range(100):
                 time_start = time.time()
                 img_aug = augmenter.augment_images(images)
                 time_end = time.time()

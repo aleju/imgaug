@@ -597,6 +597,11 @@ class Crop(Augmenter):
 
         self.keep_size = keep_size
 
+        self.all_sides = None
+        self.top = None
+        self.right = None
+        self.bottom = None
+        self.left = None
         if px is None and percent is None:
             self.mode = "noop"
         elif px is not None and percent is not None:
@@ -605,7 +610,8 @@ class Crop(Augmenter):
             self.mode = "px"
             if ia.is_single_integer(px):
                 assert px >= 0
-                self.top = self.right = self.bottom = self.left = Deterministic(px)
+                #self.top = self.right = self.bottom = self.left = Deterministic(px)
+                self.all_sides = Deterministic(px)
             elif isinstance(px, tuple):
                 assert len(px) in [2, 4]
                 def handle_param(p):
@@ -630,7 +636,8 @@ class Crop(Augmenter):
                         raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, got type %s." % (type(p),))
 
                 if len(px) == 2:
-                    self.top = self.right = self.bottom = self.left = handle_param(px)
+                    #self.top = self.right = self.bottom = self.left = handle_param(px)
+                    self.all_sides = handle_param(px)
                 else: # len == 4
                     self.top = handle_param(px[0])
                     self.right = handle_param(px[1])
@@ -644,7 +651,8 @@ class Crop(Augmenter):
             self.mode = "percent"
             if ia.is_single_number(percent):
                 assert 0 <= percent < 1.0
-                self.top = self.right = self.bottom = self.left = Deterministic(percent)
+                #self.top = self.right = self.bottom = self.left = Deterministic(percent)
+                self.all_sides = Deterministic(percent)
             elif isinstance(percent, tuple):
                 assert len(percent) in [2, 4]
                 def handle_param(p):
@@ -668,7 +676,8 @@ class Crop(Augmenter):
                         raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, got type %s." % (type(p),))
 
                 if len(percent) == 2:
-                    self.top = self.right = self.bottom = self.left = handle_param(percent)
+                    #self.top = self.right = self.bottom = self.left = handle_param(percent)
+                    self.all_sides = handle_param(percent)
                 else: # len == 4
                     self.top = handle_param(percent[0])
                     self.right = handle_param(percent[1])
@@ -678,6 +687,7 @@ class Crop(Augmenter):
                 self.top = self.right = self.bottom = self.left = percent
             else:
                 raise Exception("Expected number, tuple of 4 numbers/lists/StochasticParameters or StochasticParameter, got type %s." % (type(percent),))
+
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
@@ -718,10 +728,18 @@ class Crop(Augmenter):
     def _draw_samples_image(self, seed, height, width):
         random_state = ia.new_random_state(seed)
 
-        top = self.top.draw_samples((1,), random_state=ia.copy_random_state(random_state))[0]
-        right = self.right.draw_samples((1,), random_state=ia.copy_random_state(random_state))[0]
-        bottom = self.bottom.draw_samples((1,), random_state=ia.copy_random_state(random_state))[0]
-        left = self.left.draw_samples((1,), random_state=ia.copy_random_state(random_state))[0]
+        if self.all_sides is not None:
+            samples = self.all_sides.draw_samples((4,), random_state=random_state)
+            top, right, bottom, left = samples
+        else:
+            rs_top = random_state
+            rs_right = rs_top
+            rs_bottom = rs_top
+            rs_left = rs_top
+            top = self.top.draw_sample(random_state=rs_top)
+            right = self.right.draw_sample(random_state=rs_right)
+            bottom = self.bottom.draw_sample(random_state=rs_bottom)
+            left = self.left.draw_sample(random_state=rs_left)
 
         if self.mode == "px":
             # no change necessary for pixel values
@@ -1328,6 +1346,15 @@ class Affine(Augmenter):
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant", name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
+        # Peformance:
+        #  1.0x order 0
+        #  1.5x order 1
+        #  3.0x order 3
+        # 30.0x order 4
+        # 60.0x order 5
+        # measurement based on 256x256x3 batches, difference is smaller
+        # on smaller images (seems to grow more like exponentially with image
+        # size)
         if order == ia.ALL:
             #self.order = DiscreteUniform(0, 5)
             self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
