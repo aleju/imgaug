@@ -1,9 +1,14 @@
 """
 Automatically running tests for this library.
 Run these from the project directory (i.e. parent directory) via
-    python -m tests/test
+    python test.py
 """
 from __future__ import print_function, division
+
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import imgaug as ia
 import augmenters as iaa
 import parameters as iap

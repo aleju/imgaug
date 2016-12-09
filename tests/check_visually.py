@@ -1,9 +1,14 @@
 """
 Tests to visually inspect the results of the library's functionality.
 Run these checks from the project directory (i.e. parent directory) via
-    python -m tests/check_visually
+    python check_visually.py
 """
 from __future__ import print_function, division
+
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import imgaug as ia
 import augmenters as iaa
 import parameters as iap
@@ -13,7 +18,7 @@ from skimage import data
 
 def main():
     images = [
-        misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128)),
+        misc.imresize(ndimage.imread("../quokka.jpg")[0:643, 0:643], (128, 128)),
         misc.imresize(data.astronaut(), (128, 128))
     ]
 

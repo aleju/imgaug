@@ -1,9 +1,14 @@
 """
 Script to verify all examples in the readme.
 Run from the project directory (i.e. parent) with
-    python -m tests/test_readme_examples
+    python test_readme_examples.py
 """
 from __future__ import print_function, division
+
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import numpy as np
 from scipy import misc
 
@@ -77,17 +82,18 @@ def example_heavy_augmentations():
             iaa.Flipud(0.5), # vertically flip 50% of all images
             st(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
             st(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
-            st(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.2), per_channel=0.5)), # add gaussian noise to images
+            st(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5)), # add gaussian noise to images
             st(iaa.Dropout((0.0, 0.1), per_channel=0.5)), # randomly remove up to 10% of the pixels
             st(iaa.Add((-10, 10), per_channel=0.5)), # change brightness of images (by -10 to 10 of original value)
             st(iaa.Multiply((0.5, 1.5), per_channel=0.5)), # change brightness of images (50-150% of original value)
             st(iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5)), # improve or worsen the contrast
+            st(iaa.Grayscale((0.0, 1.0))), # blend with grayscale image
             st(iaa.Affine(
                 scale={"x": (0.8, 1.2), "y": (0.8, 1.2)}, # scale images to 80-120% of their size, individually per axis
                 translate_px={"x": (-16, 16), "y": (-16, 16)}, # translate by -16 to +16 pixels (per axis)
                 rotate=(-45, 45), # rotate by -45 to +45 degrees
                 shear=(-16, 16), # shear by -16 to +16 degrees
-                order=ia.ALL, # use any of scikit-image's interpolation methods
+                order=[0, 1], # use scikit-image's interpolation orders 0 (nearest neighbour) and 1 (bilinear)
                 cval=(0, 1.0), # if mode is constant, use a cval between 0 and 1.0
                 mode=ia.ALL # use any of scikit-image's warping modes (see 2nd image from the top for examples)
             )),

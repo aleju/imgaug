@@ -872,6 +872,7 @@ class Flipud(Augmenter):
     def get_parameters(self):
         return [self.p]
 
+# TODO tests
 # Note: Not clear whether this class will be kept (for anything aside from grayscale)
 # other colorspaces dont really make sense and they also might not work correctly
 # due to having no clearly limited range (like 0-255 or 0-1)
@@ -1006,6 +1007,7 @@ class ChangeColorspace(Augmenter):
     def get_parameters(self):
         return [self.alpha, self.to_colorspace]
 
+# TODO tests
 def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
     return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)
 
