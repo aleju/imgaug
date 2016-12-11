@@ -19,6 +19,22 @@ except NameError:  # python3
 
 
 class Augmenter(object):
+    """Base class for Augmenter objects
+
+    Parameters
+    ----------
+    name : string, optional
+        Name given to an Augmenter object
+
+    deterministic : boolean, optional (default=False)
+        ?????
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, name=None, deterministic=False, random_state=None):
@@ -42,14 +58,67 @@ class Augmenter(object):
         self.activated = True
 
     def augment_batches(self, batches, hooks=None):
+        """Augment images, batch-wise
+
+        Parameters
+        ----------
+        batches : array-like, shape = (num_samples, height, width, channels)
+            image batch to augment
+
+
+        hooks : optional(default=None)
+            # TODO
+
+        Returns
+        -------
+        augmented_batch : array-like, shape = (num_samples, height, width, channels)
+            corresponding batch of augmented images
+
+        """
         assert isinstance(batches, list)
         return [self.augment_images(batch, hooks=hooks) for batch in batches]
 
     def augment_image(self, image, hooks=None):
+        """Augment a single image
+
+        Parameters
+        ----------
+        image : array-like, shape = (height, width, channels)
+            The image to augment
+
+        hooks : optional(default=None)
+            # TODO
+
+        Returns
+        -------
+        img : array-like, shape = (height, width, channels)
+            The corresponding augmented image
+        """
         assert len(image.shape) == 3, "Expected image to have shape (height, width, channels), got shape %s." % (image.shape,)
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
+        """Augment multiple images
+
+        Parameters
+        ----------
+
+        images : array-like, shape = (num_samples, height, width, channels)
+            images to augment
+
+        parents : optional(default=None)
+            # TODO
+
+        hooks : optional(default=None)
+            # TODO
+
+        Returns
+        -------
+
+        images_result : array-like, shape = (num_samples, height, width, channels)
+            corresponding augmented images
+
+        """
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
@@ -289,7 +358,7 @@ class Augmenter(object):
                 aug.remove_augmenters_inplace(func, subparents)
 
     # TODO
-    #def to_json(self):
+    # def to_json(self):
     #    pass
 
     def copy(self):
@@ -498,6 +567,23 @@ class Sometimes(Augmenter):
 
 
 class Noop(Augmenter):
+    """Noop is an Augmenter that does nothing
+
+    Parameters
+    ----------
+    name : string, optional
+        Name given to an Augmenter object
+
+    deterministic : boolean, optional (default=False)
+        ?????
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.Parameters
+    ----------
+    """
     def __init__(self, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1357,6 +1443,9 @@ class ContrastNormalization(Augmenter):
         return [self.alpha]
 
 class Affine(Augmenter):
+    """
+
+    """
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant", name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
