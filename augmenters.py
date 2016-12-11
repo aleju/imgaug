@@ -17,6 +17,7 @@ try:
 except NameError:  # python3
     xrange = range
 
+
 class Augmenter(object):
     __metaclass__ = ABCMeta
 
@@ -305,6 +306,7 @@ class Augmenter(object):
         params_str = ", ".join([param.__str__() for param in params])
         return "%s(name=%s, parameters=[%s], deterministic=%s)" % (self.__class__.__name__, self.name, params_str, self.deterministic)
 
+
 class Sequential(Augmenter, list):
     def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
@@ -314,7 +316,7 @@ class Sequential(Augmenter, list):
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.random_order:
-                #for augmenter in self.children:
+                # for augmenter in self.children:
                 for index in random_state.permutation(len(self)):
                     images = self[index].augment_images(
                         images=images,
@@ -322,7 +324,7 @@ class Sequential(Augmenter, list):
                         hooks=hooks
                     )
             else:
-                #for augmenter in self.children:
+                # for augmenter in self.children:
                 for augmenter in self:
                     images = augmenter.augment_images(
                         images=images,
@@ -367,9 +369,10 @@ class Sequential(Augmenter, list):
         return [self]
 
     def __str__(self):
-        #augs_str = ", ".join([aug.__str__() for aug in self.children])
+        # augs_str = ", ".join([aug.__str__() for aug in self.children])
         augs_str = ", ".join([aug.__str__() for aug in self])
         return "Sequential(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
+
 
 class Sometimes(Augmenter):
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
@@ -493,6 +496,7 @@ class Sometimes(Augmenter):
     def __str__(self):
         return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
 
+
 class Noop(Augmenter):
     def __init__(self, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
@@ -505,6 +509,7 @@ class Noop(Augmenter):
 
     def get_parameters(self):
         return []
+
 
 class Lambda(Augmenter):
     def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
@@ -524,6 +529,7 @@ class Lambda(Augmenter):
     def get_parameters(self):
         return []
 
+
 def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, random_state=None):
     def func_images_assert(images, random_state, parents, hooks):
         assert func_images(images, random_state, parents=parents, hooks=hooks)
@@ -534,6 +540,7 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
     if name is None:
         name = "UnnamedAssertLambda"
     return Lambda(func_images_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
+
 
 def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deterministic=False, random_state=None):
     assert len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape))
@@ -590,6 +597,7 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
         name = "UnnamedAssertShape"
 
     return Lambda(func_images, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)
+
 
 class Crop(Augmenter):
     def __init__(self, px=None, percent=None, keep_size=True, name=None, deterministic=False, random_state=None):
@@ -808,6 +816,7 @@ class Crop(Augmenter):
     def get_parameters(self):
         return [self.top, self.right, self.bottom, self.left]
 
+
 class Fliplr(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
@@ -839,6 +848,7 @@ class Fliplr(Augmenter):
 
     def get_parameters(self):
         return [self.p]
+
 
 class Flipud(Augmenter):
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
@@ -1010,6 +1020,7 @@ class ChangeColorspace(Augmenter):
 # TODO tests
 def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
     return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)
+
 
 class GaussianBlur(Augmenter):
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
@@ -1294,6 +1305,7 @@ class MultiplyElementwise(Augmenter):
 
     def get_parameters(self):
         return [self.mul]
+
 
 # TODO tests
 class ContrastNormalization(Augmenter):
