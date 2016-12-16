@@ -21,40 +21,52 @@ ALL = "ALL"
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
+
 def is_np_array(val):
     return isinstance(val, (np.ndarray, np.generic))
+
 
 def is_single_integer(val):
     return isinstance(val, numbers.Integral)
 
+
 def is_single_float(val):
     return isinstance(val, numbers.Real) and not is_single_integer(val)
+
 
 def is_single_number(val):
     return is_single_integer(val) or is_single_float(val)
 
+
 def is_iterable(val):
     return isinstance(val, (tuple, list))
+
 
 def is_string(val):
     return isinstance(val, str) or isinstance(val, unicode)
 
+
 def is_integer_array(val):
     return issubclass(val.dtype.type, np.integer)
+
 
 def current_random_state():
     return CURRENT_RANDOM_STATE
 
+
 def new_random_state(seed=None, fully_random=False):
     if seed is None:
         if not fully_random:
-            # sample manually a seed instead of just RandomState(), because the latter one
+            # sample manually a seed instead of just RandomState(),
+            # because the latter one
             # is way slower.
             seed = CURRENT_RANDOM_STATE.randint(0, 10**6, 1)[0]
     return np.random.RandomState(seed)
 
+
 def dummy_random_state():
     return np.random.RandomState(1)
+
 
 def copy_random_state(random_state, force_copy=False):
     if random_state == np.random and not force_copy:
@@ -66,8 +78,9 @@ def copy_random_state(random_state, force_copy=False):
         return rs_copy
 
 # TODO
-#def from_json(json_str):
+# def from_json(json_str):
 #    pass
+
 
 def imresize_many_images(images, sizes=None, interpolation=None):
     s = images.shape
@@ -104,6 +117,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         result[img_idx] = result_img
     return result
 
+
 def imresize_single_image(image, sizes, interpolation=None):
     grayscale = False
     if image.shape == 2:
@@ -115,6 +129,7 @@ def imresize_single_image(image, sizes, interpolation=None):
         return np.squeeze(rs[0, :, :, 0])
     else:
         return rs[0, ...]
+
 
 def draw_grid(images, rows=None, cols=None):
     if is_np_array(images):
@@ -153,11 +168,16 @@ def draw_grid(images, rows=None, cols=None):
 
     return grid
 
+
 def show_grid(images, rows=None, cols=None):
     grid = draw_grid(images, rows=rows, cols=cols)
     misc.imshow(grid)
 
+
 class HooksImages(object):
+    """
+    # TODO
+    """
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
         self.propagator = propagator
@@ -190,10 +210,16 @@ class HooksImages(object):
         else:
             return self.postprocessor(images, augmenter, parents)
 
+
 class HooksKeypoints(HooksImages):
     pass
 
+
 class Keypoint(object):
+    """
+    # TODO
+    """
+
     def __init__(self, x, y):
         # these checks are currently removed because they are very slow for some
         # reason
@@ -220,6 +246,7 @@ class Keypoint(object):
 
     def __str__(self):
         return "Keypoint(x=%d, y=%d)" % (self.x, self.y)
+
 
 class KeypointsOnImage(object):
     def __init__(self, keypoints, shape):

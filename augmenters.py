@@ -27,7 +27,10 @@ class Augmenter(object):
         Name given to an Augmenter object
 
     deterministic : boolean, optional (default=False)
-        ?????
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
 
     random_state : int, RandomState instance or None, optional (default=None)
         If int, random_state is the seed used by the random number generator;
@@ -67,7 +70,7 @@ class Augmenter(object):
 
 
         hooks : optional(default=None)
-            # TODO
+            HooksImages object to dynamically interfere with the Augmentation process
 
         Returns
         -------
@@ -87,7 +90,7 @@ class Augmenter(object):
             The image to augment
 
         hooks : optional(default=None)
-            # TODO
+            HooksImages object to dynamically interfere with the Augmentation process
 
         Returns
         -------
@@ -103,14 +106,16 @@ class Augmenter(object):
         Parameters
         ----------
 
-        images : array-like, shape = (num_samples, height, width, channels)
+        images : array-like, shape = (num_samples, height, width, channels) or
+                 a list of images (particularly useful for images of various
+                 dimensions)
             images to augment
 
         parents : optional(default=None)
             # TODO
 
         hooks : optional(default=None)
-            # TODO
+            HooksImages object to dynamically interfere with the Augmentation process
 
         Returns
         -------
@@ -178,6 +183,25 @@ class Augmenter(object):
         raise NotImplementedError()
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
+        """Augment image keypoints
+
+        Parameters
+        ----------
+
+        keypoints_on_images : # TODO
+
+
+        parents : optional(default=None)
+            # TODO
+
+        hooks : optional(default=None)
+            HooksImages object to dynamically interfere with the Augmentation process
+
+        Returns
+        -------
+
+        keypoints_on_images_result : # TODO
+        """
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
@@ -256,22 +280,51 @@ class Augmenter(object):
         return grid
 
     def show_grid(self, images, rows, cols):
+        """Quickly show examples results of the applied augmentation
+
+        Parameters
+        ----------
+        images : array-like, shape = (num_samples, height, width, channels) or
+                 a list of images (particularly useful for images of various
+                 dimensions)
+            images to augment
+
+        rows : integer.
+            number of rows in the grid
+
+        cols : integer
+            number of columns in the grid
+        """
         grid = self.draw_grid(images, rows, cols)
         misc.imshow(grid)
 
     def to_deterministic(self, n=None):
+        """ # TODO
+        """
         if n is None:
             return self.to_deterministic(1)[0]
         else:
             return [self._to_deterministic() for _ in xrange(n)]
 
     def _to_deterministic(self):
+        """ # TODO
+        """
         aug = self.copy()
         aug.random_state = ia.new_random_state()
         aug.deterministic = True
         return aug
 
     def reseed(self, deterministic_too=False, random_state=None):
+        """For reseeding the internal random_state
+
+        Parameters
+        ----------
+        deterministic_too : boolean, optional(default=False)
+            # TODO
+
+        random_state : np.random.RandomState instance, optional(default=None)
+            random seed generator
+        """
         if random_state is None:
             random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
@@ -295,6 +348,8 @@ class Augmenter(object):
         return []
 
     def find_augmenters(self, func, parents=None, flat=True):
+        """ # TODO
+        """
         if parents is None:
             parents = []
 
@@ -314,9 +369,44 @@ class Augmenter(object):
         return result
 
     def find_augmenters_by_name(self, name, regex=False, flat=True):
+        """Find augmenter(s) by name
+
+        Parameters
+        ----------
+
+        name : string
+            name of the augmenter to find
+
+        regex : regular Expression, optional(default=False)
+            Regular Expression for searching the augmenter
+
+        flat : boolean, optional(default=True)
+            # TODO
+
+        Returns
+        -------
+        found augmenter instance
+        """
         return self.find_augmenters_by_names([name], regex=regex, flat=flat)
 
     def find_augmenters_by_names(self, names, regex=False, flat=True):
+        """Find augmenters by names
+
+        Parameters
+        ----------
+        names : list of strings
+            names of the augmenter to find
+
+        regex : regular Expression, optional(default=False)
+            Regular Expression for searching the augmenter
+
+        flat : boolean, optional(default=True)
+            # TODO
+
+        Returns
+        -------
+        found augmenter instance(s)
+        """
         if regex:
             def comparer(aug, parents):
                 for pattern in names:
@@ -329,6 +419,23 @@ class Augmenter(object):
             return self.find_augmenters(lambda aug, parents: aug.name in names, flat=flat)
 
     def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
+        """Remove Augmenters from the list of augmenters
+
+        Parameters
+        ----------
+        func : # TODO
+
+        copy : boolean, optional(default=True)
+            removing the augmenter or it's copy
+
+        noop_if_topmost : boolean, optional(default=True)
+            if func is provided and noop_if_topmost is True
+            an object of Noop class is returned
+
+        Returns
+        -------
+        aug : removed augmenter object
+        """
         if func(self, []):
             if not copy:
                 raise Exception("Inplace removal of topmost augmenter requested, which is currently not possible.")
@@ -343,6 +450,15 @@ class Augmenter(object):
             return aug
 
     def remove_augmenters_inplace(self, func, parents):
+        """Inplace removal of augmenters
+
+        Parameters
+        ----------
+
+        func : # TODO
+
+        parents : # TODO
+        """
         subparents = parents + [self]
         for lst in self.get_children_lists():
             to_remove = []
@@ -351,7 +467,7 @@ class Augmenter(object):
                     to_remove.append((i, aug))
 
             for count_removed, (i, aug) in enumerate(to_remove):
-                #self._remove_augmenters_inplace_from_list(lst, aug, i, i - count_removed)
+                # self._remove_augmenters_inplace_from_list(lst, aug, i, i - count_removed)
                 del lst[i - count_removed]
 
             for aug in lst:
@@ -362,9 +478,11 @@ class Augmenter(object):
     #    pass
 
     def copy(self):
+        """Obtain a copy"""
         return copy_module.copy(self)
 
     def deepcopy(self):
+        """Obtain a deep copy"""
         return copy_module.deepcopy(self)
 
     def __repr__(self):
@@ -377,6 +495,33 @@ class Augmenter(object):
 
 
 class Sequential(Augmenter, list):
+    """Sequential class is used to apply a number of transformations in an
+    ordered / random sequence
+    It is essentially an Augmenter comprising of multiple Augmenters
+
+    Parameters
+    ----------
+    children : optional(default=None)
+
+    random_order : boolean, optional(default=False)
+        whether to apply the listed transformations in a random order
+
+    name : string, optional(default=None)
+        name of the object
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+
+    """
     def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         list.__init__(self, children if children is not None else [])
@@ -432,9 +577,11 @@ class Sequential(Augmenter, list):
         return []
 
     def add(self, augmenter):
+        """Add an additional augmenter"""
         self.append(augmenter)
 
     def get_children_lists(self):
+        """Return all the children augmenters"""
         return [self]
 
     def __str__(self):
@@ -444,6 +591,37 @@ class Sequential(Augmenter, list):
 
 
 class Sometimes(Augmenter):
+    """Sometimes is an Augmenter that augments according to some probability
+    Given the probability "p", only certain number of images will be transformed
+
+    Parameters
+    ----------
+    p : float, optional(default=0.5)
+        determines the probability with which the associated Augmentation
+        will be applied. eg. value of 0.5 Augments roughly 50% of the image
+        samples that are up for Augmentation
+
+    then_list : optional(default=None)
+        # TODO
+
+    else_list : optional(default=None)
+        # TODO
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         if ia.is_single_float(p) or ia.is_single_integer(p):
@@ -571,18 +749,20 @@ class Noop(Augmenter):
 
     Parameters
     ----------
-    name : string, optional
-        Name given to an Augmenter object
+    name : string, optional(default=None)
+        name of the instance
 
     deterministic : boolean, optional (default=False)
-        ?????
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
 
     random_state : int, RandomState instance or None, optional (default=None)
         If int, random_state is the seed used by the random number generator;
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
-        by `np.random`.Parameters
-    ----------
+        by `np.random`.
     """
     def __init__(self, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
@@ -598,6 +778,8 @@ class Noop(Augmenter):
 
 
 class Lambda(Augmenter):
+    """ # TODO
+    """
     def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
@@ -686,6 +868,33 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
 
 
 class Crop(Augmenter):
+    """Crop Augmenter object that crops input image(s)
+
+    Parameters
+    ----------
+    px : # TODO
+
+    percent : tuple, optional(default=None)
+        percent crop on each of the axis
+
+    keep_size : boolean, optional(default=True)
+        # TODO
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     def __init__(self, px=None, percent=None, keep_size=True, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -904,6 +1113,28 @@ class Crop(Augmenter):
 
 
 class Fliplr(Augmenter):
+    """Flip the input images horizontally
+
+    Parameters
+    ----------
+    p : int, float or StochasticParameter
+        number or percentage of samples to Flip
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -937,6 +1168,28 @@ class Fliplr(Augmenter):
 
 
 class Flipud(Augmenter):
+    """Flip the input images vertically
+
+    Parameters
+    ----------
+    p : int, float or StochasticParameter
+        number or percentage of samples to Flip
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1109,6 +1362,28 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
 
 
 class GaussianBlur(Augmenter):
+    """Apply GaussianBlur to input images
+
+    Parameters
+    ----------
+    sigma : float, list/iterable of length 2 of floats or StochasticParameter
+        variance parameter.
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         if ia.is_single_number(sigma):
@@ -1140,6 +1415,34 @@ class GaussianBlur(Augmenter):
         return [self.sigma]
 
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
+    """Add Random Gaussian Noise to images
+
+    Parameters
+    ----------
+    loc : integer/ optional(default=0)
+        # TODO
+
+    scale : integer/optional(default=0)
+        # TODO
+
+    per_channel : boolean, optional(default=False)
+        Apply transformation in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     if ia.is_single_number(loc):
         loc2 = Deterministic(loc)
     elif ia.is_iterable(loc):
@@ -1170,7 +1473,37 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 #class ReplacingGaussianNoise(Augmenter):
 #    pass
 
-def Dropout(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
+
+def Dropout(p=0, per_channel=False, name=None, deterministic=False,
+            random_state=None):
+    """Dropout (Blacken) certain fraction of pixels
+
+    Parameters
+    ----------
+    p : float, iterable of len 2, StochasticParameter optional(default=0)
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+
+    Returns
+    -------
+    # TODO
+    """
     if ia.is_single_number(p):
         p2 = Binomial(1 - p)
     elif ia.is_iterable(p):
@@ -1185,9 +1518,36 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False, random_state
         raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
     return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
+
 # TODO tests
 class Add(Augmenter):
-    def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
+    """Augmenter that Adds a value elementwise to the pixels of the image
+
+    Parameters
+    ----------
+    value : integer, iterable of len 2, StochasticParameter
+        value to be added to the pixels/elements
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, value=0, per_channel=False, name=None,
+                 deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
@@ -1241,6 +1601,7 @@ class Add(Augmenter):
 
 # TODO tests
 class AddElementwise(Augmenter):
+    # TODO
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1289,8 +1650,35 @@ class AddElementwise(Augmenter):
     def get_parameters(self):
         return [self.value]
 
+
 class Multiply(Augmenter):
-    def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
+    """Augmenter that Multiplies a value elementwise to the pixels of the image
+
+    Parameters
+    ----------
+    value : integer, iterable of len 2, StochasticParameter
+        value to be added to the pixels/elements
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, mul=1.0, per_channel=False, name=None,
+                 deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
@@ -1342,8 +1730,10 @@ class Multiply(Augmenter):
     def get_parameters(self):
         return [self.mul]
 
+
 # TODO tests
 class MultiplyElementwise(Augmenter):
+    # TODO
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1395,6 +1785,32 @@ class MultiplyElementwise(Augmenter):
 
 # TODO tests
 class ContrastNormalization(Augmenter):
+    """Augmenter class for ContrastNormalization
+
+    Parameters
+    ----------
+    alpha : float, iterable of len 2, StochasticParameter
+        Normalization parameter that governs the contrast ratio
+        of the resulting image
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         if ia.is_single_number(alpha):
@@ -1442,11 +1858,51 @@ class ContrastNormalization(Augmenter):
     def get_parameters(self):
         return [self.alpha]
 
-class Affine(Augmenter):
-    """
 
+class Affine(Augmenter):
+    """Augmenter for Affine Transformations
+    An Affine Transformation is a linear mapping that preserves points,
+    straight lines and planes
+
+    Parameters
+    ----------
+    scale : # TODO
+
+    translate_percent : # TODO
+
+    translate_px : # TODO
+
+    rotate : # TODO
+
+    shear : # TODO
+
+    order : # TODO
+
+    cval : # TODO
+
+    mode : # TODO
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
     """
-    def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant", name=None, deterministic=False, random_state=None):
+    def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
+                 rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant",
+                 name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
         # Peformance:
@@ -1459,7 +1915,7 @@ class Affine(Augmenter):
         # on smaller images (seems to grow more like exponentially with image
         # size)
         if order == ia.ALL:
-            #self.order = DiscreteUniform(0, 5)
+            # self.order = DiscreteUniform(0, 5)
             self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
             assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
@@ -1756,9 +2212,47 @@ class Affine(Augmenter):
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples
 
-# code partially from https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
+
+# code partially from
+# https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 class ElasticTransformation(Augmenter):
-    def __init__(self, alpha=0, sigma=0, name=None, deterministic=False, random_state=None):
+    """Augmenter class for ElasticTransformations
+    Elastic Transformations are transformations that allow non-rigid
+    transformations of images. In a sense, Elastic Transformations are opposite
+    of Affine Transforms, since Elastic Transformations can effect the lines,
+    planes and points of an image.
+
+    Elastic Transformations can be used to create new, unseen images from given
+    images, and are used extensively in Machine Learning/Pattern Recognition.
+
+    Parameters
+    ----------
+    alpha : float, iterable of len 2, StochasticParameter
+        # TODO
+
+    sigma : float, iterable of len 2, StochasticParameter
+        # TODO
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, alpha=0, sigma=0, name=None, deterministic=False,
+                 random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
