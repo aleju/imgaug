@@ -197,6 +197,91 @@ class Deterministic(StochasticParameter):
         else:
             return "Deterministic(float %.8f)" % (self.value,)
 
+class FromLowerResolution(StochasticParameter):
+    def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
+        StochasticParameter.__init__(self)
+
+        assert size_percent is not None or size_px is not None
+
+        if size_percent is not None:
+            self.size_method = "percent"
+            self.size_px = None
+            if ia.is_single_number(size_percent):
+                self.size_percent = Deterministic(size_percent)
+            elif ia.is_iterable(size_percent):
+                assert len(size_percent) == 2
+                self.size_percent = Uniform(size_percent[0], size_percent[1])
+            elif isinstance(size_percent, StochasticParameter):
+                self.size_percent = size_percent
+            else:
+                raise Exception("Expected int, float, tuple of two ints/floats or StochasticParameter for size_percent, got %s." % (type(size_percent),))
+        else: # = elif size_px is not None:
+            self.size_method = "px"
+            self.size_percent = None
+            if ia.is_single_integer(size_px):
+                self.size_px = Deterministic(size_px)
+            elif ia.is_iterable(size_px):
+                assert len(size_px) == 2
+                self.size_px = DiscreteUniform(size_px[0], size_px[1])
+            elif isinstance(size_px, StochasticParameter):
+                self.size_px = size_px
+            else:
+                raise Exception("Expected int, float, tuple of two ints/floats or StochasticParameter for size_px, got %s." % (type(size_px),))
+
+        self.other_param = other_param
+
+        if ia.is_string(method):
+            self.method = Deterministic(method)
+        elif isinstance(method, StochasticParameter):
+            self.method = method
+        else:
+            raise Exception("Expected string or StochasticParameter, got %s." % (type(method),))
+
+        self.min_size = min_size
+
+    def _draw_samples(self, size, random_state):
+        if len(size) == 3:
+            n = 1
+            h, w, c = size
+        elif len(size) == 4:
+            n, h, w, c = size
+        else:
+            raise Exception("FromLowerResolution can only generate samples of shape (H, W, C) or (N, H, W, C), requested was %s." % (str(size),))
+
+        if self.size_method == "percent":
+            hw_percents = self.size_percent.draw_samples((n, 2), random_state=random_state)
+            hw_pxs = (hw_percents * np.array([h, w])).astype(np.int32)
+        else:
+            hw_pxs = self.size_px.draw_samples((n, 2), random_state=random_state)
+
+        methods = self.method.draw_samples((n,), random_state=random_state)
+        result = None
+        #for i, (size_factor, method) in enumerate(zip(size_factors, methods)):
+        for i, (hw_px, method) in enumerate(zip(hw_pxs, methods)):
+            #h_small = max(int(h * size_factor), self.min_size)
+            #w_small = max(int(w * size_factor), self.min_size)
+            h_small = max(hw_px[0], self.min_size)
+            w_small = max(hw_px[1], self.min_size)
+            samples = self.other_param.draw_samples((1, h_small, w_small, c))
+            samples_upscaled = ia.imresize_many_images(samples, (h, w), interpolation=method)
+            if result is None:
+                result = np.zeros((n, h, w, c), dtype=samples.dtype)
+            result[i] = samples_upscaled
+
+        if len(size) == 3:
+            return result[0]
+        else:
+            return result
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        if self.size_method == "percent":
+            return "FromLowerResolution(size_percent=%s, method=%s, other_param=%s)" % (self.size_percent, self.method, self.other_param)
+        else:
+            return "FromLowerResolution(size_px=%s, method=%s, other_param=%s)" % (self.size_px, self.method, self.other_param)
+
 class Clip(StochasticParameter):
     def __init__(self, other_param, minval=None, maxval=None):
         StochasticParameter.__init__(self)
