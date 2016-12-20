@@ -94,12 +94,14 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         return np.copy(images)
 
     ip = interpolation
-    assert ip is None or ip in ["linear", "area", "cubic", cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+    assert ip is None or ip in ["nearest", "linear", "area", "cubic", cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
     if ip is None:
         if height > im_height or width > im_width:
             ip = cv2.INTER_AREA
         else:
             ip = cv2.INTER_LINEAR
+    elif ip in ["nearest", cv2.INTER_NEAREST]:
+        ip = cv2.INTER_NEAREST
     elif ip in ["linear", cv2.INTER_LINEAR]:
         ip = cv2.INTER_LINEAR
     elif ip in ["area", cv2.INTER_AREA]:
