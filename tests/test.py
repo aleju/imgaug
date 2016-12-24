@@ -13,6 +13,8 @@ import imgaug as ia
 import augmenters as iaa
 import parameters as iap
 import numpy as np
+import six
+import six.moves as sm
 
 def main():
     test_is_single_integer()
@@ -259,7 +261,7 @@ def test_Lambda():
     expected = images_aug_list
     assert array_equal_lists(observed, expected)
 
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images_aug
         assert np.array_equal(observed, expected)
@@ -402,7 +404,7 @@ def test_AssertShape():
     expected = images_list
     assert array_equal_lists(observed, expected)
 
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
@@ -436,7 +438,7 @@ def test_AssertShape():
     # any value for number of images allowed (None)
     aug = iaa.AssertShape((None, 3, 4, 1))
     aug_det = aug.to_deterministic()
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
@@ -470,7 +472,7 @@ def test_AssertShape():
     # list of possible choices [1, 3, 5] for height
     aug = iaa.AssertShape((1, [1, 3, 5], 4, 1))
     aug_det = aug.to_deterministic()
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
@@ -504,7 +506,7 @@ def test_AssertShape():
     # range of 1-3 for height (tuple comparison is a <= x < b, so we use (1,4) here)
     aug = iaa.AssertShape((1, (1, 4), 4, 1))
     aug_det = aug.to_deterministic()
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
@@ -587,17 +589,17 @@ def test_Crop():
         right_range = right if isinstance(right, tuple) else (right, right)
         bottom_range = bottom if isinstance(bottom, tuple) else (bottom, bottom)
         left_range = left if isinstance(left, tuple) else (left, left)
-        for top_val in range(top_range[0], top_range[1]+1):
-            for right_val in range(right_range[0], right_range[1]+1):
-                for bottom_val in range(bottom_range[0], bottom_range[1]+1):
-                    for left_val in range(left_range[0], left_range[1]+1):
+        for top_val in sm.xrange(top_range[0], top_range[1]+1):
+            for right_val in sm.xrange(right_range[0], right_range[1]+1):
+                for bottom_val in sm.xrange(bottom_range[0], bottom_range[1]+1):
+                    for left_val in sm.xrange(left_range[0], left_range[1]+1):
 
                         images_cropped.append(base_img[top_val:height-bottom_val, left_val:width-right_val, :])
                         keypoints_cropped.append(keypoints[0].shift(x=-left_val, y=-top_val))
 
         movements = []
         movements_det = []
-        for i in range(100):
+        for i in sm.xrange(100):
             observed = aug.augment_images(images)
 
             matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
@@ -646,7 +648,7 @@ def test_Crop():
 
         movements = []
         movements_det = []
-        for i in range(100):
+        for i in sm.xrange(100):
             observed = aug.augment_images(images)
             matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
             movements.append(np.argmax(np.array(matches)))
@@ -691,7 +693,7 @@ def test_Fliplr():
     aug = iaa.Fliplr(0)
     aug_det = aug.to_deterministic()
 
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
@@ -712,7 +714,7 @@ def test_Fliplr():
     aug = iaa.Fliplr(1.0)
     aug_det = aug.to_deterministic()
 
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images_flipped
         assert np.array_equal(observed, expected)
@@ -738,7 +740,7 @@ def test_Fliplr():
     nb_images_flipped_det = 0
     nb_keypoints_flipped = 0
     nb_keypoints_flipped_det = 0
-    for _ in range(nb_iterations):
+    for _ in sm.xrange(nb_iterations):
         observed = aug.augment_images(images)
         if np.array_equal(observed, images_flipped):
             nb_images_flipped += 1
@@ -767,14 +769,14 @@ def test_Fliplr():
     nb_iterations = 1000
     nb_flipped_by_pos = [0] * len(images_multi)
     nb_flipped_by_pos_det = [0] * len(images_multi)
-    for _ in range(nb_iterations):
+    for _ in sm.xrange(nb_iterations):
         observed = aug.augment_images(images_multi)
-        for i in range(len(images_multi)):
+        for i in sm.xrange(len(images_multi)):
             if np.array_equal(observed[i], base_img_flipped):
                 nb_flipped_by_pos[i] += 1
 
         observed = aug_det.augment_images(images_multi)
-        for i in range(len(images_multi)):
+        for i in sm.xrange(len(images_multi)):
             if np.array_equal(observed[i], base_img_flipped):
                 nb_flipped_by_pos_det[i] += 1
 
@@ -805,7 +807,7 @@ def test_Flipud():
     aug = iaa.Flipud(0)
     aug_det = aug.to_deterministic()
 
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
@@ -826,7 +828,7 @@ def test_Flipud():
     aug = iaa.Flipud(1.0)
     aug_det = aug.to_deterministic()
 
-    for _ in range(10):
+    for _ in sm.xrange(10):
         observed = aug.augment_images(images)
         expected = images_flipped
         assert np.array_equal(observed, expected)
@@ -852,7 +854,7 @@ def test_Flipud():
     nb_images_flipped_det = 0
     nb_keypoints_flipped = 0
     nb_keypoints_flipped_det = 0
-    for _ in range(nb_iterations):
+    for _ in sm.xrange(nb_iterations):
         observed = aug.augment_images(images)
         if np.array_equal(observed, images_flipped):
             nb_images_flipped += 1
@@ -881,14 +883,14 @@ def test_Flipud():
     nb_iterations = 1000
     nb_flipped_by_pos = [0] * len(images_multi)
     nb_flipped_by_pos_det = [0] * len(images_multi)
-    for _ in range(nb_iterations):
+    for _ in sm.xrange(nb_iterations):
         observed = aug.augment_images(images_multi)
-        for i in range(len(images_multi)):
+        for i in sm.xrange(len(images_multi)):
             if np.array_equal(observed[i], base_img_flipped):
                 nb_flipped_by_pos[i] += 1
 
         observed = aug_det.augment_images(images_multi)
-        for i in range(len(images_multi)):
+        for i in sm.xrange(len(images_multi)):
             if np.array_equal(observed[i], base_img_flipped):
                 nb_flipped_by_pos_det[i] += 1
 
@@ -907,8 +909,8 @@ def test_GaussianBlur():
     images = np.array([base_img])
     images_list = [base_img]
     outer_pixels = ([], [])
-    for i in range(base_img.shape[0]):
-        for j in range(base_img.shape[1]):
+    for i in sm.xrange(base_img.shape[0]):
+        for j in sm.xrange(base_img.shape[1]):
             if i != j:
                 outer_pixels[0].append(i)
                 outer_pixels[1].append(j)
@@ -973,7 +975,7 @@ def test_GaussianBlur():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1037,7 +1039,7 @@ def test_AdditiveGaussianNoise():
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     nb_iterations = 10000
     values = []
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         images_aug = aug.augment_images(images)
         values.append(images_aug[0, 0, 0, 0])
     values = np.array(values)
@@ -1050,7 +1052,7 @@ def test_AdditiveGaussianNoise():
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     nb_iterations = 10000
     values = []
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         images_aug = aug.augment_images(images)
         values.append(images_aug[0, 0, 0, 0] - 128)
     values = np.array(values)
@@ -1065,7 +1067,7 @@ def test_AdditiveGaussianNoise():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1090,7 +1092,7 @@ def test_AdditiveGaussianNoise():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1180,7 +1182,7 @@ def test_Dropout():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1282,7 +1284,7 @@ def test_Multiply():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1307,8 +1309,8 @@ def test_Affine():
     images = np.array([base_img])
     images_list = [base_img]
     outer_pixels = ([], [])
-    for i in range(base_img.shape[0]):
-        for j in range(base_img.shape[1]):
+    for i in sm.xrange(base_img.shape[0]):
+        for j in sm.xrange(base_img.shape[1]):
             if i != j:
                 outer_pixels[0].append(i)
                 outer_pixels[1].append(j)
@@ -1494,8 +1496,8 @@ def test_Affine():
     images = np.array([image])
     images_list = [image]
     outer_pixels = ([], [])
-    for y in range(4):
-        xs = range(4) if y in [0, 3] else [0, 3]
+    for y in sm.xrange(4):
+        xs = sm.xrange(4) if y in [0, 3] else [0, 3]
         for x in xs:
             outer_pixels[0].append(y)
             outer_pixels[1].append(x)
@@ -1543,7 +1545,7 @@ def test_Affine():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1704,7 +1706,7 @@ def test_Affine():
     nb_iterations = 1000
     centers_aug = np.copy(image).astype(np.int32) * 0
     centers_aug_det = np.copy(image).astype(np.int32) * 0
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1784,7 +1786,7 @@ def test_Affine():
     nb_iterations = 1000
     pixels_sums_aug = np.copy(image).astype(np.int32) * 0
     pixels_sums_aug_det = np.copy(image).astype(np.int32) * 0
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1858,7 +1860,7 @@ def test_Affine():
     nb_changed_aug_det = 0
     nb_iterations = 1000
     averages = []
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -1957,7 +1959,7 @@ def test_Sequential():
     nb_changed_aug = 0
     nb_changed_aug_det = 0
     nb_iterations = 1000
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         if i == 0:
@@ -2035,7 +2037,7 @@ def test_Sequential():
     nb_keypoints_first_second_random = 0
     nb_keypoints_second_first_random = 0
 
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug_unrandom = aug_unrandom.augment_images(images)
         observed_aug_unrandom_det = aug_unrandom_det.augment_images(images)
         observed_aug_random = aug_random.augment_images(images)
@@ -2178,7 +2180,7 @@ def test_Sometimes():
     nb_images_else_branch = 0
     nb_keypoints_if_branch = 0
     nb_keypoints_else_branch = 0
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         keypoints_aug = aug.augment_keypoints(keypoints)
@@ -2227,7 +2229,7 @@ def test_Sometimes():
     nb_images_else_branch = 0
     nb_keypoints_if_branch = 0
     nb_keypoints_else_branch = 0
-    for i in range(nb_iterations):
+    for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         keypoints_aug = aug.augment_keypoints(keypoints)
@@ -2269,10 +2271,10 @@ def create_random_images(size):
 
 def create_random_keypoints(size_images, nb_keypoints_per_img):
     result = []
-    for i in range(size_images[0]):
+    for i in sm.xrange(size_images[0]):
         kps = []
         height, width = size_images[1], size_images[2]
-        for i in range(nb_keypoints_per_img):
+        for i in sm.xrange(nb_keypoints_per_img):
             x = np.random.randint(0, width-1)
             y = np.random.randint(0, height-1)
             kps.append(ia.Keypoint(x=x, y=y))
@@ -2296,13 +2298,13 @@ def keypoints_equal(kps1, kps2):
     if len(kps1) != len(kps2):
         return False
 
-    for i in range(len(kps1)):
+    for i in sm.xrange(len(kps1)):
         a = kps1[i].keypoints
         b = kps2[i].keypoints
         if len(a) != len(b):
             return False
 
-        for j in range(len(a)):
+        for j in sm.xrange(len(a)):
             if a[j].x != b[j].x or a[j].y != b[j].y:
                 return False
 

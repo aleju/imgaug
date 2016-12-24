@@ -31,10 +31,10 @@ def main():
         iaa.Grayscale(0.5, name="Grayscale0.5"),
         iaa.Grayscale(1.0, name="Grayscale1.0"),
         iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
-        iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.1), name="AdditiveGaussianNoise"),
+        iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.1*255), name="AdditiveGaussianNoise"),
         iaa.Dropout((0.0, 0.1), name="Dropout"),
         iaa.Multiply((0.5, 1.5), name="Multiply"),
-        iaa.ContrastNormalization(alpha=(0.5, 2.0)),
+        iaa.ContrastNormalization(alpha=(0.5, 2.0), name="ContrastNormalization"),
         iaa.Affine(
             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
             translate_px={"x": (-16, 16), "y": (-16, 16)},

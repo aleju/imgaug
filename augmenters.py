@@ -11,13 +11,10 @@ import itertools
 import imgaug as ia
 from parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform
 import cv2
+import six
+import six.moves as sm
 
-try:
-    xrange
-except NameError:  # python3
-    xrange = range
-
-
+@six.add_metaclass(ABCMeta)
 class Augmenter(object):
     """Base class for Augmenter objects
 
@@ -38,9 +35,10 @@ class Augmenter(object):
         If None, the random number generator is the RandomState instance used
         by `np.random`.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, name=None, deterministic=False, random_state=None):
+        super(Augmenter, self).__init__()
+
         if name is None:
             self.name = "Unnamed%s" % (self.__class__.__name__,)
         else:
@@ -304,7 +302,7 @@ class Augmenter(object):
         if n is None:
             return self.to_deterministic(1)[0]
         else:
-            return [self._to_deterministic() for _ in xrange(n)]
+            return [self._to_deterministic() for _ in sm.xrange(n)]
 
     def _to_deterministic(self):
         """ # TODO
@@ -623,7 +621,8 @@ class Sometimes(Augmenter):
         by `np.random`.
     """
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Sometimes, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
         if ia.is_single_float(p) or ia.is_single_integer(p):
             assert 0 <= p <= 1
             self.p = Binomial(p)
@@ -765,7 +764,8 @@ class Noop(Augmenter):
         by `np.random`.
     """
     def __init__(self, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Noop, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
     def _augment_images(self, images, random_state, parents, hooks):
         return images
@@ -781,7 +781,8 @@ class Lambda(Augmenter):
     """ # TODO
     """
     def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_keypoints = func_keypoints
 
@@ -832,10 +833,10 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
                 if shape[0] is not None:
                     compare(len(images), shape[0], 0, "ALL")
 
-                for i in xrange(len(images)):
+                for i in sm.xrange(len(images)):
                     image = images[i]
                     assert len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape))
-                    for j in xrange(len(shape)-1):
+                    for j in sm.xrange(len(shape)-1):
                         expected = shape[j+1]
                         observed = image.shape[j]
                         compare(observed, expected, j, i)
@@ -853,9 +854,9 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
             if shape[0] is not None:
                 compare(len(keypoints_on_images), shape[0], 0, "ALL")
 
-            for i in xrange(len(keypoints_on_images)):
+            for i in sm.xrange(len(keypoints_on_images)):
                 keypoints_on_image = keypoints_on_images[i]
-                for j in xrange(len(shape[0:2])):
+                for j in sm.xrange(len(shape[0:2])):
                     expected = shape[j+1]
                     observed = keypoints_on_image.shape[j]
                     compare(observed, expected, j, i)
@@ -896,7 +897,7 @@ class Crop(Augmenter):
         by `np.random`.
     """
     def __init__(self, px=None, percent=None, keep_size=True, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Crop, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.keep_size = keep_size
 
@@ -996,7 +997,7 @@ class Crop(Augmenter):
         result = []
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             seed = seeds[i]
             height, width = images[i].shape[0:2]
             top, right, bottom, left = self._draw_samples_image(seed, height, width)
@@ -1136,7 +1137,7 @@ class Fliplr(Augmenter):
         by `np.random`.
     """
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Fliplr, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p):
             self.p = Binomial(p)
@@ -1148,7 +1149,7 @@ class Fliplr(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             if samples[i] == 1:
                 images[i] = np.fliplr(images[i])
         return images
@@ -1191,7 +1192,7 @@ class Flipud(Augmenter):
         by `np.random`.
     """
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Flipud, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p):
             self.p = Binomial(p)
@@ -1203,7 +1204,7 @@ class Flipud(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             if samples[i] == 1:
                 images[i] = np.flipud(images[i])
         return images
@@ -1270,7 +1271,7 @@ class ChangeColorspace(Augmenter):
     }
 
     def __init__(self, to_colorspace, alpha, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(ChangeColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
             self.alpha = Deterministic(alpha)
@@ -1303,7 +1304,7 @@ class ChangeColorspace(Augmenter):
         nb_images = len(images)
         alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
         to_colorspaces = self.to_colorspace.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             alpha = alphas[i]
             to_colorspace = to_colorspaces[i]
             image = images[i]
@@ -1385,7 +1386,8 @@ class GaussianBlur(Augmenter):
         by `np.random`.
     """
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
         if ia.is_single_number(sigma):
             self.sigma = Deterministic(sigma)
         elif ia.is_iterable(sigma):
@@ -1400,11 +1402,11 @@ class GaussianBlur(Augmenter):
         result = images
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             nb_channels = images[i].shape[2]
             sig = samples[i]
             if sig > 0:
-                for channel in xrange(nb_channels):
+                for channel in sm.xrange(nb_channels):
                     result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
 
@@ -1548,7 +1550,7 @@ class Add(Augmenter):
     """
     def __init__(self, value=0, per_channel=False, name=None,
                  deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
             assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
@@ -1573,7 +1575,7 @@ class Add(Augmenter):
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             image = images[i].astype(np.int32)
             rs_image = ia.new_random_state(seeds[i])
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
@@ -1603,7 +1605,7 @@ class Add(Augmenter):
 class AddElementwise(Augmenter):
     # TODO
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
             assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
@@ -1628,7 +1630,7 @@ class AddElementwise(Augmenter):
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             seed = seeds[i]
             image = images[i].astype(np.int32)
             height, width, nb_channels = image.shape
@@ -1679,7 +1681,7 @@ class Multiply(Augmenter):
     """
     def __init__(self, mul=1.0, per_channel=False, name=None,
                  deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
             assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
@@ -1704,7 +1706,7 @@ class Multiply(Augmenter):
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             image = images[i].astype(np.float32)
             rs_image = ia.new_random_state(seeds[i])
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
@@ -1735,7 +1737,7 @@ class Multiply(Augmenter):
 class MultiplyElementwise(Augmenter):
     # TODO
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
             assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
@@ -1760,7 +1762,7 @@ class MultiplyElementwise(Augmenter):
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             seed = seeds[i]
             image = images[i].astype(np.float32)
             height, width, nb_channels = image.shape
@@ -1812,7 +1814,8 @@ class ContrastNormalization(Augmenter):
         by `np.random`.
     """
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
         if ia.is_single_number(alpha):
             assert alpha >= 0.0, "Expected alpha to have range (0, inf), got value %.4f." % (alpha,)
             self.alpha = Deterministic(alpha)
@@ -1836,7 +1839,7 @@ class ContrastNormalization(Augmenter):
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             image = images[i].astype(np.float32)
             rs_image = ia.new_random_state(seeds[i])
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
@@ -1903,7 +1906,7 @@ class Affine(Augmenter):
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant",
                  name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         # Peformance:
         #  1.0x order 0
@@ -2079,7 +2082,7 @@ class Affine(Augmenter):
 
         scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
 
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             height, width = result[i].shape[0], result[i].shape[1]
             shift_x = int(width / 2.0)
             shift_y = int(height / 2.0)
@@ -2253,7 +2256,7 @@ class ElasticTransformation(Augmenter):
     """
     def __init__(self, alpha=0, sigma=0, name=None, deterministic=False,
                  random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
             assert alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,)
@@ -2283,7 +2286,7 @@ class ElasticTransformation(Augmenter):
         seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
         alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
         sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        for i in xrange(nb_images):
+        for i in sm.xrange(nb_images):
             image = images[i]
             image_first_channel = np.squeeze(image[..., 0])
             indices_x, indices_y = ElasticTransformation.generate_indices(image_first_channel.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
@@ -2340,7 +2343,7 @@ class ElasticTransformation(Augmenter):
         assert len(image.shape) == 3
         result = np.copy(image)
         height, width = image.shape[0:2]
-        for c in xrange(image.shape[2]):
+        for c in sm.xrange(image.shape[2]):
             remapped_flat = ndimage.interpolation.map_coordinates(image[..., c], (indices_x, indices_y), order=1)
             remapped = remapped_flat.reshape((height, width))
             result[..., c] = remapped

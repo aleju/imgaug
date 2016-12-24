@@ -3,17 +3,12 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import imgaug as ia
 import copy as copy_module
+import six
 
-try:
-    xrange
-except NameError:  # python3
-    xrange = range
-
+@six.add_metaclass(ABCMeta)
 class StochasticParameter(object):
-    __metaclass__ = ABCMeta
-
     def __init__(self):
-        pass
+        super(StochasticParameter, self).__init__()
 
     def draw_sample(self, random_state=None):
         return self.draw_samples(1, random_state=random_state)[0]
@@ -34,7 +29,7 @@ class StochasticParameter(object):
 
 class Binomial(StochasticParameter):
     def __init__(self, p):
-        StochasticParameter.__init__(self)
+        super(Binomial, self).__init__()
 
         if isinstance(p, StochasticParameter):
             self.p = p
@@ -60,7 +55,7 @@ class Binomial(StochasticParameter):
 
 class Choice(StochasticParameter):
     def __init__(self, a, replace=True, p=None):
-        StochasticParameter.__init__(self)
+        super(Choice, self).__init__()
 
         self.a = a
         self.replace = replace
@@ -110,7 +105,7 @@ class DiscreteUniform(StochasticParameter):
 
 class Normal(StochasticParameter):
     def __init__(self, loc, scale):
-        StochasticParameter.__init__(self)
+        super(Normal, self).__init__()
 
         if isinstance(loc, StochasticParameter):
             self.loc = loc
@@ -144,7 +139,7 @@ class Normal(StochasticParameter):
 
 class Uniform(StochasticParameter):
     def __init__(self, a, b):
-        StochasticParameter.__init__(self)
+        super(Uniform, self).__init__()
 
         assert isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),)
@@ -176,7 +171,7 @@ class Uniform(StochasticParameter):
 
 class Deterministic(StochasticParameter):
     def __init__(self, value):
-        StochasticParameter.__init__(self)
+        super(Deterministic, self).__init__()
 
         if isinstance(value, StochasticParameter):
             self.value = value.draw_sample()
@@ -199,7 +194,7 @@ class Deterministic(StochasticParameter):
 
 class FromLowerResolution(StochasticParameter):
     def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
-        StochasticParameter.__init__(self)
+        super(StochasticParameter, self).__init__()
 
         assert size_percent is not None or size_px is not None
 
@@ -284,7 +279,7 @@ class FromLowerResolution(StochasticParameter):
 
 class Clip(StochasticParameter):
     def __init__(self, other_param, minval=None, maxval=None):
-        StochasticParameter.__init__(self)
+        super(Clip, self).__init__()
 
         assert isinstance(other_param, StochasticParameter)
         assert minval is None or ia.is_single_number(minval)

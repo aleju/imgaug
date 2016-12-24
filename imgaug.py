@@ -7,11 +7,15 @@ import numbers
 import cv2
 import math
 from scipy import misc
+import six
+import six.moves as sm
 
+"""
 try:
     xrange
 except NameError:  # python3
     xrange = range
+"""
 
 ALL = "ALL"
 
@@ -112,7 +116,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         raise Exception("Invalid interpolation order")
 
     result = np.zeros((nb_images, height, width, nb_channels), dtype=np.uint8)
-    for img_idx in range(nb_images):
+    for img_idx in sm.xrange(nb_images):
         result_img = cv2.resize(images[img_idx], (width, height), interpolation=ip)
         if len(result_img.shape) == 2:
             result_img = result_img[:, :, np.newaxis]
@@ -157,8 +161,8 @@ def draw_grid(images, rows=None, cols=None):
     height = cell_height * rows
     grid = np.zeros((height, width, nb_channels))
     cell_idx = 0
-    for row_idx in range(rows):
-        for col_idx in range(cols):
+    for row_idx in sm.xrange(rows):
+        for col_idx in sm.xrange(cols):
             if cell_idx < nb_images:
                 image = images[cell_idx]
                 cell_y1 = cell_height * row_idx
@@ -313,7 +317,7 @@ class KeypointsOnImage(object):
     @staticmethod
     def from_coords_array(coords, shape):
         assert is_integer_array(coords), coords.dtype
-        keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in xrange(coords.shape[0])]
+        keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
     def to_keypoint_image(self):
@@ -348,7 +352,7 @@ class KeypointsOnImage(object):
             raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (type(if_not_found_coords),))
 
         keypoints = []
-        for i in range(nb_keypoints):
+        for i in sm.xrange(nb_keypoints):
             maxidx_flat = np.argmax(image[..., i])
             maxidx_ndim = np.unravel_index(maxidx_flat, (height, width))
             found = (image[maxidx_ndim[0], maxidx_ndim[1], i] >= threshold)

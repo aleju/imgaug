@@ -21,12 +21,13 @@ The image below shows examples for each availabe augmentation technique.
 # Requirements and installation
 
 Required dependencies:
+* six
 * numpy
 * scipy
 * scikit-image (`pip install -U scikit-image`)
-* OpenCV
+* OpenCV (i.e. `cv2`)
 
-Currently only tested in python2.7.
+Currently only tested in python2.7. Code is written so that it *should* run in python3 too.
 No installer available right now, copy the files `imgaug.py`, `augmenters.py` and `parameters.py` into your project.
 
 # Examples

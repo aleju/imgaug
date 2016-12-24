@@ -8,6 +8,8 @@ from scipy import ndimage, misc
 from skimage import data
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import six
+import six.moves as sm
 
 def main():
     draw_single_sequential_images()
@@ -58,7 +60,7 @@ def draw_per_augmenter_images():
 
     print("[draw_per_augmenter_images] Initializing...")
     rows_augmenters = [
-        ("Noop", [("", iaa.Noop()) for _ in range(5)]),
+        ("Noop", [("", iaa.Noop()) for _ in sm.xrange(5)]),
         #("Crop", [iaa.Crop(px=vals) for vals in [(2, 4), (4, 8), (6, 16), (8, 32), (10, 64)]]),
         ("Crop\n(top, right,\nbottom, left)", [(str(vals), iaa.Crop(px=vals)) for vals in [(2, 0, 0, 0), (0, 8, 8, 0), (4, 0, 16, 4), (8, 0, 0, 32), (32, 64, 0, 0)]]),
         ("Fliplr", [(str(p), iaa.Fliplr(p)) for p in [0, 0, 1, 1, 1]]),
@@ -94,7 +96,7 @@ def draw_per_augmenter_images():
                         cval=(0.0, 1.0)
                     )
                 )
-                for _ in range(5)
+                for _ in sm.xrange(5)
             ]
         ),
         ("ElasticTransformation\n(sigma=0.2)", [("alpha=%.1f" % (alpha,), iaa.ElasticTransformation(alpha=alpha, sigma=0.2)) for alpha in [0.1, 0.5, 1.0, 3.0, 9.0]])
@@ -121,8 +123,8 @@ def draw_per_augmenter_images():
     grid_cols = 1 + 5
     gs = gridspec.GridSpec(grid_rows, grid_cols, width_ratios=[2, 1, 1, 1, 1, 1])
     axes = []
-    for i in range(grid_rows):
-        axes.append([plt.subplot(gs[i, col_idx]) for col_idx in range(grid_cols)])
+    for i in sm.xrange(grid_rows):
+        axes.append([plt.subplot(gs[i, col_idx]) for col_idx in sm.xrange(grid_cols)])
     fig.tight_layout()
     #fig.subplots_adjust(bottom=0.2 / grid_rows, hspace=0.22)
     #fig.subplots_adjust(wspace=0.005, hspace=0.425, bottom=0.02)
@@ -131,7 +133,7 @@ def draw_per_augmenter_images():
     for row_idx, (row_name, row_images, row_keypoints, row_titles) in enumerate(rows):
         axes_row = axes[row_idx]
 
-        for col_idx in range(grid_cols):
+        for col_idx in sm.xrange(grid_cols):
             ax = axes_row[col_idx]
 
             ax.cla()
