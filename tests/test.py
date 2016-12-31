@@ -5,13 +5,13 @@ Run these from the project directory (i.e. parent directory) via
 """
 from __future__ import print_function, division
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+#import sys
+#import os
+#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import imgaug as ia
-import augmenters as iaa
-import parameters as iap
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
 import numpy as np
 import six
 import six.moves as sm

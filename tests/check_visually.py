@@ -5,13 +5,13 @@ Run these checks from the project directory (i.e. parent directory) via
 """
 from __future__ import print_function, division
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+#import sys
+#import os
+#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import imgaug as ia
-import augmenters as iaa
-import parameters as iap
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
 import numpy as np
 from scipy import ndimage, misc
 from skimage import data
@@ -45,7 +45,7 @@ def main():
             mode=ia.ALL,
             name="Affine"
         ),
-        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0)
+        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation")
     ]
 
     #for i, aug in enumerate(augmenters):

@@ -27,15 +27,20 @@ Required dependencies:
 * scikit-image (`pip install -U scikit-image`)
 * OpenCV (i.e. `cv2`)
 
+Installation:
+* Clone the repository.
+* From within the repository do:
+  * `python setup.py sdist`
+  * `sudo pip install dist/imgaug-0.1.tar.gz`
+
 Currently only tested in python2.7. Code is written so that it *should* run in python3 too.
-No installer available right now, copy the files `imgaug.py`, `augmenters.py` and `parameters.py` into your project.
 
 # Examples
 
 A standard machine learning situation.
 Train on batches of images and augment each batch via crop, horizontal flip ("Fliplr") and gaussian blur:
 ```python
-import augmenters as iaa
+from imgaug import augmenters as iaa
 
 seq = iaa.Sequential([
     iaa.Crop(px=(0, 16)), # crop images from each side by 0 to 16px (randomly chosen)
@@ -57,7 +62,7 @@ for batch_idx in range(1000):
 Apply heavy augmentations to images (used to create the image at the very top of this readme):
 ```python
 import imgaug as ia
-import augmenters as iaa
+from imgaug import augmenters as iaa
 import numpy as np
 
 # random example images
@@ -100,7 +105,7 @@ images_aug = seq.augment_images(images)
 
 Quickly show example results of your augmentation sequence:
 ```python
-import augmenters as iaa
+from imgaug import augmenters as iaa
 import numpy as np
 
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
@@ -117,7 +122,7 @@ seq.show_grid([images[0], images[1]], cols=8, rows=8)
 
 Augment grayscale images:
 ```python
-import augmenters as iaa
+from imgaug import augmenters as iaa
 import numpy as np
 images = np.random.randint(0, 255, (16, 128, 128), dtype=np.uint8)
 seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
@@ -128,7 +133,7 @@ images_aug = seq.augment_images(images[:, :, :, np.newaxis])
 
 Augment two batches of images in *exactly the same way* (e.g. horizontally flip 1st, 2nd and 5th images in both batches, but do not alter 3rd and 4th images):
 ```python
-import augmenters as iaa
+from imgaug import augmenters as iaa
 
 # Standard scenario: You have N RGB-images and additionally 21 heatmaps per image.
 # You want to augment each image and its heatmaps identically.
@@ -147,7 +152,7 @@ heatmaps_aug = seq_det.augment_images(heatmaps)
 Augment images *and* landmarks on these images:
 ```python
 import imgaug as ia
-import augmenters as iaa
+from imgaug import augmenters as iaa
 from scipy import misc
 import random
 import numpy as np
@@ -186,7 +191,7 @@ for img_idx, (image_before, image_after, keypoints_before, keypoints_after) in e
 
 Apply single augmentations to images:
 ```python
-import augmenters as iaa
+from imgaug import augmenters as iaa
 import numpy as np
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
@@ -209,8 +214,8 @@ images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y 
 
 You can use more unusual distributions for the stochastic parameters of each augmenter:
 ```python
-import augmenters as iaa
-import parameters as iap
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
 import numpy as np
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
@@ -244,7 +249,7 @@ images_aug = blurer.augment_images(images)
 You can dynamically deactivate augmenters in an already defined sequence:
 ```python
 import imgaug as ia
-import augmenters as iaa
+from imgaug import augmenters as iaa
 import numpy as np
 
 # images and heatmaps, just arrays filled with value 30

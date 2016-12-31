@@ -1,4 +1,6 @@
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
+from . import imgaug as ia
+from .parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform
 from abc import ABCMeta, abstractmethod
 import random
 import numpy as np
@@ -8,8 +10,6 @@ import math
 from scipy import misc, ndimage
 from skimage import transform as tf
 import itertools
-import imgaug as ia
-from parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform
 import cv2
 import six
 import six.moves as sm

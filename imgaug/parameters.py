@@ -1,7 +1,7 @@
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
+from . import imgaug as ia
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import imgaug as ia
 import copy as copy_module
 import six
 

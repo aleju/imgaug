@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 from abc import ABCMeta, abstractmethod
 import random
 import numpy as np

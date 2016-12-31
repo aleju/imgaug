@@ -5,9 +5,9 @@ Run from the project directory (i.e. parent) with
 """
 from __future__ import print_function, division
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+#import sys
+#import os
+#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import numpy as np
 from scipy import misc
@@ -35,8 +35,7 @@ def example_standard_situation():
 
     # -------
 
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
 
     seq = iaa.Sequential([
         iaa.Crop(px=(0, 16)), # crop images from each side by 0 to 16px (randomly chosen)
@@ -63,8 +62,7 @@ def example_standard_situation():
 def example_heavy_augmentations():
     print("Example: Heavy Augmentations")
     import imgaug as ia
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
 
     # random example images
     images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
@@ -110,8 +108,7 @@ def example_heavy_augmentations():
 
 def example_show():
     print("Example: Show")
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
 
     images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
     seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
@@ -126,8 +123,7 @@ def example_show():
 
 def example_grayscale():
     print("Example: Grayscale")
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
     images = np.random.randint(0, 255, (16, 128, 128), dtype=np.uint8)
     seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
     # The library expects a list of images (3D inputs) or a single array (4D inputs).
@@ -140,8 +136,7 @@ def example_grayscale():
 
 def example_determinism():
     print("Example: Determinism")
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
 
     # Standard scenario: You have N RGB-images and additionally 21 heatmaps per image.
     # You want to augment each image and its heatmaps identically.
@@ -169,8 +164,7 @@ def example_determinism():
 def example_keypoints():
     print("Example: Keypoints")
     import imgaug as ia
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
     from scipy import misc
     import random
     images = np.random.randint(0, 50, (4, 128, 128, 3), dtype=np.uint8)
@@ -207,8 +201,7 @@ def example_keypoints():
 
 def example_single_augmenters():
     print("Example: Single Augmenters")
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
     images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
     flipper = iaa.Fliplr(1.0) # always horizontally flip each input image
@@ -229,10 +222,8 @@ def example_single_augmenters():
 
 def example_unusual_distributions():
     print("Example: Unusual Distributions")
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
-    #from imgaug import parameters as iap
-    import parameters as iap
+    from imgaug import augmenters as iaa
+    from imgaug import parameters as iap
     images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
     # Blur by a value sigma which is sampled from a uniform distribution
@@ -264,8 +255,7 @@ def example_unusual_distributions():
 def example_hooks():
     print("Example: Hooks")
     import imgaug as ia
-    #from imgaug import augmenters as iaa
-    import augmenters as iaa
+    from imgaug import augmenters as iaa
     import numpy as np
 
     # images and heatmaps, just arrays filled with value 30
