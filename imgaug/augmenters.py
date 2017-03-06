@@ -1267,7 +1267,10 @@ class ChangeColorspace(Augmenter):
         "BGR2HSV": cv2.COLOR_BGR2HSV,
         "BGR2HLS": cv2.COLOR_BGR2HLS,
         "BGR2LAB": cv2.COLOR_BGR2LAB,
-        "BGR2LUV": cv2.COLOR_BGR2LUV
+        "BGR2LUV": cv2.COLOR_BGR2LUV,
+        # HSV
+        "HSV2RGB": cv2.COLOR_HSV2RGB,
+        "HSV2BGR": cv2.COLOR_HSV2BGR,
     }
 
     def __init__(self, to_colorspace, alpha, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
@@ -1329,10 +1332,13 @@ class ChangeColorspace(Augmenter):
                     from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
                     img_rgb = cv2.cvtColor(image, from_to_var)
 
-                    # convert from RGB to desired target colorspace
-                    from_to_var_name = "%s2%s" % (ChangeColorspace.RGB, to_colorspace)
-                    from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
-                    img_to_cs = cv2.cvtColor(img_rgb, from_to_var)
+                    if to_colorspace == ChangeColorspace.RGB:
+                        img_to_cs = img_rgb
+                    else:
+                        # convert from RGB to desired target colorspace
+                        from_to_var_name = "%s2%s" % (ChangeColorspace.RGB, to_colorspace)
+                        from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
+                        img_to_cs = cv2.cvtColor(img_rgb, from_to_var)
 
                 # this will break colorspaces that have values outside 0-255 or 0.0-1.0
                 if ia.is_integer_array(img_to_cs):
