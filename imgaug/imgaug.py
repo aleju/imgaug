@@ -85,6 +85,19 @@ def copy_random_state(random_state, force_copy=False):
 # def from_json(json_str):
 #    pass
 
+def angle_between_vectors(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2':
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+        From http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
+    """
+    v1_u = v1 / np.linalg.norm(v1)
+    v2_u = v2 / np.linalg.norm(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 def imresize_many_images(images, sizes=None, interpolation=None):
     s = images.shape

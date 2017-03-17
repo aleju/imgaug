@@ -30,8 +30,8 @@ Required dependencies:
 Installation:
 * Clone the repository.
 * From within the repository do:
-  * `python setup.py sdist`
-  * `sudo pip install dist/imgaug-0.1.tar.gz`
+  * `python setup.py sdist && sudo pip install dist/imgaug-0.1.tar.gz`
+Deinstall via `sudo pip uninstall imgaug`
 
 Currently only tested in python2.7. Code is written so that it *should* run in python3 too.
 

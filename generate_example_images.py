@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 import imgaug as ia
-import augmenters as iaa
-import parameters as iap
+from imgaug import augmenters as iaa
+from imgaug import parameters as iap
 #from skimage import
 import numpy as np
 from scipy import ndimage, misc
@@ -18,13 +18,19 @@ def main():
 def draw_single_sequential_images():
     image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
 
-    st = lambda aug: iaa.Sometimes(0.5, aug)
+    st = lambda aug: iaa.Sometimes(0.4, aug)
 
     seq = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Flipud(0.5),
             st(iaa.Crop(percent=(0, 0.1))),
             st(iaa.GaussianBlur((0, 3.0))),
+            st(iaa.Sharpen(alpha=(0, 1.0), strength=(0.75, 1.5))),
+            st(iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0))),
+            st(iaa.Sometimes(0.5,
+                iaa.EdgeDetect(alpha=(0, 0.7)),
+                iaa.DirectedEdgeDetect(alpha=(0, 0.7), direction=(0.0, 1.0)),
+            )),
             st(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5)),
             st(iaa.Dropout((0.0, 0.1), per_channel=0.5)),
             st(iaa.Add((-10, 10), per_channel=0.5)),
@@ -70,8 +76,12 @@ def draw_per_augmenter_images():
         ("Multiply", [("value=%.2f" % (val,), iaa.Multiply(val)) for val in [0.25, 0.5, 1.0, 1.25, 1.5]]),
         ("Multiply\n(per channel)", [("value=(%.2f, %.2f)" % (vals[0], vals[1],), iaa.Multiply(vals, per_channel=True)) for vals in [(0.15, 0.35), (0.4, 0.6), (0.9, 1.1), (1.15, 1.35), (1.4, 1.6)]]),
         ("GaussianBlur", [("sigma=%.2f" % (sigma,), iaa.GaussianBlur(sigma=sigma)) for sigma in [0.25, 0.50, 1.0, 2.0, 4.0]]),
-        ("AdditiveGaussianNoise", [("scale=%.2f" % (scale,), iaa.AdditiveGaussianNoise(scale=scale * 255)) for scale in [0.025, 0.05, 0.1, 0.2, 0.3]]),
-        ("AdditiveGaussianNoise\n(per channel)", [("scale=%.2f" % (scale,), iaa.AdditiveGaussianNoise(scale=scale * 255, per_channel=True)) for scale in [0.025, 0.05, 0.1, 0.2, 0.3]]),
+        ("Sharpen\n(alpha=1)", [("strength=%.2f" % (strength,), iaa.Sharpen(alpha=1, strength=strength)) for strength in [0, 0.5, 1.0, 1.5, 2.0]]),
+        ("Emboss\n(alpha=1)", [("strength=%.2f" % (strength,), iaa.Emboss(alpha=1, strength=strength)) for strength in [0, 0.5, 1.0, 1.5, 2.0]]),
+        ("EdgeDetect", [("alpha=%.2f" % (alpha,), iaa.EdgeDetect(alpha=alpha)) for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]]),
+        ("DirectedEdgeDetect\n(alpha=1)", [("direction=%.2f" % (direction,), iaa.DirectedEdgeDetect(alpha=1, direction=direction)) for direction in [0.0, 1*(360/5)/360, 2*(360/5)/360, 3*(360/5)/360, 4*(360/5)/360]]),
+        ("AdditiveGaussianNoise", [("scale=%.2f*255" % (scale,), iaa.AdditiveGaussianNoise(scale=scale * 255)) for scale in [0.025, 0.05, 0.1, 0.2, 0.3]]),
+        ("AdditiveGaussianNoise\n(per channel)", [("scale=%.2f*255" % (scale,), iaa.AdditiveGaussianNoise(scale=scale * 255, per_channel=True)) for scale in [0.025, 0.05, 0.1, 0.2, 0.3]]),
         ("Dropout", [("p=%.2f" % (p,), iaa.Dropout(p=p)) for p in [0.025, 0.05, 0.1, 0.2, 0.4]]),
         ("Dropout\n(per channel)", [("p=%.2f" % (p,), iaa.Dropout(p=p, per_channel=True)) for p in [0.025, 0.05, 0.1, 0.2, 0.4]]),
         ("ContrastNormalization", [("alpha=%.1f" % (alpha,), iaa.ContrastNormalization(alpha=alpha)) for alpha in [0.5, 0.75, 1.0, 1.25, 1.50]]),

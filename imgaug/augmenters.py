@@ -13,6 +13,7 @@ import itertools
 import cv2
 import six
 import six.moves as sm
+import types
 
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
@@ -1421,6 +1422,346 @@ class GaussianBlur(Augmenter):
 
     def get_parameters(self):
         return [self.sigma]
+
+# TODO tests
+class Convolve(Augmenter):
+    """Apply a Convolution to input images.
+
+    Parameters
+    ----------
+    matrix : None, 2D numpy array, StochasticParameter, function
+        The weight matrix of the convolution kernel to apply.
+        If None, a unit matrix will be used that does not change the image.
+        If a numpy array, that array will be used for all images and channels.
+        If a stochastic parameter, C new matrices will be generated
+        via param.draw_samples(C) for each image, where C is the number of
+        channels.
+        If a function, the parameter will be called for each image
+        via param(C, random_state). The function must return C matrices,
+        one per channel.
+
+    name : TODO
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, matrix=None, name=None, deterministic=False, random_state=None):
+        super(Convolve, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if matrix is None:
+            self.matrix = np.array([[1]], dtype=np.float32)
+            self.matrix_type = "constant"
+        elif ia.is_np_array(matrix):
+            assert len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape)
+            self.matrix = matrix
+            self.matrix_type = "constant"
+        elif isinstance(matrix, StochasticParameter):
+            self.matrix = matrix
+            self.matrix_type = "stochastic"
+        elif isinstance(matrix, types.FunctionType):
+            self.matrix = matrix
+            self.matrix_type = "function"
+        else:
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        for i in sm.xrange(nb_images):
+            height, width, nb_channels = images[i].shape
+            if self.matrix_type == "constant":
+                matrices = [self.matrix] * nb_channels
+            elif self.matrix_type == "stochastic":
+                matrices = self.matrix.draw_samples((nb_channels), random_state=random_state)
+            elif self.matrix_type == "function":
+                matrices = self.matrix(nb_channels, random_state)
+            else:
+                raise Exception("Invalid matrix type")
+
+            for channel in sm.xrange(nb_channels):
+                #result[i][..., channel] = ndimage.convolve(result[i][..., channel], matrices[channel], mode='constant', cval=0.0)
+                result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
+        result = np.clip(result, 0, 255).astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.matrix, self.matrix_type]
+
+# TODO tests
+"""Creates an augmenter that sharpens images.
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the sharpened image. At 0, only the original image is visible,
+    at 1.0 only its sharpened version is visible.
+strength : int, float, tuple of two ints/floats or StochasticParameter, optional
+    Parameter that controls the strength of the sharpening.
+    Sane values are somewhere in the range (0.5, 2).
+    The value 0 results in an edge map. Values higher than 1 create bright images.
+    Default value is 1.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = Sharpen(alpha=(0.0, 1.0), strength=(0.75, 2.0))
+    image_aug = aug.augment_image(image)
+"""
+def Sharpen(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    if ia.is_single_number(strength):
+        strength_param = Deterministic(strength)
+    elif ia.is_iterable(strength):
+        assert len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(strength)),)
+        strength_param = Uniform(strength[0], strength[1])
+    elif isinstance(strength, StochasticParameter):
+        strength_param = strength
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        strength_sample = strength_param.draw_sample(random_state=random_state_func)
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [-1, -1, -1],
+            [-1, 8+strength_sample, -1],
+            [-1, -1, -1]
+        ], dtype=np.float32)
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
+# TODO tests
+"""Creates an augmenter that embosses an image.
+The embossed version pronounces highlights and shadows,
+letting the image look as if it was recreated on a metal plate ("embossed").
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the embossed image. At 0, only the original image is visible,
+    at 1.0 only the embossed image is visible.
+strength : int, float, tuple of two ints/floats or StochasticParameter, optional
+    Parameter that controls the strength of the embossing.
+    Sane values are somewhere in the range (0, 2) with 1 being the standard
+    embossing effect. Default value is 1.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
+    image_aug = aug.augment_image(image)
+"""
+def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    if ia.is_single_number(strength):
+        strength_param = Deterministic(strength)
+    elif ia.is_iterable(strength):
+        assert len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(strength)),)
+        strength_param = Uniform(strength[0], strength[1])
+    elif isinstance(strength, StochasticParameter):
+        strength_param = strength
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        strength_sample = strength_param.draw_sample(random_state=random_state_func)
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [-1-strength_sample, 0-strength_sample, 0],
+            [0-strength_sample, 1, 0+strength_sample],
+            [0, 0+strength_sample, 1+strength_sample]
+        ], dtype=np.float32)
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
+# TODO tests
+"""Creates an augmenter that pronounces all edges in the image.
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the edge map. At 0, only the original image is visible,
+    at 1.0 only the edge map is visible.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = EdgeDetect(alpha=(0.0, 1.0))
+    image_aug = aug.augment_image(image)
+"""
+def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [0, 1, 0],
+            [1, -4, 1],
+            [0, 1, 0]
+        ], dtype=np.float32)
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
+# TODO tests
+"""Creates an augmenter that pronounces edges that have certain directions.
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the edge map. At 0, only the original image is visible,
+    at 1.0 only the edge map is visible.
+direction : int, float, tuple of two ints/floats or StochasticParameter, optional
+    Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
+    represents 360 degrees (both clockwise).
+    Default value is (0.0, 1.0), i.e. pick a random angle per image.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = DirectedEdgeDetect(alpha=(0.0, 1.0), direction=(0.0, 1.0))
+    image_aug = aug.augment_image(image)
+"""
+def DirectedEdgeDetect(alpha=0, direction=(0, 1), name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    if ia.is_single_number(direction):
+        direction_param = Deterministic(direction)
+    elif ia.is_iterable(direction):
+        assert len(direction) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(direction)),)
+        direction_param = Uniform(direction[0], direction[1])
+    elif isinstance(direction, StochasticParameter):
+        direction_param = direction
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(direction),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        direction_sample = direction_param.draw_sample(random_state=random_state_func)
+
+        deg = int(direction_sample * 360) % 360
+        rad = np.deg2rad(deg)
+        x = np.cos(rad - 0.5*np.pi)
+        y = np.sin(rad - 0.5*np.pi)
+        #x = (deg % 90) / 90 if 0 <= deg <= 180 else -(deg % 90) / 90
+        #y = (-1) + (deg % 90) / 90 if 90 < deg < 270 else 1 - (deg % 90) / 90
+        direction_vector = np.array([x, y])
+
+        #print("direction_vector", direction_vector)
+
+        vertical_vector = np.array([0, 1])
+
+        matrix_effect = np.array([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        for x in [-1, 0, 1]:
+            for y in [-1, 0, 1]:
+                if (x, y) != (0, 0):
+                    cell_vector = np.array([x, y])
+                    #deg_cell = angle_between_vectors(vertical_vector, vec_cell)
+                    distance_deg = np.rad2deg(ia.angle_between_vectors(cell_vector, direction_vector))
+                    distance = distance_deg / 180
+                    similarity = (1 - distance)**4
+                    matrix_effect[y+1, x+1] = similarity
+                    #print("cell", y, x, "distance_deg", distance_deg, "distance", distance, "similarity", similarity)
+        matrix_effect = matrix_effect / np.sum(matrix_effect)
+        matrix_effect = matrix_effect * (-1)
+        matrix_effect[1, 1] = 1
+        #for y in [0, 1, 2]:
+        #    vals = []
+        #    for x in [0, 1, 2]:
+        #        vals.append("%.2f" % (matrix_effect[y, x],))
+        #    print(" ".join(vals))
+        #print("matrix_effect", matrix_effect)
+
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """Add Random Gaussian Noise to images
