@@ -18,7 +18,7 @@ def main():
 def draw_single_sequential_images():
     image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
 
-    st = lambda aug: iaa.Sometimes(0.4, aug)
+    st = lambda aug: iaa.Sometimes(0.3, aug)
 
     seq = iaa.Sequential([
             iaa.Fliplr(0.5),
@@ -34,6 +34,7 @@ def draw_single_sequential_images():
             )),
             st(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5)),
             st(iaa.Dropout((0.0, 0.1), per_channel=0.5)),
+            st(iaa.Invert(0.25, per_channel=True)),
             st(iaa.Add((-10, 10), per_channel=0.5)),
             st(iaa.Multiply((0.5, 1.5), per_channel=0.5)),
             st(iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5)),
@@ -74,6 +75,8 @@ def draw_per_augmenter_images():
         ("Flipud", [(str(p), iaa.Flipud(p)) for p in [0, 0, 1, 1, 1]]),
         ("Superpixels\np_replace=1", [("n_segments=%d" % (n_segments,), iaa.Superpixels(p_replace=1.0, n_segments=n_segments)) for n_segments in [25, 50, 75, 100, 125]]),
         ("Superpixels\nn_segments=100", [("p_replace=%.2f" % (p_replace,), iaa.Superpixels(p_replace=p_replace, n_segments=100)) for p_replace in [0, 0.25, 0.5, 0.75, 1.0]]),
+        ("Invert", [("p=%d" % (p,), iaa.Invert(p=p)) for p in [0, 0, 1, 1, 1]]),
+        ("Invert\n(per_channel)", [("p=%.2f" % (p,), iaa.Invert(p=p, per_channel=True)) for p in [0.5, 0.5, 0.5, 0.5, 0.5]]),
         ("Add", [("value=%d" % (val,), iaa.Add(val)) for val in [-45, -25, 0, 25, 45]]),
         ("Add\n(per channel)", [("value=(%d, %d)" % (vals[0], vals[1],), iaa.Add(vals, per_channel=True)) for vals in [(-55, -35), (-35, -15), (-10, 10), (15, 35), (35, 55)]]),
         ("Multiply", [("value=%.2f" % (val,), iaa.Multiply(val)) for val in [0.25, 0.5, 1.0, 1.25, 1.5]]),

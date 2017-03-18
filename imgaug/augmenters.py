@@ -15,6 +15,16 @@ import six
 import six.moves as sm
 import types
 
+"""
+TODOs
+    - check if all get_parameters() implementations really return all parameters.
+    - Add Alpha augmenter
+    - Add WithChannels augmenter
+    - Add SpatialDropout augmenter
+    - Add CoarseDropout shortcut function
+    - Add Hue and Saturation augmenters
+"""
+
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
     """Base class for Augmenter objects
@@ -2009,6 +2019,97 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
         raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
     return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
+# TODO tests
+class Invert(Augmenter):
+    """Augmenter that inverts all values in images.
+
+    For the standard value range of 0-255 it converts 0 to 255, 255 to 0
+    and 10 to (255-10)=245.
+
+    Let M be the maximum value possible, m the minimum value possible,
+    v a value. Then the distance of v to m is d=abs(v-m) and the new value
+    is given by v'=M-d.
+
+    Parameters
+    ----------
+    min_value : TODO
+
+    max_value : TODO
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
+                 deterministic=False, random_state=None):
+        super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(p):
+            self.p = Binomial(p)
+        elif isinstance(p, StochasticParameter):
+            self.p = p
+        else:
+            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            image = images[i].astype(np.int32)
+            rs_image = ia.new_random_state(seeds[i])
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = image.shape[2]
+                p_samples = self.p.draw_samples((nb_channels,), random_state=rs_image)
+                for c, p_sample in enumerate(p_samples):
+                    assert 0 <= p_sample <= 1
+                    if p_sample > 0.5:
+                        image_c = image[..., c]
+                        distance_from_min = np.abs(image_c - self.min_value) # d=abs(v-m)
+                        image[..., c] = -distance_from_min + self.max_value # v'=M-d
+                np.clip(image, 0, 255, out=image)
+                result[i] = image.astype(np.uint8)
+            else:
+                p_sample = self.p.draw_sample(random_state=rs_image)
+                assert 0 <= p_sample <= 1.0
+                if p_sample > 0.5:
+                    distance_from_min = np.abs(image - self.min_value) # d=abs(v-m)
+                    image = -distance_from_min + self.max_value
+                    np.clip(image, 0, 255, out=image)
+                    result[i] = image.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.p, self.per_channel, self.min_value, self.max_value]
 
 # TODO tests
 class Add(Augmenter):
