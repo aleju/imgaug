@@ -99,6 +99,37 @@ def angle_between_vectors(v1, v2):
     v2_u = v2 / np.linalg.norm(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
+def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
+    # keeping PIL here so that it is not a depdency of the library right now
+    from PIL import Image, ImageDraw, ImageFont
+
+    assert img.dtype in [np.uint8, np.float32]
+
+    input_dtype = img.dtype
+    if img.dtype == np.float32:
+        img = img.astype(np.uint8)
+        is_float32 = False
+
+    for i in range(len(color)):
+        val = color[i]
+        if isinstance(val, float):
+            val = int(val * 255)
+            val = np.clip(val, 0, 255)
+            color[i] = val
+
+    shape = img.shape
+    img = Image.fromarray(img)
+    font = ImageFont.truetype("DejaVuSans.ttf", size)
+    context = ImageDraw.Draw(img)
+    context.text((x, y), text, fill=tuple(color), font=font)
+    img_np = np.asarray(img)
+    img_np.setflags(write=True)  # PIL/asarray returns read only array
+
+    if img_np.dtype != input_dtype:
+        img_np = img_np.astype(input_dtype)
+
+    return img_np
+
 def imresize_many_images(images, sizes=None, interpolation=None):
     s = images.shape
     assert len(s) == 4, s

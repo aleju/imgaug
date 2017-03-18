@@ -23,6 +23,7 @@ def draw_single_sequential_images():
     seq = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Flipud(0.5),
+            st(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))),
             st(iaa.Crop(percent=(0, 0.1))),
             st(iaa.GaussianBlur((0, 3.0))),
             st(iaa.Sharpen(alpha=(0, 1.0), strength=(0.75, 1.5))),
@@ -71,6 +72,8 @@ def draw_per_augmenter_images():
         ("Crop\n(top, right,\nbottom, left)", [(str(vals), iaa.Crop(px=vals)) for vals in [(2, 0, 0, 0), (0, 8, 8, 0), (4, 0, 16, 4), (8, 0, 0, 32), (32, 64, 0, 0)]]),
         ("Fliplr", [(str(p), iaa.Fliplr(p)) for p in [0, 0, 1, 1, 1]]),
         ("Flipud", [(str(p), iaa.Flipud(p)) for p in [0, 0, 1, 1, 1]]),
+        ("Superpixels\np_replace=1", [("n_segments=%d" % (n_segments,), iaa.Superpixels(p_replace=1.0, n_segments=n_segments)) for n_segments in [25, 50, 75, 100, 125]]),
+        ("Superpixels\nn_segments=100", [("p_replace=%.2f" % (p_replace,), iaa.Superpixels(p_replace=p_replace, n_segments=100)) for p_replace in [0, 0.25, 0.5, 0.75, 1.0]]),
         ("Add", [("value=%d" % (val,), iaa.Add(val)) for val in [-45, -25, 0, 25, 45]]),
         ("Add\n(per channel)", [("value=(%d, %d)" % (vals[0], vals[1],), iaa.Add(vals, per_channel=True)) for vals in [(-55, -35), (-35, -15), (-10, 10), (15, 35), (35, 55)]]),
         ("Multiply", [("value=%.2f" % (val,), iaa.Multiply(val)) for val in [0.25, 0.5, 1.0, 1.25, 1.5]]),
