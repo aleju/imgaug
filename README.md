@@ -28,10 +28,11 @@ Required dependencies:
 * OpenCV (i.e. `cv2`)
 
 Installation:
-* Clone the repository.
+* Clone the repository (`git clone https://github.com/aleju/imgaug`).
 * From within the repository do:
   * `python setup.py sdist && sudo pip install dist/imgaug-0.1.tar.gz`
-Deinstall via `sudo pip uninstall imgaug`
+
+To deinstall the library, just execute `sudo pip uninstall imgaug`.
 
 Currently only tested in python2.7. Code is written so that it *should* run in python3 too.
 
