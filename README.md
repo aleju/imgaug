@@ -20,21 +20,21 @@ The image below shows examples for each availabe augmentation technique.
 
 # Requirements and installation
 
-Required dependencies:
+Required packages:
 * six
 * numpy
 * scipy
 * scikit-image (`pip install -U scikit-image`)
 * OpenCV (i.e. `cv2`)
 
-Installation:
-* Clone the repository (`git clone https://github.com/aleju/imgaug`).
-* From within the repository do:
-  * `python setup.py sdist && sudo pip install dist/imgaug-0.1.tar.gz`
+OpenCV has to be manually installed. The other package should auto-install themselves.
+
+To install, simply use `sudo pip install imgaug`. That version might be outdated though. To always get the newest version directly from github use `sudo pip install git+https://github.com/aleju/imgaug`.
+Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install by using `python setup.py sdist && sudo pip install dist/imgaug-0.2.0.tar.gz`.
 
 To deinstall the library, just execute `sudo pip uninstall imgaug`.
 
-Currently only tested in python2.7. Code is written so that it *should* run in python3 too.
+The library is currently only tested in python2.7, but the code is written so that it *should* run in python3 too.
 
 # Examples
 
