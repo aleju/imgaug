@@ -10,13 +10,15 @@ Supports augmentation of images and keypoints/landmarks in a variety of differen
 
 setup(
     name="imgaug",
-    version="0.1",
+    version="0.2.0",
     author="Alexander Jung",
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
+    download_url="https://github.com/aleju/imgaug/archive/0.2.0.tar.gz",
     install_requires=["scipy", "scikit-image", "numpy", "six"],
     packages=find_packages(),
     license="MIT",
     description="Image augmentation library for machine learning",
-    long_description=long_description
+    long_description=long_description,
+    keywords=["augmentation", "image", "deep learning", "neural network", "machine learning"]
 )
