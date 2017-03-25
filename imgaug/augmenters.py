@@ -106,6 +106,7 @@ class Augmenter(object):
         img : array-like, shape = (height, width, channels)
             The corresponding augmented image
         """
+        assert image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,)
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
@@ -142,10 +143,11 @@ class Augmenter(object):
             hooks = ia.HooksImages()
 
         if ia.is_np_array(images):
-            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s." % (str(images.shape),)
-            assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
+            assert images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width, [channels]), got shape %s." % (images.shape,)
             images_tf = images
         elif ia.is_iterable(images):
+            if len(images) > 0:
+                assert all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width, [channels]), got shape %s." % ([image.shape for image in images],)
             images_tf = list(images)
         else:
             raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
