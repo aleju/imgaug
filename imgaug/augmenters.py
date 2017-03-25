@@ -8,11 +8,22 @@ import copy as copy_module
 import re
 import math
 from scipy import misc, ndimage
-from skimage import transform as tf
+from skimage import transform as tf, segmentation, measure
 import itertools
 import cv2
 import six
 import six.moves as sm
+import types
+
+"""
+TODOs
+    - check if all get_parameters() implementations really return all parameters.
+    - Add Alpha augmenter
+    - Add WithChannels augmenter
+    - Add SpatialDropout augmenter
+    - Add CoarseDropout shortcut function
+    - Add Hue and Saturation augmenters
+"""
 
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
@@ -1214,6 +1225,148 @@ class Flipud(Augmenter):
         return [self.p]
 
 # TODO tests
+class Superpixels(Augmenter):
+    """Transform images to their superpixel representation.
+
+    This implementation uses skimage's version of the SLIC algorithm.
+
+    Parameters
+    ----------
+    p_replace : int/float, tuple/list of ints/floats or StochasticParameter, optional (default=0)
+        Defines the probability of any superpixel area being replaced by the
+        superpixel, i.e. by the average pixel color within its area.
+        A probability of 0 would mean, that no superpixel area is replaced by
+        its average (image is not changed at all).
+        A probability of 0.5 would mean, that half of all superpixels are
+        replaced by their average color.
+        A probability of 1.0 would mean, that all superpixels are replaced
+        by their average color (resulting in a standard superpixel image).
+        This parameter can be a tuple (a, b), e.g. (0.5, 1.0). In this case,
+        a random probability p with a <= p <= b will be rolled per image.
+
+    n_segments : int, tuple/list of ints, StochasticParameter, optional (default=100)
+        Number of superpixels to generate.
+
+    max_size : int, None, optional (default=128)
+        Maximum image size at which the superpixels are generated.
+        If the width or height of an image exceeds this value, it will be
+        downscaled so that the longest side matches max_size.
+        This is done to speed up the superpixel algorithm.
+        Use None to apply no downscaling.
+
+    interpolation : int, string (default="linear")
+        Interpolation method to use during downscaling when max_size is
+        exceeded. Valid methods are the same as in ia.imresize_single_image().
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, p_replace=0, n_segments=100, max_size=128, interpolation="linear", name=None, deterministic=False, random_state=None):
+        super(Superpixels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(p_replace):
+            self.p_replace = Binomial(p_replace)
+        elif ia.is_iterable(p_replace):
+            assert len(p_replace) == 2
+            assert p_replace[0] < p_replace[1]
+            assert 0 <= p_replace[0] <= 1.0
+            assert 0 <= p_replace[1] <= 1.0
+            self.p_replace = p_replace = Binomial(Uniform(p_replace[0], p_replace[1]))
+        elif isinstance(p_replace, StochasticParameter):
+            self.p_replace = p_replace
+        else:
+            raise Exception("Expected p_replace to be float, int, list/tuple of floats/ints or StochasticParameter, got %s." % (type(p_replace),))
+
+        if ia.is_single_integer(n_segments):
+            self.n_segments = Deterministic(n_segments)
+        elif ia.is_iterable(n_segments):
+            assert len(n_segments) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(n_segments)),)
+            self.n_segments = DiscreteUniform(n_segments[0], n_segments[1])
+        elif isinstance(n_segments, StochasticParameter):
+            self.n_segments = n_segments
+        else:
+            raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(n_segments),))
+
+        self.max_size = max_size
+        self.interpolation = interpolation
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        #import time
+        nb_images = len(images)
+        #p_replace_samples = self.p_replace.draw_samples((nb_images,), random_state=random_state)
+        n_segments_samples = self.n_segments.draw_samples((nb_images,), random_state=random_state)
+        seeds = random_state.randint(0, 10**6, size=(nb_images,))
+        for i in sm.xrange(nb_images):
+            #replace_samples = ia.new_random_state(seeds[i]).binomial(1, p_replace_samples[i], size=(n_segments_samples[i],))
+            replace_samples = self.p_replace.draw_samples((n_segments_samples[i],), random_state=ia.new_random_state(seeds[i]))
+            #print("n_segments", n_segments_samples[i], "replace_samples.shape", replace_samples.shape)
+            #print("p", p_replace_samples[i])
+            #print("replace_samples", replace_samples)
+
+            if np.max(replace_samples) == 0:
+                # not a single superpixel would be replaced by its average color,
+                # i.e. the image would not be changed, so just keep it
+                pass
+            else:
+                image = images[i]
+
+                orig_shape = image.shape
+                if self.max_size is not None:
+                    size = max(image.shape[0], image.shape[1])
+                    if size > self.max_size:
+                        resize_factor = self.max_size / size
+                        new_height, new_width = int(image.shape[0] * resize_factor), int(image.shape[1] * resize_factor)
+                        image = ia.imresize_single_image(image, (new_height, new_width), interpolation=self.interpolation)
+
+                #image_sp = np.random.randint(0, 255, size=image.shape).astype(np.uint8)
+                image_sp = np.copy(image)
+                #time_start = time.time()
+                segments = segmentation.slic(image, n_segments=n_segments_samples[i], compactness=10)
+                #print("seg", np.min(segments), np.max(segments), n_segments_samples[i])
+                #print("segmented in %.4fs" % (time.time() - time_start))
+                #print(np.bincount(segments.flatten()))
+                #time_start = time.time()
+                nb_channels = image.shape[2]
+                for c in sm.xrange(nb_channels):
+                    # segments+1 here because otherwise regionprops always misses
+                    # the last label
+                    regions = measure.regionprops(segments+1, intensity_image=image[..., c])
+                    for ridx, region in enumerate(regions):
+                        # with mod here, because slic can sometimes create more superpixel
+                        # than requested. replace_samples then does not have enough
+                        # values, so we just start over with the first one again.
+                        if replace_samples[ridx % len(replace_samples)] == 1:
+                            #print("changing region %d of %d, channel %d, #indices %d" % (ridx, np.max(segments), c, len(np.where(segments == ridx)[0])))
+                            mean_intensity = region.mean_intensity
+                            image_sp_c = image_sp[..., c]
+                            image_sp_c[segments == ridx] = mean_intensity
+                #print("colored in %.4fs" % (time.time() - time_start))
+
+                if orig_shape != image.shape:
+                    image_sp = ia.imresize_single_image(image_sp, orig_shape[0:2], interpolation=self.interpolation)
+
+                images[i] = image_sp
+        return images
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.n_segments, self.max_size]
+
+# TODO tests
 # Note: Not clear whether this class will be kept (for anything aside from grayscale)
 # other colorspaces dont really make sense and they also might not work correctly
 # due to having no clearly limited range (like 0-255 or 0-1)
@@ -1413,6 +1566,346 @@ class GaussianBlur(Augmenter):
     def get_parameters(self):
         return [self.sigma]
 
+# TODO tests
+class Convolve(Augmenter):
+    """Apply a Convolution to input images.
+
+    Parameters
+    ----------
+    matrix : None, 2D numpy array, StochasticParameter, function
+        The weight matrix of the convolution kernel to apply.
+        If None, a unit matrix will be used that does not change the image.
+        If a numpy array, that array will be used for all images and channels.
+        If a stochastic parameter, C new matrices will be generated
+        via param.draw_samples(C) for each image, where C is the number of
+        channels.
+        If a function, the parameter will be called for each image
+        via param(C, random_state). The function must return C matrices,
+        one per channel.
+
+    name : TODO
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, matrix=None, name=None, deterministic=False, random_state=None):
+        super(Convolve, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if matrix is None:
+            self.matrix = np.array([[1]], dtype=np.float32)
+            self.matrix_type = "constant"
+        elif ia.is_np_array(matrix):
+            assert len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape)
+            self.matrix = matrix
+            self.matrix_type = "constant"
+        elif isinstance(matrix, StochasticParameter):
+            self.matrix = matrix
+            self.matrix_type = "stochastic"
+        elif isinstance(matrix, types.FunctionType):
+            self.matrix = matrix
+            self.matrix_type = "function"
+        else:
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        for i in sm.xrange(nb_images):
+            height, width, nb_channels = images[i].shape
+            if self.matrix_type == "constant":
+                matrices = [self.matrix] * nb_channels
+            elif self.matrix_type == "stochastic":
+                matrices = self.matrix.draw_samples((nb_channels), random_state=random_state)
+            elif self.matrix_type == "function":
+                matrices = self.matrix(nb_channels, random_state)
+            else:
+                raise Exception("Invalid matrix type")
+
+            for channel in sm.xrange(nb_channels):
+                #result[i][..., channel] = ndimage.convolve(result[i][..., channel], matrices[channel], mode='constant', cval=0.0)
+                result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
+        result = np.clip(result, 0, 255).astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.matrix, self.matrix_type]
+
+# TODO tests
+"""Creates an augmenter that sharpens images.
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the sharpened image. At 0, only the original image is visible,
+    at 1.0 only its sharpened version is visible.
+strength : int, float, tuple of two ints/floats or StochasticParameter, optional
+    Parameter that controls the strength of the sharpening.
+    Sane values are somewhere in the range (0.5, 2).
+    The value 0 results in an edge map. Values higher than 1 create bright images.
+    Default value is 1.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = Sharpen(alpha=(0.0, 1.0), strength=(0.75, 2.0))
+    image_aug = aug.augment_image(image)
+"""
+def Sharpen(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    if ia.is_single_number(strength):
+        strength_param = Deterministic(strength)
+    elif ia.is_iterable(strength):
+        assert len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(strength)),)
+        strength_param = Uniform(strength[0], strength[1])
+    elif isinstance(strength, StochasticParameter):
+        strength_param = strength
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        strength_sample = strength_param.draw_sample(random_state=random_state_func)
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [-1, -1, -1],
+            [-1, 8+strength_sample, -1],
+            [-1, -1, -1]
+        ], dtype=np.float32)
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
+# TODO tests
+"""Creates an augmenter that embosses an image.
+The embossed version pronounces highlights and shadows,
+letting the image look as if it was recreated on a metal plate ("embossed").
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the embossed image. At 0, only the original image is visible,
+    at 1.0 only the embossed image is visible.
+strength : int, float, tuple of two ints/floats or StochasticParameter, optional
+    Parameter that controls the strength of the embossing.
+    Sane values are somewhere in the range (0, 2) with 1 being the standard
+    embossing effect. Default value is 1.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
+    image_aug = aug.augment_image(image)
+"""
+def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    if ia.is_single_number(strength):
+        strength_param = Deterministic(strength)
+    elif ia.is_iterable(strength):
+        assert len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(strength)),)
+        strength_param = Uniform(strength[0], strength[1])
+    elif isinstance(strength, StochasticParameter):
+        strength_param = strength
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        strength_sample = strength_param.draw_sample(random_state=random_state_func)
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [-1-strength_sample, 0-strength_sample, 0],
+            [0-strength_sample, 1, 0+strength_sample],
+            [0, 0+strength_sample, 1+strength_sample]
+        ], dtype=np.float32)
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
+# TODO tests
+"""Creates an augmenter that pronounces all edges in the image.
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the edge map. At 0, only the original image is visible,
+    at 1.0 only the edge map is visible.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = EdgeDetect(alpha=(0.0, 1.0))
+    image_aug = aug.augment_image(image)
+"""
+def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [0, 1, 0],
+            [1, -4, 1],
+            [0, 1, 0]
+        ], dtype=np.float32)
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
+# TODO tests
+"""Creates an augmenter that pronounces edges that have certain directions.
+
+Parameters
+----------
+alpha : int, float, tuple of two ints/floats or StochasticParameter
+    Visibility of the edge map. At 0, only the original image is visible,
+    at 1.0 only the edge map is visible.
+direction : int, float, tuple of two ints/floats or StochasticParameter, optional
+    Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
+    represents 360 degrees (both clockwise).
+    Default value is (0.0, 1.0), i.e. pick a random angle per image.
+name : TODO
+deterministic : TODO
+random_state : TODO
+
+Example:
+    aug = DirectedEdgeDetect(alpha=(0.0, 1.0), direction=(0.0, 1.0))
+    image_aug = aug.augment_image(image)
+"""
+def DirectedEdgeDetect(alpha=0, direction=(0, 1), name=None, deterministic=False, random_state=None):
+    if ia.is_single_number(alpha):
+        alpha_param = Deterministic(alpha)
+    elif ia.is_iterable(alpha):
+        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(alpha)),)
+        alpha_param = Uniform(alpha[0], alpha[1])
+    elif isinstance(alpha, StochasticParameter):
+        alpha_param = alpha
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+
+    if ia.is_single_number(direction):
+        direction_param = Deterministic(direction)
+    elif ia.is_iterable(direction):
+        assert len(direction) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(direction)),)
+        direction_param = Uniform(direction[0], direction[1])
+    elif isinstance(direction, StochasticParameter):
+        direction_param = direction
+    else:
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(direction),))
+
+    def create_matrices(nb_channels, random_state_func):
+        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
+        assert 0 <= alpha_sample <= 1.0
+        direction_sample = direction_param.draw_sample(random_state=random_state_func)
+
+        deg = int(direction_sample * 360) % 360
+        rad = np.deg2rad(deg)
+        x = np.cos(rad - 0.5*np.pi)
+        y = np.sin(rad - 0.5*np.pi)
+        #x = (deg % 90) / 90 if 0 <= deg <= 180 else -(deg % 90) / 90
+        #y = (-1) + (deg % 90) / 90 if 90 < deg < 270 else 1 - (deg % 90) / 90
+        direction_vector = np.array([x, y])
+
+        #print("direction_vector", direction_vector)
+
+        vertical_vector = np.array([0, 1])
+
+        matrix_effect = np.array([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        for x in [-1, 0, 1]:
+            for y in [-1, 0, 1]:
+                if (x, y) != (0, 0):
+                    cell_vector = np.array([x, y])
+                    #deg_cell = angle_between_vectors(vertical_vector, vec_cell)
+                    distance_deg = np.rad2deg(ia.angle_between_vectors(cell_vector, direction_vector))
+                    distance = distance_deg / 180
+                    similarity = (1 - distance)**4
+                    matrix_effect[y+1, x+1] = similarity
+                    #print("cell", y, x, "distance_deg", distance_deg, "distance", distance, "similarity", similarity)
+        matrix_effect = matrix_effect / np.sum(matrix_effect)
+        matrix_effect = matrix_effect * (-1)
+        matrix_effect[1, 1] = 1
+        #for y in [0, 1, 2]:
+        #    vals = []
+        #    for x in [0, 1, 2]:
+        #        vals.append("%.2f" % (matrix_effect[y, x],))
+        #    print(" ".join(vals))
+        #print("matrix_effect", matrix_effect)
+
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+
+        matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
+
+        return [matrix] * nb_channels
+
+    return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """Add Random Gaussian Noise to images
 
@@ -1510,13 +2003,104 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
         assert p[0] < p[1]
         assert 0 <= p[0] <= 1.0
         assert 0 <= p[1] <= 1.0
-        p2 = Binomial(Uniform(1- p[1], 1 - p[0]))
+        p2 = Binomial(Uniform(1 - p[1], 1 - p[0]))
     elif isinstance(p, StochasticParameter):
         p2 = p
     else:
         raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
     return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
+# TODO tests
+class Invert(Augmenter):
+    """Augmenter that inverts all values in images.
+
+    For the standard value range of 0-255 it converts 0 to 255, 255 to 0
+    and 10 to (255-10)=245.
+
+    Let M be the maximum value possible, m the minimum value possible,
+    v a value. Then the distance of v to m is d=abs(v-m) and the new value
+    is given by v'=M-d.
+
+    Parameters
+    ----------
+    min_value : TODO
+
+    max_value : TODO
+
+    per_channel : boolean, optional(default=False)
+        apply transform in a per channel manner
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
+                 deterministic=False, random_state=None):
+        super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(p):
+            self.p = Binomial(p)
+        elif isinstance(p, StochasticParameter):
+            self.p = p
+        else:
+            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            image = images[i].astype(np.int32)
+            rs_image = ia.new_random_state(seeds[i])
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = image.shape[2]
+                p_samples = self.p.draw_samples((nb_channels,), random_state=rs_image)
+                for c, p_sample in enumerate(p_samples):
+                    assert 0 <= p_sample <= 1
+                    if p_sample > 0.5:
+                        image_c = image[..., c]
+                        distance_from_min = np.abs(image_c - self.min_value) # d=abs(v-m)
+                        image[..., c] = -distance_from_min + self.max_value # v'=M-d
+                np.clip(image, 0, 255, out=image)
+                result[i] = image.astype(np.uint8)
+            else:
+                p_sample = self.p.draw_sample(random_state=rs_image)
+                assert 0 <= p_sample <= 1.0
+                if p_sample > 0.5:
+                    distance_from_min = np.abs(image - self.min_value) # d=abs(v-m)
+                    image = -distance_from_min + self.max_value
+                    np.clip(image, 0, 255, out=image)
+                    result[i] = image.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.p, self.per_channel, self.min_value, self.max_value]
 
 # TODO tests
 class Add(Augmenter):

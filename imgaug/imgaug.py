@@ -85,6 +85,50 @@ def copy_random_state(random_state, force_copy=False):
 # def from_json(json_str):
 #    pass
 
+def angle_between_vectors(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2':
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+        From http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
+    """
+    v1_u = v1 / np.linalg.norm(v1)
+    v2_u = v2 / np.linalg.norm(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
+    # keeping PIL here so that it is not a depdency of the library right now
+    from PIL import Image, ImageDraw, ImageFont
+
+    assert img.dtype in [np.uint8, np.float32]
+
+    input_dtype = img.dtype
+    if img.dtype == np.float32:
+        img = img.astype(np.uint8)
+        is_float32 = False
+
+    for i in range(len(color)):
+        val = color[i]
+        if isinstance(val, float):
+            val = int(val * 255)
+            val = np.clip(val, 0, 255)
+            color[i] = val
+
+    shape = img.shape
+    img = Image.fromarray(img)
+    font = ImageFont.truetype("DejaVuSans.ttf", size)
+    context = ImageDraw.Draw(img)
+    context.text((x, y), text, fill=tuple(color), font=font)
+    img_np = np.asarray(img)
+    img_np.setflags(write=True)  # PIL/asarray returns read only array
+
+    if img_np.dtype != input_dtype:
+        img_np = img_np.astype(input_dtype)
+
+    return img_np
 
 def imresize_many_images(images, sizes=None, interpolation=None):
     s = images.shape
