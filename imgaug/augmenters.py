@@ -17,12 +17,22 @@ import types
 
 """
 TODOs
+    - add a version of augment_images that skips validation and copying which
+        is called by augmenters with children
     - check if all get_parameters() implementations really return all parameters.
     - Add Alpha augmenter
     - Add WithChannels augmenter
     - Add SpatialDropout augmenter
     - Add CoarseDropout shortcut function
     - Add Hue and Saturation augmenters
+    - Add uniform blurring augmenter
+    - Add bilateral filter augmenter
+    - Add median filter augmenter
+    - Add random blurring shortcut (either uniform or gaussian or bilateral or median)
+    - Add Max-Pooling augmenter
+    - Add edge pronounce augmenter
+    - Add Cartoon augmenter
+    - Add OilPainting augmenter
 """
 
 @six.add_metaclass(ABCMeta)
@@ -110,7 +120,7 @@ class Augmenter(object):
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
-        """Augment multiple images
+        """Augment multiple images.
 
         Parameters
         ----------
@@ -118,10 +128,17 @@ class Augmenter(object):
         images : array-like, shape = (num_samples, height, width, channels) or
                  a list of images (particularly useful for images of various
                  dimensions)
-            images to augment
+            Images to augment. The input can be a list of numpy arrays or
+            a single array. Each array is expected to have shape (H, W, C)
+            or (H, W), where H is the height, W is the width and C are the
+            channels. Number of channels may differ between images.
+            Currently the recommended dtype is uint8 (i.e. integer values in
+            range 0 to 255). Other dtypes are not tested.
 
         parents : optional(default=None)
-            # TODO
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
 
         hooks : optional(default=None)
             HooksImages object to dynamically interfere with the Augmentation process
@@ -143,22 +160,58 @@ class Augmenter(object):
             hooks = ia.HooksImages()
 
         if ia.is_np_array(images):
-            assert images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width, [channels]), got shape %s." % (images.shape,)
-            images_tf = images
-        elif ia.is_iterable(images):
-            if len(images) > 0:
-                assert all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width, [channels]), got shape %s." % ([image.shape for image in images],)
-            images_tf = list(images)
-        else:
-            raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
+            input_type = "array"
+            input_added_axis = False
 
-        if isinstance(images_tf, list):
-            images_copy = [np.copy(image) for image in images]
-        else:
+            assert images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width) or (N, height, width, channels), got shape %s." % (images.shape,)
+
+            # copy the input, we don't want to augment it in-place
             images_copy = np.copy(images)
+
+            # for 2D input images (i.e. shape (N, H, W)), we add a channel axis (i.e. (N, H, W, 1)),
+            # so that all augmenters can rely on the input having a channel axis and
+            # don't have to add if/else statements for 2D images
+            if images_copy.ndim == 3:
+                images_copy = images_copy[..., np.newaxis]
+                input_added_axis = True
+        elif ia.is_iterable(images):
+            input_type = "list"
+            input_added_axis = []
+
+            if len(images) == 0:
+                images_copy = []
+            else:
+                assert all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width) or (height, width, channels), got shapes %s." % ([image.shape for image in images],)
+
+                # copy images and add channel axis for 2D images (see above,
+                # as for list inputs each image can have different shape, it
+                # is done here on a per images basis)
+                images_copy = []
+                input_added_axis = []
+                for image in images:
+                    image_copy = np.copy(image)
+                    if image.ndim == 2:
+                        image_copy = image_copy[:, :, np.newaxis]
+                        input_added_axis.append(True)
+                    else:
+                        input_added_axis.append(False)
+                    images_copy.append(image_copy)
+        else:
+            raise Exception("Expected images as one numpy array or list/tuple of numpy arrays, got %s." % (type(images),))
 
         images_copy = hooks.preprocess(images_copy, augmenter=self, parents=parents)
 
+        #if ia.is_np_array(images) != ia.is_np_array(images_copy):
+        #    print("[WARNING] images vs images_copy", ia.is_np_array(images), ia.is_np_array(images_copy))
+        #if ia.is_np_array(images):
+            #assert images.shape[0] > 0, images.shape
+        #    print("images.shape", images.shape)
+        #if ia.is_np_array(images_copy):
+        #    print("images_copy.shape", images_copy.shape)
+
+        # the is_activated() call allows to use hooks that selectively
+        # deactivate specific augmenters in previously defined augmentation
+        # sequences
         if hooks.is_activated(images_copy, augmenter=self, parents=parents, default=self.activated):
             if len(images) > 0:
                 images_result = self._augment_images(
@@ -167,6 +220,8 @@ class Augmenter(object):
                     parents=parents,
                     hooks=hooks
                 )
+                # move "forward" the random state, so that the next call to
+                # augment_images() will use different random values
                 self.random_state.uniform()
             else:
                 images_result = images_copy
@@ -174,6 +229,15 @@ class Augmenter(object):
             images_result = images_copy
 
         images_result = hooks.postprocess(images_result, augmenter=self, parents=parents)
+
+        # remove temporarily added channel axis for 2D input images
+        if input_type == "array":
+            if input_added_axis == True:
+                images_result = np.squeeze(images_result, axis=3)
+        if input_type == "list":
+            for i in sm.xrange(len(images_result)):
+                if input_added_axis[i] == True:
+                    images_result[i] = np.squeeze(images_result[i], axis=2)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -2492,7 +2556,16 @@ class Affine(Augmenter):
 
     order : # TODO
 
-    cval : # TODO
+    cval : int or float or tuple or list or StochasticParameter, optional(default=0)
+        The constant value used for skimage's transform function.
+        This is the value used to fill up pixels in the result image that didn't
+        exist in the input image (e.g. when translating to the left, some new
+        pixels are created at the right).
+        If this is a single int or float, this value will be used (e.g. 0 results
+        in black pixels). If a tuple/list (a, b) is provided, the value
+        will be selected from the uniform range (a, b) per image.
+        If a StochasticParameter, a new value will be sampled from the parameter
+        per image.
 
     mode : # TODO
 
@@ -2515,7 +2588,7 @@ class Affine(Augmenter):
         by `np.random`.
     """
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
-                 rotate=0.0, shear=0.0, order=1, cval=0.0, mode="constant",
+                 rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
                  name=None, deterministic=False, random_state=None):
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -2544,13 +2617,13 @@ class Affine(Augmenter):
             raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = Uniform(0, 1.0)
+            self.cval = DiscreteUniform(0, 255)
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
             assert len(cval) == 2
-            assert 0 <= cval[0] <= 1.0
-            assert 0 <= cval[1] <= 1.0
+            assert 0 <= cval[0] <= 255
+            assert 0 <= cval[1] <= 255
             self.cval = Uniform(cval[0], cval[1])
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -2678,9 +2751,10 @@ class Affine(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        images = images if isinstance(images, list) else [images]
+        #images = images if isinstance(images, list) else [images]
         nb_images = len(images)
-        result = [None] * nb_images
+        #result = [None] * nb_images
+        result = images
 
         scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
 
@@ -2723,7 +2797,9 @@ class Affine(Augmenter):
                     cval=cval,
                     preserve_range=True,
                 )
-                result[i] = result[i].astype(images[i].dtype, copy=False)
+                #result[i] = result[i].astype(images[i].dtype, copy=False)
+            else:
+                result[i] = images[i]
 
         return result
 

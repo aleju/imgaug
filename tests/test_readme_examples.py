@@ -1,6 +1,6 @@
 """
 Script to verify all examples in the readme.
-Run from the project directory (i.e. parent) with
+Simply execute
     python test_readme_examples.py
 """
 from __future__ import print_function, division
@@ -92,7 +92,7 @@ def example_heavy_augmentations():
                 rotate=(-45, 45), # rotate by -45 to +45 degrees
                 shear=(-16, 16), # shear by -16 to +16 degrees
                 order=[0, 1], # use scikit-image's interpolation orders 0 (nearest neighbour) and 1 (bilinear)
-                cval=(0, 1.0), # if mode is constant, use a cval between 0 and 1.0
+                cval=(0, 255), # if mode is constant, use a cval between 0 and 1.0
                 mode=ia.ALL # use any of scikit-image's warping modes (see 2nd image from the top for examples)
             )),
             st(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)) # apply elastic transformations with random strengths

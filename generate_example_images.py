@@ -45,7 +45,7 @@ def draw_single_sequential_images():
                 rotate=(-45, 45),
                 shear=(-16, 16),
                 order=[0, 1],
-                cval=(0, 1.0),
+                cval=(0, 255),
                 mode=ia.ALL
             )),
             st(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25))

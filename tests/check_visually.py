@@ -1,6 +1,6 @@
 """
 Tests to visually inspect the results of the library's functionality.
-Run these checks from the project directory (i.e. parent directory) via
+Run checks via
     python check_visually.py
 """
 from __future__ import print_function, division
@@ -53,7 +53,7 @@ def main():
             rotate=(-45, 45),
             shear=(-16, 16),
             order=ia.ALL,
-            cval=(0, 1.0),
+            cval=(0, 255),
             mode=ia.ALL,
             name="Affine"
         ),
@@ -65,10 +65,8 @@ def main():
         #aug.deepcopy()
         #import copy
         #copy.deepcopy(aug)
-    seq = iaa.Sequential([aug.copy() for aug in augmenters], name="Sequential")
-    st = iaa.Sometimes(0.5, seq.copy(), name="Sometimes")
-    augmenters.append(seq)
-    augmenters.append(st)
+    augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
+    augmenters.append(iaa.Sometimes(0.5, [aug.copy() for aug in augmenters], name="Sometimes"))
 
     for augmenter in augmenters:
         print("Augmenter: %s" % (augmenter.name,))

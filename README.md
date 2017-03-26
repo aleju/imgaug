@@ -102,7 +102,7 @@ seq = iaa.Sequential([
             rotate=(-45, 45), # rotate by -45 to +45 degrees
             shear=(-16, 16), # shear by -16 to +16 degrees
             order=ia.ALL, # use any of scikit-image's interpolation methods
-            cval=(0, 1.0), # if mode is constant, use a cval between 0 and 1.0
+            cval=(0, 255), # if mode is constant, use a cval between 0 and 255
             mode=ia.ALL # use any of scikit-image's warping modes (see 2nd image from the top for examples)
         )),
         st(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)) # apply elastic transformations with random strengths

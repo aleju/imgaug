@@ -1,6 +1,6 @@
 """
-Automatically running tests for this library.
-Run these from the project directory (i.e. parent directory) via
+Automatically run tests for this library.
+Simply execute
     python test.py
 """
 from __future__ import print_function, division
@@ -41,6 +41,9 @@ def main():
     test_ElasticTransformation()
     test_Sequential()
     test_Sometimes()
+
+    # this function uses Fliplr(), so always test it after that augmenter
+    test_2d_inputs()
 
     print("Finished without errors.")
 
@@ -1826,8 +1829,7 @@ def test_Affine():
     # ---------------------
     # cval
     # ---------------------
-    # cval of 0.5 (= 128)
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0.5)
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=128)
     aug_det = aug.to_deterministic()
 
     image = np.ones((3, 3, 1), dtype=np.uint8) * 255
@@ -1852,7 +1854,7 @@ def test_Affine():
     assert (observed[0] < 128 + 30).all()
 
     # random cvals
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=(0, 1.0))
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=(0, 255))
     aug_det = aug.to_deterministic()
     last_aug = None
     last_aug_det = None
@@ -2265,6 +2267,54 @@ def test_Sometimes():
     assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
     assert nb_changed_aug_det == 0
+
+def test_2d_inputs():
+    """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work.
+    """
+    base_img1 = np.array([[0, 0, 1],
+                          [0, 0, 1],
+                          [0, 1, 1]], dtype=np.uint8)
+    base_img2 = np.array([[0, 0, 1],
+                          [0, 1, 1],
+                          [0, 1, 0]], dtype=np.uint8)
+
+    base_img1_flipped = np.array([[1, 0, 0],
+                                  [1, 0, 0],
+                                  [1, 1, 0]], dtype=np.uint8)
+    base_img2_flipped = np.array([[1, 0, 0],
+                                  [1, 1, 0],
+                                  [0, 1, 0]], dtype=np.uint8)
+
+    images = np.array([base_img1, base_img2])
+    images_flipped = np.array([base_img1_flipped, base_img2_flipped])
+    images_list = [base_img1, base_img2]
+    images_flipped_list = [base_img1_flipped, base_img2_flipped]
+    images_list2d3d = [base_img1, base_img2[:, :, np.newaxis]]
+    images_flipped_list2d3d = [base_img1_flipped, base_img2_flipped[:, :, np.newaxis]]
+
+    aug = iaa.Fliplr(1.0)
+    noaug = iaa.Fliplr(0.0)
+
+    # one numpy array as input
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_flipped)
+
+    observed = noaug.augment_images(images)
+    assert np.array_equal(observed, images)
+
+    # list of 2d images
+    observed = aug.augment_images(images_list)
+    assert array_equal_lists(observed, images_flipped_list)
+
+    observed = noaug.augment_images(images_list)
+    assert array_equal_lists(observed, images_list)
+
+    # list of images, one 2d and one 3d
+    observed = aug.augment_images(images_list2d3d)
+    assert array_equal_lists(observed, images_flipped_list2d3d)
+
+    observed = noaug.augment_images(images_list2d3d)
+    assert array_equal_lists(observed, images_list2d3d)
 
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)

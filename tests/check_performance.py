@@ -184,7 +184,7 @@ def main():
             rotate=(-45, 45),
             shear=(-16, 16),
             order=0,
-            cval=(0, 1.0),
+            cval=(0, 255),
             mode="constant",
             name="AffineOrder0ModeConstant"
         )
@@ -198,7 +198,7 @@ def main():
                 rotate=(-45, 45),
                 shear=(-16, 16),
                 order=order,
-                cval=(0, 1.0),
+                cval=(0, 255),
                 mode=ia.ALL,
                 name="AffineOrder%d" % (order,)
             )
@@ -211,7 +211,7 @@ def main():
             rotate=(-45, 45),
             shear=(-16, 16),
             order=ia.ALL,
-            cval=(0, 1.0),
+            cval=(0, 255),
             mode=ia.ALL,
             name="AffineAll"
         )

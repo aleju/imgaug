@@ -15,7 +15,7 @@ setup(
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
     download_url="https://github.com/aleju/imgaug/archive/0.2.0.tar.gz",
-    install_requires=["scipy", "scikit-image>=0.11.0", "numpy", "six"],
+    install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six"],
     packages=find_packages(),
     license="MIT",
     description="Image augmentation library for machine learning",
