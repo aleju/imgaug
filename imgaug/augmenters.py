@@ -106,7 +106,7 @@ class Augmenter(object):
         img : array-like, shape = (height, width, channels)
             The corresponding augmented image
         """
-        assert len(image.shape) == 3, "Expected image to have shape (height, width, channels), got shape %s." % (image.shape,)
+        assert image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,)
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
@@ -143,13 +143,11 @@ class Augmenter(object):
             hooks = ia.HooksImages()
 
         if ia.is_np_array(images):
-            assert len(images.shape) == 4, "Expected 4d array of form (N, height, width, channels), got shape %s." % (str(images.shape),)
-            assert images.dtype == np.uint8, "Expected dtype uint8 (with value range 0 to 255), got dtype %s." % (str(images.dtype),)
+            assert images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width, [channels]), got shape %s." % (images.shape,)
             images_tf = images
         elif ia.is_iterable(images):
             if len(images) > 0:
-                assert all([len(image.shape) == 3 for image in images]), "Expected list of images with each image having shape (height, width, channels), got shapes %s." % ([image.shape for image in images],)
-                assert all([image.dtype == np.uint8 for image in images]), "Expected dtype uint8 (with value range 0 to 255), got dtypes %s." % ([str(image.dtype) for image in images],)
+                assert all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width, [channels]), got shape %s." % ([image.shape for image in images],)
             images_tf = list(images)
         else:
             raise Exception("Expected list/tuple of numpy arrays or one numpy array, got %s." % (type(images),))
@@ -179,11 +177,6 @@ class Augmenter(object):
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
-
-        if isinstance(images_result, list):
-            assert all([image.dtype == np.uint8 for image in images_result]), "Expected list of dtype uint8 as augmenter result, got %s." % ([image.dtype for image in images_result],)
-        else:
-            assert images_result.dtype == np.uint8, "Expected dtype uint8 as augmenter result, got %s." % (images_result.dtype,)
 
         return images_result
 
@@ -2539,7 +2532,6 @@ class Affine(Augmenter):
         if cval == ia.ALL:
             self.cval = Uniform(0, 1.0)
         elif ia.is_single_number(cval):
-            assert 0 <= cval <= 1.0
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
             assert len(cval) == 2
@@ -2672,22 +2664,14 @@ class Affine(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        # skimage's warp() converts to 0-1 range, so we use float here and then convert
-        # at the end
-        # float images are expected by skimage's warp() to be in range 0-1, so we divide by 255
-        if isinstance(images, list):
-            result = [image.astype(np.float32, copy=False) for image in images]
-            result = [image / 255.0 for image in images]
-        else:
-            result = images.astype(np.float32, copy=False)
-            result = result / 255.0
-
+        images = images if isinstance(images, list) else [images]
         nb_images = len(images)
+        result = [None] * nb_images
 
         scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
 
         for i in sm.xrange(nb_images):
-            height, width = result[i].shape[0], result[i].shape[1]
+            height, width = images[i].shape[0], images[i].shape[1]
             shift_x = int(width / 2.0)
             shift_y = int(height / 2.0)
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
@@ -2718,20 +2702,14 @@ class Affine(Augmenter):
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
                 result[i] = tf.warp(
-                    result[i],
+                    images[i],
                     matrix.inverse,
                     order=order,
                     mode=mode,
-                    cval=cval
+                    cval=cval,
+                    preserve_range=True,
                 )
-
-            result[i] *= 255.0
-            np.clip(result[i], 0, 255, out=result[i])
-
-        if isinstance(images, list):
-            result = [image.astype(np.uint8, copy=False) for image in result]
-        else:
-            result = result.astype(np.uint8, copy=False)
+                result[i] = result[i].astype(images[i].dtype, copy=False)
 
         return result
 
