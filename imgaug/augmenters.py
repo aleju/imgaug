@@ -2322,12 +2322,9 @@ class Add(Augmenter):
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
         by `np.random`.
-
-    channels : int, tuple/list of int, or None, optional (default=none)
-        Channels to apply values. Applying all values with None value.
     """
     def __init__(self, value=0, per_channel=False, name=None,
-                 deterministic=False, random_state=None, channels=None):
+                 deterministic=False, random_state=None):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
@@ -2349,16 +2346,6 @@ class Add(Augmenter):
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
-        if channels is None:
-            self.channels = channels
-        elif ia.is_single_number(channels):
-            self.channels = [channels]
-        elif ia.is_iterable(value):
-            assert all(isinstance(c, int) for c in channels), "Expected tuple/list of int channels, got %s." % channels
-            self.channels = channels
-        else:
-            raise Exception("Expected None, int or tuple/list of int. Got %s." % type(channels))
-
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
@@ -2371,15 +2358,14 @@ class Add(Augmenter):
                 nb_channels = image.shape[2]
                 samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
-                    if self.channels is None or c in self.channels:
-                        assert -255 <= sample <= 255
-                        image[..., c] += sample
+                    assert -255 <= sample <= 255
+                    image[..., c] += sample
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(np.uint8)
             else:
                 sample = self.value.draw_sample(random_state=rs_image)
                 assert -255 <= sample <= 255
-                image[:, :, self.channels] += sample
+                image += sample
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(np.uint8)
         return result
@@ -2467,12 +2453,9 @@ class Multiply(Augmenter):
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
         by `np.random`.
-
-    channels : int, tuple/list of int, or None, optional (default=none)
-        Channels to apply values. Applying all values with None value.
     """
     def __init__(self, mul=1.0, per_channel=False, name=None,
-                 deterministic=False, random_state=None, channels=None):
+                 deterministic=False, random_state=None):
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
@@ -2494,16 +2477,6 @@ class Multiply(Augmenter):
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
-        if channels is None:
-            self.channels = channels
-        elif ia.is_single_number(channels):
-            self.channels = [channels]
-        elif ia.is_iterable(channels):
-            assert all(isinstance(c, int) for c in channels), "Expected tuple/list of int channels, got %s." % channels
-            self.channels = channels
-        else:
-            raise Exception("Expected None, int or tuple/list of int. Got %s." % type(channels))
-
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
@@ -2516,15 +2489,14 @@ class Multiply(Augmenter):
                 nb_channels = image.shape[2]
                 samples = self.mul.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
-                    if self.channels is None or c in self.channels:
-                        assert sample >= 0
-                        image[..., c] *= sample
+                    assert sample >= 0
+                    image[..., c] *= sample
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(np.uint8)
             else:
                 sample = self.mul.draw_sample(random_state=rs_image)
                 assert sample >= 0
-                image[:, :, self.channels] *= sample
+                image *= sample
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(np.uint8)
         return result
