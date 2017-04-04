@@ -16,10 +16,11 @@ def main():
     example_standard_situation()
     example_heavy_augmentations()
     example_show()
-    example_grayscale()
+    #example_grayscale()
     example_determinism()
     example_keypoints()
     example_single_augmenters()
+    example_withchannels()
     example_unusual_distributions()
     example_hooks()
 
@@ -121,6 +122,8 @@ def example_show():
     # image 0 and 1.
     seq.show_grid([images[0], images[1]], cols=8, rows=8)
 
+# this example is no longer necessary as the library can now handle 2D images
+"""
 def example_grayscale():
     print("Example: Grayscale")
     from imgaug import augmenters as iaa
@@ -133,6 +136,7 @@ def example_grayscale():
     # -----
     # Make sure that the example really does something
     assert not np.array_equal(images, images_aug)
+"""
 
 def example_determinism():
     print("Example: Determinism")
@@ -219,6 +223,23 @@ def example_single_augmenters():
 
     scaler = iaa.Affine(scale={"y": (0.8, 1.2)}) # scale each input image to 80-120% on the y axis
     images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y axis
+
+def example_withchannels():
+    print("Example: WithChannels")
+    from imgaug import augmenters as iaa
+    import numpy as np
+
+    # fake RGB images
+    images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
+
+    # add a random value from the range (-30, 30) to the first two channels of
+    # input images (e.g. to the R and G channels)
+    aug = iaa.WithChannels(
+      channels=[0, 1],
+      children=iaa.Add((-30, 30))
+    )
+
+    images_aug = aug.augment_images(images)
 
 def example_unusual_distributions():
     print("Example: Unusual Distributions")

@@ -130,17 +130,6 @@ seq.show_grid(images[0], cols=8, rows=8)
 seq.show_grid([images[0], images[1]], cols=8, rows=8)
 ```
 
-Augment grayscale images:
-```python
-from imgaug import augmenters as iaa
-import numpy as np
-images = np.random.randint(0, 255, (16, 128, 128), dtype=np.uint8)
-seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
-# The library expects a list of images (3D inputs) or a single array (4D inputs).
-# So we add an axis to our grayscale array to convert it to shape (16, 128, 128, 1).
-images_aug = seq.augment_images(images[:, :, :, np.newaxis])
-```
-
 Augment two batches of images in *exactly the same way* (e.g. horizontally flip 1st, 2nd and 5th images in both batches, but do not alter 3rd and 4th images):
 ```python
 from imgaug import augmenters as iaa
@@ -220,6 +209,24 @@ images[4] = translater.augment_image(images[4]) # move image 4 to the left
 
 scaler = iaa.Affine(scale={"y": (0.8, 1.2)}) # scale each input image to 80-120% on the y axis
 images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y axis
+```
+
+Apply an augmenter to only specific image channels:
+```python
+from imgaug import augmenters as iaa
+import numpy as np
+
+# fake RGB images
+images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
+
+# add a random value from the range (-30, 30) to the first two channels of
+# input images (e.g. to the R and G channels)
+aug = iaa.WithChannels(
+  channels=[0, 1],
+  children=iaa.Add((-30, 30))
+)
+
+images_aug = aug.augment_images(images)
 ```
 
 You can use more unusual distributions for the stochastic parameters of each augmenter:
