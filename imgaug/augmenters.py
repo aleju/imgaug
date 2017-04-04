@@ -657,21 +657,37 @@ class Sequential(Augmenter, list):
 
 
 class Sometimes(Augmenter):
-    """Sometimes is an Augmenter that augments according to some probability
-    Given the probability "p", only certain number of images will be transformed
+    """Augment only p percent of all images with one or more augmenters.
+
+    Let C be one or more child augmenters given to Sometimes.
+    Let p be the percent of images to augment.
+    Let I be the input images.
+    Then (on average) p percent of all images in I will be augmented using C.
+
+    Example:
+        aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3))
+    when calling aug.augment_images(...), only 50 percent of all images
+    will be blurred (on average).
+
+    Example:
+        aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3), iaa.Fliplr(1.0))
+    when calling aug.augment_images(...), 50 percent of all images
+    will be blurred, the other 50 percent will be horizontally flipped.
 
     Parameters
     ----------
     p : float, optional(default=0.5)
-        determines the probability with which the associated Augmentation
-        will be applied. eg. value of 0.5 Augments roughly 50% of the image
-        samples that are up for Augmentation
+        Sets the probability with which the given augmenters will be applied to
+        input images. E.g. a value of 0.5 will result in 50 percent of all
+        input images being augmented.
 
-    then_list : optional(default=None)
-        # TODO
+    then_list : None, Augmenter or list of Augmenters, optional(default=None)
+        Augmenter(s) to apply to p percent of all images.
 
-    else_list : optional(default=None)
-        # TODO
+    else_list : None, Augmenter or list of Augmenters, optional(default=None)
+        Augmenter(s) to apply to (1-p) percent of all images.
+        These augmenters will be applied only when the ones in then_list
+        are NOT applied (either-or-relationship).
 
     name : string, optional(default=None)
         name of the instance
@@ -810,6 +826,118 @@ class Sometimes(Augmenter):
     def __str__(self):
         return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
 
+class WithChannels(Augmenter):
+    """Select channels to augment.
+
+    Let C be one or more child augmenters given to this augmenter.
+    Let H be a list of channels.
+    Let I be the input images.
+    Then this augmenter will pick the channels H from each image
+    in I (resulting in new images) and apply C to them.
+    The result of the augmentation will be merged back into the original
+    images.
+
+    Example:
+        aug = iaa.WithChannels([0], iaa.Add(10))
+    assuming input images are RGB, then this augmenter will add 10 only
+    to the first channel, i.e. make images more red.
+
+    Parameters
+    ----------
+    channels : integer, list of integers, None, optional(default=None)
+        Sets the channels to extract from each image.
+        If None, all channels will be used.
+
+    children : Augmenter, list of Augmenters, None, optional(default=None)
+        One or more augmenters to apply to images, after the channels
+        are extracted.
+
+    name : string, optional(default=None)
+        name of the instance
+
+    deterministic : boolean, optional (default=False)
+        Whether random state will be saved before augmenting images
+        and then will be reset to the saved value post augmentation
+        use this parameter to obtain transformations in the EXACT order
+        everytime
+
+    random_state : int, RandomState instance or None, optional (default=None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
+    """
+    def __init__(self, channels=None, children=None, name=None, deterministic=False, random_state=None):
+        super(WithChannels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if channels is None:
+            self.channels = None
+        elif ia.is_single_integer(channels):
+            self.channels = [channels]
+        elif ia.is_iterable(channels):
+            assert all([ia.is_single_integer(channel) for channel in channels]), "Expected integers as channels, got %s." % ([type(channel) for channel in channels],)
+            self.channels = channels
+        else:
+            raise Exception("Expected None, int or list of ints as channels, got %s." % (type(channels),))
+
+        if children is None:
+            self.children = Sequential([], name="%s-then" % (self.name,))
+        elif ia.is_iterable(children):
+            self.children = Sequential(children, name="%s-then" % (self.name,))
+        elif isinstance(children, Augmenter):
+            self.children = Sequential([children], name="%s-then" % (self.name,))
+        else:
+            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+            if self.channels is None:
+                result = self.children.augment_images(
+                    images=images,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+            elif len(self.channels) == 0:
+                pass
+            else:
+                if ia.is_np_array(images):
+                    images_then_list = images[..., self.channels]
+                else:
+                    images_then_list = [image[..., self.channels] for image in images]
+
+                result_then_list = self.children.augment_images(
+                    images=images_then_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+                if ia.is_np_array(images):
+                    result[..., self.channels] = result_then_list
+                else:
+                    for i in sm.xrange(len(images)):
+                        result[i][..., self.channels] = result_then_list[i]
+
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def _to_deterministic(self):
+        aug = self.copy()
+        aug.children = aug.children.to_deterministic()
+        aug.deterministic = True
+        aug.random_state = ia.new_random_state()
+        return aug
+
+    def get_parameters(self):
+        return [self.channels]
+
+    def get_children_lists(self):
+        return [self.children]
+
+    def __str__(self):
+        return "WithChannels(channels=%s, name=%s, children=[%s], deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
 
 class Noop(Augmenter):
     """Noop is an Augmenter that does nothing
@@ -2789,7 +2917,8 @@ class Affine(Augmenter):
                 )
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
-                result[i] = tf.warp(
+                #print("before aug", images[i].dtype, np.min(images[i]), np.max(images[i]))
+                image_warped = tf.warp(
                     images[i],
                     matrix.inverse,
                     order=order,
@@ -2797,7 +2926,13 @@ class Affine(Augmenter):
                     cval=cval,
                     preserve_range=True,
                 )
+                #print("after aug", image_warped.dtype, np.min(image_warped), np.max(image_warped))
+                # warp changes uint8 to float64, making this necessary
+                if image_warped.dtype != images[i].dtype:
+                    image_warped = image_warped.astype(images[i].dtype, copy=False)
+                #print("after aug2", image_warped.dtype, np.min(image_warped), np.max(image_warped))
                 #result[i] = result[i].astype(images[i].dtype, copy=False)
+                result[i] = image_warped
             else:
                 result[i] = images[i]
 
