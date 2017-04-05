@@ -51,7 +51,7 @@ class Augmenter(object):
             If None, `UnnamedX` will be used as the name, where X is the
             Augmenter's class name.
 
-        deterministic : boolean, optional(default=False)
+        deterministic : bool, optional(default=False)
             Whether the augmenter instance's random state will be saved before
             augmenting images and then reset to that saved state after an
             augmentation (of multiple images/keypoints) is finished.
@@ -148,7 +148,6 @@ class Augmenter(object):
 
         Parameters
         ----------
-
         images : (N, H, W, C) ndarray or (N, H, W) ndarray
                 or list of ndarray (each either (H, W, C) or (H, W))
             Images to augment. The input can be a list of numpy arrays or
@@ -170,7 +169,6 @@ class Augmenter(object):
 
         Returns
         -------
-
         images_result : array-like
             Corresponding augmented images.
 
@@ -271,6 +269,44 @@ class Augmenter(object):
 
     @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
+        """Augment multiple images.
+
+        This is the internal variation of augment_images().
+        It is called from augment_images() and should usually not be called
+        directly.
+        It has to be implemented by every augmenter.
+        This method may transform the images in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's random_state variable. The parameter random_state
+        takes care of both of these.
+
+        Parameters
+        ----------
+        images : list of (H, W, C) ndarray or a single (N, H, W, C) ndarray
+            Images to augment.
+            They may be changed in-place.
+            Either a list of (H, W, C) arrays or a single (N, H, W, C) array,
+            where N = number of images, H = height of images, W = width of
+            images, C = number of channels of images.
+            In the case of a list as input, H, W and C may change per image.
+
+        random_state : np.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of Augmenter
+            See augment_images().
+            (Here never None, but instead an empty list in these cases.)
+
+        hooks : ia.HooksImages
+            See augment_images().
+            (Here never None, is always an ia.HooksImages instance.)
+
+        Returns
+        ----------
+        images : list of (H, W, C) ndarray or a single (N, H, W, C) ndarray
+            The augmented images.
+        """
         raise NotImplementedError()
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
@@ -359,6 +395,39 @@ class Augmenter(object):
 
     @abstractmethod
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        """Augment keypoints on multiple images.
+
+        This is the internal variation of augment_keypoints().
+        It is called from augment_keypoints() and should usually not be called
+        directly.
+        It has to be implemented by every augmenter.
+        This method may transform the keypoints in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's random_state variable. The parameter random_state
+        takes care of both of these.
+
+        Parameters
+        ----------
+        keypoints_on_images : list of ia.KeypointsOnImage
+            Keypoints to augment. They may be changed in-place.
+
+        random_state : np.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of Augmenter
+            See augment_keypoints().
+            (Here never None, but instead an empty list in these cases.)
+
+        hooks : ia.HooksImages
+            See augment_keypoints().
+            (Here never None, is always an ia.HooksKeypoints instance.)
+
+        Returns
+        ----------
+        images : list of (H, W, C) ndarray or a single (N, H, W, C) ndarray
+            The augmented images.
+        """
         raise NotImplementedError()
 
     # TODO most of the code of this function could be replaced with ia.draw_grid()
@@ -819,34 +888,49 @@ class Augmenter(object):
 
 
 class Sequential(Augmenter, list):
-    """Sequential class is used to apply a number of transformations in an
-    ordered / random sequence
-    It is essentially an Augmenter comprising of multiple Augmenters
+    """List augmenter that may contain other augmenters to apply in sequence
+    or random order.
 
-    Parameters
-    ----------
-    children : optional(default=None)
+    Example:
+        seq = iaa.Sequential([
+            iaa.Fliplr(0.5),
+            iaa.Flipud(0.5)
+        ])
+        imgs_aug = seq.augment_images(imgs)
+    Calls always first the horizontal flip augmenter and then the vertical
+    flip augmenter (each having a probability of 50 percent to be used).
 
-    random_order : boolean, optional(default=False)
-        whether to apply the listed transformations in a random order
-
-    name : string, optional(default=None)
-        name of the object
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-
+    Example:
+        seq = iaa.Sequential([
+            iaa.Fliplr(0.5),
+            iaa.Flipud(0.5)
+        ], random_order=True)
+        imgs_aug = seq.augment_images(imgs)
+    Calls sometimes first the horizontal flip augmenter and sometimes first the
+    vertical flip augmenter (each again with 50 percent probability to be used).
     """
+
     def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
+        """Initialize a new Sequential instance.
+
+        Parameters
+        ----------
+        children : Augmenter, list of Augmenter or None, optional(default=None)
+            The augmenters to apply to images.
+
+        random_order : boolean, optional(default=False)
+            Whether to apply the child augmenters in random order per image.
+            The order is resampled for each image.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : boolean, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         list.__init__(self, children if children is not None else [])
         self.random_order = random_order
@@ -901,11 +985,16 @@ class Sequential(Augmenter, list):
         return []
 
     def add(self, augmenter):
-        """Add an additional augmenter"""
+        """Add an augmenter to the list of child augmenters.
+
+        Parameters
+        ----------
+        augmenter : Augmenter
+            The augmenter to add.
+        """
         self.append(augmenter)
 
     def get_children_lists(self):
-        """Return all the children augmenters"""
         return [self]
 
     def __str__(self):
@@ -924,45 +1013,43 @@ class Sometimes(Augmenter):
 
     Example:
         aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3))
-    when calling aug.augment_images(...), only 50 percent of all images
-    will be blurred (on average).
+    when calling aug.augment_images(...), only (on average) 50 percent of
+    all images will be blurred.
 
     Example:
         aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3), iaa.Fliplr(1.0))
-    when calling aug.augment_images(...), 50 percent of all images
-    will be blurred, the other 50 percent will be horizontally flipped.
-
-    Parameters
-    ----------
-    p : float, optional(default=0.5)
-        Sets the probability with which the given augmenters will be applied to
-        input images. E.g. a value of 0.5 will result in 50 percent of all
-        input images being augmented.
-
-    then_list : None, Augmenter or list of Augmenters, optional(default=None)
-        Augmenter(s) to apply to p percent of all images.
-
-    else_list : None, Augmenter or list of Augmenters, optional(default=None)
-        Augmenter(s) to apply to (1-p) percent of all images.
-        These augmenters will be applied only when the ones in then_list
-        are NOT applied (either-or-relationship).
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+    when calling aug.augment_images(...), (on average) 50 percent of all images
+    will be blurred, the other (again, on average) 50 percent will be
+    horizontally flipped.
     """
+
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
+        """Instantiate a new Sometimes instance.
+
+        Parameters
+        ----------
+        p : float or StochasticParameter, optional(default=0.5)
+            Sets the probability with which the given augmenters will be applied to
+            input images. E.g. a value of 0.5 will result in 50 percent of all
+            input images being augmented.
+
+        then_list : None or Augmenter or list of Augmenters, optional(default=None)
+            Augmenter(s) to apply to p percent of all images.
+
+        else_list : None or Augmenter or list of Augmenters, optional(default=None)
+            Augmenter(s) to apply to (1-p) percent of all images.
+            These augmenters will be applied only when the ones in then_list
+            are NOT applied (either-or-relationship).
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional (default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(Sometimes, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_float(p) or ia.is_single_integer(p):
@@ -1099,33 +1186,30 @@ class WithChannels(Augmenter):
         aug = iaa.WithChannels([0], iaa.Add(10))
     assuming input images are RGB, then this augmenter will add 10 only
     to the first channel, i.e. make images more red.
-
-    Parameters
-    ----------
-    channels : integer, list of integers, None, optional(default=None)
-        Sets the channels to extract from each image.
-        If None, all channels will be used.
-
-    children : Augmenter, list of Augmenters, None, optional(default=None)
-        One or more augmenters to apply to images, after the channels
-        are extracted.
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
     """
+
     def __init__(self, channels=None, children=None, name=None, deterministic=False, random_state=None):
+        """Instantiate a new WithChannels augmenter.
+
+        Parameters
+        ----------
+        channels : integer, list of integers, None, optional(default=None)
+            Sets the channels to extract from each image.
+            If None, all channels will be used.
+
+        children : Augmenter, list of Augmenters, None, optional(default=None)
+            One or more augmenters to apply to images, after the channels
+            are extracted.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional (default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(WithChannels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if channels is None:
@@ -1198,26 +1282,27 @@ class WithChannels(Augmenter):
         return "WithChannels(channels=%s, name=%s, children=[%s], deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
 
 class Noop(Augmenter):
-    """Noop is an Augmenter that does nothing
+    """Augmenter that never changes input images ("no operation").
 
-    Parameters
-    ----------
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+    This augmenter is useful when you just want to use a placeholder augmenter
+    in some situation, so that you can continue to call augment_images(),
+    without actually changing them (e.g. when switching from training to test).
     """
+
     def __init__(self, name=None, deterministic=False, random_state=None):
+        """Instantiate a new Noop instance.
+
+        Parameters
+        ----------
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional (default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Noop, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1232,9 +1317,39 @@ class Noop(Augmenter):
 
 
 class Lambda(Augmenter):
-    """ # TODO
+    """Augmenter that calls a lambda function for each batch of input image.
+
+    This is useful to add missing functions to a list of augmenters.
     """
+
     def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
+        """Instantiate a new Lambda instance.
+
+        Parameters
+        ----------
+        func_images : function,
+            The function to call for each batch of images.
+            It must follow the form
+                `function(images, random_state, parents, hooks)`
+            and return the changed images (may be transformed in-place).
+            This is essentially the interface of Augmenter._augment_images().
+
+        func_keypoints : function,
+            The function to call for each batch of image keypoints.
+            It must follow the form
+                `function(keypoints_on_images, random_state, parents, hooks)`
+            and return the changed keypoints (may be transformed in-place).
+            This is essentially the interface of Augmenter._augment_keypoints().
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional (default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
