@@ -21,7 +21,6 @@ TODOs
         is called by augmenters with children
     - check if all get_parameters() implementations really return all parameters.
     - Add Alpha augmenter
-    - Add WithChannels augmenter
     - Add SpatialDropout augmenter
     - Add CoarseDropout shortcut function
     - Add Hue and Saturation augmenters
@@ -37,27 +36,46 @@ TODOs
 
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
-    """Base class for Augmenter objects
-
-    Parameters
-    ----------
-    name : string, optional
-        Name given to an Augmenter object
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+    """Base class for Augmenter objects.
+    All augmenters derive from this class.
     """
 
     def __init__(self, name=None, deterministic=False, random_state=None):
+        """Create a new Augmenter instance.
+
+        Parameters
+        ----------
+        name : string or None, optional(default=None)
+            Name given to an Augmenter object. This name is used in print()
+            statements as well as find and remove functions.
+            If None, `UnnamedX` will be used as the name, where X is the
+            Augmenter's class name.
+
+        deterministic : boolean, optional(default=False)
+            Whether the augmenter instance's random state will be saved before
+            augmenting images and then reset to that saved state after an
+            augmentation (of multiple images/keypoints) is finished.
+            I.e. if set to True, each batch of images will be augmented in the
+            same way (e.g. first image might always be flipped horizontally,
+            second image will never be flipped etc.).
+            This is useful when you want to transform multiple batches of images
+            in the same way, or when you want to augment images and keypoints
+            on these images.
+            Usually, there is no need to set this variable by hand. Instead,
+            instantiate the augmenter with the defaults and then use
+            augmenter.to_deterministic().
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            The random state to use for this augmenter.
+            If int, a new np.random.RandomState will be created using this
+            value as the seed.
+            If np.random.RandomState instance, the instance will be used directly.
+            If None, imgaug's default RandomState will be used, which's state can
+            be controlled using imgaug.seed(int).
+            Usually, there is no need to set this variable by hand. Instead,
+            instantiate the augmenter with the defaults and then use
+            augmenter.to_deterministic().
+        """
         super(Augmenter, self).__init__()
 
         if name is None:
@@ -80,41 +98,47 @@ class Augmenter(object):
         self.activated = True
 
     def augment_batches(self, batches, hooks=None):
-        """Augment images, batch-wise
+        """Augment multiple batches of images.
 
         Parameters
         ----------
-        batches : array-like, shape = (num_samples, height, width, channels)
-            image batch to augment
+        batches : list
+            List of image batches to augment.
+            Expected is a list of array-likes, each one being either
+            (a) a list of arrays of shape (H, W) or (H, W, C) or
+            (b) an array of shape (N, H, W) or (N, H, W, C),
+            where N = number of images, H = height, W = width,
+            C = number of channels.
+            Each image should have dtype uint8 (range 0-255).
 
-
-        hooks : optional(default=None)
-            HooksImages object to dynamically interfere with the Augmentation process
+        hooks : ia.HooksImages or None, optional(default=None)
+            HooksImages object to dynamically interfere with the augmentation
+            process.
 
         Returns
         -------
-        augmented_batch : array-like, shape = (num_samples, height, width, channels)
-            corresponding batch of augmented images
-
+        augmented_batch : list
+            Corresponding list of batches of augmented images.
         """
         assert isinstance(batches, list)
         return [self.augment_images(batch, hooks=hooks) for batch in batches]
 
     def augment_image(self, image, hooks=None):
-        """Augment a single image
+        """Augment a single image.
 
         Parameters
         ----------
-        image : array-like, shape = (height, width, channels)
-            The image to augment
+        image : (H, W, C) ndarray or (H, W) ndarray
+            The image to augment. Should have dtype uint8 (range 0-255).
 
-        hooks : optional(default=None)
-            HooksImages object to dynamically interfere with the Augmentation process
+        hooks : ia.HooksImages or None, optional(default=None)
+            HooksImages object to dynamically interfere with the augmentation
+            process.
 
         Returns
         -------
-        img : array-like, shape = (height, width, channels)
-            The corresponding augmented image
+        img : ndarray
+            The corresponding augmented image.
         """
         assert image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,)
         return self.augment_images([image], hooks=hooks)[0]
@@ -125,29 +149,30 @@ class Augmenter(object):
         Parameters
         ----------
 
-        images : array-like, shape = (num_samples, height, width, channels) or
-                 a list of images (particularly useful for images of various
-                 dimensions)
+        images : (N, H, W, C) ndarray or (N, H, W) ndarray
+                or list of ndarray (each either (H, W, C) or (H, W))
             Images to augment. The input can be a list of numpy arrays or
             a single array. Each array is expected to have shape (H, W, C)
             or (H, W), where H is the height, W is the width and C are the
             channels. Number of channels may differ between images.
+            If a list is chosen, height and width may differ per between images.
             Currently the recommended dtype is uint8 (i.e. integer values in
-            range 0 to 255). Other dtypes are not tested.
+            the range 0 to 255). Other dtypes are not tested.
 
-        parents : optional(default=None)
+        parents : list of Augmenter or None, optional(default=None)
             Parent augmenters that have previously been called before the
             call to this function. Usually you can leave this parameter as None.
             It is set automatically for child augmenters.
 
-        hooks : optional(default=None)
-            HooksImages object to dynamically interfere with the Augmentation process
+        hooks : ia.HooksImages or None, optional(default=None)
+            HooksImages object to dynamically interfere with the augmentation
+            process.
 
         Returns
         -------
 
-        images_result : array-like, shape = (num_samples, height, width, channels)
-            corresponding augmented images
+        images_result : array-like
+            Corresponding augmented images.
 
         """
         if self.deterministic:
@@ -249,24 +274,51 @@ class Augmenter(object):
         raise NotImplementedError()
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
-        """Augment image keypoints
+        """Augment image keypoints.
+
+        This is the corresponding function to augment_images(), just for
+        keypoints/landmarks (i.e. coordinates on the image).
+        Usually you will want to call augment_images() with a list of images,
+        e.g. augment_images([A, B, C]) and then augment_keypoints() with the
+        corresponding list of keypoints on these images, e.g.
+        augment_keypoints([Ak, Bk, Ck]), where Ak are the keypoints on image A.
+
+        Make sure to first convert the augmenter(s) to deterministic states
+        before augmenting the images and keypoints,
+        e.g. by
+            seq = iaa.Fliplr(0.5)
+            seq_det = seq.to_deterministic()
+            imgs_aug = seq_det.augment_images([A, B, C])
+            kps_aug = seq_det.augment_keypoints([Ak, Bk, Ck])
+        Otherwise, different random values will be sampled for the image
+        and keypoint augmentations, resulting in different augmentations (e.g.
+        images might be rotated by 30deg and keypoints by -10deg).
+        Also make sure to call to_deterministic() again for each new batch,
+        otherwise you would augment all batches in the same way.
+
 
         Parameters
         ----------
 
-        keypoints_on_images : # TODO
+        keypoints_on_images : list of ia.KeypointsOnImage
+            The keypoints/landmarks to augment.
+            Expected is a list of ia.KeypointsOnImage objects,
+            each containing the keypoints of a single image.
 
+        parents : list of Augmenter or None, optional(default=None)
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
 
-        parents : optional(default=None)
-            # TODO
-
-        hooks : optional(default=None)
-            HooksImages object to dynamically interfere with the Augmentation process
+        hooks : ia.HooksKeypoints or None, optional(default=None)
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
 
         Returns
         -------
 
-        keypoints_on_images_result : # TODO
+        keypoints_on_images_result : List of augmented ia.KeypointsOnImage
+            objects.
         """
         if self.deterministic:
             state_orig = self.random_state.get_state()
@@ -310,7 +362,51 @@ class Augmenter(object):
         raise NotImplementedError()
 
     # TODO most of the code of this function could be replaced with ia.draw_grid()
+    # TODO add parameter for handling multiple images ((a) next to each other
+    # in each row or (b) multiply row count by number of images and put each
+    # one in a new row)
     def draw_grid(self, images, rows, cols):
+        """Apply this augmenter to the given images and return a grid
+        image of the results.
+        Each cell in the grid contains a single augmented variation of
+        an input image.
+
+        If multiple images are provided, the row count is multiplied by
+        the number of images and each image gets its own row.
+        E.g. for images = [A, B], rows=2, cols=3:
+            A A A
+            B B B
+            A A A
+            B B B
+        for images = [A], rows=2, cols=3:
+            A A A
+            A A A
+
+        Parameters
+        -------
+
+        images : list of ndarray or ndarray
+            List of images of which to show the augmented versions.
+            If a list, then each element is expected to have shape (H, W) or
+            (H, W, 3). If a single array, then it is expected to have
+            shape (N, H, W, 3) or (H, W, 3) or (H, W).
+
+        rows : integer.
+            Number of rows in the grid.
+            If N input images are given, this value will automatically be
+            multiplied by N to create rows for each image.
+
+        cols : integer
+            Number of columns in the grid.
+
+        Returns
+        -------
+
+        grid : ndarray of shape (H, W, 3).
+            The generated grid image with augmented versions of the input
+            images. Here, H and W reference the output size of the grid,
+            and _not_ the sizes of the input images.
+        """
         if ia.is_np_array(images):
             if len(images.shape) == 4:
                 images = [images[i] for i in range(images.shape[0])]
@@ -345,35 +441,92 @@ class Augmenter(object):
 
         return grid
 
+    # TODO test for 2D images
+    # TODO test with C = 1
     def show_grid(self, images, rows, cols):
-        """Quickly show examples results of the applied augmentation
+        """Apply this augmenter to the given images and show/plot the results as
+        a grid of images.
+
+        If multiple images are provided, the row count is multiplied by
+        the number of images and each image gets its own row.
+        E.g. for images = [A, B], rows=2, cols=3:
+            A A A
+            B B B
+            A A A
+            B B B
+        for images = [A], rows=2, cols=3:
+            A A A
+            A A A
 
         Parameters
         ----------
-        images : array-like, shape = (num_samples, height, width, channels) or
-                 a list of images (particularly useful for images of various
-                 dimensions)
-            images to augment
+
+        images : list of ndarray or ndarray
+            List of images of which to show the augmented versions.
+            If a list, then each element is expected to have shape (H, W) or
+            (H, W, 3). If a single array, then it is expected to have
+            shape (N, H, W, 3) or (H, W, 3) or (H, W).
 
         rows : integer.
-            number of rows in the grid
+            Number of rows in the grid.
+            If N input images are given, this value will automatically be
+            multiplied by N to create rows for each image.
 
         cols : integer
-            number of columns in the grid
+            Number of columns in the grid.
         """
         grid = self.draw_grid(images, rows, cols)
         misc.imshow(grid)
 
     def to_deterministic(self, n=None):
-        """ # TODO
+        """Converts this augmenter from a stochastic to a deterministic one.
+
+        A stochastic augmenter samples new values for each parameter per image.
+        Feed a new batch of images into the augmenter and you will get a
+        new set of transformations.
+        A deterministic augmenter also samples new values for each parameter
+        per image, but starts each batch the same RandomState (i.e. seed).
+        Feed two batches of images into the augmenter and you get the same
+        transformations both times (same number of images assumed; some
+        augmenter's results are also dependend on image height, width and
+        channel count).
+
+        Using determinism is useful for keypoint augmentation,
+        as you will usually want to augment images and their corresponding
+        keypoints in the same way (e.g. if an image is rotated by 30deg, then
+        also rotate its keypoints by 30deg).
+
+        Parameters
+        ----------
+        n : int or None, optional(default=None)
+            Number of deterministic augmenters to return.
+            If None then only one Augmenter object will be returned.
+            If 1 or higher, then a list containing n Augmenter objects
+            will be returned.
+
+        Returns
+        -------
+
+        det : Augmenter object or list of Augmenter object
+            A single Augmenter object if n was None,
+            otherwise a list of Augmenter objects (even if n was 1).
         """
+        assert n is None or n >= 1
         if n is None:
             return self.to_deterministic(1)[0]
         else:
             return [self._to_deterministic() for _ in sm.xrange(n)]
 
     def _to_deterministic(self):
-        """ # TODO
+        """Augmenter-specific implementation of to_deterministic().
+        This function is expected to return a single new deterministic
+        Augmenter object of this augmenter.
+
+        Returns
+        -------
+
+        det : Augmenter object
+            Deterministic variation of this Augmenter object.
         """
         aug = self.copy()
         aug.random_state = ia.new_random_state()
@@ -381,15 +534,26 @@ class Augmenter(object):
         return aug
 
     def reseed(self, deterministic_too=False, random_state=None):
-        """For reseeding the internal random_state
+        """Reseed this augmenter and all of its children (if it has any).
+
+        This function is useful, when augmentations are run in the
+        background (i.e. on multiple cores).
+        It should be called before sending this Augmenter object to a
+        background worker (i.e., if N workers are used, the function
+        should be called N times). Otherwise, all background workers will
+        use the same seeds and therefore apply the same augmentations.
 
         Parameters
         ----------
         deterministic_too : boolean, optional(default=False)
-            # TODO
+            Whether to also change the seed of an augmenter A, if A
+            is deterministic. This is the case both when this augmenter
+            object is A or one of its children is A.
 
-        random_state : np.random.RandomState instance, optional(default=None)
-            random seed generator
+        random_state : np.random.RandomState or int, optional(default=None)
+            Generator that creates new random seeds.
+            If int, it will be used as a seed.
+            If None, a new RandomState will automatically be created.
         """
         if random_state is None:
             random_state = ia.current_random_state()
@@ -414,7 +578,43 @@ class Augmenter(object):
         return []
 
     def find_augmenters(self, func, parents=None, flat=True):
-        """ # TODO
+        """Find augmenters that match a condition.
+        This function will compare this augmenter and all of its children
+        with a condition. The condition is a lambda function.
+
+        Example:
+            aug = iaa.Sequential([
+                nn.Fliplr(0.5, name="fliplr"),
+                nn.Flipud(0.5, name="flipud")
+            ])
+            print(aug.find_augmenters(lambda a, parents: a.name == "fliplr"))
+        will return the first child augmenter (Fliplr instance).
+
+        Parameters
+        ----------
+
+        func : lambda function
+            A function that receives an Augmenter instance and a list of
+            parent Augmenter instances and must return True, if that
+            augmenter is valid match.
+            E.g.
+                lambda a, parents: a.name == "fliplr" and any([b.name == "other-augmenter" for b in parents])
+
+        parents : list of Augmenter or None, optional(default=None)
+            List of parent augmenters.
+            Intended for nested calls and can usually be left as None.
+
+        flat : bool, optional(default=True)
+            Whether to return the result as a flat list (True)
+            or a nested list (False). In the latter case, the nesting matches
+            each augmenters position among the children.
+
+        Returns
+        ----------
+
+        augmenters : list of Augmenter objects
+            Nested list if flat was set to False.
+            Flat list if flat was set to True.
         """
         if parents is None:
             parents = []
@@ -435,43 +635,49 @@ class Augmenter(object):
         return result
 
     def find_augmenters_by_name(self, name, regex=False, flat=True):
-        """Find augmenter(s) by name
+        """Find augmenter(s) by name.
 
         Parameters
         ----------
 
         name : string
-            name of the augmenter to find
+            Name of the augmenter(s) to search for.
 
-        regex : regular Expression, optional(default=False)
-            Regular Expression for searching the augmenter
+        regex : bool, optional(default=False)
+            Whether `name` parameter is a regular expression.
 
-        flat : boolean, optional(default=True)
-            # TODO
+        flat : bool, optional(default=True)
+            See `Augmenter.find_augmenters()`.
 
         Returns
         -------
-        found augmenter instance
+
+        augmenters : list of Augmenter objects
+            Nested list if flat was set to False.
+            Flat list if flat was set to True.
         """
         return self.find_augmenters_by_names([name], regex=regex, flat=flat)
 
     def find_augmenters_by_names(self, names, regex=False, flat=True):
-        """Find augmenters by names
+        """Find augmenter(s) by names.
 
         Parameters
         ----------
         names : list of strings
-            names of the augmenter to find
+            Names of the augmenter(s) to search for.
 
-        regex : regular Expression, optional(default=False)
-            Regular Expression for searching the augmenter
+        regex : bool, optional(default=False)
+            Whether `names` is a list of regular expressions.
 
         flat : boolean, optional(default=True)
-            # TODO
+            See `Augmenter.find_augmenters()`.
 
         Returns
         -------
-        found augmenter instance(s)
+
+        augmenters : list of Augmenter objects
+            Nested list if flat was set to False.
+            Flat list if flat was set to True.
         """
         if regex:
             def comparer(aug, parents):
@@ -485,22 +691,46 @@ class Augmenter(object):
             return self.find_augmenters(lambda aug, parents: aug.name in names, flat=flat)
 
     def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
-        """Remove Augmenters from the list of augmenters
+        """Remove this augmenter or its children that match a condition.
+
+        Example:
+            seq = iaa.Sequential([
+                iaa.Fliplr(0.5, name="fliplr"),
+                iaa.Flipud(0.5, name="flipud"),
+            ])
+            seq = seq.remove_augmenters(lambda a, parents: a.name == "fliplr")
+        removes the augmenter Fliplr from the Sequential object's children.
 
         Parameters
         ----------
-        func : # TODO
+        func : lambda function
+            Condition to match per augmenter.
+            The function must expect the augmenter itself and a list of parent
+            augmenters and returns True if that augmenter is to be removed,
+            or False otherwise.
+            E.g. lambda a, parents: a.name == "fliplr" and len(parents) == 1
+            removes an augmenter with name "fliplr" if it is the direct child
+            of the augmenter upon which remove_augmenters() was initially called.
 
-        copy : boolean, optional(default=True)
-            removing the augmenter or it's copy
+        copy : bool, optional(default=True)
+            Whether to copy this augmenter and all if its children before
+            removing. If False, removal is performed in-place.
 
         noop_if_topmost : boolean, optional(default=True)
-            if func is provided and noop_if_topmost is True
-            an object of Noop class is returned
+            If True and the condition (lambda function) leads to the removal
+            of the topmost augmenter (the one this function is called on
+            initially), then that topmost augmenter will be replaced by a
+            Noop instance (i.e. an object will still knows augment_images(),
+            but doesnt change images). If False, None will be returned in
+            these cases.
+            This can only be False if copy is set to True.
 
         Returns
         -------
-        aug : removed augmenter object
+        aug : Augmenter or None
+            This augmenter after the removal was performed.
+            Is None iff condition was matched for the topmost augmenter,
+            copy was set to True and noop_if_topmost was set to False.
         """
         if func(self, []):
             if not copy:
@@ -515,16 +745,32 @@ class Augmenter(object):
             aug.remove_augmenters_inplace(func, parents=[])
             return aug
 
-    def remove_augmenters_inplace(self, func, parents):
-        """Inplace removal of augmenters
+    def remove_augmenters_inplace(self, func, parents=None):
+        """Remove in-place children of this augmenter that match a condition.
+
+        E.g. seq = iaa.Sequential([
+                iaa.Fliplr(0.5, name="fliplr"),
+                iaa.Flipud(0.5, name="flipud"),
+            ])
+            seq.remove_augmenters_inplace(lambda a, parents: a.name == "fliplr")
+        removes the augmenter Fliplr from the Sequential object's children.
+
+        This is functionally identical to remove_augmenters() with copy=False,
+        except that it does not affect the topmost augmenter (the one on
+        which this function is initially called on).
 
         Parameters
         ----------
+        func : lambda function
+            See Augmenter.remove_augmenters().
 
-        func : # TODO
-
-        parents : # TODO
+        parents : list of Augmenter or None, optional(default=None)
+            List of parent Augmenter instances that lead to this
+            Augmenter. If None, an empty list will be used.
+            This parameter can usually be left empty and will be set
+            automatically for children.
         """
+        parents = [] if parents is None else parents
         subparents = parents + [self]
         for lst in self.get_children_lists():
             to_remove = []
@@ -544,11 +790,23 @@ class Augmenter(object):
     #    pass
 
     def copy(self):
-        """Obtain a copy"""
+        """Create a shallow copy of this Augmenter instance.
+
+        Returns
+        -------
+        aug : Augmenter
+            Shallow copy of this Augmenter instance.
+        """
         return copy_module.copy(self)
 
     def deepcopy(self):
-        """Obtain a deep copy"""
+        """Create a deep copy of this Augmenter instance.
+
+        Returns
+        -------
+        aug : Augmenter
+            Deep copy of this Augmenter instance.
+        """
         return copy_module.deepcopy(self)
 
     def __repr__(self):
