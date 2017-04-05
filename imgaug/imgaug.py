@@ -25,6 +25,8 @@ ALL = "ALL"
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
+def seed(seed):
+    CURRENT_RANDOM_STATE.seed(seed)
 
 def is_np_array(val):
     return isinstance(val, (np.ndarray, np.generic))
