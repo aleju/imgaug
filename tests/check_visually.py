@@ -32,7 +32,7 @@ def main():
         iaa.Grayscale(0.5, name="Grayscale0.5"),
         iaa.Grayscale(1.0, name="Grayscale1.0"),
         iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
-        iaa.Sharpen(alpha=(0.1, 1.0), strength=(0, 2.0), name="Sharpen"),
+        iaa.Sharpen(alpha=(0.1, 1.0), lightness=(0, 2.0), name="Sharpen"),
         iaa.Emboss(alpha=(0.1, 1.0), strength=(0, 2.0), name="Emboss"),
         iaa.EdgeDetect(alpha=(0.1, 1.0), name="EdgeDetect"),
         iaa.DirectedEdgeDetect(alpha=(0.1, 1.0), direction=(0, 1.0), name="DirectedEdgeDetect"),

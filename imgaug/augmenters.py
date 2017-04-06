@@ -2544,20 +2544,20 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     else:
         raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
 
-    if ia.is_single_number(strength):
-        strength_param = Deterministic(strength)
-    elif ia.is_iterable(strength):
-        assert len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(strength)),)
-        strength_param = Uniform(strength[0], strength[1])
-    elif isinstance(strength, StochasticParameter):
-        strength_param = strength
+    if ia.is_single_number(lightness):
+        lightness_param = Deterministic(lightness)
+    elif ia.is_iterable(lightness):
+        assert len(lightness) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(lightness)),)
+        lightness_param = Uniform(lightness[0], lightness[1])
+    elif isinstance(lightness, StochasticParameter):
+        lightness_param = lightness
     else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
+        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(lightness),))
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         assert 0 <= alpha_sample <= 1.0
-        strength_sample = strength_param.draw_sample(random_state=random_state_func)
+        lightness_sample = lightness_param.draw_sample(random_state=random_state_func)
         matrix_nochange = np.array([
             [0, 0, 0],
             [0, 1, 0],
@@ -2565,7 +2565,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
         ], dtype=np.float32)
         matrix_effect = np.array([
             [-1, -1, -1],
-            [-1, 8+strength_sample, -1],
+            [-1, 8+lightness_sample, -1],
             [-1, -1, -1]
         ], dtype=np.float32)
         matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect

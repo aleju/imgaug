@@ -83,7 +83,7 @@ seq = iaa.Sequential([
         st(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))), # convert images into their superpixel representation
         st(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
         st(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
-        st(iaa.Sharpen(alpha=(0, 1.0), strength=(0.75, 1.5))), # sharpen images
+        st(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5))), # sharpen images
         st(iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0))), # emboss images
         # search either for all edges or for directed edges
         st(iaa.Sometimes(0.5,
