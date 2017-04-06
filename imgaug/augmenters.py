@@ -335,7 +335,6 @@ class Augmenter(object):
 
         Parameters
         ----------
-
         keypoints_on_images : list of ia.KeypointsOnImage
             The keypoints/landmarks to augment.
             Expected is a list of ia.KeypointsOnImage objects,
@@ -352,8 +351,7 @@ class Augmenter(object):
 
         Returns
         -------
-
-        keypoints_on_images_result : List of augmented ia.KeypointsOnImage
+        keypoints_on_images_result : list of augmented ia.KeypointsOnImage
             objects.
         """
         if self.deterministic:
@@ -453,24 +451,22 @@ class Augmenter(object):
 
         Parameters
         -------
-
         images : list of ndarray or ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape (H, W) or
             (H, W, 3). If a single array, then it is expected to have
             shape (N, H, W, 3) or (H, W, 3) or (H, W).
 
-        rows : integer.
+        rows : int
             Number of rows in the grid.
             If N input images are given, this value will automatically be
             multiplied by N to create rows for each image.
 
-        cols : integer
+        cols : int
             Number of columns in the grid.
 
         Returns
         -------
-
         grid : ndarray of shape (H, W, 3).
             The generated grid image with augmented versions of the input
             images. Here, H and W reference the output size of the grid,
@@ -529,19 +525,18 @@ class Augmenter(object):
 
         Parameters
         ----------
-
         images : list of ndarray or ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape (H, W) or
             (H, W, 3). If a single array, then it is expected to have
             shape (N, H, W, 3) or (H, W, 3) or (H, W).
 
-        rows : integer.
+        rows : int
             Number of rows in the grid.
             If N input images are given, this value will automatically be
             multiplied by N to create rows for each image.
 
-        cols : integer
+        cols : int
             Number of columns in the grid.
         """
         grid = self.draw_grid(images, rows, cols)
@@ -575,7 +570,6 @@ class Augmenter(object):
 
         Returns
         -------
-
         det : Augmenter object or list of Augmenter object
             A single Augmenter object if n was None,
             otherwise a list of Augmenter objects (even if n was 1).
@@ -593,7 +587,6 @@ class Augmenter(object):
 
         Returns
         -------
-
         det : Augmenter object
             Deterministic variation of this Augmenter object.
         """
@@ -614,7 +607,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        deterministic_too : boolean, optional(default=False)
+        deterministic_too : bool, optional(default=False)
             Whether to also change the seed of an augmenter A, if A
             is deterministic. This is the case both when this augmenter
             object is A or one of its children is A.
@@ -661,8 +654,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-
-        func : lambda function
+        func : callable
             A function that receives an Augmenter instance and a list of
             parent Augmenter instances and must return True, if that
             augmenter is valid match.
@@ -680,7 +672,6 @@ class Augmenter(object):
 
         Returns
         ----------
-
         augmenters : list of Augmenter objects
             Nested list if flat was set to False.
             Flat list if flat was set to True.
@@ -708,7 +699,6 @@ class Augmenter(object):
 
         Parameters
         ----------
-
         name : string
             Name of the augmenter(s) to search for.
 
@@ -720,7 +710,6 @@ class Augmenter(object):
 
         Returns
         -------
-
         augmenters : list of Augmenter objects
             Nested list if flat was set to False.
             Flat list if flat was set to True.
@@ -743,7 +732,6 @@ class Augmenter(object):
 
         Returns
         -------
-
         augmenters : list of Augmenter objects
             Nested list if flat was set to False.
             Flat list if flat was set to True.
@@ -772,7 +760,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        func : lambda function
+        func : callable
             Condition to match per augmenter.
             The function must expect the augmenter itself and a list of parent
             augmenters and returns True if that augmenter is to be removed,
@@ -890,32 +878,32 @@ class Augmenter(object):
 class Sequential(Augmenter, list):
     """List augmenter that may contain other augmenters to apply in sequence
     or random order.
-
-    Example:
-        seq = iaa.Sequential([
-            iaa.Fliplr(0.5),
-            iaa.Flipud(0.5)
-        ])
-        imgs_aug = seq.augment_images(imgs)
-    Calls always first the horizontal flip augmenter and then the vertical
-    flip augmenter (each having a probability of 50 percent to be used).
-
-    Example:
-        seq = iaa.Sequential([
-            iaa.Fliplr(0.5),
-            iaa.Flipud(0.5)
-        ], random_order=True)
-        imgs_aug = seq.augment_images(imgs)
-    Calls sometimes first the horizontal flip augmenter and sometimes first the
-    vertical flip augmenter (each again with 50 percent probability to be used).
     """
 
     def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
         """Initialize a new Sequential instance.
 
+        Example:
+            seq = iaa.Sequential([
+                iaa.Fliplr(0.5),
+                iaa.Flipud(0.5)
+            ])
+            imgs_aug = seq.augment_images(imgs)
+        Calls always first the horizontal flip augmenter and then the vertical
+        flip augmenter (each having a probability of 50 percent to be used).
+
+        Example:
+            seq = iaa.Sequential([
+                iaa.Fliplr(0.5),
+                iaa.Flipud(0.5)
+            ], random_order=True)
+            imgs_aug = seq.augment_images(imgs)
+        Calls sometimes first the horizontal flip augmenter and sometimes first the
+        vertical flip augmenter (each again with 50 percent probability to be used).
+
         Parameters
         ----------
-        children : Augmenter, list of Augmenter or None, optional(default=None)
+        children : Augmenter or list of Augmenter or None, optional(default=None)
             The augmenters to apply to images.
 
         random_order : boolean, optional(default=False)
@@ -1010,21 +998,21 @@ class Sometimes(Augmenter):
     Let p be the percent of images to augment.
     Let I be the input images.
     Then (on average) p percent of all images in I will be augmented using C.
-
-    Example:
-        aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3))
-    when calling aug.augment_images(...), only (on average) 50 percent of
-    all images will be blurred.
-
-    Example:
-        aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3), iaa.Fliplr(1.0))
-    when calling aug.augment_images(...), (on average) 50 percent of all images
-    will be blurred, the other (again, on average) 50 percent will be
-    horizontally flipped.
     """
 
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
         """Instantiate a new Sometimes instance.
+
+        Example:
+            aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3))
+        when calling aug.augment_images(...), only (on average) 50 percent of
+        all images will be blurred.
+
+        Example:
+            aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3), iaa.Fliplr(1.0))
+        when calling aug.augment_images(...), (on average) 50 percent of all images
+        will be blurred, the other (again, on average) 50 percent will be
+        horizontally flipped.
 
         Parameters
         ----------
@@ -1044,7 +1032,7 @@ class Sometimes(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1204,7 +1192,7 @@ class WithChannels(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1297,7 +1285,7 @@ class Noop(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1344,7 +1332,7 @@ class Lambda(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1394,7 +1382,7 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
     name : string, optional(default=None)
         See Augmenter.__init__()
 
-    deterministic : bool, optional (default=False)
+    deterministic : bool, optional(default=False)
         See Augmenter.__init__()
 
     random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1458,7 +1446,7 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
     name : string, optional(default=None)
         See Augmenter.__init__()
 
-    deterministic : bool, optional (default=False)
+    deterministic : bool, optional(default=False)
         See Augmenter.__init__()
 
     random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1601,7 +1589,7 @@ class Crop(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1845,7 +1833,7 @@ class Fliplr(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1904,7 +1892,7 @@ class Flipud(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -1999,7 +1987,7 @@ class Superpixels(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -2182,7 +2170,7 @@ class ChangeColorspace(Augmenter):
         name : string, optional(default=None)
             See Augmenter.__init__()
 
-        deterministic : bool, optional (default=False)
+        deterministic : bool, optional(default=False)
             See Augmenter.__init__()
 
         random_state : int or np.random.RandomState or None, optional(default=None)
@@ -2215,6 +2203,8 @@ class ChangeColorspace(Augmenter):
         self.from_colorspace = from_colorspace
         assert self.from_colorspace in ChangeColorspace.COLORSPACES
         assert from_colorspace != ChangeColorspace.GRAY
+
+        self.eps = 0.001 # epsilon value to check if alpha is close to 1.0 or 0.0
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -2260,12 +2250,15 @@ class ChangeColorspace(Augmenter):
                 else:
                     img_to_cs = np.clip(img_to_cs * 255, 0, 255).astype(np.uint8)
 
+                # for grayscale: covnert from (H, W) to (H, W, 3)
                 if len(img_to_cs.shape) == 2:
                     img_to_cs = img_to_cs[:, :, np.newaxis]
                     img_to_cs = np.tile(img_to_cs, (1, 1, 3))
 
-                if alpha == 1:
+                if alpha >= (1 - self.eps):
                     result[i] = img_to_cs
+                elif alpha <= self.eps:
+                    result[i] = image
                 else:
                     result[i] = (alpha * img_to_cs + (1 - alpha) * image).astype(np.uint8)
 
@@ -2279,33 +2272,83 @@ class ChangeColorspace(Augmenter):
 
 # TODO tests
 def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
+    """Augmenter to convert images to their grayscale versions.
+
+    NOTE: Number of output channels is still 3, i.e. this augmenter just
+    "removes" color.
+
+    Example:
+        aug = iaa.Grayscale(alpha=1.0)
+    creates an augmenter that turns images to their grayscale versions.
+
+    Example:
+        aug = iaa.Grayscale(alpha=(0.0, 1.0))
+    creates an augmenter that turns images to their grayscale versions with
+    an alpha value in the range 0 <= alpha <= 1. An alpha value of 0.5 would
+    mean, that the output image is 50 percent of the input image and 50
+    percent of the grayscale image (i.e. 50 percent of color removed).
+
+    Parameters
+    ----------
+    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+        The alpha value of the grayscale image when overlayed over the
+        old image. A value close to 1.0 means, that mostly the new grayscale
+        image is visible. A value close to 0.0 means, that mostly the
+        old image is visible. Use a tuple (a, b) to use a random value
+        x with a <= x <= b as the alpha value per image.
+
+    from_colorspace : string, optional(default="RGB")
+        The source colorspace (of the input images).
+        Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+
+    name : string, optional(default=None)
+        See Augmenter.__init__()
+
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
+    """
     return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)
 
 
 class GaussianBlur(Augmenter):
-    """Apply GaussianBlur to input images
+    """Blur an image using a gaussian kernel."""
 
-    Parameters
-    ----------
-    sigma : float, list/iterable of length 2 of floats or StochasticParameter
-        variance parameter.
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
+        """Creates a new GaussianBlur instance.
+
+        Example:
+            aug = iaa.GaussianBlur(sigma=1.5)
+        blurs all images using a gaussian kernel with standard deviation 1.5.
+
+        Example:
+            aug = iaa.GaussianBlur(sigma=(0.0, 3.0))
+        blurs images using a gaussian kernel with a random standard deviation
+        from the range 0.0 <= x <= 3.0. The value is sampled per image.
+
+        Parameters
+        ----------
+        sigma : float or tuple of two floats or StochasticParameter
+            Standard deviation of the gaussian kernel.
+            Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
+            If a single float, that value will always be used as the standard
+              deviation.
+            If a tuple (a, b), then a random value from the range a <= x <= b
+              will be picked per image.
+            If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(sigma):
@@ -2318,6 +2361,8 @@ class GaussianBlur(Augmenter):
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
 
+        self.eps = 0.001 # epsilon value to estimate whether sigma is above 0
+
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
@@ -2325,7 +2370,11 @@ class GaussianBlur(Augmenter):
         for i in sm.xrange(nb_images):
             nb_channels = images[i].shape[2]
             sig = samples[i]
-            if sig > 0:
+            if sig > 0 + self.eps:
+                # note that while gaussian_filter can be applied to all channels
+                # at the same time, that should not be done here, because then
+                # the blurring would also happen across channels (e.g. red
+                # values might be mixed with blue values in RGB)
                 for channel in sm.xrange(nb_channels):
                     result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
@@ -2338,41 +2387,64 @@ class GaussianBlur(Augmenter):
 
 # TODO tests
 class Convolve(Augmenter):
-    """Apply a Convolution to input images.
+    """Apply a Convolution to input images."""
 
-    Parameters
-    ----------
-    matrix : None, 2D numpy array, StochasticParameter, function
-        The weight matrix of the convolution kernel to apply.
-        If None, a unit matrix will be used that does not change the image.
-        If a numpy array, that array will be used for all images and channels.
-        If a stochastic parameter, C new matrices will be generated
-        via param.draw_samples(C) for each image, where C is the number of
-        channels.
-        If a function, the parameter will be called for each image
-        via param(C, random_state). The function must return C matrices,
-        one per channel.
-
-    name : TODO
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
     def __init__(self, matrix=None, name=None, deterministic=False, random_state=None):
+        """Instantiate a new Convolve augmenter.
+
+        Example:
+            matrix = np.array([[0, -1, 0],
+                               [-1, 4, -1],
+                               [0, -1, 0]])
+            aug = iaa.Convolve(matrix=matrix)
+        convolves all input images with the kernel shown in the `matrix`
+        variable.
+
+        Example:
+            def gen_matrix(image, nb_channels, random_state):
+                matrix_A = np.array([[0, -1, 0],
+                                     [-1, 4, -1],
+                                     [0, -1, 0]])
+                matrix_B = np.array([[0, 1, 0],
+                                     [1, -4, 1],
+                                     [0, 1, 0]])
+                if image.shape[0] % 2 == 0:
+                    return matrix_A
+                else:
+                    return matrix_B
+            aug = iaa.Convolve(matrix=gen_matrix)
+        convolves images that have an even height with matrix A and images
+        with an odd height with matrix B.
+
+        Parameters
+        ----------
+        matrix : None or (H, W) ndarray or StochasticParameter or callable, optional(default=None)
+            The weight matrix of the convolution kernel to apply.
+            If None, the input images will not be changed.
+            If a numpy array, that array will be used for all images and
+              channels as the kernel.
+            If a stochastic parameter, C new matrices will be generated
+              via param.draw_samples(C) for each image, where C is the number
+              of channels.
+            If a callable, the parameter will be called for each image
+              via param(image, C, random_state). The function must return C
+              matrices, one per channel. It may return None, then that channel
+              will not be changed.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(Convolve, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if matrix is None:
-            self.matrix = np.array([[1]], dtype=np.float32)
-            self.matrix_type = "constant"
+            self.matrix = None #np.array([[1]], dtype=np.float32)
+            self.matrix_type = "None"
         elif ia.is_np_array(matrix):
             assert len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape)
             self.matrix = matrix
@@ -2391,18 +2463,22 @@ class Convolve(Augmenter):
         nb_images = len(images)
         for i in sm.xrange(nb_images):
             height, width, nb_channels = images[i].shape
-            if self.matrix_type == "constant":
+            if self.matrix_type == "None":
+                matrices = [None] * nb_channels
+            elif self.matrix_type == "constant":
                 matrices = [self.matrix] * nb_channels
             elif self.matrix_type == "stochastic":
                 matrices = self.matrix.draw_samples((nb_channels), random_state=random_state)
             elif self.matrix_type == "function":
-                matrices = self.matrix(nb_channels, random_state)
+                matrices = self.matrix(images[i], nb_channels, random_state)
+                assert len(matrices) == nb_channels
             else:
                 raise Exception("Invalid matrix type")
 
             for channel in sm.xrange(nb_channels):
-                #result[i][..., channel] = ndimage.convolve(result[i][..., channel], matrices[channel], mode='constant', cval=0.0)
-                result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
+                if matrices[channel] is not None:
+                    # ndimage.convolve caused problems here
+                    result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
         result = np.clip(result, 0, 255).astype(np.uint8)
         return result
 
@@ -2414,27 +2490,50 @@ class Convolve(Augmenter):
         return [self.matrix, self.matrix_type]
 
 # TODO tests
-"""Creates an augmenter that sharpens images.
+def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=None):
+    """Creates an augmenter that sharpens images.
 
-Parameters
-----------
-alpha : int, float, tuple of two ints/floats or StochasticParameter
-    Visibility of the sharpened image. At 0, only the original image is visible,
-    at 1.0 only its sharpened version is visible.
-strength : int, float, tuple of two ints/floats or StochasticParameter, optional
-    Parameter that controls the strength of the sharpening.
-    Sane values are somewhere in the range (0.5, 2).
-    The value 0 results in an edge map. Values higher than 1 create bright images.
-    Default value is 1.
-name : TODO
-deterministic : TODO
-random_state : TODO
+    Example:
+        aug = Sharpen(alpha=(0.0, 1.0))
+    sharpens input images and overlays the sharpened image by a variable
+    amount over the old image.
 
-Example:
-    aug = Sharpen(alpha=(0.0, 1.0), strength=(0.75, 2.0))
-    image_aug = aug.augment_image(image)
-"""
-def Sharpen(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
+    Example:
+        aug = Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0))
+    sharpens input images with a variable lightness in the range
+    0.75 <= x <= 2.0 and with a variable alpha.
+
+    Parameters
+    ----------
+    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+        Visibility of the sharpened image. At 0, only the original image is
+        visible, at 1.0 only its sharpened version is visible.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    lightness : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1)
+        Parameter that controls the lightness/brightness of the sharped image.
+        Sane values are somewhere in the range (0.5, 2).
+        The value 0 results in an edge map. Values higher than 1 create bright
+        images. Default value is 1.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    name : string, optional(default=None)
+        See Augmenter.__init__()
+
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
+    """
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
@@ -2455,7 +2554,7 @@ def Sharpen(alpha=0, strength=1, name=None, deterministic=False, random_state=No
     else:
         raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
 
-    def create_matrices(nb_channels, random_state_func):
+    def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         assert 0 <= alpha_sample <= 1.0
         strength_sample = strength_param.draw_sample(random_state=random_state_func)
@@ -2475,28 +2574,48 @@ def Sharpen(alpha=0, strength=1, name=None, deterministic=False, random_state=No
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO tests
-"""Creates an augmenter that embosses an image.
-The embossed version pronounces highlights and shadows,
-letting the image look as if it was recreated on a metal plate ("embossed").
-
-Parameters
-----------
-alpha : int, float, tuple of two ints/floats or StochasticParameter
-    Visibility of the embossed image. At 0, only the original image is visible,
-    at 1.0 only the embossed image is visible.
-strength : int, float, tuple of two ints/floats or StochasticParameter, optional
-    Parameter that controls the strength of the embossing.
-    Sane values are somewhere in the range (0, 2) with 1 being the standard
-    embossing effect. Default value is 1.
-name : TODO
-deterministic : TODO
-random_state : TODO
-
-Example:
-    aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
-    image_aug = aug.augment_image(image)
-"""
 def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
+    """Creates an augmenter that embosses an image.
+    The embossed version pronounces highlights and shadows,
+    letting the image look as if it was recreated on a metal plate ("embossed").
+
+    Example:
+        aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
+    embosses an image with a variable strength in the range 0.5 <= x <= 1.5
+    and overlays the result with a variable alpha in the range 0.0 <= a <= 1.0
+    over the old image.
+
+    Parameters
+    ----------
+    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+        Visibility of the sharpened image. At 0, only the original image is
+        visible, at 1.0 only its sharpened version is visible.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    strength : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1)
+        Parameter that controls the strength of the embossing.
+        Sane values are somewhere in the range (0, 2) with 1 being the standard
+        embossing effect. Default value is 1.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    name : string, optional(default=None)
+        See Augmenter.__init__()
+
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
+    """
+
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
@@ -2517,7 +2636,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     else:
         raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
 
-    def create_matrices(nb_channels, random_state_func):
+    def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         assert 0 <= alpha_sample <= 1.0
         strength_sample = strength_param.draw_sample(random_state=random_state_func)
@@ -2537,22 +2656,34 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO tests
-"""Creates an augmenter that pronounces all edges in the image.
-
-Parameters
-----------
-alpha : int, float, tuple of two ints/floats or StochasticParameter
-    Visibility of the edge map. At 0, only the original image is visible,
-    at 1.0 only the edge map is visible.
-name : TODO
-deterministic : TODO
-random_state : TODO
-
-Example:
-    aug = EdgeDetect(alpha=(0.0, 1.0))
-    image_aug = aug.augment_image(image)
-"""
 def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
+    """Creates an augmenter that pronounces all edges in images.
+
+    Example:
+        aug = EdgeDetect(alpha=(0.0, 1.0))
+    detects edges in an image  and overlays the result with a variable alpha
+    in the range 0.0 <= a <= 1.0 over the old image.
+
+    Parameters
+    ----------
+    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+        Visibility of the sharpened image. At 0, only the original image is
+        visible, at 1.0 only its sharpened version is visible.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    name : string, optional(default=None)
+        See Augmenter.__init__()
+
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
+    """
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
@@ -2563,7 +2694,7 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     else:
         raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
 
-    def create_matrices(nb_channels, random_state_func):
+    def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         assert 0 <= alpha_sample <= 1.0
         matrix_nochange = np.array([
@@ -2582,26 +2713,63 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO tests
-"""Creates an augmenter that pronounces edges that have certain directions.
 
-Parameters
-----------
-alpha : int, float, tuple of two ints/floats or StochasticParameter
-    Visibility of the edge map. At 0, only the original image is visible,
-    at 1.0 only the edge map is visible.
-direction : int, float, tuple of two ints/floats or StochasticParameter, optional
-    Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
-    represents 360 degrees (both clockwise).
-    Default value is (0.0, 1.0), i.e. pick a random angle per image.
-name : TODO
-deterministic : TODO
-random_state : TODO
+def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=False, random_state=None):
+    """Creates an augmenter that detects edges that have certain directions.
 
-Example:
-    aug = DirectedEdgeDetect(alpha=(0.0, 1.0), direction=(0.0, 1.0))
-    image_aug = aug.augment_image(image)
-"""
-def DirectedEdgeDetect(alpha=0, direction=(0, 1), name=None, deterministic=False, random_state=None):
+    Example:
+        aug = EdgeDetect(alpha=1.0, direction=0)
+    turns input images into edge images in which edges are detected from
+    top side of the image (i.e. the top sides of horizontal edges are
+    added to the output).
+
+    Example:
+        aug = EdgeDetect(alpha=1.0, direction=90/360)
+    same as before, but detecting edges from the right (right side of each
+    vertical edge).
+
+    Example:
+        aug = EdgeDetect(alpha=1.0, direction=(0.0, 1.0))
+    same as before, but detecting edges from a variable direction (anything
+    between 0 and 1.0, i.e. 0 degrees and 360 degrees, starting from the
+    top and moving clockwise).
+
+    Example:
+        aug = EdgeDetect(alpha=(0.0, 0.3), direction=0)
+    generates edge images (edges detected from the top) and overlays them
+    with the input images by a variable amount between 0 and 30 percent
+    (e.g. for 0.3 then 0.7*old_image + 0.3*edge_image).
+
+    Parameters
+    ----------
+    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+        Visibility of the sharpened image. At 0, only the original image is
+        visible, at 1.0 only its sharpened version is visible.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    direction : int or float or tuple of two ints/floats or StochasticParameter, optional(default=(0.0, 1.0))
+        Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
+        represents 360 degrees (both clockwise, starting at the top).
+        Default value is (0.0, 1.0), i.e. pick a random angle per image.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
+
+    name : string, optional(default=None)
+        See Augmenter.__init__()
+
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
+    """
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
@@ -2622,7 +2790,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0, 1), name=None, deterministic=False
     else:
         raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(direction),))
 
-    def create_matrices(nb_channels, random_state_func):
+    def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         assert 0 <= alpha_sample <= 1.0
         direction_sample = direction_param.draw_sample(random_state=random_state_func)
