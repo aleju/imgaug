@@ -2844,34 +2844,272 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
+# TODO tests
+class Add(Augmenter):
+    """Add a value to all pixels in an image."""
+
+    def __init__(self, value=0, per_channel=False, name=None,
+                 deterministic=False, random_state=None):
+        """Creates an instance of the Add augmenter.
+
+        Example:
+            aug = iaa.Add(10)
+        always adds a value of 10 to all pixels in the image.
+
+        Example:
+            aug = iaa.Add((-10, 10))
+        adds a value from the discrete range [-10 .. 10] to all pixels of
+        the input images. The exact value is sampled per image.
+
+        Example:
+            aug = iaa.Add((-10, 10), per_channel=True)
+        adds a value from the discrete range [-10 .. 10] to all pixels of
+        the input images. The exact value is sampled per image AND channel,
+        i.e. to a red-channel it might add 5 while subtracting 7 from the
+        blue channel of the same image.
+
+        Example:
+            aug = iaa.Add((-10, 10), per_channel=0.5)
+        same as previous example, but the per_channel feature is only active
+        for 50 percent of all images.
+
+        Parameters
+        ----------
+        value : int or iterable of two ints or StochasticParameter, optional(default=0)
+            Value to add to all pixels.
+            If an int, then that value will be used for all images.
+            If a tuple (a, b), then a value from the discrete range [a .. b]
+              will be used.
+            If a StochasticParameter, then a value will be sampled per image
+              from that parameter.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same value for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images
+            per_channel will be treated as True, otherwise as False.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_integer(value):
+            assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
+            self.value = Deterministic(value)
+        elif ia.is_iterable(value):
+            assert len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),)
+            self.value = DiscreteUniform(value[0], value[1])
+        elif isinstance(value, StochasticParameter):
+            self.value = value
+        else:
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            image = images[i].astype(np.int32)
+            rs_image = ia.new_random_state(seeds[i])
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = image.shape[2]
+                samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
+                for c, sample in enumerate(samples):
+                    assert -255 <= sample <= 255
+                    image[..., c] += sample
+                np.clip(image, 0, 255, out=image)
+                result[i] = image.astype(np.uint8)
+            else:
+                sample = self.value.draw_sample(random_state=rs_image)
+                assert -255 <= sample <= 255
+                image += sample
+                np.clip(image, 0, 255, out=image)
+                result[i] = image.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.value]
+
+# TODO tests
+class AddElementwise(Augmenter):
+    """Add values to the pixels of images with possibly different values
+    for neighbouring pixels.
+
+    While the Add Augmenter adds a constant value per image, this one can
+    add different values (sampled per pixel).
+    """
+
+    def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
+        """Create a new AddElementwise instance.
+
+        Example:
+            aug = iaa.AddElementwise(10)
+        always adds a value of 10 to all pixels in the image.
+
+        Example:
+            aug = iaa.AddElementwise((-10, 10))
+        samples per pixel a value from the discrete range [-10 .. 10] and
+        adds that value to the pixel.
+
+        Example:
+            aug = iaa.AddElementwise((-10, 10), per_channel=True)
+        samples per pixel _and channel_ a value from the discrete
+        range [-10 .. 10] ands adds it to the pixel's value. Therefore,
+        added values may differ between channels of the same pixel.
+
+        Example:
+            aug = iaa.AddElementwise((-10, 10), per_channel=0.5)
+        same as previous example, but the per_channel feature is only active
+        for 50 percent of all images.
+
+        Parameters
+        ----------
+        value : int or iterable of two ints or StochasticParameter, optional(default=0)
+            Value to add to the pixels.
+            If an int, then that value will be used for all images.
+            If a tuple (a, b), then values from the discrete range [a .. b]
+              will be sampled.
+            If a StochasticParameter, then values will be sampled per pixel
+              (and possibly channel) from that parameter.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same value for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images
+            per_channel will be treated as True, otherwise as False.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_integer(value):
+            assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
+            self.value = Deterministic(value)
+        elif ia.is_iterable(value):
+            assert len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),)
+            self.value = DiscreteUniform(value[0], value[1])
+        elif isinstance(value, StochasticParameter):
+            self.value = value
+        else:
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            seed = seeds[i]
+            image = images[i].astype(np.int32)
+            height, width, nb_channels = image.shape
+            rs_image = ia.new_random_state(seed)
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image)
+            else:
+                samples = self.value.draw_samples((height, width, 1), random_state=rs_image)
+                samples = np.tile(samples, (1, 1, nb_channels))
+            after_add = image + samples
+            np.clip(after_add, 0, 255, out=after_add)
+            result[i] = after_add.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.value]
+
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Add Random Gaussian Noise to images
+    """Add gaussian noise (aka white noise) to images.
+
+    Example:
+        aug = iaa.GaussianNoise(scale=0.1*255)
+    adds gaussian noise from the distribution N(0, 0.1*255) to images.
+
+    Example:
+        aug = iaa.GaussianNoise(scale=(0, 0.1*255))
+    adds gaussian noise from the distribution N(0, s) to images,
+    where s is sampled per image from the range 0 <= s <= 0.1*255.
+
+    Example:
+        aug = iaa.GaussianNoise(scale=0.1*255, per_channel=True)
+    adds gaussian noise from the distribution N(0, 0.1*255) to images,
+    where the noise value is different per pixel _and_ channel (e.g. a
+    different one for red, green and blue channels for the same pixel).
+
+    Example:
+        aug = iaa.GaussianNoise(scale=0.1*255, per_channel=0.5)
+    adds gaussian noise from the distribution N(0, 0.1*255) to images,
+    where the noise value is sometimes (50 percent of all cases) the same
+    per pixel for all channels and sometimes different (other 50 percent).
 
     Parameters
     ----------
-    loc : integer/ optional(default=0)
-        # TODO
+    loc : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
+        Mean of the normal distribution that generates the noise.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
 
-    scale : integer/optional(default=0)
-        # TODO
+    scale : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
+        Standard deviation of the normal distribution that generates the noise.
+        If this value gets too close to zero, the image will not be changed.
+        If an int or float, exactly that value will be used.
+        If a tuple (a, b), a random value from the range a <= x <= b will be
+          sampled per image.
+        If a StochasticParameter, a value will be sampled from the parameter
+          per image.
 
-    per_channel : boolean, optional(default=False)
-        Apply transformation in a per channel manner
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same noise value per pixel for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images per_channel
+        will be treated as True, otherwise as False.
 
     name : string, optional(default=None)
-        name of the instance
+        See Augmenter.__init__()
 
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
 
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
     """
     if ia.is_single_number(loc):
         loc2 = Deterministic(loc)
@@ -2904,35 +3142,258 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 #    pass
 
 
+class Multiply(Augmenter):
+    """Multiply all pixels in an image with a specific value.
+
+    This augmenter can be used to make images lighter or darker."""
+
+    def __init__(self, mul=1.0, per_channel=False, name=None,
+                 deterministic=False, random_state=None):
+        """Create a new Multiply instance.
+
+        Example:
+            aug = iaa.Multiply(2.0)
+        would multiply all images by a factor of 2, making the images
+        significantly brighter.
+
+        Example:
+            aug = iaa.Multiply((0.5, 1.5))
+        would multiply images by a random value from the range 0.5 <= x <= 1.5,
+        making some images darker and others brighter.
+
+        Parameters
+        ----------
+        mul : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+            The value by which to multiply the pixel values in the image.
+            If a float, then that value will always be used.
+            If a tuple (a, b), then a value from the range a <= x <= b will
+              be sampled per image and used for all pixels.
+            If a StochasticParameter, then that parameter will be used to
+              sample a new value per image.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same multiplier per pixel for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images per_channel
+            will be treated as True, otherwise as False.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(mul):
+            assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
+            self.mul = Deterministic(mul)
+        elif ia.is_iterable(mul):
+            assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),)
+            self.mul = Uniform(mul[0], mul[1])
+        elif isinstance(mul, StochasticParameter):
+            self.mul = mul
+        else:
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            image = images[i].astype(np.float32)
+            rs_image = ia.new_random_state(seeds[i])
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = image.shape[2]
+                samples = self.mul.draw_samples((nb_channels,), random_state=rs_image)
+                for c, sample in enumerate(samples):
+                    assert sample >= 0
+                    image[..., c] *= sample
+                np.clip(image, 0, 255, out=image)
+                result[i] = image.astype(np.uint8)
+            else:
+                sample = self.mul.draw_sample(random_state=rs_image)
+                assert sample >= 0
+                image *= sample
+                np.clip(image, 0, 255, out=image)
+                result[i] = image.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.mul]
+
+
+# TODO tests
+class MultiplyElementwise(Augmenter):
+    """Multiply values of pixels with possibly different values
+    for neighbouring pixels.
+
+    While the Multiply Augmenter uses a constant multiplier per image,
+    this one can use different multipliers per pixel."""
+
+    def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
+        """Create a new MultiplyElementwise instance.
+
+        Example:
+            aug = iaa.MultiplyElementwise(2.0)
+        multiply all images by a factor of 2.0, making them significantly
+        bighter.
+
+        Example:
+            aug = iaa.MultiplyElementwise((0.5, 1.5))
+        samples per pixel a value from the range 0.5 <= x <= 1.5 and
+        multiplies the pixel with that value.
+
+        Example:
+            aug = iaa.MultiplyElementwise((0.5, 1.5), per_channel=True)
+        samples per pixel _and channel_ a value from the range
+        0.5 <= x <= 1.5 ands multiplies the pixel by that value. Therefore,
+        added multipliers may differ between channels of the same pixel.
+
+        Example:
+            aug = iaa.AddElementwise((0.5, 1.5), per_channel=0.5)
+        same as previous example, but the per_channel feature is only active
+        for 50 percent of all images.
+
+        Parameters
+        ----------
+        mul : float or iterable of two floats or StochasticParameter, optional(default=1.0)
+            The value by which to multiply the pixel values in the image.
+            If a float, then that value will always be used.
+            If a tuple (a, b), then a value from the range a <= x <= b will
+              be sampled per image and pixel.
+            If a StochasticParameter, then that parameter will be used to
+              sample a new value per image and pixel.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same value for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images
+            per_channel will be treated as True, otherwise as False.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(mul):
+            assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
+            self.mul = Deterministic(mul)
+        elif ia.is_iterable(mul):
+            assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(mul)),)
+            self.mul = Uniform(mul[0], mul[1])
+        elif isinstance(mul, StochasticParameter):
+            self.mul = mul
+        else:
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            seed = seeds[i]
+            image = images[i].astype(np.float32)
+            height, width, nb_channels = image.shape
+            rs_image = ia.new_random_state(seed)
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                samples = self.mul.draw_samples((height, width, nb_channels), random_state=rs_image)
+            else:
+                samples = self.mul.draw_samples((height, width, 1), random_state=rs_image)
+                samples = np.tile(samples, (1, 1, nb_channels))
+            after_multiply = image * samples
+            np.clip(after_multiply, 0, 255, out=after_multiply)
+            result[i] = after_multiply.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.mul]
+
 def Dropout(p=0, per_channel=False, name=None, deterministic=False,
             random_state=None):
-    """Dropout (Blacken) certain fraction of pixels
+    """Create an augmenter to set a certain fraction of pixels in images to zero.
+
+    Examples:
+        aug = iaa.Dropout(0.02)
+    drops 2 percent of all pixels.
+
+    Examples:
+        aug = iaa.Dropout((0.0, 0.05))
+    drops in each image a random fraction of all pixels, where the fraction
+    is in the range 0.0 <= x <= 0.05.
+
+    Examples:
+        aug = iaa.Dropout(0.02, per_channel=True)
+    drops 2 percent of all pixels in a channel-wise fashion, i.e. it is unlikely
+    for any pixel to have all channels set to zero (black pixels).
+
+    Examples:
+        aug = iaa.Dropout(0.02, per_channel=0.5)
+    same as previous example, but the per_channel feature is only active
+    for 50 percent of all images.
 
     Parameters
     ----------
-    p : float, iterable of len 2, StochasticParameter optional(default=0)
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        The probability of any pixel being dropped (i.e. set to zero).
+        If a float, then that value will be used for all pixels. A value of 1.0
+          would mean, that all pixels will be dropped. A value of 0.0 would
+          lead to no pixels being dropped.
+        If a tuple (a, b), then a value p will be sampled from the
+          range a <= p <= b per image and be used as the pixel's dropout
+          probability.
+        If a StochasticParameter, then this parameter will be used to determine
+          per pixel whether it should be dropped (sampled value of 0)
+          or shouldn't (sampled value of 1).
 
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
+    per_channel : bool, optional(default=False)
+        Whether to use the same value (is dropped / is not dropped)
+        for all channels of a pixel (False) or to sample a new value for each
+        channel (True).
+        If this value is a float p, then for p percent of all images
+        per_channel will be treated as True, otherwise as False.
 
     name : string, optional(default=None)
-        name of the instance
+        See Augmenter.__init__()
 
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
+    deterministic : bool, optional(default=False)
+        See Augmenter.__init__()
 
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-
-    Returns
-    -------
-    # TODO
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
     """
     if ia.is_single_number(p):
         p2 = Binomial(1 - p)
@@ -2957,34 +3418,47 @@ class Invert(Augmenter):
 
     Let M be the maximum value possible, m the minimum value possible,
     v a value. Then the distance of v to m is d=abs(v-m) and the new value
-    is given by v'=M-d.
+    is given by v'=M-d."""
 
-    Parameters
-    ----------
-    min_value : TODO
-
-    max_value : TODO
-
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
     def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
                  deterministic=False, random_state=None):
+        """Create a new Invert instance.
+
+
+
+        Parameters
+        ----------
+        p : float or StochasticParameter, optional(default=0)
+            The probability of an image being inverted.
+            If a float, then that probability will be used for all images.
+            If a StochasticParameter, then that parameter will queried per
+              image and is expected too return values in the range [0.0, 1.0],
+              where values >0.5 mean that the image/channel is supposed to be
+              inverted.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same value for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images
+            per_channel will be treated as True, otherwise as False.
+
+        min_value : int or float, optional(default=0)
+            Minimum of the range of possible pixel values. For uint8 (0-255)
+            images, this should be 0.
+
+        max_value : int or float, optional(default=255)
+            Maximum of the range of possible pixel values. For uint8 (0-255)
+            images, this should be 255.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p):
@@ -3041,298 +3515,38 @@ class Invert(Augmenter):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
 # TODO tests
-class Add(Augmenter):
-    """Augmenter that Adds a value elementwise to the pixels of the image
-
-    Parameters
-    ----------
-    value : integer, iterable of len 2, StochasticParameter
-        value to be added to the pixels/elements
-
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
-    def __init__(self, value=0, per_channel=False, name=None,
-                 deterministic=False, random_state=None):
-        super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-
-        if ia.is_single_integer(value):
-            assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
-            self.value = Deterministic(value)
-        elif ia.is_iterable(value):
-            assert len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),)
-            self.value = DiscreteUniform(value[0], value[1])
-        elif isinstance(value, StochasticParameter):
-            self.value = value
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.int32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = image.shape[2]
-                samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
-                for c, sample in enumerate(samples):
-                    assert -255 <= sample <= 255
-                    image[..., c] += sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
-            else:
-                sample = self.value.draw_sample(random_state=rs_image)
-                assert -255 <= sample <= 255
-                image += sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
-        return result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
-    def get_parameters(self):
-        return [self.value]
-
-# TODO tests
-class AddElementwise(Augmenter):
-    # TODO
-    def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
-        super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-
-        if ia.is_single_integer(value):
-            assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
-            self.value = Deterministic(value)
-        elif ia.is_iterable(value):
-            assert len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),)
-            self.value = DiscreteUniform(value[0], value[1])
-        elif isinstance(value, StochasticParameter):
-            self.value = value
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            seed = seeds[i]
-            image = images[i].astype(np.int32)
-            height, width, nb_channels = image.shape
-            rs_image = ia.new_random_state(seed)
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image)
-            else:
-                samples = self.value.draw_samples((height, width, 1), random_state=rs_image)
-                samples = np.tile(samples, (1, 1, nb_channels))
-            after_add = image + samples
-            np.clip(after_add, 0, 255, out=after_add)
-            result[i] = after_add.astype(np.uint8)
-        return result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
-    def get_parameters(self):
-        return [self.value]
-
-
-class Multiply(Augmenter):
-    """Augmenter that Multiplies a value elementwise to the pixels of the image
-
-    Parameters
-    ----------
-    value : integer, iterable of len 2, StochasticParameter
-        value to be added to the pixels/elements
-
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
-    def __init__(self, mul=1.0, per_channel=False, name=None,
-                 deterministic=False, random_state=None):
-        super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-
-        if ia.is_single_number(mul):
-            assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
-            self.mul = Deterministic(mul)
-        elif ia.is_iterable(mul):
-            assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),)
-            self.mul = Uniform(mul[0], mul[1])
-        elif isinstance(mul, StochasticParameter):
-            self.mul = mul
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.float32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = image.shape[2]
-                samples = self.mul.draw_samples((nb_channels,), random_state=rs_image)
-                for c, sample in enumerate(samples):
-                    assert sample >= 0
-                    image[..., c] *= sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
-            else:
-                sample = self.mul.draw_sample(random_state=rs_image)
-                assert sample >= 0
-                image *= sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
-        return result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
-    def get_parameters(self):
-        return [self.mul]
-
-
-# TODO tests
-class MultiplyElementwise(Augmenter):
-    # TODO
-    def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
-        super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-
-        if ia.is_single_number(mul):
-            assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
-            self.mul = Deterministic(mul)
-        elif ia.is_iterable(mul):
-            assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (str(len(mul)),)
-            self.mul = Uniform(mul[0], mul[1])
-        elif isinstance(mul, StochasticParameter):
-            self.mul = mul
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            seed = seeds[i]
-            image = images[i].astype(np.float32)
-            height, width, nb_channels = image.shape
-            rs_image = ia.new_random_state(seed)
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                samples = self.mul.draw_samples((height, width, nb_channels), random_state=rs_image)
-            else:
-                samples = self.mul.draw_samples((height, width, 1), random_state=rs_image)
-                samples = np.tile(samples, (1, 1, nb_channels))
-            after_multiply = image * samples
-            np.clip(after_multiply, 0, 255, out=after_multiply)
-            result[i] = after_multiply.astype(np.uint8)
-        return result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
-    def get_parameters(self):
-        return [self.mul]
-
-
-# TODO tests
 class ContrastNormalization(Augmenter):
-    """Augmenter class for ContrastNormalization
+    """Augmenter that changes the contrast of images."""
 
-    Parameters
-    ----------
-    alpha : float, iterable of len 2, StochasticParameter
-        Normalization parameter that governs the contrast ratio
-        of the resulting image
-
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
+        """Create a new ContrastNormalization instance.
+
+        Parameters
+        ----------
+        alpha : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+            Strength of the contrast normalization. Higher values than 1.0
+            lead to higher contrast, lower values decrease the contrast.
+            If a float, then that value will be used for all images.
+            If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the alpha value.
+            If a StochasticParameter, then this parameter will be used to
+              sample the alpha value per image.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same value for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images
+            per_channel will be treated as True, otherwise as False.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
@@ -3382,58 +3596,229 @@ class ContrastNormalization(Augmenter):
 
 
 class Affine(Augmenter):
-    """Augmenter for Affine Transformations
-    An Affine Transformation is a linear mapping that preserves points,
-    straight lines and planes
+    """Augmenter to apply affine transformations to images.
 
-    Parameters
-    ----------
-    scale : # TODO
+    This is mostly a wrapper around skimage's
+    [AffineTransform](http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.AffineTransform)
+    class and
+    [warp](http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.warp)
+    function.
 
-    translate_percent : # TODO
+    Affine transformations involve:
+        - Translation ("move" image on the x-/y-axis)
+        - Rotation
+        - Scaling ("zoom" in/out)
+        - Shear (move one side of the image, turning a square into a trapezoid)
 
-    translate_px : # TODO
+    All such transformations can create "new" pixels in the image without a
+    defined content, e.g. if the image is translated to the left, pixels
+    are created on the right.
+    A method has to be defined to deal with these pixel values. The
+    parameters `cval` and `mode` of this class deal with this.
 
-    rotate : # TODO
-
-    shear : # TODO
-
-    order : # TODO
-
-    cval : int or float or tuple or list or StochasticParameter, optional(default=0)
-        The constant value used for skimage's transform function.
-        This is the value used to fill up pixels in the result image that didn't
-        exist in the input image (e.g. when translating to the left, some new
-        pixels are created at the right).
-        If this is a single int or float, this value will be used (e.g. 0 results
-        in black pixels). If a tuple/list (a, b) is provided, the value
-        will be selected from the uniform range (a, b) per image.
-        If a StochasticParameter, a new value will be sampled from the parameter
-        per image.
-
-    mode : # TODO
-
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
+    Some transformations involve interpolations between several pixels
+    of the input image to generate output pixel values. The parameter `order`
+    deals with the method of interpolation used for this.
     """
+
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
                  name=None, deterministic=False, random_state=None):
+        """Create a new Affine instance.
+
+        Example:
+            aug = iaa.Affine(scale=2.0)
+        zooms all images by a factor of 2.
+
+        Example:
+            aug = iaa.Affine(translate_px=16)
+        translates all images on the x- and y-axis by 16 pixels (to the
+        right/top), fills up any new pixels with zero (black values).
+
+        Example:
+            aug = iaa.Affine(translate_percent=0.1)
+        translates all images on the x- and y-axis by 10 percent of their
+        width/height (to the right/top), fills up any new pixels with zero
+        (black values).
+
+        Example:
+            aug = iaa.Affine(rotate=35)
+        rotates all images by 35 degrees, fills up any new pixels with zero
+        (black values).
+
+        Example:
+            aug = iaa.Affine(shear=15)
+        rotates all images by 15 degrees, fills up any new pixels with zero
+        (black values).
+
+        Example:
+            aug = iaa.Affine(translate_px=(-16, 16))
+        translates all images on the x- and y-axis by a random value
+        between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
+        sampled once per image), fills up any new pixels with zero (black values).
+
+        Example:
+            aug = iaa.Affine(translate_px={"x": (-16, 16), "y": (-4, 4)})
+        translates all images on the x-axis by a random value
+        between -16 and 16 pixels (to the right) and on the y-axis by a
+        random value between -4 and 4 pixels to the top. Even if both ranges
+        were the same, both axis could use different samples.
+        Fills up any new pixels with zero (black values).
+
+        Example:
+            aug = iaa.Affine(scale=2.0, order=[0, 1])
+        same as previously, but uses (randomly) either nearest neighbour
+        interpolation or linear interpolation.
+
+        Example:
+            aug = iaa.Affine(translate_px=16, cval=(0, 255))
+        same as previously, but fills up any new pixels with a random
+        brightness (same for the whole image).
+
+        Example:
+            aug = iaa.Affine(translate_px=16, mode=["constant", "edge"])
+        same as previously, but fills up the new pixels in only 50 percent
+        of all images with black values. In the other 50 percent of all cases,
+        the value of the nearest edge is used.
+
+        Parameters
+        ----------
+        scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+            Scaling factor to use, where 1.0 represents no change and 0.5 is
+            zoomed out to 50 percent of the original size.
+            If a single float, then that value will be used for all images.
+            If a tuple (a, b), then a value will be sampled from the range
+              a <= x <= b per image. That value will be used identically for
+              both x- and y-axis.
+            If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`scale`). Using a dictionary allows to
+              set different values for the axis. If they are set to the same
+              ranges, different values may still be sampled per axis.
+
+        translate_percent : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+            Translation in percent relative to the image
+            height/width (x-translation, y-translation) to use,
+            where 0 represents no change and 0.5 is half of the image
+            height/width.
+            If a single float, then that value will be used for all images.
+            If a tuple (a, b), then a value will be sampled from the range
+              a <= x <= b per image. That percent value will be used identically
+              for both x- and y-axis.
+            If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`translate_percent`).
+              Using a dictionary allows to set different values for the axis.
+              If they are set to the same ranges, different values may still
+              be sampled per axis.
+
+        translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
+            Translation in pixels.
+            If a single int, then that value will be used for all images.
+            If a tuple (a, b), then a value will be sampled from the discrete
+              range [a .. b] per image. That number will be used identically
+              for both x- and y-axis.
+            If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`translate_px`).
+              Using a dictionary allows to set different values for the axis.
+              If they are set to the same ranges, different values may still
+              be sampled per axis.
+
+        rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+            Rotation in degrees (NOT radians), i.e. expected value range is
+            0 to 360.
+            If a float/int, then that value will be used for all images.
+            If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the rotation value.
+            If a StochasticParameter, then this parameter will be used to
+              sample the rotation value per image.
+
+        shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+            Shear in degrees (NOT radians), i.e. expected value range is
+            0 to 360.
+            If a float/int, then that value will be used for all images.
+            If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the rotation value.
+            If a StochasticParameter, then this parameter will be used to
+              sample the shear value per image.
+
+        order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
+            Interpolation order to use. Same meaning as in skimage:
+                0: Nearest-neighbor
+                1: Bi-linear (default)
+                2: Bi-quadratic (not recommended by skimage)
+                3: Bi-cubic
+                4: Bi-quartic
+                5: Bi-quintic
+            Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very slow.
+            If a single int, then that order will be used for all images.
+            If an iterable, then for each image a random value will be sampled
+              from that iterable (i.e. list of allowed order values).
+            If ia.ALL, then equivalant to list [0, 1, 3, 4, 5].
+            If StochasticParameter, then that parameter is queried per image
+              to sample the order value to use.
+
+        cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
+            The constant value used for skimage's transform function.
+            This is the value used to fill up pixels in the result image that
+            didn't exist in the input image (e.g. when translating to the left,
+            some new pixels are created at the right). Such a fill-up with a
+            constant value only happens, when `mode` is "constant".
+            For standard uint8 images (value range 0-255), this value may also
+            come from the range 0-255. It may be a float value, even for
+            integer image dtypes.
+            If this is a single int or float, then that value will be used
+              (e.g. 0 results in black pixels).
+            If a tuple (a, b), then a random value from the range a <= x <= b
+              is picked per image.
+            If ia.ALL, a value from the discrete range [0 .. 255] will be
+              sampled per image.
+            If a StochasticParameter, a new value will be sampled from the
+              parameter per image.
+
+        mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
+            Parameter that defines the handling of newly created pixels.
+            Same meaning as in skimage (and numpy.pad):
+                "constant": Pads with a constant value
+                "edge": Pads with the edge values of array
+                "symmetric": Pads with the reflection of the vector mirrored
+                    along the edge of the array.
+                "reflect": Pads with the reflection of the vector mirrored on
+                    the first and last values of the vector along each axis.
+                "wrap": Pads with the wrap of the vector along the axis.
+                    The first values are used to pad the end and the end values
+                    are used to pad the beginning.
+            If a single string, then that mode will be used for all images.
+            If a list of strings, then per image a random mode will be picked
+              from that list.
+            If ia.ALL, then a random mode from all possible modes will be
+              picked.
+            If StochasticParameter, then the mode will be sampled from that
+              parameter per image, i.e. it must return only the above mentioned
+              strings.
+
+        per_channel : bool, optional(default=False)
+            Whether to use the same value for all channels (False)
+            or to sample a new value for each channel (True).
+            If this value is a float p, then for p percent of all images
+            per_channel will be treated as True, otherwise as False.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         # Peformance:
