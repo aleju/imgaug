@@ -3804,12 +3804,6 @@ class Affine(Augmenter):
               parameter per image, i.e. it must return only the above mentioned
               strings.
 
-        per_channel : bool, optional(default=False)
-            Whether to use the same value for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images
-            per_channel will be treated as True, otherwise as False.
-
         name : string, optional(default=None)
             See Augmenter.__init__()
 
@@ -4127,43 +4121,62 @@ class Affine(Augmenter):
 # code partially from
 # https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 class ElasticTransformation(Augmenter):
-    """Augmenter class for ElasticTransformations
-    Elastic Transformations are transformations that allow non-rigid
-    transformations of images. In a sense, Elastic Transformations are opposite
-    of Affine Transforms, since Elastic Transformations can effect the lines,
-    planes and points of an image.
+    """Augmenter to transform images using elastic transformations/distortions.
 
-    Elastic Transformations can be used to create new, unseen images from given
-    images, and are used extensively in Machine Learning/Pattern Recognition.
+    Elastic transformations move pixels around based on displacement fields,
+    leading to distorted images.
+    See
+        Simard, Steinkraus and Platt
+        Best Practices for Convolutional Neural Networks applied to Visual
+        Document Analysis
+        in Proc. of the International Conference on Document Analysis and
+        Recognition, 2003
+    for a detailed explanation."""
 
-    Parameters
-    ----------
-    alpha : float, iterable of len 2, StochasticParameter
-        # TODO
-
-    sigma : float, iterable of len 2, StochasticParameter
-        # TODO
-
-    per_channel : boolean, optional(default=False)
-        apply transform in a per channel manner
-
-    name : string, optional(default=None)
-        name of the instance
-
-    deterministic : boolean, optional (default=False)
-        Whether random state will be saved before augmenting images
-        and then will be reset to the saved value post augmentation
-        use this parameter to obtain transformations in the EXACT order
-        everytime
-
-    random_state : int, RandomState instance or None, optional (default=None)
-        If int, random_state is the seed used by the random number generator;
-        If RandomState instance, random_state is the random number generator;
-        If None, the random number generator is the RandomState instance used
-        by `np.random`.
-    """
     def __init__(self, alpha=0, sigma=0, name=None, deterministic=False,
                  random_state=None):
+        """Create a new ElasticTransformation instance.
+
+        Example:
+            aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+        apply elastic transformations with a strength/alpha of 0.5 and
+        smoothness of 0.25 to all images.
+
+        Example:
+            aug = iaa.ElasticTransformation(alpha=(0.25, 3.0), sigma=0.25)
+        apply elastic transformations with a strength/alpha that comes
+        from the range 0.25 <= x <= 3.0 (randomly picked per image) and
+        smoothness of 0.25.
+
+        Parameters
+        ----------
+        alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
+            Strength of the distortion field. Higher values mean more "movement" of
+            pixels.
+            If float, then that value will be used for all images.
+            If tuple (a, b), then a random value from range a <= x <= b will be
+              sampled per image.
+            If StochasticParameter, then that parameter will be used to sample
+              a value per image.
+
+        sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
+            Standard deviation of the gaussian kernel used to smooth the distortion
+            fields.
+            If float, then that value will be used for all images.
+            If tuple (a, b), then a random value from range a <= x <= b will be
+              sampled per image.
+            If StochasticParameter, then that parameter will be used to sample
+              a value per image.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
@@ -4232,12 +4245,6 @@ class ElasticTransformation(Augmenter):
 
     @staticmethod
     def generate_indices(shape, alpha, sigma, random_state):
-        """Elastic deformation of images as described in [Simard2003]_.
-        .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
-           Convolutional Neural Networks applied to Visual Document Analysis", in
-           Proc. of the International Conference on Document Analysis and
-           Recognition, 2003.
-        """
         assert len(shape) == 2
 
         dx = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
