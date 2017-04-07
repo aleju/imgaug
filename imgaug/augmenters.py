@@ -1159,6 +1159,74 @@ class Sometimes(Augmenter):
     def __str__(self):
         return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
 
+
+class InColorspace(Augmenter):
+    """Select colorspace for augumentation.
+
+    This augumenter applies children augumenters with changing the colorspace to specified one.
+    See ~imgaug.augumenters.ChainerColorspace for detail.
+
+    Example:
+        aug = iaa.InColorspace(to_colorspace="HSV", from_colorspace="RGB",
+                               children=iaa.WithChannels(0, iaa.Add(10)))
+    This augmenter will add 10 to Hue value in HSV colorspace,
+    then return the colorspace to the original, RGB.
+    """
+
+    def __init__(self, to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
+        super(InColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.to_colorspace = to_colorspace
+        self.from_colorspace = from_colorspace
+
+        if children is None:
+            self.children = Sequential([], name="%s-then" % (self.name,))
+        elif ia.is_iterable(children):
+            self.children = Sequential(children, name="%s-then" % (self.name,))
+        elif isinstance(children, Augmenter):
+            self.children = Sequential([children], name="%s-then" % (self.name,))
+        else:
+            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+            result = ChangeColorspace(
+                to_colorspace=self.to_colorspace,
+                from_colorspace=self.from_colorspace,
+            ).augment_images(images=result)
+            result = self.children.augment_images(
+                images=result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+            result = ChangeColorspace(
+                to_colorspace=self.from_colorspace,
+                from_colorspace=self.to_colorspace,
+            ).augment_images(images=result)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def _to_deterministic(self):
+        aug = self.copy()
+        aug.children = aug.children.to_deterministic()
+        aug.deterministic = True
+        aug.random_state = ia.new_random_state()
+        return aug
+
+    def get_parameters(self):
+        return [self.channels]
+
+    def get_children_lists(self):
+        return [self.children]
+
+    def __str__(self):
+        return ("InColorspace(from_colorspace=%s, to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" %
+                (self.from_colorspace, self.to_colorspace, self.name, self.children, self.deterministic))
+
+
 class WithChannels(Augmenter):
     """Select channels to augment.
 
