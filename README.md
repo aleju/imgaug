@@ -84,7 +84,9 @@ seq = iaa.Sequential([
         iaa.Flipud(0.5), # vertically flip 50% of all images
         rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))), # convert images into their superpixel representation
         often(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
-        sometimes(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
+        rarely(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
+        rarely(iaa.AverageBlur(k=(2, 7))), # blur image using local means with kernel sizes between 2 and 7
+        rarely(iaa.MedianBlur(k=(3, 11))), # blur image using local medians with kernel sizes between 2 and 7
         sometimes(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5))), # sharpen images
         sometimes(iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0))), # emboss images
         # search either for all edges or for directed edges

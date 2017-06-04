@@ -22,16 +22,16 @@ TODOs
     - check if all get_parameters() implementations really return all parameters.
     - Add Alpha augmenter
     - Add SpatialDropout augmenter
-    - Add CoarseDropout shortcut function
     - Add Hue and Saturation augmenters
-    - Add uniform blurring augmenter
     - Add bilateral filter augmenter
-    - Add median filter augmenter
     - Add random blurring shortcut (either uniform or gaussian or bilateral or median)
     - Add Max-Pooling augmenter
     - Add edge pronounce augmenter
     - Add Cartoon augmenter
     - Add OilPainting augmenter
+    - Add NOf augmenter
+    - Add OneOf augmenter
+    - Remove unnecessary copy statements of images
 """
 
 @six.add_metaclass(ABCMeta)
@@ -2452,6 +2452,185 @@ class GaussianBlur(Augmenter):
 
     def get_parameters(self):
         return [self.sigma]
+
+class AverageBlur(Augmenter):
+    """Blur an image by computing simple means over neighbourhoods."""
+
+    def __init__(self, k=1, name=None, deterministic=False, random_state=None):
+        """Creates a new AverageBlur instance.
+
+        Example:
+            aug = iaa.AverageBlur(k=5)
+        blurs all images using a kernel size of 5x5.
+
+        Example:
+            aug = iaa.AverageBlur(k=(2, 5))
+        blurs images using a varying kernel size per image, which is sampled
+        from the interval [2..5].
+
+        Example:
+            aug = iaa.AverageBlur(k=((5, 7), (1, 3)))
+        blurs images using a varying kernel size per image, which's height
+        is sampled from the interval [5..7] and which's width is sampled
+        from [1..3].
+
+        Parameters
+        ----------
+        k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter
+            Kernel size.
+            If a single int, then that value will be used for the height and
+              width of the kernel.
+            If a tuple of two ints (a, b), then the kernel size will be sampled
+              from the interval [a..b].
+            If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the kernel
+              size for the nth image.
+            If a tuple (a, b), where either a or b is a tuple, then a and b
+              will be treated according to the rules above. This leads to
+              different values for height and width of the kernel.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(AverageBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.mode = "single"
+        if ia.is_single_number(k):
+            self.k = Deterministic(int(k))
+        elif ia.is_iterable(k):
+            assert len(k) == 2
+            if all([ia.is_single_number(ki) for ki in k]):
+                self.k = DiscreteUniform(int(k[0]), int(k[1]))
+            elif all([isinstance(ki, StochasticParameter) for ki in k]):
+                self.mode = "two"
+                self.k = (k[0], k[1])
+            else:
+                k_tuple = [None, None]
+                if ia.is_single_number(k[0]):
+                    k_tuple[0] = Deterministic(int(k[0]))
+                elif ia.is_iterable(k[0]) and all([ia.is_single_number(ki) for ki in k[0]]):
+                    k_tuple[0] = DiscreteUniform(int(k[0][0]), int(k[0][1]))
+                else:
+                    raise Exception("k[0] expected to be int or tuple of two ints, got %s" % (type(k[0]),))
+
+                if ia.is_single_number(k[1]):
+                    k_tuple[1] = Deterministic(int(k[1]))
+                elif ia.is_iterable(k[1]) and all([ia.is_single_number(ki) for ki in k[1]]):
+                    k_tuple[1] = DiscreteUniform(int(k[1][0]), int(k[1][1]))
+                else:
+                    raise Exception("k[1] expected to be int or tuple of two ints, got %s" % (type(k[1]),))
+
+                self.mode = "two"
+                self.k = k_tuple
+        elif isinstance(k, StochasticParameter):
+            self.k = k
+        else:
+            raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        if self.mode == "single":
+            samples = self.k.draw_samples((nb_images,), random_state=random_state)
+            samples = (samples, samples)
+        else:
+            samples = (
+                self.k[0].draw_samples((nb_images,), random_state=random_state),
+                self.k[1].draw_samples((nb_images,), random_state=random_state),
+            )
+        for i in sm.xrange(nb_images):
+            kh, kw = samples[0][i], samples[1][i]
+            if kh > 1 or kw > 1:
+                result[i] = cv2.blur(result[i], (kh, kw))
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.k]
+
+class MedianBlur(Augmenter):
+    """Blur an image by computing median values over neighbourhoods.
+
+    Median blurring can be used to remove small dirt from images.
+    At larger kernel sizes, its effects have some similarity with Superpixels.
+    """
+
+    def __init__(self, k=1, name=None, deterministic=False, random_state=None):
+        """Creates a new MedianBlur instance.
+
+        Example:
+            aug = iaa.MedianBlur(k=5)
+        blurs all images using a kernel size of 5x5.
+
+        Example:
+            aug = iaa.MedianBlur(k=(3, 7))
+        blurs images using a varying kernel size per image, which is
+        and odd value sampled from the interval [3..7], i.e. 3 or 5 or 7.
+
+        Parameters
+        ----------
+        k : int or tuple of two ints or StochasticParameter
+            Kernel size.
+            If a single int, then that value will be used for the height and
+              width of the kernel. Must be an odd value.
+            If a tuple of two ints (a, b), then the kernel size will be an
+              odd value sampled from the interval [a..b]. a and b must both
+              be odd values.
+            If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the kernel
+              size for the nth image. Expected to be discrete. If a sampled
+              value is not odd, then that value will be increased by 1.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.mode = "single"
+        if ia.is_single_number(k):
+            assert k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),)
+            self.k = Deterministic(int(k))
+        elif ia.is_iterable(k):
+            assert len(k) == 2
+            assert all([ia.is_single_number(ki) for ki in k])
+            assert k[0] % 2 != 0, "Expected k[0] to be odd, got %d. Add or subtract 1." % (int(k[0]),)
+            assert k[1] % 2 != 0, "Expected k[1] to be odd, got %d. Add or subtract 1." % (int(k[1]),)
+            self.k = DiscreteUniform(int(k[0]), int(k[1]))
+        elif isinstance(k, StochasticParameter):
+            self.k = k
+        else:
+            raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        samples = self.k.draw_samples((nb_images,), random_state=random_state)
+        for i in sm.xrange(nb_images):
+            ki = samples[i]
+            if ki > 1:
+                ki = ki + 1 if ki % 2 == 0 else ki
+                result[i] = cv2.medianBlur(result[i], ki)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.k]
 
 # TODO tests
 class Convolve(Augmenter):

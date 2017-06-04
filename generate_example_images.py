@@ -26,7 +26,9 @@ def draw_single_sequential_images():
             iaa.Flipud(0.5), # vertically flip 50% of all images
             rarely(iaa.Superpixels(p_replace=(0, 1.0), n_segments=(20, 200))), # convert images into their superpixel representation
             often(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
-            sometimes(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
+            rarely(iaa.GaussianBlur((0, 3.0))), # blur images with a sigma between 0 and 3.0
+            rarely(iaa.AverageBlur(k=(2, 7))), # blur image using local means with kernel sizes between 2 and 7
+            rarely(iaa.MedianBlur(k=(3, 11))), # blur image using local medians with kernel sizes between 2 and 7
             sometimes(iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5))), # sharpen images
             sometimes(iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0))), # emboss images
             # search either for all edges or for directed edges
@@ -36,7 +38,7 @@ def draw_single_sequential_images():
             )),
             often(iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5)), # add gaussian noise to images
             often(iaa.Dropout((0.0, 0.1), per_channel=0.5)), # randomly remove up to 10% of the pixels
-            often(iaa.CoarseDropout((0.0, 0.05), size_percent=(0.02, 0.25), per_channel=True)),
+            often(iaa.CoarseDropout((0.0, 0.05), size_percent=(0.02, 0.25), per_channel=0.5)),
             rarely(iaa.Invert(0.25, per_channel=True)), # invert color channels
             often(iaa.Add((-10, 10), per_channel=0.5)), # change brightness of images (by -10 to 10 of original value)
             often(iaa.Multiply((0.5, 1.5), per_channel=0.5)), # change brightness of images (50-150% of original value)
@@ -85,6 +87,8 @@ def draw_per_augmenter_images():
         ("Multiply", [("value=%.2f" % (val,), iaa.Multiply(val)) for val in [0.25, 0.5, 1.0, 1.25, 1.5]]),
         ("Multiply\n(per channel)", [("value=(%.2f, %.2f)" % (vals[0], vals[1],), iaa.Multiply(vals, per_channel=True)) for vals in [(0.15, 0.35), (0.4, 0.6), (0.9, 1.1), (1.15, 1.35), (1.4, 1.6)]]),
         ("GaussianBlur", [("sigma=%.2f" % (sigma,), iaa.GaussianBlur(sigma=sigma)) for sigma in [0.25, 0.50, 1.0, 2.0, 4.0]]),
+        ("AverageBlur", [("k=%d" % (k,), iaa.AverageBlur(k=k)) for k in [1, 3, 5, 7, 9]]),
+        ("MedianBlur", [("k=%d" % (k,), iaa.MedianBlur(k=k)) for k in [1, 3, 5, 7, 9]]),
         ("Sharpen\n(alpha=1)", [("lightness=%.2f" % (lightness,), iaa.Sharpen(alpha=1, lightness=lightness)) for lightness in [0, 0.5, 1.0, 1.5, 2.0]]),
         ("Emboss\n(alpha=1)", [("strength=%.2f" % (strength,), iaa.Emboss(alpha=1, strength=strength)) for strength in [0, 0.5, 1.0, 1.5, 2.0]]),
         ("EdgeDetect", [("alpha=%.2f" % (alpha,), iaa.EdgeDetect(alpha=alpha)) for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]]),
