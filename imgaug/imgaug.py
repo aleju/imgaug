@@ -185,9 +185,9 @@ def imresize_single_image(image, sizes, interpolation=None):
 
 def draw_grid(images, rows=None, cols=None):
     if is_np_array(images):
-        assert len(images.shape) == 4
+        assert images.ndim == 4
     else:
-        assert is_iterable(images)
+        assert is_iterable(images) and is_np_array(images[0]) and images[0].ndim == 3
 
     nb_images = len(images)
     cell_height = max([image.shape[0] for image in images])
@@ -205,7 +205,7 @@ def draw_grid(images, rows=None, cols=None):
 
     width = cell_width * cols
     height = cell_height * rows
-    grid = np.zeros((height, width, nb_channels))
+    grid = np.zeros((height, width, nb_channels), dtype=np.uint8)
     cell_idx = 0
     for row_idx in sm.xrange(rows):
         for col_idx in sm.xrange(cols):
