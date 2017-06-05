@@ -257,7 +257,7 @@ class FromLowerResolution(StochasticParameter):
             #w_small = max(int(w * size_factor), self.min_size)
             h_small = max(hw_px[0], self.min_size)
             w_small = max(hw_px[1], self.min_size)
-            samples = self.other_param.draw_samples((1, h_small, w_small, c))
+            samples = self.other_param.draw_samples((1, h_small, w_small, c), random_state=random_state)
             samples_upscaled = ia.imresize_many_images(samples, (h, w), interpolation=method)
             if result is None:
                 result = np.zeros((n, h, w, c), dtype=samples.dtype)
