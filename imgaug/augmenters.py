@@ -986,10 +986,324 @@ class Sequential(Augmenter, list):
         return [self]
 
     def __str__(self):
-        # augs_str = ", ".join([aug.__str__() for aug in self.children])
         augs_str = ", ".join([aug.__str__() for aug in self])
         return "Sequential(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
 
+class SomeOf(Augmenter, list):
+    """List augmenter that applies only some of its children.
+
+    E.g. this allows to define a list of 20 augmenters, but only apply a
+    random selection of 5 of them to each image.
+
+    This augmenter currently does not support replacing (i.e. picking the same
+    child multiple times) due to implementation difficulties in connection
+    with deterministic augmenters.
+    """
+
+    def __init__(self, n=None, children=None, random_order=False, name=None, deterministic=False, random_state=None):
+        """Initialize a new SomeOf instance.
+
+        Example:
+            seq = iaa.SomeOf(1, [
+                iaa.Fliplr(1.0),
+                iaa.Flipud(1.0)
+            ])
+            imgs_aug = seq.augment_images(imgs)
+        Applies either Fliplr or Flipud to images.
+
+        Example:
+            seq = iaa.SomeOf((1, 3), [
+                iaa.Fliplr(1.0),
+                iaa.Flipud(1.0),
+                iaa.GaussianBlur(1.0)
+            ])
+            imgs_aug = seq.augment_images(imgs)
+        Applies one to three of the listed augmenters (Fliplr, Flipud,
+        GaussianBlur) to images. They are always applied in the
+        order (1st) Fliplr, (2nd) Flipud, (3rd) GaussianBlur.
+
+        Example:
+            seq = iaa.SomeOf((1, 3), [
+                iaa.Fliplr(1.0),
+                iaa.Flipud(1.0),
+                iaa.GaussianBlur(1.0)
+            ], random_order=True)
+            imgs_aug = seq.augment_images(imgs)
+        Applies one to three of the listed augmenters (Fliplr, Flipud,
+        GaussianBlur) to images. They are applied in random order, i.e.
+        sometimes Blur first, followed by Fliplr, sometimes Fliplr follow by
+        Flipud followed by Blur, sometimes Flipud follow by Blur, etc.
+
+        Parameters
+        ----------
+        n : int or tuple of two ints or list of ints or StochasticParameter or None, optional(default=None)
+            Count of augmenters to apply.
+            If int n, then exactly n of the child augmenters are applied to
+              every image.
+            If tuple of two ints (a, b), then a <= x <= b augmenters are
+              picked and applied to every image.
+            If tuple of (int, None), then the second value will automatically
+              be replaced by the number of children. (Dynamically per call
+              to augment_*.)
+            If StochasticParameter, then N numbers will be sampled for N images.
+              The parameter is expected to be discrete.
+            If None, then the number of children will be used. (Dynamically per
+              call to augment_*)
+
+        children : Augmenter or list of Augmenter or None, optional(default=None)
+            The augmenters to apply to images.
+
+        random_order : boolean, optional(default=False)
+            Whether to apply the child augmenters in random order per image.
+            The order is resampled for each image.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : boolean, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        #        Example:
+        #            seq = iaa.SomeOf((1, 6), [
+        #                iaa.Fliplr(1.0),
+        #                iaa.Flipud(1.0),
+        #                iaa.GaussianBlur(1.0)
+        #            ], replace=True)
+        #            imgs_aug = seq.augment_images(imgs)
+        #        Applies one to six of the listed augmenters (Fliplr, Flipud,
+        #        GaussianBlur) to images. Augmenters are replaced, so the same one
+        #        can be applied multiple times.
+        #replace : boolean, optional(default=False)
+        #    Whether to pick augmenters with replacing or without. If with
+        #    replacing is chosen, the same augmenter may be applied multiple
+        #    times.
+        Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
+        list.__init__(self, children if children is not None else [])
+
+        if ia.is_single_number(n):
+            self.n = int(n)
+            self.n_mode = "deterministic"
+        elif n is None:
+            self.n = None
+            self.n_mode = "None"
+        elif ia.is_iterable(n):
+            assert len(n) == 2
+            if ia.is_single_number(n[0]) and n[1] is None:
+                self.n = (int(n[0]), None)
+                self.n_mode = "(int,None)"
+            elif ia.is_single_number(n[0]) and ia.is_single_number(n[1]):
+                self.n = DiscreteUniform(int(n[0]), int(n[1]))
+                self.n_mode = "stochastic"
+            else:
+                raise Exception("Expected tuple of (int, None) or (int, int), got %s" % ([type(el) for el in n],))
+        elif isinstance(n, StochasticParameter):
+            self.n = n
+            self.n_mode = "stochastic"
+        else:
+            raise Exception("Expected int, (int, None), (int, int) or StochasticParameter, got %s" % (type(n),))
+
+        self.random_order = random_order
+
+    def _get_n(self, nb_images, random_state):
+        if self.n_mode == "deterministic":
+            return [self.n] * nb_images
+        elif self.n_mode == "None":
+            return [len(self)] * nb_images
+        elif self.n_mode == "(int,None)":
+            param = DiscreteUniform(self.n[0], len(self))
+            return param.draw_samples((nb_images,), random_state=random_state)
+        elif self.n_mode == "stochastic":
+            return self.n.draw_samples((nb_images,), random_state=random_state)
+        else:
+            raise Exception("Invalid n_mode: %s" % (self.n_mode,))
+
+    def _get_augmenter_order(self, random_state):
+        if not self.random_order:
+            augmenter_order = np.arange(len(self))
+        else:
+            augmenter_order = random_state.permutation(len(self))
+        return augmenter_order
+
+    def _get_augmenter_active(self, nb_rows, random_state):
+        nn = self._get_n(nb_rows, random_state)
+        #if not self.replace:
+        #    nn = [min(n, len(self)) for n in nn]
+        #augmenter_indices = [
+        #    random_state.choice(len(self.children), size=(min(n, len(self)),), replace=False]) for n in nn
+        #]
+        nn = [min(n, len(self)) for n in nn]
+        augmenter_active = np.zeros((nb_rows, len(self)), dtype=np.bool)
+        for row_idx, n_true in enumerate(nn):
+            if n_true > 0:
+                augmenter_active[row_idx, 0:n_true] = 1
+        for row in augmenter_active:
+            random_state.shuffle(row)
+        return augmenter_active
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+            input_is_array = ia.is_np_array(images)
+
+            # This must happen before creating the augmenter_active array,
+            # otherwise in case of determinism the number of augmented images
+            # would change the random_state's state, resulting in the order
+            # being dependent on the number of augmented images (and not be
+            # constant). By doing this first, the random state is always the
+            # same (when determinism is active), so the order is always the
+            # same.
+            augmenter_order = self._get_augmenter_order(random_state)
+
+            # create an array of active augmenters per image
+            # e.g.
+            #  [[0, 0, 1],
+            #   [1, 0, 1],
+            #   [1, 0, 0]]
+            # would signal, that augmenter 3 is active for the first image,
+            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
+            augmenter_active = self._get_augmenter_active(len(images), random_state)
+
+            for augmenter_index in augmenter_order:
+                active = augmenter_active[:, augmenter_index].nonzero()[0]
+                if len(active) > 0:
+                    # pick images to augment, i.e. images for which
+                    # augmenter at current index is active
+                    if input_is_array:
+                        images_to_aug = images[active]
+                    else:
+                        images_to_aug = [images[idx] for idx in active]
+
+                    # augment the images
+                    images_to_aug = self[augmenter_index].augment_images(
+                        images=images_to_aug,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+
+                    # map them back to their position in the images array/list
+                    if input_is_array:
+                        images[active] = images_to_aug
+                    else:
+                        for aug_idx, original_idx in enumerate(active):
+                            images[original_idx] = images_to_aug[aug_idx]
+
+        return images
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+            # This must happen before creating the augmenter_active array,
+            # otherwise in case of determinism the number of augmented images
+            # would change the random_state's state, resulting in the order
+            # being dependent on the number of augmented images (and not be
+            # constant). By doing this first, the random state is always the
+            # same (when determinism is active), so the order is always the
+            # same.
+            augmenter_order = self._get_augmenter_order(random_state)
+
+            # create an array of active augmenters per image
+            # e.g.
+            #  [[0, 0, 1],
+            #   [1, 0, 1],
+            #   [1, 0, 0]]
+            # would signal, that augmenter 3 is active for the first image,
+            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
+            augmenter_active = self._get_augmenter_active(len(keypoints_on_images), random_state)
+
+            for augmenter_index in augmenter_order:
+                active = augmenter_active[:, augmenter_index].nonzero()[0]
+                if len(active) > 0:
+                    # pick images to augment, i.e. images for which
+                    # augmenter at current index is active
+                    koi_to_aug = [keypoints_on_images[idx] for idx in active]
+
+                    # augment the images
+                    koi_to_aug = self[augmenter_index].augment_keypoints(
+                        keypoints_on_images=koi_to_aug,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+
+                    # map them back to their position in the images array/list
+                    for aug_idx, original_idx in enumerate(active):
+                        keypoints_on_images[original_idx] = koi_to_aug[aug_idx]
+
+        return keypoints_on_images
+
+    def _to_deterministic(self):
+        augs = [aug.to_deterministic() for aug in self]
+        seq = self.copy()
+        seq[:] = augs
+        seq.random_state = ia.new_random_state()
+        seq.deterministic = True
+        return seq
+
+    def get_parameters(self):
+        return [self.n]
+
+    def add(self, augmenter):
+        """Add an augmenter to the list of child augmenters.
+
+        Parameters
+        ----------
+        augmenter : Augmenter
+            The augmenter to add.
+        """
+        self.append(augmenter)
+
+    def get_children_lists(self):
+        return [self]
+
+    def __str__(self):
+        # augs_str = ", ".join([aug.__str__() for aug in self.children])
+        augs_str = ", ".join([aug.__str__() for aug in self])
+        return "SomeOf(name=%s, n=%s, random_order=%s, augmenters=[%s], deterministic=%s)" % (self.name, str(self.n), str(self.random_order), augs_str, self.deterministic)
+
+def OneOf(children, name=None, deterministic=False, random_state=None):
+    """Augmenter that always executes exactly one of its children.
+
+    Example:
+        seq = iaa.OneOf([
+            iaa.Fliplr(1.0),
+            iaa.Flipud(1.0)
+        ])
+        imgs_aug = seq.augment_images(imgs)
+    flips each image either horizontally or vertically.
+
+    Example:
+        seq = iaa.OneOf([
+            iaa.Fliplr(1.0),
+            iaa.Sequential([
+                iaa.GaussianBlur(1.0),
+                iaa.Dropout(0.05),
+                iaa.AdditiveGaussianNoise(0.1*255)
+            ]),
+            iaa.Noop()
+        ])
+        imgs_aug = seq.augment_images(imgs)
+    either flips each image horizontally, or ads blur+dropout+noise or does
+    nothing.
+
+    Parameters
+    ----------
+    children : list of Augmenter
+        The choices of augmenters to apply.
+
+    random_order : boolean, optional(default=False)
+        Whether to apply the child augmenters in random order per image.
+        The order is resampled for each image.
+
+    name : string, optional(default=None)
+        See Augmenter.__init__()
+
+    deterministic : boolean, optional(default=False)
+        See Augmenter.__init__()
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See Augmenter.__init__()
+    """
+    return SomeOf(n=1, children=children, random_order=False, name=name, deterministic=deterministic, random_state=random_state)
 
 class Sometimes(Augmenter):
     """Augment only p percent of all images with one or more augmenters.

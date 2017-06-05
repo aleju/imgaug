@@ -24,6 +24,11 @@ def main():
 
     augmenters = [
         iaa.Noop(name="Noop"),
+        iaa.OneOf(children=[
+            iaa.CoarseDropout(p=0.5, size_percent=0.05),
+            iaa.AdditiveGaussianNoise(scale=0.1*255),
+            iaa.Crop(percent=0.1)
+        ], name="OneOf"),
         iaa.Crop(px=(0, 8), name="Crop-px"),
         iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),
@@ -31,13 +36,16 @@ def main():
         iaa.Superpixels(p_replace=0.75, n_segments=50, name="Superpixels"),
         iaa.Grayscale(0.5, name="Grayscale0.5"),
         iaa.Grayscale(1.0, name="Grayscale1.0"),
+        iaa.AverageBlur(k=(3, 11), name="AverageBlur"),
         iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
+        iaa.MedianBlur(k=(3, 11), name="MedianBlur"),
         iaa.Sharpen(alpha=(0.1, 1.0), lightness=(0, 2.0), name="Sharpen"),
         iaa.Emboss(alpha=(0.1, 1.0), strength=(0, 2.0), name="Emboss"),
         iaa.EdgeDetect(alpha=(0.1, 1.0), name="EdgeDetect"),
         iaa.DirectedEdgeDetect(alpha=(0.1, 1.0), direction=(0, 1.0), name="DirectedEdgeDetect"),
         iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.1*255), name="AdditiveGaussianNoise"),
         iaa.Dropout((0.0, 0.1), name="Dropout"),
+        iaa.CoarseDropout(p=0.05, size_percent=(0.05, 0.5), name="CoarseDropout"),
         iaa.Invert(p=0.5, name="Invert"),
         iaa.Invert(p=0.5, per_channel=True, name="InvertPerChannel"),
         iaa.Add((-50, 50), name="Add"),
