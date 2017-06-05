@@ -30,7 +30,7 @@ Required packages:
 OpenCV has to be manually installed. The other package should auto-install themselves.
 
 To install, simply use `sudo pip install imgaug`. That version might be outdated though. To always get the newest version directly from github use `sudo pip install git+https://github.com/aleju/imgaug`.
-Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install by using `python setup.py sdist && sudo pip install dist/imgaug-0.2.2b.tar.gz`.
+Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install by using `python setup.py sdist && sudo pip install dist/imgaug-0.2.3.tar.gz`.
 
 To deinstall the library, just execute `sudo pip uninstall imgaug`.
 
