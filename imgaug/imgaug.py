@@ -7,15 +7,19 @@ import numbers
 import cv2
 import math
 from scipy import misc
+import multiprocessing
+import threading
+import sys
 import six
 import six.moves as sm
 
-"""
-try:
-    xrange
-except NameError:  # python3
+if sys.version_info[0] == 2:
+    import cPickle as pickle
+    from Queue import Empty as QueueEmpty
+elif sys.version_info[1] == 3:
+    import pickle
+    from queue import Empty as QueueEmpty
     xrange = range
-"""
 
 ALL = "ALL"
 
@@ -25,8 +29,8 @@ ALL = "ALL"
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
-def seed(seed):
-    CURRENT_RANDOM_STATE.seed(seed)
+def seed(seedval):
+    CURRENT_RANDOM_STATE.seed(seedval)
 
 def is_np_array(val):
     return isinstance(val, (np.ndarray, np.generic))
@@ -428,28 +432,131 @@ class KeypointsOnImage(object):
         #print(type(self.keypoints), type(self.shape))
         return "KeypointOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
-# TODO
-"""
-class BackgroundAugmenter(object):
-    def __init__(self, image_source, augmenter, maxlen, nb_workers=1):
-        self.augmenter = augmenter
-        self.maxlen = maxlen
-        self.result_queue = multiprocessing.Queue(maxlen)
-        self.batch_workers = []
+
+############################
+# Background augmentation
+############################
+
+class Batch(object):
+    """Class encapsulating a batch before and after augmentation."""
+    def __init__(self, images=None, keypoints=None, data=None):
+        self.images = images
+        self.images_aug = None
+        # keypoints here are the corners of the bounding box
+        self.keypoints = keypoints
+        self.keypoints_aug = None
+        self.data = data
+
+class BatchLoader(object):
+    """Class to load batches in the background."""
+
+    def __init__(self, load_batch_func, nb_workers=1, queue_size=50, threaded=True):
+        self.queue = multiprocessing.Queue(queue_size)
+        self.finished_signals = []
+
+        self.workers = []
         for i in range(nb_workers):
-            worker = multiprocessing.Process(target=self._augment, args=(image_source, augmenter, self.result_queue))
+            finished_signal = multiprocessing.Event()
+            self.finished_signals.append(finished_signal)
+
+            if threaded:
+                worker = threading.Thread(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal))
+            else:
+                worker = multiprocessing.Process(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal))
             worker.daemon = True
             worker.start()
-            self.batch_workers.append(worker)
+            self.workers.append(worker)
 
-    def join(self):
-        for worker in self.batch_workers:
-            worker.join()
+    def _load_batches(self, load_batch_func, queue, finished_signal):
+        for batch in load_batch_func():
+            assert isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),)
+            queue.put(pickle.dumps(batch, protocol=-1))
+        finished_signal.set()
+
+    def terminate(self):
+        for worker in self.workers:
+            self.worker.terminate()
+
+class BackgroundAugmenter(object):
+    """Class to augment batches in the background (while training on
+    the GPU)."""
+    def __init__(self, augseq, batch_loader, nb_workers, queue_size=50, threaded=False):
+        assert queue_size > 0
+        self.augseq = augseq
+        self.source_finished_signals = batch_loader.finished_signals
+        self.queue_source = batch_loader.queue
+        self.queue_result = multiprocessing.Queue(queue_size)
+        self.nb_workers = nb_workers
+        self.workers = []
+        self.nb_workers_finished = 0
+
+        self.augment_images = True
+        self.augment_keypoints = True
+
+        seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
+        for i in range(nb_workers):
+            if threaded:
+                augseq_worker = augseq.deepcopy()
+                augseq_worker.reseed(seeds[i])
+                worker = threading.Thread(target=self._augment_images_worker, args=(augseq_worker, self.queue_source, self.queue_result, self.source_finished_signals, None))
+            else:
+                worker = multiprocessing.Process(target=self._augment_images_worker, args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i]))
+            worker.daemon = True
+            worker.start()
+            self.workers.append(worker)
 
     def get_batch(self):
-        return self.result_queue.get()
+        """Returns a batch from the queue of augmented batches."""
+        batch_str = self.queue_result.get()
+        batch = pickle.loads(batch_str)
+        if batch is not None:
+            return batch
+        else:
+            self.nb_workers_finished += 1
+            if self.nb_workers_finished == self.nb_workers:
+                return None
+            else:
+                return self.get_batch()
 
-    def _augment(self, image_source, augmenter, result_queue):
-        batch = next(image_source)
-        self.result_queue.put(augmenter.transform(batch))
-"""
+    def _augment_images_worker(self, augseq, queue_source, queue_result, source_finished_signals, seedval):
+        """Worker function that endlessly queries the source queue (input
+        batches), augments batches in it and sends the result to the output
+        queue."""
+        if seedval is not None:
+            print("seed is not None", seedval)
+            np.random.seed(seedval)
+            random.seed(seedval)
+            augseq.reseed(seedval)
+            seed(seedval)
+        else:
+            print("seed is None")
+
+        while True:
+            # wait for a new batch in the source queue and load it
+            try:
+                batch_str = queue_source.get(timeout=0.1)
+                batch = pickle.loads(batch_str)
+                # augment the batch
+                batch_augment_images = batch.images is not None and self.augment_images
+                batch_augment_keypoints = batch.keypoints is not None and self.augment_keypoints
+
+                if batch_augment_images and batch_augment_keypoints:
+                    augseq_det = augseq.to_deterministic()
+                    batch.images_aug = augseq_det.augment_images(batch.images)
+                    batch.keypoints_aug = augseq_det.augment_keypoints(batch.keypoints)
+                elif batch_augment_images is not None:
+                    batch.images_aug = augseq.augment_images(batch.images)
+                elif batch_augment_keypoints is not None:
+                    batch.keypoints_aug = augseq.augment_keypoints(batch.keypoints)
+
+                # send augmented batch to output queue
+                batch_str = pickle.dumps(batch, protocol=-1)
+                queue_result.put(batch_str)
+            except QueueEmpty as e:
+                if all([signal.is_set() for signal in source_finished_signals]):
+                    queue_result.put(pickle.dumps(None, protocol=-1))
+                    return
+
+    def terminate(self):
+        for worker in self.workers:
+            self.worker.terminate()
