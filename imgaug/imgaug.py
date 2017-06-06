@@ -16,7 +16,7 @@ import six.moves as sm
 if sys.version_info[0] == 2:
     import cPickle as pickle
     from Queue import Empty as QueueEmpty
-elif sys.version_info[1] == 3:
+elif sys.version_info[0] == 3:
     import pickle
     from queue import Empty as QueueEmpty
     xrange = range
