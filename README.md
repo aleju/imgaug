@@ -119,7 +119,8 @@ seq = iaa.Sequential(
                 iaa.Multiply((0.5, 1.5), per_channel=0.5), # change brightness of images (50-150% of original value)
                 iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5), # improve or worsen the contrast
                 iaa.Grayscale(alpha=(0.0, 1.0)),
-                sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)) # move pixels locally around (with random strengths)
+                sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)), # move pixels locally around (with random strengths)
+                sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))) # sometimes move parts of the image around
             ],
             random_order=True
         )

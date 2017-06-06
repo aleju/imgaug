@@ -105,7 +105,8 @@ def draw_single_sequential_images():
                     iaa.Multiply((0.5, 1.5), per_channel=0.5), # change brightness of images (50-150% of original value)
                     iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5), # improve or worsen the contrast
                     iaa.Grayscale(alpha=(0.0, 1.0)),
-                    sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)) # move pixels locally around (with random strengths)
+                    sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)), # move pixels locally around (with random strengths)
+                    sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))) # sometimes move parts of the image around
                 ],
                 random_order=True
             )
@@ -157,6 +158,7 @@ def draw_per_augmenter_images():
         ("ContrastNormalization", [("alpha=%.1f" % (alpha,), iaa.ContrastNormalization(alpha=alpha)) for alpha in [0.5, 0.75, 1.0, 1.25, 1.50]]),
         ("ContrastNormalization\n(per channel)", [("alpha=(%.2f, %.2f)" % (alphas[0], alphas[1],), iaa.ContrastNormalization(alpha=alphas, per_channel=True)) for alphas in [(0.4, 0.6), (0.65, 0.85), (0.9, 1.1), (1.15, 1.35), (1.4, 1.6)]]),
         ("Grayscale", [("alpha=%.1f" % (alpha,), iaa.Grayscale(alpha=alpha)) for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]]),
+        ("PiecewiseAffine", [("scale=%.3f" % (scale,), iaa.PiecewiseAffine(scale=scale)) for scale in [0.015, 0.03, 0.045, 0.06, 0.075]]),
         ("Affine: Scale", [("%.1fx" % (scale,), iaa.Affine(scale=scale)) for scale in [0.1, 0.5, 1.0, 1.5, 1.9]]),
         ("Affine: Translate", [("x=%d y=%d" % (x, y), iaa.Affine(translate_px={"x": x, "y": y})) for x, y in [(-32, -16), (-16, -32), (-16, -8), (16, 8), (16, 32)]]),
         ("Affine: Rotate", [("%d deg" % (rotate,), iaa.Affine(rotate=rotate)) for rotate in [-90, -45, 0, 45, 90]]),
@@ -195,6 +197,8 @@ def draw_per_augmenter_images():
             row_titles.append(img_title)
         rows.append((row_name, row_images, row_keypoints, row_titles))
 
+    # matplotlib drawin routine
+    """
     print("[draw_per_augmenter_images] Plotting...")
     width = 8
     height = int(1.5 * len(rows_augmenters))
@@ -236,6 +240,51 @@ def draw_per_augmenter_images():
 
     fig.savefig("examples.jpg", bbox_inches="tight")
     #plt.show()
+    """
+
+    # simpler and faster drawing routine
+    output_image = ExamplesImage(128, 128, 128+64, 32)
+    for (row_name, row_images, row_keypoints, row_titles) in rows:
+        row_images_kps = []
+        for image, keypoints in zip(row_images, row_keypoints):
+            row_images_kps.append(keypoints.draw_on_image(image, size=5))
+        output_image.add_row(row_name, row_images_kps, row_titles)
+    misc.imsave("examples.jpg", output_image.draw())
+
+class ExamplesImage(object):
+    def __init__(self, image_height, image_width, title_cell_width, subtitle_height):
+        self.rows = []
+        self.image_height = image_height
+        self.image_width = image_width
+        self.title_cell_width = title_cell_width
+        self.cell_height = image_height + subtitle_height
+        self.cell_width = image_width
+
+    def add_row(self, title, images, subtitles):
+        assert len(images) == len(subtitles)
+        images_rs = []
+        for image in images:
+            images_rs.append(ia.imresize_single_image(image, (self.image_height, self.image_width)))
+        self.rows.append((title, images_rs, subtitles))
+
+    def draw(self):
+        rows_drawn = [self.draw_row(title, images, subtitles) for title, images, subtitles in self.rows]
+        grid = np.vstack(rows_drawn)
+        return grid
+
+    def draw_row(self, title, images, subtitles):
+        title_cell = np.zeros((self.cell_height, self.title_cell_width, 3), dtype=np.uint8) + 255
+        title_cell = ia.draw_text(title_cell, x=2, y=2, text=title, color=[0, 0, 0], size=12)
+
+        image_cells = []
+        for image, subtitle in zip(images, subtitles):
+            image_cell = np.zeros((self.cell_height, self.cell_width, 3), dtype=np.uint8) + 255
+            image_cell[0:image.shape[0], 0:image.shape[1], :] = image
+            image_cell = ia.draw_text(image_cell, x=2, y=image.shape[0]+2, text=subtitle, color=[0, 0, 0], size=11)
+            image_cells.append(image_cell)
+
+        row = np.hstack([title_cell] + image_cells)
+        return row
 
 if __name__ == "__main__":
     main()
