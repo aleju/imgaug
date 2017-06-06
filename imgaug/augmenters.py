@@ -597,7 +597,7 @@ class Augmenter(object):
         aug.deterministic = True
         return aug
 
-    def reseed(self, deterministic_too=False, random_state=None):
+    def reseed(self, random_state=None, deterministic_too=False):
         """Reseed this augmenter and all of its children (if it has any).
 
         This function is useful, when augmentations are run in the
@@ -609,16 +609,18 @@ class Augmenter(object):
 
         Parameters
         ----------
-        deterministic_too : bool, optional(default=False)
-            Whether to also change the seed of an augmenter A, if A
-            is deterministic. This is the case both when this augmenter
-            object is A or one of its children is A.
-
         random_state : np.random.RandomState or int, optional(default=None)
             Generator that creates new random seeds.
             If int, it will be used as a seed.
             If None, a new RandomState will automatically be created.
+
+        deterministic_too : bool, optional(default=False)
+            Whether to also change the seed of an augmenter A, if A
+            is deterministic. This is the case both when this augmenter
+            object is A or one of its children is A.
         """
+        assert isinstance(deterministic_too, bool)
+
         if random_state is None:
             random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
