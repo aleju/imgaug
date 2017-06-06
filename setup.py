@@ -10,11 +10,11 @@ Supports augmentation of images and keypoints/landmarks in a variety of differen
 
 setup(
     name="imgaug",
-    version="0.2.3",
+    version="0.2.4",
     author="Alexander Jung",
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
-    download_url="https://github.com/aleju/imgaug/archive/0.2.3.tar.gz",
+    download_url="https://github.com/aleju/imgaug/archive/0.2.4.tar.gz",
     install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six"],
     packages=find_packages(),
     license="MIT",
