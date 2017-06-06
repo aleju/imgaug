@@ -5,18 +5,19 @@ Run checks via
 """
 from __future__ import print_function, division
 
-#import sys
-#import os
-#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import numpy as np
 from scipy import ndimage, misc
 from skimage import data
+import argparse
 
 def main():
+    parser = argparse.ArgumentParser(description="Check augmenters visually.")
+    parser.add_argument('--only', default=None, help="If this is set, then only the results of an augmenter with this name will be shown.", required=False)
+    args = parser.parse_args()
+
     images = [
         misc.imresize(ndimage.imread("../quokka.jpg")[0:643, 0:643], (128, 128)),
         misc.imresize(data.astronaut(), (128, 128))
@@ -65,21 +66,18 @@ def main():
             mode=ia.ALL,
             name="Affine"
         ),
+        iaa.PiecewiseAffine(scale=0.03, nb_rows=(2, 6), nb_cols=(2, 6), name="PiecewiseAffine"),
         iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation")
     ]
 
-    #for i, aug in enumerate(augmenters):
-        #print(i)
-        #aug.deepcopy()
-        #import copy
-        #copy.deepcopy(aug)
     augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
     augmenters.append(iaa.Sometimes(0.5, [aug.copy() for aug in augmenters], name="Sometimes"))
 
     for augmenter in augmenters:
-        print("Augmenter: %s" % (augmenter.name,))
-        grid = augmenter.draw_grid(images, rows=1, cols=16)
-        misc.imshow(grid)
+        if args.only is None or augmenter.name == args.only:
+            print("Augmenter: %s" % (augmenter.name,))
+            grid = augmenter.draw_grid(images, rows=1, cols=16)
+            misc.imshow(grid)
 
 if __name__ == "__main__":
     main()
