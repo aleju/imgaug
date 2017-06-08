@@ -10,9 +10,10 @@ Features:
 * Techniques can be applied to both images and keypoints/landmarks on images.
 * Define your augmentation sequence once at the start of the experiment, then apply it many times.
 * Define flexible stochastic ranges for each augmentation, e.g. "rotate each image by a value between -45 and 45 degrees" or "rotate each image by a value sampled from the normal distribution N(0, 5.0)".
-* Easily convert all stochastic ranges to deterministic values to augment different batches of images in the exactly identical way (e.g. images and their heatmaps).
+* Easily convert all stochastic ranges to deterministic values in order to augment different batches of images in exactly the same way. (E.g. images and their respective heatmaps. If an image is rotated, you want its heatmap to be rotated by the exactly same amount.)
+* Optionally run the augmentations in background processes, improving performance of experiments.
 
-The image below shows examples for each availabe augmentation technique.
+The image below shows examples for each available augmentation technique.
 
 ![Available augmenters](examples.jpg?raw=true "Effects of all available augmenters")
 
@@ -318,4 +319,122 @@ hooks_heatmaps = ia.HooksImages(activator=activator_heatmaps)
 seq_det = seq.to_deterministic() # call this for each batch again, NOT only once at the start
 images_aug = seq_det.augment_images(images)
 heatmaps_aug = seq_det.augment_images(heatmaps, hooks=hooks_heatmaps)
+```
+
+Images can be augmented in background processes using the method `augment_batches(batches, background=True)`,
+where `batches` is expected to be a list of image batches or a list of batches/lists of `imgaug.KeypointsOnImage` or a list of `imgaug.Batch`.
+The following example augments a list of image batches in the background:
+```python
+import imgaug as ia
+from imgaug import augmenters as iaa
+import numpy as np
+from skimage import data
+
+# Number of batches and batch size for this example
+nb_batches = 10
+batch_size = 32
+
+# Example augmentation sequence to run in the background
+augseq = iaa.Sequential([
+    iaa.Fliplr(0.5),
+    iaa.CoarseDropout(p=0.1, size_percent=0.1)
+])
+
+# For simplicity, we use the same image here many times
+astronaut = data.astronaut()
+astronaut = ia.imresize_single_image(astronaut, (64, 64))
+
+# Make batches out of the example image (here: 10 batches, each 32 times
+# the example image)
+batches = []
+for _ in range(nb_batches):
+    batches.append(
+        np.array(
+            [astronaut for _ in range(batch_size)],
+            dtype=np.uint8
+        )
+    )
+
+# Show the augmented images.
+# Note that augment_batches() returns a generator.
+for images_aug in augseq.augment_batches(batches, background=True):
+    misc.imshow(ia.draw_grid(images_aug, cols=8))
+```
+
+Images can also be augmented in background processes using the classes `imgaug.BatchLoader` and `imgaug.BackgroundAugmenter`,
+which offer a bit more flexibility. (`augment_batches()` is a wrapper around these.)
+Using these classes is good practice, when you have a lot of images that you don't want to load at the same time.
+```python
+import imgaug as ia
+from imgaug import augmenters as iaa
+import numpy as np
+from skimage import data
+
+# Example augmentation sequence to run in the background.
+augseq = iaa.Sequential([
+    iaa.Fliplr(0.5),
+    iaa.CoarseDropout(p=0.1, size_percent=0.1)
+])
+
+# A generator that loads batches from the hard drive.
+def load_batches():
+    # Here, load 10 batches of size 4 each.
+    # You can also load an infinite amount of batches, if you don't train
+    # in epochs.
+    batch_size = 4
+    nb_batches = 10
+
+    # Here, for simplicity we just always use the same image.
+    astronaut = data.astronaut()
+    astronaut = ia.imresize_single_image(astronaut, (64, 64))
+
+    for i in range(nb_batches):
+        # A list containing all images of the batch.
+        batch_images = []
+        # A list containing IDs of images in the batch. This is not necessary
+        # for the background augmentation and here just used to showcase that
+        # you can transfer additional information.
+        batch_data = []
+
+        # Add some images to the batch.
+        for b in range(batch_size):
+            batch_images.append(astronaut)
+            batch_data.append((i, b))
+
+        # Create the batch object to send to the background processes.
+        batch = ia.Batch(
+            images=np.array(batch_images, dtype=np.uint8),
+            data=batch_data
+        )
+
+        yield batch
+
+# background augmentation consists of two components:
+#  (1) BatchLoader, which runs in a Thread and calls repeatedly a user-defined
+#      function (here: load_batches) to load batches (optionally with keypoints
+#      and additional information) and sends them to a queue of batches.
+#  (2) BackgroundAugmenter, which runs several background processes (on other
+#      CPU cores). Each process takes batches from the queue defined by (1),
+#      augments images/keypoints and sends them to another queue.
+# The main process can then read augmented batches from the queue defined
+# by (2).
+batch_loader = ia.BatchLoader(load_batches)
+bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+
+# Run until load_batches() returns nothing anymore. This also allows infinite
+# training.
+while True:
+    print("Next batch...")
+    batch = bg_augmenter.get_batch()
+    if batch is None:
+        print("Finished epoch.")
+        break
+    images_aug = batch.images_aug
+
+    print("Image IDs: ", batch.data)
+
+    misc.imshow(np.hstack(list(images_aug)))
+
+batch_loader.terminate()
+bg_augmenter.terminate()
 ```

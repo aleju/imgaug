@@ -99,7 +99,7 @@ class Augmenter(object):
 
         self.activated = True
 
-    def augment_batches(self, batches, hooks=None):
+    def augment_batches(self, batches, hooks=None, background=False):
         """Augment multiple batches of images.
 
         Parameters
@@ -117,13 +117,90 @@ class Augmenter(object):
             HooksImages object to dynamically interfere with the augmentation
             process.
 
+        background : bool, optional(default=False)
+            Whether to augment the batches in background processes.
+            If true, hooks can currently not be used as that would require
+            pickling functions.
+
         Returns
         -------
         augmented_batch : list
             Corresponding list of batches of augmented images.
         """
         assert isinstance(batches, list)
-        return [self.augment_images(batch, hooks=hooks) for batch in batches]
+        assert len(batches) > 0
+        if background:
+            assert hooks is None, "Hooks can not be used when background augmentation is activated."
+
+        batches_normalized = []
+        batches_original_dts = []
+        for i, batch in enumerate(batches):
+            if isinstance(batch, ia.Batch):
+                batches_normalized.append(batch)
+                batches_original_dts.append("imgaug.Batch")
+            elif ia.is_np_array(batch):
+                assert batch.ndim in (3, 4), "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,)
+                batches_normalized.append(ia.Batch(images=batch, data=i))
+                batches_original_dts.append("numpy_array")
+            elif isinstance(batch, list):
+                if len(batch) == 0:
+                    batches_normalized.append(ia.Batch())
+                    batches_original_dts.append("empty_list")
+                elif ia.is_np_array(batch[0]):
+                    batches_normalized.append(ia.Batch(images=batch, data=i))
+                    batches_original_dts.append("list_of_numpy_arrays")
+                elif isinstance(batch[0], ia.KeypointsOnImage):
+                    batches_normalized.append(ia.Batch(keypoints=batch, data=i))
+                    batches_original_dts.append("list_of_imgaug.KeypointsOfImage")
+                else:
+                    raise Exception("Unknown datatype in batch[0]. Expected numpy array or imgaug.KeypointsOnImage, got %s." % (type(batch[0]),))
+            else:
+                raise Exception("Unknown datatype in of batch. Expected imgaug.Batch or numpy array or list of numpy arrays/imgaug.KeypointsOnImage. Got %s." % (type(batch),))
+
+        def unnormalize_batch(batch_aug):
+            if batch_aug.data is None:
+                return batch_aug
+            else:
+                i = batch_aug.data
+                dt_orig = batches_original_dts[i]
+                if dt_orig == "imgaug.Batch":
+                    batch_unnormalized = batch_aug
+                elif dt_orig == "numpy_array":
+                    batch_unnormalized = batch_aug.images_aug
+                elif dt_orig == "empty_list":
+                    batch_unnormalized = []
+                elif dt_orig == "list_of_numpy_arrays":
+                    batch_unnormalized = batch_aug.images_aug
+                elif dt_orig == "list_of_imgaug.KeypointsOnImage":
+                    batch_unnormalized = batch_aug.keypoints_aug
+                else:
+                    raise Exception("Internal error. Unexpected value in dt_orig '%s'. This should never happen." % (dt_orig,))
+                return batch_unnormalized
+
+        if not background:
+            for batch_normalized in batches_normalized:
+                if batch_normalized.images is not None:
+                    batch_normalized.images_aug = self.augment_images(batch_normalized.images, hooks=hooks)
+                if batch_normalized.keypoints is not None:
+                    batch_normalized.keypoints_aug = self.augment_keypoints(batch_normalized.keypoints, hooks=hooks)
+                batch_unnormalized = unnormalize_batch(batch_normalized)
+                yield batch_unnormalized
+        else:
+            def load_batches():
+                for batch in batches_normalized:
+                    yield batch
+
+            batch_loader = ia.BatchLoader(load_batches)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, self)
+            while True:
+                batch_aug = bg_augmenter.get_batch()
+                if batch_aug is None:
+                    break
+                else:
+                    batch_unnormalized = unnormalize_batch(batch_aug)
+                    yield batch_unnormalized
+            batch_loader.terminate()
+            bg_augmenter.terminate()
 
     def augment_image(self, image, hooks=None):
         """Augment a single image.

@@ -450,42 +450,74 @@ class Batch(object):
 class BatchLoader(object):
     """Class to load batches in the background."""
 
-    def __init__(self, load_batch_func, nb_workers=1, queue_size=50, threaded=True):
+    def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
+        assert queue_size > 0
+        assert nb_workers >= 1
         self.queue = multiprocessing.Queue(queue_size)
+        self.join_signal = multiprocessing.Event()
         self.finished_signals = []
-
         self.workers = []
+        self.threaded = threaded
+        seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
         for i in range(nb_workers):
             finished_signal = multiprocessing.Event()
             self.finished_signals.append(finished_signal)
-
             if threaded:
-                worker = threading.Thread(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal))
+                worker = threading.Thread(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal, self.join_signal, None))
             else:
-                worker = multiprocessing.Process(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal))
+                worker = multiprocessing.Process(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal, self.join_signal, seeds[i]))
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
 
-    def _load_batches(self, load_batch_func, queue, finished_signal):
+    def all_finished(self):
+        return all([event.is_set() for event in self.finished_signal])
+
+    def _load_batches(self, load_batch_func, queue, finished_signal, join_signal, seedval):
+        if seedval is not None:
+            random.seed(seedval)
+            np.random.seed(seedval)
+            seed(seedval)
+
         for batch in load_batch_func():
             assert isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),)
             queue.put(pickle.dumps(batch, protocol=-1))
+            if join_signal.is_set():
+                break
+
         finished_signal.set()
 
     def terminate(self):
-        for worker in self.workers:
-            self.worker.terminate()
+        self.join_signal.set()
+        if self.threaded:
+            for worker in self.workers:
+                worker.join()
+        else:
+            for worker, finished_signal in zip(self.workers, self.finished_signals):
+                worker.terminate()
+                finished_signal.set()
 
 class BackgroundAugmenter(object):
     """Class to augment batches in the background (while training on
     the GPU)."""
-    def __init__(self, augseq, batch_loader, nb_workers, queue_size=50, threaded=False):
+    def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
         assert queue_size > 0
         self.augseq = augseq
         self.source_finished_signals = batch_loader.finished_signals
         self.queue_source = batch_loader.queue
         self.queue_result = multiprocessing.Queue(queue_size)
+
+        if nb_workers == "auto":
+            try:
+                nb_workers = multiprocessing.cpu_count()
+            except (ImportError, NotImplementedError):
+                nb_workers = 1
+            # try to reserve at least one core for the main process
+            nb_workers = max(1, nb_workers - 1)
+        else:
+            assert nb_workers >= 1
+        #print("Starting %d background processes" % (nb_workers,))
+
         self.nb_workers = nb_workers
         self.workers = []
         self.nb_workers_finished = 0
@@ -495,12 +527,7 @@ class BackgroundAugmenter(object):
 
         seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
         for i in range(nb_workers):
-            if threaded:
-                augseq_worker = augseq.deepcopy()
-                augseq_worker.reseed(seeds[i])
-                worker = threading.Thread(target=self._augment_images_worker, args=(augseq_worker, self.queue_source, self.queue_result, self.source_finished_signals, None))
-            else:
-                worker = multiprocessing.Process(target=self._augment_images_worker, args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i]))
+            worker = multiprocessing.Process(target=self._augment_images_worker, args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i]))
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
@@ -522,14 +549,10 @@ class BackgroundAugmenter(object):
         """Worker function that endlessly queries the source queue (input
         batches), augments batches in it and sends the result to the output
         queue."""
-        if seedval is not None:
-            print("seed is not None", seedval)
-            np.random.seed(seedval)
-            random.seed(seedval)
-            augseq.reseed(seedval)
-            seed(seedval)
-        else:
-            print("seed is None")
+        np.random.seed(seedval)
+        random.seed(seedval)
+        augseq.reseed(seedval)
+        seed(seedval)
 
         while True:
             # wait for a new batch in the source queue and load it
@@ -559,4 +582,4 @@ class BackgroundAugmenter(object):
 
     def terminate(self):
         for worker in self.workers:
-            self.worker.terminate()
+            worker.terminate()

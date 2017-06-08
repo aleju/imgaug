@@ -5,10 +5,6 @@ Simply execute
 """
 from __future__ import print_function, division
 
-#import sys
-#import os
-#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import numpy as np
 from scipy import misc
 
@@ -23,6 +19,8 @@ def main():
     example_withchannels()
     example_unusual_distributions()
     example_hooks()
+    example_background_augment_batches()
+    example_background_classes()
 
 def example_standard_situation():
     print("Example: Standard Situation")
@@ -312,6 +310,118 @@ def example_hooks():
     # -----------
     ia.show_grid(images_aug)
     ia.show_grid(heatmaps_aug[..., 0:3])
+
+def example_background_augment_batches():
+    print("Example: Background Augmentation via augment_batches()")
+    import imgaug as ia
+    from imgaug import augmenters as iaa
+    import numpy as np
+    from skimage import data
+
+    # Number of batches and batch size for this example
+    nb_batches = 10
+    batch_size = 32
+
+    # Example augmentation sequence to run in the background
+    augseq = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.CoarseDropout(p=0.1, size_percent=0.1)
+    ])
+
+    # For simplicity, we use the same image here many times
+    astronaut = data.astronaut()
+    astronaut = ia.imresize_single_image(astronaut, (64, 64))
+
+    # Make batches out of the example image (here: 10 batches, each 32 times
+    # the example image)
+    batches = []
+    for _ in range(nb_batches):
+        batches.append(
+            np.array(
+                [astronaut for _ in range(batch_size)],
+                dtype=np.uint8
+            )
+        )
+
+    # Show the augmented images.
+    # Note that augment_batches() returns a generator.
+    for images_aug in augseq.augment_batches(batches, background=True):
+        misc.imshow(ia.draw_grid(images_aug, cols=8))
+
+def example_background_classes():
+    print("Example: Background Augmentation via Classes")
+    import imgaug as ia
+    from imgaug import augmenters as iaa
+    import numpy as np
+    from skimage import data
+
+    # Example augmentation sequence to run in the background.
+    augseq = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.CoarseDropout(p=0.1, size_percent=0.1)
+    ])
+
+    # A generator that loads batches from the hard drive.
+    def load_batches():
+        # Here, load 10 batches of size 4 each.
+        # You can also load an infinite amount of batches, if you don't train
+        # in epochs.
+        batch_size = 4
+        nb_batches = 10
+
+        # Here, for simplicity we just always use the same image.
+        astronaut = data.astronaut()
+        astronaut = ia.imresize_single_image(astronaut, (64, 64))
+
+        for i in range(nb_batches):
+            # A list containing all images of the batch.
+            batch_images = []
+            # A list containing IDs per image. This is not necessary for the
+            # background augmentation and here just used to showcase that you
+            # can transfer additional information.
+            batch_data = []
+
+            # Add some images to the batch.
+            for b in range(batch_size):
+                batch_images.append(astronaut)
+                batch_data.append((i, b))
+
+            # Create the batch object to send to the background processes.
+            batch = ia.Batch(
+                images=np.array(batch_images, dtype=np.uint8),
+                data=batch_data
+            )
+
+            yield batch
+
+    # background augmentation consists of two components:
+    #  (1) BatchLoader, which runs in a Thread and calls repeatedly a user-defined
+    #      function (here: load_batches) to load batches (optionally with keypoints
+    #      and additional information) and sends them to a queue of batches.
+    #  (2) BackgroundAugmenter, which runs several background processes (on other
+    #      CPU cores). Each process takes batches from the queue defined by (1),
+    #      augments images/keypoints and sends them to another queue.
+    # The main process can then read augmented batches from the queue defined
+    # by (2).
+    batch_loader = ia.BatchLoader(load_batches)
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+
+    # Run until load_batches() returns nothing anymore. This also allows infinite
+    # training.
+    while True:
+        print("Next batch...")
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished epoch.")
+            break
+        images_aug = batch.images_aug
+
+        print("Image IDs: ", batch.data)
+
+        misc.imshow(np.hstack(list(images_aug)))
+
+    batch_loader.terminate()
+    bg_augmenter.terminate()
 
 if __name__ == "__main__":
     main()
