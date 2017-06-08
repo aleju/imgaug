@@ -438,3 +438,47 @@ while True:
 batch_loader.terminate()
 bg_augmenter.terminate()
 ```
+
+# List of augmenters
+
+The following is a list of augmenters.
+Note that most defines variables can be set as ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image.
+
+| Augmenter | Description |
+| --- | --- |
+| Sequential(C, R) | Takes a list of child augmenters `C` and applies them in that order to images. If `R` is true (default: false), then the order is random (chosen once per batch). |
+| SomeOf(N, C, R) | Applies `N` randomly selected augmenters from from a list of augmenters `C` to each image. The augmenters are chosen per image. `R` is the same as for `Sequential`. `N` can be a range, e.g. `(1, 3)` in order to pick 1 to 3. |
+| OneOf(C) | Identical to `SomeOf(1, C)`. |
+| Sometimes(P, C, D) | Augments images with probability `P` by using child augmenters `C`, otherwise uses `D`. `D` can be None, then only `P` percent of all images are augmented via `C`. |
+| InColorspace(T, F, C) | Transforms images from colorspace `F` (default: RGB) to colorspace `T`, applies augmenters `C` and then converts back to `F`. |
+| WithChannels(H, C) | Selects from each image channels `H` (e.g. `[0,1]` for red and green in RGB images), applies child augmenters `C` to these channels and merges the result back into the original images. |
+| Noop() | Does nothing. (Useful for validation/test.) |
+| Lambda(I, K) | Applies lambda function `I` to images and `K` to keypoints. |
+| AssertLambda(I, K) | Checks images via lambda function `I` and keypoints via `K` and raises an error if false is returned by either of them. |
+| AssertShape(S) | Raises an error if input images are not of shape `S`. |
+| Crop(PX, PC, KS) | Cuts away either `PX` pixels or `PC` percent of pixels at top/right/bottom/left of images. If `KS` is true (default), the resulting image is resized back to the original size. |
+| Fliplr(P) | Horizontally flips images with probability `P`. |
+| Flipud(P) | Vertically flips images with probability `P`. |
+| Superpixels(P, N, M) | Generates N superpixels of the image at (max) resolution M and resizes back to the original size. Then `P` percent of all superpixel areas in the original image are replaced by the superpixel. (1-P) percent remain unaltered. |
+| ChangeColorspace(T, F, A) | Converts images from colorspace `F` to `T` and mixes with the original image using alpha `A`. Grayscale remains at three channels. (Fairly untested augmenter, use at own risk.) |
+| Grayscale(A, F) | Converts images from colorspace F (default: RGB) to grayscale and mixes with the original image using alpha `A`. |
+| GaussianBlur(S) | Blurs images using a gaussian kernel with size `S`. |
+| AverageBlur(K) | Blurs images using a simple averaging kernel with size `K`. |
+| MedianBlur(K) | Blurs images using a median over neihbourhoods of size `K`. |
+| Convolve(M) | Convolves images with matrix `M`, which can be a lambda function. |
+| Sharpen(A, L) | Runs a sharpening kernel over each image with lightness `L` (low values result in dark images). Mixes the result with the original image using alpha `A`. |
+| Emboss(A, S) | Runs an emboss kernel over each image with strength `S`. Mixes the result with the original image using alpha `A`. |
+| EdgeDetect(A) | Runs an edge detection kernel over each image. Mixes the result with the original image using alpha `A`. |
+| DirectedEdgeDetect(A, D) | Runs a directed edge detection kernel over each image, which detects each from direction `D` (default: random direction from 0 to 360 degrees, chosen per image). Mixes the result with the original image using alpha `A`. |
+| Add(V, PCH) | Adds value `V` to each image. If `PCH` is true, then the the sampled values may be different per channel. |
+| AddElementwise(V, PCH) | Adds value `V` to each pixel. If `PCH` is true, then the the sampled values may be different per channel (and pixel). |
+| AdditiveGaussianNoise(L, S, PCH) | Adds white/gaussian noise pixelwise to an image. The noise comes from the normal distribution `N(L,S)`. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
+| Multiply(V, PCH) | Multiplies each image by value `V`, leading to darker/brighter images. If `PCH` is true, then the the sampled values may be different per channel. |
+| MultiplyElementwise(V, PCH) | Multiplies each pixel by value `V`, leading to darker/brighter pixels. If `PCH` is true, then the the sampled values may be different per channel (and pixel). |
+| Dropout(P, PCH) | Sets pixels to zero with probability `P`. If `PCH` is true, then channels may be treated differently, otherwise whole pixels are set to zero. |
+| CoarseDropout(P, SPX, SPC, PCH) | Like `Dropout`, but samples the locations of pixels that are to be set to zero from a coarser/smaller image, which has pixel size `SPX` or relative size `SPC`. I.e. if `SPC` has a small value, the coarse map is small, resulting in large rectangles being dropped. |
+| Invert(P, PCH) | Inverts with probability `P` all pixels in an image, i.e. sets them to (1-pixel_value). If `PCH` is true, each channel is treated individually (leading to only some channels being inverted). |
+| ContrastNormalization(S, PCH) | Changes the contrast in images, by moving pixel values away or closer to 128. The direction and strength is defined by `S`. If `PCH` is set to true, the process happens channel-wise with possibly different `S`. |
+| Affine(S, TPX, TPC, R, SH, O, M, CVAL) | Applies affine transformations to images. Scales them by `S` (>1=zoom in, <1=zoom out), translates them by `TPX` pixels or `TPC` percent, rotates them by `R` degrees and shears them by `SH` degrees. Interpolation happens with order `O` (0 or 1 are good and fast). Areas can appear in the resulting image, which have no corresponding area in the original image. `M` defines, how to handle these. If `M='constant'` then `CVAL` defines a constant value with which to fill the area. |
+| PiecewiseAffine(S, R, C, O, M, CVAL) | Places a regular grid of points on the image. The grid has `R` rows and `C` columns. Then moves the points (and the image areas around them) by amounts that are samples from normal distribution N(0,`S`), leading to local distortions of varying strengths. `O`, `M` and `CVAL` are defines as in `Affine`. |
+| ElasticTransformation(S, SM) | Moves each pixel individually around based on distortion fields. `SM` defines the smoothness of the distortion field and `S` its strength. |
