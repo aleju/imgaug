@@ -167,7 +167,7 @@ images_aug = seq_det.augment_images(images)
 heatmaps_aug = seq_det.augment_images(heatmaps)
 ```
 
-Augment images *and* landmarks on these images:
+Augment images *and* **landmarks/keypoints** on these images:
 ```python
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -282,7 +282,7 @@ blurer = iaa.GaussianBlur(iap.DiscreteUniform(1, 5))
 images_aug = blurer.augment_images(images)
 ```
 
-You can dynamically deactivate augmenters in an already defined sequence:
+You can **dynamically deactivate augmenters** in an already defined sequence:
 ```python
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -321,7 +321,7 @@ images_aug = seq_det.augment_images(images)
 heatmaps_aug = seq_det.augment_images(heatmaps, hooks=hooks_heatmaps)
 ```
 
-Images can be augmented in background processes using the method `augment_batches(batches, background=True)`,
+Images can be augmented in **background processes** using the method `augment_batches(batches, background=True)`,
 where `batches` is expected to be a list of image batches or a list of batches/lists of `imgaug.KeypointsOnImage` or a list of `imgaug.Batch`.
 The following example augments a list of image batches in the background:
 ```python
@@ -441,8 +441,8 @@ bg_augmenter.terminate()
 
 # List of augmenters
 
-The following is a list of augmenters.
-Note that most defines variables can be set as ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image.
+The following is a list of available augmenters.
+Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image.
 
 | Augmenter | Description |
 | --- | --- |
@@ -480,5 +480,5 @@ Note that most defines variables can be set as ranges, e.g. `A=(0.0, 1.0)` to sa
 | Invert(P, PCH) | Inverts with probability `P` all pixels in an image, i.e. sets them to (1-pixel_value). If `PCH` is true, each channel is treated individually (leading to only some channels being inverted). |
 | ContrastNormalization(S, PCH) | Changes the contrast in images, by moving pixel values away or closer to 128. The direction and strength is defined by `S`. If `PCH` is set to true, the process happens channel-wise with possibly different `S`. |
 | Affine(S, TPX, TPC, R, SH, O, M, CVAL) | Applies affine transformations to images. Scales them by `S` (>1=zoom in, <1=zoom out), translates them by `TPX` pixels or `TPC` percent, rotates them by `R` degrees and shears them by `SH` degrees. Interpolation happens with order `O` (0 or 1 are good and fast). Areas can appear in the resulting image, which have no corresponding area in the original image. `M` defines, how to handle these. If `M='constant'` then `CVAL` defines a constant value with which to fill the area. |
-| PiecewiseAffine(S, R, C, O, M, CVAL) | Places a regular grid of points on the image. The grid has `R` rows and `C` columns. Then moves the points (and the image areas around them) by amounts that are samples from normal distribution N(0,`S`), leading to local distortions of varying strengths. `O`, `M` and `CVAL` are defines as in `Affine`. |
+| PiecewiseAffine(S, R, C, O, M, CVAL) | Places a regular grid of points on the image. The grid has `R` rows and `C` columns. Then moves the points (and the image areas around them) by amounts that are samples from normal distribution N(0,`S`), leading to local distortions of varying strengths. `O`, `M` and `CVAL` are defined as in `Affine`. |
 | ElasticTransformation(S, SM) | Moves each pixel individually around based on distortion fields. `SM` defines the smoothness of the distortion field and `S` its strength. |
