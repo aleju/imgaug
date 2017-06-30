@@ -164,7 +164,7 @@ def draw_per_augmenter_images():
         ("Affine: Rotate", [("%d deg" % (rotate,), iaa.Affine(rotate=rotate)) for rotate in [-90, -45, 0, 45, 90]]),
         ("Affine: Shear", [("%d deg" % (shear,), iaa.Affine(shear=shear)) for shear in [-45, -25, 0, 25, 45]]),
         ("Affine: Modes", [(mode, iaa.Affine(translate_px=-32, mode=mode)) for mode in ["constant", "edge", "symmetric", "reflect", "wrap"]]),
-        ("Affine: cval", [("%.2f" % (cval,), iaa.Affine(translate_px=-32, cval=cval, mode="constant")) for cval in [0.0, 0.25, 0.5, 0.75, 1.0]]),
+        ("Affine: cval", [("%d" % (int(cval*255),), iaa.Affine(translate_px=-32, cval=int(cval*255), mode="constant")) for cval in [0.0, 0.25, 0.5, 0.75, 1.0]]),
         (
             "Affine: all", [
                 (
