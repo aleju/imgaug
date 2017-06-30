@@ -2271,19 +2271,19 @@ def test_Sometimes():
 def test_2d_inputs():
     """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work.
     """
-    base_img1 = np.array([[0, 0, 1],
-                          [0, 0, 1],
-                          [0, 1, 1]], dtype=np.uint8)
-    base_img2 = np.array([[0, 0, 1],
-                          [0, 1, 1],
-                          [0, 1, 0]], dtype=np.uint8)
+    base_img1 = np.array([[0, 0, 1, 1],
+                          [0, 0, 1, 1],
+                          [0, 1, 1, 1]], dtype=np.uint8)
+    base_img2 = np.array([[0, 0, 1, 1],
+                          [0, 1, 1, 1],
+                          [0, 1, 0, 0]], dtype=np.uint8)
 
-    base_img1_flipped = np.array([[1, 0, 0],
-                                  [1, 0, 0],
-                                  [1, 1, 0]], dtype=np.uint8)
-    base_img2_flipped = np.array([[1, 0, 0],
-                                  [1, 1, 0],
-                                  [0, 1, 0]], dtype=np.uint8)
+    base_img1_flipped = np.array([[1, 1, 0, 0],
+                                  [1, 1, 0, 0],
+                                  [1, 1, 1, 0]], dtype=np.uint8)
+    base_img2_flipped = np.array([[1, 1, 0, 0],
+                                  [1, 1, 1, 0],
+                                  [0, 0, 1, 0]], dtype=np.uint8)
 
     images = np.array([base_img1, base_img2])
     images_flipped = np.array([base_img1_flipped, base_img2_flipped])

@@ -14,6 +14,7 @@ import cv2
 import six
 import six.moves as sm
 import types
+import warnings
 
 """
 TODOs
@@ -269,6 +270,14 @@ class Augmenter(object):
 
             # copy the input, we don't want to augment it in-place
             images_copy = np.copy(images)
+
+            if images_copy.ndim == 3 and images_copy.shape[-1] in [1, 3]:
+                warnings.warn("You provided a numpy array of shape %s as input to augment_images(), "
+                              "which was interpreted as (N, H, W). The last dimension however has "
+                              "value 1 or 3, which indicates that you provided a single image "
+                              "with shape (H, W, C) instead. If that is the case, you should use "
+                              "augment_image(image) or augment_images([image]), otherwise "
+                              "you will not get the expected augmentations." % (images_copy.shape,))
 
             # for 2D input images (i.e. shape (N, H, W)), we add a channel axis (i.e. (N, H, W, 1)),
             # so that all augmenters can rely on the input having a channel axis and
@@ -711,7 +720,7 @@ class Augmenter(object):
 
         for lst in self.get_children_lists():
             for aug in lst:
-                aug.reseed(deterministic_too=deterministic_too, random_state=random_state)
+                aug.reseed(random_state=random_state, deterministic_too=deterministic_too)
 
     @abstractmethod
     def get_parameters(self):
