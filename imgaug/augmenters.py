@@ -1563,22 +1563,49 @@ class Sometimes(Augmenter):
     def __str__(self):
         return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
 
+# legacy support
+def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
+    return WithColorspace(to_colorspace, from_colorspace, children, name, deterministic, random_state)
 
-class InColorspace(Augmenter):
-    """Select colorspace for augumentation.
+class WithColorspace(Augmenter):
+    """Select colorspace for child augumentation.
 
-    This augumenter applies children augumenters with changing the colorspace to specified one.
-    See ~imgaug.augumenters.ChainerColorspace for detail.
-
-    Example:
-        aug = iaa.InColorspace(to_colorspace="HSV", from_colorspace="RGB",
-                               children=iaa.WithChannels(0, iaa.Add(10)))
-    This augmenter will add 10 to Hue value in HSV colorspace,
-    then return the colorspace to the original, RGB.
+    This augumenter takes a source colorspace A and a target colorspace B
+    as well as children C. It changes images from A to B, then applies the
+    child augmenters C and finally changes the colorspace back from B to A.
+    See also ChangeColorspace() for more.
     """
 
     def __init__(self, to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
-        super(InColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        """Instantiate a new WithColorspace instance.
+
+        Example:
+            aug = iaa.WithColorspace(to_colorspace="HSV", from_colorspace="RGB",
+                                     children=iaa.WithChannels(0, iaa.Add(10)))
+        This augmenter will add 10 to Hue value in HSV colorspace,
+        then change the colorspace back to the original (RGB).
+
+        Parameters
+        ----------
+        to_colorspace : string
+            See ChangeColorspace.__init__()
+
+        from_colorspace : string, optional(default="RGB")
+            See ChangeColorspace.__init__()
+
+        children : None or Augmenter or list of Augmenters, optional(default=None)
+            See ChangeColorspace.__init__()
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(WithColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.to_colorspace = to_colorspace
         self.from_colorspace = from_colorspace
@@ -1627,8 +1654,7 @@ class InColorspace(Augmenter):
         return [self.children]
 
     def __str__(self):
-        return ("InColorspace(from_colorspace=%s, to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" %
-                (self.from_colorspace, self.to_colorspace, self.name, self.children, self.deterministic))
+        return "WithColorspace(from_colorspace=%s, to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" % (self.from_colorspace, self.to_colorspace, self.name, self.children, self.deterministic)
 
 
 class WithChannels(Augmenter):
