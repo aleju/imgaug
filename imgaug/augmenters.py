@@ -34,7 +34,7 @@ TODOs
     - Add Rot90 augmenter
     - Add random piecewise affine
     - Add CropSquare
-    - background process
+    - weak()/medium()/strong() factory functions per augmenter
 """
 
 @six.add_metaclass(ABCMeta)
@@ -520,6 +520,8 @@ class Augmenter(object):
     # TODO add parameter for handling multiple images ((a) next to each other
     # in each row or (b) multiply row count by number of images and put each
     # one in a new row)
+    # TODO "images" parameter deviates from augment_images (3d array is here
+    # treated as one 3d image, in augment_images as (N, H, W))
     def draw_grid(self, images, rows, cols):
         """Apply this augmenter to the given images and return a grid
         image of the results.
@@ -577,8 +579,8 @@ class Augmenter(object):
             augs.append(det.augment_images([image] * (rows * cols)))
 
         augs_flat = list(itertools.chain(*augs))
-        cell_height = max([image.shape[0] for image in images] + [image.shape[0] for image in augs_flat])
-        cell_width = max([image.shape[1] for image in images] + [image.shape[1] for image in augs_flat])
+        cell_height = max([image.shape[0] for image in augs_flat])
+        cell_width = max([image.shape[1] for image in augs_flat])
         width = cell_width * cols
         height = cell_height * (rows * len(images))
         grid = np.zeros((height, width, 3))
@@ -2006,6 +2008,183 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
     return Lambda(func_images, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)
 
 
+class Scale(Augmenter):
+    """Augmenter that scales images to specified sizes."""
+    def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
+        """Initialize Scale augmenter.
+
+        Example:
+            aug = iaa.Scale(32)
+        scales all images to 32x32 pixels.
+
+        Example:
+            aug = iaa.Scale(0.5)
+        scales all images to 50 percent of their original size.
+
+        Example:
+            aug = iaa.Scale((16, 22))
+        scales all images to a height of 16 pixels and width of 22 pixels.
+
+        Example:
+            aug = iaa.Scale((0.75, 0.5))
+        scales all image's height to 75 percent and width to 50 percent of
+        their original values.
+
+        Example:
+            aug = iaa.Scale(32, interpolation=["linear", "cubic"])
+        scales all images to 32x32 pixels. Randomly uses either "linear"
+        or "cubic" interpolation to do that.
+
+        Example:
+            from imgaug import parameters as iap
+            aug = iaa.Scale(iap.Choice([16, 32, 64]))
+        scales all images either to 16x16, 32x32 or 64x64 pixels.
+
+        Example:
+            from imgaug import parameters as iap
+            aug = iaa.Scale(iap.DiscreteUniform(16, 32))
+        scales all images to a size NxN, where N is a discrete value randomly
+        sampled from the range [16 .. 32].
+
+        size : int or float or tuple of two ints/floats or StochasticParameter
+            New size of the images.
+            If this is an integer, this value will always be used as the new
+              height and width of the images.
+            If this is a float v, then per image the image's height H and
+              width W will be changed to H*v and W*v.
+            If this is a tuple, it is expected to have two entries (H, W).
+              The first entry is expected to resemble the height value and the
+              second the width value. Both entries may be integers, floats or
+              StochasticParameter.
+              Note that this deviates from most other augmenters, where tuples
+              (a, b) resemble continous/discrete ranges.
+            If this is a StochasticParameter, then this parameter will first
+              be queried once per image. The resulting value will be used
+              for both height and width.
+
+        interpolation : int or string or list of ints/strings or StochasticParameter, optional(default="cubic")
+            Interpolation to use.
+            If int, then this interpolation will always be used.
+              Expected to be any of the following:
+                cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC
+            If string, then this interpolation will always be used.
+              Expected to be any of the following:
+                "nearest", "linear", "area", "cubic"
+            If list of ints/strings, then a random one of the values will be
+              picked per image as the interpolation.
+            If a StochasticParameter, then this parameter will be queried per
+              image and is expected to return an integer or string.
+
+        name : string, optional(default=None)
+            See Augmenter.__init__()
+
+        deterministic : bool, optional(default=False)
+            See Augmenter.__init__()
+
+        random_state : int or np.random.RandomState or None, optional(default=None)
+            See Augmenter.__init__()
+        """
+        super(Scale, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        def handle(val):
+            if ia.is_single_integer(val):
+                assert val >= 0
+                return Deterministic(val)
+            elif ia.is_single_float(val):
+                assert 0 <= val <= 1.0
+                return Deterministic(val)
+            elif isinstance(val, StochasticParameter):
+                return val
+            else:
+                raise Exception("Expected integer, float or StochasticParameter, got %s." % (type(val),))
+
+        if isinstance(size, tuple):
+            assert len(size) == 2
+            self.size = (handle(size[0]), handle(size[1]))
+        else:
+            self.size = handle(size)
+
+        if ia.is_single_integer(interpolation):
+            self.interpolation = Deterministic(interpolation)
+        elif ia.is_string(interpolation):
+            self.interpolation = Deterministic(interpolation)
+        elif ia.is_iterable(interpolation):
+            self.interpolation = Choice(interpolation)
+        elif isinstance(interpolation, StochasticParameter):
+            self.interpolation = interpolation
+        else:
+            raise Exception("Expected int or string or iterable or StochasticParameter, got %s." % (type(interpolation),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = []
+        nb_images = len(images)
+        seed = random_state.randint(0, 10**6, 1)[0]
+        if isinstance(self.size, tuple):
+            samples_h = self.size[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_w = self.size[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        else:
+            samples_h = self.size.draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_w = samples_h
+        samples_ip = self.interpolation.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
+        for i in sm.xrange(nb_images):
+            image = images[i]
+            imh, imw = image.shape[0:2]
+            h, w, ip = samples_h[i], samples_w[i], samples_ip[i]
+            if ia.is_single_float(h):
+                assert 0 <= h <= 1.0
+                h = int(imh * h)
+                h = h if h > 0 else 1
+            if ia.is_single_float(w):
+                assert 0 <= w <= 1.0
+                w = int(imw * w)
+                w = w if w > 0 else 1
+
+            image_rs = ia.imresize_single_image(image, (h, w), interpolation=ip)
+            result.append(image_rs)
+
+        if not isinstance(images, list):
+            all_same_size = (len(set([image.shape for image in result])) == 1)
+            if all_same_size:
+                result = np.array(result, dtype=np.uint8)
+
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        result = []
+        nb_images = len(keypoints_on_images)
+        seed = random_state.randint(0, 10**6, 1)[0]
+        if isinstance(self.size, tuple):
+            samples_h = self.size[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_w = self.size[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        else:
+            samples_h = self.size.draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_w = samples_h
+        for i in sm.xrange(nb_images):
+            keypoints_on_image = keypoints_on_images[i]
+            imh, imw = keypoints_on_image.shape[0:2]
+
+            h, w = samples_h[i], samples_w[i]
+            if ia.is_single_float(h):
+                assert 0 <= h <= 1.0
+                h = int(imh * h)
+                h = h if h > 0 else 1
+            if ia.is_single_float(w):
+                assert 0 <= w <= 1.0
+                w = int(imw * w)
+                w = w if w > 0 else 1
+
+            new_shape = list(keypoints_on_image.shape)
+            new_shape[0] = h
+            new_shape[1] = w
+            keypoints_on_image_rs = keypoints_on_image.on(tuple(new_shape))
+
+            result.append(keypoints_on_image_rs)
+
+        return result
+
+    def get_parameters(self):
+        return [self.size, self.interpolation]
+
 class Crop(Augmenter):
     """Augmenter that crops images, i.e. extracts smaller subareas from them."""
 
@@ -2187,7 +2366,6 @@ class Crop(Augmenter):
                 self.top = self.right = self.bottom = self.left = percent
             else:
                 raise Exception("Expected number, tuple of 4 numbers/tuples/lists/StochasticParameters or StochasticParameter, got type %s." % (type(percent),))
-
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
