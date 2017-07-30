@@ -6,7 +6,7 @@ import copy
 import numbers
 import cv2
 import math
-from scipy import misc
+from scipy import misc, ndimage
 import multiprocessing
 import threading
 import sys
@@ -90,6 +90,19 @@ def copy_random_state(random_state, force_copy=False):
 # TODO
 # def from_json(json_str):
 #    pass
+
+def quokka(size=None):
+    img = ndimage.imread("../quokka.jpg", mode="RGB")
+    if size is not None:
+        img = misc.imresize(img, size)
+    return img
+
+def quokka_square(size=None):
+    img = ndimage.imread("../quokka.jpg", mode="RGB")
+    img = img[0:643, 0:643]
+    if size is not None:
+        img = misc.imresize(img, size)
+    return img
 
 def angle_between_vectors(v1, v2):
     """ Returns the angle in radians between vectors 'v1' and 'v2':
