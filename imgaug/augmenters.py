@@ -2023,47 +2023,76 @@ class Scale(Augmenter):
 
         Example:
             aug = iaa.Scale((16, 22))
-        scales all images to a height of 16 pixels and width of 22 pixels.
+        scales all images to a random height and width within the
+        discrete range 16<=x<=22.
 
         Example:
-            aug = iaa.Scale((0.75, 0.5))
-        scales all image's height to 75 percent and width to 50 percent of
-        their original values.
+            aug = iaa.Scale((0.5, 0.75))
+        scales all image's height and width to H*v and W*v, where v is randomly
+        sampled from the range 0.5<=x<=0.75.
+
+        Example:
+            aug = iaa.Scale([16, 32, 64])
+        scales all images either to 16x16, 32x32 or 64x64 pixels.
+
+        Example:
+            aug = iaa.Scale({"height": 32})
+        scales all images to a height of 32 pixels and keeps the original
+        width.
+
+        Example:
+            aug = iaa.Scale({"height": 32, "width": "keep-aspect-ratio"})
+        scales all images to a height of 32 pixels and resizes the x-axis
+        (width) so that the aspect ratio is maintained.
+
+        Example:
+            aug = iaa.Scale({"height": (0.5, 0.75), "width": [16, 32, 64]})
+        scales all images to a height of H*v, where H is the original height
+        and v is a random value sampled from the range 0.5<=x<=0.75.
+        The width/x-axis of each image is resized to either 16 or 32 or
+        64 pixels.
 
         Example:
             aug = iaa.Scale(32, interpolation=["linear", "cubic"])
         scales all images to 32x32 pixels. Randomly uses either "linear"
-        or "cubic" interpolation to do that.
+        or "cubic" interpolation.
 
-        Example:
-            from imgaug import parameters as iap
-            aug = iaa.Scale(iap.Choice([16, 32, 64]))
-        scales all images either to 16x16, 32x32 or 64x64 pixels.
-
-        Example:
-            from imgaug import parameters as iap
-            aug = iaa.Scale(iap.DiscreteUniform(16, 32))
-        scales all images to a size NxN, where N is a discrete value randomly
-        sampled from the range [16 .. 32].
-
-        size : int or float or tuple of two ints/floats or StochasticParameter
+        Parameters
+        ----------
+        size : string "keep" or int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter or dictionary
             New size of the images.
+            If this has the string value 'keep', the original height and width
+              values will be kept (image is not scaled).
             If this is an integer, this value will always be used as the new
               height and width of the images.
             If this is a float v, then per image the image's height H and
               width W will be changed to H*v and W*v.
-            If this is a tuple, it is expected to have two entries (H, W).
-              The first entry is expected to resemble the height value and the
-              second the width value. Both entries may be integers, floats or
-              StochasticParameter.
-              Note that this deviates from most other augmenters, where tuples
-              (a, b) resemble continous/discrete ranges.
+            If this is a tuple, it is expected to have two entries (a, b).
+              If at least one of these are floats, a value will be sampled from
+              range [a, b] and used as the float value to resize the image
+              (see above). If both are integers, a value will be sampled from
+              the discrete range [a .. b] and used as the integer value
+              to resize the image (see above).
+            If this is a list, a random value from the list will be picked
+              to resize the image. All values in the list must be integers or
+              floats (no mixture is possible).
             If this is a StochasticParameter, then this parameter will first
               be queried once per image. The resulting value will be used
               for both height and width.
+            If this is a dictionary, it may contain the keys "height" and
+              "width". Each key may have the same datatypes as above and
+              describes the scaling on x and y-axis. Both axis are sampled
+              independently. Additionally, one of the keys may have the value
+              "keep-aspect-ratio", which means that the respective side of the
+              image will be resized so that the original aspect ratio is kept.
+              This is useful when only resizing one image size by a pixel
+              value (e.g. resize images to a height of 64 pixels and resize
+              the width so that the overall aspect ratio is maintained).
 
-        interpolation : int or string or list of ints/strings or StochasticParameter, optional(default="cubic")
+        interpolation : ia.ALL or int or string or list of ints/strings or StochasticParameter, optional(default="cubic")
             Interpolation to use.
+            If ia.ALL, then a random interpolation from "nearest", "linear",
+              "area" or "cubic" will be picked (per image).
             If int, then this interpolation will always be used.
               Expected to be any of the following:
                 cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC
@@ -2086,25 +2115,64 @@ class Scale(Augmenter):
         """
         super(Scale, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        def handle(val):
-            if ia.is_single_integer(val):
-                assert val >= 0
+        def handle(val, allow_dict):
+            if val == "keep":
+                return Deterministic("keep")
+            elif ia.is_single_integer(val):
+                assert val > 0
                 return Deterministic(val)
             elif ia.is_single_float(val):
                 assert 0 <= val <= 1.0
                 return Deterministic(val)
+            elif allow_dict and isinstance(val, dict):
+                if len(val.keys()) == 0:
+                    return Deterministic("keep")
+                else:
+                    assert all([key in ["height", "width"] for key in val.keys()])
+                    if "height" in val and "width" in val:
+                        assert val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio"
+
+                    size_tuple = []
+                    for k in ["height", "width"]:
+                        if k in val:
+                            if val[k] == "keep-aspect-ratio" or val[k] == "keep":
+                                entry = Deterministic(val[k])
+                            else:
+                                entry = handle(val[k], False)
+                        else:
+                            entry = Deterministic("keep")
+                        size_tuple.append(entry)
+                    return tuple(size_tuple)
+            elif isinstance(val, tuple):
+                assert len(val) == 2
+                if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
+                    assert 0 <= val[0] <= 1.0 and 0 <= val[1] <= 1.0
+                    return Uniform(val[0], val[1])
+                else:
+                    assert val[0] > 0 and val[1] > 0
+                    return DiscreteUniform(val[0], val[1])
+            elif isinstance(val, list):
+                if len(val) == 0:
+                    return Deterministic("keep")
+                else:
+                    all_int = all([ia.is_single_integer(v) for v in val])
+                    all_float = all([ia.is_single_float(v) for v in val])
+                    assert all_int or all_float
+                    if all_int:
+                        assert all([v > 0 for v in val])
+                    else:
+                        assert all([0 <= v <= 1.0 for v in val])
+                    return Choice(val)
             elif isinstance(val, StochasticParameter):
                 return val
             else:
                 raise Exception("Expected integer, float or StochasticParameter, got %s." % (type(val),))
 
-        if isinstance(size, tuple):
-            assert len(size) == 2
-            self.size = (handle(size[0]), handle(size[1]))
-        else:
-            self.size = handle(size)
+        self.size = handle(size, True)
 
-        if ia.is_single_integer(interpolation):
+        if interpolation == ia.ALL:
+            self.interpolation = Choice(["nearest", "linear", "area", "cubic"])
+        elif ia.is_single_integer(interpolation):
             self.interpolation = Deterministic(interpolation)
         elif ia.is_string(interpolation):
             self.interpolation = Deterministic(interpolation)
@@ -2118,28 +2186,12 @@ class Scale(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
-        seed = random_state.randint(0, 10**6, 1)[0]
-        if isinstance(self.size, tuple):
-            samples_h = self.size[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            samples_w = self.size[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
-        else:
-            samples_h = self.size.draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            samples_w = samples_h
-        samples_ip = self.interpolation.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
+        samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
-            imh, imw = image.shape[0:2]
-            h, w, ip = samples_h[i], samples_w[i], samples_ip[i]
-            if ia.is_single_float(h):
-                assert 0 <= h <= 1.0
-                h = int(imh * h)
-                h = h if h > 0 else 1
-            if ia.is_single_float(w):
-                assert 0 <= w <= 1.0
-                w = int(imw * w)
-                w = w if w > 0 else 1
-
-            image_rs = ia.imresize_single_image(image, (h, w), interpolation=ip)
+            sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
+            h, w = self._compute_height_width(image.shape, sample_h, sample_w)
+            image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
             result.append(image_rs)
 
         if not isinstance(images, list):
@@ -2152,27 +2204,11 @@ class Scale(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        seed = random_state.randint(0, 10**6, 1)[0]
-        if isinstance(self.size, tuple):
-            samples_h = self.size[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            samples_w = self.size[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
-        else:
-            samples_h = self.size.draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            samples_w = samples_h
+        samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            imh, imw = keypoints_on_image.shape[0:2]
-
-            h, w = samples_h[i], samples_w[i]
-            if ia.is_single_float(h):
-                assert 0 <= h <= 1.0
-                h = int(imh * h)
-                h = h if h > 0 else 1
-            if ia.is_single_float(w):
-                assert 0 <= w <= 1.0
-                w = int(imw * w)
-                w = w if w > 0 else 1
-
+            sample_h, sample_w = samples_h[i], samples_w[i]
+            h, w = self._compute_height_width(keypoints_on_image.shape, sample_h, sample_w)
             new_shape = list(keypoints_on_image.shape)
             new_shape[0] = h
             new_shape[1] = w
@@ -2181,6 +2217,49 @@ class Scale(Augmenter):
             result.append(keypoints_on_image_rs)
 
         return result
+
+    def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
+        seed = random_state.randint(0, 10**6, 1)[0]
+        if isinstance(self.size, tuple):
+            samples_h = self.size[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_w = self.size[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        else:
+            samples_h = self.size.draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_w = samples_h
+        if do_sample_ip:
+            samples_ip = self.interpolation.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
+        else:
+            samples_ip = None
+        return samples_h, samples_w, samples_ip
+
+    def _compute_height_width(self, image_shape, sample_h, sample_w):
+        imh, imw = image_shape[0:2]
+        h, w = sample_h, sample_w
+
+        if ia.is_single_float(h):
+            assert 0 <= h <= 1.0
+            h = int(imh * h)
+            h = h if h > 0 else 1
+        elif h == "keep":
+            h = imh
+        if ia.is_single_float(w):
+            assert 0 <= w <= 1.0
+            w = int(imw * w)
+            w = w if w > 0 else 1
+        elif w == "keep":
+            w = imw
+
+        # at least the checks for keep-aspect-ratio must come after
+        # the float checks, as they are dependent on the results
+        # this is also why these are not written as elifs
+        if h == "keep-aspect-ratio":
+            h_per_w_orig = imh / imw
+            h = int(w * h_per_w_orig)
+        if w == "keep-aspect-ratio":
+            w_per_h_orig = imw / imh
+            w = int(h * w_per_h_orig)
+
+        return h, w
 
     def get_parameters(self):
         return [self.size, self.interpolation]
