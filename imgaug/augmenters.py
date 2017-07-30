@@ -32,8 +32,11 @@ TODOs
     - Add Cartoon augmenter
     - Add OilPainting augmenter
     - Add Rot90 augmenter
-    - Add random piecewise affine
     - Add CropSquare
+    - Add CropToAspectRatio
+    - Add Pad
+    - Add PadToAspectRatio
+    - Add MeanCarve
     - weak()/medium()/strong() factory functions per augmenter
 """
 
@@ -2009,7 +2012,7 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
 
 
 class Scale(Augmenter):
-    """Augmenter that scales images to specified sizes."""
+    """Augmenter that scales/resizes images to specified heights and widths."""
     def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
         """Initialize Scale augmenter.
 
@@ -2039,6 +2042,10 @@ class Scale(Augmenter):
             aug = iaa.Scale({"height": 32})
         scales all images to a height of 32 pixels and keeps the original
         width.
+
+        Example:
+            aug = iaa.Scale({"height": 32, "width": 48})
+        scales all images to a height of 32 pixels and a width of 48.
 
         Example:
             aug = iaa.Scale({"height": 32, "width": "keep-aspect-ratio"})
@@ -2189,6 +2196,7 @@ class Scale(Augmenter):
         samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
+            assert image.dtype == np.uint8, "Scale() can currently only process images of dtype uint8 (got %s)" % (image.dtype,)
             sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
             h, w = self._compute_height_width(image.shape, sample_h, sample_w)
             image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
@@ -2563,7 +2571,7 @@ class Crop(Augmenter):
         return top, right, bottom, left
 
     def get_parameters(self):
-        return [self.top, self.right, self.bottom, self.left]
+        return [self.all_sides, self.top, self.right, self.bottom, self.left]
 
 
 class Fliplr(Augmenter):
