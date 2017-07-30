@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
+from imgaug import parameters as iap
 from scipy import misc
 import numpy as np
 from skimage import data
@@ -27,6 +28,9 @@ def main():
     ]
 
     augs_many = [
+        iaa.Crop(px=(0, 50), name="native-crop-0-to-50px"),
+        iaa.Crop(px=iap.DiscreteUniform(0, 50), name="native-crop-0-to-50px-iap"),
+        iaa.Pad(px=(0, 50), pad_mode="linear_ramp", pad_cval=(0, 255), name="native-pad-0-to-50px-pad-modes"),
         iaa.CropAndPad(px=(0, 50), sample_independently=False, name="pad-by-0-to-50px-same"),
         iaa.CropAndPad(px=(0, 50), name="pad-by-0-to-50px"),
         iaa.CropAndPad(px=(0, 50), pad_mode=ia.ALL, pad_cval=(0, 255), name="pad-by-0-to-50px-random-pad-modes-cvals"),
@@ -53,7 +57,7 @@ def main():
         kps_aug = aug.augment_keypoints(kps)[0]
         img_aug_kps = kps_aug.draw_on_image(img_aug)
         print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
-        #misc.imshow(img_aug_kps)
+        misc.imshow(img_aug_kps)
 
     print("-----------------")
     print("Random aug per image")

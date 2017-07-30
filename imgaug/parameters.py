@@ -314,3 +314,24 @@ class Clip(StochasticParameter):
             return "Clip(%s, None, %.6f)" % (opstr, float(self.maxval))
         else:
             return "Clip(%s, None, None)" % (opstr,)
+
+class Multiply(StochasticParameter):
+    def __init__(self, other_param, val):
+        super(Multiply, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+        assert ia.is_single_number(val)
+
+        self.other_param = other_param
+        self.val = val
+
+    def _draw_samples(self, size, random_state):
+        samples = self.other_param.draw_samples(size, random_state=random_state)
+        return samples * self.val
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Multiply(%s, %s)" % (opstr, str(self.val))
