@@ -456,7 +456,10 @@ Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0
 | Lambda(I, K) | Applies lambda function `I` to images and `K` to keypoints. |
 | AssertLambda(I, K) | Checks images via lambda function `I` and keypoints via `K` and raises an error if false is returned by either of them. |
 | AssertShape(S) | Raises an error if input images are not of shape `S`. |
-| Crop(PX, PC, KS) | Cuts away either `PX` pixels or `PC` percent of pixels at top/right/bottom/left of images. If `KS` is true (default), the resulting image is resized back to the original size. |
+| Scale(S, I) | Resizes images to size `S`. Common use case would be to use `S={"height":H, "width":W}` to resize all images to shape `HxW`. `H` and `W` may be floats (e.g. resize to `50%` of original size). Either `H` or `W` may be `"keep-aspect-ratio"` to define only one side's new size and resize the other side correspondingly. `I` is the interpolation to use (default: `cubic`). |
+| CropAndPad(PX, PC, PM, PCV, KS) | Crops away or pads `PX` pixels or `PC` percent of pixels at top/right/bottom/left of images. Negative values result in cropping, positive in padding. `PM` defines the pad mode (e.g. use uniform color for all added pixels). `PCV` controls the color of added pixels if `PM=constant`. If `KS` is true (default), the resulting image is resized back to the original size. |
+| Pad(PX, PC, PM, PCV, KS) | Shortcut for CropAndPad(), which only adds pixels. Only positive values are allowed for `PX` and `PC`. |
+| Crop(PX, PC, KS) | Shortcut for CropAndPad(), which only crops away pixels. Only positive values are allowed for `PX` and `PC` (e.g. a value of 5 results in 5 pixels cropped away). |
 | Fliplr(P) | Horizontally flips images with probability `P`. |
 | Flipud(P) | Vertically flips images with probability `P`. |
 | Superpixels(P, N, M) | Generates N superpixels of the image at (max) resolution M and resizes back to the original size. Then `P` percent of all superpixel areas in the original image are replaced by the superpixel. (1-P) percent remain unaltered. |
