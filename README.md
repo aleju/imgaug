@@ -450,7 +450,7 @@ Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0
 | SomeOf(N, C, R) | Applies `N` randomly selected augmenters from from a list of augmenters `C` to each image. The augmenters are chosen per image. `R` is the same as for `Sequential`. `N` can be a range, e.g. `(1, 3)` in order to pick 1 to 3. |
 | OneOf(C) | Identical to `SomeOf(1, C)`. |
 | Sometimes(P, C, D) | Augments images with probability `P` by using child augmenters `C`, otherwise uses `D`. `D` can be None, then only `P` percent of all images are augmented via `C`. |
-| InColorspace(T, F, C) | Transforms images from colorspace `F` (default: RGB) to colorspace `T`, applies augmenters `C` and then converts back to `F`. |
+| WithColorspace(T, F, C) | Transforms images from colorspace `F` (default: RGB) to colorspace `T`, applies augmenters `C` and then converts back to `F`. |
 | WithChannels(H, C) | Selects from each image channels `H` (e.g. `[0,1]` for red and green in RGB images), applies child augmenters `C` to these channels and merges the result back into the original images. |
 | Noop() | Does nothing. (Useful for validation/test.) |
 | Lambda(I, K) | Applies lambda function `I` to images and `K` to keypoints. |
