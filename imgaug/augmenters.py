@@ -5149,7 +5149,7 @@ class Affine(Augmenter):
     """
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
-                 rotate=0.0, shear=0.0, resize=False,
+                 rotate=0.0, shear=0.0, fit_output=False,
                  order=1, cval=0, mode="constant",
                  name=None, deterministic=False, random_state=None):
         """Create a new Affine instance.
@@ -5277,7 +5277,7 @@ class Affine(Augmenter):
             If a StochasticParameter, then this parameter will be used to
               sample the shear value per image.
 
-        resize: bool, optional(default=False)
+        fit_output: bool, optional(default=False)
             Determine whether the shape of the output image will be automatically
             calculated, so the complete rotated image exactly fits.
 
@@ -5398,13 +5398,13 @@ class Affine(Augmenter):
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
 
-        if isinstance(resize, bool):
-            self.resize = Deterministic(resize)
-        elif isinstance(resize, bool):
-            assert all([isinstance(val, bool) for val in resize])
-            self.resize = Choice(resize)
+        if isinstance(fit_output, bool):
+            self.fit_output = Deterministic(fit_output)
+        elif isinstance(fit_output, bool):
+            assert all([isinstance(val, bool) for val in fit_output])
+            self.fit_output = Choice(fit_output)
         else:
-            raise Exception("Expected resize to be boolean, got %s." % (type(resize),))
+            raise Exception("Expected fit_output to be boolean, got %s." % (type(fit_output),))
 
         # scale
         # float | (float, float) | [float, float] | StochasticParameter
@@ -5519,7 +5519,7 @@ class Affine(Augmenter):
         #result = [None] * nb_images
         result = images
 
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, resize_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, fit_output_samples = self._draw_samples(nb_images, random_state)
 
         for i in sm.xrange(nb_images):
             height, width = images[i].shape[0], images[i].shape[1]
@@ -5542,7 +5542,7 @@ class Affine(Augmenter):
             cval = cval_samples[i]
             mode = mode_samples[i]
             order = order_samples[i]
-            resize = resize_samples[i]
+            fit_output = fit_output_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
                 matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
@@ -5556,7 +5556,7 @@ class Affine(Augmenter):
                 image_warped = tf.warp(
                     images[i],
                     matrix.inverse,
-                    resize=resize,
+                    fit_output=fit_output,
                     order=order,
                     mode=mode,
                     cval=cval,
@@ -5652,9 +5652,9 @@ class Affine(Augmenter):
         cval_samples = self.cval.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 90))
         mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
         order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
-        resize_samples = self.resize.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 120))
+        fit_output_samples = self.fit_output.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 120))
 
-        return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, resize_samples
+        return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, fit_output_samples
 
 class PiecewiseAffine(Augmenter):
     """Augmenter that places a regular grid of points on an image and randomly
