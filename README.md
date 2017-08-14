@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/aleju/imgaug.svg?branch=master)](https://travis-ci.org/aleju/imgaug)
+
 # About
 
 This python library helps you with augmenting images for your machine learning projects.
