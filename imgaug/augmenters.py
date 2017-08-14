@@ -1572,6 +1572,7 @@ class Sometimes(Augmenter):
 
 # legacy support
 def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
+    warnings.warn('InColorspace is deprecated. Use WithColorspace.', DeprecationWarning)
     return WithColorspace(to_colorspace, from_colorspace, children, name, deterministic, random_state)
 
 class WithColorspace(Augmenter):
