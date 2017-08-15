@@ -8,14 +8,16 @@ cache:
   directories:
     - $HOME/.cache/pip
 
-before_script:
+before_install:
   - sudo apt-get update -qq
 
-script:
+install:
   - sudo apt-get install -qq -y python-opencv python-virtualenv
   - virtualenv venv
   - cp $(python -c 'import cv2; print(cv2.__file__)') venv/lib/python2.7/site-packages
   - . venv/bin/activate
   - pip install -U numpy  # for copied cv2
   - pip install .
+
+script:
   - python tests/test.py
