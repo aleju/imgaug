@@ -1,4 +1,10 @@
-# About
+# imgaug
+
+[![Build Status](https://travis-ci.org/aleju/imgaug.svg?branch=master)](https://travis-ci.org/aleju/imgaug)
+
+Image augmentation for machine learning experiments.
+
+## About
 
 This python library helps you with augmenting images for your machine learning projects.
 It converts a set of input images into a new, much larger set of slightly altered images.
@@ -19,7 +25,7 @@ The image below shows examples for each available augmentation technique.
 
 *Noop is an augmenter that does nothing. Values for crop are (top pixel, right px, bottom px, left px). Other values written in the form (a, b) mean that each value x was randomly picked from the range a <= x <= b.*
 
-# Requirements and installation
+## Requirements and installation
 
 Required packages:
 * six
@@ -37,7 +43,7 @@ To deinstall the library, just execute `sudo pip uninstall imgaug`.
 
 The library is currently only tested in python2.7, but the code is written so that it *should* run in python3 too.
 
-# Examples
+## Examples
 
 A standard machine learning situation.
 Train on batches of images and augment each batch via crop, horizontal flip ("Fliplr") and gaussian blur:
@@ -439,7 +445,7 @@ batch_loader.terminate()
 bg_augmenter.terminate()
 ```
 
-# List of augmenters
+## List of augmenters
 
 The following is a list of available augmenters.
 Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image.
