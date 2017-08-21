@@ -1,9 +1,15 @@
 from setuptools import setup, find_packages
+import os
 
-try:
-    import cv2
-except ImportError as e:
-    raise Exception("Could not find package 'cv2' (OpenCV). It cannot be automatically installed, so you will have to manually install it.")
+# Check if OpenCV is installed and raise an error if it is not
+# but don't do this if the ReadTheDocs systems tries to install
+# the library, as that is configured to mock cv2 anyways
+READ_THE_DOCS = os.environ.get('READTHEDOCS') == 'True'
+if not READ_THE_DOCS:
+    try:
+        import cv2
+    except ImportError as e:
+        raise Exception("Could not find package 'cv2' (OpenCV). It cannot be automatically installed, so you will have to manually install it.")
 
 long_description = """A library for image augmentation in machine learning experiments, particularly convolutional neural networks.
 Supports augmentation of images and keypoints/landmarks in a variety of different ways."""
