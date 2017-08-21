@@ -44,16 +44,18 @@ TODOs
 
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
-    """Base class for Augmenter objects.
+    """
+    Base class for Augmenter objects.
     All augmenters derive from this class.
     """
 
     def __init__(self, name=None, deterministic=False, random_state=None):
-        """Create a new Augmenter instance.
+        """
+        Create a new Augmenter instance.
 
         Parameters
         ----------
-        name : string or None, optional(default=None)
+        name : None or string, optional(default=None)
             Name given to an Augmenter object. This name is used in print()
             statements as well as find and remove functions.
             If None, `UnnamedX` will be used as the name, where X is the
@@ -71,18 +73,20 @@ class Augmenter(object):
             on these images.
             Usually, there is no need to set this variable by hand. Instead,
             instantiate the augmenter with the defaults and then use
-            augmenter.to_deterministic().
+            `augmenter.to_deterministic()`.
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            The random state to use for this augmenter.
-            If int, a new np.random.RandomState will be created using this
-            value as the seed.
-            If np.random.RandomState instance, the instance will be used directly.
-            If None, imgaug's default RandomState will be used, which's state can
-            be controlled using imgaug.seed(int).
-            Usually, there is no need to set this variable by hand. Instead,
+        random_state : None or int or np.random.RandomState, optional(default=None)
+            The random state to use for this
+            augmenter.
+                * If int, a new np.random.RandomState will be created using this
+                  value as the seed.
+                * If np.random.RandomState instance, the instance will be used directly.
+                * If None, imgaug's default RandomState will be used, which's state can
+                  be controlled using imgaug.seed(int).
+            Usually there is no need to set this variable by hand. Instead,
             instantiate the augmenter with the defaults and then use
-            augmenter.to_deterministic().
+            `augmenter.to_deterministic()`.
+
         """
         super(Augmenter, self).__init__()
 
@@ -106,20 +110,27 @@ class Augmenter(object):
         self.activated = True
 
     def augment_batches(self, batches, hooks=None, background=False):
-        """Augment multiple batches of images.
+        """
+        Augment multiple batches of images.
 
         Parameters
         ----------
         batches : list
             List of image batches to augment.
-            Expected is a list of array-likes, each one being either
-            (a) a list of arrays of shape (H, W) or (H, W, C) or
-            (b) an array of shape (N, H, W) or (N, H, W, C),
+            The expected input is a list, with each entry having one of the
+            following datatypes:
+                * ia.Batch
+                * []
+                * list of ia.KeypointsOnImage
+                * list of (H,W,C) ndarray
+                * list of (H,W) ndarray
+                * (N,H,W,C) ndarray
+                * (N,H,W) ndarray
             where N = number of images, H = height, W = width,
             C = number of channels.
-            Each image should have dtype uint8 (range 0-255).
+            Each image is recommended to have dtype uint8 (range 0-255).
 
-        hooks : ia.HooksImages or None, optional(default=None)
+        hooks : None or ia.HooksImages, optional(default=None)
             HooksImages object to dynamically interfere with the augmentation
             process.
 
@@ -132,6 +143,7 @@ class Augmenter(object):
         -------
         augmented_batch : list
             Corresponding list of batches of augmented images.
+
         """
         assert isinstance(batches, list)
         assert len(batches) > 0
@@ -209,14 +221,15 @@ class Augmenter(object):
             bg_augmenter.terminate()
 
     def augment_image(self, image, hooks=None):
-        """Augment a single image.
+        """
+        Augment a single image.
 
         Parameters
         ----------
-        image : (H, W, C) ndarray or (H, W) ndarray
+        image : (H,W,C) ndarray or (H,W) ndarray
             The image to augment. Should have dtype uint8 (range 0-255).
 
-        hooks : ia.HooksImages or None, optional(default=None)
+        hooks : None or ia.HooksImages, optional(default=None)
             HooksImages object to dynamically interfere with the augmentation
             process.
 
@@ -224,17 +237,18 @@ class Augmenter(object):
         -------
         img : ndarray
             The corresponding augmented image.
+
         """
         assert image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,)
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
-        """Augment multiple images.
+        """
+        Augment multiple images.
 
         Parameters
         ----------
-        images : (N, H, W, C) ndarray or (N, H, W) ndarray
-                or list of ndarray (each either (H, W, C) or (H, W))
+        images : (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
             Images to augment. The input can be a list of numpy arrays or
             a single array. Each array is expected to have shape (H, W, C)
             or (H, W), where H is the height, W is the width and C are the
@@ -243,18 +257,18 @@ class Augmenter(object):
             Currently the recommended dtype is uint8 (i.e. integer values in
             the range 0 to 255). Other dtypes are not tested.
 
-        parents : list of Augmenter or None, optional(default=None)
+        parents : None or list of Augmenter, optional(default=None)
             Parent augmenters that have previously been called before the
             call to this function. Usually you can leave this parameter as None.
             It is set automatically for child augmenters.
 
-        hooks : ia.HooksImages or None, optional(default=None)
+        hooks : None or ia.HooksImages, optional(default=None)
             HooksImages object to dynamically interfere with the augmentation
             process.
 
         Returns
         -------
-        images_result : array-like
+        images_result : ndarray or list
             Corresponding augmented images.
 
         """
@@ -362,20 +376,21 @@ class Augmenter(object):
 
     @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
-        """Augment multiple images.
+        """
+        Augment multiple images.
 
-        This is the internal variation of augment_images().
-        It is called from augment_images() and should usually not be called
+        This is the internal variation of `augment_images()`.
+        It is called from `augment_images()` and should usually not be called
         directly.
         It has to be implemented by every augmenter.
         This method may transform the images in-place.
         This method does not have to care about determinism or the
-        Augmenter instance's random_state variable. The parameter random_state
-        takes care of both of these.
+        Augmenter instance's `random_state` variable. The parameter
+        `random_state` takes care of both of these.
 
         Parameters
         ----------
-        images : list of (H, W, C) ndarray or a single (N, H, W, C) ndarray
+        images : (N,H,W,C) ndarray or list of (H,W,C) ndarray
             Images to augment.
             They may be changed in-place.
             Either a list of (H, W, C) arrays or a single (N, H, W, C) array,
@@ -389,40 +404,41 @@ class Augmenter(object):
 
         parents : list of Augmenter
             See augment_images().
-            (Here never None, but instead an empty list in these cases.)
 
         hooks : ia.HooksImages
             See augment_images().
-            (Here never None, is always an ia.HooksImages instance.)
 
         Returns
         ----------
-        images : list of (H, W, C) ndarray or a single (N, H, W, C) ndarray
+        images : (N,H,W,C) ndarray or list of (H,W,C) ndarray
             The augmented images.
+
         """
         raise NotImplementedError()
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
-        """Augment image keypoints.
+        """
+        Augment image keypoints.
 
-        This is the corresponding function to augment_images(), just for
+        This is the corresponding function to `augment_images()`, just for
         keypoints/landmarks (i.e. coordinates on the image).
-        Usually you will want to call augment_images() with a list of images,
-        e.g. augment_images([A, B, C]) and then augment_keypoints() with the
+        Usually you will want to call `augment_images()` with a list of images,
+        e.g. `augment_images([A, B, C])` and then `augment_keypoints()` with the
         corresponding list of keypoints on these images, e.g.
-        augment_keypoints([Ak, Bk, Ck]), where Ak are the keypoints on image A.
+        `augment_keypoints([Ak, Bk, Ck])`, where `Ak` are the keypoints on
+        image `A`.
 
         Make sure to first convert the augmenter(s) to deterministic states
-        before augmenting the images and keypoints,
+        before augmenting images and their corresponding keypoints,
         e.g. by
-            seq = iaa.Fliplr(0.5)
-            seq_det = seq.to_deterministic()
-            imgs_aug = seq_det.augment_images([A, B, C])
-            kps_aug = seq_det.augment_keypoints([Ak, Bk, Ck])
+            >>> seq = iaa.Fliplr(0.5)
+            >>> seq_det = seq.to_deterministic()
+            >>> imgs_aug = seq_det.augment_images([A, B, C])
+            >>> kps_aug = seq_det.augment_keypoints([Ak, Bk, Ck])
         Otherwise, different random values will be sampled for the image
         and keypoint augmentations, resulting in different augmentations (e.g.
-        images might be rotated by 30deg and keypoints by -10deg).
-        Also make sure to call to_deterministic() again for each new batch,
+        images might be rotated by `30deg` and keypoints by `-10deg`).
+        Also make sure to call `to_deterministic()` again for each new batch,
         otherwise you would augment all batches in the same way.
 
 
@@ -433,19 +449,20 @@ class Augmenter(object):
             Expected is a list of ia.KeypointsOnImage objects,
             each containing the keypoints of a single image.
 
-        parents : list of Augmenter or None, optional(default=None)
+        parents : None or list of Augmenter, optional(default=None)
             Parent augmenters that have previously been called before the
             call to this function. Usually you can leave this parameter as None.
             It is set automatically for child augmenters.
 
-        hooks : ia.HooksKeypoints or None, optional(default=None)
+        hooks : None or ia.HooksKeypoints, optional(default=None)
             HooksKeypoints object to dynamically interfere with the
             augmentation process.
 
         Returns
         -------
-        keypoints_on_images_result : list of augmented ia.KeypointsOnImage
-            objects.
+        keypoints_on_images_result : list of ia.KeypointsOnImage
+            Augmented keypoints.
+
         """
         if self.deterministic:
             state_orig = self.random_state.get_state()
@@ -486,16 +503,17 @@ class Augmenter(object):
 
     @abstractmethod
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        """Augment keypoints on multiple images.
+        """
+        Augment keypoints on multiple images.
 
-        This is the internal variation of augment_keypoints().
-        It is called from augment_keypoints() and should usually not be called
+        This is the internal variation of `augment_keypoints()`.
+        It is called from `augment_keypoints()` and should usually not be called
         directly.
         It has to be implemented by every augmenter.
         This method may transform the keypoints in-place.
         This method does not have to care about determinism or the
-        Augmenter instance's random_state variable. The parameter random_state
-        takes care of both of these.
+        Augmenter instance's `random_state` variable. The parameter
+        `random_state` takes care of both of these.
 
         Parameters
         ----------
@@ -507,17 +525,16 @@ class Augmenter(object):
             augmentation.
 
         parents : list of Augmenter
-            See augment_keypoints().
-            (Here never None, but instead an empty list in these cases.)
+            See `augment_keypoints()`.
 
         hooks : ia.HooksImages
-            See augment_keypoints().
-            (Here never None, is always an ia.HooksKeypoints instance.)
+            See `augment_keypoints()`.
 
         Returns
         ----------
-        images : list of (H, W, C) ndarray or a single (N, H, W, C) ndarray
-            The augmented images.
+        images : list of ia.KeypointsOnImage
+            The augmented keypoints.
+
         """
         raise NotImplementedError()
 
@@ -528,25 +545,28 @@ class Augmenter(object):
     # TODO "images" parameter deviates from augment_images (3d array is here
     # treated as one 3d image, in augment_images as (N, H, W))
     def draw_grid(self, images, rows, cols):
-        """Apply this augmenter to the given images and return a grid
+        """
+        Apply this augmenter to the given images and return a grid
         image of the results.
         Each cell in the grid contains a single augmented variation of
         an input image.
 
         If multiple images are provided, the row count is multiplied by
         the number of images and each image gets its own row.
-        E.g. for images = [A, B], rows=2, cols=3:
+        E.g. for `images = [A, B]`, `rows=2`, `cols=3`::
             A A A
             B B B
             A A A
             B B B
-        for images = [A], rows=2, cols=3:
+
+        for `images = [A]`, `rows=2`,
+        `cols=3`::
             A A A
             A A A
 
         Parameters
         -------
-        images : list of ndarray or ndarray
+        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray or list of (H,W) ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape (H, W) or
             (H, W, 3). If a single array, then it is expected to have
@@ -562,10 +582,11 @@ class Augmenter(object):
 
         Returns
         -------
-        grid : ndarray of shape (H, W, 3).
+        grid : (Hg,Wg,3) ndarray
             The generated grid image with augmented versions of the input
-            images. Here, H and W reference the output size of the grid,
-            and _not_ the sizes of the input images.
+            images. Here, Hg and Wg reference the output size of the grid,
+            and *not* the sizes of the input images.
+
         """
         if ia.is_np_array(images):
             if len(images.shape) == 4:
@@ -604,27 +625,31 @@ class Augmenter(object):
     # TODO test for 2D images
     # TODO test with C = 1
     def show_grid(self, images, rows, cols):
-        """Apply this augmenter to the given images and show/plot the results as
+        """
+        Apply this augmenter to the given images and show/plot the results as
         a grid of images.
 
         If multiple images are provided, the row count is multiplied by
         the number of images and each image gets its own row.
-        E.g. for images = [A, B], rows=2, cols=3:
+        E.g. for `images = [A, B]`, `rows=2`, `cols=3`::
             A A A
             B B B
             A A A
             B B B
-        for images = [A], rows=2, cols=3:
+
+        for `images = [A]`, `rows=2`,
+        `cols=3`::
             A A A
             A A A
 
         Parameters
         ----------
-        images : list of ndarray or ndarray
+        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray or list of (H,W) ndarray
             List of images of which to show the augmented versions.
-            If a list, then each element is expected to have shape (H, W) or
-            (H, W, 3). If a single array, then it is expected to have
-            shape (N, H, W, 3) or (H, W, 3) or (H, W).
+            If a list, then each element is expected to have shape (H, W)
+            or (H, W, 3).
+            If a single array, then it is expected to have shape (N, H, W, 3)
+            or (H, W, 3) or (H, W).
 
         rows : int
             Number of rows in the grid.
@@ -633,18 +658,20 @@ class Augmenter(object):
 
         cols : int
             Number of columns in the grid.
+
         """
         grid = self.draw_grid(images, rows, cols)
         misc.imshow(grid)
 
     def to_deterministic(self, n=None):
-        """Converts this augmenter from a stochastic to a deterministic one.
+        """
+        Converts this augmenter from a stochastic to a deterministic one.
 
         A stochastic augmenter samples new values for each parameter per image.
         Feed a new batch of images into the augmenter and you will get a
         new set of transformations.
         A deterministic augmenter also samples new values for each parameter
-        per image, but starts each batch the same RandomState (i.e. seed).
+        per image, but starts each batch with the same RandomState (i.e. seed).
         Feed two batches of images into the augmenter and you get the same
         transformations both times (same number of images assumed; some
         augmenter's results are also dependend on image height, width and
@@ -652,12 +679,12 @@ class Augmenter(object):
 
         Using determinism is useful for keypoint augmentation,
         as you will usually want to augment images and their corresponding
-        keypoints in the same way (e.g. if an image is rotated by 30deg, then
-        also rotate its keypoints by 30deg).
+        keypoints in the same way (e.g. if an image is rotated by `30deg`, then
+        also rotate its keypoints by `30deg`).
 
         Parameters
         ----------
-        n : int or None, optional(default=None)
+        n : None or int, optional
             Number of deterministic augmenters to return.
             If None then only one Augmenter object will be returned.
             If 1 or higher, then a list containing n Augmenter objects
@@ -665,9 +692,10 @@ class Augmenter(object):
 
         Returns
         -------
-        det : Augmenter object or list of Augmenter object
+        det : Augmenter or list of Augmenter
             A single Augmenter object if n was None,
             otherwise a list of Augmenter objects (even if n was 1).
+
         """
         assert n is None or n >= 1
         if n is None:
@@ -676,7 +704,8 @@ class Augmenter(object):
             return [self._to_deterministic() for _ in sm.xrange(n)]
 
     def _to_deterministic(self):
-        """Augmenter-specific implementation of to_deterministic().
+        """
+        Augmenter-specific implementation of `to_deterministic()`.
         This function is expected to return a single new deterministic
         Augmenter object of this augmenter.
 
@@ -684,6 +713,7 @@ class Augmenter(object):
         -------
         det : Augmenter object
             Deterministic variation of this Augmenter object.
+
         """
         aug = self.copy()
         aug.random_state = ia.new_random_state()
@@ -691,7 +721,8 @@ class Augmenter(object):
         return aug
 
     def reseed(self, random_state=None, deterministic_too=False):
-        """Reseed this augmenter and all of its children (if it has any).
+        """
+        Reseed this augmenter and all of its children (if it has any).
 
         This function is useful, when augmentations are run in the
         background (i.e. on multiple cores).
@@ -702,15 +733,16 @@ class Augmenter(object):
 
         Parameters
         ----------
-        random_state : np.random.RandomState or int, optional(default=None)
-            Generator that creates new random seeds.
-            If int, it will be used as a seed.
+        random_state : None or int or np.random.RandomState, optional
+            A RandomState that is used to sample seeds per augmenter.
+            If int, the parameter will be used as a seed for a new RandomState.
             If None, a new RandomState will automatically be created.
 
-        deterministic_too : bool, optional(default=False)
-            Whether to also change the seed of an augmenter A, if A
+        deterministic_too : bool, optional
+            Whether to also change the seed of an augmenter `A`, if `A`
             is deterministic. This is the case both when this augmenter
-            object is A or one of its children is A.
+            object is `A` or one of its children is `A`.
+
         """
         assert isinstance(deterministic_too, bool)
 
@@ -737,17 +769,10 @@ class Augmenter(object):
         return []
 
     def find_augmenters(self, func, parents=None, flat=True):
-        """Find augmenters that match a condition.
+        """
+        Find augmenters that match a condition.
         This function will compare this augmenter and all of its children
         with a condition. The condition is a lambda function.
-
-        Example:
-            aug = iaa.Sequential([
-                nn.Fliplr(0.5, name="fliplr"),
-                nn.Flipud(0.5, name="flipud")
-            ])
-            print(aug.find_augmenters(lambda a, parents: a.name == "fliplr"))
-        will return the first child augmenter (Fliplr instance).
 
         Parameters
         ----------
@@ -755,23 +780,32 @@ class Augmenter(object):
             A function that receives an Augmenter instance and a list of
             parent Augmenter instances and must return True, if that
             augmenter is valid match.
-            E.g.
-                lambda a, parents: a.name == "fliplr" and any([b.name == "other-augmenter" for b in parents])
 
-        parents : list of Augmenter or None, optional(default=None)
+        parents : None or list of Augmenter, optional
             List of parent augmenters.
             Intended for nested calls and can usually be left as None.
 
-        flat : bool, optional(default=True)
+        flat : bool, optional
             Whether to return the result as a flat list (True)
             or a nested list (False). In the latter case, the nesting matches
             each augmenters position among the children.
 
         Returns
         ----------
-        augmenters : list of Augmenter objects
+        augmenters : list of Augmenter
             Nested list if flat was set to False.
             Flat list if flat was set to True.
+
+        Examples
+        --------
+        >>> aug = iaa.Sequential([
+        >>>     nn.Fliplr(0.5, name="fliplr"),
+        >>>     nn.Flipud(0.5, name="flipud")
+        >>> ])
+        >>> print(aug.find_augmenters(lambda a, parents: a.name == "fliplr"))
+
+        This will return the first child augmenter (Fliplr instance).
+
         """
         if parents is None:
             parents = []
@@ -799,10 +833,10 @@ class Augmenter(object):
         name : string
             Name of the augmenter(s) to search for.
 
-        regex : bool, optional(default=False)
+        regex : bool, optional
             Whether `name` parameter is a regular expression.
 
-        flat : bool, optional(default=True)
+        flat : bool, optional
             See `Augmenter.find_augmenters()`.
 
         Returns
@@ -810,28 +844,31 @@ class Augmenter(object):
         augmenters : list of Augmenter objects
             Nested list if flat was set to False.
             Flat list if flat was set to True.
+
         """
         return self.find_augmenters_by_names([name], regex=regex, flat=flat)
 
     def find_augmenters_by_names(self, names, regex=False, flat=True):
-        """Find augmenter(s) by names.
+        """
+        Find augmenter(s) by names.
 
         Parameters
         ----------
-        names : list of strings
+        names : list of string
             Names of the augmenter(s) to search for.
 
-        regex : bool, optional(default=False)
+        regex : bool, optional
             Whether `names` is a list of regular expressions.
 
-        flat : boolean, optional(default=True)
+        flat : boolean, optional
             See `Augmenter.find_augmenters()`.
 
         Returns
         -------
-        augmenters : list of Augmenter objects
+        augmenters : list of Augmenter
             Nested list if flat was set to False.
             Flat list if flat was set to True.
+
         """
         if regex:
             def comparer(aug, parents):
@@ -845,15 +882,8 @@ class Augmenter(object):
             return self.find_augmenters(lambda aug, parents: aug.name in names, flat=flat)
 
     def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
-        """Remove this augmenter or its children that match a condition.
-
-        Example:
-            seq = iaa.Sequential([
-                iaa.Fliplr(0.5, name="fliplr"),
-                iaa.Flipud(0.5, name="flipud"),
-            ])
-            seq = seq.remove_augmenters(lambda a, parents: a.name == "fliplr")
-        removes the augmenter Fliplr from the Sequential object's children.
+        """
+        Remove this augmenter or its children that match a condition.
 
         Parameters
         ----------
@@ -862,19 +892,19 @@ class Augmenter(object):
             The function must expect the augmenter itself and a list of parent
             augmenters and returns True if that augmenter is to be removed,
             or False otherwise.
-            E.g. lambda a, parents: a.name == "fliplr" and len(parents) == 1
+            E.g. `lambda a, parents: a.name == "fliplr" and len(parents) == 1`
             removes an augmenter with name "fliplr" if it is the direct child
-            of the augmenter upon which remove_augmenters() was initially called.
+            of the augmenter upon which `remove_augmenters()` was initially called.
 
-        copy : bool, optional(default=True)
+        copy : bool, optional
             Whether to copy this augmenter and all if its children before
             removing. If False, removal is performed in-place.
 
-        noop_if_topmost : boolean, optional(default=True)
+        noop_if_topmost : bool, optional
             If True and the condition (lambda function) leads to the removal
             of the topmost augmenter (the one this function is called on
             initially), then that topmost augmenter will be replaced by a
-            Noop instance (i.e. an object will still knows augment_images(),
+            Noop instance (i.e. an object will still knows `augment_images()`,
             but doesnt change images). If False, None will be returned in
             these cases.
             This can only be False if copy is set to True.
@@ -884,7 +914,18 @@ class Augmenter(object):
         aug : Augmenter or None
             This augmenter after the removal was performed.
             Is None iff condition was matched for the topmost augmenter,
-            copy was set to True and noop_if_topmost was set to False.
+            copy was set to True and `noop_if_topmost` was set to False.
+
+        Examples
+        --------
+        >>> seq = iaa.Sequential([
+        >>>     iaa.Fliplr(0.5, name="fliplr"),
+        >>>     iaa.Flipud(0.5, name="flipud"),
+        >>> ])
+        >>> seq = seq.remove_augmenters(lambda a, parents: a.name == "fliplr")
+
+        This removes the augmenter Fliplr from the Sequential object's children.
+
         """
         if func(self, []):
             if not copy:
@@ -900,29 +941,34 @@ class Augmenter(object):
             return aug
 
     def remove_augmenters_inplace(self, func, parents=None):
-        """Remove in-place children of this augmenter that match a condition.
+        """
+        Remove in-place children of this augmenter that match a condition.
 
-        E.g. seq = iaa.Sequential([
-                iaa.Fliplr(0.5, name="fliplr"),
-                iaa.Flipud(0.5, name="flipud"),
-            ])
-            seq.remove_augmenters_inplace(lambda a, parents: a.name == "fliplr")
-        removes the augmenter Fliplr from the Sequential object's children.
-
-        This is functionally identical to remove_augmenters() with copy=False,
-        except that it does not affect the topmost augmenter (the one on
-        which this function is initially called on).
+        This is functionally identical to `remove_augmenters()` with
+        `copy=False`, except that it does not affect the topmost augmenter
+        (the one on which this function is initially called on).
 
         Parameters
         ----------
-        func : lambda function
-            See Augmenter.remove_augmenters().
+        func : callable
+            See `Augmenter.remove_augmenters()`.
 
-        parents : list of Augmenter or None, optional(default=None)
+        parents : None or list of Augmenter, optional
             List of parent Augmenter instances that lead to this
             Augmenter. If None, an empty list will be used.
             This parameter can usually be left empty and will be set
             automatically for children.
+
+        Examples
+        --------
+        >>> seq = iaa.Sequential([
+        >>>     iaa.Fliplr(0.5, name="fliplr"),
+        >>>    iaa.Flipud(0.5, name="flipud"),
+        >>> ])
+        >>> seq.remove_augmenters_inplace(lambda a, parents: a.name == "fliplr")
+
+        This removes the augmenter Fliplr from the Sequential object's children.
+
         """
         parents = [] if parents is None else parents
         subparents = parents + [self]
@@ -944,22 +990,26 @@ class Augmenter(object):
     #    pass
 
     def copy(self):
-        """Create a shallow copy of this Augmenter instance.
+        """
+        Create a shallow copy of this Augmenter instance.
 
         Returns
         -------
         aug : Augmenter
             Shallow copy of this Augmenter instance.
+
         """
         return copy_module.copy(self)
 
     def deepcopy(self):
-        """Create a deep copy of this Augmenter instance.
+        """
+        Create a deep copy of this Augmenter instance.
 
         Returns
         -------
         aug : Augmenter
             Deep copy of this Augmenter instance.
+
         """
         return copy_module.deepcopy(self)
 
@@ -973,49 +1023,58 @@ class Augmenter(object):
 
 
 class Sequential(Augmenter, list):
-    """List augmenter that may contain other augmenters to apply in sequence
+    """
+    List augmenter that may contain other augmenters to apply in sequence
     or random order.
+
+    NOTE: You are *not* forced to use `Sequential` in order to use other
+    augmenters. Each augmenter can be used on its own, e.g the following
+    defines an augmenter for horizontal flips and then augments a single
+    image::
+        aug = iaa.Fliplr(0.5)
+        image_aug = aug.augment_image(image)
+
+    Parameters
+    ----------
+    children : Augmenter or list of Augmenter or None, optional(default=None)
+        The augmenters to apply to images.
+
+    random_order : bool, optional(default=False)
+        Whether to apply the child augmenters in random order per image.
+        The order is resampled for each image.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> seq = iaa.Sequential([
+    >>>     iaa.Fliplr(0.5),
+    >>>     iaa.Flipud(0.5)
+    >>> ])
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    Calls always first the horizontal flip augmenter and then the vertical
+    flip augmenter (each having a probability of 50 percent to be used).
+
+    >>> seq = iaa.Sequential([
+    >>>     iaa.Fliplr(0.5),
+    >>>     iaa.Flipud(0.5)
+    >>> ], random_order=True)
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    Calls sometimes first the horizontal flip augmenter and sometimes first the
+    vertical flip augmenter (each again with 50 percent probability to be used).
+
     """
 
     def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
-        """Initialize a new Sequential instance.
-
-        Example:
-            seq = iaa.Sequential([
-                iaa.Fliplr(0.5),
-                iaa.Flipud(0.5)
-            ])
-            imgs_aug = seq.augment_images(imgs)
-        Calls always first the horizontal flip augmenter and then the vertical
-        flip augmenter (each having a probability of 50 percent to be used).
-
-        Example:
-            seq = iaa.Sequential([
-                iaa.Fliplr(0.5),
-                iaa.Flipud(0.5)
-            ], random_order=True)
-            imgs_aug = seq.augment_images(imgs)
-        Calls sometimes first the horizontal flip augmenter and sometimes first the
-        vertical flip augmenter (each again with 50 percent probability to be used).
-
-        Parameters
-        ----------
-        children : Augmenter or list of Augmenter or None, optional(default=None)
-            The augmenters to apply to images.
-
-        random_order : boolean, optional(default=False)
-            Whether to apply the child augmenters in random order per image.
-            The order is resampled for each image.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : boolean, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         list.__init__(self, children if children is not None else [])
         self.random_order = random_order
@@ -1087,7 +1146,8 @@ class Sequential(Augmenter, list):
         return "Sequential(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
 
 class SomeOf(Augmenter, list):
-    """List augmenter that applies only some of its children.
+    """
+    List augmenter that applies only some of its children to images.
 
     E.g. this allows to define a list of 20 augmenters, but only apply a
     random selection of 5 of them to each image.
@@ -1095,88 +1155,75 @@ class SomeOf(Augmenter, list):
     This augmenter currently does not support replacing (i.e. picking the same
     child multiple times) due to implementation difficulties in connection
     with deterministic augmenters.
+
+    Parameters
+    ----------
+    n : int or tuple of two ints or list of ints or StochasticParameter or None, optional(default=None)
+        Count of augmenters to
+        apply.
+            * If int n, then exactly n of the child augmenters are applied to
+              every image.
+            * If tuple of two ints (a, b), then a <= x <= b augmenters are
+              picked and applied to every image. Here, b may be set to None,
+              then it will automatically replaced with the total number of
+              available children.
+            * If StochasticParameter, then N numbers will be sampled for N images.
+              The parameter is expected to be discrete.
+            * If None, then the total number of available children will be
+              used (i.e. all children will be applied).
+
+    children : Augmenter or list of Augmenter or None, optional(default=None)
+        The augmenters to apply to images.
+
+    random_order : boolean, optional(default=False)
+        Whether to apply the child augmenters in random order per image.
+        The order is resampled for each image.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> seq = iaa.SomeOf(1, [
+    >>>     iaa.Fliplr(1.0),
+    >>>     iaa.Flipud(1.0)
+    >>> ])
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    Applies either Fliplr or Flipud to images.
+
+    >>> seq = iaa.SomeOf((1, 3), [
+    >>>     iaa.Fliplr(1.0),
+    >>>     iaa.Flipud(1.0),
+    >>>     iaa.GaussianBlur(1.0)
+    >>> ])
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    Applies one to three of the listed augmenters (Fliplr, Flipud,
+    GaussianBlur) to images. They are always applied in the
+    order (1st) Fliplr, (2nd) Flipud, (3rd) GaussianBlur.
+
+    >>> seq = iaa.SomeOf((1, None), [
+    >>>     iaa.Fliplr(1.0),
+    >>>     iaa.Flipud(1.0),
+    >>>     iaa.GaussianBlur(1.0)
+    >>> ], random_order=True)
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    Applies one to all of the listed augmenters (Fliplr, Flipud,
+    GaussianBlur) to images. They are applied in random order, i.e.
+    sometimes Blur first, followed by Fliplr, sometimes Fliplr follow by
+    Flipud followed by Blur, sometimes Flipud follow by Blur, etc.
+
     """
 
     def __init__(self, n=None, children=None, random_order=False, name=None, deterministic=False, random_state=None):
-        """Initialize a new SomeOf instance.
-
-        Example:
-            seq = iaa.SomeOf(1, [
-                iaa.Fliplr(1.0),
-                iaa.Flipud(1.0)
-            ])
-            imgs_aug = seq.augment_images(imgs)
-        Applies either Fliplr or Flipud to images.
-
-        Example:
-            seq = iaa.SomeOf((1, 3), [
-                iaa.Fliplr(1.0),
-                iaa.Flipud(1.0),
-                iaa.GaussianBlur(1.0)
-            ])
-            imgs_aug = seq.augment_images(imgs)
-        Applies one to three of the listed augmenters (Fliplr, Flipud,
-        GaussianBlur) to images. They are always applied in the
-        order (1st) Fliplr, (2nd) Flipud, (3rd) GaussianBlur.
-
-        Example:
-            seq = iaa.SomeOf((1, 3), [
-                iaa.Fliplr(1.0),
-                iaa.Flipud(1.0),
-                iaa.GaussianBlur(1.0)
-            ], random_order=True)
-            imgs_aug = seq.augment_images(imgs)
-        Applies one to three of the listed augmenters (Fliplr, Flipud,
-        GaussianBlur) to images. They are applied in random order, i.e.
-        sometimes Blur first, followed by Fliplr, sometimes Fliplr follow by
-        Flipud followed by Blur, sometimes Flipud follow by Blur, etc.
-
-        Parameters
-        ----------
-        n : int or tuple of two ints or list of ints or StochasticParameter or None, optional(default=None)
-            Count of augmenters to apply.
-            If int n, then exactly n of the child augmenters are applied to
-              every image.
-            If tuple of two ints (a, b), then a <= x <= b augmenters are
-              picked and applied to every image.
-            If tuple of (int, None), then the second value will automatically
-              be replaced by the number of children. (Dynamically per call
-              to augment_*.)
-            If StochasticParameter, then N numbers will be sampled for N images.
-              The parameter is expected to be discrete.
-            If None, then the number of children will be used. (Dynamically per
-              call to augment_*)
-
-        children : Augmenter or list of Augmenter or None, optional(default=None)
-            The augmenters to apply to images.
-
-        random_order : boolean, optional(default=False)
-            Whether to apply the child augmenters in random order per image.
-            The order is resampled for each image.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : boolean, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
-        #        Example:
-        #            seq = iaa.SomeOf((1, 6), [
-        #                iaa.Fliplr(1.0),
-        #                iaa.Flipud(1.0),
-        #                iaa.GaussianBlur(1.0)
-        #            ], replace=True)
-        #            imgs_aug = seq.augment_images(imgs)
-        #        Applies one to six of the listed augmenters (Fliplr, Flipud,
-        #        GaussianBlur) to images. Augmenters are replaced, so the same one
-        #        can be applied multiple times.
-        #replace : boolean, optional(default=False)
-        #    Whether to pick augmenters with replacing or without. If with
-        #    replacing is chosen, the same augmenter may be applied multiple
-        #    times.
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         list.__init__(self, children if children is not None else [])
 
@@ -1346,6 +1393,7 @@ class SomeOf(Augmenter, list):
         ----------
         augmenter : Augmenter
             The augmenter to add.
+
         """
         self.append(augmenter)
 
@@ -1358,29 +1406,8 @@ class SomeOf(Augmenter, list):
         return "SomeOf(name=%s, n=%s, random_order=%s, augmenters=[%s], deterministic=%s)" % (self.name, str(self.n), str(self.random_order), augs_str, self.deterministic)
 
 def OneOf(children, name=None, deterministic=False, random_state=None):
-    """Augmenter that always executes exactly one of its children.
-
-    Example:
-        seq = iaa.OneOf([
-            iaa.Fliplr(1.0),
-            iaa.Flipud(1.0)
-        ])
-        imgs_aug = seq.augment_images(imgs)
-    flips each image either horizontally or vertically.
-
-    Example:
-        seq = iaa.OneOf([
-            iaa.Fliplr(1.0),
-            iaa.Sequential([
-                iaa.GaussianBlur(1.0),
-                iaa.Dropout(0.05),
-                iaa.AdditiveGaussianNoise(0.1*255)
-            ]),
-            iaa.Noop()
-        ])
-        imgs_aug = seq.augment_images(imgs)
-    either flips each image horizontally, or ads blur+dropout+noise or does
-    nothing.
+    """
+    Augmenter that always executes exactly one of its children.
 
     Parameters
     ----------
@@ -1392,63 +1419,91 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
         The order is resampled for each image.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
-    deterministic : boolean, optional(default=False)
-        See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> seq = iaa.OneOf([
+    >>>     iaa.Fliplr(1.0),
+    >>>     iaa.Flipud(1.0)
+    >>> ])
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    flips each image either horizontally or vertically.
+
+
+    >>> seq = iaa.OneOf([
+    >>>     iaa.Fliplr(1.0),
+    >>>     iaa.Sequential([
+    >>>         iaa.GaussianBlur(1.0),
+    >>>         iaa.Dropout(0.05),
+    >>>         iaa.AdditiveGaussianNoise(0.1*255)
+    >>>     ]),
+    >>>     iaa.Noop()
+    >>> ])
+    >>> imgs_aug = seq.augment_images(imgs)
+
+    either flips each image horizontally, or ads blur+dropout+noise or does
+    nothing.
+
     """
     return SomeOf(n=1, children=children, random_order=False, name=name, deterministic=deterministic, random_state=random_state)
 
 class Sometimes(Augmenter):
-    """Augment only p percent of all images with one or more augmenters.
+    """
+    Augment only p percent of all images with one or more augmenters.
 
     Let C be one or more child augmenters given to Sometimes.
     Let p be the percent of images to augment.
     Let I be the input images.
     Then (on average) p percent of all images in I will be augmented using C.
+
+    Parameters
+    ----------
+    p : float or StochasticParameter, optional(default=0.5)
+        Sets the probability with which the given augmenters will be applied to
+        input images. E.g. a value of 0.5 will result in 50 percent of all
+        input images being augmented.
+
+    then_list : None or Augmenter or list of Augmenters, optional(default=None)
+        Augmenter(s) to apply to p percent of all images.
+
+    else_list : None or Augmenter or list of Augmenters, optional(default=None)
+        Augmenter(s) to apply to (1-p) percent of all images.
+        These augmenters will be applied only when the ones in then_list
+        are NOT applied (either-or-relationship).
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3))
+
+    when calling `aug.augment_images()`, only (on average) 50 percent of
+    all images will be blurred.
+
+    >>> aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3), iaa.Fliplr(1.0))
+
+    when calling `aug.augment_images()`, (on average) 50 percent of all images
+    will be blurred, the other (again, on average) 50 percent will be
+    horizontally flipped.
+
     """
 
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
-        """Instantiate a new Sometimes instance.
-
-        Example:
-            aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3))
-        when calling aug.augment_images(...), only (on average) 50 percent of
-        all images will be blurred.
-
-        Example:
-            aug = iaa.Sometimes(0.5, iaa.GaussianBlur(0.3), iaa.Fliplr(1.0))
-        when calling aug.augment_images(...), (on average) 50 percent of all images
-        will be blurred, the other (again, on average) 50 percent will be
-        horizontally flipped.
-
-        Parameters
-        ----------
-        p : float or StochasticParameter, optional(default=0.5)
-            Sets the probability with which the given augmenters will be applied to
-            input images. E.g. a value of 0.5 will result in 50 percent of all
-            input images being augmented.
-
-        then_list : None or Augmenter or list of Augmenters, optional(default=None)
-            Augmenter(s) to apply to p percent of all images.
-
-        else_list : None or Augmenter or list of Augmenters, optional(default=None)
-            Augmenter(s) to apply to (1-p) percent of all images.
-            These augmenters will be applied only when the ones in then_list
-            are NOT applied (either-or-relationship).
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(Sometimes, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_float(p) or ia.is_single_integer(p):
@@ -1572,47 +1627,50 @@ class Sometimes(Augmenter):
 
 # legacy support
 def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
+    """Deprecated. Use WithColorspace."""
     warnings.warn('InColorspace is deprecated. Use WithColorspace.', DeprecationWarning)
     return WithColorspace(to_colorspace, from_colorspace, children, name, deterministic, random_state)
 
 class WithColorspace(Augmenter):
-    """Select colorspace for child augumentation.
+    """
+    Apply child augmenters within a specific colorspace.
 
     This augumenter takes a source colorspace A and a target colorspace B
     as well as children C. It changes images from A to B, then applies the
     child augmenters C and finally changes the colorspace back from B to A.
     See also ChangeColorspace() for more.
+
+    Parameters
+    ----------
+    to_colorspace : string
+        See `ChangeColorspace.__init__()`
+
+    from_colorspace : string, optional(default="RGB")
+        See `ChangeColorspace.__init__()`
+
+    children : None or Augmenter or list of Augmenters, optional(default=None)
+        See `ChangeColorspace.__init__()`
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.WithColorspace(to_colorspace="HSV", from_colorspace="RGB",
+    >>>                          children=iaa.WithChannels(0, iaa.Add(10)))
+
+    This augmenter will add 10 to Hue value in HSV colorspace,
+    then change the colorspace back to the original (RGB).
+
     """
 
     def __init__(self, to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
-        """Instantiate a new WithColorspace instance.
-
-        Example:
-            aug = iaa.WithColorspace(to_colorspace="HSV", from_colorspace="RGB",
-                                     children=iaa.WithChannels(0, iaa.Add(10)))
-        This augmenter will add 10 to Hue value in HSV colorspace,
-        then change the colorspace back to the original (RGB).
-
-        Parameters
-        ----------
-        to_colorspace : string
-            See ChangeColorspace.__init__()
-
-        from_colorspace : string, optional(default="RGB")
-            See ChangeColorspace.__init__()
-
-        children : None or Augmenter or list of Augmenters, optional(default=None)
-            See ChangeColorspace.__init__()
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(WithColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.to_colorspace = to_colorspace
@@ -1666,7 +1724,8 @@ class WithColorspace(Augmenter):
 
 
 class WithChannels(Augmenter):
-    """Select channels to augment.
+    """
+    Apply child augmenters to specific channels.
 
     Let C be one or more child augmenters given to this augmenter.
     Let H be a list of channels.
@@ -1676,34 +1735,35 @@ class WithChannels(Augmenter):
     The result of the augmentation will be merged back into the original
     images.
 
-    Example:
-        aug = iaa.WithChannels([0], iaa.Add(10))
+    Parameters
+    ----------
+    channels : integer, list of integers, None, optional(default=None)
+        Sets the channels to extract from each image.
+        If None, all channels will be used.
+
+    children : Augmenter, list of Augmenters, None, optional(default=None)
+        One or more augmenters to apply to images, after the channels
+        are extracted.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.WithChannels([0], iaa.Add(10))
+
     assuming input images are RGB, then this augmenter will add 10 only
     to the first channel, i.e. make images more red.
+
     """
 
     def __init__(self, channels=None, children=None, name=None, deterministic=False, random_state=None):
-        """Instantiate a new WithChannels augmenter.
-
-        Parameters
-        ----------
-        channels : integer, list of integers, None, optional(default=None)
-            Sets the channels to extract from each image.
-            If None, all channels will be used.
-
-        children : Augmenter, list of Augmenters, None, optional(default=None)
-            One or more augmenters to apply to images, after the channels
-            are extracted.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(WithChannels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if channels is None:
@@ -1776,27 +1836,27 @@ class WithChannels(Augmenter):
         return "WithChannels(channels=%s, name=%s, children=[%s], deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
 
 class Noop(Augmenter):
-    """Augmenter that never changes input images ("no operation").
+    """
+    Augmenter that never changes input images ("no operation").
 
     This augmenter is useful when you just want to use a placeholder augmenter
-    in some situation, so that you can continue to call augment_images(),
+    in some situation, so that you can continue to call `augment_images()`,
     without actually changing them (e.g. when switching from training to test).
+
+    Parameters
+    ----------
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
     """
 
     def __init__(self, name=None, deterministic=False, random_state=None):
-        """Instantiate a new Noop instance.
-
-        Parameters
-        ----------
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Noop, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1811,39 +1871,43 @@ class Noop(Augmenter):
 
 
 class Lambda(Augmenter):
-    """Augmenter that calls a lambda function for each batch of input image.
+    """
+    Augmenter that calls a lambda function for each batch of input image.
 
     This is useful to add missing functions to a list of augmenters.
+
+    Parameters
+    ----------
+    func_images : callable,
+        The function to call for each batch of images.
+        It must follow the form
+
+            ``function(images, random_state, parents, hooks)``
+
+        and return the changed images (may be transformed in-place).
+        This is essentially the interface of `Augmenter._augment_images()`.
+
+    func_keypoints : callable,
+        The function to call for each batch of image keypoints.
+        It must follow the form
+
+            ``function(keypoints_on_images, random_state, parents, hooks)``
+
+        and return the changed keypoints (may be transformed in-place).
+        This is essentially the interface of `Augmenter._augment_keypoints()`.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
     """
 
     def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
-        """Instantiate a new Lambda instance.
-
-        Parameters
-        ----------
-        func_images : function,
-            The function to call for each batch of images.
-            It must follow the form
-                `function(images, random_state, parents, hooks)`
-            and return the changed images (may be transformed in-place).
-            This is essentially the interface of Augmenter._augment_images().
-
-        func_keypoints : function,
-            The function to call for each batch of image keypoints.
-            It must follow the form
-                `function(keypoints_on_images, random_state, parents, hooks)`
-            and return the changed keypoints (may be transformed in-place).
-            This is essentially the interface of Augmenter._augment_keypoints().
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
@@ -1863,7 +1927,8 @@ class Lambda(Augmenter):
 
 
 def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, random_state=None):
-    """Augmenter that runs an assert on each batch of input images
+    """
+    Augmenter that runs an assert on each batch of input images
     using a lambda function as condition.
 
     This is useful to make generic assumption about the input images and error
@@ -1874,25 +1939,25 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
     func_images : callable,
         The function to call for each batch of images.
         It must follow the form
-            `function(images, random_state, parents, hooks)`
+            ``function(images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_images().
 
     func_keypoints : callable,
         The function to call for each batch of keypoints.
         It must follow the form
-            `function(keypoints_on_images, random_state, parents, hooks)`
+            ``function(keypoints_on_images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_keypoints().
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
     """
     def func_images_assert(images, random_state, parents, hooks):
         assert func_images(images, random_state, parents=parents, hooks=hooks)
@@ -1906,40 +1971,23 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
 
 
 def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deterministic=False, random_state=None):
-    """Augmenter to make assumptions about the shape of input image(s)
+    """
+    Augmenter to make assumptions about the shape of input image(s)
     and keypoints.
-
-    Example:
-        seq = iaa.Sequential([
-            iaa.AssertShape((None, 32, 32, 3)),
-            iaa.Fliplr(0.5)
-        ])
-    will first check for each image batch, if it contains a variable number of
-    32x32 images with 3 channels each. Only if that check succeeds, the
-    horizontal flip will be executed (otherwise an assertion error will be
-    thrown).
-
-    Example:
-        seq = iaa.Sequential([
-            iaa.AssertShape((None, (32, 64), 32, [1, 3])),
-            iaa.Fliplr(0.5)
-        ])
-    like above, but now the height may be in the range 32 <= H < 64 and
-    the number of channels may be either 1 or 3.
 
     Parameters
     ----------
-    shape : tuple of None|int|tuple of two ints|list of ints,
-        The expected shape.
-        For number of entries must match the number of dimensions, i.e. usually
-        follow (N, H, W, C).
-        If an entry is None, any value for that dimensions is accepted.
-        If an entry is int, exactly that integer value will be accepted or no
-        other value.
-        If an entry is a tuple of two ints with values a and b, only a
-        value x with a <= x < b will be accepted for the dimension.
-        If an entry is a list of ints, only a value for the dimension will
-        be accepted which is contained in the list.
+    shape : tuple with each entry being None or tuple of two ints or list of ints
+        The expected shape. Given as a tuple. The number of entries in the tuple
+        must match the number of dimensions, i.e. usually four entries for
+        (N, H, W, C).
+            * If an entry is None, any value for that dimensions is accepted.
+            * If an entry is int, exactly that integer value will be accepted
+              or no other value.
+            * If an entry is a tuple of two ints with values a and b, only a
+              value x with a <= x < b will be accepted for the dimension.
+            * If an entry is a list of ints, only a value for the dimension
+              will be accepted which is contained in the list.
 
     check_images : bool, optional(default=True)
         Whether to validate input images via the given shape.
@@ -1950,13 +1998,33 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
         instance its image's shape, i.e. KeypointsOnImage.shape.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> seq = iaa.Sequential([
+    >>>     iaa.AssertShape((None, 32, 32, 3)),
+    >>>     iaa.Fliplr(0.5)
+    >>> ])
+
+    will first check for each image batch, if it contains a variable number of
+    32x32 images with 3 channels each. Only if that check succeeds, the
+    horizontal flip will be executed (otherwise an assertion error will be
+    thrown).
+
+    >>> seq = iaa.Sequential([
+    >>>     iaa.AssertShape((None, (32, 64), 32, [1, 3])),
+    >>>     iaa.Fliplr(0.5)
+    >>> ])
+
+    like above, but now the height may be in the range 32 <= H < 64 and
+    the number of channels may be either 1 or 3.
     """
     assert len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape))
 
@@ -2014,82 +2082,35 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
     return Lambda(func_images, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)
 
 
+# TODO rename to Resize to avoid confusion with Affine's scale
 class Scale(Augmenter):
-    """Augmenter that scales/resizes images to specified heights and widths."""
-    def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
-        """Initialize Scale augmenter.
+    """
+    Augmenter that scales/resizes images to specified heights and widths.
 
-        Example:
-            aug = iaa.Scale(32)
-        scales all images to 32x32 pixels.
-
-        Example:
-            aug = iaa.Scale(0.5)
-        scales all images to 50 percent of their original size.
-
-        Example:
-            aug = iaa.Scale((16, 22))
-        scales all images to a random height and width within the
-        discrete range 16<=x<=22.
-
-        Example:
-            aug = iaa.Scale((0.5, 0.75))
-        scales all image's height and width to H*v and W*v, where v is randomly
-        sampled from the range 0.5<=x<=0.75.
-
-        Example:
-            aug = iaa.Scale([16, 32, 64])
-        scales all images either to 16x16, 32x32 or 64x64 pixels.
-
-        Example:
-            aug = iaa.Scale({"height": 32})
-        scales all images to a height of 32 pixels and keeps the original
-        width.
-
-        Example:
-            aug = iaa.Scale({"height": 32, "width": 48})
-        scales all images to a height of 32 pixels and a width of 48.
-
-        Example:
-            aug = iaa.Scale({"height": 32, "width": "keep-aspect-ratio"})
-        scales all images to a height of 32 pixels and resizes the x-axis
-        (width) so that the aspect ratio is maintained.
-
-        Example:
-            aug = iaa.Scale({"height": (0.5, 0.75), "width": [16, 32, 64]})
-        scales all images to a height of H*v, where H is the original height
-        and v is a random value sampled from the range 0.5<=x<=0.75.
-        The width/x-axis of each image is resized to either 16 or 32 or
-        64 pixels.
-
-        Example:
-            aug = iaa.Scale(32, interpolation=["linear", "cubic"])
-        scales all images to 32x32 pixels. Randomly uses either "linear"
-        or "cubic" interpolation.
-
-        Parameters
-        ----------
-        size : string "keep" or int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter or dictionary
-            New size of the images.
-            If this has the string value 'keep', the original height and width
-              values will be kept (image is not scaled).
-            If this is an integer, this value will always be used as the new
+    Parameters
+    ----------
+    size : string "keep" or int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter or dictionary
+        The new size of the
+        images.
+            * If this has the string value 'keep', the original height and
+              width values will be kept (image is not scaled).
+            * If this is an integer, this value will always be used as the new
               height and width of the images.
-            If this is a float v, then per image the image's height H and
+            * If this is a float v, then per image the image's height H and
               width W will be changed to H*v and W*v.
-            If this is a tuple, it is expected to have two entries (a, b).
+            * If this is a tuple, it is expected to have two entries (a, b).
               If at least one of these are floats, a value will be sampled from
               range [a, b] and used as the float value to resize the image
               (see above). If both are integers, a value will be sampled from
               the discrete range [a .. b] and used as the integer value
               to resize the image (see above).
-            If this is a list, a random value from the list will be picked
+            * If this is a list, a random value from the list will be picked
               to resize the image. All values in the list must be integers or
               floats (no mixture is possible).
-            If this is a StochasticParameter, then this parameter will first
+            * If this is a StochasticParameter, then this parameter will first
               be queried once per image. The resulting value will be used
               for both height and width.
-            If this is a dictionary, it may contain the keys "height" and
+            * If this is a dictionary, it may contain the keys "height" and
               "width". Each key may have the same datatypes as above and
               describes the scaling on x and y-axis. Both axis are sampled
               independently. Additionally, one of the keys may have the value
@@ -2099,29 +2120,87 @@ class Scale(Augmenter):
               value (e.g. resize images to a height of 64 pixels and resize
               the width so that the overall aspect ratio is maintained).
 
-        interpolation : ia.ALL or int or string or list of ints/strings or StochasticParameter, optional(default="cubic")
-            Interpolation to use.
-            If ia.ALL, then a random interpolation from "nearest", "linear",
-              "area" or "cubic" will be picked (per image).
-            If int, then this interpolation will always be used.
+    interpolation : ia.ALL or int or string or list of ints/strings or StochasticParameter, optional(default="cubic")
+        Interpolation to
+        use.
+            * If ia.ALL, then a random interpolation from `nearest`, `linear`,
+              `area` or `cubic` will be picked (per image).
+            * If int, then this interpolation will always be used.
               Expected to be any of the following:
-                cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC
-            If string, then this interpolation will always be used.
+              `cv2.INTER_NEAREST`, `cv2.INTER_LINEAR`, `cv2.INTER_AREA`,
+              `cv2.INTER_CUBIC`
+            * If string, then this interpolation will always be used.
               Expected to be any of the following:
-                "nearest", "linear", "area", "cubic"
-            If list of ints/strings, then a random one of the values will be
+              "nearest", "linear", "area", "cubic"
+            * If list of ints/strings, then a random one of the values will be
               picked per image as the interpolation.
-            If a StochasticParameter, then this parameter will be queried per
+              If a StochasticParameter, then this parameter will be queried per
               image and is expected to return an integer or string.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Scale(32)
+
+    scales all images to 32x32 pixels.
+
+    >>> aug = iaa.Scale(0.5)
+
+    scales all images to 50 percent of their original size.
+
+    >>> aug = iaa.Scale((16, 22))
+
+    scales all images to a random height and width within the
+    discrete range 16<=x<=22.
+
+    >>> aug = iaa.Scale((0.5, 0.75))
+
+    scales all image's height and width to H*v and W*v, where v is randomly
+    sampled from the range 0.5<=x<=0.75.
+
+    >>> aug = iaa.Scale([16, 32, 64])
+
+    scales all images either to 16x16, 32x32 or 64x64 pixels.
+
+    >>> aug = iaa.Scale({"height": 32})
+
+    scales all images to a height of 32 pixels and keeps the original
+    width.
+
+    >>> aug = iaa.Scale({"height": 32, "width": 48})
+
+    scales all images to a height of 32 pixels and a width of 48.
+
+    >>> aug = iaa.Scale({"height": 32, "width": "keep-aspect-ratio"})
+
+    scales all images to a height of 32 pixels and resizes the x-axis
+    (width) so that the aspect ratio is maintained.
+
+    >>> aug = iaa.Scale({"height": (0.5, 0.75), "width": [16, 32, 64]})
+
+    scales all images to a height of H*v, where H is the original height
+    and v is a random value sampled from the range 0.5<=x<=0.75.
+    The width/x-axis of each image is resized to either 16 or 32 or
+    64 pixels.
+
+    >>> aug = iaa.Scale(32, interpolation=["linear", "cubic"])
+
+    scales all images to 32x32 pixels. Randomly uses either "linear"
+    or "cubic" interpolation.
+
+    """
+    def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
+        """Initialize Scale augmenter.
+
+
         """
         super(Scale, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -2276,183 +2355,188 @@ class Scale(Augmenter):
         return [self.size, self.interpolation]
 
 class CropAndPad(Augmenter):
-    """Augmenter that crops/pads images by defined amounts in pixels or
-    percent (relative to input image size)."""
+    """
+    Augmenter that crops/pads images by defined amounts in pixels or
+    percent (relative to input image size).
+    Cropping removes pixels at the sides (i.e. extracts a subimage from
+    a given full image). Padding adds pixels to the sides (e.g. black pixels).
 
-    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
-        """Create a new Pad instance.
-
-        Example:
-            aug = iaa.CropAndPad(px=(-10, 0))
-        crops each side by a random value from the range -10px to 0px (the value
-        is sampled per side).
-
-        Example:
-            aug = iaa.CropAndPad(px=(0, 10))
-        pads each side by a random value from the range 0px to 10px (the values
-        are sampled per side). The padding happens by zero-padding (i.e. adds
-        black pixels).
-
-        Example:
-            aug = iaa.CropAndPad(px=(0, 10), pad_mode="edge")
-        pads each side by a random value from the range 0px to 10px (the values
-        are sampled per side). The padding uses the 'edge' mode from numpy's
-        pad function.
-
-        Example:
-            aug = iaa.CropAndPad(px=(0, 10), pad_mode=["constant", "edge"])
-        pads each side by a random value from the range 0px to 10px (the values
-        are sampled per side). The padding uses randomly either the 'constant'
-        or 'edge' mode from numpy's pad function.
-
-        Example:
-            aug = iaa.CropAndPad(px=(0, 10), pad_mode=ia.ALL, pad_cval=(0, 255))
-        pads each side by a random value from the range 0px to 10px (the values
-        are sampled per side). It uses a random mode for numpy's pad function.
-        If the mode is 'constant' or 'linear_ramp', it samples a random value
-        v from the range [0, 255] and uses that as the constant
-        value (mode=constant) or end value (mode=linear_ramp).
-
-        Example:
-            aug = iaa.CropAndPad(px=(0, 10), sample_independently=False)
-        samples one value v from the discrete range [0..10] and pads all sides
-        by v pixels.
-
-        Example:
-            aug = iaa.CropAndPad(px=(0, 10), keep_size=False)
-        pads each side by a random value from the range 0px to 10px (the value
-        is sampled per side). After padding, the images are NOT resized to
-        their original size (i.e. the images may end up having different
-        heights/widths).
-
-        Example:
-            aug = iaa.CropAndPad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
-        crops the top and bottom by a random value from the range 0px to 10px
-        and the left and right by a random value in the range 0px to 5px.
-
-        Example:
-            aug = iaa.CropAndPad(percent=(0, 0.1))
-        crops each side by a random value from the range 0 percent to
-        10 percent. (Percent with respect to the side's size, e.g. for the
-        top side it uses the image's height.)
-
-        Example:
-            aug = iaa.CropAndPad(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
-        crops each side by either 5 percent or 10 percent.
-
-        Example:
-            aug = iaa.CropAndPad(px=(-10, 10))
-        samples per side and image a value v from the discrete range [-10..10]
-        and either crops (negative value) or pads (positive value) the side
-        by v pixels.
-
-        Parameters
-        ----------
-        px : None or int or StochasticParameter or tuple, optional(default=None)
-            The number of pixels to crop (negative values) away (cut off) or
-            pad (positive values) on each side of the image.
-            Either this or the parameter `percent` may be set, not both at the
-            same time.
-            If None, then pixel-based cropping will not be used.
-            If int, then that exact number of pixels will always be cropped.
-            If StochasticParameter, then that parameter will be used for each
+    Parameters
+    ----------
+    px : None or int or StochasticParameter or tuple, optional(default=None)
+        The number of pixels to crop (negative values) or
+        pad (positive values) on each side of the image.
+        Either this or the parameter `percent` may be set, not both at the
+        same time.
+            * If None, then pixel-based cropping will not be used.
+            * If int, then that exact number of pixels will always be cropped.
+            * If StochasticParameter, then that parameter will be used for each
               image. Four samples will be drawn per image (top, right, bottom,
               left).
-              If however sample_independently is set to False, only one value
+              If however `sample_independently` is set to False, only one value
               will be sampled per image and used for all sides.
-            If a tuple of two ints with values a and b, then each side will be
-              cropped by a random amount in the range a <= x <= b.
+            * If a tuple of two ints with values a and b, then each side will
+              be cropped by a random amount in the range a <= x <= b.
               x is sampled per image side.
-              If however sample_independently is set to False, only one value
+              If however `sample_independently` is set to False, only one value
               will be sampled per image and used for all sides.
-            If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single integer (always crop by exactly
-              that value), a tuple of two ints a and b (crop by an
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single integer (always crop by
+              exactly that value), a tuple of two ints a and b (crop by an
               amount a <= x <= b), a list of ints (crop by a random value that
               is contained in the list) or a StochasticParameter (sample the
               amount to crop from that parameter).
 
-        percent : None or int or float or StochasticParameter or tuple, optional(default=None)
-            The number of pixels to crop (negative values) away (cut off) or
-            pad (positive values) on each side of the image given _in percent_
-            of the image height/width. E.g. if this is set to 0.1, the
-            augmenter will always crop away 10 percent of the image's height at
-            the top, 10 percent of the width on the right, 10 percent of the
-            height at the bottom and 10 percent of the width on the left.
-            Either this or the parameter `px` may be set, not both at the same
-            time.
-            If None, then percent-based cropping will not be used.
-            If int, then expected to be 0 (no padding/cropping).
-            If float, then that percentage will always be cropped away.
-            If StochasticParameter, then that parameter will be used for each
+    percent : None or int or float or StochasticParameter or tuple, optional(default=None)
+        The number of pixels to crop (negative values) or
+        pad (positive values) on each side of the image given *in percent*
+        of the image height/width. E.g. if this is set to 0.1, the
+        augmenter will always crop away 10 percent of the image's height at
+        the top, 10 percent of the width on the right, 10 percent of the
+        height at the bottom and 10 percent of the width on the left.
+        Either this or the parameter `px` may be set, not both at the same
+        time.
+            * If None, then percent-based cropping will not be used.
+            * If int, then expected to be 0 (no padding/cropping).
+            * If float, then that percentage will always be cropped away.
+            * If StochasticParameter, then that parameter will be used for each
               image. Four samples will be drawn per image (top, right, bottom,
               left).
-              If however sample_independently is set to False, only one value
+              If however `sample_independently` is set to False, only one value
               will be sampled per image and used for all sides.
-            If a tuple of two floats with values a and b, then each side will be
-              cropped by a random percentage in the range a <= x <= b.
+            * If a tuple of two floats with values a and b, then each side will
+              be cropped by a random percentage in the range a <= x <= b.
               x is sampled per image side.
-              If however sample_independently is set to False, only one value
+              If however `sample_independently` is set to False, only one value
               will be sampled per image and used for all sides.
-            If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single float (always crop by exactly
-              that percent value), a tuple of two floats a and b (crop by a
-              percentage a <= x <= b), a list of floats (crop by a random value that
-              is contained in the list) or a StochasticParameter (sample the
-              percentage to crop from that parameter).
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single float (always crop by
+              exactly that percent value), a tuple of two floats a and b (crop
+              by a percentage a <= x <= b), a list of floats (crop by a random
+              value that is contained in the list) or a StochasticParameter
+              (sample the percentage to crop from that parameter).
 
-        pad_mode : ia.ALL or string or list of strings or StochasticParameter, optional(default="constant")
-            Padding mode to use for numpy's pad function. The available modes
-            are "constant", "edge", "linear_ramp", "maximum", "median",
-            "minimum", "reflect", "symmetric", "wrap". Each one of these is
-            explained in the numpy documentation. The modes "constant" and
-            "linear_ramp" use extra values, which are provided by pad_cval
-            when necessary.
-            If ia.ALL, then a random mode from all available
+    pad_mode : ia.ALL or string or list of strings or StochasticParameter, optional(default="constant")
+        Padding mode to use for numpy's pad function. The available modes
+        are `constant`, `edge`, `linear_ramp`, `maximum`, `median`,
+        `minimum`, `reflect`, `symmetric`, `wrap`. Each one of these is
+        explained in the numpy documentation. The modes "constant" and
+        `linear_ramp` use extra values, which are provided by `pad_cval`
+        when necessary.
+            * If ia.ALL, then a random mode from all available
               modes will be sampled per image.
-            If a string, it will be used as the pad mode for all
+            * If a string, it will be used as the pad mode for all
               images.
-            If a list of strings, a random one of these will be
+            * If a list of strings, a random one of these will be
               sampled per image and used as the mode.
-            If StochasticParameter, a random mode will be sampled from this
+            * If StochasticParameter, a random mode will be sampled from this
               parameter per image.
 
-        pad_cval : float or int or tuple of two ints/floats or list of ints/floats or StochasticParameter, optional(default=0)
-            The constant value to use (for numpy's pad function) if the pad
-            mode is "constant" or the end value to use if the mode
-            is "linear_ramp".
-            If float/int, then that value will be used.
-            If a tuple of two numbers and at least one of them is a float,
+    pad_cval : float or int or tuple of two ints/floats or list of ints/floats or StochasticParameter, optional(default=0)
+        The constant value to use (for numpy's pad function) if the pad
+        mode is "constant" or the end value to use if the mode
+        is `linear_ramp`.
+            * If float/int, then that value will be used.
+            * If a tuple of two numbers and at least one of them is a float,
               then a random number will be sampled from the continuous range
               a<=x<=b and used as the value. If both numbers are integers,
               the range is discrete.
-            If a list of ints/floats, then a random value will be chosen from
+            * If a list of ints/floats, then a random value will be chosen from
               the elements of the list and used as the value.
-            If StochasticParameter, a random value will be sampled from that
+            * If StochasticParameter, a random value will be sampled from that
               parameter per image.
 
-        keep_size : bool, optional(default=True)
-            After cropping, the result image has a different height/width than
-            the input image. If this parameter is set to True, then the cropped
-            image will be resized to the input image's size, i.e. the image size
-            is then not changed by the augmenter.
+    keep_size : bool, optional(default=True)
+        After cropping, the result image has a different height/width than
+        the input image. If this parameter is set to True, then the cropped
+        image will be resized to the input image's size, i.e. the image size
+        is then not changed by the augmenter.
 
-        sample_independently : bool, optional(default=True)
-            If false AND the values for px/percent result in exactly one
-            probability distribution for the amount to crop/pad, only one
-            single value will be sampled from that probability distribution
-            and used for all sides. I.e. the crop/pad amount then is the same
-            for all sides.
+    sample_independently : bool, optional(default=True)
+        If false AND the values for px/percent result in exactly one
+        probability distribution for the amount to crop/pad, only one
+        single value will be sampled from that probability distribution
+        and used for all sides. I.e. the crop/pad amount then is the same
+        for all sides.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.CropAndPad(px=(-10, 0))
+
+    crops each side by a random value from the range -10px to 0px (the value
+    is sampled per side).
+
+    >>> aug = iaa.CropAndPad(px=(0, 10))
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). The padding happens by zero-padding (i.e. adds
+    black pixels).
+
+    >>> aug = iaa.CropAndPad(px=(0, 10), pad_mode="edge")
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). The padding uses the 'edge' mode from numpy's
+    pad function.
+
+    >>> aug = iaa.CropAndPad(px=(0, 10), pad_mode=["constant", "edge"])
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). The padding uses randomly either the 'constant'
+    or 'edge' mode from numpy's pad function.
+
+    >>> aug = iaa.CropAndPad(px=(0, 10), pad_mode=ia.ALL, pad_cval=(0, 255))
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). It uses a random mode for numpy's pad function.
+    If the mode is `constant` or `linear_ramp`, it samples a random value
+    v from the range [0, 255] and uses that as the constant
+    value (`mode=constant`) or end value (`mode=linear_ramp`).
+
+    >>> aug = iaa.CropAndPad(px=(0, 10), sample_independently=False)
+
+    samples one value v from the discrete range [0..10] and pads all sides
+    by v pixels.
+
+    >>> aug = iaa.CropAndPad(px=(0, 10), keep_size=False)
+
+    pads each side by a random value from the range 0px to 10px (the value
+    is sampled per side). After padding, the images are NOT resized to
+    their original size (i.e. the images may end up having different
+    heights/widths).
+
+    >>> aug = iaa.CropAndPad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
+
+    pads the top and bottom by a random value from the range 0px to 10px
+    and the left and right by a random value in the range 0px to 5px.
+
+    >>> aug = iaa.CropAndPad(percent=(0, 0.1))
+
+    pads each side by a random value from the range 0 percent to
+    10 percent. (Percent with respect to the side's size, e.g. for the
+    top side it uses the image's height.)
+
+    >>> aug = iaa.CropAndPad(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
+
+    pads each side by either 5 percent or 10 percent.
+
+    >>> aug = iaa.CropAndPad(px=(-10, 10))
+
+    samples per side and image a value v from the discrete range [-10..10]
+    and either crops (negative value) or pads (positive value) the side
+    by v pixels.
+
+    """
+
+    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
         super(CropAndPad, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.all_sides = None
@@ -2732,58 +2816,8 @@ class CropAndPad(Augmenter):
 
 
 def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
-    """Create a new Pad augmenter, which adds columns/rows to images.
-
-    Example:
-        aug = iaa.Pad(px=(0, 10))
-    pads each side by a random value from the range 0px to 10px (the value
-    is sampled per side). The added rows/columns are filled with black pixels.
-
-    Example:
-        aug = iaa.Pad(px=(0, 10), sample_independently=False)
-    samples one value v from the discrete range [0..10] and pads all sides
-    by v pixels.
-
-    Example:
-        aug = iaa.Pad(px=(0, 10), keep_size=False)
-    pads each side by a random value from the range 0px to 10px (the value
-    is sampled per side). After padding, the images are NOT resized to their
-    original size (i.e. the images may end up having different heights/widths).
-
-    Example:
-        aug = iaa.Pad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
-    pads the top and bottom by a random value from the range 0px to 10px
-    and the left and right by a random value in the range 0px to 5px.
-
-    Example:
-        aug = iaa.Pad(percent=(0, 0.1))
-    pads each side by a random value from the range 0 percent to
-    10 percent. (Percent with respect to the side's size, e.g. for the
-    top side it uses the image's height.)
-
-    Example:
-        aug = iaa.Pad(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
-    pads each side by either 5 percent or 10 percent.
-
-    Example:
-        aug = iaa.Pad(px=(0, 10), pad_mode="edge")
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding uses the 'edge' mode from numpy's
-    pad function.
-
-    Example:
-        aug = iaa.Pad(px=(0, 10), pad_mode=["constant", "edge"])
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding uses randomly either the 'constant'
-    or 'edge' mode from numpy's pad function.
-
-    Example:
-        aug = iaa.Pad(px=(0, 10), pad_mode=ia.ALL, pad_cval=(0, 255))
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). It uses a random mode for numpy's pad function.
-    If the mode is 'constant' or 'linear_ramp', it samples a random value
-    v from the range [0, 255] and uses that as the constant
-    value (mode=constant) or end value (mode=linear_ramp).
+    """
+    Augmenter that pads images, i.e. adds columns/rows to them.
 
     Parameters
     ----------
@@ -2791,75 +2825,75 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         The number of pixels to crop away (cut off) on each side of the image.
         Either this or the parameter `percent` may be set, not both at the same
         time.
-        If None, then pixel-based cropping will not be used.
-        If int, then that exact number of pixels will always be cropped.
-        If StochasticParameter, then that parameter will be used for each
-          image. Four samples will be drawn per image (top, right, bottom,
-          left).
-        If a tuple of two ints with values a and b, then each side will be
-          cropped by a random amount in the range a <= x <= b.
-          x is sampled per image side.
-        If a tuple of four entries, then the entries represent top, right,
-          bottom, left. Each entry may be a single integer (always crop by exactly
-          that value), a tuple of two ints a and b (crop by an
-          amount a <= x <= b), a list of ints (crop by a random value that
-          is contained in the list) or a StochasticParameter (sample the
-          amount to crop from that parameter).
+            * If None, then pixel-based cropping will not be used.
+            * If int, then that exact number of pixels will always be cropped.
+            * If StochasticParameter, then that parameter will be used for each
+              image. Four samples will be drawn per image (top, right, bottom,
+              left).
+            * If a tuple of two ints with values a and b, then each side will
+              be cropped by a random amount in the range a <= x <= b.
+              x is sampled per image side.
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single integer (always crop by
+              exactly that value), a tuple of two ints a and b (crop by an
+              amount a <= x <= b), a list of ints (crop by a random value that
+              is contained in the list) or a StochasticParameter (sample the
+              amount to crop from that parameter).
 
     percent : None or int or float or StochasticParameter or tuple, optional(default=None)
         The number of pixels to crop away (cut off) on each side of the image
-        given _in percent_ of the image height/width.
+        given *in percent* of the image height/width.
         E.g. if this is set to 0.1, the augmenter will always crop away
         10 percent of the image's height at the top, 10 percent of the width
         on the right, 10 percent of the height at the bottom and 10 percent
         of the width on the left.
         Either this or the parameter `px` may be set, not both at the same
         time.
-        If None, then percent-based cropping will not be used.
-        If int, then expected to be 0 (no cropping).
-        If float, then that percentage will always be cropped away.
-        If StochasticParameter, then that parameter will be used for each
-          image. Four samples will be drawn per image (top, right, bottom,
-          left).
-        If a tuple of two floats with values a and b, then each side will be
-          cropped by a random percentage in the range a <= x <= b.
-          x is sampled per image side.
-        If a tuple of four entries, then the entries represent top, right,
-          bottom, left. Each entry may be a single float (always crop by exactly
-          that percent value), a tuple of two floats a and b (crop by a
-          percentage a <= x <= b), a list of floats (crop by a random value that
-          is contained in the list) or a StochasticParameter (sample the
-          percentage to crop from that parameter).
+            * If None, then percent-based cropping will not be used.
+            * If int, then expected to be 0 (no cropping).
+            * If float, then that percentage will always be cropped away.
+            * If StochasticParameter, then that parameter will be used for each
+              image. Four samples will be drawn per image (top, right, bottom,
+              left).
+            * If a tuple of two floats with values a and b, then each side will
+              be cropped by a random percentage in the range a <= x <= b.
+              x is sampled per image side.
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single float (always crop by
+              exactly that percent value), a tuple of two floats a and b (crop
+              by a percentage a <= x <= b), a list of floats (crop by a random
+              value that is contained in the list) or a StochasticParameter
+              (sample the percentage to crop from that parameter).
 
     pad_mode : ia.ALL or string or list of strings or StochasticParameter, optional(default="constant")
         Padding mode to use for numpy's pad function. The available modes
-        are "constant", "edge", "linear_ramp", "maximum", "median",
-        "minimum", "reflect", "symmetric", "wrap". Each one of these is
-        explained in the numpy documentation. The modes "constant" and
-        "linear_ramp" use extra values, which are provided by pad_cval
+        are `constant`, `edge`, `linear_ramp`, `maximum`, `median`,
+        `minimum`, `reflect`, `symmetric`, `wrap`. Each one of these is
+        explained in the numpy documentation. The modes `constant` and
+        `linear_ramp` use extra values, which are provided by `pad_cval`
         when necessary.
-        If ia.ALL, then a random mode from all available
-          modes will be sampled per image.
-        If a string, it will be used as the pad mode for all
-          images.
-        If a list of strings, a random one of these will be
-          sampled per image and used as the mode.
-        If StochasticParameter, a random mode will be sampled from this
-          parameter per image.
+            * If ia.ALL, then a random mode from all available
+              modes will be sampled per image.
+            * If a string, it will be used as the pad mode for all
+              images.
+            * If a list of strings, a random one of these will be
+              sampled per image and used as the mode.
+            * If StochasticParameter, a random mode will be sampled from this
+              parameter per image.
 
     pad_cval : float or int or tuple of two ints/floats or list of ints/floats or StochasticParameter, optional(default=0)
         The constant value to use (for numpy's pad function) if the pad
         mode is "constant" or the end value to use if the mode
-        is "linear_ramp".
-        If float/int, then that value will be used.
-        If a tuple of two numbers and at least one of them is a float,
-          then a random number will be sampled from the continuous range
-          a<=x<=b and used as the value. If both numbers are integers,
-          the range is discrete.
-        If a list of ints/floats, then a random value will be chosen from
-          the elements of the list and used as the value.
-        If StochasticParameter, a random value will be sampled from that
-          parameter per image.
+        is `linear_ramp`.
+            * If float/int, then that value will be used.
+            * If a tuple of two numbers and at least one of them is a float,
+              then a random number will be sampled from the continuous range
+              a<=x<=b and used as the value. If both numbers are integers,
+              the range is discrete.
+            * If a list of ints/floats, then a random value will be chosen from
+              the elements of the list and used as the value.
+            * If StochasticParameter, a random value will be sampled from that
+              parameter per image.
 
     keep_size : bool, optional(default=True)
         After cropping, the result image has a different height/width than
@@ -2875,13 +2909,67 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         for all sides.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Pad(px=(0, 10))
+
+    pads each side by a random value from the range 0px to 10px (the value
+    is sampled per side). The added rows/columns are filled with black pixels.
+
+    >>> aug = iaa.Pad(px=(0, 10), sample_independently=False)
+
+    samples one value v from the discrete range [0..10] and pads all sides
+    by v pixels.
+
+    >>> aug = iaa.Pad(px=(0, 10), keep_size=False)
+
+    pads each side by a random value from the range 0px to 10px (the value
+    is sampled per side). After padding, the images are NOT resized to their
+    original size (i.e. the images may end up having different heights/widths).
+
+    >>> aug = iaa.Pad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
+
+    pads the top and bottom by a random value from the range 0px to 10px
+    and the left and right by a random value in the range 0px to 5px.
+
+    >>> aug = iaa.Pad(percent=(0, 0.1))
+
+    pads each side by a random value from the range 0 percent to
+    10 percent. (Percent with respect to the side's size, e.g. for the
+    top side it uses the image's height.)
+
+    >>> aug = iaa.Pad(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
+
+    pads each side by either 5 percent or 10 percent.
+
+    >>> aug = iaa.Pad(px=(0, 10), pad_mode="edge")
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). The padding uses the 'edge' mode from numpy's
+    pad function.
+
+    >>> aug = iaa.Pad(px=(0, 10), pad_mode=["constant", "edge"])
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). The padding uses randomly either the 'constant'
+    or 'edge' mode from numpy's pad function.
+
+    >>> aug = iaa.Pad(px=(0, 10), pad_mode=ia.ALL, pad_cval=(0, 255))
+
+    pads each side by a random value from the range 0px to 10px (the values
+    are sampled per side). It uses a random mode for numpy's pad function.
+    If the mode is `constant` or `linear_ramp`, it samples a random value
+    v from the range [0, 255] and uses that as the constant
+    value (`mode=constant`) or end value (`mode=linear_ramp`).
+
     """
 
     def recursive_validate(v):
@@ -2911,38 +2999,12 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
 
 
 def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
-    """Create a new Crop instance.
+    """
+    Augmenter that crops/cuts away pixels at the sides of the image.
 
-    Example:
-        aug = iaa.Crop(px=(0, 10))
-    crops each side by a random value from the range 0px to 10px (the value
-    is sampled per side).
-
-    Example:
-        aug = iaa.Crop(px=(0, 10), sample_independently=False)
-    samples one value v from the discrete range [0..10] and crops all sides
-    by v pixels.
-
-    Example:
-        aug = iaa.Crop(px=(0, 10), keep_size=False)
-    crops each side by a random value from the range 0px to 10px (the value
-    is sampled per side). After cropping, the images are NOT resized to their
-    original size (i.e. the images may end up having different heights/widths).
-
-    Example:
-        aug = iaa.Crop(px=((0, 10), (0, 5), (0, 10), (0, 5)))
-    crops the top and bottom by a random value from the range 0px to 10px
-    and the left and right by a random value in the range 0px to 5px.
-
-    Example:
-        aug = iaa.Crop(percent=(0, 0.1))
-    crops each side by a random value from the range 0 percent to
-    10 percent. (Percent with respect to the side's size, e.g. for the
-    top side it uses the image's height.)
-
-    Example:
-        aug = iaa.Crop(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
-    crops each side by either 5 percent or 10 percent.
+    That allows to cut out subimages from given (full) input images.
+    The number of pixels to cut off may be defined in absolute values or
+    percent of the image sizes.
 
     Parameters
     ----------
@@ -2950,45 +3012,45 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
         The number of pixels to crop away (cut off) on each side of the image.
         Either this or the parameter `percent` may be set, not both at the same
         time.
-        If None, then pixel-based cropping will not be used.
-        If int, then that exact number of pixels will always be cropped.
-        If StochasticParameter, then that parameter will be used for each
-          image. Four samples will be drawn per image (top, right, bottom,
-          left).
-        If a tuple of two ints with values a and b, then each side will be
-          cropped by a random amount in the range a <= x <= b.
-          x is sampled per image side.
-        If a tuple of four entries, then the entries represent top, right,
-          bottom, left. Each entry may be a single integer (always crop by exactly
-          that value), a tuple of two ints a and b (crop by an
-          amount a <= x <= b), a list of ints (crop by a random value that
-          is contained in the list) or a StochasticParameter (sample the
-          amount to crop from that parameter).
+            * If None, then pixel-based cropping will not be used.
+            * If int, then that exact number of pixels will always be cropped.
+            * If StochasticParameter, then that parameter will be used for each
+              image. Four samples will be drawn per image (top, right, bottom,
+              left).
+            * If a tuple of two ints with values a and b, then each side will
+              be cropped by a random amount in the range a <= x <= b.
+              x is sampled per image side.
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single integer (always crop by
+              exactly that value), a tuple of two ints a and b (crop by an
+              amount a <= x <= b), a list of ints (crop by a random value that
+              is contained in the list) or a StochasticParameter (sample the
+              amount to crop from that parameter).
 
     percent : None or int or float or StochasticParameter or tuple, optional(default=None)
         The number of pixels to crop away (cut off) on each side of the image
-        given _in percent_ of the image height/width.
+        given *in percent* of the image height/width.
         E.g. if this is set to 0.1, the augmenter will always crop away
         10 percent of the image's height at the top, 10 percent of the width
         on the right, 10 percent of the height at the bottom and 10 percent
         of the width on the left.
         Either this or the parameter `px` may be set, not both at the same
         time.
-        If None, then percent-based cropping will not be used.
-        If int, then expected to be 0 (no cropping).
-        If float, then that percentage will always be cropped away.
-        If StochasticParameter, then that parameter will be used for each
-          image. Four samples will be drawn per image (top, right, bottom,
-          left).
-        If a tuple of two floats with values a and b, then each side will be
-          cropped by a random percentage in the range a <= x <= b.
-          x is sampled per image side.
-        If a tuple of four entries, then the entries represent top, right,
-          bottom, left. Each entry may be a single float (always crop by exactly
-          that percent value), a tuple of two floats a and b (crop by a
-          percentage a <= x <= b), a list of floats (crop by a random value that
-          is contained in the list) or a StochasticParameter (sample the
-          percentage to crop from that parameter).
+            * If None, then percent-based cropping will not be used.
+            * If int, then expected to be 0 (no cropping).
+            * If float, then that percentage will always be cropped away.
+            * If StochasticParameter, then that parameter will be used for each
+              image. Four samples will be drawn per image (top, right, bottom,
+              left).
+            * If a tuple of two floats with values a and b, then each side will
+              be cropped by a random percentage in the range a <= x <= b.
+              x is sampled per image side.
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single float (always crop by
+              exactly that percent value), a tuple of two floats a and b (crop
+              by a percentage a <= x <= b), a list of floats (crop by a random
+              value that is contained in the list) or a StochasticParameter
+              (sample the percentage to crop from that parameter).
 
     keep_size : bool, optional(default=True)
         After cropping, the result image has a different height/width than
@@ -2998,19 +3060,53 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
 
     sample_independently : bool, optional(default=True)
         If false AND the values for px/percent result in exactly one
-        probability distribution for the amount to crop/pad, only one
+        probability distribution for the amount to crop, only one
         single value will be sampled from that probability distribution
-        and used for all sides. I.e. the crop/pad amount then is the same
+        and used for all sides. I.e. the crop amount then is the same
         for all sides.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Crop(px=(0, 10))
+
+    crops each side by a random value from the range 0px to 10px (the value
+    is sampled per side).
+
+    >>> aug = iaa.Crop(px=(0, 10), sample_independently=False)
+
+    samples one value v from the discrete range [0..10] and crops all sides
+    by v pixels.
+
+    >>> aug = iaa.Crop(px=(0, 10), keep_size=False)
+
+    crops each side by a random value from the range 0px to 10px (the value
+    is sampled per side). After cropping, the images are NOT resized to their
+    original size (i.e. the images may end up having different heights/widths).
+
+    >>> aug = iaa.Crop(px=((0, 10), (0, 5), (0, 10), (0, 5)))
+
+    crops the top and bottom by a random value from the range 0px to 10px
+    and the left and right by a random value in the range 0px to 5px.
+
+    >>> aug = iaa.Crop(percent=(0, 0.1))
+
+    crops each side by a random value from the range 0 percent to
+    10 percent. (Percent with respect to the side's size, e.g. for the
+    top side it uses the image's height.)
+
+    >>> aug = iaa.Crop(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
+
+    crops each side by either 5 percent or 10 percent.
+
     """
 
     def recursive_negate(v):
@@ -3039,33 +3135,37 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
 
 
 class Fliplr(Augmenter):
-    """Flip/mirror input images horizontally."""
+    """
+    Flip/mirror input images horizontally.
+
+    Parameters
+    ----------
+    p : int or float or StochasticParameter, optional(default=0)
+        Probability of each image to get flipped.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Fliplr(0.5)
+
+    would horizontally flip/mirror 50 percent of all input images.
+
+
+    >>> aug = iaa.Fliplr(1.0)
+
+    would horizontally flip/mirror all input images.
+
+    """
 
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
-        """Create a new Fliplr instance.
-
-        Example:
-            aug = iaa.Fliplr(0.5)
-        would horizontally flip/mirror 50 percent of all input images.
-
-        Example:
-            aug = iaa.Fliplr(1.0)
-        would horizontally flip/mirror all input images.
-
-        Parameters
-        ----------
-        p : int or float or StochasticParameter, optional(default=0)
-            Probability of each image being flipped.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(Fliplr, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p):
@@ -3098,33 +3198,36 @@ class Fliplr(Augmenter):
 
 
 class Flipud(Augmenter):
-    """Flip/mirror input images vertically."""
+    """
+    Flip/mirror input images vertically.
+
+    Parameters
+    ----------
+    p : int or float or StochasticParameter, optional(default=0)
+        Probability of each image to get flipped.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Flipud(0.5)
+
+    would vertically flip/mirror 50 percent of all input images.
+
+    >>> aug = iaa.Flipud(1.0)
+
+    would vertically flip/mirror all input images.
+
+    """
 
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
-        """Create a new Flipud instance.
-
-        Example:
-            aug = iaa.Flipud(0.5)
-        would vertically flip/mirror 50 percent of all input images.
-
-        Example:
-            aug = iaa.Flipud(1.0)
-        would vertically flip/mirror all input images.
-
-        Parameters
-        ----------
-        p : int or float or StochasticParameter, optional(default=0)
-            Probability of each image being flipped.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(Flipud, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p):
@@ -3157,69 +3260,73 @@ class Flipud(Augmenter):
 
 # TODO tests
 class Superpixels(Augmenter):
-    """Completely or partially transform images to their superpixel representation."""
+    """
+    Completely or partially transform images to their superpixel representation.
+
+    This implementation uses skimage's version of the SLIC algorithm.
+
+    Parameters
+    ----------
+    p_replace : int or float or tuple/list of ints/floats or StochasticParameter, optional(default=0)
+        Defines the probability of any superpixel area being replaced by the
+        superpixel, i.e. by the average pixel color within its area.
+        A probability of 0 would mean, that no superpixel area is replaced by
+        its average (image is not changed at all).
+        A probability of 0.5 would mean, that half of all superpixels are
+        replaced by their average color.
+        A probability of 1.0 would mean, that all superpixels are replaced
+        by their average color (resulting in a standard superpixel image).
+        This parameter can be a tuple (a, b), e.g. (0.5, 1.0). In this case,
+        a random probability p with a <= p <= b will be rolled per image.
+
+    n_segments : int or tuple/list of ints or StochasticParameter, optional(default=100)
+        Target number of superpixels to generate.
+        Lower numbers are faster.
+
+    max_size : int or None, optional(default=128)
+        Maximum image size at which the superpixels are generated.
+        If the width or height of an image exceeds this value, it will be
+        downscaled so that the longest side matches `max_size`.
+        Though, the final output (superpixel) image has the same size as the
+        input image.
+        This is done to speed up the superpixel algorithm.
+        Use None to apply no downscaling.
+
+    interpolation : int or string, optional(default="linear")
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        `ia.imresize_single_image()`.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Superpixels(p_replace=1.0, n_segments=64)
+
+    generates ~64 superpixels per image and replaces all of them with
+    their average color (standard superpixel image).
+
+    >>> aug = iaa.Superpixels(p_replace=0.5, n_segments=64)
+
+    generates always ~64 superpixels per image and replaces half of them
+    with their average color, while the other half are left unchanged (i.e.
+    they still show the input image's content).
+
+    >>> aug = iaa.Superpixels(p_replace=(0.25, 1.0), n_segments=(16, 128))
+
+    generates between ~16 and ~128 superpixels per image and replaces
+    25 to 100 percent of them with their average color.
+
+    """
 
     def __init__(self, p_replace=0, n_segments=100, max_size=128, interpolation="linear", name=None, deterministic=False, random_state=None):
-        """Create a new Superpixels augmenter instance.
-
-        This implementation uses skimage's version of the SLIC algorithm.
-
-        Example:
-            aug = iaa.Superpixels(p_replace=1.0, n_segments=64)
-        generates ~64 superpixels per image and replaces all of them with
-        their average color (standard superpixel image).
-
-        Example:
-            aug = iaa.Superpixels(p_replace=0.5, n_segments=64)
-        generates always ~64 superpixels per image and replaces half of them
-        with their average color, while the other half are left unchanged (i.e.
-        they still show the input image's content).
-
-        Example:
-            aug = iaa.Superpixels(p_replace=(0.25, 1.0), n_segments=(16, 128))
-        generates between ~16 and ~128 superpixels per image and replaces
-        25 to 100 percent of them with their average color.
-
-        Parameters
-        ----------
-        p_replace : int or float or tuple/list of ints/floats or StochasticParameter, optional(default=0)
-            Defines the probability of any superpixel area being replaced by the
-            superpixel, i.e. by the average pixel color within its area.
-            A probability of 0 would mean, that no superpixel area is replaced by
-            its average (image is not changed at all).
-            A probability of 0.5 would mean, that half of all superpixels are
-            replaced by their average color.
-            A probability of 1.0 would mean, that all superpixels are replaced
-            by their average color (resulting in a standard superpixel image).
-            This parameter can be a tuple (a, b), e.g. (0.5, 1.0). In this case,
-            a random probability p with a <= p <= b will be rolled per image.
-
-        n_segments : int or tuple/list of ints or StochasticParameter, optional(default=100)
-            Target number of superpixels to generate.
-            Lower numbers are faster.
-
-        max_size : int or None, optional(default=128)
-            Maximum image size at which the superpixels are generated.
-            If the width or height of an image exceeds this value, it will be
-            downscaled so that the longest side matches max_size.
-            Though, the final output (superpixel) image has the same size as the
-            input image.
-            This is done to speed up the superpixel algorithm.
-            Use None to apply no downscaling.
-
-        interpolation : int or string, optional(default="linear")
-            Interpolation method to use during downscaling when max_size is
-            exceeded. Valid methods are the same as in ia.imresize_single_image().
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(Superpixels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p_replace):
@@ -3256,6 +3363,7 @@ class Superpixels(Augmenter):
         seeds = random_state.randint(0, 10**6, size=(nb_images,))
         for i in sm.xrange(nb_images):
             #replace_samples = ia.new_random_state(seeds[i]).binomial(1, p_replace_samples[i], size=(n_segments_samples[i],))
+            # TODO this results in an error when n_segments is 0
             replace_samples = self.p_replace.draw_samples((n_segments_samples[i],), random_state=ia.new_random_state(seeds[i]))
             #print("n_segments", n_segments_samples[i], "replace_samples.shape", replace_samples.shape)
             #print("p", p_replace_samples[i])
@@ -3316,8 +3424,51 @@ class Superpixels(Augmenter):
 # Note: Not clear whether this class will be kept (for anything aside from grayscale)
 # other colorspaces dont really make sense and they also might not work correctly
 # due to having no clearly limited range (like 0-255 or 0-1)
+# TODO rename to ChangeColorspace3D and then introduce ChangeColorspace, which
+# does not enforce 3d images?
 class ChangeColorspace(Augmenter):
-    """Augmenter to change the colorspace of images."""
+    """
+    Augmenter to change the colorspace of images.
+
+    NOTE: This augmenter is not tested. Some colorspaces might work, others
+    might not.
+
+    NOTE: This augmenter tries to project the colorspace value range on 0-255.
+    It outputs dtype=uint8 images.
+
+    Parameters
+    ----------
+    to_colorspace : string or iterable or StochasticParameter
+        The target colorspace.
+        Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+            * If a string, it must be among the allowed colorspaces.
+            * If an iterable, it is expected to be a list of strings, each one
+              being an allowed colorspace. A random element from the list
+              will be chosen per image.
+            * If a StochasticParameter, it is expected to return string. A new
+              sample will be drawn per image.
+
+    from_colorspace : string, optional(default="RGB")
+        The source colorspace (of the input images).
+        Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+
+    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1.0)
+        The alpha value of the new colorspace when overlayed over the
+        old one. A value close to 1.0 means that mostly the new
+        colorspace is visible. A value close to 0.0 means, that mostly the
+        old image is visible. Use a tuple (a, b) to use a random value
+        `x` with `a <= x <= b` as the alpha value per image.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    """
 
     RGB = "RGB"
     BGR = "BGR"
@@ -3366,43 +3517,6 @@ class ChangeColorspace(Augmenter):
     }
 
     def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False, random_state=None):
-        """Create a ChangeColorspace instance.
-
-        NOTE: This augmenter is not tested. Some colorspaces might work, others
-        might not.
-
-        Parameters
-        ----------
-        to_colorspace : string or iterable or StochasticParameter
-            The target colorspace.
-            Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
-            If a string, it must be among the allowed colorspaces.
-            If an iterable, it is expected to be a list of strings, each one
-              being an allowed colorspace. A random element from the list
-              will be chosen per image.
-            If a StochasticParameter, it is expected to return string. A new
-              sample will be drawn per image.
-
-        from_colorspace : string, optional(default="RGB")
-            The source colorspace (of the input images).
-            Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
-
-        alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1.0)
-            The alpha value of the new colorspace when overlayed over the
-            old one. A value close to 1.0 means, that mostly the new
-            colorspace is visible. A value close to 0.0 means, that mostlye the
-            old image is visible. Use a tuple (a, b) to use a random value
-            x with a <= x <= b as the alpha value per image.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(ChangeColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
@@ -3498,22 +3612,13 @@ class ChangeColorspace(Augmenter):
         return [self.to_colorspace, self.alpha]
 
 # TODO tests
+# TODO rename to Grayscale3D and add Grayscale that keeps the image at 1D
 def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
-    """Augmenter to convert images to their grayscale versions.
+    """
+    Augmenter to convert images to their grayscale versions.
 
     NOTE: Number of output channels is still 3, i.e. this augmenter just
     "removes" color.
-
-    Example:
-        aug = iaa.Grayscale(alpha=1.0)
-    creates an augmenter that turns images to their grayscale versions.
-
-    Example:
-        aug = iaa.Grayscale(alpha=(0.0, 1.0))
-    creates an augmenter that turns images to their grayscale versions with
-    an alpha value in the range 0 <= alpha <= 1. An alpha value of 0.5 would
-    mean, that the output image is 50 percent of the input image and 50
-    percent of the grayscale image (i.e. 50 percent of color removed).
 
     Parameters
     ----------
@@ -3521,61 +3626,79 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
         The alpha value of the grayscale image when overlayed over the
         old image. A value close to 1.0 means, that mostly the new grayscale
         image is visible. A value close to 0.0 means, that mostly the
-        old image is visible. Use a tuple (a, b) to use a random value
-        x with a <= x <= b as the alpha value per image.
+        old image is visible. Use a tuple (a, b) to sample per image a
+        random value x with a <= x <= b as the alpha value.
 
     from_colorspace : string, optional(default="RGB")
         The source colorspace (of the input images).
         Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+        Only RGB is decently tested.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Grayscale(alpha=1.0)
+
+    creates an augmenter that turns images to their grayscale versions.
+
+    >>> aug = iaa.Grayscale(alpha=(0.0, 1.0))
+
+    creates an augmenter that turns images to their grayscale versions with
+    an alpha value in the range 0 <= alpha <= 1. An alpha value of 0.5 would
+    mean, that the output image is 50 percent of the input image and 50
+    percent of the grayscale image (i.e. 50 percent of color removed).
+
     """
     return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)
 
 
 class GaussianBlur(Augmenter):
-    """Blur an image using a gaussian kernel."""
+    """
+    Augmenter to blur images using gaussian kernels.
 
-    def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
-        """Creates a new GaussianBlur instance.
-
-        Example:
-            aug = iaa.GaussianBlur(sigma=1.5)
-        blurs all images using a gaussian kernel with standard deviation 1.5.
-
-        Example:
-            aug = iaa.GaussianBlur(sigma=(0.0, 3.0))
-        blurs images using a gaussian kernel with a random standard deviation
-        from the range 0.0 <= x <= 3.0. The value is sampled per image.
-
-        Parameters
-        ----------
-        sigma : float or tuple of two floats or StochasticParameter
-            Standard deviation of the gaussian kernel.
-            Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
-            If a single float, that value will always be used as the standard
+    Parameters
+    ----------
+    sigma : float or tuple of two floats or StochasticParameter
+        Standard deviation of the gaussian kernel.
+        Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
+            * If a single float, that value will always be used as the standard
               deviation.
-            If a tuple (a, b), then a random value from the range a <= x <= b
+            * If a tuple (a, b), then a random value from the range a <= x <= b
               will be picked per image.
-            If a StochasticParameter, then N samples will be drawn from
+            * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.GaussianBlur(sigma=1.5)
+
+    blurs all images using a gaussian kernel with standard deviation 1.5.
+
+    >>> aug = iaa.GaussianBlur(sigma=(0.0, 3.0))
+
+    blurs images using a gaussian kernel with a random standard deviation
+    from the range 0.0 <= x <= 3.0. The value is sampled per image.
+
+    """
+
+    def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(sigma):
@@ -3613,50 +3736,53 @@ class GaussianBlur(Augmenter):
         return [self.sigma]
 
 class AverageBlur(Augmenter):
-    """Blur an image by computing simple means over neighbourhoods."""
+    """
+    Blur an image by computing simple means over neighbourhoods.
+
+    Parameters
+    ----------
+    k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter, optional
+        Kernel size to use.
+            * If a single int, then that value will be used for the height
+              and width of the kernel.
+            * If a tuple of two ints `(a, b)`, then the kernel size will be
+              sampled from the interval `[a..b]`.
+            * If a StochasticParameter, then `N` samples will be drawn from
+              that parameter per `N` input images, each representing the kernel
+              size for the nth image.
+            * If a tuple `(a, b)`, where either `a` or `b` is a tuple, then `a`
+              and `b` will be treated according to the rules above. This leads
+              to different values for height and width of the kernel.
+
+    name : string, optional
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional
+        See `Augmenter.__init__()`
+
+    random_state : None or int or np.random.RandomState, optional
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.AverageBlur(k=5)
+
+    Blurs all images using a kernel size of 5x5.
+
+    >>> aug = iaa.AverageBlur(k=(2, 5))
+
+    Blurs images using a varying kernel size per image, which is sampled
+    from the interval [2..5].
+
+    >>> aug = iaa.AverageBlur(k=((5, 7), (1, 3)))
+
+    Blurs images using a varying kernel size per image, which's height
+    is sampled from the interval [5..7] and which's width is sampled
+    from [1..3].
+
+    """
 
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
-        """Creates a new AverageBlur instance.
-
-        Example:
-            aug = iaa.AverageBlur(k=5)
-        blurs all images using a kernel size of 5x5.
-
-        Example:
-            aug = iaa.AverageBlur(k=(2, 5))
-        blurs images using a varying kernel size per image, which is sampled
-        from the interval [2..5].
-
-        Example:
-            aug = iaa.AverageBlur(k=((5, 7), (1, 3)))
-        blurs images using a varying kernel size per image, which's height
-        is sampled from the interval [5..7] and which's width is sampled
-        from [1..3].
-
-        Parameters
-        ----------
-        k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter
-            Kernel size.
-            If a single int, then that value will be used for the height and
-              width of the kernel.
-            If a tuple of two ints (a, b), then the kernel size will be sampled
-              from the interval [a..b].
-            If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images, each representing the kernel
-              size for the nth image.
-            If a tuple (a, b), where either a or b is a tuple, then a and b
-              will be treated according to the rules above. This leads to
-              different values for height and width of the kernel.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(AverageBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.mode = "single"
@@ -3716,47 +3842,50 @@ class AverageBlur(Augmenter):
         return [self.k]
 
 class MedianBlur(Augmenter):
-    """Blur an image by computing median values over neighbourhoods.
+    """
+    Blur an image by computing median values over neighbourhoods.
 
     Median blurring can be used to remove small dirt from images.
     At larger kernel sizes, its effects have some similarity with Superpixels.
-    """
 
-    def __init__(self, k=1, name=None, deterministic=False, random_state=None):
-        """Creates a new MedianBlur instance.
-
-        Example:
-            aug = iaa.MedianBlur(k=5)
-        blurs all images using a kernel size of 5x5.
-
-        Example:
-            aug = iaa.MedianBlur(k=(3, 7))
-        blurs images using a varying kernel size per image, which is
-        and odd value sampled from the interval [3..7], i.e. 3 or 5 or 7.
-
-        Parameters
-        ----------
-        k : int or tuple of two ints or StochasticParameter
-            Kernel size.
-            If a single int, then that value will be used for the height and
+    Parameters
+    ----------
+    k : int or tuple of two ints or StochasticParameter
+        Kernel
+        size.
+            * If a single int, then that value will be used for the height and
               width of the kernel. Must be an odd value.
-            If a tuple of two ints (a, b), then the kernel size will be an
+            * If a tuple of two ints (a, b), then the kernel size will be an
               odd value sampled from the interval [a..b]. a and b must both
               be odd values.
-            If a StochasticParameter, then N samples will be drawn from
+            * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the kernel
               size for the nth image. Expected to be discrete. If a sampled
               value is not odd, then that value will be increased by 1.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.MedianBlur(k=5)
+
+    blurs all images using a kernel size of 5x5.
+
+    >>> aug = iaa.MedianBlur(k=(3, 7))
+
+    blurs images using a varying kernel size per image, which is
+    and odd value sampled from the interval [3..7], i.e. 3 or 5 or 7.
+
+    """
+
+    def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.mode = "single"
@@ -3793,59 +3922,63 @@ class MedianBlur(Augmenter):
 
 # TODO tests
 class Convolve(Augmenter):
-    """Apply a Convolution to input images."""
+    """
+    Apply a Convolution to input images.
 
-    def __init__(self, matrix=None, name=None, deterministic=False, random_state=None):
-        """Instantiate a new Convolve augmenter.
-
-        Example:
-            matrix = np.array([[0, -1, 0],
-                               [-1, 4, -1],
-                               [0, -1, 0]])
-            aug = iaa.Convolve(matrix=matrix)
-        convolves all input images with the kernel shown in the `matrix`
-        variable.
-
-        Example:
-            def gen_matrix(image, nb_channels, random_state):
-                matrix_A = np.array([[0, -1, 0],
-                                     [-1, 4, -1],
-                                     [0, -1, 0]])
-                matrix_B = np.array([[0, 1, 0],
-                                     [1, -4, 1],
-                                     [0, 1, 0]])
-                if image.shape[0] % 2 == 0:
-                    return matrix_A
-                else:
-                    return matrix_B
-            aug = iaa.Convolve(matrix=gen_matrix)
-        convolves images that have an even height with matrix A and images
-        with an odd height with matrix B.
-
-        Parameters
-        ----------
-        matrix : None or (H, W) ndarray or StochasticParameter or callable, optional(default=None)
-            The weight matrix of the convolution kernel to apply.
-            If None, the input images will not be changed.
-            If a numpy array, that array will be used for all images and
+    Parameters
+    ----------
+    matrix : None or (H, W) ndarray or StochasticParameter or callable, optional(default=None)
+        The weight matrix of the convolution kernel to
+        apply.
+            * If None, the input images will not be changed.
+            * If a numpy array, that array will be used for all images and
               channels as the kernel.
-            If a stochastic parameter, C new matrices will be generated
+            * If a stochastic parameter, C new matrices will be generated
               via param.draw_samples(C) for each image, where C is the number
               of channels.
-            If a callable, the parameter will be called for each image
+            * If a callable, the parameter will be called for each image
               via param(image, C, random_state). The function must return C
               matrices, one per channel. It may return None, then that channel
               will not be changed.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> matrix = np.array([[0, -1, 0],
+    >>>                    [-1, 4, -1],
+    >>>                    [0, -1, 0]])
+    >>> aug = iaa.Convolve(matrix=matrix)
+
+    convolves all input images with the kernel shown in the `matrix`
+    variable.
+
+    >>> def gen_matrix(image, nb_channels, random_state):
+    >>>     matrix_A = np.array([[0, -1, 0],
+    >>>                          [-1, 4, -1],
+    >>>                          [0, -1, 0]])
+    >>>     matrix_B = np.array([[0, 1, 0],
+    >>>                          [1, -4, 1],
+    >>>                          [0, 1, 0]])
+    >>>     if image.shape[0] % 2 == 0:
+    >>>         return [matrix_A] * nb_channels
+    >>>     else:
+    >>>         return [matrix_B] * nb_channels
+    >>> aug = iaa.Convolve(matrix=gen_matrix)
+
+    convolves images that have an even height with matrix A and images
+    with an odd height with matrix B.
+
+    """
+
+    def __init__(self, matrix=None, name=None, deterministic=False, random_state=None):
         super(Convolve, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if matrix is None:
@@ -3877,7 +4010,8 @@ class Convolve(Augmenter):
                 matrices = self.matrix.draw_samples((nb_channels), random_state=random_state)
             elif self.matrix_type == "function":
                 matrices = self.matrix(images[i], nb_channels, random_state)
-                assert len(matrices) == nb_channels
+                assert isinstance(matrices, list) and len(matrices) == nb_channels \
+                       or ia.is_np_array(matrices) and matrices.ndim == 3
             else:
                 raise Exception("Invalid matrix type")
 
@@ -3897,48 +4031,53 @@ class Convolve(Augmenter):
 
 # TODO tests
 def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=None):
-    """Creates an augmenter that sharpens images.
-
-    Example:
-        aug = Sharpen(alpha=(0.0, 1.0))
-    sharpens input images and overlays the sharpened image by a variable
-    amount over the old image.
-
-    Example:
-        aug = Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0))
-    sharpens input images with a variable lightness in the range
-    0.75 <= x <= 2.0 and with a variable alpha.
+    """
+    Augmenter that sharpens images and overlays the result with the original
+    image.
 
     Parameters
     ----------
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     lightness : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1)
         Parameter that controls the lightness/brightness of the sharped image.
         Sane values are somewhere in the range (0.5, 2).
         The value 0 results in an edge map. Values higher than 1 create bright
         images. Default value is 1.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = Sharpen(alpha=(0.0, 1.0))
+
+    sharpens input images and overlays the sharpened image by a variable
+    amount over the old image.
+
+    >>> aug = Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0))
+
+    sharpens input images with a variable lightness in the range
+    0.75 <= x <= 2.0 and with a variable alpha.
+
     """
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
@@ -3981,45 +4120,51 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
 
 # TODO tests
 def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
-    """Creates an augmenter that embosses an image.
+    """
+    Augmenter that embosses images and overlays the result with the original
+    image.
+
     The embossed version pronounces highlights and shadows,
     letting the image look as if it was recreated on a metal plate ("embossed").
-
-    Example:
-        aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
-    embosses an image with a variable strength in the range 0.5 <= x <= 1.5
-    and overlays the result with a variable alpha in the range 0.0 <= a <= 1.0
-    over the old image.
 
     Parameters
     ----------
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     strength : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1)
         Parameter that controls the strength of the embossing.
         Sane values are somewhere in the range (0, 2) with 1 being the standard
         embossing effect. Default value is 1.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
+
+    embosses an image with a variable strength in the range 0.5 <= x <= 1.5
+    and overlays the result with a variable alpha in the range 0.0 <= a <= 1.0
+    over the old image.
+
     """
 
     if ia.is_single_number(alpha):
@@ -4063,32 +4208,38 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
 
 # TODO tests
 def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
-    """Creates an augmenter that pronounces all edges in images.
-
-    Example:
-        aug = EdgeDetect(alpha=(0.0, 1.0))
-    detects edges in an image  and overlays the result with a variable alpha
-    in the range 0.0 <= a <= 1.0 over the old image.
+    """
+    Augmenter that detects all edges in images, marks them in
+    a black and white image and then overlays the result with the original
+    image.
 
     Parameters
     ----------
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = EdgeDetect(alpha=(0.0, 1.0))
+
+    detects edges in an image  and overlays the result with a variable alpha
+    in the range 0.0 <= a <= 1.0 over the old image.
+
     """
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
@@ -4119,62 +4270,68 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO tests
-
+# TODO merge EdgeDetect and DirectedEdgeDetect?
 def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=False, random_state=None):
-    """Creates an augmenter that detects edges that have certain directions.
-
-    Example:
-        aug = EdgeDetect(alpha=1.0, direction=0)
-    turns input images into edge images in which edges are detected from
-    top side of the image (i.e. the top sides of horizontal edges are
-    added to the output).
-
-    Example:
-        aug = EdgeDetect(alpha=1.0, direction=90/360)
-    same as before, but detecting edges from the right (right side of each
-    vertical edge).
-
-    Example:
-        aug = EdgeDetect(alpha=1.0, direction=(0.0, 1.0))
-    same as before, but detecting edges from a variable direction (anything
-    between 0 and 1.0, i.e. 0 degrees and 360 degrees, starting from the
-    top and moving clockwise).
-
-    Example:
-        aug = EdgeDetect(alpha=(0.0, 0.3), direction=0)
-    generates edge images (edges detected from the top) and overlays them
-    with the input images by a variable amount between 0 and 30 percent
-    (e.g. for 0.3 then 0.7*old_image + 0.3*edge_image).
+    """
+    Augmenter that detects edges that have certain directions and marks them
+    in a black and white image and then overlays the result with the original
+    image.
 
     Parameters
     ----------
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     direction : int or float or tuple of two ints/floats or StochasticParameter, optional(default=(0.0, 1.0))
         Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
         represents 360 degrees (both clockwise, starting at the top).
         Default value is (0.0, 1.0), i.e. pick a random angle per image.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = DirectedEdgeDetect(alpha=1.0, direction=0)
+
+    turns input images into edge images in which edges are detected from
+    top side of the image (i.e. the top sides of horizontal edges are
+    added to the output).
+
+    >>> aug = DirectedEdgeDetect(alpha=1.0, direction=90/360)
+
+    same as before, but detecting edges from the right (right side of each
+    vertical edge).
+
+    >>> aug = DirectedEdgeDetect(alpha=1.0, direction=(0.0, 1.0))
+
+    same as before, but detecting edges from a variable direction (anything
+    between 0 and 1.0, i.e. 0 degrees and 360 degrees, starting from the
+    top and moving clockwise).
+
+    >>> aug = DirectedEdgeDetect(alpha=(0.0, 0.3), direction=0)
+
+    generates edge images (edges detected from the top) and overlays them
+    with the input images by a variable amount between 0 and 30 percent
+    (e.g. for 0.3 then `0.7*old_image + 0.3*edge_image`).
+
     """
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
@@ -4252,57 +4409,65 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
 # TODO tests
 class Add(Augmenter):
-    """Add a value to all pixels in an image."""
+    """
+    Add a value to all pixels in an image.
+
+    Parameters
+    ----------
+    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+        Value to add to all
+        pixels.
+            * If an int, then that value will be used for all images.
+            * If a tuple (a, b), then a value from the discrete range [a .. b]
+              will be used.
+            * If a StochasticParameter, then a value will be sampled per image
+              from that parameter.
+
+    per_channel : bool, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Add(10)
+
+    always adds a value of 10 to all pixels in the image.
+
+    >>> aug = iaa.Add((-10, 10))
+
+    adds a value from the discrete range [-10 .. 10] to all pixels of
+    the input images. The exact value is sampled per image.
+
+    >>> aug = iaa.Add((-10, 10), per_channel=True)
+
+    adds a value from the discrete range [-10 .. 10] to all pixels of
+    the input images. The exact value is sampled per image AND channel,
+    i.e. to a red-channel it might add 5 while subtracting 7 from the
+    blue channel of the same image.
+
+    >>> aug = iaa.Add((-10, 10), per_channel=0.5)
+
+    same as previous example, but the `per_channel` feature is only active
+    for 50 percent of all images.
+
+    """
 
     def __init__(self, value=0, per_channel=False, name=None,
                  deterministic=False, random_state=None):
         """Creates an instance of the Add augmenter.
 
-        Example:
-            aug = iaa.Add(10)
-        always adds a value of 10 to all pixels in the image.
 
-        Example:
-            aug = iaa.Add((-10, 10))
-        adds a value from the discrete range [-10 .. 10] to all pixels of
-        the input images. The exact value is sampled per image.
-
-        Example:
-            aug = iaa.Add((-10, 10), per_channel=True)
-        adds a value from the discrete range [-10 .. 10] to all pixels of
-        the input images. The exact value is sampled per image AND channel,
-        i.e. to a red-channel it might add 5 while subtracting 7 from the
-        blue channel of the same image.
-
-        Example:
-            aug = iaa.Add((-10, 10), per_channel=0.5)
-        same as previous example, but the per_channel feature is only active
-        for 50 percent of all images.
-
-        Parameters
-        ----------
-        value : int or iterable of two ints or StochasticParameter, optional(default=0)
-            Value to add to all pixels.
-            If an int, then that value will be used for all images.
-            If a tuple (a, b), then a value from the discrete range [a .. b]
-              will be used.
-            If a StochasticParameter, then a value will be sampled per image
-              from that parameter.
-
-        per_channel : bool, optional(default=False)
-            Whether to use the same value for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images
-            per_channel will be treated as True, otherwise as False.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
         """
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -4357,60 +4522,67 @@ class Add(Augmenter):
 
 # TODO tests
 class AddElementwise(Augmenter):
-    """Add values to the pixels of images with possibly different values
+    """
+    Add values to the pixels of images with possibly different values
     for neighbouring pixels.
 
     While the Add Augmenter adds a constant value per image, this one can
     add different values (sampled per pixel).
+
+    Parameters
+    ----------
+    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+        Value to add to the
+        pixels.
+            * If an int, then that value will be used for all images.
+            * If a tuple (a, b), then values from the discrete range [a .. b]
+              will be sampled.
+            * If a StochasticParameter, then values will be sampled per pixel
+              (and possibly channel) from that parameter.
+
+    per_channel : bool, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.AddElementwise(10)
+
+    always adds a value of 10 to all pixels in the image.
+
+    >>> aug = iaa.AddElementwise((-10, 10))
+
+    samples per pixel a value from the discrete range [-10 .. 10] and
+    adds that value to the pixel.
+
+    >>> aug = iaa.AddElementwise((-10, 10), per_channel=True)
+
+    samples per pixel *and channel* a value from the discrete
+    range [-10 .. 10] ands adds it to the pixel's value. Therefore,
+    added values may differ between channels of the same pixel.
+
+    >>> aug = iaa.AddElementwise((-10, 10), per_channel=0.5)
+
+    same as previous example, but the `per_channel` feature is only active
+    for 50 percent of all images.
+
     """
 
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         """Create a new AddElementwise instance.
 
-        Example:
-            aug = iaa.AddElementwise(10)
-        always adds a value of 10 to all pixels in the image.
 
-        Example:
-            aug = iaa.AddElementwise((-10, 10))
-        samples per pixel a value from the discrete range [-10 .. 10] and
-        adds that value to the pixel.
-
-        Example:
-            aug = iaa.AddElementwise((-10, 10), per_channel=True)
-        samples per pixel _and channel_ a value from the discrete
-        range [-10 .. 10] ands adds it to the pixel's value. Therefore,
-        added values may differ between channels of the same pixel.
-
-        Example:
-            aug = iaa.AddElementwise((-10, 10), per_channel=0.5)
-        same as previous example, but the per_channel feature is only active
-        for 50 percent of all images.
-
-        Parameters
-        ----------
-        value : int or iterable of two ints or StochasticParameter, optional(default=0)
-            Value to add to the pixels.
-            If an int, then that value will be used for all images.
-            If a tuple (a, b), then values from the discrete range [a .. b]
-              will be sampled.
-            If a StochasticParameter, then values will be sampled per pixel
-              (and possibly channel) from that parameter.
-
-        per_channel : bool, optional(default=False)
-            Whether to use the same value for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images
-            per_channel will be treated as True, otherwise as False.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
         """
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -4460,62 +4632,68 @@ class AddElementwise(Augmenter):
         return [self.value]
 
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Add gaussian noise (aka white noise) to images.
-
-    Example:
-        aug = iaa.GaussianNoise(scale=0.1*255)
-    adds gaussian noise from the distribution N(0, 0.1*255) to images.
-
-    Example:
-        aug = iaa.GaussianNoise(scale=(0, 0.1*255))
-    adds gaussian noise from the distribution N(0, s) to images,
-    where s is sampled per image from the range 0 <= s <= 0.1*255.
-
-    Example:
-        aug = iaa.GaussianNoise(scale=0.1*255, per_channel=True)
-    adds gaussian noise from the distribution N(0, 0.1*255) to images,
-    where the noise value is different per pixel _and_ channel (e.g. a
-    different one for red, green and blue channels for the same pixel).
-
-    Example:
-        aug = iaa.GaussianNoise(scale=0.1*255, per_channel=0.5)
-    adds gaussian noise from the distribution N(0, 0.1*255) to images,
-    where the noise value is sometimes (50 percent of all cases) the same
-    per pixel for all channels and sometimes different (other 50 percent).
+    """
+    Add gaussian noise (aka white noise) to images.
 
     Parameters
     ----------
     loc : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
-        Mean of the normal distribution that generates the noise.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+        Mean of the normal distribution that generates the
+        noise.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     scale : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
-        Standard deviation of the normal distribution that generates the noise.
-        If this value gets too close to zero, the image will not be changed.
-        If an int or float, exactly that value will be used.
-        If a tuple (a, b), a random value from the range a <= x <= b will be
-          sampled per image.
-        If a StochasticParameter, a value will be sampled from the parameter
-          per image.
+        Standard deviation of the normal distribution that generates the
+        noise. If this value gets too close to zero, the image will not be
+        changed.
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     per_channel : bool or float, optional(default=False)
         Whether to use the same noise value per pixel for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images per_channel
-        will be treated as True, otherwise as False.
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.GaussianNoise(scale=0.1*255)
+
+    adds gaussian noise from the distribution N(0, 0.1*255) to images.
+
+    >>> aug = iaa.GaussianNoise(scale=(0, 0.1*255))
+
+    adds gaussian noise from the distribution N(0, s) to images,
+    where s is sampled per image from the range 0 <= s <= 0.1*255.
+
+    >>> aug = iaa.GaussianNoise(scale=0.1*255, per_channel=True)
+
+    adds gaussian noise from the distribution N(0, 0.1*255) to images,
+    where the noise value is different per pixel *and* channel (e.g. a
+    different one for red, green and blue channels for the same pixel).
+
+    >>> aug = iaa.GaussianNoise(scale=0.1*255, per_channel=0.5)
+
+    adds gaussian noise from the distribution N(0, 0.1*255) to images,
+    where the noise value is sometimes (50 percent of all cases) the same
+    per pixel for all channels and sometimes different (other 50 percent).
+
     """
     if ia.is_single_number(loc):
         loc2 = Deterministic(loc)
@@ -4549,49 +4727,53 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 
 
 class Multiply(Augmenter):
-    """Multiply all pixels in an image with a specific value.
+    """
+    Multiply all pixels in an image with a specific value.
 
-    This augmenter can be used to make images lighter or darker."""
+    This augmenter can be used to make images lighter or darker.
+
+    Parameters
+    ----------
+    mul : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+        The value with which to multiply the pixel values in each
+        image.
+            * If a float, then that value will always be used.
+            * If a tuple (a, b), then a value from the range a <= x <= b will
+              be sampled per image and used for all pixels.
+            * If a StochasticParameter, then that parameter will be used to
+              sample a new value per image.
+
+    per_channel : bool, optional(default=False)
+        Whether to use the same multiplier per pixel for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Multiply(2.0)
+
+    would multiply all images by a factor of 2, making the images
+    significantly brighter.
+
+    >>> aug = iaa.Multiply((0.5, 1.5))
+
+    would multiply images by a random value from the range 0.5 <= x <= 1.5,
+    making some images darker and others brighter.
+
+    """
 
     def __init__(self, mul=1.0, per_channel=False, name=None,
                  deterministic=False, random_state=None):
-        """Create a new Multiply instance.
-
-        Example:
-            aug = iaa.Multiply(2.0)
-        would multiply all images by a factor of 2, making the images
-        significantly brighter.
-
-        Example:
-            aug = iaa.Multiply((0.5, 1.5))
-        would multiply images by a random value from the range 0.5 <= x <= 1.5,
-        making some images darker and others brighter.
-
-        Parameters
-        ----------
-        mul : float or tuple of two floats or StochasticParameter, optional(default=1.0)
-            The value by which to multiply the pixel values in the image.
-            If a float, then that value will always be used.
-            If a tuple (a, b), then a value from the range a <= x <= b will
-              be sampled per image and used for all pixels.
-            If a StochasticParameter, then that parameter will be used to
-              sample a new value per image.
-
-        per_channel : bool, optional(default=False)
-            Whether to use the same multiplier per pixel for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images per_channel
-            will be treated as True, otherwise as False.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
@@ -4646,61 +4828,65 @@ class Multiply(Augmenter):
 
 # TODO tests
 class MultiplyElementwise(Augmenter):
-    """Multiply values of pixels with possibly different values
+    """
+    Multiply values of pixels with possibly different values
     for neighbouring pixels.
 
     While the Multiply Augmenter uses a constant multiplier per image,
-    this one can use different multipliers per pixel."""
+    this one can use different multipliers per pixel.
 
-    def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
-        """Create a new MultiplyElementwise instance.
-
-        Example:
-            aug = iaa.MultiplyElementwise(2.0)
-        multiply all images by a factor of 2.0, making them significantly
-        bighter.
-
-        Example:
-            aug = iaa.MultiplyElementwise((0.5, 1.5))
-        samples per pixel a value from the range 0.5 <= x <= 1.5 and
-        multiplies the pixel with that value.
-
-        Example:
-            aug = iaa.MultiplyElementwise((0.5, 1.5), per_channel=True)
-        samples per pixel _and channel_ a value from the range
-        0.5 <= x <= 1.5 ands multiplies the pixel by that value. Therefore,
-        added multipliers may differ between channels of the same pixel.
-
-        Example:
-            aug = iaa.AddElementwise((0.5, 1.5), per_channel=0.5)
-        same as previous example, but the per_channel feature is only active
-        for 50 percent of all images.
-
-        Parameters
-        ----------
-        mul : float or iterable of two floats or StochasticParameter, optional(default=1.0)
-            The value by which to multiply the pixel values in the image.
-            If a float, then that value will always be used.
-            If a tuple (a, b), then a value from the range a <= x <= b will
+    Parameters
+    ----------
+    mul : float or iterable of two floats or StochasticParameter, optional(default=1.0)
+        The value by which to multiply the pixel values in the
+        image.
+            * If a float, then that value will always be used.
+            * If a tuple (a, b), then a value from the range a <= x <= b will
               be sampled per image and pixel.
-            If a StochasticParameter, then that parameter will be used to
+            * If a StochasticParameter, then that parameter will be used to
               sample a new value per image and pixel.
 
-        per_channel : bool, optional(default=False)
-            Whether to use the same value for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images
-            per_channel will be treated as True, otherwise as False.
+    per_channel : bool, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.MultiplyElementwise(2.0)
+
+    multiply all images by a factor of 2.0, making them significantly
+    bighter.
+
+    >>> aug = iaa.MultiplyElementwise((0.5, 1.5))
+
+    samples per pixel a value from the range 0.5 <= x <= 1.5 and
+    multiplies the pixel with that value.
+
+    >>> aug = iaa.MultiplyElementwise((0.5, 1.5), per_channel=True)
+
+    samples per pixel *and channel* a value from the range
+    0.5 <= x <= 1.5 ands multiplies the pixel by that value. Therefore,
+    added multipliers may differ between channels of the same pixel.
+
+    >>> aug = iaa.AddElementwise((0.5, 1.5), per_channel=0.5)
+
+    same as previous example, but the `per_channel` feature is only active
+    for 50 percent of all images.
+
+    """
+
+    def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
@@ -4750,56 +4936,62 @@ class MultiplyElementwise(Augmenter):
 
 def Dropout(p=0, per_channel=False, name=None, deterministic=False,
             random_state=None):
-    """Create an augmenter to set a certain fraction of pixels in images to zero.
-
-    Examples:
-        aug = iaa.Dropout(0.02)
-    drops 2 percent of all pixels.
-
-    Examples:
-        aug = iaa.Dropout((0.0, 0.05))
-    drops in each image a random fraction of all pixels, where the fraction
-    is in the range 0.0 <= x <= 0.05.
-
-    Examples:
-        aug = iaa.Dropout(0.02, per_channel=True)
-    drops 2 percent of all pixels in a channel-wise fashion, i.e. it is unlikely
-    for any pixel to have all channels set to zero (black pixels).
-
-    Examples:
-        aug = iaa.Dropout(0.02, per_channel=0.5)
-    same as previous example, but the per_channel feature is only active
-    for 50 percent of all images.
+    """
+    Augmenter that sets a certain fraction of pixels in images to zero.
 
     Parameters
     ----------
     p : float or tuple of two floats or StochasticParameter, optional(default=0)
-        The probability of any pixel being dropped (i.e. set to zero).
-        If a float, then that value will be used for all pixels. A value of 1.0
-          would mean, that all pixels will be dropped. A value of 0.0 would
-          lead to no pixels being dropped.
-        If a tuple (a, b), then a value p will be sampled from the
-          range a <= p <= b per image and be used as the pixel's dropout
-          probability.
-        If a StochasticParameter, then this parameter will be used to determine
-          per pixel whether it should be dropped (sampled value of 0)
-          or shouldn't (sampled value of 1).
+        The probability of any pixel being dropped (i.e. set to
+        zero).
+            * If a float, then that value will be used for all images. A value
+              of 1.0 would mean that all pixels will be dropped and 0.0 that
+              no pixels would be dropped. A value of 0.05 corresponds to 5
+              percent of all pixels dropped.
+            * If a tuple (a, b), then a value p will be sampled from the
+              range a <= p <= b per image and be used as the pixel's dropout
+              probability.
+            * If a StochasticParameter, then this parameter will be used to
+              determine per pixel whether it should be dropped (sampled value
+              of 0) or shouldn't (sampled value of 1).
 
     per_channel : bool, optional(default=False)
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
         If this value is a float p, then for p percent of all images
-        per_channel will be treated as True, otherwise as False.
+        `per_channel` will be treated as True, otherwise as False.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Dropout(0.02)
+
+    drops 2 percent of all pixels.
+
+    >>> aug = iaa.Dropout((0.0, 0.05))
+
+    drops in each image a random fraction of all pixels, where the fraction
+    is in the range 0.0 <= x <= 0.05.
+
+    >>> aug = iaa.Dropout(0.02, per_channel=True)
+
+    drops 2 percent of all pixels in a channel-wise fashion, i.e. it is unlikely
+    for any pixel to have all channels set to zero (black pixels).
+
+    >>> aug = iaa.Dropout(0.02, per_channel=0.5)
+
+    same as previous example, but the `per_channel` feature is only active
+    for 50 percent of all images.
+
     """
     if ia.is_single_number(p):
         p2 = Binomial(1 - p)
@@ -4818,7 +5010,8 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
 def CoarseDropout(p=0, size_px=None, size_percent=None,
                   per_channel=False, min_size=4, name=None, deterministic=False,
                   random_state=None):
-    """Create an augmenter that sets areas of the image to zero.
+    """
+    Augmenter that sets rectangular areas within images to zero.
 
     In contrast to Dropout, these areas can have larger sizes.
     (E.g. you might end up with three large black rectangles in an image.)
@@ -4830,92 +5023,99 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
     lower resolution (than the image has) and then upsampling the mask
     before dropping the pixels.
 
-    Examples:
-        aug = iaa.Dropout(0.02, size_percent=0.5)
-    drops 2 percent of all pixels on an lower-resolution image that has
-    50 percent of the original image's size, leading to dropped areas that
-    have roughly 2x2 pixels size.
-
-    Examples:
-        aug = iaa.Dropout((0.0, 0.05), size_percent=(0.05, 0.5))
-    generates a dropout mask at 5 to 50 percent of image's size. In that mask,
-    0 to 5 percent of all pixels are dropped (random per image).
-
-    Examples:
-        aug = iaa.Dropout((0.0, 0.05), size_px=(2, 16))
-    same as previous example, but the lower resolution image has 2 to 16 pixels
-    size.
-
-    Examples:
-        aug = iaa.Dropout(0.02, size_percent=0.5, per_channel=True)
-    drops 2 percent of all pixels at 50 percent resolution (2x2 sizes)
-    in a channel-wise fashion, i.e. it is unlikely
-    for any pixel to have all channels set to zero (black pixels).
-
-    Examples:
-        aug = iaa.Dropout(0.02, size_percent=0.5, per_channel=0.5)
-    same as previous example, but the per_channel feature is only active
-    for 50 percent of all images.
-
     Parameters
     ----------
     p : float or tuple of two floats or StochasticParameter, optional(default=0)
-        The probability of any pixel being dropped (i.e. set to zero).
-        If a float, then that value will be used for all pixels. A value of 1.0
-          would mean, that all pixels will be dropped. A value of 0.0 would
-          lead to no pixels being dropped.
-        If a tuple (a, b), then a value p will be sampled from the
-          range a <= p <= b per image and be used as the pixel's dropout
-          probability.
-        If a StochasticParameter, then this parameter will be used to determine
-          per pixel whether it should be dropped (sampled value of 0)
-          or shouldn't (sampled value of 1).
+        The probability of any pixel being dropped (i.e. set to
+        zero).
+            * If a float, then that value will be used for all pixels. A value
+              of 1.0 would mean, that all pixels will be dropped. A value of
+              0.0 would lead to no pixels being dropped.
+            * If a tuple (a, b), then a value p will be sampled from the
+              range a <= p <= b per image and be used as the pixel's dropout
+              probability.
+            * If a StochasticParameter, then this parameter will be used to
+              determine per pixel whether it should be dropped (sampled value
+              of 0) or shouldn't (sampled value of 1).
 
     size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
         The size of the lower resolution image from which to sample the dropout
-        mask.
-        If an integer, then that size will be used for both height and width.
-          E.g. a value of 3 would lead to a 3x3 mask, which is then upsampled
-          to HxW, where H is the image size and W the image width.
-        If a tuple (a, b), then two values M, N will be sampled from the range
-          [a..b] and the mask will be generated at size MxN, then upsampled
-          to HxW.
-        If a StochasticParameter, then this parameter will be used to determine
-          the sizes. It is expected to be discrete.
+        mask in absolute pixel dimensions.
+            * If an integer, then that size will be used for both height and
+              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
+              upsampled to HxW, where H is the image size and W the image width.
+            * If a tuple (a, b), then two values M, N will be sampled from the
+              range [a..b] and the mask will be generated at size MxN, then
+              upsampled to HxW.
+            * If a StochasticParameter, then this parameter will be used to
+              determine the sizes. It is expected to be discrete.
 
     size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
-        If a float, then that value will be used as the percentage of the
-          height and width (relative to the original size). E.g. for value p,
-          the mask will be sampled from (p*H)x(p*W) and later upsampled to
-          HxW.
-        If a tuple (a, b), then two values m, n will be sampled from the
-          interval (a, b) and used as the percentages, i.e the mask size
-          will be (m*H)x(n*W).
-        If a StochasticParameter, then this parameter will be used to sample
-          the percentage values. It is expected to be continuous.
+        The size of the lower resolution image from which to sample the dropout
+        mask *in percent* of the input image.
+            * If a float, then that value will be used as the percentage of the
+              height and width (relative to the original size). E.g. for value
+              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
+              to HxW.
+            * If a tuple (a, b), then two values m, n will be sampled from the
+              interval (a, b) and used as the percentages, i.e the mask size
+              will be (m*H)x(n*W).
+            * If a StochasticParameter, then this parameter will be used to
+              sample the percentage values. It is expected to be continuous.
 
     per_channel : bool, optional(default=False)
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
         If this value is a float p, then for p percent of all images
-        per_channel will be treated as True, otherwise as False.
+        `per_channel` will be treated as True, otherwise as False.
 
     min_size : int, optional(default=4)
         Minimum size of the low resolution mask, both width and height. If
-        size_percent or size_px leads to a lower value than this, min_size will
-        be used instead. This should never have a value of less than 2,
+        `size_percent` or `size_px` leads to a lower value than this, `min_size`
+        will be used instead. This should never have a value of less than 2,
         otherwise one may end up with a 1x1 low resolution mask, leading easily
         to the whole image being dropped.
 
     name : string, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     deterministic : bool, optional(default=False)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
 
     random_state : int or np.random.RandomState or None, optional(default=None)
-        See Augmenter.__init__()
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Dropout(0.02, size_percent=0.5)
+
+    drops 2 percent of all pixels on an lower-resolution image that has
+    50 percent of the original image's size, leading to dropped areas that
+    have roughly 2x2 pixels size.
+
+
+    >>> aug = iaa.Dropout((0.0, 0.05), size_percent=(0.05, 0.5))
+
+    generates a dropout mask at 5 to 50 percent of image's size. In that mask,
+    0 to 5 percent of all pixels are dropped (random per image).
+
+    >>> aug = iaa.Dropout((0.0, 0.05), size_px=(2, 16))
+
+    same as previous example, but the lower resolution image has 2 to 16 pixels
+    size.
+
+    >>> aug = iaa.Dropout(0.02, size_percent=0.5, per_channel=True)
+
+    drops 2 percent of all pixels at 50 percent resolution (2x2 sizes)
+    in a channel-wise fashion, i.e. it is unlikely
+    for any pixel to have all channels set to zero (black pixels).
+
+    >>> aug = iaa.Dropout(0.02, size_percent=0.5, per_channel=0.5)
+
+    same as previous example, but the `per_channel` feature is only active
+    for 50 percent of all images.
+
     """
     if ia.is_single_number(p):
         p2 = Binomial(1 - p)
@@ -4941,52 +5141,67 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
 
 # TODO tests
 class Invert(Augmenter):
-    """Augmenter that inverts all values in images.
+    """
+    Augmenter that inverts all values in images.
 
     For the standard value range of 0-255 it converts 0 to 255, 255 to 0
     and 10 to (255-10)=245.
 
     Let M be the maximum value possible, m the minimum value possible,
     v a value. Then the distance of v to m is d=abs(v-m) and the new value
-    is given by v'=M-d."""
+    is given by v'=M-d.
 
-    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
-                 deterministic=False, random_state=None):
-        """Create a new Invert instance.
-
-        Parameters
-        ----------
-        p : float or StochasticParameter, optional(default=0)
-            The probability of an image being inverted.
-            If a float, then that probability will be used for all images.
-            If a StochasticParameter, then that parameter will queried per
+    Parameters
+    ----------
+    p : float or StochasticParameter, optional(default=0)
+        The probability of an image to be
+        inverted.
+            * If a float, then that probability will be used for all images.
+            * If a StochasticParameter, then that parameter will queried per
               image and is expected too return values in the range [0.0, 1.0],
               where values >0.5 mean that the image/channel is supposed to be
               inverted.
 
-        per_channel : bool, optional(default=False)
-            Whether to use the same value for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images
-            per_channel will be treated as True, otherwise as False.
+    per_channel : bool, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
 
-        min_value : int or float, optional(default=0)
-            Minimum of the range of possible pixel values. For uint8 (0-255)
-            images, this should be 0.
+    min_value : int or float, optional(default=0)
+        Minimum of the range of possible pixel values. For uint8 (0-255)
+        images, this should be 0.
 
-        max_value : int or float, optional(default=255)
-            Maximum of the range of possible pixel values. For uint8 (0-255)
-            images, this should be 255.
+    max_value : int or float, optional(default=255)
+        Maximum of the range of possible pixel values. For uint8 (0-255)
+        images, this should be 255.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Invert(0.1)
+
+    Inverts the colors in 10 percent of all images.
+
+    >>> aug = iaa.Invert(0.1, per_channel=0.5)
+
+    For 50 percent of all images, it inverts all channels with a probability of
+    10 percent (same as the first example). For the other 50 percent of all
+    images, it inverts each channel individually with a probability of 10
+    percent (so some channels of an image may end up inverted, others not).
+
+    """
+
+    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
+                 deterministic=False, random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(p):
@@ -5044,37 +5259,53 @@ class Invert(Augmenter):
 
 # TODO tests
 class ContrastNormalization(Augmenter):
-    """Augmenter that changes the contrast of images."""
+    """
+    Augmenter that changes the contrast of images.
 
-    def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
-        """Create a new ContrastNormalization instance.
-
-        Parameters
-        ----------
-        alpha : float or tuple of two floats or StochasticParameter, optional(default=1.0)
-            Strength of the contrast normalization. Higher values than 1.0
-            lead to higher contrast, lower values decrease the contrast.
-            If a float, then that value will be used for all images.
-            If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the alpha value.
-            If a StochasticParameter, then this parameter will be used to
+    Parameters
+    ----------
+    alpha : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+        Strength of the contrast normalization. Higher values than 1.0
+        lead to higher contrast, lower values decrease the contrast.
+            * If a float, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled per image from
+              the range a <= x <= b and be used as the alpha value.
+            * If a StochasticParameter, then this parameter will be used to
               sample the alpha value per image.
 
-        per_channel : bool, optional(default=False)
-            Whether to use the same value for all channels (False)
-            or to sample a new value for each channel (True).
-            If this value is a float p, then for p percent of all images
-            per_channel will be treated as True, otherwise as False.
+    per_channel : bool, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
 
-        name : string, optional(default=None)
-            See Augmenter.__init__()
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
 
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
 
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> iaa.ContrastNormalization((0.5, 1.5))
+
+    Decreases oder improves contrast per image by a random factor between
+    0.5 and 1.5. The factor 0.5 means that any difference from the center value
+    (i.e. 128) will be halved, leading to less contrast.
+
+    >>> iaa.ContrastNormalization((0.5, 1.5), per_channel=0.5)
+
+    Same as before, but for 50 percent of all images the normalization is done
+    independently per channel (i.e. factors can vary per channel for the same
+    image). In the other 50 percent of all images, the factor is the same for
+    all channels.
+
+    """
+
+    def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
@@ -5124,15 +5355,14 @@ class ContrastNormalization(Augmenter):
 
 
 class Affine(Augmenter):
-    """Augmenter to apply affine transformations to images.
+    """
+    Augmenter to apply affine transformations to images.
 
-    This is mostly a wrapper around skimage's
-    [AffineTransform](http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.AffineTransform)
-    class and
-    [warp](http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.warp)
-    function.
+    This is mostly a wrapper around skimage's AffineTransform class and
+    warp function.
 
-    Affine transformations involve:
+    Affine transformations
+    involve:
         - Translation ("move" image on the x-/y-axis)
         - Rotation
         - Scaling ("zoom" in/out)
@@ -5147,6 +5377,201 @@ class Affine(Augmenter):
     Some transformations involve interpolations between several pixels
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
+
+    Parameters
+    ----------
+    scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+        Scaling factor to use, where 1.0 represents no change and 0.5 is
+        zoomed out to 50 percent of the original size.
+            * If a single float, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled from the range
+              a <= x <= b per image. That value will be used identically for
+              both x- and y-axis.
+            * If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`scale`). Using a dictionary allows to
+              set different values for the axis. If they are set to the same
+              ranges, different values may still be sampled per axis.
+
+    translate_percent : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+        Translation in percent relative to the image
+        height/width (x-translation, y-translation) to use,
+        where 0 represents no change and 0.5 is half of the image
+        height/width.
+            * If a single float, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled from the range
+              a <= x <= b per image. That percent value will be used identically
+              for both x- and y-axis.
+            * If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`translate_percent`).
+              Using a dictionary allows to set different values for the axis.
+              If they are set to the same ranges, different values may still
+              be sampled per axis.
+
+    translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
+        Translation in
+        pixels.
+            * If a single int, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled from the discrete
+              range [a .. b] per image. That number will be used identically
+              for both x- and y-axis.
+            * If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`translate_px`).
+              Using a dictionary allows to set different values for the axis.
+              If they are set to the same ranges, different values may still
+              be sampled per axis.
+
+    rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+        Rotation in degrees (NOT radians), i.e. expected value range is
+        0 to 360 for positive rotations (may also be negative).
+            * If a float/int, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the rotation value.
+            * If a StochasticParameter, then this parameter will be used to
+              sample the rotation value per image.
+
+    shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+        Shear in degrees (NOT radians), i.e. expected value range is
+        0 to 360 for positive shear (may also be negative).
+            * If a float/int, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the rotation value.
+            * If a StochasticParameter, then this parameter will be used to
+              sample the shear value per image.
+
+    order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
+        Interpolation order to use. Same meaning as in
+        skimage:
+            * 0: Nearest-neighbor
+            * 1: Bi-linear (default)
+            * 2: Bi-quadratic (not recommended by skimage)
+            * 3: Bi-cubic
+            * 4: Bi-quartic
+            * 5: Bi-quintic
+        Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very
+        slow.
+            * If a single int, then that order will be used for all images.
+            * If an iterable, then for each image a random value will be sampled
+              from that iterable (i.e. list of allowed order values).
+            * If ia.ALL, then equivalant to list [0, 1, 3, 4, 5].
+            * If StochasticParameter, then that parameter is queried per image
+              to sample the order value to use.
+
+    cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
+        The constant value used for skimage's transform function.
+        This is the value used to fill up pixels in the result image that
+        didn't exist in the input image (e.g. when translating to the left,
+        some new pixels are created at the right). Such a fill-up with a
+        constant value only happens, when `mode` is "constant".
+        For standard uint8 images (value range 0-255), this value may also
+        come from the range 0-255. It may be a float value, even for
+        integer image dtypes.
+            * If this is a single int or float, then that value will be used
+              (e.g. 0 results in black pixels).
+            * If a tuple (a, b), then a random value from the range a <= x <= b
+              is picked per image.
+            * If ia.ALL, a value from the discrete range [0 .. 255] will be
+              sampled per image.
+            * If a StochasticParameter, a new value will be sampled from the
+              parameter per image.
+
+    mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
+        Parameter that defines the handling of newly created pixels.
+        Same meaning as in skimage (and numpy.pad):
+            * "constant": Pads with a constant value
+            * "edge": Pads with the edge values of array
+            * "symmetric": Pads with the reflection of the vector mirrored
+              along the edge of the array.
+            * "reflect": Pads with the reflection of the vector mirrored on
+              the first and last values of the vector along each axis.
+            * "wrap": Pads with the wrap of the vector along the axis.
+              The first values are used to pad the end and the end values
+              are used to pad the beginning.
+        The datatype of the parameter may
+        be:
+            * If a single string, then that mode will be used for all images.
+            * If a list of strings, then per image a random mode will be picked
+              from that list.
+            * If ia.ALL, then a random mode from all possible modes will be
+              picked.
+            * If StochasticParameter, then the mode will be sampled from that
+              parameter per image, i.e. it must return only the above mentioned
+              strings.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Affine(scale=2.0)
+
+    zooms all images by a factor of 2.
+
+    >>> aug = iaa.Affine(translate_px=16)
+
+    translates all images on the x- and y-axis by 16 pixels (to the
+    right/top), fills up any new pixels with zero (black values).
+
+    >>> aug = iaa.Affine(translate_percent=0.1)
+
+    translates all images on the x- and y-axis by 10 percent of their
+    width/height (to the right/top), fills up any new pixels with zero
+    (black values).
+
+    >>> aug = iaa.Affine(rotate=35)
+
+    rotates all images by 35 degrees, fills up any new pixels with zero
+    (black values).
+
+    >>> aug = iaa.Affine(shear=15)
+
+    rotates all images by 15 degrees, fills up any new pixels with zero
+    (black values).
+
+    >>> aug = iaa.Affine(translate_px=(-16, 16))
+
+    translates all images on the x- and y-axis by a random value
+    between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
+    sampled once per image), fills up any new pixels with zero (black values).
+
+    >>> aug = iaa.Affine(translate_px={"x": (-16, 16), "y": (-4, 4)})
+
+    translates all images on the x-axis by a random value
+    between -16 and 16 pixels (to the right) and on the y-axis by a
+    random value between -4 and 4 pixels to the top. Even if both ranges
+    were the same, both axis could use different samples.
+    Fills up any new pixels with zero (black values).
+
+    >>> aug = iaa.Affine(scale=2.0, order=[0, 1])
+
+    same as previously, but uses (randomly) either nearest neighbour
+    interpolation or linear interpolation.
+
+    >>> aug = iaa.Affine(translate_px=16, cval=(0, 255))
+
+    same as previously, but fills up any new pixels with a random
+    brightness (same for the whole image).
+
+    >>> aug = iaa.Affine(translate_px=16, mode=["constant", "edge"])
+
+    same as previously, but fills up the new pixels in only 50 percent
+    of all images with black values. In the other 50 percent of all cases,
+    the value of the nearest edge is used.
+
     """
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
@@ -5154,192 +5579,7 @@ class Affine(Augmenter):
                  name=None, deterministic=False, random_state=None):
         """Create a new Affine instance.
 
-        Example:
-            aug = iaa.Affine(scale=2.0)
-        zooms all images by a factor of 2.
 
-        Example:
-            aug = iaa.Affine(translate_px=16)
-        translates all images on the x- and y-axis by 16 pixels (to the
-        right/top), fills up any new pixels with zero (black values).
-
-        Example:
-            aug = iaa.Affine(translate_percent=0.1)
-        translates all images on the x- and y-axis by 10 percent of their
-        width/height (to the right/top), fills up any new pixels with zero
-        (black values).
-
-        Example:
-            aug = iaa.Affine(rotate=35)
-        rotates all images by 35 degrees, fills up any new pixels with zero
-        (black values).
-
-        Example:
-            aug = iaa.Affine(shear=15)
-        rotates all images by 15 degrees, fills up any new pixels with zero
-        (black values).
-
-        Example:
-            aug = iaa.Affine(translate_px=(-16, 16))
-        translates all images on the x- and y-axis by a random value
-        between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
-        sampled once per image), fills up any new pixels with zero (black values).
-
-        Example:
-            aug = iaa.Affine(translate_px={"x": (-16, 16), "y": (-4, 4)})
-        translates all images on the x-axis by a random value
-        between -16 and 16 pixels (to the right) and on the y-axis by a
-        random value between -4 and 4 pixels to the top. Even if both ranges
-        were the same, both axis could use different samples.
-        Fills up any new pixels with zero (black values).
-
-        Example:
-            aug = iaa.Affine(scale=2.0, order=[0, 1])
-        same as previously, but uses (randomly) either nearest neighbour
-        interpolation or linear interpolation.
-
-        Example:
-            aug = iaa.Affine(translate_px=16, cval=(0, 255))
-        same as previously, but fills up any new pixels with a random
-        brightness (same for the whole image).
-
-        Example:
-            aug = iaa.Affine(translate_px=16, mode=["constant", "edge"])
-        same as previously, but fills up the new pixels in only 50 percent
-        of all images with black values. In the other 50 percent of all cases,
-        the value of the nearest edge is used.
-
-        Parameters
-        ----------
-        scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
-            Scaling factor to use, where 1.0 represents no change and 0.5 is
-            zoomed out to 50 percent of the original size.
-            If a single float, then that value will be used for all images.
-            If a tuple (a, b), then a value will be sampled from the range
-              a <= x <= b per image. That value will be used identically for
-              both x- and y-axis.
-            If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`scale`). Using a dictionary allows to
-              set different values for the axis. If they are set to the same
-              ranges, different values may still be sampled per axis.
-
-        translate_percent : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
-            Translation in percent relative to the image
-            height/width (x-translation, y-translation) to use,
-            where 0 represents no change and 0.5 is half of the image
-            height/width.
-            If a single float, then that value will be used for all images.
-            If a tuple (a, b), then a value will be sampled from the range
-              a <= x <= b per image. That percent value will be used identically
-              for both x- and y-axis.
-            If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`translate_percent`).
-              Using a dictionary allows to set different values for the axis.
-              If they are set to the same ranges, different values may still
-              be sampled per axis.
-
-        translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
-            Translation in pixels.
-            If a single int, then that value will be used for all images.
-            If a tuple (a, b), then a value will be sampled from the discrete
-              range [a .. b] per image. That number will be used identically
-              for both x- and y-axis.
-            If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`translate_px`).
-              Using a dictionary allows to set different values for the axis.
-              If they are set to the same ranges, different values may still
-              be sampled per axis.
-
-        rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
-            Rotation in degrees (NOT radians), i.e. expected value range is
-            0 to 360.
-            If a float/int, then that value will be used for all images.
-            If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the rotation value.
-            If a StochasticParameter, then this parameter will be used to
-              sample the rotation value per image.
-
-        shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
-            Shear in degrees (NOT radians), i.e. expected value range is
-            0 to 360.
-            If a float/int, then that value will be used for all images.
-            If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the rotation value.
-            If a StochasticParameter, then this parameter will be used to
-              sample the shear value per image.
-
-        order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
-            Interpolation order to use. Same meaning as in skimage:
-                0: Nearest-neighbor
-                1: Bi-linear (default)
-                2: Bi-quadratic (not recommended by skimage)
-                3: Bi-cubic
-                4: Bi-quartic
-                5: Bi-quintic
-            Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very slow.
-            If a single int, then that order will be used for all images.
-            If an iterable, then for each image a random value will be sampled
-              from that iterable (i.e. list of allowed order values).
-            If ia.ALL, then equivalant to list [0, 1, 3, 4, 5].
-            If StochasticParameter, then that parameter is queried per image
-              to sample the order value to use.
-
-        cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
-            The constant value used for skimage's transform function.
-            This is the value used to fill up pixels in the result image that
-            didn't exist in the input image (e.g. when translating to the left,
-            some new pixels are created at the right). Such a fill-up with a
-            constant value only happens, when `mode` is "constant".
-            For standard uint8 images (value range 0-255), this value may also
-            come from the range 0-255. It may be a float value, even for
-            integer image dtypes.
-            If this is a single int or float, then that value will be used
-              (e.g. 0 results in black pixels).
-            If a tuple (a, b), then a random value from the range a <= x <= b
-              is picked per image.
-            If ia.ALL, a value from the discrete range [0 .. 255] will be
-              sampled per image.
-            If a StochasticParameter, a new value will be sampled from the
-              parameter per image.
-
-        mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
-            Parameter that defines the handling of newly created pixels.
-            Same meaning as in skimage (and numpy.pad):
-                "constant": Pads with a constant value
-                "edge": Pads with the edge values of array
-                "symmetric": Pads with the reflection of the vector mirrored
-                    along the edge of the array.
-                "reflect": Pads with the reflection of the vector mirrored on
-                    the first and last values of the vector along each axis.
-                "wrap": Pads with the wrap of the vector along the axis.
-                    The first values are used to pad the end and the end values
-                    are used to pad the beginning.
-            If a single string, then that mode will be used for all images.
-            If a list of strings, then per image a random mode will be picked
-              from that list.
-            If ia.ALL, then a random mode from all possible modes will be
-              picked.
-            If StochasticParameter, then the mode will be sampled from that
-              parameter per image, i.e. it must return only the above mentioned
-              strings.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
         """
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -5642,67 +5882,81 @@ class Affine(Augmenter):
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples
 
 class PiecewiseAffine(Augmenter):
-    """Augmenter that places a regular grid of points on an image and randomly
+    """
+    Augmenter that places a regular grid of points on an image and randomly
     moves the neighbourhood of these point around via affine transformations.
     This leads to local distortions.
 
     This is mostly a wrapper around around scikit-image's PiecewiseAffine.
     See also the Affine augmenter for a similar technique.
+
+    Parameters
+    ----------
+    scale : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Each point on the regular grid is moved around via a normal
+        distribution. This scale factor is equivalent to the normal
+        distribution's sigma. Note that the jitter (how far each point is
+        moved in which direction) is multiplied by the height/width of the
+        image, so this scale can be the same for different sized images.
+        Recommended values are in the range 0.01 to 0.05 (weak to strong
+        augmentations).
+            * If a single float, then that value will always be used as the
+              scale.
+            * If a tuple (a, b) of floats, then a random value will be picked
+              from the interval (a, b) (per image).
+            * If a StochasticParameter, then that parameter will be queried to
+              draw one value per image.
+
+    nb_rows : int or tuple of ints or StochasticParameter, optional(default=4)
+        Number of rows of points that the regular grid should have.
+        Must be at least 2. For large images, you might want to pick a
+        higher value than 4. You might have to then adjust scale to lower
+        values.
+            * If a single int, then that value will always be used as the
+              number of rows.
+            * If a tuple (a, b), then a value from the discrete interval [a..b]
+              will be sampled per image.
+            * If a StochasticParameter, then that parameter will be queried to
+              draw one value per image.
+
+    nb_cols : int or tuple of ints or StochasticParameter, optional(default=4)
+        Number of columns. See `nb_rows`.
+
+    order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
+        See Affine.__init__().
+
+    cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
+        See Affine.__init__().
+
+    mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
+        See Affine.__init__().
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05))
+
+    Puts a grid of points on each image and then randomly moves each point
+    around by 1 to 5 percent (with respect to the image height/width). Pixels
+    between these points will be moved accordingly.
+
+    >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05), nb_rows=8, nb_cols=8)
+
+    Same as the previous example, but uses a denser grid of 8x8 points (default
+    is 4x4). This can be useful for large images.
+
     """
 
     def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant",
                  name=None, deterministic=False, random_state=None):
-        """Instantiate a new PiecewiseAffine object.
-
-        Parameters
-        ----------
-        scale : float or tuple of two floats or StochasticParameter, optional(default=0)
-            Each point on the regular grid is moved around via a normal
-            distribution. This scale factor is equivalent to the normal
-            distribution's sigma. Note that the jitter (how far each point is
-            moved in which direction) is multiplied by the height/width of the
-            image, so this scale can be the same for different sized images.
-            Recommended values are in the range 0.01 to 0.05 (weak to strong
-            augmentations).
-            If a single float, then that value will always be used as the scale.
-            If a tuple (a, b) of floats, then a random value will be picked
-              from the interval (a, b) (per image).
-            If a StochasticParameter, then that parameter will be queried to
-              draw one value per image.
-
-        nb_rows : int or tuple of ints or StochasticParameter, optional(default=4)
-            Number of rows of points that the regular grid should have.
-            Must be at least 2. For large images, you might want to pick a
-            higher value than 4. You might have to then adjust scale to lower
-            values.
-            If a single int, then that value will always be used as the number
-              of rows.
-            If a tuple (a, b), then a value from the discrete interval [a..b]
-              will be sampled.
-            If a StochasticParameter, then that parameter will be queried to
-              draw one value per image.
-
-        nb_cols : int or tuple of ints or StochasticParameter, optional(default=4)
-            Number of columns. See nb_rows.
-
-        order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
-            See Affine.__init__().
-
-        cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
-            See Affine.__init__().
-
-        mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
-            See Affine.__init__().
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(scale):
@@ -5916,62 +6170,65 @@ class PiecewiseAffine(Augmenter):
 # code partially from
 # https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 class ElasticTransformation(Augmenter):
-    """Augmenter to transform images using elastic transformations/distortions.
+    """
+    Augmenter to transform images by moving pixels locally around using
+    displacement fields.
 
-    Elastic transformations move pixels around based on displacement fields,
-    leading to distorted images.
     See
         Simard, Steinkraus and Platt
         Best Practices for Convolutional Neural Networks applied to Visual
         Document Analysis
         in Proc. of the International Conference on Document Analysis and
         Recognition, 2003
-    for a detailed explanation."""
+    for a detailed explanation.
+
+    Parameters
+    ----------
+    alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Strength of the distortion field. Higher values mean more "movement" of
+        pixels.
+            * If float, then that value will be used for all images.
+            * If tuple (a, b), then a random value from range a <= x <= b will be
+              sampled per image.
+            * If StochasticParameter, then that parameter will be used to sample
+              a value per image.
+
+    sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Standard deviation of the gaussian kernel used to smooth the distortion
+        fields.
+            * If float, then that value will be used for all images.
+            * If tuple (a, b), then a random value from range a <= x <= b will be
+              sampled per image.
+            * If StochasticParameter, then that parameter will be used to sample
+              a value per image.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+
+    apply elastic transformations with a strength/alpha of 0.5 and
+    smoothness of 0.25 to all images.
+
+
+    >>> aug = iaa.ElasticTransformation(alpha=(0.25, 3.0), sigma=0.25)
+
+    apply elastic transformations with a strength/alpha that comes
+    from the range 0.25 <= x <= 3.0 (randomly picked per image) and
+    smoothness of 0.25.
+
+    """
 
     def __init__(self, alpha=0, sigma=0, name=None, deterministic=False,
                  random_state=None):
-        """Create a new ElasticTransformation instance.
-
-        Example:
-            aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
-        apply elastic transformations with a strength/alpha of 0.5 and
-        smoothness of 0.25 to all images.
-
-        Example:
-            aug = iaa.ElasticTransformation(alpha=(0.25, 3.0), sigma=0.25)
-        apply elastic transformations with a strength/alpha that comes
-        from the range 0.25 <= x <= 3.0 (randomly picked per image) and
-        smoothness of 0.25.
-
-        Parameters
-        ----------
-        alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
-            Strength of the distortion field. Higher values mean more "movement" of
-            pixels.
-            If float, then that value will be used for all images.
-            If tuple (a, b), then a random value from range a <= x <= b will be
-              sampled per image.
-            If StochasticParameter, then that parameter will be used to sample
-              a value per image.
-
-        sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
-            Standard deviation of the gaussian kernel used to smooth the distortion
-            fields.
-            If float, then that value will be used for all images.
-            If tuple (a, b), then a random value from range a <= x <= b will be
-              sampled per image.
-            If StochasticParameter, then that parameter will be used to sample
-              a value per image.
-
-        name : string, optional(default=None)
-            See Augmenter.__init__()
-
-        deterministic : bool, optional(default=False)
-            See Augmenter.__init__()
-
-        random_state : int or np.random.RandomState or None, optional(default=None)
-            See Augmenter.__init__()
-        """
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):

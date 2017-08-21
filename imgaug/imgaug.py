@@ -12,6 +12,7 @@ import threading
 import sys
 import six
 import six.moves as sm
+import os
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -22,6 +23,13 @@ elif sys.version_info[0] == 3:
     xrange = range
 
 ALL = "ALL"
+
+# filepath to the quokka image
+QUOKKA_FP = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..",
+    "quokka.jpg"
+)
 
 # We instantiate a current/global random state here once.
 # One can also call np.random, but that is (in contrast to np.random.RandomState)
@@ -92,13 +100,13 @@ def copy_random_state(random_state, force_copy=False):
 #    pass
 
 def quokka(size=None):
-    img = ndimage.imread("../quokka.jpg", mode="RGB")
+    img = ndimage.imread(QUOKKA_FP, mode="RGB")
     if size is not None:
         img = misc.imresize(img, size)
     return img
 
 def quokka_square(size=None):
-    img = ndimage.imread("../quokka.jpg", mode="RGB")
+    img = ndimage.imread(QUOKKA_FP, mode="RGB")
     img = img[0:643, 0:643]
     if size is not None:
         img = misc.imresize(img, size)
@@ -119,7 +127,7 @@ def angle_between_vectors(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
-    # keeping PIL here so that it is not a depdency of the library right now
+    # keeping PIL here so that it is not a dependency of the library right now
     from PIL import Image, ImageDraw, ImageFont
 
     assert img.dtype in [np.uint8, np.float32]
@@ -286,7 +294,16 @@ class HooksKeypoints(HooksImages):
 
 class Keypoint(object):
     """
-    # TODO
+    A single keypoint (aka landmark) on an image.
+
+    Parameters
+    ----------
+    x : int
+        Coordinate of the keypoint on the x axis.
+
+    y : int
+        Coordinate of the keypoint on the y axis.
+
     """
 
     def __init__(self, x, y):
@@ -298,6 +315,30 @@ class Keypoint(object):
         self.y = y
 
     def project(self, from_shape, to_shape):
+        """
+        Project the keypoint onto a new position on a new image.
+
+        E.g. if the keypoint is on its original image at x=(10 of 100 pixels)
+        and y=(20 of 100 pixels) and is projected onto a new image with
+        size (width=200, height=200), its new position will be (20, 40).
+
+        This is intended for cases where the original image is resized.
+        It cannot be used for more complex changes (e.g. padding, cropping).
+
+        Parameters
+        ----------
+        from_shape : tuple
+            Shape of the original image. (Before resize.)
+
+        to_shape : tuple
+            Shape of the new image. (After resize.)
+
+        Returns
+        -------
+        out : Keypoint
+            Keypoint object with new coordinates.
+
+        """
         if from_shape[0:2] == to_shape[0:2]:
             return Keypoint(x=self.x, y=self.y)
         else:
@@ -308,6 +349,23 @@ class Keypoint(object):
             return Keypoint(x=x, y=y)
 
     def shift(self, x, y):
+        """
+        Move the keypoint around on an image.
+
+        Parameters
+        ----------
+        x : int
+            Move by this value on the x axis.
+
+        y : int
+            Move by this value on the y axis.
+
+        Returns
+        -------
+        out : Keypoint
+            Keypoint object with new coordinates.
+
+        """
         return Keypoint(self.x + x, self.y + y)
 
     def __repr__(self):
@@ -318,6 +376,23 @@ class Keypoint(object):
 
 
 class KeypointsOnImage(object):
+    """
+    Object that represents all keypoints on a single image.
+
+    Parameters
+    ----------
+    keypoints : list of Keypoint
+        List of keypoints on the image.
+
+    shape :
+        The shape of the image on which the keypoints are placed.
+
+    Examples
+    --------
+    >>> kps = [Keypoint(x=10, y=20), Keypoint(x=34, y=60)]
+    >>> kps_oi = KeypointsOnImage(kps, shape=image.shape)
+
+    """
     def __init__(self, keypoints, shape):
         self.keypoints = keypoints
         if is_np_array(shape):
@@ -335,6 +410,20 @@ class KeypointsOnImage(object):
         return self.shape[1]
 
     def on(self, image):
+        """
+        Project keypoints from one image to a new one.
+
+        Parameters
+        ----------
+        image : ndarray or tuple
+            New image onto which the keypoints are to be projected.
+            May also simply be that new image's shape tuple.
+
+        Returns
+        -------
+        keypoints : KeypointsOnImage
+            Object containing all projected keypoints.
+        """
         if is_np_array(image):
             shape = image.shape
         else:
@@ -347,6 +436,32 @@ class KeypointsOnImage(object):
             return KeypointsOnImage(keypoints, shape)
 
     def draw_on_image(self, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False):
+        """
+        Draw all keypoints onto a given image. Each keypoint is marked by a
+        square of a chosen color and size.
+
+        Parameters
+        ----------
+        image : (H,W,3) ndarray
+            The image onto which to draw the keypoints.
+            This image should usually have the same shape as
+            set in KeypointsOnImage.shape.
+
+        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=[0, 255, 0])
+            The RGB color of all keypoints. If a single int `C`, then that is
+            equivalent to (C,C,C).
+
+        size : int, optional(default=3)
+            The size of each point. If set to C, each square will have
+            size CxC.
+
+        copy : bool, optional(default=True)
+            Whether to copy the image before drawing the points.
+
+        raise_if_out_of_image : bool, optional(default=False)
+            Whether to raise an exception if any keypoint is outside of the
+            image.
+        """
         if copy:
             image = np.copy(image)
 
@@ -367,10 +482,38 @@ class KeypointsOnImage(object):
         return image
 
     def shift(self, x, y):
+        """
+        Move the keypoints around on an image.
+
+        Parameters
+        ----------
+        x : int
+            Move each keypoint by this value on the x axis.
+
+        y : int
+            Move each keypoint by this value on the y axis.
+
+        Returns
+        -------
+        out : KeypointsOnImage
+            Keypoints after moving them.
+
+        """
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
         return KeypointsOnImage(keypoints, self.shape)
 
     def get_coords_array(self):
+        """
+        Convert the coordinates of all keypoints in this object to
+        an array of shape (N,2).
+
+        Returns
+        -------
+        result : (N, 2) ndarray
+            Where N is the number of keypoints. Each first value is the
+            x coordinate, each second value is the y coordinate.
+
+        """
         result = np.zeros((len(self.keypoints), 2), np.int32)
         for i, keypoint in enumerate(self.keypoints):
             result[i, 0] = keypoint.x
@@ -379,11 +522,47 @@ class KeypointsOnImage(object):
 
     @staticmethod
     def from_coords_array(coords, shape):
+        """
+        Convert an array (N,2) with a given image shape to a KeypointsOnImage
+        object.
+
+        Parameters
+        ----------
+        coords : (N, 2) ndarray
+            Coordinates of N keypoints on the original image.
+            Each first entry (i, 0) is expected to be the x coordinate.
+            Each second entry (i, 1) is expected to be the y coordinate.
+
+        shape : tuple
+            Shape tuple of the image on which the keypoints are placed.
+
+        Returns
+        -------
+        out : KeypointsOnImage
+            KeypointsOnImage object that contains all keypoints from the array.
+
+        """
         assert is_integer_array(coords), coords.dtype
         keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
     def to_keypoint_image(self):
+        """
+        Draws a new black image of shape (H,W,N) in which all keypoint coordinates
+        are set to 255.
+        (H=shape height, W=shape width, N=number of keypoints)
+
+        This function can be used as a helper when augmenting keypoints with
+        a method that only supports the augmentation of images.
+
+        Returns
+        -------
+        image : (H,W,N) ndarray
+            Image in which the keypoints are marked. H is the height,
+            defined in KeypointsOnImage.shape[0] (analogous W). N is the
+            number of keypoints.
+
+        """
         assert len(self.keypoints) > 0
         height, width = self.shape[0:2]
         image = np.zeros((height, width, len(self.keypoints)), dtype=np.uint8)
@@ -396,6 +575,33 @@ class KeypointsOnImage(object):
 
     @staticmethod
     def from_keypoint_image(image, if_not_found_coords={"x": -1, "y": -1}, threshold=1):
+        """
+        Converts an image generated by `to_keypoint_image()` back to
+        an KeypointsOnImage object.
+
+        Parameters
+        ----------
+        image : (H,W,N) ndarray
+            The keypoints image. N is the number of keypoints.
+
+        if_not_found_coords : tuple or list or dict or None
+            Coordinates to use for keypoints that cannot be found in `image`.
+            If this is a list/tuple, it must have two integer values. If it
+            is a dictionary, it must have the keys "x" and "y". If this
+            is None, then the keypoint will not be added to the final
+            KeypointsOnImage object.
+
+        threshold : int
+            The search for keypoints works by searching for the argmax in
+            each channel. This parameters contains the minimum value that
+            the max must have in order to be viewed as a keypoint.
+
+        Returns
+        -------
+            out : KeypointsOnImage
+                The extracted keypoints.
+
+        """
         assert len(image.shape) == 3
         height, width, nb_keypoints = image.shape
 
@@ -451,7 +657,25 @@ class KeypointsOnImage(object):
 ############################
 
 class Batch(object):
-    """Class encapsulating a batch before and after augmentation."""
+    """
+    Class encapsulating a batch before and after augmentation.
+
+    Parameters
+    ----------
+    images : None or (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
+        The images to augment.
+
+    keypoints : None or list of KeypointOnImage
+        The keypoints to augment.
+
+    data
+        Additional data that is saved in the batch and may be read out
+        after augmentation. This could e.g. contain filepaths to each image
+        in `images`. As this object is usually used for background
+        augmentation with multiple processes, the augmented Batch objects might
+        not be returned in the original order, making this information useful.
+
+    """
     def __init__(self, images=None, keypoints=None, data=None):
         self.images = images
         self.images_aug = None
@@ -461,7 +685,29 @@ class Batch(object):
         self.data = data
 
 class BatchLoader(object):
-    """Class to load batches in the background."""
+    """
+    Class to load batches in the background.
+
+    Loaded batches can be accesses using `BatchLoader.queue`.
+
+    Parameters
+    ----------
+    load_batch_func : callable
+        Function that yields Batch objects (i.e. expected to be a generator).
+        Background loading automatically stops when the last batch was yielded.
+
+    queue_size : int, optional(default=50)
+        Maximum number of batches to store in the queue. May be set higher
+        for small images and/or small batches.
+
+    nb_workers : int, optional(default=1)
+        Number of workers to run in the background.
+
+    threaded : bool, optional(default=True)
+        Whether to run the background processes using threads (true) or
+        full processes (false).
+
+    """
 
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
         assert queue_size > 0
