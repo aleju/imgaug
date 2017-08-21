@@ -1,7 +1,2 @@
-matplotlib==1.5.1
-numpy==1.11.1
 numpydoc==0.7.0
-scikit-image==0.12.3
-scipy==0.18.0
-six==1.10.0
 sphinx-rtd-theme==0.2.4

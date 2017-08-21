@@ -21,6 +21,20 @@ import sys
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
 
+# unittest.mock is available in python 3.3+ by default
+# in lower versions run 'pip install mock'
+try:
+    from unittest.mock import MagicMock
+except ImportError as e:
+    from mock import Mock as MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return MagicMock()
+
+MOCK_MODULES = ['argparse', 'numpy', 'pandas', 'scipy', 'cv2', 'skimage']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
 
