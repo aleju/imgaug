@@ -15,9 +15,15 @@ Features:
 * Easily convert all stochastic ranges to deterministic values in order to augment different batches of images in exactly the same way. (E.g. images and their respective heatmaps. If an image is rotated, you want its heatmap to be rotated by the exactly same amount.)
 * Optionally run the augmentations in background processes, improving performance of experiments.
 
-The image below shows examples for each available augmentation technique.
+Documentation:
+* [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code to use the library.
+* [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for each augmentation technique.
+* [http://imgaug.readthedocs.io/en/latest/source/modules.html](http://imgaug.readthedocs.io/en/latest/source/modules.html) - API.
+* This README contains more examples. See further below.
 
-![Available augmenters](examples.jpg?raw=true "Effects of all available augmenters")
+The image below shows examples for most augmentation techniques:
+
+![Available augmenters](examples.jpg?raw=true "Effects of most available augmenters")
 
 *Noop is an augmenter that does nothing. Values for crop are (top pixel, right px, bottom px, left px). Other values written in the form (a, b) mean that each value x was randomly picked from the range a <= x <= b.*
 
