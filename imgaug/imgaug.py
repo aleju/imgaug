@@ -61,7 +61,7 @@ def is_iterable(val):
 
 
 def is_string(val):
-    return isinstance(val, str) or isinstance(val, unicode)
+    return isinstance(val, six.string_types)
 
 
 def is_integer_array(val):
