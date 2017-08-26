@@ -26,7 +26,6 @@ TODOs
     - Add Alpha augmenter
         - CloudyAlpha
     - Add SpatialDropout augmenter
-    - Add Hue and Saturation augmenters
     - Add bilateral filter augmenter
     - Add random blurring shortcut (either uniform or gaussian or bilateral or median)
     - Add Max-Pooling augmenter
@@ -41,6 +40,10 @@ TODOs
     - weak()/medium()/strong() factory functions per augmenter
     - documentations say 'see Class.__init__()' even though they should say 'see Class'
     - documentations that say 'see xyz' should somehow in ReadTheDocs link to xyz (clickable)
+    - Add AddHueAndSaturation to example images
+    - Add AddHueAndSaturation to documentation
+    - Add BilateralBlur to example images
+    - Add BilateralBlur to documentation
 """
 
 @six.add_metaclass(ABCMeta)
@@ -3917,6 +3920,7 @@ class AverageBlur(Augmenter):
     def get_parameters(self):
         return [self.k]
 
+# TODO tests
 class MedianBlur(Augmenter):
     """
     Blur an image by computing median values over neighbourhoods.
@@ -3995,6 +3999,111 @@ class MedianBlur(Augmenter):
 
     def get_parameters(self):
         return [self.k]
+
+# TODO tests
+class BilateralBlur(Augmenter):
+    """
+    Blur/Denoise an image using a bilateral filter.
+
+    Bilateral filters blur homogenous and textured areas, while trying to
+    preserve edges.
+
+    See http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html#bilateralfilter
+    for more information regarding the parameters.
+
+    Parameters
+    ----------
+    d : int or tuple of two ints or StochasticParameter
+        Diameter of each pixel neighborhood.
+        High values for d lead to significantly worse performance. Values
+        equal or less than 10 seem to be good.
+            * If a single int, then that value will be used for the diameter.
+            * If a tuple of two ints (a, b), then the diameter will be a
+              value sampled from the interval [a..b].
+            * If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the diameter
+              for the nth image. Expected to be discrete.
+
+    sigma_color : int or tuple of two ints or StochasticParameter
+        Filter sigma in the color space. A larger value of the parameter means
+        that farther colors within the pixel neighborhood (see sigmaSpace )
+        will be mixed together, resulting in larger areas of semi-equal color.
+            * If a single int, then that value will be used for the diameter.
+            * If a tuple of two ints (a, b), then the diameter will be a
+              value sampled from the interval [a..b].
+            * If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the diameter
+              for the nth image. Expected to be discrete.
+
+    sigma_space :
+        Filter sigma in the coordinate space. A larger value of the parameter
+        means that farther pixels will influence each other as long as their
+        colors are close enough (see sigmaColor ).
+        * If a single int, then that value will be used for the diameter.
+        * If a tuple of two ints (a, b), then the diameter will be a
+          value sampled from the interval [a..b].
+        * If a StochasticParameter, then N samples will be drawn from
+          that parameter per N input images, each representing the diameter
+          for the nth image. Expected to be discrete.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.BilateralBlur(d=(3, 10), sigma_color=(10, 250), sigma_space=(10, 250))
+
+    blurs all images using a bilateral filter with max distance 3 to 10
+    and wide ranges for sigma_color and sigma_space.
+
+    """
+
+    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250), name=None, deterministic=False, random_state=None):
+        super(BilateralBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        def val(var):
+            if ia.is_single_number(var):
+                return Deterministic(int(var))
+            elif ia.is_iterable(var):
+                assert len(var) == 2
+                assert all([ia.is_single_number(var_i) for var_i in var])
+                return DiscreteUniform(int(var[0]), int(var[1]))
+            elif isinstance(d, StochasticParameter):
+                return var
+            else:
+                raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(var),))
+
+        self.d = val(d)
+        self.sigma_color = val(sigma_color)
+        self.sigma_space = val(sigma_space)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seed = random_state.randint(0, 10**6)
+        samples_d = self.d.draw_samples((nb_images,), random_state=ia.new_random_state(seed))
+        samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
+        samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
+        for i in sm.xrange(nb_images):
+            di = samples_d[i]
+            sigma_color_i = samples_sigma_color[i]
+            sigma_space_i = samples_sigma_space[i]
+
+            if di != 1:
+                result[i] = cv2.bilateralFilter(images[i], di, sigma_color_i, sigma_space_i)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.d, self.sigma_color, self.sigma_space]
 
 # TODO tests
 class Convolve(Augmenter):
