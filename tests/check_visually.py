@@ -30,7 +30,7 @@ def main():
             iaa.AdditiveGaussianNoise(scale=0.1*255),
             iaa.Crop(percent=0.1)
         ], name="OneOf"),
-        iaa.AddHueAndSaturation((-20, 20), per_channel=True, name="AddHueAndSaturation"),
+        iaa.AddToHueAndSaturation((-20, 20), per_channel=True, name="AddHueAndSaturation"),
         iaa.Crop(px=(0, 8), name="Crop-px"),
         iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),

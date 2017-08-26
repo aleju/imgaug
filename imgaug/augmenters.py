@@ -26,7 +26,6 @@ TODOs
     - Add Alpha augmenter
         - CloudyAlpha
     - Add SpatialDropout augmenter
-    - Add bilateral filter augmenter
     - Add random blurring shortcut (either uniform or gaussian or bilateral or median)
     - Add Max-Pooling augmenter
     - Add edge pronounce augmenter
@@ -40,8 +39,8 @@ TODOs
     - weak()/medium()/strong() factory functions per augmenter
     - documentations say 'see Class.__init__()' even though they should say 'see Class'
     - documentations that say 'see xyz' should somehow in ReadTheDocs link to xyz (clickable)
-    - Add AddHueAndSaturation to example images
-    - Add AddHueAndSaturation to documentation
+    - Add AddToHueAndSaturation to example images
+    - Add AddToHueAndSaturation to documentation
     - Add BilateralBlur to example images
     - Add BilateralBlur to documentation
 """
@@ -1856,7 +1855,7 @@ class WithChannels(Augmenter):
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
-def AddHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):
+def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):
     """
     Augmenter that transforms images into HSV space, selects the H and S
     channels and then adds a given range of values to these.
@@ -1880,7 +1879,7 @@ def AddHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", chann
 
     Examples
     --------
-    >> aug = AddHueAndSaturation((-20, 20), per_channel=True)
+    >> aug = AddToHueAndSaturation((-20, 20), per_channel=True)
 
     Adds random values between -20 and 20 to the hue and saturation
     (independently per channel and the same value for all pixels within
