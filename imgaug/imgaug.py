@@ -27,7 +27,6 @@ ALL = "ALL"
 # filepath to the quokka image
 QUOKKA_FP = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..",
     "quokka.jpg"
 )
 
@@ -823,12 +822,12 @@ class BackgroundAugmenter(object):
                 batch_augment_keypoints = batch.keypoints is not None and self.augment_keypoints
 
                 if batch_augment_images and batch_augment_keypoints:
-                    augseq_det = augseq.to_deterministic()
+                    augseq_det = augseq.to_deterministic() if not augseq.deterministic else augseq
                     batch.images_aug = augseq_det.augment_images(batch.images)
                     batch.keypoints_aug = augseq_det.augment_keypoints(batch.keypoints)
-                elif batch_augment_images is not None:
+                elif batch_augment_images:
                     batch.images_aug = augseq.augment_images(batch.images)
-                elif batch_augment_keypoints is not None:
+                elif batch_augment_keypoints:
                     batch.keypoints_aug = augseq.augment_keypoints(batch.keypoints)
 
                 # send augmented batch to output queue

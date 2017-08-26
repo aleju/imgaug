@@ -4,15 +4,11 @@ Simply execute
     python test.py
 """
 from __future__ import print_function, division
-
-#import sys
-#import os
-#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import numpy as np
+import random
 import six
 import six.moves as sm
 
@@ -45,6 +41,8 @@ def main():
     # this function uses Fliplr(), so always test it after that augmenter
     test_2d_inputs()
 
+    test_background_augmentation()
+
     print("Finished without errors.")
 
 def test_is_single_integer():
@@ -70,6 +68,8 @@ def test_is_single_float():
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
 
 def test_find():
+    reseed()
+
     noop1 = iaa.Noop(name="Noop")
     fliplr = iaa.Fliplr(name="Fliplr")
     flipud = iaa.Flipud(name="Flipud")
@@ -110,6 +110,8 @@ def test_find():
     assert augs[1] == [seq2]
 
 def test_remove():
+    reseed()
+
     def get_seq():
         noop1 = iaa.Noop(name="Noop")
         fliplr = iaa.Fliplr(name="Fliplr")
@@ -142,6 +144,8 @@ def test_remove():
     assert augs is None
 
 def test_hooks():
+    reseed()
+
     image = np.array([[0, 0, 1],
                       [0, 0, 1],
                       [0, 1, 1]], dtype=np.uint8)
@@ -204,6 +208,8 @@ def test_hooks():
     assert np.array_equal(images_aug[0], image_lr)
 
 def test_Noop():
+    reseed()
+
     images = create_random_images((16, 70, 50, 3))
     keypoints = create_random_keypoints((16, 70, 50, 3), 4)
     aug = iaa.Noop()
@@ -226,6 +232,8 @@ def test_Noop():
     assert keypoints_equal(observed, expected)
 
 def test_Lambda():
+    reseed()
+
     base_img = np.array([[0, 0, 1],
                          [0, 0, 1],
                          [0, 1, 1]], dtype=np.uint8)
@@ -282,6 +290,8 @@ def test_Lambda():
         assert keypoints_equal(observed, expected)
 
 def test_AssertLambda():
+    reseed()
+
     base_img = np.array([[0, 0, 1],
                          [0, 0, 1],
                          [0, 1, 1]], dtype=np.uint8)
@@ -378,6 +388,8 @@ def test_AssertLambda():
     assert errored
 
 def test_AssertShape():
+    reseed()
+
     base_img = np.array([[0, 0, 1, 0],
                          [0, 0, 1, 0],
                          [0, 1, 1, 0]], dtype=np.uint8)
@@ -541,6 +553,8 @@ def test_AssertShape():
         assert errored
 
 def test_Crop():
+    reseed()
+
     base_img = np.array([[0, 0, 0],
                          [0, 1, 0],
                          [0, 0, 0]], dtype=np.uint8)
@@ -676,6 +690,8 @@ def test_Crop():
     print("[Note] Landmark projection after crop with resize is currently not tested.")
 
 def test_Fliplr():
+    reseed()
+
     base_img = np.array([[0, 0, 1],
                          [0, 0, 1],
                          [0, 1, 1]], dtype=np.uint8)
@@ -790,6 +806,8 @@ def test_Fliplr():
         assert val in [0, nb_iterations]
 
 def test_Flipud():
+    reseed()
+
     base_img = np.array([[0, 0, 1],
                          [0, 0, 1],
                          [0, 1, 1]], dtype=np.uint8)
@@ -904,6 +922,8 @@ def test_Flipud():
         assert val in [0, nb_iterations]
 
 def test_GaussianBlur():
+    reseed()
+
     base_img = np.array([[0, 0, 0],
                          [0, 255, 0],
                          [0, 0, 0]], dtype=np.uint8)
@@ -995,6 +1015,8 @@ def test_GaussianBlur():
     assert nb_changed_aug_det == 0
 
 def test_AdditiveGaussianNoise():
+    reseed()
+
     #base_img = np.array([[128, 128, 128],
     #                     [128, 128, 128],
     #                     [128, 128, 128]], dtype=np.uint8)
@@ -1112,13 +1134,15 @@ def test_AdditiveGaussianNoise():
     assert nb_changed_aug_det == 0
 
 
-def test_MultiplicativeGaussianNoise():
-    pass
+#def test_MultiplicativeGaussianNoise():
+#    pass
 
-def test_ReplacingGaussianNoise():
-    pass
+#def test_ReplacingGaussianNoise():
+#    pass
 
 def test_Dropout():
+    reseed()
+
     base_img = np.ones((512, 512, 1), dtype=np.uint8) * 255
 
     images = np.array([base_img])
@@ -1202,6 +1226,8 @@ def test_Dropout():
     assert nb_changed_aug_det == 0
 
 def test_Multiply():
+    reseed()
+
     base_img = np.ones((3, 3, 1), dtype=np.uint8) * 100
     images = np.array([base_img])
     images_list = [base_img]
@@ -1304,6 +1330,8 @@ def test_Multiply():
     assert nb_changed_aug_det == 0
 
 def test_Affine():
+    reseed()
+
     base_img = np.array([[0, 0, 0],
                          [0, 255, 0],
                          [0, 0, 0]], dtype=np.uint8)
@@ -1893,10 +1921,13 @@ def test_Affine():
 
 
 def test_ElasticTransformation():
+    reseed()
     # TODO
     print("[Note] Elastic Transformations are currently not tested.")
 
 def test_Sequential():
+    reseed()
+
     image = np.array([[0, 1, 1],
                       [0, 0, 1],
                       [0, 0, 1]], dtype=np.uint8) * 255
@@ -2101,6 +2132,8 @@ def test_Sequential():
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
 
 def test_Sometimes():
+    reseed()
+
     image = np.array([[0, 1, 1],
                       [0, 0, 1],
                       [0, 0, 1]], dtype=np.uint8) * 255
@@ -2271,6 +2304,8 @@ def test_Sometimes():
 def test_2d_inputs():
     """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work.
     """
+    reseed()
+
     base_img1 = np.array([[0, 0, 1, 1],
                           [0, 0, 1, 1],
                           [0, 1, 1, 1]], dtype=np.uint8)
@@ -2316,6 +2351,187 @@ def test_2d_inputs():
     observed = noaug.augment_images(images_list2d3d)
     assert array_equal_lists(observed, images_list2d3d)
 
+def test_background_augmentation():
+    reseed()
+
+    image = np.array([[0, 0, 1, 1],
+                      [0, 0, 1, 1],
+                      [0, 1, 1, 1]], dtype=np.uint8)
+    image_flipped = np.fliplr(image)
+    keypoint = ia.Keypoint(x=2, y=1)
+    keypoints = [ia.KeypointsOnImage([keypoint], shape=image.shape)]
+    kp_flipped = ia.Keypoint(
+        x=image.shape[1]-1-keypoint.x,
+        y=keypoint.y
+    )
+
+    seq = iaa.Fliplr(0.5)
+
+    # with images as list, background=False
+    nb_flipped_images = 0
+    nb_flipped_keypoints = 0
+    nb_iterations = 1000
+    batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
+    batches_aug = list(seq.augment_batches(batches, background=False))
+    for batch_aug in batches_aug:
+        image_aug = batch_aug.images_aug[0]
+        keypoint_aug = batch_aug.keypoints_aug[0].keypoints[0]
+        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+        if np.array_equal(image_aug, image_flipped):
+            nb_flipped_images += 1
+
+        assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
+               or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
+        if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
+            nb_flipped_keypoints += 1
+    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+    assert nb_flipped_images == nb_flipped_keypoints
+
+    # with images as list
+    nb_flipped_images = 0
+    nb_flipped_keypoints = 0
+    nb_iterations = 1000
+    batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
+    batches_aug = list(seq.augment_batches(batches, background=True))
+    for batch_aug in batches_aug:
+        image_aug = batch_aug.images_aug[0]
+        keypoint_aug = batch_aug.keypoints_aug[0].keypoints[0]
+        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+        if np.array_equal(image_aug, image_flipped):
+            nb_flipped_images += 1
+
+        assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
+               or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
+        if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
+            nb_flipped_keypoints += 1
+    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+    assert nb_flipped_images == nb_flipped_keypoints
+
+    # with images as array
+    nb_flipped_images = 0
+    nb_flipped_keypoints = 0
+    nb_iterations = 1000
+    batches = [ia.Batch(images=np.array([np.copy(image)], dtype=np.uint8), keypoints=None) for _ in sm.xrange(nb_iterations)]
+    batches_aug = list(seq.augment_batches(batches, background=True))
+    for batch_aug in batches_aug:
+        #batch = ia.Batch(images=np.array([image], dtype=np.uint8), keypoints=keypoints)
+        #batches_aug = list(seq.augment_batches([batch], background=True))
+        #batch_aug = batches_aug[0]
+        image_aug = batch_aug.images_aug[0]
+        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+        if np.array_equal(image_aug, image_flipped):
+            nb_flipped_images += 1
+    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+
+    # array (N, H, W) as input
+    nb_flipped_images = 0
+    nb_iterations = 1000
+    batches = [np.array([np.copy(image)], dtype=np.uint8) for _ in sm.xrange(nb_iterations)]
+    batches_aug = list(seq.augment_batches(batches, background=True))
+    for batch_aug in batches_aug:
+        #batch = np.array([image], dtype=np.uint8)
+        #batches_aug = list(seq.augment_batches([batch], background=True))
+        #image_aug = batches_aug[0][0]
+        image_aug = batch_aug[0]
+        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+        if np.array_equal(image_aug, image_flipped):
+            nb_flipped_images += 1
+    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+
+    # list of list of KeypointsOnImage as input
+    nb_flipped_keypoints = 0
+    nb_iterations = 1000
+    #batches = [ia.Batch(images=[np.copy(image)], keypoints=None) for _ in sm.xrange(nb_iterations)]
+    batches = [[keypoints[0].deepcopy()] for _ in sm.xrange(nb_iterations)]
+    batches_aug = list(seq.augment_batches(batches, background=True))
+    for batch_aug in batches_aug:
+        #batch = [keypoints]
+        #batches_aug = list(seq.augment_batches([batch], background=True))
+        #batch_aug = batches_aug[0]
+        #keypoint_aug = batches_aug[0].keypoints[0].keypoints[0]
+        keypoint_aug = batch_aug[0].keypoints[0]
+
+        assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
+               or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
+        if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
+            nb_flipped_keypoints += 1
+    assert 0.4*nb_iterations <= nb_flipped_keypoints <= 0.6*nb_iterations
+
+    # test all augmenters
+    augs = [
+        iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
+        iaa.SomeOf(1, [iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
+        iaa.OneOf([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
+        iaa.Sometimes(1.0, iaa.Fliplr(1)),
+        iaa.WithColorspace("HSV", children=iaa.Add((-50, 50))),
+        iaa.WithChannels([0], iaa.Add((-50, 50))),
+        iaa.Noop(name="Noop-nochange"),
+        iaa.Lambda(
+            func_images=lambda images, random_state, parents, hooks: images,
+            func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: keypoints_on_images,
+            name="Lambda-nochange"
+        ),
+        iaa.AssertLambda(
+            func_images=lambda images, random_state, parents, hooks: True,
+            func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: True,
+            name="AssertLambda-nochange"
+        ),
+        iaa.AssertShape(
+            (None, 64, 64, 3),
+            check_keypoints=False,
+            name="AssertShape-nochange"
+        ),
+        iaa.Scale((0.5, 0.9)),
+        iaa.CropAndPad(px=(-50, 50)),
+        iaa.Pad(px=(1, 50)),
+        iaa.Crop(px=(1, 50)),
+        iaa.Fliplr(1.0),
+        iaa.Flipud(1.0),
+        iaa.Superpixels(p_replace=(0.25, 1.0), n_segments=(16, 128)),
+        iaa.ChangeColorspace(to_colorspace="GRAY"),
+        iaa.Grayscale(alpha=(0.1, 1.0)),
+        iaa.GaussianBlur(1.0),
+        iaa.AverageBlur(5),
+        iaa.MedianBlur(5),
+        iaa.Convolve(np.array([[0, 1, 0],
+                               [1, -4, 1],
+                               [0, 1, 0]])),
+        iaa.Sharpen(alpha=(0.1, 1.0), lightness=(0.8, 1.2)),
+        iaa.Emboss(alpha=(0.1, 1.0), strength=(0.8, 1.2)),
+        iaa.EdgeDetect(alpha=(0.1, 1.0)),
+        iaa.DirectedEdgeDetect(alpha=(0.1, 1.0), direction=(0.0, 1.0)),
+        iaa.Add((-50, 50)),
+        iaa.AddElementwise((-50, 50)),
+        iaa.AdditiveGaussianNoise(scale=(0.1, 1.0)),
+        iaa.Multiply((0.6, 1.4)),
+        iaa.MultiplyElementwise((0.6, 1.4)),
+        iaa.Dropout((0.3, 0.5)),
+        iaa.CoarseDropout((0.3, 0.5), size_percent=(0.05, 0.2)),
+        iaa.Invert(0.5),
+        iaa.ContrastNormalization((0.6, 1.4)),
+        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1), rotate=(-20, 20), shear=(-20, 20), order=ia.ALL, mode=ia.ALL, cval=(0, 255)),
+        iaa.PiecewiseAffine(scale=(0.1, 0.3)),
+        iaa.ElasticTransformation(alpha=0.5)
+    ]
+
+    nb_iterations = 100
+    image = ia.quokka(size=(64, 64))
+    batch = ia.Batch(images=np.array([image]), keypoints=keypoints)
+    batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
+    for aug in augs:
+        nb_changed = 0
+        batches_aug = list(aug.augment_batches(batches, background=True))
+        for batch_aug in batches_aug:
+            image_aug = batch_aug.images_aug[0]
+            if image.shape != image_aug.shape or not np.array_equal(image, image_aug):
+                nb_changed += 1
+                if nb_changed > 10:
+                    break
+        if "-nochange" not in aug.name:
+            assert nb_changed > 0
+        else:
+            assert nb_changed == 0
+
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)
 
@@ -2359,6 +2575,11 @@ def keypoints_equal(kps1, kps2):
                 return False
 
     return True
+
+def reseed(seed=0):
+    ia.seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 if __name__ == "__main__":
     main()
