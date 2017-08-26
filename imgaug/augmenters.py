@@ -36,10 +36,11 @@ TODOs
     - Add Rot90 augmenter
     - Add CropSquare
     - Add CropToAspectRatio
-    - Add Pad
     - Add PadToAspectRatio
     - Add MeanCarve
     - weak()/medium()/strong() factory functions per augmenter
+    - documentations say 'see Class.__init__()' even though they should say 'see Class'
+    - documentations that say 'see xyz' should somehow in ReadTheDocs link to xyz (clickable)
 """
 
 @six.add_metaclass(ABCMeta)
@@ -1751,11 +1752,11 @@ class WithChannels(Augmenter):
 
     Parameters
     ----------
-    channels : integer, list of integers, None, optional(default=None)
+    channels : integer or list of integers or None, optional(default=None)
         Sets the channels to extract from each image.
         If None, all channels will be used.
 
-    children : Augmenter, list of Augmenters, None, optional(default=None)
+    children : Augmenter or list of Augmenters or None, optional(default=None)
         One or more augmenters to apply to images, after the channels
         are extracted.
 
@@ -1848,6 +1849,50 @@ class WithChannels(Augmenter):
 
     def __str__(self):
         return "WithChannels(channels=%s, name=%s, children=[%s], deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
+
+# TODO removed deterministic and random_state here as parameters, because this
+# function creates multiple child augmenters. not sure if this is sensible
+# (give them all the same random state instead?)
+def AddHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):
+    """
+    Augmenter that transforms images into HSV space, selects the H and S
+    channels and then adds a given range of values to these.
+
+    Parameters
+    ----------
+    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+        See `Add.__init__()`
+
+    per_channel : bool, optional(default=False)
+        See `Add.__init__()`
+
+    from_colorspace : string, optional(default="RGB")
+        See `ChangeColorspace.__init__()`
+
+    channels : integer or list of integers or None, optional(default=[0, 1])
+        See `WithChannels.__init__()`
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >> aug = AddHueAndSaturation((-20, 20), per_channel=True)
+
+    Adds random values between -20 and 20 to the hue and saturation
+    (independently per channel and the same value for all pixels within
+    that channel).
+
+    """
+    return WithColorspace(
+        to_colorspace="HSV",
+        from_colorspace=from_colorspace,
+        children=WithChannels(
+            channels=channels,
+            children=Add(value=value, per_channel=per_channel)
+        ),
+        name=name
+    )
 
 class Noop(Augmenter):
     """
@@ -4496,10 +4541,6 @@ class Add(Augmenter):
 
     def __init__(self, value=0, per_channel=False, name=None,
                  deterministic=False, random_state=None):
-        """Creates an instance of the Add augmenter.
-
-
-        """
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
