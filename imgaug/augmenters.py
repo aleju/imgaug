@@ -3968,7 +3968,6 @@ class MedianBlur(Augmenter):
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.mode = "single"
         if ia.is_single_number(k):
             assert k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),)
             self.k = Deterministic(int(k))
