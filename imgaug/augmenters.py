@@ -18,33 +18,6 @@ import six.moves as sm
 import types
 import warnings
 
-"""
-TODOs
-    - add a version of augment_images that skips validation and copying which
-        is called by augmenters with children
-    - check if all get_parameters() implementations really return all parameters.
-    - Add Alpha augmenter
-        - CloudyAlpha
-    - Add SpatialDropout augmenter
-    - Add random blurring shortcut (either uniform or gaussian or bilateral or median)
-    - Add Max-Pooling augmenter
-    - Add edge pronounce augmenter
-    - Add Cartoon augmenter
-    - Add OilPainting augmenter
-    - Add Rot90 augmenter
-    - Add CropSquare
-    - Add CropToAspectRatio
-    - Add PadToAspectRatio
-    - Add MeanCarve
-    - weak()/medium()/strong() factory functions per augmenter
-    - documentations say 'see Class.__init__()' even though they should say 'see Class'
-    - documentations that say 'see xyz' should somehow in ReadTheDocs link to xyz (clickable)
-    - Add AddToHueAndSaturation to example images
-    - Add AddToHueAndSaturation to documentation
-    - Add BilateralBlur to example images
-    - Add BilateralBlur to documentation
-"""
-
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
     """
@@ -4202,7 +4175,7 @@ class Convolve(Augmenter):
                 if matrices[channel] is not None:
                     # ndimage.convolve caused problems here
                     result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
-        result = np.clip(result, 0, 255).astype(np.uint8)
+            result[i] = np.clip(result[i], 0, 255).astype(np.uint8)
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
