@@ -11,6 +11,8 @@ import numpy as np
 import random
 import six
 import six.moves as sm
+from scipy import misc
+from skimage import data
 
 def main():
     test_is_single_integer()
@@ -38,10 +40,10 @@ def main():
     test_Sequential()
     test_Sometimes()
 
-    # this function uses Fliplr(), so always test it after that augmenter
+    # these functions use various augmenters, so test them last
     test_2d_inputs()
-
     test_background_augmentation()
+    test_determinism()
 
     print("Finished without errors.")
 
@@ -2531,6 +2533,85 @@ def test_background_augmentation():
             assert nb_changed > 0
         else:
             assert nb_changed == 0
+
+def test_determinism():
+    reseed()
+
+    images = [
+        ia.quokka(size=(128, 128)),
+        ia.quokka(size=(64, 64)),
+        misc.imresize(data.astronaut(), (128, 256))
+    ]
+    keypoints = [
+        ia.KeypointsOnImage([
+            ia.Keypoint(x=20, y=10), ia.Keypoint(x=5, y=5), ia.Keypoint(x=10, y=43)
+            ], shape=(50, 60, 3))
+    ]
+
+    augs = [
+        iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
+        iaa.SomeOf(1, [iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
+        iaa.OneOf([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
+        iaa.Sometimes(1.0, iaa.Fliplr(1)),
+        iaa.WithColorspace("HSV", children=iaa.Add((-50, 50))),
+        iaa.WithChannels([0], iaa.Add((-50, 50))),
+        iaa.Noop(name="Noop-nochange"),
+        iaa.Lambda(
+            func_images=lambda images, random_state, parents, hooks: images,
+            func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: keypoints_on_images,
+            name="Lambda-nochange"
+        ),
+        iaa.AssertLambda(
+            func_images=lambda images, random_state, parents, hooks: True,
+            func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: True,
+            name="AssertLambda-nochange"
+        ),
+        iaa.AssertShape(
+            (None, None, None, 3),
+            check_keypoints=False,
+            name="AssertShape-nochange"
+        ),
+        iaa.Scale((0.5, 0.9)),
+        iaa.CropAndPad(px=(-50, 50)),
+        iaa.Pad(px=(1, 50)),
+        iaa.Crop(px=(1, 50)),
+        iaa.Fliplr(1.0),
+        iaa.Flipud(1.0),
+        iaa.Superpixels(p_replace=(0.25, 1.0), n_segments=(16, 128)),
+        iaa.ChangeColorspace(to_colorspace="GRAY"),
+        iaa.Grayscale(alpha=(0.1, 1.0)),
+        iaa.GaussianBlur(1.0),
+        iaa.AverageBlur(5),
+        iaa.MedianBlur(5),
+        iaa.Convolve(np.array([[0, 1, 0],
+                               [1, -4, 1],
+                               [0, 1, 0]])),
+        iaa.Sharpen(alpha=(0.1, 1.0), lightness=(0.8, 1.2)),
+        iaa.Emboss(alpha=(0.1, 1.0), strength=(0.8, 1.2)),
+        iaa.EdgeDetect(alpha=(0.1, 1.0)),
+        iaa.DirectedEdgeDetect(alpha=(0.1, 1.0), direction=(0.0, 1.0)),
+        iaa.Add((-50, 50)),
+        iaa.AddElementwise((-50, 50)),
+        iaa.AdditiveGaussianNoise(scale=(0.1, 1.0)),
+        iaa.Multiply((0.6, 1.4)),
+        iaa.MultiplyElementwise((0.6, 1.4)),
+        iaa.Dropout((0.3, 0.5)),
+        iaa.CoarseDropout((0.3, 0.5), size_percent=(0.05, 0.2)),
+        iaa.Invert(0.5),
+        iaa.ContrastNormalization((0.6, 1.4)),
+        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1), rotate=(-20, 20), shear=(-20, 20), order=ia.ALL, mode=ia.ALL, cval=(0, 255)),
+        iaa.PiecewiseAffine(scale=(0.1, 0.3)),
+        iaa.ElasticTransformation(alpha=0.5)
+    ]
+
+    for aug in augs:
+        aug_det = aug.to_deterministic()
+        images_aug1 = aug_det.augment_images(images)
+        images_aug2 = aug_det.augment_images(images)
+        kps_aug1 = aug_det.augment_keypoints(keypoints)
+        kps_aug2 = aug_det.augment_keypoints(keypoints)
+        assert array_equal_lists(images_aug1, images_aug2), "Images not identical for %s" % (aug.name,)
+        assert keypoints_equal(kps_aug1, kps_aug2), "Keypoints not identical for %s" % (aug.name,)
 
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)
