@@ -21,7 +21,7 @@ Documentation:
 * [http://imgaug.readthedocs.io/en/latest/source/modules.html](http://imgaug.readthedocs.io/en/latest/source/modules.html) - API.
 * This README contains more examples. See further below.
 
-The image below shows examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
+The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
 
 ![Noop](images/examples_noop.jpg?raw=true "Noop")
 ![Crop top, right, bottom, left](images/examples_crop.jpg?raw=true "Crop top, right, bottom, left")
