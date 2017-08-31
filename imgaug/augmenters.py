@@ -6337,7 +6337,8 @@ class PerspectiveTransform(Augmenter):
     scale : float or tuple of two floats or StochasticParameter, optional(default=0)
         Standard deviation of the normal distributions. These are used to sample
         the random distances of the subimage's corners from the full image's
-        corners. Recommended values are in the range 0.0 to 0.1.
+        corners. The sampled values reflect percentage values (with respect
+        to image height/width). Recommended values are in the range 0.0 to 0.1.
             * If a single float, then that value will always be used as the
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
@@ -6362,16 +6363,12 @@ class PerspectiveTransform(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05))
+    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.10))
 
-    Puts a grid of points on each image and then randomly moves each point
-    around by 1 to 5 percent (with respect to the image height/width). Pixels
-    between these points will be moved accordingly.
-
-    >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05), nb_rows=8, nb_cols=8)
-
-    Same as the previous example, but uses a denser grid of 8x8 points (default
-    is 4x4). This can be useful for large images.
+    Applies perspective transformations using a random scale between 0.01 and
+    0.1 per image, where the scale is roughly a measure of how far the
+    perspective transform's corner points may be distanced from the original
+    image's corner points.
 
     """
 
