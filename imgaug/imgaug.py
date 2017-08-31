@@ -30,6 +30,11 @@ QUOKKA_FP = os.path.join(
     "quokka.jpg"
 )
 
+DEFAULT_FONT_FP = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "DejaVuSans.ttf"
+)
+
 # We instantiate a current/global random state here once.
 # One can also call np.random, but that is (in contrast to np.random.RandomState)
 # a module and hence cannot be copied via deepcopy. That's why we use RandomState
@@ -145,7 +150,7 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
 
     shape = img.shape
     img = Image.fromarray(img)
-    font = ImageFont.truetype("DejaVuSans.ttf", size)
+    font = ImageFont.truetype(DEFAULT_FONT_FP, size)
     context = ImageDraw.Draw(img)
     context.text((x, y), text, fill=tuple(color), font=font)
     img_np = np.asarray(img)
