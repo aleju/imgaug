@@ -21,11 +21,49 @@ Documentation:
 * [http://imgaug.readthedocs.io/en/latest/source/modules.html](http://imgaug.readthedocs.io/en/latest/source/modules.html) - API.
 * This README contains more examples. See further below.
 
-The image below shows examples for most augmentation techniques:
+The image below shows examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
 
-![Available augmenters](examples.jpg?raw=true "Effects of most available augmenters")
-
-*Noop is an augmenter that does nothing. Values for crop are (top pixel, right px, bottom px, left px). Other values written in the form (a, b) mean that each value x was randomly picked from the range a <= x <= b.*
+![Noop](images/examples_noop.jpg?raw=true "Noop")
+![Crop top, right, bottom, left](images/examples_crop.jpg?raw=true "Crop top, right, bottom, left")
+![Pad top, right, bottom, left](images/examples_pad.jpg?raw=true "Pad top, right, bottom, left")
+![Fliplr](images/examples_fliplr.jpg?raw=true "Fliplr")
+![Flipud](images/examples_flipud.jpg?raw=true "Flipud")
+![Superpixels p_replace=1](images/examples_superpixels.jpg?raw=true "Superpixels p_replace=1")
+![Superpixels n_segments=100](images/examples_superpixels_2.jpg?raw=true "Superpixels n_segments=100")
+![Invert](images/examples_invert.jpg?raw=true "Invert")
+![Invert per_channel](images/examples_invert_2.jpg?raw=true "Invert per_channel")
+![Add](images/examples_add.jpg?raw=true "Add")
+![Add per channel](images/examples_add_2.jpg?raw=true "Add per channel")
+![AddToHueAndSaturation](images/examples_addtohueandsaturation.jpg?raw=true "AddToHueAndSaturation")
+![Multiply](images/examples_multiply.jpg?raw=true "Multiply")
+![Multiply per channel](images/examples_multiply_2.jpg?raw=true "Multiply per channel")
+![GaussianBlur](images/examples_gaussianblur.jpg?raw=true "GaussianBlur")
+![AverageBlur](images/examples_averageblur.jpg?raw=true "AverageBlur")
+![MedianBlur](images/examples_medianblur.jpg?raw=true "MedianBlur")
+![BilateralBlur sigma_color=250, sigma_space=250](images/examples_bilateralblur.jpg?raw=true "BilateralBlur sigma_color=250, sigma_space=250")
+![Sharpen alpha=1](images/examples_sharpen.jpg?raw=true "Sharpen alpha=1")
+![Emboss alpha=1](images/examples_emboss.jpg?raw=true "Emboss alpha=1")
+![EdgeDetect](images/examples_edgedetect.jpg?raw=true "EdgeDetect")
+![DirectedEdgeDetect alpha=1](images/examples_directededgedetect.jpg?raw=true "DirectedEdgeDetect alpha=1")
+![AdditiveGaussianNoise](images/examples_additivegaussiannoise.jpg?raw=true "AdditiveGaussianNoise")
+![AdditiveGaussianNoise per channel](images/examples_additivegaussiannoise_2.jpg?raw=true "AdditiveGaussianNoise per channel")
+![Dropout](images/examples_dropout.jpg?raw=true "Dropout")
+![Dropout per channel](images/examples_dropout_2.jpg?raw=true "Dropout per channel")
+![CoarseDropout p=0.2](images/examples_coarsedropout.jpg?raw=true "CoarseDropout p=0.2")
+![CoarseDropout p=0.2, per channel](images/examples_coarsedropout_2.jpg?raw=true "CoarseDropout p=0.2, per channel")
+![ContrastNormalization](images/examples_contrastnormalization.jpg?raw=true "ContrastNormalization")
+![ContrastNormalization per channel](images/examples_contrastnormalization_2.jpg?raw=true "ContrastNormalization per channel")
+![Grayscale](images/examples_grayscale.jpg?raw=true "Grayscale")
+![PerspectiveTransform](images/examples_perspectivetransform.jpg?raw=true "PerspectiveTransform")
+![PiecewiseAffine](images/examples_piecewiseaffine.jpg?raw=true "PiecewiseAffine")
+![Affine: Scale](images/examples_affine_scale.jpg?raw=true "Affine: Scale")
+![Affine: Translate](images/examples_affine_translate.jpg?raw=true "Affine: Translate")
+![Affine: Rotate](images/examples_affine_rotate.jpg?raw=true "Affine: Rotate")
+![Affine: Shear](images/examples_affine_shear.jpg?raw=true "Affine: Shear")
+![Affine: Modes](images/examples_affine_modes.jpg?raw=true "Affine: Modes")
+![Affine: cval](images/examples_affine_cval.jpg?raw=true "Affine: cval")
+![Affine: all](images/examples_affine_all.jpg?raw=true "Affine: all")
+![ElasticTransformation sigma=0.2](images/examples_elastictransformation.jpg?raw=true "ElasticTransformation sigma=0.2")
 
 ## Requirements and installation
 
