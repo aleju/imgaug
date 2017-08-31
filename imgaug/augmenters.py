@@ -6319,6 +6319,216 @@ class PiecewiseAffine(Augmenter):
     def get_parameters(self):
         return [self.sigma]
 
+class PerspectiveTransform(Augmenter):
+    """
+    Augmenter that performs a random four point perspective transform.
+
+    Each of the four points is placed on the image using a random distance from
+    its respective corner. The distance is sampled from a normal distribution.
+    As a result, most transformations don't change very much, while some
+    "focus" on polygons far inside the image.
+
+    The results of this augmenter have some similarity with Crop.
+
+    Code partially from http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/ .
+
+    Parameters
+    ----------
+    scale : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Standard deviation of the normal distributions. These are used to sample
+        the random distances of the subimage's corners from the full image's
+        corners. Recommended values are in the range 0.0 to 0.1.
+            * If a single float, then that value will always be used as the
+              scale.
+            * If a tuple (a, b) of floats, then a random value will be picked
+              from the interval (a, b) (per image).
+            * If a StochasticParameter, then that parameter will be queried to
+              draw one value per image.
+
+    keep_size : bool, optional(default=True)
+        Whether to resize image's back to their original size after applying
+        the perspective transform. If set to False, the resulting images
+        may end up having different shapes and will always be a list, never
+        an array.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05))
+
+    Puts a grid of points on each image and then randomly moves each point
+    around by 1 to 5 percent (with respect to the image height/width). Pixels
+    between these points will be moved accordingly.
+
+    >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05), nb_rows=8, nb_cols=8)
+
+    Same as the previous example, but uses a denser grid of 8x8 points (default
+    is 4x4). This can be useful for large images.
+
+    """
+
+    def __init__(self, scale=0, keep_size=True, name=None, deterministic=False, random_state=None):
+        super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(scale):
+            self.scale = Deterministic(scale)
+        elif ia.is_iterable(scale):
+            assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),)
+            self.scale = Uniform(scale[0], scale[1])
+        elif isinstance(scale, StochasticParameter):
+            self.scale = scale
+        else:
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
+
+        self.jitter = Normal(loc=0, scale=self.scale)
+
+        self.keep_size = keep_size
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        if not self.keep_size:
+            result = list(result)
+
+        matrices, max_heights, max_widths = self._create_matrices(
+            [image.shape for image in images],
+            random_state
+        )
+
+        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
+            #print(np.min(warped), np.max(warped), warped.dtype)
+            if self.keep_size:
+                h, w = images[i].shape[0:2]
+                warped = ia.imresize_single_image(warped, (h, w), interpolation="cubic")
+            result[i] = warped
+
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        result = keypoints_on_images
+        matrices, max_heights, max_widths = self._create_matrices(
+            [kps.shape for kps in keypoints_on_images],
+            random_state
+        )
+
+        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            keypoints_on_image = keypoints_on_images[i]
+            kps_arr = keypoints_on_image.get_coords_array()
+
+            warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
+            warped = warped[0]
+            warped_kps = ia.KeypointsOnImage.from_coords_array(
+                np.around(warped, decimals=0).astype(np.int32),
+                shape=(max_height, max_width)
+            )
+            if self.keep_size:
+                warped_kps = warped_kps.on(keypoints_on_image.shape)
+            result[i] = warped_kps
+
+        return result
+
+    def _create_matrices(self, shapes, random_state):
+        matrices = []
+        max_heights = []
+        max_widths = []
+        nb_images = len(shapes)
+        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
+
+        for i in sm.xrange(nb_images):
+            h, w = shapes[i][0:2]
+
+            points = self.jitter.draw_samples((4, 2), random_state=ia.new_random_state(seeds[i]))
+            points = np.mod(np.abs(points), 1)
+
+            # top left
+            points[0, 1] = 1.0 - points[0, 1] # h = 1.0 - jitter
+
+            # top right
+            points[1, 0] = 1.0 - points[1, 0] # w = 1.0 - jitter
+            points[1, 1] = 1.0 - points[1, 1] # h = 1.0 - jitter
+
+            # bottom right
+            points[2, 0] = 1.0 - points[2, 0] # h = 1.0 - jitter
+
+            # bottom left
+            # nothing
+
+            points[:, 0] = points[:, 0] * w
+            points[:, 1] = points[:, 1] * h
+
+            # obtain a consistent order of the points and unpack them
+            # individually
+            points = self._order_points(points)
+            (tl, tr, br, bl) = points
+
+            # compute the width of the new image, which will be the
+            # maximum distance between bottom-right and bottom-left
+            # x-coordiates or the top-right and top-left x-coordinates
+            widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+            widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+            maxWidth = max(int(widthA), int(widthB))
+
+            # compute the height of the new image, which will be the
+            # maximum distance between the top-right and bottom-right
+            # y-coordinates or the top-left and bottom-left y-coordinates
+            heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+            heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+            maxHeight = max(int(heightA), int(heightB))
+
+            # now that we have the dimensions of the new image, construct
+            # the set of destination points to obtain a "birds eye view",
+            # (i.e. top-down view) of the image, again specifying points
+            # in the top-left, top-right, bottom-right, and bottom-left
+            # order
+            dst = np.array([
+                [0, 0],
+                [maxWidth - 1, 0],
+                [maxWidth - 1, maxHeight - 1],
+                [0, maxHeight - 1]
+            ], dtype="float32")
+
+            # compute the perspective transform matrix and then apply it
+            M = cv2.getPerspectiveTransform(points, dst)
+            matrices.append(M)
+            max_heights.append(maxHeight)
+            max_widths.append(maxWidth)
+
+        return matrices, max_heights, max_widths
+
+    def _order_points(self, pts):
+        # initialzie a list of coordinates that will be ordered
+        # such that the first entry in the list is the top-left,
+        # the second entry is the top-right, the third is the
+        # bottom-right, and the fourth is the bottom-left
+        pts_ordered = np.zeros((4, 2), dtype="float32")
+
+        # the top-left point will have the smallest sum, whereas
+        # the bottom-right point will have the largest sum
+        s = pts.sum(axis=1)
+        pts_ordered[0] = pts[np.argmin(s)]
+        pts_ordered[2] = pts[np.argmax(s)]
+
+        # now, compute the difference between the points, the
+        # top-right point will have the smallest difference,
+        # whereas the bottom-left will have the largest difference
+        diff = np.diff(pts, axis=1)
+        pts_ordered[1] = pts[np.argmin(diff)]
+        pts_ordered[3] = pts[np.argmax(diff)]
+
+        # return the ordered coordinates
+        return pts_ordered
+
+    def get_parameters(self):
+        return [self.scale]
+
 # code partially from
 # https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 class ElasticTransformation(Augmenter):

@@ -30,7 +30,7 @@ def main():
             iaa.AdditiveGaussianNoise(scale=0.1*255),
             iaa.Crop(percent=0.1)
         ], name="OneOf"),
-        iaa.AddToHueAndSaturation((-20, 20), per_channel=True, name="AddHueAndSaturation"),
+        iaa.AddToHueAndSaturation((-20, 20), per_channel=True, name="AddToHueAndSaturation"),
         iaa.Crop(px=(0, 8), name="Crop-px"),
         iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),
@@ -68,7 +68,8 @@ def main():
             name="Affine"
         ),
         iaa.PiecewiseAffine(scale=0.03, nb_rows=(2, 6), nb_cols=(2, 6), name="PiecewiseAffine"),
-        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation")
+        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation"),
+        iaa.PerspectiveTransform(scale=0.1, name="PerspectiveTransform"),
     ]
 
     augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
