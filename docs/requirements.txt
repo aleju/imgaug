@@ -1,2 +1,6 @@
+numpy==1.11.1
+scikit-image==0.12.3
+scipy==0.18.0
+six==1.10.0
 numpydoc==0.7.0
 sphinx-rtd-theme==0.2.4
