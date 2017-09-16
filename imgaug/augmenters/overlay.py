@@ -535,16 +535,17 @@ class AlphaElementwise(Alpha):
 
         return result
 
-def SimplexAlpha(first=None, second=None, per_channel=False,
-                 iterations=(1, 3), size_px_max=(2, 16), upscale_method=None,
-                 aggregation_method="max", sigmoid=True, sigmoid_thresh=None,
-                 name=None, deterministic=False, random_state=None):
+def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
+                      iterations=(1, 3), size_px_max=(2, 16), upscale_method=None,
+                      aggregation_method="max", sigmoid=True, sigmoid_thresh=None,
+                      name=None, deterministic=False, random_state=None):
     """
     Augmenter to overlay two image sources with each other using alpha values
     that follow noisy patterns.
 
     The alpha masks are sampled using a simplex noise method, roughly creating
-    connected blobs of 1s surrounded by 0s.
+    connected blobs of 1s surrounded by 0s. If nearest neighbour upsampling
+    is used, these blobs can be rectangular with sharp edges.
 
     Parameters
     ----------
@@ -658,19 +659,19 @@ def SimplexAlpha(first=None, second=None, per_channel=False,
 
     Examples
     --------
-    >>> aug = iaa.SimplexAlpha(iaa.EdgeDetect(1.0))
+    >>> aug = iaa.SimplexNoiseAlpha(iaa.EdgeDetect(1.0))
 
     Detects per image all edges, marks them in a black and white image and
     then overlays the result with the original image using simplex noise masks.
 
-    >>> aug = iaa.SimplexAlpha(iaa.EdgeDetect(1.0), upscale_method="linear")
+    >>> aug = iaa.SimplexNoiseAlpha(iaa.EdgeDetect(1.0), upscale_method="linear")
 
     Same as the first example, but uses only (smooth) linear upscaling to
     scale the simplex noise masks to the final image sizes, i.e. no nearest
     neighbour upsampling is used, which would result in rectangles with hard
     edges.
 
-    >>> aug = iaa.SimplexAlpha(iaa.EdgeDetect(1.0), sigmoid_thresh=iap.Normal(10.0, 5.0))
+    >>> aug = iaa.SimplexNoiseAlpha(iaa.EdgeDetect(1.0), sigmoid_thresh=iap.Normal(10.0, 5.0))
 
     Same as the first example, but uses a threshold for the sigmoid function
     that is further to the right. This is more conservative, i.e. the generated

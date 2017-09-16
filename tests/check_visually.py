@@ -145,13 +145,13 @@ def main():
             per_channel=True,
             name="AlphaElementwiseAffine"
         ),
-        iaa.SimplexAlpha(
+        iaa.SimplexNoiseAlpha(
             #first=iaa.GaussianBlur((1.0, 3.0)),
             #first=iaa.MedianBlur((3, 7)),
             first=iaa.EdgeDetect(1.0),
             #first=iaa.Affine(rotate=-45), #(-45, 45)),
             per_channel=False,
-            name="SimplexAlpha"
+            name="SimplexNoiseAlpha"
         )
     ]
 
