@@ -117,14 +117,34 @@ def main():
             first=iaa.Add(100),
             second=iaa.Dropout(0.5),
             per_channel=True,
-            name="AlphaChannelwise"
+            name="AlphaPerChannel"
         ),
         iaa.Alpha(
             factor=(0.0, 1.0),
             first=iaa.Affine(rotate=(-45, 45)),
             per_channel=True,
             name="AlphaAffine"
-        )
+        ),
+        iaa.AlphaElementwise(
+            factor=(0.0, 1.0),
+            first=iaa.Add(50),
+            second=iaa.ContrastNormalization(2.0),
+            per_channel=False,
+            name="AlphaElementwise"
+        ),
+        iaa.AlphaElementwise(
+            factor=(0.0, 1.0),
+            first=iaa.Add(50),
+            second=iaa.ContrastNormalization(2.0),
+            per_channel=True,
+            name="AlphaElementwisePerChannel"
+        ),
+        iaa.AlphaElementwise(
+            factor=(0.0, 1.0),
+            first=iaa.Affine(rotate=(-45, 45)),
+            per_channel=True,
+            name="AlphaElementwiseAffine"
+        ),
     ]
 
     augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
