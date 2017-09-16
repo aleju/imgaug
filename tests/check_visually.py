@@ -23,14 +23,31 @@ def main():
         misc.imresize(data.astronaut(), (128, 128))
     ]
 
+    # missing: InColorspace, Lambda, AssertLambda, AssertShape, Convolve
     augmenters = [
-        iaa.Noop(name="Noop"),
+        iaa.Sequential([
+            iaa.CoarseDropout(p=0.5, size_percent=0.05),
+            iaa.AdditiveGaussianNoise(scale=0.1*255),
+            iaa.Crop(percent=0.1)
+        ], name="Sequential"),
+        iaa.SomeOf(2, children=[
+            iaa.CoarseDropout(p=0.5, size_percent=0.05),
+            iaa.AdditiveGaussianNoise(scale=0.1*255),
+            iaa.Crop(percent=0.1)
+        ], name="SomeOf"),
         iaa.OneOf(children=[
             iaa.CoarseDropout(p=0.5, size_percent=0.05),
             iaa.AdditiveGaussianNoise(scale=0.1*255),
             iaa.Crop(percent=0.1)
         ], name="OneOf"),
+        iaa.Sometimes(0.5, iaa.AdditiveGaussianNoise(scale=0.1*255), name="Sometimes"),
+        iaa.WithColorspace("HSV", children=[iaa.Add(20)], name="WithColorspace"),
+        iaa.WithChannels([0], children=[iaa.Add(20)], name="WithChannels"),
         iaa.AddToHueAndSaturation((-20, 20), per_channel=True, name="AddToHueAndSaturation"),
+        iaa.Noop(name="Noop"),
+        iaa.Scale({"width": 64, "height": 64}, name="Scale"),
+        iaa.CropAndPad(px=(-8, 8), name="CropAndPad-px"),
+        iaa.Pad(px=(0, 8), name="Pad-px"),
         iaa.Crop(px=(0, 8), name="Crop-px"),
         iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),
@@ -38,24 +55,25 @@ def main():
         iaa.Superpixels(p_replace=0.75, n_segments=50, name="Superpixels"),
         iaa.Grayscale(0.5, name="Grayscale0.5"),
         iaa.Grayscale(1.0, name="Grayscale1.0"),
-        iaa.AverageBlur(k=(3, 11), name="AverageBlur"),
         iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
+        iaa.AverageBlur(k=(3, 11), name="AverageBlur"),
         iaa.MedianBlur(k=(3, 11), name="MedianBlur"),
+        iaa.BilateralBlur(d=10, name="BilateralBlur"),
         iaa.Sharpen(alpha=(0.1, 1.0), lightness=(0, 2.0), name="Sharpen"),
         iaa.Emboss(alpha=(0.1, 1.0), strength=(0, 2.0), name="Emboss"),
         iaa.EdgeDetect(alpha=(0.1, 1.0), name="EdgeDetect"),
         iaa.DirectedEdgeDetect(alpha=(0.1, 1.0), direction=(0, 1.0), name="DirectedEdgeDetect"),
+        iaa.Add((-50, 50), name="Add"),
+        iaa.Add((-50, 50), per_channel=True, name="AddPerChannel"),
+        iaa.AddElementwise((-50, 50), name="AddElementwise"),
         iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.1*255), name="AdditiveGaussianNoise"),
+        iaa.Multiply((0.5, 1.5), name="Multiply"),
+        iaa.Multiply((0.5, 1.5), per_channel=True, name="MultiplyPerChannel"),
+        iaa.MultiplyElementwise((0.5, 1.5), name="MultiplyElementwise"),
         iaa.Dropout((0.0, 0.1), name="Dropout"),
         iaa.CoarseDropout(p=0.05, size_percent=(0.05, 0.5), name="CoarseDropout"),
         iaa.Invert(p=0.5, name="Invert"),
         iaa.Invert(p=0.5, per_channel=True, name="InvertPerChannel"),
-        iaa.Add((-50, 50), name="Add"),
-        iaa.Add((-50, 50), per_channel=True, name="AddPerChannel"),
-        iaa.AddElementwise((-50, 50), name="AddElementwise"),
-        iaa.Multiply((0.5, 1.5), name="Multiply"),
-        iaa.Multiply((0.5, 1.5), per_channel=True, name="MultiplyPerChannel"),
-        iaa.MultiplyElementwise((0.5, 1.5), name="MultiplyElementwise"),
         iaa.ContrastNormalization(alpha=(0.5, 2.0), name="ContrastNormalization"),
         iaa.Affine(
             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
@@ -68,8 +86,8 @@ def main():
             name="Affine"
         ),
         iaa.PiecewiseAffine(scale=0.03, nb_rows=(2, 6), nb_cols=(2, 6), name="PiecewiseAffine"),
-        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation"),
         iaa.PerspectiveTransform(scale=0.1, name="PerspectiveTransform"),
+        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation")
     ]
 
     augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
