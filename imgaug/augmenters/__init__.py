@@ -6,5 +6,6 @@ from .convolutional import *
 from .flip import *
 from .geometric import *
 from .meta import *
+from .overlay import *
 from .segmentation import *
 from .size import *
