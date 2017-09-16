@@ -23,6 +23,23 @@ def main():
         misc.imresize(data.astronaut(), (128, 128))
     ]
 
+    keypoints = [
+        ia.KeypointsOnImage([
+                ia.Keypoint(x=50, y=40),
+                ia.Keypoint(x=70, y=38),
+                ia.Keypoint(x=62, y=52)
+            ],
+            shape=images[0].shape
+        ),
+        ia.KeypointsOnImage([
+                ia.Keypoint(x=55, y=32),
+                ia.Keypoint(x=42, y=95),
+                ia.Keypoint(x=75, y=89)
+            ],
+            shape=images[1].shape
+        )
+    ]
+
     # missing: InColorspace, Lambda, AssertLambda, AssertShape, Convolve
     augmenters = [
         iaa.Sequential([
@@ -87,7 +104,27 @@ def main():
         ),
         iaa.PiecewiseAffine(scale=0.03, nb_rows=(2, 6), nb_cols=(2, 6), name="PiecewiseAffine"),
         iaa.PerspectiveTransform(scale=0.1, name="PerspectiveTransform"),
-        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation")
+        iaa.ElasticTransformation(alpha=(0.5, 8.0), sigma=1.0, name="ElasticTransformation"),
+        iaa.Alpha(
+            factor=(0.0, 1.0),
+            first=iaa.Add(100),
+            second=iaa.Dropout(0.5),
+            per_channel=False,
+            name="Alpha"
+        ),
+        iaa.Alpha(
+            factor=(0.0, 1.0),
+            first=iaa.Add(100),
+            second=iaa.Dropout(0.5),
+            per_channel=True,
+            name="AlphaChannelwise"
+        ),
+        iaa.Alpha(
+            factor=(0.0, 1.0),
+            first=iaa.Affine(rotate=(-45, 45)),
+            per_channel=True,
+            name="AlphaAffine"
+        )
     ]
 
     augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
@@ -96,8 +133,14 @@ def main():
     for augmenter in augmenters:
         if args.only is None or augmenter.name == args.only:
             print("Augmenter: %s" % (augmenter.name,))
-            grid = augmenter.draw_grid(images, rows=1, cols=16)
-            misc.imshow(grid)
+            grid = []
+            for image, kps in zip(images, keypoints):
+                aug_det = augmenter.to_deterministic()
+                imgs_aug = aug_det.augment_images(np.tile(image[np.newaxis, ...], (16, 1, 1, 1)))
+                kps_aug = aug_det.augment_keypoints([kps] * 16)
+                imgs_aug_kps = [kps_aug_one.draw_on_image(img_aug) for img_aug, kps_aug_one in zip(imgs_aug, kps_aug)]
+                grid.append(np.hstack(imgs_aug_kps))
+            misc.imshow(np.vstack(grid))
 
 if __name__ == "__main__":
     main()
