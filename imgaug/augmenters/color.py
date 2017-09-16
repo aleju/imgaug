@@ -150,7 +150,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
     value : int or iterable of two ints or StochasticParameter, optional(default=0)
         See `Add.__init__()`
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         See `Add.__init__()`
 
     from_colorspace : string, optional(default="RGB")

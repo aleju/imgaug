@@ -55,7 +55,7 @@ class Add(Augmenter):
             * If a StochasticParameter, then a value will be sampled per image
               from that parameter.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
         If this value is a float p, then for p percent of all images
@@ -168,7 +168,7 @@ class AddElementwise(Augmenter):
             * If a StochasticParameter, then values will be sampled per pixel
               (and possibly channel) from that parameter.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
         If this value is a float p, then for p percent of all images
@@ -371,7 +371,7 @@ class Multiply(Augmenter):
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same multiplier per pixel for all channels (False)
         or to sample a new value for each channel (True).
         If this value is a float p, then for p percent of all images
@@ -474,7 +474,7 @@ class MultiplyElementwise(Augmenter):
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image and pixel.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
         If this value is a float p, then for p percent of all images
@@ -583,7 +583,7 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
               determine per pixel whether it should be dropped (sampled value
               of 0) or shouldn't (sampled value of 1).
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
@@ -691,7 +691,7 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
             * If a StochasticParameter, then this parameter will be used to
               sample the percentage values. It is expected to be continuous.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
@@ -790,7 +790,7 @@ class Invert(Augmenter):
               where values >0.5 mean that the image/channel is supposed to be
               inverted.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
         If this value is a float p, then for p percent of all images
@@ -901,7 +901,7 @@ class ContrastNormalization(Augmenter):
             * If a StochasticParameter, then this parameter will be used to
               sample the alpha value per image.
 
-    per_channel : bool, optional(default=False)
+    per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
         If this value is a float p, then for p percent of all images
