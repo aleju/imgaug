@@ -1,9 +1,11 @@
 from __future__ import print_function, division, absolute_import
 from . import imgaug as ia
+from .opensimplex import OpenSimplex
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import copy as copy_module
 import six
+import six.moves as sm
 
 @six.add_metaclass(ABCMeta)
 class StochasticParameter(object):
@@ -335,3 +337,175 @@ class Multiply(StochasticParameter):
     def __str__(self):
         opstr = str(self.other_param)
         return "Multiply(%s, %s)" % (opstr, str(self.val))
+
+class SimplexNoise(StochasticParameter):
+    def __init__(self, iterations=(1, 3), size_px_max=(2, 16), upscale_method=["linear", "nearest"], aggregation_method=["max", "avg"], sigmoid=0.5, sigmoid_thresh=(-10, 10)):
+        if ia.is_single_integer(iterations):
+            self.iterations = Deterministic(iterations)
+        elif ia.is_iterable(iterations):
+            assert len(iterations) == 2
+            assert all([ia.is_single_integer(val) for val in iterations])
+            assert all([1 <= val <= 10000 for val in iterations])
+            self.iterations = DiscreteUniform(iterations[0], iterations[1])
+        elif ia.is_iterable(iterations):
+            assert len(iterations) > 0
+            assert all([1 <= val <= 10000 for val in iterations])
+            self.iterations = Choice(iterations)
+        elif isinstance(iterations, StochasticParameter):
+            self.iterations = iterations
+        else:
+            raise Exception("Expected iterations to be int or tuple of two ints or StochasticParameter, got %s." % (type(iterations),))
+
+        if ia.is_single_integer(size_px_max):
+            self.iterations = Deterministic(size_px_max)
+        elif isinstance(size_px_max, tuple):
+            assert len(size_px_max) == 2
+            assert all([ia.is_single_integer(val) for val in size_px_max])
+            assert all([1 <= val <= 10000 for val in size_px_max])
+            self.size_px_max = DiscreteUniform(size_px_max[0], size_px_max[1])
+        elif ia.is_iterable(sigmoid_thresh):
+            assert len(size_px_max) > 0
+            assert all([1 <= val <= 10000 for val in size_px_max])
+            self.size_px_max = Choice(size_px_max)
+        elif isinstance(size_px_max, StochasticParameter):
+            self.size_px_max = size_px_max
+        else:
+            raise Exception("Expected size_px_max to be int or tuple of two ints or StochasticParameter, got %s." % (type(size_px_max),))
+
+        if upscale_method == ia.ALL:
+            self.upscale_method = Choice(["nearest", "linear", "area", "cubic"])
+        elif ia.is_string(upscale_method):
+            self.upscale_method = Deterministic(upscale_method)
+        elif isinstance(upscale_method, list):
+            assert len(upscale_method) >= 1
+            assert all([ia.is_string(val) for val in upscale_method])
+            self.upscale_method = Choice(upscale_method)
+        elif isinstance(upscale_method, StochasticParameter):
+            self.upscale_method = upscale_method
+        else:
+            raise Exception("Expected upscale_method to be string or list of strings or StochasticParameter, got %s." % (type(upscale_method),))
+
+        if aggregation_method == ia.ALL:
+            self.aggregation_method = Choice(["min", "max", "avg"])
+        elif ia.is_string(aggregation_method):
+            self.aggregation_method = Deterministic(aggregation_method)
+        elif isinstance(aggregation_method, list):
+            assert len(aggregation_method) >= 1
+            assert all([ia.is_string(val) for val in aggregation_method])
+            self.aggregation_method = Choice(aggregation_method)
+        elif isinstance(aggregation_method, StochasticParameter):
+            self.aggregation_method = aggregation_method
+        else:
+            raise Exception("Expected aggregation_method to be string or list of strings or StochasticParameter, got %s." % (type(aggregation_method),))
+
+        if sigmoid in [True, False, 0, 1, 0.0, 1.0]:
+            self.sigmoid = Deterministic(int(sigmoid))
+        elif ia.is_single_number(sigmoid):
+            assert 0 <= sigmoid <= 1.0
+            self.sigmoid = Binomial(sigmoid)
+        else:
+            raise Exception("Expected sigmoid to be boolean or number or StochasticParameter, got %s." % (type(sigmoid),))
+
+        if ia.is_single_number(sigmoid_thresh):
+            self.sigmoid_thresh = Deterministic(sigmoid_thresh)
+        elif isinstance(sigmoid_thresh, tuple):
+            assert len(sigmoid_thresh) == 2
+            assert all([ia.is_single_number(val) for val in sigmoid_thresh])
+            self.sigmoid_thresh = Uniform(sigmoid_thresh[0], sigmoid_thresh[1])
+        elif ia.is_iterable(sigmoid_thresh):
+            assert len(sigmoid_thresh) > 0
+            self.sigmoid_thresh = Choice(sigmoid_thresh)
+        elif isinstance(sigmoid_thresh, StochasticParameter):
+            self.sigmoid_thresh = sigmoid_thresh
+        else:
+            raise Exception("Expected sigmoid_thresh to be number or tuple of two numbers or StochasticParameter, got %s." % (type(sigmoid_thresh),))
+
+    def _draw_samples(self, size, random_state):
+        assert len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,)
+        h, w = size
+        seed = random_state.randint(0, 10**6)
+        aggregation_method = self.aggregation_method.draw_sample(random_state=ia.new_random_state(seed))
+        iterations = self.iterations.draw_sample(random_state=ia.new_random_state(seed+1))
+        upscale_methods = self.upscale_method.draw_samples((iterations,), random_state=ia.new_random_state(seed+2))
+        result = np.zeros((h, w), dtype=np.float32)
+        for i in sm.xrange(iterations):
+            noise_iter = self._draw_samples_iteration(h, w, seed + 10 + i, upscale_methods[i])
+            if aggregation_method == "avg":
+                result += noise_iter
+            elif aggregation_method == "min":
+                if i == 0:
+                    result = noise_iter
+                else:
+                    result = np.minimum(result, noise_iter)
+            else: # self.aggregation_method == "max"
+                if i == 0:
+                    result = noise_iter
+                else:
+                    result = np.maximum(result, noise_iter)
+
+        if aggregation_method == "avg":
+            result = result / iterations
+
+        sigmoid = self.sigmoid.draw_sample(random_state=ia.new_random_state(seed+3))
+        sigmoid_thresh = self.sigmoid_thresh.draw_sample(random_state=ia.new_random_state(seed+4))
+        if sigmoid > 0.5:
+            # yes, threshold must be subtracted here, not added
+            # higher threshold = move threshold of sigmoid towards the right
+            #                  = make it harder to pass the threshold
+            #                  = more 0.0s / less 1.0s
+            # by subtracting a high value, it moves each x towards the left,
+            # leading to more values being left of the threshold, leading
+            # to more 0.0s
+            result = 1 / (1 + np.exp(-(result * 20 - 10 - sigmoid_thresh)))
+
+        #from scipy import misc
+        #misc.imshow((result * 255).astype(np.uint8))
+
+        return result
+
+    def _draw_samples_iteration(self, h, w, seed, upscale_method):
+        maxlen = max(h, w)
+        size_px_max = self.size_px_max.draw_sample(random_state=ia.new_random_state(seed))
+        if maxlen > size_px_max:
+            downscale_factor = size_px_max / maxlen
+            h_small = int(h * downscale_factor)
+            w_small = int(w * downscale_factor)
+        else:
+            h_small = h
+            w_small = w
+
+        # don't go below Hx1 or 1xW
+        h_small = max(h_small, 1)
+        w_small = max(w_small, 1)
+
+        generator = OpenSimplex(seed=seed)
+        noise = np.zeros((h_small, w_small), dtype=np.float32)
+        for y in sm.xrange(h_small):
+            for x in sm.xrange(w_small):
+                noise[y, x] = generator.noise2d(y=y, x=x)
+        noise_0to1 = (noise + 0.5) / 2
+
+        if noise_0to1.shape != (h, w):
+            noise_0to1_uint8 = (noise_0to1 * 255).astype(np.uint8)
+            noise_0to1_3d = np.tile(noise_0to1_uint8[..., np.newaxis], (1, 1, 3))
+            noise_0to1 = ia.imresize_single_image(noise_0to1_3d, (h, w), interpolation=upscale_method)
+            noise_0to1 = (noise_0to1[..., 0] / 255.0).astype(np.float32)
+
+        #from scipy import misc
+        #print(noise_0to1.shape, h_small, w_small, self.size_percent, self.size_px_max, maxlen)
+        #misc.imshow((noise_0to1 * 255).astype(np.uint8))
+
+        return noise_0to1
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "SimplexNoise(%s, %s, %s, %s, %s, %s, %s)" % (
+            str(self.iterations),
+            str(self.size_px_max),
+            str(self.upscale_method),
+            str(self.aggregation_method),
+            str(self.sigmoid),
+            str(self.sigmoid_thresh)
+        )

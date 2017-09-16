@@ -145,6 +145,14 @@ def main():
             per_channel=True,
             name="AlphaElementwiseAffine"
         ),
+        iaa.SimplexAlpha(
+            #first=iaa.GaussianBlur((1.0, 3.0)),
+            #first=iaa.MedianBlur((3, 7)),
+            first=iaa.EdgeDetect(1.0),
+            #first=iaa.Affine(rotate=-45), #(-45, 45)),
+            per_channel=False,
+            name="SimplexAlpha"
+        )
     ]
 
     augmenters.append(iaa.Sequential([iaa.Sometimes(0.2, aug.copy()) for aug in augmenters], name="Sequential"))
