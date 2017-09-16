@@ -2,6 +2,6 @@ imgaug
 ======
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 5
 
    imgaug
