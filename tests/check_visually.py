@@ -152,6 +152,14 @@ def main():
             #first=iaa.Affine(rotate=-45), #(-45, 45)),
             per_channel=False,
             name="SimplexNoiseAlpha"
+        ),
+        iaa.FrequencyNoiseAlpha(
+            #first=iaa.GaussianBlur((1.0, 3.0)),
+            #first=iaa.MedianBlur((3, 7)),
+            first=iaa.EdgeDetect(1.0),
+            #first=iaa.Affine(rotate=-45), #(-45, 45)),
+            per_channel=False,
+            name="FrequencyNoiseAlpha"
         )
     ]
 
