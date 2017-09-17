@@ -403,8 +403,7 @@ class AlphaElementwise(Alpha):
     (A) Adds 10 to each image and (B) multiplies each image by 0.8. Then per
     pixel an overlay factor is sampled from the range [0.0, 1.0]. If it is
     close to 1.0, the results from (A) are mostly used, otherwise the ones
-    from (B). This is equivalent to
-    `iaa.Sequential([iaa.Multiply(0.8), iaa.AlphaElementwise((0.0, 1.0), iaa.Add(10))])`.
+    from (B).
 
     >>> aug = iaa.AlphaElementwise(iap.Choice([0.25, 0.75]), iaa.MedianBlur((3, 7)))
 
