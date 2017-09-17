@@ -1,6 +1,6 @@
 from __future__ import print_function, division, absolute_import
 from . import imgaug as ia
-from .opensimplex import OpenSimplex
+from .external.opensimplex import OpenSimplex
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import copy as copy_module
