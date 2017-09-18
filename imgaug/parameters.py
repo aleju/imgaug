@@ -441,6 +441,10 @@ class Sigmoid(StochasticParameter):
         assert ia.is_single_number(add)
         self.add = add
 
+    @staticmethod
+    def create_for_noise(other_param, threshold=(-10, 10), activated=True):
+        return Sigmoid(other_param, threshold, activated, mul=20, add=-10)
+
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6)
         result = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))

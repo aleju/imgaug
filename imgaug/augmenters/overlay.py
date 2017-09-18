@@ -699,12 +699,10 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         )
 
     if sigmoid != False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
-        noise = iap.Sigmoid(
+        noise = iap.Sigmoid.create_for_noise(
             noise,
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
-            activated=sigmoid,
-            mul=20,
-            add=-10
+            activated=sigmoid
         )
 
     return AlphaElementwise(
@@ -899,12 +897,10 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         )
 
     if sigmoid != False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
-        noise = iap.Sigmoid(
+        noise = iap.Sigmoid.create_for_noise(
             noise,
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
-            activated=sigmoid,
-            mul=20,
-            add=-10
+            activated=sigmoid
         )
 
     return AlphaElementwise(
