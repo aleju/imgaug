@@ -535,8 +535,9 @@ class AlphaElementwise(Alpha):
         return result
 
 def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
-                      iterations=(1, 3), size_px_max=(2, 16), upscale_method=None,
-                      aggregation_method="max", sigmoid=True, sigmoid_thresh=None,
+                      size_px_max=(2, 16), upscale_method=None,
+                      iterations=(1, 3), aggregation_method="max",
+                      sigmoid=True, sigmoid_thresh=None,
                       name=None, deterministic=False, random_state=None):
     """
     Augmenter to overlay two image sources with each other using alpha values
@@ -572,18 +573,6 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         If this value is a float p, then for p percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
-        How often to repeat the simplex noise generation process per
-        image.
-            * If int, then that number will be used as the iterations for all
-              images.
-            * If tuple of two ints (a, b), then a value will be sampled
-              per image from the discrete range [a..b].
-            * If a list of ints, then a value will be picked per image at
-              random from that list.
-            * If a StochasticParameter, then a value will be sampled from
-              that parameter per image.
-
     size_px_max : int or tuple of ints or list of ints or StochasticParameter, optional(default=(2, 16))
         The simplex noise is always generated in a low resolution environment.
         This parameter defines the maximum size of that environment (in
@@ -613,6 +602,18 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
               list per iteration.
             * If StochasticParameter, then a random value will be sampled
               from that parameter per iteration.
+
+    iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
+        How often to repeat the simplex noise generation process per
+        image.
+            * If int, then that number will be used as the iterations for all
+              images.
+            * If tuple of two ints (a, b), then a value will be sampled
+              per image from the discrete range [a..b].
+            * If a list of ints, then a value will be picked per image at
+              random from that list.
+            * If a StochasticParameter, then a value will be sampled from
+              that parameter per image.
 
     aggregation_method : ia.ALL or string or list of string or StochasticParameter, optional(default="max")
         The noise maps (from each iteration) are combined to one noise map
@@ -710,11 +711,11 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         name=name, deterministic=deterministic, random_state=random_state
     )
 
-def FrequencyNoiseAlpha(first=None, second=None, per_channel=False,
-                        iterations=(1, 3), size_px_max=(4, 16),
-                        exponent=(-4, 4), upscale_method=None,
-                        aggregation_method=["avg", "max"], sigmoid=0.5,
-                        sigmoid_thresh=None,
+def FrequencyNoiseAlpha(exponent=(-4, 4),
+                        first=None, second=None, per_channel=False,
+                        size_px_max=(4, 16), upscale_method=None,
+                        iterations=(1, 3), aggregation_method=["avg", "max"],
+                        sigmoid=0.5, sigmoid_thresh=None,
                         name=None, deterministic=False, random_state=None):
     """
     Augmenter to overlay two image sources with each other using alpha values
@@ -727,6 +728,19 @@ def FrequencyNoiseAlpha(first=None, second=None, per_channel=False,
 
     Parameters
     ----------
+    exponent : number or tuple of numbers of list of numbers or StochasticParameter, optional(default=(-4, 4))
+        Exponent to use when scaling in the frequency domain.
+        Sane values are in the range -4 (large blobs) to 4 (small patterns).
+        To generate cloud-like structures, use roughly -2.
+            * If number, then that number will be used as the exponent for all
+              iterations.
+            * If tuple of two numbers (a, b), then a value will be sampled
+              per iteration from the range [a, b].
+            * If a list of numbers, then a value will be picked per iteration
+              at random from that list.
+            * If a StochasticParameter, then a value will be sampled from
+              that parameter per iteration.
+
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
@@ -751,18 +765,6 @@ def FrequencyNoiseAlpha(first=None, second=None, per_channel=False,
         If this value is a float p, then for p percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
-        How often to repeat the simplex noise generation process per
-        image.
-            * If int, then that number will be used as the iterations for all
-              images.
-            * If tuple of two ints (a, b), then a value will be sampled
-              per image from the discrete range [a..b].
-            * If a list of ints, then a value will be picked per image at
-              random from that list.
-            * If a StochasticParameter, then a value will be sampled from
-              that parameter per image.
-
     size_px_max : int or tuple of ints or list of ints or StochasticParameter, optional(default=(4, 16))
         The simplex noise is always generated in a low resolution environment.
         This parameter defines the maximum size of that environment (in
@@ -775,19 +777,6 @@ def FrequencyNoiseAlpha(first=None, second=None, per_channel=False,
               per iteration from the discrete range [a..b].
             * If a list of ints, then a value will be picked per iteration at
               random from that list.
-            * If a StochasticParameter, then a value will be sampled from
-              that parameter per iteration.
-
-    exponent : number or tuple of numbers of list of numbers or StochasticParameter, optional(default=(-4, 4))
-        Exponent to use when scaling in the frequency domain.
-        Sane values are in the range -4 (large blobs) to 4 (small patterns).
-        To generate cloud-like structures, use roughly -2.
-            * If number, then that number will be used as the exponent for all
-              iterations.
-            * If tuple of two numbers (a, b), then a value will be sampled
-              per iteration from the range [a, b].
-            * If a list of numbers, then a value will be picked per iteration
-              at random from that list.
             * If a StochasticParameter, then a value will be sampled from
               that parameter per iteration.
 
@@ -805,6 +794,18 @@ def FrequencyNoiseAlpha(first=None, second=None, per_channel=False,
               list per iteration.
             * If StochasticParameter, then a random value will be sampled
               from that parameter per iteration.
+
+    iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
+        How often to repeat the simplex noise generation process per
+        image.
+            * If int, then that number will be used as the iterations for all
+              images.
+            * If tuple of two ints (a, b), then a value will be sampled
+              per image from the discrete range [a..b].
+            * If a list of ints, then a value will be picked per image at
+              random from that list.
+            * If a StochasticParameter, then a value will be sampled from
+              that parameter per image.
 
     aggregation_method : ia.ALL or string or list of string or StochasticParameter, optional(default=["avg", "max"])
         The noise maps (from each iteration) are combined to one noise map
