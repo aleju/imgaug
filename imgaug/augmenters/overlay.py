@@ -456,20 +456,17 @@ class AlphaElementwise(Alpha):
             h, w, nb_channels = image.shape[0:3]
             image_first = images_first[i]
             image_second = images_second[i]
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
             input_dtype = image.dtype
             if per_channel == 1:
-                samples = self.factor.draw_samples((h, w, nb_channels), random_state=rs_image)
-                assert 0 <= samples.item(0) <= 1.0 # validate only first value
-                #for c, sample in enumerate(samples):
                 for c in sm.xrange(nb_channels):
-                    samples_c = samples[..., c]
+                    samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
+                    assert 0 <= samples_c.item(0) <= 1.0 # validate only first value
                     image[..., c] = samples_c * image_first[..., c] + (1.0 - samples_c) * image_second[..., c]
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
             else:
-                samples = self.factor.draw_samples((h, w), random_state=rs_image)
+                samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
                 samples = np.tile(samples[..., np.newaxis], (1, 1, nb_channels))
                 assert 0.0 <= samples.item(0) <= 1.0
 
@@ -508,17 +505,21 @@ class AlphaElementwise(Alpha):
         for i in sm.xrange(nb_images):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
-            rs_image = ia.new_random_state(seeds[i])
+            #rs_image = ia.new_random_state(seeds[i])
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
             # keypoint augmentation also works channel-wise, even though
             # keypoints do not have channels, in order to keep the random
             # values properly synchronized with the image augmentation
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
             if per_channel == 1:
-                samples = self.factor.draw_samples((h, w, nb_channels,), random_state=rs_image)
+                #samples = self.factor.draw_samples((h, w, nb_channels,), random_state=rs_image)
+                samples = np.zeros((h, w, nb_channels), dtype=np.float32)
+                for c in nb_channels:
+                    samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
+                    samples[:, :, c] = samples_c
             else:
-                samples = self.factor.draw_samples((h, w), random_state=rs_image)
+                samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
             assert 0.0 <= samples.item(0) <= 1.0
             sample = np.average(samples)
 

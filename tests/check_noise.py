@@ -48,5 +48,19 @@ def main():
     grid = np.vstack(rows)
     misc.imshow((grid*255).astype(np.uint8))
 
+    images = [ia.quokka_square(size=(128, 128)) for _ in range(16)]
+    seqs = [
+        iaa.SimplexNoiseAlpha(first=iaa.EdgeDetect(1.0)),
+        iaa.SimplexNoiseAlpha(first=iaa.EdgeDetect(1.0), per_channel=True),
+        iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0)),
+        iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), per_channel=True)
+    ]
+    images_aug = []
+
+    for seq in seqs:
+        images_aug.append(np.hstack(seq.augment_images(images)))
+    images_aug = np.vstack(images_aug)
+    misc.imshow(images_aug)
+
 if __name__ == "__main__":
     main()
