@@ -751,7 +751,7 @@ class FrequencyNoise(StochasticParameter):
         elif isinstance(exponent, StochasticParameter):
             self.exponent = exponent
         else:
-            raise Exception("Expected exponent to be int or tuple of two ints or StochasticParameter, got %s." % (type(exponent),))
+            raise Exception("Expected exponent to be number or tuple of two numbers or StochasticParameter, got %s." % (type(exponent),))
 
         if ia.is_single_integer(size_px_max):
             assert 1 <= size_px_max <= 10000
