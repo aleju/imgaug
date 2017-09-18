@@ -28,6 +28,8 @@ def main():
     draw_per_augmenter_images()
 
 def draw_single_sequential_images():
+    ia.seed(44)
+
     #image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
@@ -37,7 +39,12 @@ def draw_single_sequential_images():
             # apply the following augmenters to most images
             iaa.Fliplr(0.5), # horizontally flip 50% of all images
             iaa.Flipud(0.2), # vertically flip 20% of all images
-            sometimes(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
+            # crop images by -5% to 10% of their height/width
+            sometimes(iaa.CropAndPad(
+                percent=(-0.05, 0.1),
+                pad_mode=ia.ALL,
+                pad_cval=(0, 255)
+            )),
             sometimes(iaa.Affine(
                 scale={"x": (0.8, 1.2), "y": (0.8, 1.2)}, # scale images to 80-120% of their size, individually per axis
                 translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)}, # translate by -20 to +20 percent (per axis)
@@ -59,10 +66,11 @@ def draw_single_sequential_images():
                     ]),
                     iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)), # sharpen images
                     iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0)), # emboss images
-                    # search either for all edges or for directed edges
-                    sometimes(iaa.OneOf([
-                        iaa.EdgeDetect(alpha=(0, 0.7)),
-                        iaa.DirectedEdgeDetect(alpha=(0, 0.7), direction=(0.0, 1.0)),
+                    # search either for all edges or for directed edges,
+                    # blend the result with the original image using a blobby mask
+                    iaa.SimplexNoiseAlpha(iaa.OneOf([
+                        iaa.EdgeDetect(alpha=(0.5, 1.0)),
+                        iaa.DirectedEdgeDetect(alpha=(0.5, 1.0), direction=(0.0, 1.0)),
                     ])),
                     iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5), # add gaussian noise to images
                     iaa.OneOf([
@@ -71,11 +79,22 @@ def draw_single_sequential_images():
                     ]),
                     iaa.Invert(0.05, per_channel=True), # invert color channels
                     iaa.Add((-10, 10), per_channel=0.5), # change brightness of images (by -10 to 10 of original value)
-                    iaa.Multiply((0.5, 1.5), per_channel=0.5), # change brightness of images (50-150% of original value)
+                    iaa.AddToHueAndSaturation((-20, 20)), # change hue and saturation
+                    # either change the brightness of the whole image (sometimes
+                    # per channel) or change the brightness of subareas
+                    iaa.OneOf([
+                        iaa.Multiply((0.5, 1.5), per_channel=0.5),
+                        iaa.FrequencyNoiseAlpha(
+                            exponent=(-4, 0),
+                            first=iaa.Multiply((0.5, 1.5), per_channel=True),
+                            second=iaa.ContrastNormalization((0.5, 2.0))
+                        )
+                    ]),
                     iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5), # improve or worsen the contrast
                     iaa.Grayscale(alpha=(0.0, 1.0)),
                     sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)), # move pixels locally around (with random strengths)
-                    sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))) # sometimes move parts of the image around
+                    sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))), # sometimes move parts of the image around
+                    sometimes(iaa.PerspectiveTransform(scale=(0.01, 0.1)))
                 ],
                 random_order=True
             )
@@ -151,7 +170,11 @@ def draw_per_augmenter_images():
                 for _ in sm.xrange(5)
             ]
         ),
-        (1, "ElasticTransformation\n(sigma=0.2)", [("alpha=%.1f" % (alpha,), iaa.ElasticTransformation(alpha=alpha, sigma=0.2)) for alpha in [0.1, 0.5, 1.0, 3.0, 9.0]])
+        (1, "ElasticTransformation\n(sigma=0.2)", [("alpha=%.1f" % (alpha,), iaa.ElasticTransformation(alpha=alpha, sigma=0.2)) for alpha in [0.1, 0.5, 1.0, 3.0, 9.0]]),
+        (0, "Alpha\nwith EdgeDetect(1.0)", [("factor=%.1f" % (factor,), iaa.Alpha(factor=factor, first=iaa.EdgeDetect(1.0))) for factor in [0.0, 0.25, 0.5, 0.75, 1.0]]),
+        (4, "Alpha\nwith EdgeDetect(1.0)\n(per channel)", [("factor=(%.2f, %.2f)" % (factor[0], factor[1]), iaa.Alpha(factor=factor, first=iaa.EdgeDetect(1.0), per_channel=0.5)) for factor in [(0.0, 0.2), (0.15, 0.35), (0.4, 0.6), (0.65, 0.85), (0.8, 1.0)]]),
+        (15, "SimplexNoiseAlpha\nwith EdgeDetect(1.0)", [("", iaa.SimplexNoiseAlpha(first=iaa.EdgeDetect(1.0))) for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]]),
+        (9, "FrequencyNoiseAlpha\nwith EdgeDetect(1.0)", [("exponent=%.1f" % (exponent,), iaa.FrequencyNoiseAlpha(exponent=exponent, first=iaa.EdgeDetect(1.0), size_px_max=16, upscale_method="linear", sigmoid=False)) for exponent in [-4, -2, 0, 2, 4]])
     ]
 
     print("[draw_per_augmenter_images] Augmenting...")

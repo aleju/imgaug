@@ -64,6 +64,10 @@ The images below show examples for most augmentation techniques (values written 
 ![Affine: cval](images/examples_affine_cval.jpg?raw=true "Affine: cval")
 ![Affine: all](images/examples_affine_all.jpg?raw=true "Affine: all")
 ![ElasticTransformation sigma=0.2](images/examples_elastictransformation.jpg?raw=true "ElasticTransformation sigma=0.2")
+![Alpha with EdgeDetect1.0](images/examples_alpha.jpg?raw=true "Alpha with EdgeDetect1.0")
+![Alpha with EdgeDetect1.0 per channel](images/examples_alpha_2.jpg?raw=true "Alpha with EdgeDetect1.0 per channel")
+![SimplexNoiseAlpha with EdgeDetect1.0](images/examples_simplexnoisealpha.jpg?raw=true "SimplexNoiseAlpha with EdgeDetect1.0")
+![FrequencyNoiseAlpha with EdgeDetect1.0](images/examples_frequencynoisealpha.jpg?raw=true "FrequencyNoiseAlpha with EdgeDetect1.0")
 
 ## Requirements and installation
 
@@ -129,7 +133,12 @@ seq = iaa.Sequential(
         # apply the following augmenters to most images
         iaa.Fliplr(0.5), # horizontally flip 50% of all images
         iaa.Flipud(0.2), # vertically flip 20% of all images
-        sometimes(iaa.Crop(percent=(0, 0.1))), # crop images by 0-10% of their height/width
+        # crop images by -5% to 10% of their height/width
+        sometimes(iaa.CropAndPad(
+            percent=(-0.05, 0.1),
+            pad_mode=ia.ALL,
+            pad_cval=(0, 255)
+        )),
         sometimes(iaa.Affine(
             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)}, # scale images to 80-120% of their size, individually per axis
             translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)}, # translate by -20 to +20 percent (per axis)
@@ -151,10 +160,11 @@ seq = iaa.Sequential(
                 ]),
                 iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5)), # sharpen images
                 iaa.Emboss(alpha=(0, 1.0), strength=(0, 2.0)), # emboss images
-                # search either for all edges or for directed edges
-                sometimes(iaa.OneOf([
-                    iaa.EdgeDetect(alpha=(0, 0.7)),
-                    iaa.DirectedEdgeDetect(alpha=(0, 0.7), direction=(0.0, 1.0)),
+                # search either for all edges or for directed edges,
+                # blend the result with the original image using a blobby mask
+                iaa.SimplexNoiseAlpha(iaa.OneOf([
+                    iaa.EdgeDetect(alpha=(0.5, 1.0)),
+                    iaa.DirectedEdgeDetect(alpha=(0.5, 1.0), direction=(0.0, 1.0)),
                 ])),
                 iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5), # add gaussian noise to images
                 iaa.OneOf([
@@ -163,11 +173,22 @@ seq = iaa.Sequential(
                 ]),
                 iaa.Invert(0.05, per_channel=True), # invert color channels
                 iaa.Add((-10, 10), per_channel=0.5), # change brightness of images (by -10 to 10 of original value)
-                iaa.Multiply((0.5, 1.5), per_channel=0.5), # change brightness of images (50-150% of original value)
+                iaa.AddToHueAndSaturation((-20, 20)), # change hue and saturation
+                # either change the brightness of the whole image (sometimes
+                # per channel) or change the brightness of subareas
+                iaa.OneOf([
+                    iaa.Multiply((0.5, 1.5), per_channel=0.5),
+                    iaa.FrequencyNoiseAlpha(
+                        exponent=(-4, 0),
+                        first=iaa.Multiply((0.5, 1.5), per_channel=True),
+                        second=iaa.ContrastNormalization((0.5, 2.0))
+                    )
+                ]),
                 iaa.ContrastNormalization((0.5, 2.0), per_channel=0.5), # improve or worsen the contrast
                 iaa.Grayscale(alpha=(0.0, 1.0)),
                 sometimes(iaa.ElasticTransformation(alpha=(0.5, 3.5), sigma=0.25)), # move pixels locally around (with random strengths)
-                sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))) # sometimes move parts of the image around
+                sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.05))), # sometimes move parts of the image around
+                sometimes(iaa.PerspectiveTransform(scale=(0.01, 0.1)))
             ],
             random_order=True
         )
@@ -514,6 +535,7 @@ Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0
 | GaussianBlur(S) | Blurs images using a gaussian kernel with size `S`. |
 | AverageBlur(K) | Blurs images using a simple averaging kernel with size `K`. |
 | MedianBlur(K) | Blurs images using a median over neihbourhoods of size `K`. |
+| BilateralBlur(D, SC, SS) | Blurs images using a bilateral filter with distance `D` (like kernel size). `SC` is a sigma for the (influence) distance in color space, `SS` a sigma for the spatial distance. |
 | Convolve(M) | Convolves images with matrix `M`, which can be a lambda function. |
 | Sharpen(A, L) | Runs a sharpening kernel over each image with lightness `L` (low values result in dark images). Mixes the result with the original image using alpha `A`. |
 | Emboss(A, S) | Runs an emboss kernel over each image with strength `S`. Mixes the result with the original image using alpha `A`. |
@@ -521,6 +543,7 @@ Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0
 | DirectedEdgeDetect(A, D) | Runs a directed edge detection kernel over each image, which detects each from direction `D` (default: random direction from 0 to 360 degrees, chosen per image). Mixes the result with the original image using alpha `A`. |
 | Add(V, PCH) | Adds value `V` to each image. If `PCH` is true, then the the sampled values may be different per channel. |
 | AddElementwise(V, PCH) | Adds value `V` to each pixel. If `PCH` is true, then the the sampled values may be different per channel (and pixel). |
+| AddToHueAndSaturation(V, PCH, F, C) | Adds value `V` to each pixel in HSV space (i.e. modifying hue and saturation). Converts from colorspace F to HSV (default is F=RGB). Selects channels C before augmenting (default is C=[0,1]). If `PCH` is true, then the the sampled values may be different per channel. |
 | AdditiveGaussianNoise(L, S, PCH) | Adds white/gaussian noise pixelwise to an image. The noise comes from the normal distribution `N(L,S)`. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
 | Multiply(V, PCH) | Multiplies each image by value `V`, leading to darker/brighter images. If `PCH` is true, then the sampled values may be different per channel. |
 | MultiplyElementwise(V, PCH) | Multiplies each pixel by value `V`, leading to darker/brighter pixels. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
@@ -530,4 +553,9 @@ Note that most of the below mentioned variables can be set as ranges, e.g. `A=(0
 | ContrastNormalization(S, PCH) | Changes the contrast in images, by moving pixel values away or closer to 128. The direction and strength is defined by `S`. If `PCH` is set to true, the process happens channel-wise with possibly different `S`. |
 | Affine(S, TPX, TPC, R, SH, O, M, CVAL) | Applies affine transformations to images. Scales them by `S` (>1=zoom in, <1=zoom out), translates them by `TPX` pixels or `TPC` percent, rotates them by `R` degrees and shears them by `SH` degrees. Interpolation happens with order `O` (0 or 1 are good and fast). Areas can appear in the resulting image, which have no corresponding area in the original image. `M` defines, how to handle these. If `M='constant'` then `CVAL` defines a constant value with which to fill the area. |
 | PiecewiseAffine(S, R, C, O, M, CVAL) | Places a regular grid of points on the image. The grid has `R` rows and `C` columns. Then moves the points (and the image areas around them) by amounts that are samples from normal distribution N(0,`S`), leading to local distortions of varying strengths. `O`, `M` and `CVAL` are defined as in `Affine`. |
+| PerspectiveTransform(S, KS) | Applies a random four-point perspective transform to the image (kinda like an advanced form of cropping). Each point has a random distance from the image corner, derived from a normal distribution with sigma `S`. If `KS` is set to True (default), each image will be resized back to its original size. |
 | ElasticTransformation(S, SM) | Moves each pixel individually around based on distortion fields. `SM` defines the smoothness of the distortion field and `S` its strength. |
+| Alpha(F, A, B, PCH) | Augments images using augmenters `A` and `B` independently, then overlays the result using alpha `F`. Both `A` and `B` default to doing nothing if not provided. E.g. use `Alpha(0.9, A)` to augment images via `A`, then blend the result, keeping 10% of the original image (before `A`). If `PCH` is set to true, the process happens channel-wise with possibly different `F` (`A` and `B` are computed once per image). |
+| AlphaElementwise(F, A, B, PCH) | Same as `Alpha`, but performs the blending pixel-wise using a continuous mask (values 0.0 to 1.0) sampled from `F`. If `PCH` is set to true, the process happens both pixel- and channel-wise. |
+| SimplexNoiseAlpha(A, B, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `Alpha`, but uses a mask to blend the results from augmenters `A` and `B`. The mask is sampled from simplex noise, which tends to be blobby. The mask is gathered in `I` iterations (default 1-3), each iteration is combined using aggregation method `AGG` (default max, i.e. maximum value from all iterations per pixel). Each mask is sampled in low resolution space with max resolution `SM` (default 2 to 16px) and upscaled to image size using method `UP` (default: linear or cubic or nearest neighbour upsampling). If `SIG` is true, a sigmoid is applied to the mask with threshold `SIGT`, which makes the blobs have values closer to 0.0 or 1.0. |
+| FrequencyNoiseAlpha(E, A, B, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `SimplexNoiseAlpha`, but generates noise masks from the frequency domain. Exponent `E` is used to increase/decrease frequency components. High values lead to more pronounced high frequency components. Use values in the range -4 to 4, with -2 roughly generated cloud-like patterns. |
