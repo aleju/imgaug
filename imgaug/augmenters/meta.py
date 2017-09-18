@@ -611,6 +611,14 @@ class Augmenter(object):
                 images = [images[:, :, np.newaxis]]
             else:
                 raise Exception("Unexpected images shape, expected 2-, 3- or 4-dimensional array, got shape %s." % (images.shape,))
+        elif isinstance(images, list):
+            for i, image in enumerate(images):
+                if len(image.shape) == 3:
+                    continue
+                elif len(image.shape) == 2:
+                    images[i] = image[:, :, np.newaxis]
+                else:
+                    raise Exception("Unexpected image shape at index %d, expected 2- or 3-dimensional array, got shape %s." % (i, image.shape,))
         assert isinstance(images, list)
 
         det = self if self.deterministic else self.to_deterministic()
