@@ -201,7 +201,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
 def imresize_single_image(image, sizes, interpolation=None):
     grayscale = False
-    if image.shape == 2:
+    if image.ndim == 2:
         grayscale = True
         image = image[:, :, np.newaxis]
     assert len(image.shape) == 3, image.shape
