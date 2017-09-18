@@ -19,6 +19,7 @@ processes for improved performance.
    source/installation
    source/examples_basics
    source/examples_keypoints
+   source/alpha
    source/augmenters
    source/modules
 
