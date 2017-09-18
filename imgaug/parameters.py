@@ -739,12 +739,12 @@ class SimplexNoise(StochasticParameter):
 
 class FrequencyNoise(StochasticParameter):
     def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]):
-        if ia.is_single_integer(exponent):
+        if ia.is_single_number(exponent):
             self.exponent = Deterministic(exponent)
         elif isinstance(exponent, tuple):
             assert len(exponent) == 2
-            assert all([ia.is_single_integer(val) for val in exponent])
-            self.exponent = DiscreteUniform(exponent[0], exponent[1])
+            assert all([ia.is_single_number(val) for val in exponent])
+            self.exponent = Uniform(exponent[0], exponent[1])
         elif ia.is_iterable(exponent):
             assert len(exponent) > 0
             self.exponent = Choice(exponent)
