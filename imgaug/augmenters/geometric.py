@@ -435,8 +435,8 @@ class Affine(Augmenter):
 
         for i in sm.xrange(nb_images):
             height, width = images[i].shape[0], images[i].shape[1]
-            shift_x = int(width / 2.0)
-            shift_y = int(height / 2.0)
+            shift_x = width / 2.0 - 0.5
+            shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
             #assert isinstance(translate_x, (float, int))
@@ -488,8 +488,8 @@ class Affine(Augmenter):
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width
-            shift_x = int(width / 2.0)
-            shift_y = int(height / 2.0)
+            shift_x = width / 2.0 - 0.5
+            shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
             #assert isinstance(translate_x, (float, int))
