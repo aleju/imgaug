@@ -753,15 +753,13 @@ class PiecewiseAffine(Augmenter):
         for i in sm.xrange(nb_images):
             rs_image = ia.new_random_state(seeds[i])
             h, w = images[i].shape[0:2]
-            matrix = self._get_matrix(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
-            if matrix is not None:
-                order = 2
-                mode = "constant"
-                cval = 0
+            if transformer is not None:
+                #print("transformer imgs", transformer._tesselation.vertices)
                 image_warped = tf.warp(
                     images[i],
-                    matrix,
+                    transformer,
                     order=order_samples[i],
                     mode=mode_samples[i],
                     cval=cval_samples[i],
@@ -788,14 +786,16 @@ class PiecewiseAffine(Augmenter):
         for i in sm.xrange(nb_images):
             rs_image = ia.new_random_state(seeds[i])
             h, w = keypoints_on_images[i].shape[0:2]
-            matrix = self._get_matrix(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
-            if matrix is None:
+            if transformer is None:
                 result.append(keypoints_on_images[i])
             else:
+                #print("transformer kps", transformer._tesselation.vertices)
                 coords = keypoints_on_images[i].get_coords_array()
-                coords_aug = matrix.inverse(coords)
-                #coords_aug = tf.matrix_transform(coords, matrix.params)
+                coords_aug = transformer.inverse(coords)
+                #coords_aug = transformer(coords)
+                #coords_aug = tf.matrix_transform(coords, transformer.params)
                 result.append(
                     ia.KeypointsOnImage.from_coords_array(
                         np.around(coords_aug).astype(np.int32),
@@ -805,7 +805,7 @@ class PiecewiseAffine(Augmenter):
 
         return result
 
-    def _get_matrix(self, h, w, nb_rows, nb_cols, random_state):
+    def _get_transformer(self, h, w, nb_rows, nb_cols, random_state):
         #cell_height = h / self.rows
         #cell_width = w / self.cols
         #cell_height_h = cell_height / 2
@@ -828,7 +828,7 @@ class PiecewiseAffine(Augmenter):
 
         xx_src, yy_src = np.meshgrid(x, y) # (H, W) and (H, W) for H=rows, W=cols
         points_src = np.dstack([yy_src.flat, xx_src.flat])[0] # (1, HW, 2) => (HW, 2) for H=rows, W=cols
-        #print("rows_x", rows_x.shape, "cols_y", cols_y.shape, "xx_src", xx_src.shape, "yy_src", yy_src.shape, "points_src", np.dstack([yy_src.flat, xx_src.flat]).shape)
+        #print("nb_rows", nb_rows, "nb_cols", nb_cols, "x", x, "y", y, "xx_src", xx_src.shape, "yy_src", yy_src.shape, "points_src", np.dstack([yy_src.flat, xx_src.flat]).shape)
 
         jitter_img = self.jitter.draw_samples(points_src.shape, random_state=random_state)
 
@@ -845,7 +845,7 @@ class PiecewiseAffine(Augmenter):
             #print("points_src", points_src, "points_dest", points_dest)
 
             matrix = tf.PiecewiseAffineTransform()
-            matrix.estimate(points_src, points_dest)
+            matrix.estimate(points_src[:, ::-1], points_dest[:, ::-1])
             return matrix
 
     def get_parameters(self):
