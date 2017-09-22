@@ -756,14 +756,15 @@ class PiecewiseAffine(Augmenter):
             transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
             if transformer is not None:
-                #print("transformer imgs", transformer._tesselation.vertices)
+                #print("transformer vertices img", transformer._tesselation.vertices)
                 image_warped = tf.warp(
                     images[i],
                     transformer,
                     order=order_samples[i],
                     mode=mode_samples[i],
                     cval=cval_samples[i],
-                    preserve_range=True
+                    preserve_range=True,
+                    output_shape=images[i].shape
                 )
 
                 # warp changes uint8 to float64, making this necessary
@@ -785,23 +786,63 @@ class PiecewiseAffine(Augmenter):
 
         for i in sm.xrange(nb_images):
             rs_image = ia.new_random_state(seeds[i])
-            h, w = keypoints_on_images[i].shape[0:2]
+            kpsoi = keypoints_on_images[i]
+            h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
             if transformer is None:
                 result.append(keypoints_on_images[i])
             else:
-                #print("transformer kps", transformer._tesselation.vertices)
+                #print("transformer vertices kp", transformer._tesselation.vertices)
+
+                # Augmentation routine that only modifies keypoint coordinates
+                # This is efficient (coordinates of all other locations in the
+                # image are ignored). The code below should usually work, but
+                # for some reason augmented coordinates are often wildly off
+                # for large scale parameters (lots of jitter/distortion).
+                # The reason for that is unknown.
+                """
                 coords = keypoints_on_images[i].get_coords_array()
                 coords_aug = transformer.inverse(coords)
-                #coords_aug = transformer(coords)
-                #coords_aug = tf.matrix_transform(coords, transformer.params)
                 result.append(
                     ia.KeypointsOnImage.from_coords_array(
                         np.around(coords_aug).astype(np.int32),
                         shape=keypoints_on_images[i].shape
                     )
                 )
+                """
+
+
+                # Image based augmentation routine. Draws the keypoints on
+                # the image plane (black and white, only keypoint marked),
+                # then augments these images, then searches for the new
+                # (visual) location of the keypoints.
+                # Much slower than directly augmenting the coordinates, but
+                # here the only method that reliably works.
+                kp_image = kpsoi.to_keypoint_image(size=3) # size=1 sometimes leads to dropped/lost keypoints
+                kp_image_warped = tf.warp(
+                    kp_image,
+                    transformer,
+                    preserve_range=True,
+                    output_shape=kpsoi.shape
+                )
+
+                kps_aug = ia.KeypointsOnImage.from_keypoint_image(
+                    kp_image_warped,
+                    if_not_found_coords={"x": -1, "y": -1}
+                )
+
+                # Keypoints that were outside of the image plane before the
+                # augmentation will be replaced with (-1, -1) by default (as
+                # they can't be drawn on the keypoint images). They are now
+                # replaced by their old coordinates values.
+                ooi = [not 0 <= kp.x < w or not 0 <= kp.y < h for kp in kpsoi.keypoints]
+                for kp_idx in sm.xrange(len(kps_aug.keypoints)):
+                    if ooi[kp_idx]:
+                        kp_unaug = kpsoi.keypoints[kp_idx]
+                        kps_aug.keypoints[kp_idx] = kp_unaug
+
+                result.append(kps_aug)
 
         return result
 
@@ -842,6 +883,13 @@ class PiecewiseAffine(Augmenter):
             points_dest[:, 0] = points_dest[:, 0] + jitter_img[:, 0]
             points_dest[:, 1] = points_dest[:, 1] + jitter_img[:, 1]
 
+            # Restrict all destination points to be inside the image plane.
+            # This is necessary, as otherwise keypoints could be augmented
+            # outside of the image plane and these would be replaced by
+            # (-1, -1), which would not conform with the behaviour of the
+            # other augmenters.
+            points_dest[:, 0] = np.clip(points_dest[:, 0], 0, h-1)
+            points_dest[:, 1] = np.clip(points_dest[:, 1], 0, w-1)
             #print("points_src", points_src, "points_dest", points_dest)
 
             matrix = tf.PiecewiseAffineTransform()

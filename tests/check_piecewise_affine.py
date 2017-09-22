@@ -7,30 +7,46 @@ import numpy as np
 from skimage import data
 import cv2
 
+ia.seed(3)
+
 def main():
     image = ia.quokka(size=0.5)
+    print(image.shape)
     kps = [
         ia.KeypointsOnImage(
             [
-                ia.Keypoint(x=245, y=203),
-                ia.Keypoint(x=365, y=195),
-                ia.Keypoint(x=313, y=269),
+                ia.Keypoint(x=123, y=102),
+                ia.Keypoint(x=182, y=98),
+                ia.Keypoint(x=155, y=134),
+
+                #ia.Keypoint(x=255, y=213),
+                #ia.Keypoint(x=375, y=205),
+                #ia.Keypoint(x=323, y=279),
+
+                #ia.Keypoint(x=265, y=223),
+                #ia.Keypoint(x=385, y=215),
+                #ia.Keypoint(x=333, y=289),
+
+                #ia.Keypoint(x=275, y=233),
+                #ia.Keypoint(x=395, y=225),
+                #ia.Keypoint(x=343, y=299),
+
                 ia.Keypoint(x=-20, y=20)
             ],
-            shape=(image.shape[0]*2, image.shape[1]*2)
+            shape=(image.shape[0], image.shape[1])
         )
     ]
-    kps[0] = kps[0].on(image.shape)
+    #kps[0] = kps[0].on(image.shape)
     print("image shape:", image.shape)
 
     augs = [
         #iaa.PiecewiseAffine(scale=0),
-        iaa.PiecewiseAffine(scale=0.03),
+        iaa.PiecewiseAffine(scale=0.05),
         iaa.PiecewiseAffine(scale=0.1),
         iaa.PiecewiseAffine(scale=0.2)
     ]
 
-    print("original", image.shape)
+    #print("original", image.shape)
     misc.imshow(kps[0].draw_on_image(image))
 
     print("-----------------")

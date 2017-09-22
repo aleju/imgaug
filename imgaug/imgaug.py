@@ -550,7 +550,7 @@ class KeypointsOnImage(object):
         keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
-    def to_keypoint_image(self):
+    def to_keypoint_image(self, size=1):
         """
         Draws a new black image of shape (H,W,N) in which all keypoint coordinates
         are set to 255.
@@ -566,13 +566,28 @@ class KeypointsOnImage(object):
             defined in KeypointsOnImage.shape[0] (analogous W). N is the
             number of keypoints.
 
+        size : int
+            Size of each (squared) point.
+
         """
         assert len(self.keypoints) > 0
         height, width = self.shape[0:2]
         image = np.zeros((height, width, len(self.keypoints)), dtype=np.uint8)
+        assert size % 2 != 0
+        sizeh = max(0, (size-1)//2)
         for i, keypoint in enumerate(self.keypoints):
             y = keypoint.y
             x = keypoint.x
+
+            x1 = np.clip(x - sizeh, 0, width-1)
+            x2 = np.clip(x + sizeh + 1, 0, width-1)
+            y1 = np.clip(y - sizeh, 0, height-1)
+            y2 = np.clip(y + sizeh + 1, 0, height-1)
+
+            #if 0 <= y < height and 0 <= x < width:
+            #    image[y, x, i] = 255
+            if x1 < x2 and y1 < y2:
+                image[y1:y2, x1:x2, i] = 128
             if 0 <= y < height and 0 <= x < width:
                 image[y, x, i] = 255
         return image
