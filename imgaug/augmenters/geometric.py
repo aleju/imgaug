@@ -791,8 +791,8 @@ class PiecewiseAffine(Augmenter):
             h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
-            if transformer is None:
-                result.append(keypoints_on_images[i])
+            if transformer is None or len(kpsoi.keypoints) == 0:
+                result.append(kpsoi)
             else:
                 #print("transformer vertices kp", transformer._tesselation.vertices)
 
@@ -824,14 +824,21 @@ class PiecewiseAffine(Augmenter):
                 kp_image_warped = tf.warp(
                     kp_image,
                     transformer,
+                    order=1,
                     preserve_range=True,
-                    output_shape=kpsoi.shape
+                    output_shape=(kpsoi.shape[0], kpsoi.shape[1], len(kpsoi.keypoints))
                 )
 
                 kps_aug = ia.KeypointsOnImage.from_keypoint_image(
                     kp_image_warped,
                     if_not_found_coords={"x": -1, "y": -1}
                 )
+                if len(kpsoi.shape) > 2:
+                    kps_aug.shape = (
+                        kps_aug.shape[0],
+                        kps_aug.shape[1],
+                        kpsoi.shape[2]
+                    )
 
                 # Keypoints that were outside of the image plane before the
                 # augmentation will be replaced with (-1, -1) by default (as
@@ -898,7 +905,7 @@ class PiecewiseAffine(Augmenter):
             return matrix
 
     def get_parameters(self):
-        return [self.sigma]
+        return [self.scale]
 
 class PerspectiveTransform(Augmenter):
     """
@@ -981,6 +988,8 @@ class PerspectiveTransform(Augmenter):
         )
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            # cv2.warpPerspective only supports <=4 channels
+            assert images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels."
             warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
             #print(np.min(warped), np.max(warped), warped.dtype)
             if self.keep_size:
