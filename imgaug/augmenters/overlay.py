@@ -510,6 +510,12 @@ class AlphaElementwise(Alpha):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
             #rs_image = ia.new_random_state(seeds[i])
+            assert len(kps_oi_first.shape) == 3, \
+                "Keypoint augmentation in AlphaElementwise requires " \
+                "KeypointsOnImage.shape to have channel information (i.e. " \
+                "tuple with 3 entries), which you did not provide (input " \
+                "shape: %s). The channels must match the corresponding " \
+                "image channels." % (kps_oi_first.shape,)
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
             # keypoint augmentation also works channel-wise, even though
@@ -855,26 +861,26 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
 
     Examples
     --------
-    >>> aug = iaa.FrequencyNoiseAlpha(iaa.EdgeDetect(1.0))
+    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0))
 
     Detects per image all edges, marks them in a black and white image and
     then overlays the result with the original image using frequency noise
     masks.
 
-    >>> aug = iaa.FrequencyNoiseAlpha(iaa.EdgeDetect(1.0), upscale_method="linear")
+    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), upscale_method="linear")
 
     Same as the first example, but uses only (smooth) linear upscaling to
     scale the frequency noise masks to the final image sizes, i.e. no nearest
     neighbour upsampling is used, which would result in rectangles with hard
     edges.
 
-    >>> aug = iaa.FrequencyNoiseAlpha(iaa.EdgeDetect(1.0), upscale_method="linear", exponent=-2, sigmoid=False)
+    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), upscale_method="linear", exponent=-2, sigmoid=False)
 
     Same as the previous example, but also limits the exponent to -2 and
     deactivates the sigmoid, resulting in cloud-like patterns without sharp
     edges.
 
-    >>> aug = iaa.FrequencyNoiseAlpha(iaa.EdgeDetect(1.0), sigmoid_thresh=iap.Normal(10.0, 5.0))
+    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), sigmoid_thresh=iap.Normal(10.0, 5.0))
 
     Same as the first example, but uses a threshold for the sigmoid function
     that is further to the right. This is more conservative, i.e. the generated
