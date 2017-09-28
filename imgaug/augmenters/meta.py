@@ -783,12 +783,234 @@ class Augmenter(object):
             for aug in lst:
                 aug.reseed(random_state=random_state, deterministic_too=deterministic_too)
 
+    def localize_random_state(self, recursive=True):
+        """
+        Converts global random states to local ones.
+        See `Augmenter.localize_random_state_()` for more details.
+
+        Parameters
+        ----------
+        recursive : bool, optional(default=True)
+            See `Augmenter.localize_random_state_()`.
+
+        Returns
+        -------
+        aug : Augmenter
+            Returns copy of augmenter and children, with localized random
+            states.
+
+        """
+        aug = self.deepcopy()
+        aug.localize_random_state_(
+            recursive=recursive
+        )
+        return aug
+
+    def localize_random_state_(self, recursive=True):
+        """
+        Converts global random states to local ones.
+
+        A global random state exists exactly once. Many augmenters can point
+        to it (and thereby use it to sample random numbers).
+        Local random usually exists for exactly one augmenter and are
+        saved within that augmenter.
+
+        Usually there is no need to change global into local random states.
+        The only noteworthy exceptions are
+            * whenever you want to use determinism (so that the global random
+              state is not accidently reverted)
+            * whenever you want to copy random states from one augmenter to
+              another. (Copying the global random state doesn't help very
+              much. If you copy the state from A to B, then execute A and then
+              B, B's (global) random state has already changed because of A's
+              sampling.)
+        The case of determinism is handled automatically by to_deterministic().
+        Only when you copy random states (via copy_random_state()), you need
+        to call this function first.
+
+        Parameters
+        ----------
+        recursive : bool, optional(default=True)
+            Whether to localize the random states of children
+            too.
+
+        Returns
+        -------
+        self : Augmenter
+            Returns itself (with localized random states).
+
+        """
+        if self.random_state == ia.current_random_state():
+            self.random_state = ia.new_random_state()
+        if recursive:
+            for lst in self.get_children_lists():
+                for child in lst:
+                    child.localize_random_state_(recursive=recursive)
+        return self
+
+    def copy_random_state(self, source, recursive=True, matching="position", matching_tolerant=True, copy_determinism=False):
+        """
+        Copy the random states from a source augmenter sequence.
+
+        Parameters
+        ----------
+        source : Augmenter
+            See `Augmenter.copy_random_state_()`.
+
+        recursive : bool, optional(default=True)
+            See `Augmenter.copy_random_state_()`.
+
+        matching : {'position', 'name'}, optional(default='position')
+            See `Augmenter.copy_random_state_()`.
+
+        matching_tolerant : bool, optional(default=True)
+            See `Augmenter.copy_random_state_()`.
+
+        copy_determinism : bool, optional(default=False)
+            See `Augmenter.copy_random_state_()`.
+
+        Returns
+        -------
+        aug : Augmenter
+            Copy of the augmenter(s) with the same random state(s) as in the
+            source augmenter(s).
+
+        """
+        aug = self.deepcopy()
+        aug.copy_random_state_(
+            source,
+            recursive=recursive,
+            matching=matching,
+            matching_tolerant=matching_tolerant,
+            copy_determinism=copy_determinism
+        )
+        return aug
+
+    def copy_random_state_(self, source, recursive=True, matching="position", matching_tolerant=True, copy_determinism=False):
+        """
+        Copy the random states from a source augmenter sequence (inplace).
+
+        Parameters
+        ----------
+        source : Augmenter
+            The source augmenter from where to copy the random_state(s).
+            May have children (e.g. a Sequential).
+            May not use the global random state. This is used by default
+            by all augmenters. Call `localize_random_state_()` once on the
+            source to localize all random states.
+
+        recursive : bool, optional(default=True)
+            Whether to copy the random states of the source augmenter *and*
+            all of its children (True) or just the source augmenter (False).
+
+        matching : {'position', 'name'}, optional(default='position')
+            Defines the matching mode to use during recursive copy.
+            This is used to associate source augmenters with target augmenters.
+            If 'position' then the target and source sequences of augmenters
+            are turned into flattened lists and are associated based on
+            their list indices. If 'name' then the target and source augmenters
+            are matched based on their names (i.e. `augmenter.name`).
+
+        matching_tolerant : bool, optional(default=True)
+            Whether to use tolerant matching between source and target
+            augmenters. If set to False: Name matching will raise an exception
+            for any target augmenter which's name does not appear among the
+            source augmeters. Position matching will raise an exception if
+            source and target augmenter have an unequal number of children.
+
+        copy_determinism : bool, optional(default=False)
+            Whether to copy the `deterministic` flags from source to target
+            augmenters too.
+
+        Returns
+        -------
+        self : Augmenter
+            Returns itself (after random state copy).
+
+        """
+        source_augs = [source] + source.get_all_children(flat=True) if recursive else [source]
+        target_augs = [self] + self.get_all_children(flat=True) if recursive else [self]
+
+        global_rs = ia.current_random_state()
+        global_rs_exc_msg = "You called copy_random_state_() with a source " \
+                            "that uses global random states. Call " \
+                            "localize_random_state_() on the source first " \
+                            "or initialize your augmenters with local random " \
+                            "states, e.g. via Dropout(..., random_state=1234)."
+
+        if matching == "name":
+            source_augs_dict = {aug.name: aug for aug in source_augs}
+            target_augs_dict = {aug.name: aug for aug in target_augs}
+
+            if len(source_augs_dict) < len(source_augs) or len(target_augs_dict) < len(target_augs):
+                warnings.warn(
+                    "Matching mode 'name' with recursive=True was chosen in copy_random_state_, "
+                    "but either the source or target augmentation sequence contains multiple "
+                    "augmenters with the same name."
+                )
+
+            for name in target_augs_dict:
+                if name in source_augs_dict:
+                    if source_augs_dict[name].random_state == global_rs:
+                        raise Exception(global_error_msg)
+                    target_augs_dict[name].random_state = ia.copy_random_state(source_augs_dict[name].random_state)
+                    if copy_determinism:
+                        target_augs_dict[name].deterministic = source_augs_dict[name].deterministic
+                elif not matching_tolerant:
+                    raise Exception(
+                        "Augmenter name '%s' not found among source augmenters." % (name,)
+                    )
+        elif matching == "position":
+            if len(source_augs) != len(target_augs) and not matching_tolerant:
+                raise Exception(
+                    "Source and target augmentation sequences have different lengths."
+                )
+            for source_aug, target_aug in zip(source_augs, target_augs):
+                if source_aug.random_state == global_rs:
+                    raise Exception(global_error_msg)
+                target_aug.random_state = ia.copy_random_state(source_aug.random_state, force_copy=True)
+                if copy_determinism:
+                    target_aug.deterministic = source_aug.deterministic
+        else:
+            raise Exception("Unknown matching method '%s'. Valid options are 'name' and 'position'." % (matching,))
+
+        return self
+
     @abstractmethod
     def get_parameters(self):
         raise NotImplementedError()
 
     def get_children_lists(self):
         return []
+
+    def get_all_children(self, flat=False):
+        """
+        Returns all children of this augmenter as a list.
+
+        If the augmenter has no children, the returned list is empty.
+
+        Parameters
+        ----------
+        flat : bool
+            If set to True, the returned list will be
+            flat.
+
+        Returns
+        -------
+        result : list of Augmenter
+            The children as a nested or flat list.
+
+        """
+        result = []
+        for lst in self.get_children_lists():
+            for aug in lst:
+                result.append(aug)
+                children = aug.get_all_children(flat=flat)
+                if flat:
+                    result.extend(children)
+                else:
+                    result.append(children)
+        return result
 
     def find_augmenters(self, func, parents=None, flat=True):
         """

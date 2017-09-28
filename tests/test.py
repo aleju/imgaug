@@ -44,6 +44,7 @@ def main():
     test_2d_inputs()
     test_background_augmentation()
     test_determinism()
+    test_copy_random_state()
 
     print("Finished without errors.")
 
@@ -2612,6 +2613,49 @@ def test_determinism():
         kps_aug2 = aug_det.augment_keypoints(keypoints)
         assert array_equal_lists(images_aug1, images_aug2), "Images not identical for %s" % (aug.name,)
         assert keypoints_equal(kps_aug1, kps_aug2), "Keypoints not identical for %s" % (aug.name,)
+
+def test_copy_random_state():
+    image = ia.quokka_square(size=(128, 128))
+    images = np.array([image] * 64, dtype=np.uint8)
+
+    source = iaa.Sequential([
+        iaa.Fliplr(0.5, name="hflip",),
+        iaa.Dropout(0.05, name="dropout",),
+        iaa.Affine(translate_px=(-10, 10), name="translate", random_state=3),
+        iaa.GaussianBlur(1.0, name="blur", random_state=4)
+    ], random_state=5)
+    target = iaa.Sequential([
+        iaa.Fliplr(0.5, name="hflip"),
+        iaa.Dropout(0.05, name="dropout"),
+        iaa.Affine(translate_px=(-10, 10), name="translate")
+    ])
+
+    source.localize_random_state_()
+
+    target_cprs = target.copy_random_state(source, matching="position")
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    images_aug_source = source_alt.augment_images(images)
+    images_aug_target = target_cprs.augment_images(images)
+    #misc.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
+    assert np.array_equal(images_aug_source, images_aug_target)
+
+    target_cprs = target.copy_random_state(source, matching="name")
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    images_aug_source = source_alt.augment_images(images)
+    images_aug_target = target_cprs.augment_images(images)
+    assert np.array_equal(images_aug_source, images_aug_target)
+
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    source_det = source_alt.to_deterministic()
+    target_cprs_det = target.copy_random_state(source_det, matching="name", copy_determinism=True)
+    images_aug_source1 = source_det.augment_images(images)
+    images_aug_target1 = target_cprs_det.augment_images(images)
+    images_aug_source2 = source_det.augment_images(images)
+    images_aug_target2 = target_cprs_det.augment_images(images)
+    assert np.array_equal(images_aug_source1, images_aug_source2)
+    assert np.array_equal(images_aug_target1, images_aug_target2)
+    assert np.array_equal(images_aug_source1, images_aug_target1)
+    assert np.array_equal(images_aug_source2, images_aug_target2)
 
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)
