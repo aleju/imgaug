@@ -190,10 +190,12 @@ class Deterministic(StochasticParameter):
         return self.__str__()
 
     def __str__(self):
-        if isinstance(self.value, int):
+        if ia.is_single_integer(self.value):
             return "Deterministic(int %d)" % (self.value,)
-        else:
+        elif ia.is_single_float(self.value):
             return "Deterministic(float %.8f)" % (self.value,)
+        else:
+            return "Deterministic(%s)" % (str(self.value),)
 
 class FromLowerResolution(StochasticParameter):
     def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
