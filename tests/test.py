@@ -44,6 +44,7 @@ def main():
     test_2d_inputs()
     test_background_augmentation()
     test_determinism()
+    test_keypoint_augmentation()
     test_copy_random_state()
 
     print("Finished without errors.")
@@ -2614,13 +2615,108 @@ def test_determinism():
         assert array_equal_lists(images_aug1, images_aug2), "Images not identical for %s" % (aug.name,)
         assert keypoints_equal(kps_aug1, kps_aug2), "Keypoints not identical for %s" % (aug.name,)
 
+def test_keypoint_augmentation():
+    ia.seed(1)
+
+    keypoints = []
+    for y in range(40//5):
+        for x in range(60//5):
+            keypoints.append(ia.Keypoint(y=y*5, x=x*5))
+
+    keypoints_oi = ia.KeypointsOnImage(keypoints, shape=(40, 60, 3))
+    augs = [
+        iaa.Add((-5, 5), name="Add"),
+        iaa.AddElementwise((-5, 5), name="AddElementwise"),
+        iaa.AdditiveGaussianNoise(0.01*255, name="AdditiveGaussianNoise"),
+        iaa.Multiply((0.95, 1.05), name="Multiply"),
+        iaa.Dropout(0.01, name="Dropout"),
+        iaa.CoarseDropout(0.01, size_px=6, name="CoarseDropout"),
+        iaa.Invert(0.01, per_channel=True, name="Invert"),
+        iaa.ContrastNormalization((0.95, 1.05), name="ContrastNormalization"),
+        iaa.GaussianBlur(sigma=(0.95, 1.05), name="GaussianBlur"),
+        iaa.AverageBlur((3, 5), name="AverageBlur"),
+        iaa.MedianBlur((3, 5), name="MedianBlur"),
+        #iaa.BilateralBlur((3, 5), name="BilateralBlur"),
+        # WithColorspace ?
+        #iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"),
+        # ChangeColorspace ?
+        # Grayscale cannot be tested, input not RGB
+        # Convolve ?
+        iaa.Sharpen((0.0, 0.1), lightness=(1.0, 1.2), name="Sharpen"),
+        iaa.Emboss(alpha=(0.0, 0.1), strength=(0.5, 1.5), name="Emboss"),
+        iaa.EdgeDetect(alpha=(0.0, 0.1), name="EdgeDetect"),
+        iaa.DirectedEdgeDetect(alpha=(0.0, 0.1), direction=0, name="DirectedEdgeDetect"),
+        iaa.Fliplr(0.5, name="Fliplr"),
+        iaa.Flipud(0.5, name="Flipud"),
+        iaa.Affine(translate_px=(-5, 5), name="Affine-translate-px"),
+        iaa.Affine(translate_percent=(-0.05, 0.05), name="Affine-translate-percent"),
+        iaa.Affine(rotate=(-20, 20), name="Affine-rotate"),
+        iaa.Affine(shear=(-20, 20), name="Affine-shear"),
+        iaa.Affine(scale=(0.9, 1.1), name="Affine-scale"),
+        iaa.PiecewiseAffine(scale=(0.001, 0.005), name="PiecewiseAffine"),
+        #iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"),
+        iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"),
+        # Sequential
+        # SomeOf
+        # OneOf
+        # Sometimes
+        # WithChannels
+        # Noop
+        # Lambda
+        # AssertLambda
+        # AssertShape
+        iaa.Alpha((0.0, 0.1), iaa.Add(10), name="Alpha"),
+        iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"),
+        iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"),
+        iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"),
+        iaa.Superpixels(p_replace=0.01, n_segments=64),
+        iaa.Scale(0.5, name="Scale"),
+        iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
+        iaa.Pad(px=(0, 10), name="Pad"),
+        iaa.Crop(px=(0, 10), name="Crop")
+    ]
+
+    for aug in augs:
+        #if aug.name != "PiecewiseAffine":
+        #    continue
+        dss = []
+        for i in range(10):
+            aug_det = aug.to_deterministic()
+            kp_image = keypoints_oi.to_keypoint_image(size=5)
+            kp_image_aug = aug_det.augment_image(kp_image)
+            kp_image_aug_rev = ia.KeypointsOnImage.from_keypoint_image(
+                kp_image_aug,
+                if_not_found_coords={"x": -9999, "y": -9999}
+            )
+            kp_aug = aug_det.augment_keypoints([keypoints_oi])[0]
+            ds = []
+            assert len(kp_image_aug_rev.keypoints) == len(kp_aug.keypoints), "Lost keypoints for '%s' (%d vs expected %d)" % (aug.name, len(kp_aug.keypoints), len(kp_image_aug_rev.keypoints))
+            for kp_pred, kp_pred_img in zip(kp_aug.keypoints, kp_image_aug_rev.keypoints):
+                kp_pred_lost = (kp_pred.x == -9999 and kp_pred.y == -9999)
+                kp_pred_img_lost = (kp_pred_img.x == -9999 and kp_pred_img.y == -9999)
+                #if kp_pred_lost and not kp_pred_img_lost:
+                #    print("lost kp_pred", kp_pred_img)
+                #elif not kp_pred_lost and kp_pred_img_lost:
+                #    print("lost kp_pred_img", kp_pred)
+                #elif kp_pred_lost and kp_pred_img_lost:
+                #    print("lost both keypoints")
+
+                if not kp_pred_lost and not kp_pred_img_lost:
+                    d = np.sqrt((kp_pred.x - kp_pred_img.x) ** 2 + (kp_pred.y - kp_pred_img.y) ** 2)
+                    ds.append(d)
+            #print(aug.name, np.average(ds), ds)
+            dss.extend(ds)
+            if len(ds) == 0:
+                print("[INFO] No valid keypoints found for '%s' in test_keypoint_augmentation()" % (str(aug),))
+        assert np.average(dss) < 5.0, "Average distance too high (%.2f, with ds: %s)" % (np.average(dss), str(dss))
+
 def test_copy_random_state():
     image = ia.quokka_square(size=(128, 128))
     images = np.array([image] * 64, dtype=np.uint8)
 
     source = iaa.Sequential([
-        iaa.Fliplr(0.5, name="hflip",),
-        iaa.Dropout(0.05, name="dropout",),
+        iaa.Fliplr(0.5, name="hflip"),
+        iaa.Dropout(0.05, name="dropout"),
         iaa.Affine(translate_px=(-10, 10), name="translate", random_state=3),
         iaa.GaussianBlur(1.0, name="blur", random_state=4)
     ], random_state=5)
