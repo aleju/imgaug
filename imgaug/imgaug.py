@@ -559,6 +559,11 @@ class KeypointsOnImage(object):
         This function can be used as a helper when augmenting keypoints with
         a method that only supports the augmentation of images.
 
+        Parameters
+        -------
+        size : int
+            Size of each (squared) point.
+
         Returns
         -------
         image : (H,W,N) ndarray
@@ -566,8 +571,6 @@ class KeypointsOnImage(object):
             defined in KeypointsOnImage.shape[0] (analogous W). N is the
             number of keypoints.
 
-        size : int
-            Size of each (squared) point.
 
         """
         assert len(self.keypoints) > 0
@@ -601,7 +604,8 @@ class KeypointsOnImage(object):
         Parameters
         ----------
         image : (H,W,N) ndarray
-            The keypoints image. N is the number of keypoints.
+            The keypoints image. N is the number of
+            keypoints.
 
         if_not_found_coords : tuple or list or dict or None
             Coordinates to use for keypoints that cannot be found in `image`.
@@ -617,8 +621,8 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-            out : KeypointsOnImage
-                The extracted keypoints.
+        out : KeypointsOnImage
+            The extracted keypoints.
 
         """
         assert len(image.shape) == 3
