@@ -390,6 +390,7 @@ class BilateralBlur(Augmenter):
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
         for i in sm.xrange(nb_images):
+            assert images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels."
             di = samples_d[i]
             sigma_color_i = samples_sigma_color[i]
             sigma_space_i = samples_sigma_space[i]
