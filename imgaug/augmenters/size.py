@@ -3,18 +3,19 @@ Augmenters that somehow change the size of the images.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
-and then e.g.
+    `from imgaug import augmenters as iaa`
+and then e.g. ::
+
     seq = iaa.Sequential([
         iaa.Scale({"height": 32, "width": 64})
         iaa.Crop((0, 20))
     ])
 
 List of augmenters:
-    Scale
-    CropAndPad
-    Crop
-    Pad
+    * Scale
+    * CropAndPad
+    * Crop
+    * Pad
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia

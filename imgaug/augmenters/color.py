@@ -3,19 +3,20 @@ Augmenters that apply color space oriented changes.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
-and then e.g.
+    `from imgaug import augmenters as iaa`
+and then e.g. ::
+
     seq = iaa.Sequential([
         iaa.Grayscale((0.0, 1.0)),
         iaa.AddToHueAndSaturation((-10, 10))
     ])
 
 List of augmenters:
-    InColorspace (deprecated)
-    WithColorspace
-    AddToHueAndSaturation
-    ChangeColorspace
-    Grayscale
+    * InColorspace (deprecated)
+    * WithColorspace
+    * AddToHueAndSaturation
+    * ChangeColorspace
+    * Grayscale
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia

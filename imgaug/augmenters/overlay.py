@@ -3,14 +3,18 @@ Augmenters that overlay two images with each other.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
-and then e.g.
+    `from imgaug import augmenters as iaa`
+and then e.g. ::
+
     seq = iaa.Sequential([
         iaa.Alpha(0.5, iaa.Add((-5, 5)))
     ])
 
 List of augmenters:
-    Alpha
+    * Alpha
+    * AlphaElementwise
+    * SimplexNoiseAlpha
+    * FrequencyNoiseAlpha
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia

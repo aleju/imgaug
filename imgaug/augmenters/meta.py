@@ -4,21 +4,21 @@ for meta usage.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
+    `from imgaug import augmenters as iaa`
 and then e.g.
-    seq = iaa.Sequential([...])
+    `seq = iaa.Sequential([...])`
 
 List of augmenters:
-    Augmenter (base class for all augmenters)
-    Sequential
-    SomeOf
-    OneOf
-    Sometimes
-    WithChannels
-    Noop
-    Lambda
-    AssertLambda
-    AssertShape
+    * Augmenter (base class for all augmenters)
+    * Sequential
+    * SomeOf
+    * OneOf
+    * Sometimes
+    * WithChannels
+    * Noop
+    * Lambda
+    * AssertLambda
+    * AssertShape
 
 Note that WithColorspace is in `color.py`.
 """

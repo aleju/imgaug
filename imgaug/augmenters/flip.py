@@ -3,16 +3,17 @@ Augmenters that apply mirroring/flipping operations to images.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
-and then e.g.
+    `from imgaug import augmenters as iaa`
+and then e.g. ::
+
     seq = iaa.Sequential([
         iaa.Fliplr((0.0, 1.0)),
         iaa.Flipud((0.0, 1.0))
     ])
 
 List of augmenters:
-    Fliplr
-    Flipud
+    * Fliplr
+    * Flipud
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia

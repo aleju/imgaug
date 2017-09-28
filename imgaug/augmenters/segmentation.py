@@ -3,14 +3,15 @@ Augmenters that apply changes to images based on forms of segmentation.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
-and then e.g.
+    `from imgaug import augmenters as iaa`
+and then e.g. ::
+
     seq = iaa.Sequential([
         iaa.Superpixels(...)
     ])
 
 List of augmenters:
-    Superpixels
+    * Superpixels
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia

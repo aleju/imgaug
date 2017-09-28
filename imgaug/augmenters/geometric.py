@@ -3,18 +3,19 @@ Augmenters that apply affine transformations or other similar augmentations.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead
-    from imgaug import augmenters as iaa
-and then e.g.
+    `from imgaug import augmenters as iaa`
+and then e.g. ::
+
     seq = iaa.Sequential([
         iaa.Affine(...),
         iaa.PerspectiveTransform(...)
     ])
 
 List of augmenters:
-    Affine
-    PiecewiseAffine
-    PerspectiveTransform
-    ElasticTransformation
+    * Affine
+    * PiecewiseAffine
+    * PerspectiveTransform
+    * ElasticTransformation
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
