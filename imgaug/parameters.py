@@ -805,6 +805,95 @@ class Add(StochasticParameter):
         opstr = str(self.other_param)
         return "Add(%s, %s)" % (opstr, str(self.val))
 
+class Absolute(StochasticParameter):
+    """
+    Converts another parameter's results to absolute values.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    Examples
+    --------
+    >>> param = Absolute(Uniform(-1.0, 1.0))
+
+    Converts a uniform range [-1.0, 1.0) to [0.0, 1.0].
+
+    """
+    def __init__(self, other_param):
+        super(Absolute, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+
+        self.other_param = other_param
+
+    def _draw_samples(self, size, random_state):
+        samples = self.other_param.draw_samples(size, random_state=random_state)
+        return np.absolute(samples)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Absolute(%s)" % (opstr,)
+
+class RandomSign(StochasticParameter):
+    """
+    Converts another parameter's results randomly to positive or negative
+    values.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    p_positive : number
+        Fraction of values that are supposed to be turned to positive
+        values.
+
+    Examples
+    --------
+    >>> param = RandomSign(Poisson(1))
+
+    Generates a poisson distribution with alpha=1 that is mirrored at the
+    y-axis.
+
+    """
+    def __init__(self, other_param, p_positive=0.5):
+        super(RandomSign, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+        assert ia.is_single_number(p_positive)
+        assert 0 <= p_positive <= 1
+
+        self.other_param = other_param
+        self.p_positive = p_positive
+
+    def _draw_samples(self, size, random_state):
+        samples = self.other_param.draw_samples(
+            size,
+            random_state=ia.copy_random_state(random_state)
+        )
+        coinflips = ia.copy_random_state(random_state).binomial(
+            1, self.p_positive, size=size
+        ).astype(np.int32)
+        signs = coinflips * 2 - 1
+        # Add absolute here to guarantee that we get p_positive percent of
+        # positive values. Otherwise we would merely flip p_positive percent
+        # of all signs.
+        return np.absolute(samples) * signs
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "RandomSign(%s, %.2f)" % (opstr, self.p_positive)
+
 # TODO this always aggregates the result in high resolution space,
 # instead of aggregating them in low resolution and then only upscaling the
 # final image (for N iterations that would save up to N-1 upscales)
