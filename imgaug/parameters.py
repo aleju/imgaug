@@ -233,6 +233,62 @@ class DiscreteUniform(StochasticParameter):
     def __str__(self):
         return "DiscreteUniform(%s, %s)" % (self.a, self.b)
 
+class Poisson(StochasticParameter):
+    """
+    Parameter that resembles a poisson distribution.
+
+    A poisson distribution with lambda=0 has its highest probability at
+    point 0 and decreases quickly from there.
+    Poisson distributions are discrete and never negative.
+
+    Parameters
+    ----------
+    lam : number or tuple of two number or list of number or StochasticParameter
+        Lambda parameter of the poisson
+        distribution.
+            * If a number, this number will be used as a constant value.
+            * If a tuple of two numbers (a, b), the value will be sampled
+              once per call to `_draw_samples()` from the range [a, b).
+            * If a list of numbers, a random value will be picked from the
+              list per call to `_draw_samples()`.
+            * If a StochasticParameter, that parameter will be queried once
+              per call to `_draw_samples()`.
+
+    Examples
+    --------
+    >>> param = Poisson(0)
+
+    Sample from a poisson distribution with lambda=0.
+
+    """
+
+    def __init__(self, lam):
+        StochasticParameter.__init__(self)
+
+        if ia.is_single_number(lam):
+            self.lam = Deterministic(lam)
+        elif isinstance(lam, tuple):
+            assert len(lam) == 2
+            self.lam = Uniform(lam[0], lam[1])
+        elif ia.is_iterable(lam):
+            self.lam = Choice(lam)
+        elif isinstance(lam, StochasticParameter):
+            self.lam = lam
+        else:
+            raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for lam, got %s." % (type(lam),))
+
+    def _draw_samples(self, size, random_state):
+        lam = self.lam.draw_sample(random_state=random_state)
+        lam = max(lam, 0)
+
+        return random_state.poisson(lam=lam, size=size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Poisson(%s)" % (self.lam,)
+
 class Normal(StochasticParameter):
     """
     Parameter that resembles a (continuous) normal distribution.
