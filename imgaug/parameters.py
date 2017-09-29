@@ -8,6 +8,95 @@ import six
 import six.moves as sm
 import scipy
 
+def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
+    def check_value_range(v):
+        if value_range is None:
+            return True
+        elif isinstance(value_range, tuple):
+            assert len(value_range) == 2
+            if value_range[0] is None and value_range[1] is None:
+                return True
+            elif value_range[0] is None:
+                assert v <= value_range[1], "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1])
+                return True
+            elif value_range[1] is None:
+                assert value_range[0] <= v, "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0])
+                return True
+            else:
+                assert value_range[0] <= v <= value_range[1], "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (name, value_range[0], value_range[1])
+                return True
+        elif ia.is_callable(value_range):
+            value_range(v)
+            return True
+        else:
+            raise Exception("Unexpected input for value_range, got %s." % (str(value_range),))
+
+    if ia.is_single_number(param):
+        check_value_range(param)
+        return Deterministic(param)
+    elif tuple_to_uniform and isinstance(param, tuple):
+        assert len(param) == 2
+        check_value_range(param[0])
+        check_value_range(param[1])
+        return Uniform(param[0], param[1])
+    elif list_to_choice and ia.is_iterable(param):
+        for param_i in param:
+            check_value_range(param_i)
+        return Choice(param)
+    elif isinstance(param, StochasticParameter):
+        return param
+    else:
+        raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
+
+def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True):
+    def check_value_range(v):
+        if value_range is None:
+            return True
+        elif isinstance(value_range, tuple):
+            assert len(value_range) == 2
+            if value_range[0] is None and value_range[1] is None:
+                return True
+            elif value_range[0] is None:
+                assert v <= value_range[1], "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1])
+                return True
+            elif value_range[1] is None:
+                assert value_range[0] <= v, "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0])
+                return True
+            else:
+                assert value_range[0] <= v <= value_range[1], "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (name, value_range[0], value_range[1])
+                return True
+        elif ia.is_callable(value_range):
+            value_range(v)
+            return True
+        else:
+            raise Exception("Unexpected input for value_range, got %s." % (str(value_range),))
+
+    if ia.is_single_integer(param) or (allow_floats and ia.is_single_float(param)):
+        check_value_range(param)
+        return Deterministic(int(param))
+    elif tuple_to_uniform and isinstance(param, tuple):
+        assert len(param) == 2
+        if allow_floats:
+            assert ia.is_single_number(param[0]), "Expected number, got %s." % (type(param[0]),)
+            assert ia.is_single_number(param[1]), "Expected number, got %s." % (type(param[1]),)
+        else:
+            assert ia.is_single_integer(param[0]), "Expected integer, got %s." % (type(param[0]),)
+            assert ia.is_single_integer(param[1]), "Expected integer, got %s." % (type(param[1]),)
+        check_value_range(param[0])
+        check_value_range(param[1])
+        return DiscreteUniform(int(param[0]), int(param[1]))
+    elif list_to_choice and ia.is_iterable(param):
+        for param_i in param:
+            check_value_range(param_i)
+        return Choice([int(param_i) for param_i in param])
+    elif isinstance(param, StochasticParameter):
+        return param
+    else:
+        if allow_floats:
+            raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
+        else:
+            raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
+
 @six.add_metaclass(ABCMeta)
 class StochasticParameter(object):
     """
@@ -92,6 +181,27 @@ class StochasticParameter(object):
 
         """
         return copy_module.deepcopy(self)
+
+    def draw_distribution_graph(self, title=None):
+        import matplotlib.pyplot as plt
+        points = self._draw_samples_for_distribution_graph()
+        fig = plt.figure()
+        fig.add_subplot(111)
+        ax = fig.gca()
+        count, bins, ignored = ax.hist(points, 100, normed=True)
+        if title is None:
+            ax.set_title(str(self))
+        elif title != False:
+            ax.set_title(title)
+        fig.canvas.draw()
+        fig.tight_layout(pad=0)
+        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        #image = np.fromstring(fig.canvas.tostring_rgb(), dtype='uint8')
+        return data
+
+    def _draw_samples_for_distribution_graph(self):
+        return self.draw_samples(10000)
 
 class Binomial(StochasticParameter):
     """
@@ -256,9 +366,9 @@ class Poisson(StochasticParameter):
 
     Examples
     --------
-    >>> param = Poisson(0)
+    >>> param = Poisson(1)
 
-    Sample from a poisson distribution with lambda=0.
+    Sample from a poisson distribution with lambda=1.
 
     """
 
@@ -300,12 +410,12 @@ class Normal(StochasticParameter):
     loc : number or StochasticParameter
         The mean of the normal distribution.
         If StochasticParameter, the mean will be sampled once per call
-        to _draw_samples().
+        to `_draw_samples()`.
 
     scale : number or StochasticParameter
         The standard deviation of the normal distribution.
         If StochasticParameter, the scale will be sampled once per call
-        to _draw_samples().
+        to `_draw_samples()`.
 
     Examples
     --------
@@ -336,7 +446,7 @@ class Normal(StochasticParameter):
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
         scale = self.scale.draw_sample(random_state=random_state)
-        assert scale >= 0, "Expected scale to be in rnage [0, inf), got %s." % (scale,)
+        assert scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,)
         if scale == 0:
             return np.tile(loc, size)
         else:
@@ -347,6 +457,49 @@ class Normal(StochasticParameter):
 
     def __str__(self):
         return "Normal(loc=%s, scale=%s)" % (self.loc, self.scale)
+
+class ChiSquare(StochasticParameter):
+    """
+    Parameter that resembles a (continuous) chi-square distribution.
+
+    This is a wrapper around numpy's random.chisquare().
+
+    Parameters
+    ----------
+    df : int or tuple of two int or list of int or StochasticParameter
+        Degrees of freedom (must be 1 or
+        higher).
+            * If a single int, this int will be used as a constant value.
+            * If a tuple of two ints (a, b), the value will be sampled
+              once per call to `_draw_samples()` from the discrete
+              range [a..b].
+            * If a list of ints, a random value will be picked from the
+              list per call to `_draw_samples()`.
+            * If a StochasticParameter, that parameter will be queried once
+              per call to `_draw_samples()`.
+
+    Examples
+    --------
+    >>> param = ChiSquare(df=2)
+
+    A chi-square distribution with two degrees of freedom.
+
+    """
+    def __init__(self, df):
+        super(ChiSquare, self).__init__()
+
+        self.df = handle_discrete_param(df, "df", value_range=(1, None))
+
+    def _draw_samples(self, size, random_state):
+        df = self.df.draw_sample(random_state=random_state)
+        assert df >= 1, "Expected df to be in range [1, inf), got %s." % (df,)
+        return random_state.chisquare(df, size=size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "ChiSquare(df=%s)" % (self.df,)
 
 class Uniform(StochasticParameter):
     """
