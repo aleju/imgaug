@@ -764,6 +764,47 @@ class Multiply(StochasticParameter):
         opstr = str(self.other_param)
         return "Multiply(%s, %s)" % (opstr, str(self.val))
 
+class Add(StochasticParameter):
+    """
+    Parameter to add to other parameter's results.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    val : number
+        Value to add to the other parameter's
+        results.
+
+    Examples
+    --------
+    >>> param = Add(Uniform(0.0, 1.0), 1.0)
+
+    Converts a uniform range [0.0, 1.0) to [1.0, 2.0).
+
+    """
+    def __init__(self, other_param, val):
+        super(Add, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+        assert ia.is_single_number(val)
+
+        self.other_param = other_param
+        self.val = val
+
+    def _draw_samples(self, size, random_state):
+        samples = self.other_param.draw_samples(size, random_state=random_state)
+        return samples + self.val
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Add(%s, %s)" % (opstr, str(self.val))
+
 # TODO this always aggregates the result in high resolution space,
 # instead of aggregating them in low resolution and then only upscaling the
 # final image (for N iterations that would save up to N-1 upscales)
