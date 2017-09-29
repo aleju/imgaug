@@ -41,8 +41,6 @@ DEFAULT_FONT_FP = os.path.join(
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
-
-
 def is_np_array(val):
     """
     Checks whether a variable is a numpy array.
@@ -170,6 +168,28 @@ def is_integer_array(val):
 
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.integer)
+
+def is_callable(val):
+    """
+    Checks whether a variable is a callable, e.g. a function.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a callable. Otherwise False.
+
+    """
+    # python 3.x with x <= 2 does not support callable(), apparently
+    if sys.version_info[0] == 3 and sys.version_info[1] <= 2:
+        return hasattr(val, '__call__')
+    else:
+        return callable(val)
 
 def seed(seedval):
     """
