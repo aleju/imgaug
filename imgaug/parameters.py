@@ -202,7 +202,7 @@ class DiscreteUniform(StochasticParameter):
     """
 
     def __init__(self, a, b):
-        StochasticParameter.__init__(self)
+        super(DiscreteUniform, self).__init__()
 
         # for two ints the samples will be from range a <= x <= b
         assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
@@ -263,7 +263,7 @@ class Poisson(StochasticParameter):
     """
 
     def __init__(self, lam):
-        StochasticParameter.__init__(self)
+        super(Poisson, self).__init__()
 
         if ia.is_single_number(lam):
             self.lam = Deterministic(lam)
@@ -398,6 +398,71 @@ class Uniform(StochasticParameter):
 
     def __str__(self):
         return "Uniform(%s, %s)" % (self.a, self.b)
+
+class Beta(StochasticParameter):
+    """
+    Parameter that resembles a (continuous) beta distribution.
+
+    Parameters
+    ----------
+    {alpha, beta} : number or tuple of two number or list of number or StochasticParameter
+        alpha and beta parameters of the beta
+        distribution.
+            * If number, that number will always be used.
+            * If tuple of two number, a random value will be sampled per
+              call to `_draw_samples()` from the range [a, b).
+            * If list of number, a random element from that list will be
+              sampled per call to `_draw_samples()`.
+            * If a StochasticParameter, a random value will be sampled
+              from that parameter per call to `_draw_samples()`.
+        alpha and beta have to be values above 0. If they end up <=0 they
+        are automatically clipped to 0+epsilon.
+
+    epsilon : number
+        Clipping parameter. If alpha or beta end up <=0, they are clipped to
+        0+epsilon.
+
+    Examples
+    --------
+    >>> param = Beta(0.5, 0.5)
+
+    Samples random values from the beta distribution with alpha=beta=0.5.
+
+    """
+    def __init__(self, alpha, beta, epsilon=0.0001):
+        super(Beta, self).__init__()
+
+        def handle_param(param, name):
+            if ia.is_single_number(param):
+                return Deterministic(param)
+            elif isinstance(param, tuple):
+                assert len(param) == 2
+                return Uniform(param[0], param[1])
+            elif ia.is_iterable(param):
+                return Choice(param)
+            elif isinstance(param, StochasticParameter):
+                return param
+            else:
+                raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
+
+        self.alpha = handle_param(alpha, "alpha")
+        self.beta = handle_param(beta, "beta")
+
+        assert ia.is_single_number(epsilon)
+        self.epsilon = epsilon
+
+    def _draw_samples(self, size, random_state):
+        alpha = self.alpha.draw_sample(random_state=random_state)
+        beta = self.beta.draw_sample(random_state=random_state)
+        alpha = max(alpha, self.epsilon)
+        beta = max(beta, self.epsilon)
+        return random_state.beta(alpha, beta, size=size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Beta(%s, %s)" % (self.alpha, self.beta)
 
 class Deterministic(StochasticParameter):
     """
