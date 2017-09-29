@@ -458,6 +458,66 @@ class Normal(StochasticParameter):
     def __str__(self):
         return "Normal(loc=%s, scale=%s)" % (self.loc, self.scale)
 
+class Laplace(StochasticParameter):
+    """
+    Parameter that resembles a (continuous) laplace distribution.
+
+    This is a wrapper around numpy's random.laplace().
+
+    Parameters
+    ----------
+    loc : number or tuple of two number or list of number or StochasticParameter
+        The position of the distribution peak, similar to the mean in normal
+        distributions.
+            * If a single number, this number will be used as a constant value.
+            * If a tuple of two numbers (a, b), the value will be sampled
+              once per call to `_draw_samples()` from the continuous
+              range [a, b).
+            * If a list of numbers, a random value will be picked from the
+              list per call to `_draw_samples()`.
+            * If a StochasticParameter, that parameter will be queried once
+              per call to `_draw_samples()`.
+
+    scale : number or tuple of two number or list of number or StochasticParameter
+        The exponential decay factor, similar to standard deviation in
+        normal distributions.
+            * If a single number, this number will be used as a constant value.
+            * If a tuple of two numbers (a, b), the value will be sampled
+              once per call to `_draw_samples()` from the continuous
+              range [a, b).
+            * If a list of numbers, a random value will be picked from the
+              list per call to `_draw_samples()`.
+            * If a StochasticParameter, that parameter will be queried once
+              per call to `_draw_samples()`.
+
+    Examples
+    --------
+    >>> param = Laplace(0, 1.0)
+
+    A laplace distribution, which's peak is at 0 and decay is 1.0.
+
+    """
+    def __init__(self, loc, scale):
+        super(Laplace, self).__init__()
+
+        self.loc = handle_continuous_param(loc, "loc")
+        self.scale = handle_continuous_param(scale, "scale")
+
+    def _draw_samples(self, size, random_state):
+        loc = self.loc.draw_sample(random_state=random_state)
+        scale = self.scale.draw_sample(random_state=random_state)
+        assert scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,)
+        if scale == 0:
+            return np.tile(loc, size)
+        else:
+            return random_state.laplace(loc, scale, size=size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Laplace(loc=%s, scale=%s)" % (self.loc, self.scale)
+
 class ChiSquare(StochasticParameter):
     """
     Parameter that resembles a (continuous) chi-square distribution.
@@ -509,14 +569,14 @@ class Weibull(StochasticParameter):
 
     Parameters
     ----------
-    a : float or tuple of two float or list of float or StochasticParameter
+    a : number or tuple of two number or list of number or StochasticParameter
         Shape parameter of the
         distribution.
-            * If a single float, this float will be used as a constant value.
-            * If a tuple of two floats (a, b), the value will be sampled
+            * If a single number, this number will be used as a constant value.
+            * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
               range [a, b).
-            * If a list of floats, a random value will be picked from the
+            * If a list of numbers, a random value will be picked from the
               list per call to `_draw_samples()`.
             * If a StochasticParameter, that parameter will be queried once
               per call to `_draw_samples()`.
