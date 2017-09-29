@@ -41,42 +41,187 @@ DEFAULT_FONT_FP = os.path.join(
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
-def seed(seedval):
-    CURRENT_RANDOM_STATE.seed(seedval)
+
 
 def is_np_array(val):
+    """
+    Checks whether a variable is a numpy array.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a numpy array. Otherwise False.
+
+    """
     return isinstance(val, (np.ndarray, np.generic))
 
-
 def is_single_integer(val):
+    """
+    Checks whether a variable is an integer.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is an integer. Otherwise False.
+
+    """
     return isinstance(val, numbers.Integral)
 
-
 def is_single_float(val):
+    """
+    Checks whether a variable is a float.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a float. Otherwise False.
+
+    """
     return isinstance(val, numbers.Real) and not is_single_integer(val)
 
-
 def is_single_number(val):
+    """
+    Checks whether a variable is a number, i.e. an integer or float.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a number. Otherwise False.
+
+    """
     return is_single_integer(val) or is_single_float(val)
 
-
 def is_iterable(val):
+    """
+    Checks whether a variable is iterable.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is an iterable. Otherwise False.
+
+    """
+    # TODO make this more abstract, not just restricted to tuple/list
     return isinstance(val, (tuple, list))
 
-
+# TODO convert to is_single_string() or rename is_single_integer/float/number()
 def is_string(val):
+    """
+    Checks whether a variable is a string.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a string. Otherwise False.
+
+    """
     return isinstance(val, six.string_types)
 
-
 def is_integer_array(val):
-    return issubclass(val.dtype.type, np.integer)
+    """
+    Checks whether a variable is a numpy integer array.
 
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a numpy integer array. Otherwise False.
+
+    """
+    return is_np_array(val) and issubclass(val.dtype.type, np.integer)
+
+def seed(seedval):
+    """
+    Set the seed used by the global random state and thereby all randomness
+    in the library.
+
+    This random state is by default by all augmenters. Under special
+    circumstances (e.g. when an augmenter is switched to deterministic mode),
+    the global random state is replaced by another -- local -- one.
+    The replacement is dependent on the global random state.
+
+    Parameters
+    ----------
+    seedval : int
+        The seed to
+        use.
+    """
+    CURRENT_RANDOM_STATE.seed(seedval)
 
 def current_random_state():
+    """
+    Returns the current/global random state of the library.
+
+    Returns
+    ----------
+    out : np.random.RandomState
+        The current/global random state.
+
+    """
     return CURRENT_RANDOM_STATE
 
-
 def new_random_state(seed=None, fully_random=False):
+    """
+    Returns a new random state.
+
+    Parameters
+    ----------
+    seed : None or int, optional(default=None)
+        Optional seed value to use.
+        The same datatypes are allowed as for np.random.RandomState(seed).
+
+    fully_random : bool, optional(default=False)
+        Whether to use numpy's random initialization for the
+        RandomState (used if set to True). If False, a seed is sampled from
+        the global random state, which is a bit faster and hence the default.
+
+    Returns
+    -------
+    out : np.random.RandomState
+        The new random state.
+
+    """
     if seed is None:
         if not fully_random:
             # sample manually a seed instead of just RandomState(),
@@ -85,12 +230,39 @@ def new_random_state(seed=None, fully_random=False):
             seed = CURRENT_RANDOM_STATE.randint(0, 10**6, 1)[0]
     return np.random.RandomState(seed)
 
-
 def dummy_random_state():
+    """
+    Returns a dummy random state that is always based on a seed of 1.
+
+    Returns
+    -------
+    out : np.random.RandomState
+        The new random state.
+
+    """
     return np.random.RandomState(1)
 
-
 def copy_random_state(random_state, force_copy=False):
+    """
+    Creates a copy of a random state.
+
+    Parameters
+    ----------
+    random_state : np.random.RandomState
+        The random state to
+        copy.
+
+    force_copy : bool, optional(default=False)
+        If True, this function will always create a copy of every random
+        state. If False, it will not copy numpy's default random state,
+        but all other random states.
+
+    Returns
+    -------
+    rs_copy : np.random.RandomState
+        The copied random state.
+
+    """
     if random_state == np.random and not force_copy:
         return random_state
     else:
@@ -104,12 +276,44 @@ def copy_random_state(random_state, force_copy=False):
 #    pass
 
 def quokka(size=None):
+    """
+    Returns an image of a quokka as a numpy array.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints, optional(default=None)
+        Size of the output image. Input into scipy.misc.imresize.
+        Usually expected to be a tuple (H, W), where H is the desired height
+        and W is the width. If None, then the image will not be resized.
+
+    Returns
+    -------
+    img : (H,W,3) ndarray
+        The image array of dtype uint8.
+
+    """
     img = ndimage.imread(QUOKKA_FP, mode="RGB")
     if size is not None:
         img = misc.imresize(img, size)
     return img
 
 def quokka_square(size=None):
+    """
+    Returns an (square) image of a quokka as a numpy array.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints, optional(default=None)
+        Size of the output image. Input into scipy.misc.imresize.
+        Usually expected to be a tuple (H, W), where H is the desired height
+        and W is the width. If None, then the image will not be resized.
+
+    Returns
+    -------
+    img : (H,W,3) ndarray
+        The image array of dtype uint8.
+
+    """
     img = ndimage.imread(QUOKKA_FP, mode="RGB")
     img = img[0:643, 0:643]
     if size is not None:
@@ -117,20 +321,69 @@ def quokka_square(size=None):
     return img
 
 def angle_between_vectors(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2':
-            >>> angle_between((1, 0, 0), (0, 1, 0))
-            1.5707963267948966
-            >>> angle_between((1, 0, 0), (1, 0, 0))
-            0.0
-            >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-        From http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
+    """
+    Returns the angle in radians between vectors 'v1' and 'v2'.
+
+    From http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
+
+    Parameters
+    ----------
+    {v1, v2} : (N,) ndarray
+        Input
+        vectors.
+
+    Returns
+    -------
+    out : float
+        Angle in radians.
+
+    Examples
+    --------
+    >>> angle_between((1, 0, 0), (0, 1, 0))
+    1.5707963267948966
+
+    >>> angle_between((1, 0, 0), (1, 0, 0))
+    0.0
+
+    >>> angle_between((1, 0, 0), (-1, 0, 0))
+    3.141592653589793
+
     """
     v1_u = v1 / np.linalg.norm(v1)
     v2_u = v2 / np.linalg.norm(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
+    """
+    Draw text on an image.
+
+    This uses by default DejaVuSans as its font, which is included in the
+    library.
+
+    Parameters
+    ----------
+    img : (H,W,3) ndarray
+        The image array to draw text on.
+        Expected to be of dtype uint8 or float32 (value range 0.0 to 255.0).
+
+    {y, x} : int
+        x- and y- coordinate of the top left corner of the
+        text.
+
+    color : iterable of 3 ints, optional(default=[0, 255, 0])
+        Color of the text to draw. For RGB-images this is expected to be
+        an RGB color.
+
+    size : int, optional(default=25)
+        Font size of the text to
+        draw.
+
+    Returns
+    -------
+    img_np : (H,W,3) ndarray
+        Input image with text drawn on it.
+
+    """
     # keeping PIL here so that it is not a dependency of the library right now
     from PIL import Image, ImageDraw, ImageFont
 
@@ -162,6 +415,41 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
     return img_np
 
 def imresize_many_images(images, sizes=None, interpolation=None):
+    """
+    Resize many images to a specified size.
+
+    Parameters
+    ----------
+    images : (N,H,W,C) ndarray
+        Array of the images to resize.
+        Expected to usually be of dtype uint8.
+
+    sizes : iterable of two ints
+        The new size in (height, width)
+        format.
+
+    interpolation : None or string or int, optional(default=None)
+        The interpolation to use during resize.
+        If int, then expected to be one of:
+            * cv2.INTER_NEAREST (nearest neighbour interpolation)
+            * cv2.INTER_LINEAR (linear interpolation)
+            * cv2.INTER_AREA (area interpolation)
+            * cv2.INTER_CUBIC (cubic interpolation)
+        If string, then expected to be one of:
+            * "nearest" (identical to cv2.INTER_NEAREST)
+            * "linear" (identical to cv2.INTER_LINEAR)
+            * "area" (identical to cv2.INTER_AREA)
+            * "cubic" (identical to cv2.INTER_CUBIC)
+        If None, the interpolation will be chosen automatically. For size
+        increases, area interpolation will be picked and for size decreases,
+        linear interpolation will be picked.
+
+    Returns
+    -------
+    result : (N,H',W',C) ndarray
+        Array of the resized images.
+
+    """
     s = images.shape
     assert len(s) == 4, s
     nb_images = s[0]
@@ -200,6 +488,27 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
 
 def imresize_single_image(image, sizes, interpolation=None):
+    """
+    Resizes a single image.
+
+    Parameters
+    ----------
+    image : (H,W,C) ndarray or (H,W) ndarray
+        Array of the image to resize.
+        Expected to usually be of dtype uint8.
+
+    sizes : iterable of two ints
+        See `imresize_many_images()`.
+
+    interpolation : None or string or int, optional(default=None)
+        See `imresize_many_images()`.
+
+    Returns
+    -------
+    out : (H',W',C) ndarray or (H',W') ndarray
+        The resized image.
+
+    """
     grayscale = False
     if image.ndim == 2:
         grayscale = True
@@ -213,6 +522,29 @@ def imresize_single_image(image, sizes, interpolation=None):
 
 
 def draw_grid(images, rows=None, cols=None):
+    """
+    Converts multiple input images into a single image showing them in a grid.
+
+    Parameters
+    ----------
+    images : (N,H,W,3) ndarray or iterable of (H,W,3) array
+        The input images to convert to a grid.
+        Expected to be RGB and have dtype uint8.
+
+    rows : None or int, optional(default=None)
+        The number of rows to show in the grid.
+        If None, it will be automatically derived.
+
+    cols : None or int, optional(default=None)
+        The number of cols to show in the grid.
+        If None, it will be automatically derived.
+
+    Returns
+    -------
+    grid : (H',W',3) ndarray
+        Image of the generated grid.
+
+    """
     if is_np_array(images):
         assert images.ndim == 4
     else:
@@ -249,16 +581,94 @@ def draw_grid(images, rows=None, cols=None):
 
     return grid
 
-
 def show_grid(images, rows=None, cols=None):
+    """
+    Converts the input images to a grid image and shows it in a new window.
+
+    This function wraps around scipy.misc.imshow(), which requires the
+    `see <image>` command to work. On Windows systems, this tends to not be
+    the case.
+
+    Parameters
+    ----------
+    images : (N,H,W,3) ndarray or iterable of (H,W,3) array
+        See `draw_grid()`.
+
+    rows : None or int, optional(default=None)
+        See `draw_grid()`.
+
+    cols : None or int, optional(default=None)
+        See `draw_grid()`.
+
+    """
     grid = draw_grid(images, rows=rows, cols=cols)
     misc.imshow(grid)
 
 
 class HooksImages(object):
     """
-    # TODO
+    Class to intervene with image augmentation runs.
+
+    This is e.g. useful to dynamically deactivate some augmenters.
+
+    Parameters
+    ----------
+    activator : None or callable, optional(default=None)
+        A function that gives permission to execute an augmenter.
+        The expected interface is
+            `f(images, augmenter, parents, default)`,
+        where `images` are the input images to augment, `augmenter` is the
+        instance of the augmenter to execute, `parents` are previously
+        executed augmenters and `default` is an expected default value to be
+        returned if the activator function does not plan to make a decision
+        for the given inputs.
+
+    propagator : None or callable, optional(default=None)
+        A function that gives permission to propagate the augmentation further
+        to the children of an augmenter. This happens after the activator.
+        In theory, an augmenter may augment images itself (if allowed by the
+        activator) and then execute child augmenters afterwards (if allowed by
+        the propagator). If the activator returned False, the propagation step
+        will never be executed.
+        The expected interface is
+            `f(images, augmenter, parents, default)`,
+        with all arguments having identical meaning to the activator.
+
+    preprocessor : None or callable, optional(default=None)
+        A function to call before an augmenter performed any augmentations.
+        The interface is
+            `f(images, augmenter, parents)`,
+        with all arguments having identical meaning to the activator.
+        It is expected to return the input images, optionally modified.
+
+    postprocessor : None or callable, optional(default=None)
+        A function to call after an augmenter performed augmentations.
+        The interface is the same as for the preprocessor.
+
+    Examples
+    --------
+    >>>> seq = iaa.Sequential([
+    >>>>     iaa.GaussianBlur(3.0, name="blur"),
+    >>>>     iaa.Dropout(0.05, name="dropout"),
+    >>>>     iaa.Affine(translate_px=-5, name="affine")
+    >>>> ])
+    >>>>
+    >>>> def activator(images, augmenter, parents, default):
+    >>>>     return False if augmenter.name in ["blur", "dropout"] else default
+    >>>>
+    >>>> seq_det = seq.to_deterministic()
+    >>>> images_aug = seq_det.augment_images(images)
+    >>>> heatmaps_aug = seq_det.augment_images(
+    >>>>     heatmaps,
+    >>>>     hooks=ia.HooksImages(activator=activator)
+    >>>> )
+
+    This augments images and their respective heatmaps in the same way.
+    The heatmaps however are only modified by Affine, not by GaussianBlur or
+    Dropout.
+
     """
+
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
         self.propagator = propagator
@@ -266,6 +676,16 @@ class HooksImages(object):
         self.postprocessor = postprocessor
 
     def is_activated(self, images, augmenter, parents, default):
+        """
+        Returns whether an augmenter may be executed.
+
+        Returns
+        -------
+        out : bool
+            If True, the augmenter may be executed. If False, it may
+            not be executed.
+
+        """
         if self.activator is None:
             return default
         else:
@@ -274,18 +694,51 @@ class HooksImages(object):
     # TODO is a propagating hook necessary? seems to be covered by activated
     # hook already
     def is_propagating(self, images, augmenter, parents, default):
+        """
+        Returns whether an augmenter may call its children to augment an
+        image. This is independent of the augmenter itself possible changing
+        the image, without calling its children. (Most (all?) augmenters with
+        children currently dont perform any changes themselves.)
+
+        Returns
+        -------
+        out : bool
+            If True, the augmenter may be propagate to its childen.
+            If False, it may not.
+
+        """
         if self.propagator is None:
             return default
         else:
             return self.propagator(images, augmenter, parents, default)
 
     def preprocess(self, images, augmenter, parents):
+        """
+        A function to be called before the augmentation of images starts (per
+        augmenter).
+
+        Returns
+        -------
+        out : (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
+            The input images, optionally modified.
+
+        """
         if self.preprocessor is None:
             return images
         else:
             return self.preprocessor(images, augmenter, parents)
 
     def postprocess(self, images, augmenter, parents):
+        """
+        A function to be called after the augmentation of images was
+        performed.
+
+        Returns
+        -------
+        out : (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
+            The input images, optionally modified.
+
+        """
         if self.postprocessor is None:
             return images
         else:
@@ -293,6 +746,15 @@ class HooksImages(object):
 
 
 class HooksKeypoints(HooksImages):
+    """
+    Class to intervene with keypoint augmentation runs.
+
+    This is e.g. useful to dynamically deactivate some augmenters.
+
+    This class is currently the same as the one for images. This may or may
+    not change in the future.
+
+    """
     pass
 
 
@@ -388,7 +850,7 @@ class KeypointsOnImage(object):
     keypoints : list of Keypoint
         List of keypoints on the image.
 
-    shape :
+    shape : tuple of int
         The shape of the image on which the keypoints are placed.
 
     Examples
@@ -659,9 +1121,27 @@ class KeypointsOnImage(object):
         return KeypointsOnImage(keypoints, shape=(height, width))
 
     def copy(self):
+        """
+        Create a shallow copy of the KeypointsOnImage object.
+
+        Returns
+        -------
+        out : KeypointsOnImage
+            Shallow copy.
+
+        """
         return copy.copy(self)
 
     def deepcopy(self):
+        """
+        Create a deep copy of the KeypointsOnImage object.
+
+        Returns
+        -------
+        out : KeypointsOnImage
+            Deep copy.
+
+        """
         # for some reason deepcopy is way slower here than manual copy
         #return copy.deepcopy(self)
         kps = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
@@ -671,7 +1151,6 @@ class KeypointsOnImage(object):
         return self.__str__()
 
     def __str__(self):
-        #print(type(self.keypoints), type(self.shape))
         return "KeypointOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
 
@@ -686,12 +1165,14 @@ class Batch(object):
     Parameters
     ----------
     images : None or (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
-        The images to augment.
+        The images to
+        augment.
 
     keypoints : None or list of KeypointOnImage
-        The keypoints to augment.
+        The keypoints to
+        augment.
 
-    data
+    data : anything
         Additional data that is saved in the batch and may be read out
         after augmentation. This could e.g. contain filepaths to each image
         in `images`. As this object is usually used for background
@@ -702,7 +1183,6 @@ class Batch(object):
     def __init__(self, images=None, keypoints=None, data=None):
         self.images = images
         self.images_aug = None
-        # keypoints here are the corners of the bounding box
         self.keypoints = keypoints
         self.keypoints_aug = None
         self.data = data
@@ -753,6 +1233,15 @@ class BatchLoader(object):
             self.workers.append(worker)
 
     def all_finished(self):
+        """
+        Determine whether the workers have finished the loading process.
+
+        Returns
+        -------
+        out : bool
+            True if all workers have finished. Else False.
+
+        """
         return all([event.is_set() for event in self.finished_signal])
 
     def _load_batches(self, load_batch_func, queue, finished_signal, join_signal, seedval):
@@ -770,6 +1259,10 @@ class BatchLoader(object):
         finished_signal.set()
 
     def terminate(self):
+        """
+        Stop all workers.
+
+        """
         self.join_signal.set()
         if self.threaded:
             for worker in self.workers:
@@ -780,8 +1273,33 @@ class BatchLoader(object):
                 finished_signal.set()
 
 class BackgroundAugmenter(object):
-    """Class to augment batches in the background (while training on
-    the GPU)."""
+    """
+    Class to augment batches in the background (while training on the GPU).
+
+    This is a wrapper around the multiprocessing module.
+
+    Parameters
+    ----------
+    batch_loader : BatchLoader
+        BatchLoader object to load data in the
+        background.
+
+    augseq : Augmenter
+        An augmenter to apply to all loaded images.
+        This may be e.g. a Sequential to apply multiple augmenters.
+
+    queue_size : int
+        Size of the queue that is used to temporarily save the augmentation
+        results. Larger values offer the background processes more room
+        to save results when the main process doesn't load much, i.e. they
+        can lead to smoother and faster training. For large images, high
+        values can block a lot of RAM though.
+
+    nb_workers : "auto" or int
+        Number of background workers to spawn. If auto, it will be set
+        to C-1, where C is the number of CPU cores.
+
+    """
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
         assert queue_size > 0
         self.augseq = augseq
@@ -815,7 +1333,18 @@ class BackgroundAugmenter(object):
             self.workers.append(worker)
 
     def get_batch(self):
-        """Returns a batch from the queue of augmented batches."""
+        """
+        Returns a batch from the queue of augmented batches.
+
+        If workers are still running and there are no batches in the queue,
+        it will automatically wait for the next batch.
+
+        Returns
+        -------
+        out : None or ia.Batch
+            One batch or None if all workers have finished.
+
+        """
         batch_str = self.queue_result.get()
         batch = pickle.loads(batch_str)
         if batch is not None:
@@ -828,9 +1357,12 @@ class BackgroundAugmenter(object):
                 return self.get_batch()
 
     def _augment_images_worker(self, augseq, queue_source, queue_result, source_finished_signals, seedval):
-        """Worker function that endlessly queries the source queue (input
+        """
+        Worker function that endlessly queries the source queue (input
         batches), augments batches in it and sends the result to the output
-        queue."""
+        queue.
+
+        """
         np.random.seed(seedval)
         random.seed(seedval)
         augseq.reseed(seedval)
@@ -863,5 +1395,10 @@ class BackgroundAugmenter(object):
                     return
 
     def terminate(self):
+        """
+        Terminates all background processes immediately.
+        This will also free their RAM.
+
+        """
         for worker in self.workers:
             worker.terminate()
