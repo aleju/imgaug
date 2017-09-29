@@ -501,6 +501,49 @@ class ChiSquare(StochasticParameter):
     def __str__(self):
         return "ChiSquare(df=%s)" % (self.df,)
 
+class Weibull(StochasticParameter):
+    """
+    Parameter that resembles a (continuous) weibull distribution.
+
+    This is a wrapper around numpy's random.weibull().
+
+    Parameters
+    ----------
+    a : float or tuple of two float or list of float or StochasticParameter
+        Shape parameter of the
+        distribution.
+            * If a single float, this float will be used as a constant value.
+            * If a tuple of two floats (a, b), the value will be sampled
+              once per call to `_draw_samples()` from the continuous
+              range [a, b).
+            * If a list of floats, a random value will be picked from the
+              list per call to `_draw_samples()`.
+            * If a StochasticParameter, that parameter will be queried once
+              per call to `_draw_samples()`.
+
+    Examples
+    --------
+    >>> param = Weibull(a=0.5)
+
+    A weibull distribution with shape 0.5.
+
+    """
+    def __init__(self, df):
+        super(Weibull, self).__init__()
+
+        self.a = handle_continuous_param(a, "a", value_range=(0.0001, None))
+
+    def _draw_samples(self, size, random_state):
+        df = self.a.draw_sample(random_state=random_state)
+        assert a > 0, "Expected a to be in range (0, inf), got %s." % (a,)
+        return random_state.weibull(a, size=size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Weibull(a=%s)" % (self.a,)
+
 class Uniform(StochasticParameter):
     """
     Parameter that resembles a (continuous) uniform range [a, b).
