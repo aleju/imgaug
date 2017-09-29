@@ -10,13 +10,58 @@ import scipy
 
 @six.add_metaclass(ABCMeta)
 class StochasticParameter(object):
+    """
+    Abstract parent class for all stochastic parameters.
+
+    Stochastic parameters are here all parameters from which values are
+    supposed to be sampled. Usually the sampled values are to a degree random.
+    E.g. a stochastic parameter may be the range [-10, 10], with sampled
+    values being 5.2, -3.7, -9.7 and 6.4.
+
+    """
+
     def __init__(self):
         super(StochasticParameter, self).__init__()
 
     def draw_sample(self, random_state=None):
+        """
+        Draws a single sample value from this parameter.
+
+        Parameters
+        ----------
+        random_state : None or np.random.RandomState, optional(default=None)
+            A random state to use during the sampling process.
+            If None, the libraries global random state will be used.
+
+        Returns
+        -------
+        out : anything
+            A single sample value.
+
+        """
         return self.draw_samples(1, random_state=random_state)[0]
 
     def draw_samples(self, size, random_state=None):
+        """
+        Draws one or more sample values from the parameter.
+
+        Parameters
+        ----------
+        size : tuple of int
+            Number of sample values by
+            dimension.
+
+        random_state : None or np.random.RandomState, optional(default=None)
+            A random state to use during the sampling process.
+            If None, the libraries global random state will be used.
+
+        Returns
+        -------
+        out : (size) iterable
+            Sampled values. Usually a numpy ndarray of basically any dtype,
+            though not strictly limited to numpy arrays.
+
+        """
         random_state = random_state if random_state is not None else ia.current_random_state()
         return self._draw_samples(size, random_state)
 
@@ -25,12 +70,48 @@ class StochasticParameter(object):
         raise NotImplementedError()
 
     def copy(self):
+        """
+        Create a shallow copy of this parameter.
+
+        Returns
+        -------
+        out : StochasticParameter
+            Shallow copy.
+
+        """
         return copy_module.copy(self)
 
     def deepcopy(self):
+        """
+        Create a deep copy of this parameter.
+
+        Returns
+        -------
+        out : StochasticParameter
+            Deep copy.
+
+        """
         return copy_module.deepcopy(self)
 
 class Binomial(StochasticParameter):
+    """
+    Binomial distribution.
+
+    Parameters
+    ----------
+    p : number or StochasticParameter
+        Probability of the binomial distribution. Expected to be in the
+        range [0, 1]. If this is a StochasticParameter, the value will be
+        sampled once per call to _draw_samples().
+
+    Examples
+    --------
+    >>> param = Binomial(Uniform(0.01, 0.2))
+
+    Uses a varying probability `p` between 0.01 and 0.2 per sampling.
+
+    """
+
     def __init__(self, p):
         super(Binomial, self).__init__()
 
@@ -57,6 +138,31 @@ class Binomial(StochasticParameter):
             return "Binomial(%s)" % (self.p,)
 
 class Choice(StochasticParameter):
+    """
+    Parameter that samples value from a list of allowed values.
+
+    Parameters
+    ----------
+    a : iterable
+        List of allowed values.
+        Usually expected to be integers, floats or strings.
+
+    replace : bool, optional(default=True)
+        Whether to perform sampling with or without
+        replacing.
+
+    p : None or iterable, optional(default=None)
+        Optional probabilities of each element in `a`.
+        Must have the same length as `a` (if provided).
+
+    Examples
+    --------
+    >>> param = Choice([0.25, 0.5, 0.75], p=[0.25, 0.5, 0.25])
+
+    Parameter of which 50 pecent of all sampled values will be 0.5.
+    The other 50 percent will be either 0.25 or 0.75.
+
+    """
     def __init__(self, a, replace=True, p=None):
         super(Choice, self).__init__()
 
@@ -74,6 +180,27 @@ class Choice(StochasticParameter):
         return "Choice(a=%s, replace=%s, p=%s)" % (str(self.a), str(self.replace), str(self.p),)
 
 class DiscreteUniform(StochasticParameter):
+    """
+    Parameter that resembles a discrete range of values [a .. b].
+
+    Parameters
+    ----------
+    {a, b} : int or StochasticParameter
+        Lower and upper bound of the sampling range. Values will be sampled
+        from a <= x <= b. All sampled values will be discrete. If a or b is
+        a StochasticParameter, it will be queried once per sampling to
+        estimate the value of a/b. If a>b, the values will automatically be
+        flipped. If a==b, all generated values will be identical to a.
+
+    Examples
+    --------
+    >>> param = DiscreteUniform(10, Choice([20, 30, 40]))
+
+    Sampled values will be discrete and come from the either [10..20] or
+    [10..30] or [10..40].
+
+    """
+
     def __init__(self, a, b):
         StochasticParameter.__init__(self)
 
@@ -107,6 +234,31 @@ class DiscreteUniform(StochasticParameter):
         return "DiscreteUniform(%s, %s)" % (self.a, self.b)
 
 class Normal(StochasticParameter):
+    """
+    Parameter that resembles a (continuous) normal distribution.
+
+    This is a wrapper around numpy's random.normal().
+
+    Parameters
+    ----------
+    loc : number or StochasticParameter
+        The mean of the normal distribution.
+        If StochasticParameter, the mean will be sampled once per call
+        to _draw_samples().
+
+    scale : number or StochasticParameter
+        The standard deviation of the normal distribution.
+        If StochasticParameter, the scale will be sampled once per call
+        to _draw_samples().
+
+    Examples
+    --------
+    >>> param = Normal(Choice([-1.0, 1.0]), 1.0)
+
+    A standard normal distribution, which's mean is shifted either 1.0 to
+    the left or 1.0 to the right.
+
+    """
     def __init__(self, loc, scale):
         super(Normal, self).__init__()
 
@@ -141,6 +293,25 @@ class Normal(StochasticParameter):
         return "Normal(loc=%s, scale=%s)" % (self.loc, self.scale)
 
 class Uniform(StochasticParameter):
+    """
+    Parameter that resembles a (continuous) uniform range [a, b).
+
+    Parameters
+    ----------
+    {a, b} : number or StochasticParameter
+        Lower and upper bound of the sampling range. Values will be sampled
+        from a <= x < b. All sampled values will be continuous. If a or b is
+        a StochasticParameter, it will be queried once per sampling to
+        estimate the value of a/b. If a>b, the values will automatically be
+        flipped. If a==b, all generated values will be identical to a.
+
+    Examples
+    --------
+    >>> param = Uniform(0, 10.0)
+
+    Samples random values from the range [0, 10.0).
+
+    """
     def __init__(self, a, b):
         super(Uniform, self).__init__()
 
@@ -173,6 +344,27 @@ class Uniform(StochasticParameter):
         return "Uniform(%s, %s)" % (self.a, self.b)
 
 class Deterministic(StochasticParameter):
+    """
+    Parameter that resembles a constant value.
+
+    If N values are sampled from this parameter, it will return N times V,
+    where V is the constant value.
+
+    Parameters
+    ----------
+    value : number or string or StochasticParameter
+        A constant value to use.
+        A string may be provided to generate arrays of strings.
+        If this is a StochasticParameter, a single value will be sampled
+        from it exactly once and then used as the constant value.
+
+    Examples
+    --------
+    >>> param = Deterministic(10)
+
+    Will always sample the value 10.
+
+    """
     def __init__(self, value):
         super(Deterministic, self).__init__()
 
@@ -198,6 +390,69 @@ class Deterministic(StochasticParameter):
             return "Deterministic(%s)" % (str(self.value),)
 
 class FromLowerResolution(StochasticParameter):
+    """
+    A meta parameter used to sample other parameter values on a low resolution
+    2d plane (where 2d means of size (H,W,C)).
+
+    This is intended to be used with parameters that would usually sample
+    once value per pixel (or one value per pixel and channel). With this
+    parameter, the sampling can be made more coarse, i.e. the result will
+    become rectangles instead of single pixels.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        The other parameter which is to be sampled on a coarser
+        image.
+
+    size_percent : None or number or iterable of two numbers or StochasticParameter, optional(default=None)
+        Size of the 2d sampling plane in percent of the requested size.
+        I.e. this is relative to the size provided in the call to
+        `_draw_samples(size, ...)`. Lower values will result in smaller
+        sampling planes, which are then upsampled to `size`. This means that
+        lower values will result in larger rectangles.
+        The size may be provided as a constant value or a tuple (a, b), which
+        will automatically be converted to the continuous uniform range [a, b)
+        or a StochasticParameter, which will be queried per call to
+        `_draw_samples()`.
+
+    size_px : None or number or iterable of two numbers or StochasticParameter, optional(default=None)
+        Size of the 2d sampling plane in pixels.
+        Lower values will result in smaller sampling planes, which are then
+        upsampled to the input `size` of `draw_samples(size, ...)`.
+        This means that lower values will result in larger rectangles.
+        The size may be provided as a constant value or a tuple (a, b), which
+        will automatically be converted to the discrete uniform range [a..b]
+        or a StochasticParameter, which will be queried per call to
+        `_draw_samples()`.
+
+    method : string or int or StochasticParameter, optional(default="nearest")
+        Upsampling/interpolation method to use. This is used after the sampling
+        is finished and the low resolution plane has to be upsampled to the
+        requested `size` in `_draw_samples(size, ...)`. The method may be
+        the same as in `imgaug.imresize_many_images()`. Usually `nearest`
+        or `linear` are good choices. `nearest` will result in rectangles
+        with sharp edges and `linear` in rectangles with blurry and round
+        edges. The method may be provided as a StochasticParameter, which
+        will be queried per call to `_draw_samples()`.
+
+    min_size : int, optional(default=1)
+        Minimum size in pixels of the low resolution sampling
+        plane.
+
+    Examples
+    --------
+    >>> param = FromLowerResolution(Binomial(0.05), size_px=(2, 16), method=Choice(["nearest", "linear"]))
+
+    Samples from a binomial distribution with p=0.05. The sampling plane
+    will always have a size HxWxC with H and W being independently sampled
+    from [2..16] (i.e. it may range from 2x2xC up to 16x16xC max, but may
+    also be e.g. 4x8xC). The upsampling method will be "nearest" in 50 percent
+    of all cases and "linear" in the other 50 percent. The result will
+    sometimes be rectangular patches of sharp 1s surrounded by 0s and
+    sometimes blurry blobs of 1s, surrounded by values <1.0.
+
+    """
     def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
         super(StochasticParameter, self).__init__()
 
@@ -230,7 +485,7 @@ class FromLowerResolution(StochasticParameter):
 
         self.other_param = other_param
 
-        if ia.is_string(method):
+        if ia.is_string(method) or ia.is_single_integer(method):
             self.method = Deterministic(method)
         elif isinstance(method, StochasticParameter):
             self.method = method
@@ -283,6 +538,33 @@ class FromLowerResolution(StochasticParameter):
             return "FromLowerResolution(size_px=%s, method=%s, other_param=%s)" % (self.size_px, self.method, self.other_param)
 
 class Clip(StochasticParameter):
+    """
+    Clips another parameter to a defined value range.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        The other parameter, which's values are to be
+        clipped.
+
+    minval : None or number, optional(default=None)
+        The minimum value to use.
+        If None, no minimum will be used.
+
+    maxval : None or number, optional(default=None)
+        The maximum value to use.
+        If None, no maximum will be used.
+
+    Examples
+    --------
+    >>> param = Clip(Normal(0, 1.0), minval=-2.0, maxval=2.0)
+
+    Defines a standard normal distribution, which's values never go below -2.0
+    or above 2.0. Note that this will lead to small "bumps" of higher
+    probability at -2.0 and 2.0, as values below/above these will be clipped
+    to them.
+
+    """
     def __init__(self, other_param, minval=None, maxval=None):
         super(Clip, self).__init__()
 
@@ -321,6 +603,26 @@ class Clip(StochasticParameter):
             return "Clip(%s, None, None)" % (opstr,)
 
 class Multiply(StochasticParameter):
+    """
+    Parameter to multiply other parameter's results with.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        multiplied.
+
+    val : number
+        Multiplier to
+        use.
+
+    Examples
+    --------
+    >>> param = Multiply(Uniform(0.0, 1.0), -1)
+
+    Converts a uniform range [0.0, 1.0) to (-1.0, 0.0].
+
+    """
     def __init__(self, other_param, val):
         super(Multiply, self).__init__()
 
@@ -345,6 +647,47 @@ class Multiply(StochasticParameter):
 # instead of aggregating them in low resolution and then only upscaling the
 # final image (for N iterations that would save up to N-1 upscales)
 class IterativeNoiseAggregator(StochasticParameter):
+    """
+    Parameter to generate noise maps in multiple iterations and aggregate
+    their results.
+
+    This is supposed to be used in conjunction with SimplexNoise or
+    FrequencyNoise.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        The noise parameter to iterate multiple
+        times.
+
+    iterations : int or iterable of two ints or list of ints or StochasticParameter, optional(default=(1, 3))
+        The number of iterations. This may be a single integer or a tuple
+        of integers (a, b), which will result in [a..b] iterations or
+        a list of integers [a, b, c, ...], which will result in a or b or
+        c, ... iterations. It may also be a StochasticParameter, in which case
+        the number of iterations will be sampled once per call
+        to `_draw_samples()`.
+
+    aggregation_method : ia.ALL or string or list of string or StochasticParameter, optional(default=["max", "avg"])
+        The method to use to aggregate the results of multiple iterations.
+        If a string, it must have the value "min" or "max" or "avg".
+        If "min" is chosen, the elementwise minimum will be computed over
+        all iterations (pushing the noise towards zeros). "max" will result
+        in the elementwise maximum and "avg" in the average over all
+        iterations. If `ia.ALL` is used, it will be randomly either min or max
+        or avg (per call to `_draw_samples()`). If a list is chosen, it must
+        contain the mentioned strings and a random one will be picked per call
+        to `_draw_samples()`. If a StochasticParameter is used, a value will
+        be sampled from it per call to `_draw_samples()`.
+
+    Examples
+    --------
+    >>> noise = IterativeNoiseAggregator(SimplexNoise(), iterations=(2, 5), aggregation_method="max")
+
+    Generates per call 2 to 5 times simplex noise of a given size. Then
+    combines these noise maps to a single map using elementwise maximum.
+
+    """
     def __init__(self, other_param, iterations=(1, 3), aggregation_method=["max", "avg"]):
         assert isinstance(other_param, StochasticParameter)
         self.other_param = other_param
@@ -357,7 +700,7 @@ class IterativeNoiseAggregator(StochasticParameter):
             assert all([ia.is_single_integer(val) for val in iterations])
             assert all([1 <= val <= 10000 for val in iterations])
             self.iterations = DiscreteUniform(iterations[0], iterations[1])
-        elif ia.is_iterable(iterations):
+        elif isinstance(iterations, list):
             assert len(iterations) > 0
             assert all([1 <= val <= 10000 for val in iterations])
             self.iterations = Choice(iterations)
@@ -410,6 +753,53 @@ class IterativeNoiseAggregator(StochasticParameter):
         return result
 
 class Sigmoid(StochasticParameter):
+    """
+    Applies a sigmoid function to the outputs of another parameter.
+
+    This is intended to be used in combination with SimplexNoise or
+    FrequencyNoise. It pushes the noise values away from ~0.5 and towards
+    0.0 or 1.0, making the noise maps more binary.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        The other parameter to which the sigmoid will be
+        applied.
+
+    threshold : number or tuple of two numbers or iterable of numbers or StochasticParameter, optional(default=(-10, 10))
+        Sets the value of the sigmoid's saddle point, i.e. where values
+        start to quickly shift from 0.0 to 1.0.
+        This may be set using a single number, a tuple (a, b) (will result in
+        a random threshold a<=x<b per call), a list of numbers (will
+        result in a random threshold drawn from the list per call) or a
+        StochasticParameter (will be queried once per call to determine the
+        threshold).
+
+    activated : bool or number, optional(default=True)
+        Defines whether the sigmoid is activated. If this is False, the
+        results of other_param will not be altered. This may be set to a
+        float value p with 0<=p<=1.0, which will result in `activated` being
+        True in p percent of all calls.
+
+    mul : number, optional(default=1)
+        The results of other_param will be multiplied with this value before
+        applying the sigmoid. For noise values (range [0.0, 1.0]) this should
+        be set to about 20.
+
+    add : number, optional(default=0)
+        This value will be added to the results of other_param before applying
+        the sigmoid. For noise values (range [0.0, 1.0]) this should be set
+        to about -10.0, provided `mul` was set to 20.
+
+    Examples
+    --------
+    >>> param = Sigmoid(SimplexNoise(), activated=0.5, mul=20, add=-10)
+
+    Applies a sigmoid to simplex noise in 50 percent of all calls. The noise
+    results are modified to match the sigmoid's expected value range. The
+    sigmoid's outputs are in the range [0.0, 1.0].
+
+    """
     def __init__(self, other_param, threshold=(-10, 10), activated=True, mul=1, add=0):
         assert isinstance(other_param, StochasticParameter)
         self.other_param = other_param
@@ -445,6 +835,27 @@ class Sigmoid(StochasticParameter):
 
     @staticmethod
     def create_for_noise(other_param, threshold=(-10, 10), activated=True):
+        """
+        Creates a Sigmoid that is adjusted to be used with noise parameters,
+        i.e. with parameters which's output values are in the range [0.0, 1.0].
+
+        Parameters
+        ----------
+        other_param : StochasticParameter
+            See `Sigmoid`.
+
+        threshold : number or tuple of two numbers or iterable of numbers or StochasticParameter, optional(default=(-10, 10))
+            See `Sigmoid`.
+
+        activated : bool or number, optional(default=True)
+            See `Sigmoid`.
+
+        Returns
+        -------
+        out : Sigmoid
+            A sigmoid adjusted to be used with noise.
+
+        """
         return Sigmoid(other_param, threshold, activated, mul=20, add=-10)
 
     def _draw_samples(self, size, random_state):
@@ -641,6 +1052,49 @@ class SimplexNoise(StochasticParameter):
 """
 
 class SimplexNoise(StochasticParameter):
+    """
+    A parameter that generates simplex noise of varying resolutions.
+
+    This parameter expects to sample noise for 2d planes, i.e. for
+    sizes (H, W) and will return a value in the range [0.0, 1.0] per location
+    in that plane.
+
+    The noise is sampled from low resolution planes and
+    upscaled to the requested height and width. The size of the low
+    resolution plane may be defined (high values can be slow) and the
+    interpolation method for upscaling can be set.
+
+    Parameters
+    ----------
+    size_px_max : int or tuple of two int or list of int or StochasticParameter, optional(default=(2, 16))
+        Size in pixels of the low resolution plane.
+        A single int will be used as a constant value. A tuple of two
+        ints (a, b) will result in random values sampled from [a..b].
+        A list of ints will result in random values being sampled from that
+        list. A StochasticParameter will be queried once per call
+        to `_draw_samples()`.
+
+    upscale_method : string or int or StochasticParameter, optional(default="nearest")
+        Upsampling/interpolation method to use. This is used after the sampling
+        is finished and the low resolution plane has to be upsampled to the
+        requested `size` in `_draw_samples(size, ...)`. The method may be
+        the same as in `imgaug.imresize_many_images()`. Usually `nearest`
+        or `linear` are good choices. `nearest` will result in rectangles
+        with sharp edges and `linear` in rectangles with blurry and round
+        edges. The method may be provided as a StochasticParameter, which
+        will be queried per call to `_draw_samples()`.
+
+    Examples
+    --------
+    >>> param = SimplexNoise(upscale_method="linear")
+
+    Results in smooth simplex noise of varying sizes.
+
+    >>> param = SimplexNoise(size_px_max=(8, 16), upscale_method="nearest")
+
+    Results in rectangular simplex noise of rather high detail.
+
+    """
     def __init__(self, size_px_max=(2, 16), upscale_method=["linear", "nearest"]):
         if ia.is_single_integer(size_px_max):
             assert 1 <= size_px_max <= 10000
@@ -744,6 +1198,74 @@ class SimplexNoise(StochasticParameter):
         )
 
 class FrequencyNoise(StochasticParameter):
+    """
+    Parameter to generate noise of varying frequencies.
+
+    This parameter expects to sample noise for 2d planes, i.e. for
+    sizes (H, W) and will return a value in the range [0.0, 1.0] per location
+    in that plane.
+
+    The exponent controls the frequencies and therefore noise patterns.
+    Low values (around -4.0) will result in large blobs. High values (around
+    4.0) will result in small, repetitive patterns.
+
+    The noise is sampled from low resolution planes and
+    upscaled to the requested height and width. The size of the low
+    resolution plane may be defined (high values can be slow) and the
+    interpolation method for upscaling can be set.
+
+    Parameters
+    ----------
+    exponent : number or tuple of numbers of list of numbers or StochasticParameter, optional(default=(-4, 4))
+        Exponent to use when scaling in the frequency domain.
+        Sane values are in the range -4 (large blobs) to 4 (small patterns).
+        To generate cloud-like structures, use roughly -2.
+            * If number, then that number will be used as the exponent for all
+              iterations.
+            * If tuple of two numbers (a, b), then a value will be sampled
+              per iteration from the range [a, b].
+            * If a list of numbers, then a value will be picked per iteration
+              at random from that list.
+            * If a StochasticParameter, then a value will be sampled from
+              that parameter per iteration.
+
+    size_px_max : int or tuple of ints or list of ints or StochasticParameter, optional(default=(4, 16))
+        The frequency noise is generated in a low resolution environment.
+        This parameter defines the maximum size of that environment (in
+        pixels). The environment is initialized at the same size as the input
+        image and then downscaled, so that no side exceeds `size_px_max`
+        (aspect ratio is kept).
+            * If int, then that number will be used as the size for all
+              iterations.
+            * If tuple of two ints (a, b), then a value will be sampled
+              per iteration from the discrete range [a..b].
+            * If a list of ints, then a value will be picked per iteration at
+              random from that list.
+            * If a StochasticParameter, then a value will be sampled from
+              that parameter per iteration.
+
+    upscale_method : None or ia.ALL or string or list of string or StochasticParameter, optional(default=None)
+        After generating the noise maps in low resolution environments, they
+        have to be upscaled to the input image size. This parameter controls
+        the upscaling method.
+            * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
+              Most weight is put on linear, followed by cubic.
+            * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
+              is picked per iteration (all same probability).
+            * If string, then that value will be used as the method (must be
+              'nearest' or 'linear' or 'area' or 'cubic').
+            * If list of string, then a random value will be picked from that
+              list per iteration.
+            * If StochasticParameter, then a random value will be sampled
+              from that parameter per iteration.
+
+    Examples
+    --------
+    >>> param = FrequencyNoise(exponent=-2, size_px_max=(16, 32), upscale_method="linear")
+
+    Generates noise with cloud-like patterns.
+
+    """
     def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]):
         if ia.is_single_number(exponent):
             self.exponent = Deterministic(exponent)

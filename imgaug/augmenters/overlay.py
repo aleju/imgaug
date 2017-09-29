@@ -775,7 +775,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         `per_channel` will be treated as True, otherwise as False.
 
     size_px_max : int or tuple of ints or list of ints or StochasticParameter, optional(default=(4, 16))
-        The simplex noise is always generated in a low resolution environment.
+        The noise is generated in a low resolution environment.
         This parameter defines the maximum size of that environment (in
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`

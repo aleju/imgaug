@@ -647,21 +647,21 @@ class HooksImages(object):
 
     Examples
     --------
-    >>>> seq = iaa.Sequential([
-    >>>>     iaa.GaussianBlur(3.0, name="blur"),
-    >>>>     iaa.Dropout(0.05, name="dropout"),
-    >>>>     iaa.Affine(translate_px=-5, name="affine")
-    >>>> ])
-    >>>>
-    >>>> def activator(images, augmenter, parents, default):
-    >>>>     return False if augmenter.name in ["blur", "dropout"] else default
-    >>>>
-    >>>> seq_det = seq.to_deterministic()
-    >>>> images_aug = seq_det.augment_images(images)
-    >>>> heatmaps_aug = seq_det.augment_images(
-    >>>>     heatmaps,
-    >>>>     hooks=ia.HooksImages(activator=activator)
-    >>>> )
+    >>> seq = iaa.Sequential([
+    >>>     iaa.GaussianBlur(3.0, name="blur"),
+    >>>     iaa.Dropout(0.05, name="dropout"),
+    >>>     iaa.Affine(translate_px=-5, name="affine")
+    >>> ])
+    >>>
+    >>> def activator(images, augmenter, parents, default):
+    >>>     return False if augmenter.name in ["blur", "dropout"] else default
+    >>>
+    >>> seq_det = seq.to_deterministic()
+    >>> images_aug = seq_det.augment_images(images)
+    >>> heatmaps_aug = seq_det.augment_images(
+    >>>     heatmaps,
+    >>>     hooks=ia.HooksImages(activator=activator)
+    >>> )
 
     This augments images and their respective heatmaps in the same way.
     The heatmaps however are only modified by Affine, not by GaussianBlur or
@@ -889,6 +889,7 @@ class KeypointsOnImage(object):
         -------
         keypoints : KeypointsOnImage
             Object containing all projected keypoints.
+
         """
         if is_np_array(image):
             shape = image.shape
