@@ -1047,6 +1047,25 @@ class Clip(StochasticParameter):
             return "Clip(%s, None, None)" % (opstr,)
 
 class Discretize(StochasticParameter):
+    """
+    Convert values sampled from a continuous distribution into discrete values.
+
+    This will round the values and then cast them to integers.
+    Values sampled from discrete distributions are not changed.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        The other parameter, which's values are to be
+        discretized.
+
+    Examples
+    --------
+    >>> param = Discretize(Normal(0, 1.0))
+
+    Generates a discrete standard normal distribution.
+
+    """
     def __init__(self, other_param):
         super(Discretize, self).__init__()
         assert isinstance(other_param, StochasticParameter)
