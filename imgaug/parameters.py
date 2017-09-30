@@ -8,6 +8,7 @@ import six
 import six.moves as sm
 import scipy
 import numbers
+from collections import defaultdict
 
 def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
     def check_value_range(v):
@@ -98,6 +99,33 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         else:
             raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
 
+def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
+    if titles is None:
+        titles = [None] * len(params)
+    elif titles == False:
+        titles = [False] * len(params)
+
+    if sample_sizes is not None:
+        images = [param_i.draw_distribution_graph(size=size_i, title=title_i) for param_i, size_i, title_i in zip(params, sample_sizes, titles)]
+    else:
+        images = [param_i.draw_distribution_graph(title=title_i) for param_i, title_i in zip(params, titles)]
+
+    images_rs = ia.imresize_many_images(np.array(images), sizes=graph_sizes)
+    grid = ia.draw_grid(images_rs, rows=rows, cols=cols)
+    return grid
+
+def show_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
+    misc.imshow(
+        draw_distributions_grid(
+            params,
+            graph_sizes=graph_sizes,
+            sample_sizes=sample_sizes,
+            rows=rows,
+            cols=cols,
+            titles=titles
+        )
+    )
+
 @six.add_metaclass(ABCMeta)
 class StochasticParameter(object):
     """
@@ -153,7 +181,9 @@ class StochasticParameter(object):
 
         """
         random_state = random_state if random_state is not None else ia.current_random_state()
-        return self._draw_samples(size, random_state)
+        samples = self._draw_samples(size, random_state)
+        ia.forward_random_state(random_state)
+        return samples
 
     @abstractmethod
     def _draw_samples(self, size, random_state):
@@ -221,15 +251,17 @@ class StochasticParameter(object):
         """
         return copy_module.deepcopy(self)
 
-    def draw_distribution_graph(self, title=None, size=(1000, 100), bins=100):
+    def draw_distribution_graph(self, title=None, size=(1000, 1000), bins=100):
         """
         Generate a plot (image) that shows the parameter's distribution of
         values.
 
         Parameters
         ----------
-        title : None or string, optional(default=None)
-            Title of the plot.
+        title : None or False or string, optional(default=None)
+            Title of the plot. None is automatically replaced by a title
+            derived from `str(param)`. If set to False, no title will be
+            shown.
 
         size : tuple of int
             Number of points to sample. This is always expected to have at
@@ -265,8 +297,11 @@ class StochasticParameter(object):
             heights,
             width=(max(bins) - min(bins))/len(bins),
             color="blue",
-            alpha=0.5
+            alpha=0.75
         )
+        #print("[draw_distribution_graph] points", points[0:100])
+        #print("[draw_distribution_graph] min/max/avg", np.min(points), np.max(points), np.average(points))
+        #print("[draw_distribution_graph] bins", len(bins), bins[0:10], heights[0:10])
 
         if title is None:
             title = str(self)
@@ -287,7 +322,7 @@ class Binomial(StochasticParameter):
 
     Parameters
     ----------
-    p : number or StochasticParameter
+    p : number or tuple of two number or list of number or StochasticParameter
         Probability of the binomial distribution. Expected to be in the
         range [0, 1]. If this is a StochasticParameter, the value will be
         sampled once per call to _draw_samples().
@@ -303,6 +338,7 @@ class Binomial(StochasticParameter):
     def __init__(self, p):
         super(Binomial, self).__init__()
 
+        """
         if isinstance(p, StochasticParameter):
             self.p = p
         elif ia.is_single_number(p):
@@ -310,6 +346,9 @@ class Binomial(StochasticParameter):
             self.p = Deterministic(float(p))
         else:
             raise Exception("Expected StochasticParameter or float/int value, got %s." % (type(p),))
+        """
+
+        self.p = handle_continuous_param(p, "p")
 
     def _draw_samples(self, size, random_state):
         p = self.p.draw_sample(random_state=random_state)
@@ -359,7 +398,54 @@ class Choice(StochasticParameter):
         self.p = p
 
     def _draw_samples(self, size, random_state):
-        return random_state.choice(self.a, size, replace=self.replace, p=self.p)
+        if any([isinstance(a_i, StochasticParameter) for a_i in self.a]):
+            seed = random_state.randint(0, 10**6, 1)[0]
+            samples = ia.new_random_state(seed).choice(self.a, np.prod(size), replace=self.replace, p=self.p)
+
+            # collect the sampled parameters and how many samples must be taken
+            # from each of them
+            params_counter = defaultdict(lambda: 0)
+            #params_keys = set()
+            for sample in samples:
+                if isinstance(sample, StochasticParameter):
+                    key = str(sample)
+                    params_counter[key] += 1
+                    #params_keys.add(key)
+
+            # collect per parameter once the required number of samples
+            # iterate here over self.a to always use the same seed for
+            # the same parameter
+            # TODO this might fail if the same parameter is added
+            # multiple times to self.a?
+            # TODO this will fail if a parameter cant handle size=(N,)
+            param_to_samples = dict()
+            for i, param in enumerate(self.a):
+                key = str(param)
+                if key in params_counter:
+                    #print("[Choice] sampling %d from %s" % (params_counter[key], key))
+                    param_to_samples[key] = param.draw_samples(
+                        size=(params_counter[key],),
+                        random_state=ia.new_random_state(seed+1+i)
+                    )
+
+            # assign the values sampled from the parameters to the `samples`
+            # array by replacing the respective parameter
+            param_to_readcount = defaultdict(lambda: 0)
+            for i, sample in enumerate(samples):
+                #if i%10 == 0:
+                #    print("[Choice] assigning sample %d" % (i,))
+                if isinstance(sample, StochasticParameter):
+                    key = str(sample)
+                    readcount = param_to_readcount[key]
+                    #if readcount%10==0:
+                    #    print("[Choice] readcount %d for %s" % (readcount, key))
+                    samples[i] = param_to_samples[key][readcount]
+                    param_to_readcount[key] += 1
+
+            samples = samples.reshape(size)
+        else:
+            samples = random_state.choice(self.a, size, replace=self.replace, p=self.p)
+        return samples
 
     def __repr__(self):
         return self.__str__()
@@ -392,6 +478,7 @@ class DiscreteUniform(StochasticParameter):
     def __init__(self, a, b):
         super(DiscreteUniform, self).__init__()
 
+        """
         # for two ints the samples will be from range a <= x <= b
         assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),)
@@ -405,6 +492,9 @@ class DiscreteUniform(StochasticParameter):
             self.b = Deterministic(b)
         else:
             self.b = b
+        """
+        self.a = handle_discrete_param(a, "a")
+        self.b = handle_discrete_param(b, "b")
 
     def _draw_samples(self, size, random_state):
         a = self.a.draw_sample(random_state=random_state)
@@ -688,7 +778,7 @@ class Uniform(StochasticParameter):
 
     Parameters
     ----------
-    {a, b} : number or StochasticParameter
+    {a, b} : number or tuple of two number or list of number or StochasticParameter
         Lower and upper bound of the sampling range. Values will be sampled
         from a <= x < b. All sampled values will be continuous. If a or b is
         a StochasticParameter, it will be queried once per sampling to
@@ -705,6 +795,7 @@ class Uniform(StochasticParameter):
     def __init__(self, a, b):
         super(Uniform, self).__init__()
 
+        """
         assert isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),)
         assert isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),)
 
@@ -717,6 +808,10 @@ class Uniform(StochasticParameter):
             self.b = Deterministic(b)
         else:
             self.b = b
+        """
+
+        self.a = handle_continuous_param(a, "a")
+        self.b = handle_continuous_param(b, "b")
 
     def _draw_samples(self, size, random_state):
         a = self.a.draw_sample(random_state=random_state)
@@ -1383,7 +1478,6 @@ class Power(StochasticParameter):
         self.other_param = other_param
         self.val = handle_continuous_param(val, "val")
         self.elementwise = elementwise
-        self.float_power = True # whether to use np.float_power or np.power
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -1395,14 +1489,16 @@ class Power(StochasticParameter):
         else:
             exponents = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
 
-        if self.float_power:
-            # float_power requires numpy>=1.12
-            #result = np.float_power(samples, exponents)
-            result = np.power(samples.astype(np.float64), exponents)
-            if result.dtype != samples_dtype:
-                result = result.astype(samples_dtype)
-        else:
-            result = np.power(samples, exponents)
+        #print("[power] samples", samples[0:100])
+        #print("[power] exponents", exponents[0:100] if ia.is_np_array(exponents) else exponents)
+        # float_power requires numpy>=1.12
+        #result = np.float_power(samples, exponents)
+        #result = np.power(samples.astype(np.float64), exponents)
+        result = np.power(samples.astype(np.complex), exponents).real
+        #print("[power] result", result[0:100])
+        if result.dtype != samples_dtype:
+            result = result.astype(samples_dtype)
+        #print("[power] result cast", result[0:100])
 
         return result
 
@@ -1493,7 +1589,9 @@ class RandomSign(StochasticParameter):
         # Add absolute here to guarantee that we get p_positive percent of
         # positive values. Otherwise we would merely flip p_positive percent
         # of all signs.
-        return np.absolute(samples) * signs
+        result = np.absolute(samples) * signs
+        #print("[RandomSign] ", size, coinflips.shape, signs.shape, result.shape, result[0:10])
+        return result
 
     def __repr__(self):
         return self.__str__()
