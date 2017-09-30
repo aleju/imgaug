@@ -7,6 +7,7 @@ import copy as copy_module
 import six
 import six.moves as sm
 import scipy
+import numbers
 
 def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
     def check_value_range(v):
@@ -1044,6 +1045,29 @@ class Clip(StochasticParameter):
             return "Clip(%s, None, %.6f)" % (opstr, float(self.maxval))
         else:
             return "Clip(%s, None, None)" % (opstr,)
+
+class Discretize(StochasticParameter):
+    def __init__(self, other_param):
+        super(Discretize, self).__init__()
+        assert isinstance(other_param, StochasticParameter)
+        self.other_param = other_param
+
+    def _draw_samples(self, size, random_state):
+        samples = self.other_param.draw_samples(
+            size, random_state=random_state
+        )
+        if isinstance(samples.dtype, numbers.Integral):
+            # integer array, already discrete
+            return samples
+        else:
+            return np.round(samples).astype(np.int32)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Discretize(%s)" % (opstr,)
 
 class Multiply(StochasticParameter):
     """
