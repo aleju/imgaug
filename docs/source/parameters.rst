@@ -319,7 +319,7 @@ distributions with each other.
           from imgaug import parameters as iap
           params = [
               iap.Uniform(0, 1) ** 2, # identical to: Power(Uniform(0, 1), 2)
-              iap.Uniform(-1, 1) ** iap.Normal(0, 1)
+              iap.Clip(iap.Uniform(-1, 1) ** iap.Normal(0, 1), -4, 4)
           ]
           iap.show_distributions_grid(params, rows=1)
 
