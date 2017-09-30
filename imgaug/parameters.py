@@ -182,26 +182,54 @@ class StochasticParameter(object):
         """
         return copy_module.deepcopy(self)
 
-    def draw_distribution_graph(self, title=None):
+    def draw_distribution_graph(self, title=None, size=(1000, 100)):
+        """
+        Generate a plot (image) that shows the parameter's distribution of
+        values.
+
+        Parameters
+        ----------
+        title : None or string, optional(default=None)
+            Title of the plot.
+
+        size : tuple of int
+            Number of points to sample. This is always expected to have at
+            least two values. The first defines the number of sampling runs,
+            the second (and further) dimensions define the size assigned
+            to each `draw_samples()` call. E.g. `(10, 20, 15)` will lead
+            to `10` calls of `draw_samples(size=(20, 15))`. The results
+            will be merged to a single 1d array.
+
+        Returns
+        -------
+        data : (H,W,3) ndarray
+            Image of the plot.
+
+        """
         import matplotlib.pyplot as plt
-        points = self._draw_samples_for_distribution_graph()
+
+        points = []
+        for _ in sm.xrange(size[0]):
+            points.append(self.draw_samples(size[1:]).flatten())
+        points = np.concatenate(points)
+
         fig = plt.figure()
         fig.add_subplot(111)
         ax = fig.gca()
         count, bins, ignored = ax.hist(points, 100, normed=True)
+
         if title is None:
-            ax.set_title(str(self))
-        elif title != False:
-            ax.set_title(title)
-        fig.canvas.draw()
+            title = str(self)
+        if title != False:
+            # split long titles - otherwise matplotlib generates errors
+            title_fragments = [title[i:i+50] for i in sm.xrange(0, len(title), 50)]
+            ax.set_title("\n".join(title_fragments))
         fig.tight_layout(pad=0)
+        fig.canvas.draw()
         data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        #image = np.fromstring(fig.canvas.tostring_rgb(), dtype='uint8')
+        plt.close()
         return data
-
-    def _draw_samples_for_distribution_graph(self):
-        return self.draw_samples(10000)
 
 class Binomial(StochasticParameter):
     """
@@ -588,13 +616,13 @@ class Weibull(StochasticParameter):
     A weibull distribution with shape 0.5.
 
     """
-    def __init__(self, df):
+    def __init__(self, a):
         super(Weibull, self).__init__()
 
         self.a = handle_continuous_param(a, "a", value_range=(0.0001, None))
 
     def _draw_samples(self, size, random_state):
-        df = self.a.draw_sample(random_state=random_state)
+        a = self.a.draw_sample(random_state=random_state)
         assert a > 0, "Expected a to be in range (0, inf), got %s." % (a,)
         return random_state.weibull(a, size=size)
 
@@ -1259,6 +1287,13 @@ class IterativeNoiseAggregator(StochasticParameter):
 
         return result
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "IterativeNoiseAggregator(%s, %s, %s)" % (opstr, str(self.iterations), str(self.aggregation_method))
+
 class Sigmoid(StochasticParameter):
     """
     Applies a sigmoid function to the outputs of another parameter.
@@ -1381,6 +1416,13 @@ class Sigmoid(StochasticParameter):
             return 1 / (1 + np.exp(-(result * self.mul + self.add - threshold)))
         else:
             return result
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Sigmoid(%s, %s, %s, %s, %s)" % (opstr, str(self.threshold), str(self.activated), str(self.mul), str(self.add))
 
 """
 class SimplexNoise(StochasticParameter):
