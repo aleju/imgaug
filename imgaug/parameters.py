@@ -1472,6 +1472,181 @@ class RandomSign(StochasticParameter):
         opstr = str(self.other_param)
         return "RandomSign(%s, %.2f)" % (opstr, self.p_positive)
 
+class ForceSign(StochasticParameter):
+    """
+    Converts another parameter's results to positive or negative values.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    positive : bool
+        Whether to force all signs to be positive/+ (True) or
+        negative/- (False).
+
+    mode : string, optional(default="invert")
+        How to change the signs. Valid values are "invert" and "reroll".
+        "invert" means that wrong signs are simply flipped.
+        "reroll" means that all samples with wrong signs are sampled again,
+        optionally many times, until they randomly end up having the correct
+        sign.
+
+    reroll_count_max : int, optional(default=2)
+        If `mode` is set to "reroll", this determines how often values may
+        be rerolled before giving up and simply flipping the sign (as in
+        mode="invert"). This shouldn't be set too high, as rerolling is
+        expensive.
+
+    Examples
+    --------
+    >>> param = ForceSign(Poisson(1), positive=False)
+
+    Generates a poisson distribution with alpha=1 that is flipped towards
+    negative values.
+
+    """
+    def __init__(self, other_param, positive, mode="invert", reroll_count_max=2):
+        super(ForceSign, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+
+        self.other_param = other_param
+
+        assert positive in [True, False]
+        self.positive = positive
+
+        assert mode in ["invert", "reroll"]
+        self.mode = mode
+
+        assert ia.is_single_integer(reroll_count_max)
+        self.reroll_count_max = reroll_count_max
+
+    def _draw_samples(self, size, random_state):
+        seed = random_state.randint(0, 10**6, 1)[0]
+        samples = self.other_param.draw_samples(
+            size,
+            random_state=ia.new_random_state(seed)
+        )
+
+        if self.mode == "invert":
+            if self.positive:
+                samples[samples < 0] *= (-1)
+            else:
+                samples[samples > 0] *= (-1)
+        else:
+            if self.positive:
+                bad_samples = np.where(samples < 0)[0]
+            else:
+                bad_samples = np.where(samples > 0)[0]
+
+            reroll_count = 0
+            while len(bad_samples) > 0 and reroll_count < self.reroll_count_max:
+                # This rerolls the full input size, even when only a tiny
+                # fraction of the values were wrong. That is done, because not
+                # all parameters necessarily support any number of dimensions
+                # for `size`, so we cant just resample size=N for N values
+                # with wrong signs.
+                # There is still quite some room for improvement here.
+                samples_reroll = self.other_param.draw_samples(
+                    size,
+                    random_state=ia.new_random_state(seed+1+reroll_count)
+                )
+                samples[bad_samples] = samples_reroll[bad_samples]
+
+                reroll_count += 1
+                if self.positive:
+                    bad_samples = np.where(samples < 0)[0]
+                else:
+                    bad_samples = np.where(samples > 0)[0]
+
+            if len(bad_samples) > 0:
+                samples[bad_samples] *= (-1)
+
+        return samples
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "ForceSign(%s, %s, %s, %d)" % (opstr, str(self.positive), self.mode, self.reroll_count_max)
+
+def Positive(other_param, mode="invert", reroll_count_max=2):
+    """
+    Converts another parameter's results to positive values.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    mode : string, optional(default="invert")
+        How to change the signs. Valid values are "invert" and "reroll".
+        "invert" means that wrong signs are simply flipped.
+        "reroll" means that all samples with wrong signs are sampled again,
+        optionally many times, until they randomly end up having the correct
+        sign.
+
+    reroll_count_max : int, optional(default=2)
+        If `mode` is set to "reroll", this determines how often values may
+        be rerolled before giving up and simply flipping the sign (as in
+        mode="invert"). This shouldn't be set too high, as rerolling is
+        expensive.
+
+    Examples
+    --------
+    >>> param = Positive(Normal(0, 1), mode="reroll")
+
+    Generates a normal distribution that has only positive values.
+
+    """
+    return ForceSign(
+        other_param=other_param,
+        positive=True,
+        mode=mode,
+        reroll_count_max=reroll_count_max
+    )
+
+def Negative(other_param, mode="invert", reroll_count_max=2):
+    """
+    Converts another parameter's results to negative values.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    mode : string, optional(default="invert")
+        How to change the signs. Valid values are "invert" and "reroll".
+        "invert" means that wrong signs are simply flipped.
+        "reroll" means that all samples with wrong signs are sampled again,
+        optionally many times, until they randomly end up having the correct
+        sign.
+
+    reroll_count_max : int, optional(default=2)
+        If `mode` is set to "reroll", this determines how often values may
+        be rerolled before giving up and simply flipping the sign (as in
+        mode="invert"). This shouldn't be set too high, as rerolling is
+        expensive.
+
+    Examples
+    --------
+    >>> param = Negative(Normal(0, 1), mode="reroll")
+
+    Generates a normal distribution that has only negative values.
+
+    """
+    return ForceSign(
+        other_param=other_param,
+        positive=False,
+        mode=mode,
+        reroll_count_max=reroll_count_max
+    )
+
 # TODO this always aggregates the result in high resolution space,
 # instead of aggregating them in low resolution and then only upscaling the
 # final image (for N iterations that would save up to N-1 upscales)
