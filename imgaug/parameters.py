@@ -1017,9 +1017,18 @@ class Multiply(StochasticParameter):
         Other parameter which's sampled values are to be
         multiplied.
 
-    val : number
-        Multiplier to
-        use.
+    val : number or tuple of two number or list of number or StochasticParameter
+        Multiplier to use. If this is a StochasticParameter, either
+        a single or multiple values will be sampled and used as the
+        multiplier(s).
+
+    elementwise : bool, optional(default=False)
+        Controls the sampling behaviour when `val` is a StochasticParameter.
+        If set to False, a single value will be sampled from val and used as
+        the constant multiplier.
+        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        be sampled from `val` and multiplied elementwise with the results
+        of `other_param`.
 
     Examples
     --------
@@ -1028,25 +1037,108 @@ class Multiply(StochasticParameter):
     Converts a uniform range [0.0, 1.0) to (-1.0, 0.0].
 
     """
-    def __init__(self, other_param, val):
+    def __init__(self, other_param, val, elementwise=False):
         super(Multiply, self).__init__()
 
         assert isinstance(other_param, StochasticParameter)
-        assert ia.is_single_number(val)
 
         self.other_param = other_param
-        self.val = val
+        self.val = handle_continuous_param(val, "val")
+        self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        samples = self.other_param.draw_samples(size, random_state=random_state)
-        return samples * self.val
+        seed = random_state.randint(0, 10**6, 1)
+        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        if self.elementwise and not isinstance(self.val, Deterministic):
+            return np.multiply(
+                samples,
+                self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            )
+        else:
+            return samples * self.val.draw_sample(random_state=ia.new_random_state(seed+1))
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         opstr = str(self.other_param)
-        return "Multiply(%s, %s)" % (opstr, str(self.val))
+        return "Multiply(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+
+class Divide(StochasticParameter):
+    """
+    Parameter to divide other parameter's results with.
+
+    This parameter will automatically prevent division by zero (uses 1.0)
+    as the denominator in these cases.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        divided.
+
+    val : number or tuple of two number or list of number or StochasticParameter
+        Denominator to use. If this is a StochasticParameter, either
+        a single or multiple values will be sampled and used as the
+        denominator(s).
+
+    elementwise : bool, optional(default=False)
+        Controls the sampling behaviour when `val` is a StochasticParameter.
+        If set to False, a single value will be sampled from val and used as
+        the constant denominator.
+        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        be sampled from `val` and used as the elementwise denominators for the
+        results of `other_param`.
+
+    Examples
+    --------
+    >>> param = Divide(Uniform(0.0, 1.0), 2)
+
+    Converts a uniform range [0.0, 1.0) to [0, 0.5).
+
+    """
+    def __init__(self, other_param, val, elementwise=False):
+        super(Divide, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+
+        self.other_param = other_param
+        self.val = handle_continuous_param(val, "val")
+        self.elementwise = elementwise
+
+    def _draw_samples(self, size, random_state):
+        seed = random_state.randint(0, 10**6, 1)
+        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        if self.elementwise and not isinstance(self.val, Deterministic):
+            val_samples = self.val.draw_samples(
+                size,
+                random_state=ia.new_random_state(seed+1)
+            )
+
+            # prevent division by zero
+            val_samples[val_samples == 0] = 1
+
+            return np.multiply(
+                samples,
+                val_samples.astype(np.float32)
+            )
+        else:
+            val_sample = self.val.draw_sample(
+                random_state=ia.new_random_state(seed+1)
+            )
+
+            # prevent division by zero
+            if val_sample == 0:
+                val_sample = 1
+
+            return samples / float(val_sample)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Divide(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
 
 class Add(StochasticParameter):
     """
@@ -1058,9 +1150,17 @@ class Add(StochasticParameter):
         Other parameter which's sampled values are to be
         modified.
 
-    val : number
-        Value to add to the other parameter's
-        results.
+    val : number or tuple of two number or list of number or StochasticParameter
+        Value to add to the other parameter's results. If this is a
+        StochasticParameter, either a single or multiple values will be
+        sampled and added.
+
+    elementwise : bool, optional(default=False)
+        Controls the sampling behaviour when `val` is a StochasticParameter.
+        If set to False, a single value will be sampled from val and added
+        to all values generated by `other_param`.
+        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        be sampled from `val` and added to the results of `other_param`.
 
     Examples
     --------
@@ -1073,21 +1173,151 @@ class Add(StochasticParameter):
         super(Add, self).__init__()
 
         assert isinstance(other_param, StochasticParameter)
-        assert ia.is_single_number(val)
 
         self.other_param = other_param
-        self.val = val
+        self.val = handle_continuous_param(val, "val")
+        self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        samples = self.other_param.draw_samples(size, random_state=random_state)
-        return samples + self.val
+        seed = random_state.randint(0, 10**6, 1)
+        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        if self.elementwise and not isinstance(self.val, Deterministic):
+            return np.add(
+                samples,
+                self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            )
+        else:
+            return samples + self.val.draw_sample(random_state=ia.new_random_state(seed+1))
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         opstr = str(self.other_param)
-        return "Add(%s, %s)" % (opstr, str(self.val))
+        return "Add(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+
+class Subtract(StochasticParameter):
+    """
+    Parameter to subtract from another parameter's results.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    val : number or tuple of two number or list of number or StochasticParameter
+        Value to add to the other parameter's results. If this is a
+        StochasticParameter, either a single or multiple values will be
+        sampled and subtracted.
+
+    elementwise : bool, optional(default=False)
+        Controls the sampling behaviour when `val` is a StochasticParameter.
+        If set to False, a single value will be sampled from val and subtracted
+        from all values generated by `other_param`.
+        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        be sampled from `val` and subtracted from the results of `other_param`.
+
+    Examples
+    --------
+    >>> param = Add(Uniform(0.0, 1.0), 1.0)
+
+    Converts a uniform range [0.0, 1.0) to [1.0, 2.0).
+
+    """
+    def __init__(self, other_param, val):
+        super(Subtract, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+
+        self.other_param = other_param
+        self.val = handle_continuous_param(val, "val")
+        self.elementwise = elementwise
+
+    def _draw_samples(self, size, random_state):
+        seed = random_state.randint(0, 10**6, 1)
+        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        if self.elementwise and not isinstance(self.val, Deterministic):
+            return np.subtract(
+                samples,
+                self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            )
+        else:
+            return samples - self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Subtract(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+
+class Power(StochasticParameter):
+    """
+    Parameter to exponentiate another parameter's results with.
+
+    Parameters
+    ----------
+    other_param : StochasticParameter
+        Other parameter which's sampled values are to be
+        modified.
+
+    val : number or tuple of two number or list of number or StochasticParameter
+        Value to use exponentiate the other parameter's results with. If this
+        is a StochasticParameter, either a single or multiple values will be
+        sampled and used as the exponents.
+
+    elementwise : bool, optional(default=False)
+        Controls the sampling behaviour when `val` is a StochasticParameter.
+        If set to False, a single value will be sampled from val and used as
+        the exponent for all values generated by `other_param`.
+        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        be sampled from `val` and used as the exponents for the results of
+        `other_param`.
+
+    Examples
+    --------
+    >>> param = Power(Uniform(0.0, 1.0), 2)
+
+    Converts a uniform range [0.0, 1.0) to a distribution that is peaked
+    towards 1.0.
+
+    """
+    def __init__(self, other_param, val):
+        super(Power, self).__init__()
+
+        assert isinstance(other_param, StochasticParameter)
+
+        self.other_param = other_param
+        self.val = handle_continuous_param(val, "val")
+        self.elementwise = elementwise
+        self.float_power = True # whether to use np.float_power or np.power
+
+    def _draw_samples(self, size, random_state):
+        seed = random_state.randint(0, 10**6, 1)
+        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        samples_dtype = samples.dtype
+
+        if self.elementwise and not isinstance(self.val, Deterministic):
+            exponents = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+        else:
+            exponents = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+
+        if self.float_power:
+            result = np.float_power(samples, exponents)
+            if result.dtype != samples_dtype:
+                result = result.astype(samples_dtype)
+        else:
+            result = np.power(samples, exponents)
+
+        return result
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        opstr = str(self.other_param)
+        return "Power(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
 
 class Absolute(StochasticParameter):
     """
