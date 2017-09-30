@@ -57,7 +57,10 @@ def is_np_array(val):
         True if the variable is a numpy array. Otherwise False.
 
     """
-    return isinstance(val, (np.ndarray, np.generic))
+    # using np.generic here seems to also fire for scalar numpy values even
+    # though those are not arrays
+    #return isinstance(val, (np.ndarray, np.generic))
+    return isinstance(val, np.ndarray)
 
 def is_single_integer(val):
     """
@@ -290,6 +293,17 @@ def copy_random_state(random_state, force_copy=False):
         orig_state = random_state.get_state()
         rs_copy.set_state(orig_state)
         return rs_copy
+
+def derive_random_state(random_state):
+    return derive_random_states(random_state, n=1)[0]
+
+# TODO use this everywhere instead of manual seed + create
+def derive_random_states(random_state, n=1):
+    seed = random_state.randint(0, 10**6, 1)[0]
+    return [ia.new_random_state(seed+i) for i in sm.xrange(n)]
+
+def forward_random_state(random_state):
+    random_state.uniform()
 
 # TODO
 # def from_json(json_str):

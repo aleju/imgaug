@@ -366,7 +366,7 @@ class Augmenter(object):
                 )
                 # move "forward" the random state, so that the next call to
                 # augment_images() will use different random values
-                self.random_state.uniform()
+                ia.forward_random_state(self.random_state)
             else:
                 images_result = images_copy
         else:
@@ -502,7 +502,7 @@ class Augmenter(object):
                     parents=parents,
                     hooks=hooks
                 )
-                self.random_state.uniform()
+                ia.forward_random_state(self.random_state)
             else:
                 keypoints_on_images_result = keypoints_on_images_copy
         else:
