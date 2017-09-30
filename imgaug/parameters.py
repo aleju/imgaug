@@ -221,7 +221,7 @@ class StochasticParameter(object):
         """
         return copy_module.deepcopy(self)
 
-    def draw_distribution_graph(self, title=None, size=(1000, 100)):
+    def draw_distribution_graph(self, title=None, size=(1000, 100), bins=100):
         """
         Generate a plot (image) that shows the parameter's distribution of
         values.
@@ -239,6 +239,9 @@ class StochasticParameter(object):
             to `10` calls of `draw_samples(size=(20, 15))`. The results
             will be merged to a single 1d array.
 
+        bins : int
+            Number of bins in the plot histograms.
+
         Returns
         -------
         data : (H,W,3) ndarray
@@ -255,7 +258,15 @@ class StochasticParameter(object):
         fig = plt.figure()
         fig.add_subplot(111)
         ax = fig.gca()
-        count, bins, ignored = ax.hist(points, 100, normed=True)
+        heights, bins = np.histogram(points, bins=bins)
+        heights = heights / sum(heights)
+        ax.bar(
+            bins[:-1],
+            heights,
+            width=(max(bins) - min(bins))/len(bins),
+            color="blue",
+            alpha=0.5
+        )
 
         if title is None:
             title = str(self)
