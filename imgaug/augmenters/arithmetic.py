@@ -767,6 +767,640 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
 
     return MultiplyElementwise(p3, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
+class ReplaceElementwise(Augmenter):
+    """
+    Replace pixels in an image with new values.
+
+    Parameters
+    ----------
+    mask : number or tuple of two number or StochasticParameter, optional(default=0)
+        Mask that indicates the pixels that are supposed to be replaced.
+        The mask will be thresholded with 0.5. A value of 1 then indicates a
+        pixel that is supposed to be replaced.
+            * If this is a number, then that value will be used as the
+              probability of being a 1 per pixel.
+            * If a tuple (a, b), then the probability will be sampled per image
+              from the range a <= x <= b.
+            * If a StochasticParameter, then this parameter will be used to
+              sample a mask.
+
+    replacement : number or tuple of two number or list of number or StochasticParameter
+        The replacement to use at all locations that are marked as `1` in
+        the mask.
+            * If this is a number, then that value will always be used as the
+              replacement.
+            * If a tuple (a, b), then the replacement will be sampled pixelwise
+              from the range a <= x <= b.
+            * If a list of number, then a random value will be picked from
+              that list as the replacement per pixel.
+            * If a StochasticParameter, then this parameter will be used sample
+              pixelwise replacement values.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = ReplaceElementwise(0.05, [0, 255])
+
+    Replace 5 percent of all pixels in each image by either 0 or 255.
+
+    """
+
+    def __init__(self, mask, replacement, per_channel=False, name=None, deterministic=False, random_state=None):
+        super(ReplaceElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        if ia.is_single_number(mask):
+            self.mask = Binomial(mask)
+        elif isinstance(mask, tuple):
+            assert len(mask) == 2
+            assert 0 <= mask[0] <= 1.0
+            assert 0 <= mask[1] <= 1.0
+            self.mask = Binomial(Uniform(mask[0], mask[1]))
+        elif ia.is_iterable(mask):
+            assert all([0 <= pi <= 1.0 for pi in mask])
+            self.mask = iap.Choice(mask)
+        elif isinstance(mask, StochasticParameter):
+            self.mask = mask
+        else:
+            raise Exception("Expected mask to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(mask),))
+        #self.mask = iap.handle_continuous_param(mask, "mask", minval=0.0, maxval=1.0)
+        self.replacement = iap.handle_continuous_param(replacement, "replacement")
+
+        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
+            self.per_channel = Deterministic(int(per_channel))
+        elif ia.is_single_number(per_channel):
+            assert 0 <= per_channel <= 1.0
+            self.per_channel = Binomial(per_channel)
+        else:
+            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            seed = seeds[i]
+            image = images[i].astype(np.float32)
+            height, width, nb_channels = image.shape
+            rs_image = ia.new_random_state(seed)
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seed+1))
+            if per_channel == 1:
+                mask_samples = self.mask.draw_samples(
+                    (height, width, nb_channels),
+                    random_state=ia.new_random_state(seed+2)
+                )
+                replacement_samples = self.replacement.draw_samples(
+                    (height, width, nb_channels),
+                    random_state=ia.new_random_state(seed+3)
+                )
+            else:
+                mask_samples = self.mask.draw_samples(
+                    (height, width, 1),
+                    random_state=ia.new_random_state(seed+2)
+                )
+                mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
+                replacement_samples = self.replacement.draw_samples(
+                    (height, width, 1),
+                    random_state=ia.new_random_state(seed+3)
+                )
+                replacement_samples = np.tile(replacement_samples, (1, 1, nb_channels))
+
+            mask_thresh = mask_samples > 0.5
+            image_repl = image * (~mask_thresh) + replacement_samples * mask_thresh
+            np.clip(image_repl, 0, 255, out=image_repl)
+            result[i] = image_repl.astype(np.uint8)
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.mask, self.replacement]
+
+def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
+    """
+    Adds salt and pepper noise to an image, i.e. some white-ish and black-ish
+    pixels.
+
+    Parameters
+    ----------
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Probability of changing a pixel to salt/pepper
+        noise.
+            * If a float, then that value will be used for all images as the
+              probability.
+            * If a tuple (a, b), then a probability will be sampled per image
+              from the range a <= x <= b..
+            * If a StochasticParameter, then this parameter will be used as
+              the *mask*, i.e. it is expected to contain values between
+              0.0 and 1.0, where 1.0 means that salt/pepper is to be added
+              at that location.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.SaltAndPepper(0.05)
+
+    Replaces 5 percent of all pixels with salt/pepper.
+
+    """
+
+    return ReplaceElementwise(
+        mask=p,
+        replacement=iap.Beta(0.5, 0.5) * 255,
+        per_channel=per_channel,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state
+    )
+
+def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
+                        per_channel=False, min_size=4, name=None,
+                        deterministic=False, random_state=None):
+    """
+    Adds coarse salt and pepper noise to an image, i.e. rectangles that
+    contain noisy white-ish and black-ish pixels.
+
+    Parameters
+    ----------
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Probability of changing a pixel to salt/pepper
+        noise.
+            * If a float, then that value will be used for all images as the
+              probability.
+            * If a tuple (a, b), then a probability will be sampled per image
+              from the range a <= x <= b..
+            * If a StochasticParameter, then this parameter will be used as
+              the *mask*, i.e. it is expected to contain values between
+              0.0 and 1.0, where 1.0 means that salt/pepper is to be added
+              at that location.
+
+    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+        The size of the lower resolution image from which to sample the noise
+        mask in absolute pixel dimensions.
+            * If an integer, then that size will be used for both height and
+              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
+              upsampled to HxW, where H is the image size and W the image width.
+            * If a tuple (a, b), then two values M, N will be sampled from the
+              range [a..b] and the mask will be generated at size MxN, then
+              upsampled to HxW.
+            * If a StochasticParameter, then this parameter will be used to
+              determine the sizes. It is expected to be discrete.
+
+    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+        The size of the lower resolution image from which to sample the noise
+        mask *in percent* of the input image.
+            * If a float, then that value will be used as the percentage of the
+              height and width (relative to the original size). E.g. for value
+              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
+              to HxW.
+            * If a tuple (a, b), then two values m, n will be sampled from the
+              interval (a, b) and used as the percentages, i.e the mask size
+              will be (m*H)x(n*W).
+            * If a StochasticParameter, then this parameter will be used to
+              sample the percentage values. It is expected to be continuous.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value (is dropped / is not dropped)
+        for all channels of a pixel (False) or to sample a new value for each
+        channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    min_size : int, optional(default=4)
+        Minimum size of the low resolution mask, both width and height. If
+        `size_percent` or `size_px` leads to a lower value than this, `min_size`
+        will be used instead. This should never have a value of less than 2,
+        otherwise one may end up with a 1x1 low resolution mask, leading easily
+        to the whole image being replaced.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.CoarseSaltAndPepper(0.05, size_percent=(0.01, 0.1))
+
+    Replaces 5 percent of all pixels with salt/pepper in an image that has
+    1 to 10 percent of the input image size, then upscales the results
+    to the input image size, leading to large rectangular areas being replaced.
+
+    """
+
+    if ia.is_single_number(p):
+        mask = Binomial(p)
+    elif isinstance(p, tuple):
+        assert len(p) == 2
+        assert 0 <= p[0] <= 1.0
+        assert 0 <= p[1] <= 1.0
+        mask = Binomial(Uniform(p[0], p[1]))
+    elif ia.is_iterable(p):
+        assert all([0 <= pi <= 1.0 for pi in p])
+        mask = iap.Choice(p)
+    elif isinstance(p, StochasticParameter):
+        mask = p
+    else:
+        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+
+    if size_px is not None:
+        mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
+    elif size_percent is not None:
+        mask_low = FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
+    else:
+        raise Exception("Either size_px or size_percent must be set.")
+
+    replacement = iap.Beta(0.5, 0.5) * 255
+
+    return ReplaceElementwise(
+        mask=mask_low,
+        replacement=replacement,
+        per_channel=per_channel,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state
+    )
+
+def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
+    """
+    Adds salt noise to an image, i.e. white-ish pixels.
+
+    Parameters
+    ----------
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Probability of changing a pixel to salt
+        noise.
+            * If a float, then that value will be used for all images as the
+              probability.
+            * If a tuple (a, b), then a probability will be sampled per image
+              from the range a <= x <= b..
+            * If a StochasticParameter, then this parameter will be used as
+              the *mask*, i.e. it is expected to contain values between
+              0.0 and 1.0, where 1.0 means that salt is to be added
+              at that location.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Salt(0.05)
+
+    Replaces 5 percent of all pixels with salt.
+
+    """
+
+    replacement01 = iap.ForceSign(
+        iap.Beta(0.5, 0.5) - 0.5,
+        positive=True,
+        mode="invert"
+    ) + 0.5
+    replacement = replacement01 * 255
+    return ReplaceElementwise(
+        mask=p,
+        replacement=replacement,
+        per_channel=per_channel,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state
+    )
+
+def CoarseSalt(p=0, size_px=None, size_percent=None,
+               per_channel=False, min_size=4, name=None,
+               deterministic=False, random_state=None):
+    """
+    Adds coarse salt noise to an image, i.e. rectangles containing noisy
+    white-ish pixels.
+
+    Parameters
+    ----------
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Probability of changing a pixel to salt
+        noise.
+            * If a float, then that value will be used for all images as the
+              probability.
+            * If a tuple (a, b), then a probability will be sampled per image
+              from the range a <= x <= b..
+            * If a StochasticParameter, then this parameter will be used as
+              the *mask*, i.e. it is expected to contain values between
+              0.0 and 1.0, where 1.0 means that salt is to be added
+              at that location.
+
+    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+        The size of the lower resolution image from which to sample the noise
+        mask in absolute pixel dimensions.
+            * If an integer, then that size will be used for both height and
+              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
+              upsampled to HxW, where H is the image size and W the image width.
+            * If a tuple (a, b), then two values M, N will be sampled from the
+              range [a..b] and the mask will be generated at size MxN, then
+              upsampled to HxW.
+            * If a StochasticParameter, then this parameter will be used to
+              determine the sizes. It is expected to be discrete.
+
+    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+        The size of the lower resolution image from which to sample the noise
+        mask *in percent* of the input image.
+            * If a float, then that value will be used as the percentage of the
+              height and width (relative to the original size). E.g. for value
+              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
+              to HxW.
+            * If a tuple (a, b), then two values m, n will be sampled from the
+              interval (a, b) and used as the percentages, i.e the mask size
+              will be (m*H)x(n*W).
+            * If a StochasticParameter, then this parameter will be used to
+              sample the percentage values. It is expected to be continuous.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value (is dropped / is not dropped)
+        for all channels of a pixel (False) or to sample a new value for each
+        channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    min_size : int, optional(default=4)
+        Minimum size of the low resolution mask, both width and height. If
+        `size_percent` or `size_px` leads to a lower value than this, `min_size`
+        will be used instead. This should never have a value of less than 2,
+        otherwise one may end up with a 1x1 low resolution mask, leading easily
+        to the whole image being replaced.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.CoarseSalt(0.05, size_percent=(0.01, 0.1))
+
+    Replaces 5 percent of all pixels with salt in an image that has
+    1 to 10 percent of the input image size, then upscales the results
+    to the input image size, leading to large rectangular areas being replaced.
+
+    """
+
+    if ia.is_single_number(p):
+        mask = Binomial(p)
+    elif isinstance(p, tuple):
+        assert len(p) == 2
+        assert 0 <= p[0] <= 1.0
+        assert 0 <= p[1] <= 1.0
+        mask = Binomial(Uniform(p[0], p[1]))
+    elif ia.is_iterable(p):
+        assert all([0 <= pi <= 1.0 for pi in p])
+        mask = iap.Choice(p)
+    elif isinstance(p, StochasticParameter):
+        mask = p
+    else:
+        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+
+    if size_px is not None:
+        mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
+    elif size_percent is not None:
+        mask_low = FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
+    else:
+        raise Exception("Either size_px or size_percent must be set.")
+
+    replacement01 = iap.ForceSign(
+        iap.Beta(0.5, 0.5) - 0.5,
+        positive=True,
+        mode="invert"
+    ) + 0.5
+    replacement = replacement01 * 255
+
+    return ReplaceElementwise(
+        mask=mask_low,
+        replacement=replacement,
+        per_channel=per_channel,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state
+    )
+
+def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
+    """
+    Adds pepper noise to an image, i.e. black-ish pixels.
+    This is similar to dropout, but slower and the black pixels are not
+    uniformly black.
+
+    Parameters
+    ----------
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Probability of changing a pixel to pepper
+        noise.
+            * If a float, then that value will be used for all images as the
+              probability.
+            * If a tuple (a, b), then a probability will be sampled per image
+              from the range a <= x <= b..
+            * If a StochasticParameter, then this parameter will be used as
+              the *mask*, i.e. it is expected to contain values between
+              0.0 and 1.0, where 1.0 means that pepper is to be added
+              at that location.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value for all channels (False)
+        or to sample a new value for each channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.Pepper(0.05)
+
+    Replaces 5 percent of all pixels with pepper.
+
+    """
+
+    replacement01 = iap.ForceSign(
+        iap.Beta(0.5, 0.5) - 0.5,
+        positive=False,
+        mode="invert"
+    ) + 0.5
+    replacement = replacement01 * 255
+    return ReplaceElementwise(
+        mask=p,
+        replacement=replacement,
+        per_channel=per_channel,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state
+    )
+
+def CoarsePepper(p=0, size_px=None, size_percent=None,
+                 per_channel=False, min_size=4, name=None,
+                 deterministic=False, random_state=None):
+    """
+    Adds coarse pepper noise to an image, i.e. rectangles that contain
+    noisy black-ish pixels.
+
+    Parameters
+    ----------
+    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+        Probability of changing a pixel to pepper
+        noise.
+            * If a float, then that value will be used for all images as the
+              probability.
+            * If a tuple (a, b), then a probability will be sampled per image
+              from the range a <= x <= b..
+            * If a StochasticParameter, then this parameter will be used as
+              the *mask*, i.e. it is expected to contain values between
+              0.0 and 1.0, where 1.0 means that pepper is to be added
+              at that location.
+
+    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+        The size of the lower resolution image from which to sample the noise
+        mask in absolute pixel dimensions.
+            * If an integer, then that size will be used for both height and
+              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
+              upsampled to HxW, where H is the image size and W the image width.
+            * If a tuple (a, b), then two values M, N will be sampled from the
+              range [a..b] and the mask will be generated at size MxN, then
+              upsampled to HxW.
+            * If a StochasticParameter, then this parameter will be used to
+              determine the sizes. It is expected to be discrete.
+
+    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+        The size of the lower resolution image from which to sample the noise
+        mask *in percent* of the input image.
+            * If a float, then that value will be used as the percentage of the
+              height and width (relative to the original size). E.g. for value
+              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
+              to HxW.
+            * If a tuple (a, b), then two values m, n will be sampled from the
+              interval (a, b) and used as the percentages, i.e the mask size
+              will be (m*H)x(n*W).
+            * If a StochasticParameter, then this parameter will be used to
+              sample the percentage values. It is expected to be continuous.
+
+    per_channel : bool or float, optional(default=False)
+        Whether to use the same value (is dropped / is not dropped)
+        for all channels of a pixel (False) or to sample a new value for each
+        channel (True).
+        If this value is a float p, then for p percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    min_size : int, optional(default=4)
+        Minimum size of the low resolution mask, both width and height. If
+        `size_percent` or `size_px` leads to a lower value than this, `min_size`
+        will be used instead. This should never have a value of less than 2,
+        otherwise one may end up with a 1x1 low resolution mask, leading easily
+        to the whole image being replaced.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.CoarsePepper(0.05, size_percent=(0.01, 0.1))
+
+    Replaces 5 percent of all pixels with pepper in an image that has
+    1 to 10 percent of the input image size, then upscales the results
+    to the input image size, leading to large rectangular areas being replaced.
+
+    """
+
+    if ia.is_single_number(p):
+        mask = Binomial(p)
+    elif isinstance(p, tuple):
+        assert len(p) == 2
+        assert 0 <= p[0] <= 1.0
+        assert 0 <= p[1] <= 1.0
+        mask = Binomial(Uniform(p[0], p[1]))
+    elif ia.is_iterable(p):
+        assert all([0 <= pi <= 1.0 for pi in p])
+        mask = iap.Choice(p)
+    elif isinstance(p, StochasticParameter):
+        mask = p
+    else:
+        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+
+    if size_px is not None:
+        mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
+    elif size_percent is not None:
+        mask_low = FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
+    else:
+        raise Exception("Either size_px or size_percent must be set.")
+
+    replacement01 = iap.ForceSign(
+        iap.Beta(0.5, 0.5) - 0.5,
+        positive=False,
+        mode="invert"
+    ) + 0.5
+    replacement = replacement01 * 255
+
+    return ReplaceElementwise(
+        mask=mask_low,
+        replacement=replacement,
+        per_channel=per_channel,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state
+    )
+
 # TODO tests
 class Invert(Augmenter):
     """

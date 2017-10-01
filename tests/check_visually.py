@@ -15,7 +15,7 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description="Check augmenters visually.")
-    parser.add_argument('--only', default=None, help="If this is set, then only the results of an augmenter with this name will be shown.", required=False)
+    parser.add_argument('--only', default=None, help="If this is set, then only the results of an augmenter with this name will be shown. Optionally, comma-separated list.", required=False)
     args = parser.parse_args()
 
     images = [
@@ -92,6 +92,12 @@ def main():
         iaa.Invert(p=0.5, name="Invert"),
         iaa.Invert(p=0.5, per_channel=True, name="InvertPerChannel"),
         iaa.ContrastNormalization(alpha=(0.5, 2.0), name="ContrastNormalization"),
+        iaa.SaltAndPepper(p=0.05, name="SaltAndPepper"),
+        iaa.Salt(p=0.05, name="Salt"),
+        iaa.Pepper(p=0.05, name="Pepper"),
+        iaa.CoarseSaltAndPepper(p=0.05, size_percent=(0.01, 0.1), name="CoarseSaltAndPepper"),
+        iaa.CoarseSalt(p=0.05, size_percent=(0.01, 0.1), name="CoarseSalt"),
+        iaa.CoarsePepper(p=0.05, size_percent=(0.01, 0.1), name="CoarsePepper"),
         iaa.Affine(
             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
             translate_px={"x": (-16, 16), "y": (-16, 16)},
@@ -167,7 +173,7 @@ def main():
     augmenters.append(iaa.Sometimes(0.5, [aug.copy() for aug in augmenters], name="Sometimes"))
 
     for augmenter in augmenters:
-        if args.only is None or augmenter.name == args.only:
+        if args.only is None or augmenter.name in [v.strip() for v in args.only.split(",")]:
             print("Augmenter: %s" % (augmenter.name,))
             grid = []
             for image, kps in zip(images, keypoints):
