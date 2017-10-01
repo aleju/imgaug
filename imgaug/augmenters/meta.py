@@ -552,6 +552,82 @@ class Augmenter(object):
         """
         raise NotImplementedError()
 
+    def augment_bounding_boxes(self, bounding_boxes_on_images, hooks=None):
+        """
+        Augment image bounding boxes.
+
+        This is the corresponding function to `augment_keypoints()`, just for
+        bounding boxes.
+        Usually you will want to call `augment_images()` with a list of images,
+        e.g. `augment_images([A, B, C])` and then `augment_bounding_boxes()`
+        with the corresponding list of bounding boxes on these images, e.g.
+        `augment_bounding_boxes([Abb, Bbb, Cbb])`, where `Abb` are the
+        bounding boxes on image `A`.
+
+        Make sure to first convert the augmenter(s) to deterministic states
+        before augmenting images and their corresponding bounding boxes,
+        e.g. by
+            >>> seq = iaa.Fliplr(0.5)
+            >>> seq_det = seq.to_deterministic()
+            >>> imgs_aug = seq_det.augment_images([A, B, C])
+            >>> bbs_aug = seq_det.augment_keypoints([Abb, Bbb, Cbb])
+        Otherwise, different random values will be sampled for the image
+        and bounding box augmentations, resulting in different augmentations
+        (e.g. images might be rotated by `30deg` and bounding boxes by
+        `-10deg`). Also make sure to call `to_deterministic()` again for each
+        new batch, otherwise you would augment all batches in the same way.
+
+        Parameters
+        ----------
+        bounding_boxes_on_images : list of ia.BoundingBoxesOnImage
+            The bounding boxes to augment.
+            Expected is a list of ia.BoundingBoxesOnImage objects,
+            each containing the bounding boxes of a single image.
+
+        hooks : None or ia.HooksKeypoints, optional(default=None)
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
+
+        Returns
+        -------
+        result : list of ia.BoundingBoxesOnImage
+            Augmented bounding boxes.
+
+        """
+        kps_ois = []
+        for bbs_oi in bounding_boxes_on_images:
+            kps = []
+            for bb in bbs_oi.bounding_boxes:
+                kps.extend(bb.to_keypoints())
+            kps_ois.append(ia.KeypointsOnImage(kps, shape=bbs_oi.shape))
+
+        kps_ois_aug = self.augment_keypoints(kps_ois, hooks=hooks)
+
+        result = []
+        for img_idx, kps_oi_aug in enumerate(kps_ois_aug):
+            bbs_aug = []
+            for i in sm.xrange(len(kps_oi_aug.keypoints) // 4):
+                bb_kps = kps_oi_aug.keypoints[i*4:i*4+4]
+                x1 = min([kp.x for kp in bb_kps])
+                x2 = max([kp.x for kp in bb_kps])
+                y1 = min([kp.y for kp in bb_kps])
+                y2 = max([kp.y for kp in bb_kps])
+                bbs_aug.append(
+                    bounding_boxes_on_images[img_idx].bounding_boxes[i].copy(
+                        x1=x1,
+                        y1=y1,
+                        x2=x2,
+                        y2=y2
+                    )
+                )
+            result.append(
+                ia.BoundingBoxesOnImage(
+                    bbs_aug,
+                    shape=kps_oi_aug.shape
+                )
+            )
+        return result
+
     # TODO most of the code of this function could be replaced with ia.draw_grid()
     # TODO add parameter for handling multiple images ((a) next to each other
     # in each row or (b) multiply row count by number of images and put each

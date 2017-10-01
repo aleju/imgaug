@@ -40,6 +40,21 @@ def main():
         )
     ]
 
+    bounding_boxes = [
+        ia.BoundingBoxesOnImage([
+                ia.BoundingBox(x1=10, y1=10, x2=20, y2=20),
+                ia.BoundingBox(x1=40, y1=50, x2=70, y2=60)
+            ],
+            shape=images[0].shape
+        ),
+        ia.BoundingBoxesOnImage([
+                ia.BoundingBox(x1=10, y1=10, x2=20, y2=20),
+                ia.BoundingBox(x1=40, y1=50, x2=70, y2=60)
+            ],
+            shape=images[1].shape
+        )
+    ]
+
     # missing: InColorspace, Lambda, AssertLambda, AssertShape, Convolve
     augmenters = [
         iaa.Sequential([
@@ -176,12 +191,14 @@ def main():
         if args.only is None or augmenter.name in [v.strip() for v in args.only.split(",")]:
             print("Augmenter: %s" % (augmenter.name,))
             grid = []
-            for image, kps in zip(images, keypoints):
+            for image, kps, bbs in zip(images, keypoints, bounding_boxes):
                 aug_det = augmenter.to_deterministic()
                 imgs_aug = aug_det.augment_images(np.tile(image[np.newaxis, ...], (16, 1, 1, 1)))
                 kps_aug = aug_det.augment_keypoints([kps] * 16)
-                imgs_aug_kps = [kps_aug_one.draw_on_image(img_aug) for img_aug, kps_aug_one in zip(imgs_aug, kps_aug)]
-                grid.append(np.hstack(imgs_aug_kps))
+                bbs_aug = aug_det.augment_bounding_boxes([bbs] * 16)
+                imgs_aug_drawn = [kps_aug_one.draw_on_image(img_aug) for img_aug, kps_aug_one in zip(imgs_aug, kps_aug)]
+                imgs_aug_drawn = [bbs_aug_one.draw_on_image(img_aug) for img_aug, bbs_aug_one in zip(imgs_aug_drawn, bbs_aug)]
+                grid.append(np.hstack(imgs_aug_drawn))
             misc.imshow(np.vstack(grid))
 
 if __name__ == "__main__":

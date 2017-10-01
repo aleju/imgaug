@@ -13,6 +13,7 @@ import sys
 import six
 import six.moves as sm
 import os
+from skimage import draw
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -962,6 +963,12 @@ class KeypointsOnImage(object):
         raise_if_out_of_image : bool, optional(default=False)
             Whether to raise an exception if any keypoint is outside of the
             image.
+
+        Returns
+        -------
+        image : (H,W,3) ndarray
+            Image with drawn keypoints.
+
         """
         if copy:
             image = np.copy(image)
@@ -1186,8 +1193,386 @@ class KeypointsOnImage(object):
         return self.__str__()
 
     def __str__(self):
-        return "KeypointOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
+        return "KeypointsOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
+# TODO functions: square(), to_aspect_ratio(), extend()/add_border(), contains_point()
+class BoundingBox(object):
+    def __init__(self, x1, y1, x2, y2):
+        if x1 > x2:
+            x2, x1 = x1, x2
+        assert x2 > x1
+        if y1 > y2:
+            y2, y1 = y1, y2
+        assert y2 > y1
+
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+
+    @property
+    def height(self):
+        return self.y2 - self.y1
+
+    @property
+    def width(self):
+        return self.x2 - self.x1
+
+    @property
+    def center_x(self):
+        return self.x1 + self.width/2
+
+    @property
+    def center_y(self):
+        return self.y1 + self.height/2
+
+    @property
+    def area(self):
+        return self.height * self.width
+
+    def project(self, from_shape, to_shape):
+        """
+        Project the bounding box onto a new position on a new image.
+
+        E.g. if the bounding box is on its original image at
+        x1=(10 of 100 pixels) and y1=(20 of 100 pixels) and is projected onto
+        a new image with size (width=200, height=200), its new position will
+        be (x1=20, y1=40). (Analogous for x2/y2.)
+
+        This is intended for cases where the original image is resized.
+        It cannot be used for more complex changes (e.g. padding, cropping).
+
+        Parameters
+        ----------
+        from_shape : tuple
+            Shape of the original image. (Before resize.)
+
+        to_shape : tuple
+            Shape of the new image. (After resize.)
+
+        Returns
+        -------
+        out : BoundingBox
+            BoundingBox object with new coordinates.
+
+        """
+        if from_shape[0:2] == to_shape[0:2]:
+            return self.copy()
+        else:
+            from_height, from_width = from_shape[0:2]
+            to_height, to_width = to_shape[0:2]
+            assert from_height > 0
+            assert from_width > 0
+            assert to_height > 0
+            assert to_width > 0
+            x1 = int(round((self.x1 / from_width) * to_width))
+            y1 = int(round((self.y1 / from_height) * to_height))
+            x2 = int(round((self.x2 / from_width) * to_width))
+            y2 = int(round((self.y2 / from_height) * to_height))
+            if x1 == x2:
+                if x1 == 0:
+                    x2 += 1
+                else:
+                    x1 -= 1
+            if y1 == y2:
+                if y1 == 0:
+                    y2 += 1
+                else:
+                    y1 -= 1
+            return self.copy(
+                x1=x1,
+                y1=y1,
+                x2=x2,
+                y2=y2
+            )
+
+    def intersection(self, other, default=None):
+        x1_i = max(self.x1, other.x1)
+        y1_i = max(self.y1, other.y1)
+        x2_i = min(self.x2, other.x2)
+        y2_i = min(self.y2, other.y2)
+        if x1_i >= x2_i or y1_i >= y2_i:
+            return default
+        else:
+            return BoundingBox(x1=x1_i, y1=y1_i, x2=x2_i, y2=y2_i)
+
+    def union(self, other):
+        return BoundingBox(
+            x1=min(self.x1, other.x1),
+            y1=min(self.y1, other.y1),
+            x2=max(self.x2, other.x2),
+            y2=max(self.y2, other.y2)
+        )
+
+    def iou(self, other):
+        inters = self.intersection(other)
+        if inters is None:
+            return 0
+        else:
+            return inters / self.union(other)
+
+    def is_fully_within_image(self, image):
+        if isinstance(image, tuple):
+            shape = image
+        else:
+            shape = image.shape
+        height, width = shape[0:2]
+        return self.x1 >= 0 and self.x2 <= width and self.y1 >= 0 and self.y2 <= height
+
+    def is_partly_within_image(self, image):
+        if isinstance(image, tuple):
+            shape = image
+        else:
+            shape = image.shape
+        height, width = shape[0:2]
+        img_bb = BoundingBox(x1=0, x2=width, y1=0, y2=height)
+        return self.intersection(img_bb) is not None
+
+    def is_out_of_image(self, image):
+        return not self.is_partly_within_image(image)
+
+    def cut_out_of_image(self, image):
+        if isinstance(image, tuple):
+            shape = image
+        else:
+            shape = image.shape
+
+        height, width = shape[0:2]
+        assert height > 0
+        assert width > 0
+
+        x1 = np.clip(self.x1, 0, width)
+        x2 = np.clip(self.x2, 0, width)
+        y1 = np.clip(self.y1, 0, height)
+        y2 = np.clip(self.y2, 0, height)
+        if x1 == x2:
+            if x1 == 0:
+                x2 += 1
+            else:
+                x1 -= 1
+        if y1 == y2:
+            if y1 == 0:
+                y2 += 1
+            else:
+                y1 -= 1
+
+        return self.copy(
+            x1=x1,
+            y1=y1,
+            x2=x2,
+            y2=y2
+        )
+
+    def shift(self, top=None, right=None, bottom=None, left=None):
+        top = top if top is not None else 0
+        right = right if right is not None else 0
+        bottom = bottom if bottom is not None else 0
+        left = left if left is not None else 0
+        return self.copy(
+            x1=self.x1+left-right,
+            x2=self.x2+left-right,
+            y1=self.y1+top-bottom,
+            y2=self.y2+top-bottom
+        )
+
+    def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
+        if raise_if_out_of_image and self.is_out_of_image(image):
+            raise Exception("Cannot draw bounding box x1=%d, y1=%d, x2=%d, y2=%d on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
+
+        result = np.copy(image) if copy else image
+        for i in range(thickness):
+            y = [self.y1-i, self.y1-i, self.y2+i, self.y2+i]
+            x = [self.x1-i, self.x2+i, self.x2+i, self.x1-i]
+            rr, cc = draw.polygon_perimeter(y, x, shape=result.shape)
+            if alpha >= 0.99:
+                result[rr, cc, 0] = color[0]
+                result[rr, cc, 1] = color[1]
+                result[rr, cc, 2] = color[2]
+            else:
+                if result.dtype in [np.float32, np.float64]:
+                    result[rr, cc, 0] = (1 - alpha) * result[rr, cc, 0] + alpha * color[0]
+                    result[rr, cc, 1] = (1 - alpha) * result[rr, cc, 1] + alpha * color[1]
+                    result[rr, cc, 2] = (1 - alpha) * result[rr, cc, 2] + alpha * color[2]
+                    result = np.clip(result, 0, 255)
+                else:
+                    input_dtype = result.dtype
+                    result = result.astype(np.float32)
+                    result[rr, cc, 0] = (1 - alpha) * result[rr, cc, 0] + alpha * color[0]
+                    result[rr, cc, 1] = (1 - alpha) * result[rr, cc, 1] + alpha * color[1]
+                    result[rr, cc, 2] = (1 - alpha) * result[rr, cc, 2] + alpha * color[2]
+                    result = np.clip(result, 0, 255).astype(input_dtype)
+
+        return result
+
+    def extract_from_image(self, image):
+        pad_top = 0
+        pad_right = 0
+        pad_bottom = 0
+        pad_left = 0
+
+        height, width = image.shape[0], image.shape[1]
+        x1, x2, y1, y2 = self.x1, self.x2, self.y1, self.y2
+
+        # if the bb is outside of the image area, the following pads the image
+        # first with black pixels until the bb is inside the image
+        # and only then extracts the image area
+        # TODO probably more efficient to initialize an array of zeros
+        # and copy only the portions of the bb into that array that are
+        # natively inside the image area
+        if x1 < 0:
+            pad_left = abs(x1)
+            x2 = x2 + abs(x1)
+            x1 = 0
+        if y1 < 0:
+            pad_top = abs(y1)
+            y2 = y2 + abs(y1)
+            y1 = 0
+        if x2 >= width:
+            pad_right = x2 - (width - 1)
+        if y2 >= height:
+            pad_bottom = y2 - (height - 1)
+
+        if any([val > 0 for val in [pad_top, pad_right, pad_bottom, pad_left]]):
+            if len(image.shape) == 2:
+                image = np.pad(image, ((pad_top, pad_bottom), (pad_left, pad_right)), mode="constant")
+            else:
+                image = np.pad(image, ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)), mode="constant")
+
+        return image[y1:y2, x1:x2]
+
+    def to_keypoints(self):
+        return [
+            Keypoint(x=self.x1, y=self.y1),
+            Keypoint(x=self.x2, y=self.y1),
+            Keypoint(x=self.x2, y=self.y2),
+            Keypoint(x=self.x1, y=self.y2)
+        ]
+
+    def copy(self, x1=None, y1=None, x2=None, y2=None):
+        return BoundingBox(
+            x1=self.x1 if x1 is None else x1,
+            x2=self.x2 if x2 is None else x2,
+            y1=self.y1 if y1 is None else y1,
+            y2=self.y2 if y2 is None else y2
+        )
+
+class BoundingBoxesOnImage(object):
+    """
+    Object that represents all bounding boxes on a single image.
+
+    Parameters
+    ----------
+    bounding_boxes : list of BoundingBox
+        List of bounding boxes on the image.
+
+    shape : tuple of int
+        The shape of the image on which the bounding boxes are placed.
+
+    Examples
+    --------
+    >>> bbs = [
+    >>>     BoundingBox(x1=10, y1=20, x2=20, y2=30),
+    >>>     BoundingBox(x1=25, y1=50, x2=30, y2=70)
+    >>> ]
+    >>> bbs_oi = BoundingBoxesOnImage(bbs, shape=image.shape)
+
+    """
+    def __init__(self, bounding_boxes, shape):
+        self.bounding_boxes = bounding_boxes
+        if is_np_array(shape):
+            self.shape = shape.shape
+        else:
+            assert isinstance(shape, (tuple, list))
+            self.shape = tuple(shape)
+
+    @property
+    def height(self):
+        return self.shape[0]
+
+    @property
+    def width(self):
+        return self.shape[1]
+
+    def on(self, image):
+        """
+        Project bounding boxes from one image to a new one.
+
+        Parameters
+        ----------
+        image : ndarray or tuple
+            New image onto which the bounding boxes are to be projected.
+            May also simply be that new image's shape tuple.
+
+        Returns
+        -------
+        keypoints : BoundingBoxesOnImage
+            Object containing all projected bounding boxes.
+
+        """
+        if is_np_array(image):
+            shape = image.shape
+        else:
+            shape = image
+
+        if shape[0:2] == self.shape[0:2]:
+            return self.deepcopy()
+        else:
+            bounding_boxes = [bb.project(self.shape, shape) for bb in self.bounding_boxes]
+            return BoundingBoxesOnImage(bounding_boxes, shape)
+
+    def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
+        """
+        Draw all bounding boxes onto a given image.
+
+        Parameters
+        ----------
+        image : (H,W,3) ndarray
+            The image onto which to draw the bounding boxes.
+            This image should usually have the same shape as
+            set in BoundingBoxesOnImage.shape.
+
+        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=[0, 255, 0])
+            The RGB color of all bounding boxes. If a single int `C`, then that is
+            equivalent to (C,C,C).
+
+        size : float, optional(default=1.0)
+            Alpha/transparency of the bounding box.
+
+        thickness : int, optional(default=1)
+            Thickness in pixels.
+
+        copy : bool, optional(default=True)
+            Whether to copy the image before drawing the points.
+
+        raise_if_out_of_image : bool, optional(default=False)
+            Whether to raise an exception if any bounding box is outside of the
+            image.
+
+        Returns
+        -------
+        image : (H,W,3) ndarray
+            Image with drawn bounding boxes.
+
+        """
+        for bb in self.bounding_boxes:
+            image = bb.draw_on_image(
+                image,
+                color=color,
+                alpha=alpha,
+                thickness=thickness,
+                copy=copy,
+                raise_if_out_of_image=raise_if_out_of_image
+            )
+
+        return image
+
+    def remove_out_of_image(self):
+        bbs_clean = [bb for bb in self.bounding_boxes if not bb.is_out_of_image(self.shape)]
+        return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
+
+    def cut_out_of_image(self):
+        bbs_cut = [bb.cut_out_of_image(self.shape) for bb in self.bounding_boxes]
+        return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
 
 ############################
 # Background augmentation
