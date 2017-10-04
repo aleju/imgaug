@@ -1396,7 +1396,18 @@ class Sequential(Augmenter, list):
 
     def __init__(self, children=None, random_order=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        list.__init__(self, children if children is not None else [])
+        if children is None:
+            list.__init__(self, [])
+        elif isinstance(children, Augmenter):
+            # this must be separate from `list.__init__(self, children)`,
+            # otherwise in `Sequential(OneOf(...))` the OneOf(...) is
+            # interpreted as a list and OneOf's children become Sequential's
+            # children
+            list.__init__(self, [children])
+        elif ia.is_iterable(children):
+            list.__init__(self, children)
+        else:
+            raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
         self.random_order = random_order
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1545,7 +1556,18 @@ class SomeOf(Augmenter, list):
 
     def __init__(self, n=None, children=None, random_order=False, name=None, deterministic=False, random_state=None):
         Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
-        list.__init__(self, children if children is not None else [])
+        if children is None:
+            list.__init__(self, [])
+        elif isinstance(children, Augmenter):
+            # this must be separate from `list.__init__(self, children)`,
+            # otherwise in `SomeOf(OneOf(...))` the OneOf(...) is
+            # interpreted as a list and OneOf's children become SomeOf's
+            # children
+            list.__init__(self, [children])
+        elif ia.is_iterable(children):
+            list.__init__(self, children)
+        else:
+            raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
 
         if ia.is_single_number(n):
             self.n = int(n)
