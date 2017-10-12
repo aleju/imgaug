@@ -991,6 +991,8 @@ class PerspectiveTransform(Augmenter):
             # cv2.warpPerspective only supports <=4 channels
             assert images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels."
             warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
+            if warped.ndim == 2 and images[i].ndim == 3:
+                warped = np.expand_dims(warped, 2)
             #print(np.min(warped), np.max(warped), warped.dtype)
             if self.keep_size:
                 h, w = images[i].shape[0:2]
