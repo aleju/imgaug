@@ -45,6 +45,7 @@ def main():
     test_background_augmentation()
     test_determinism()
     test_keypoint_augmentation()
+    test_unusual_channel_numbers()
     test_copy_random_state()
 
     print("Finished without errors.")
@@ -2709,6 +2710,79 @@ def test_keypoint_augmentation():
             if len(ds) == 0:
                 print("[INFO] No valid keypoints found for '%s' in test_keypoint_augmentation()" % (str(aug),))
         assert np.average(dss) < 5.0, "Average distance too high (%.2f, with ds: %s)" % (np.average(dss), str(dss))
+
+def test_unusual_channel_numbers():
+    ia.seed(1)
+
+    images = [
+        (0, create_random_images((4, 16, 16))),
+        (1, create_random_images((4, 16, 16, 1))),
+        (2, create_random_images((4, 16, 16, 2))),
+        (4, create_random_images((4, 16, 16, 4))),
+        (5, create_random_images((4, 16, 16, 5))),
+        (10, create_random_images((4, 16, 16, 10))),
+        (20, create_random_images((4, 16, 16, 20)))
+    ]
+
+    augs = [
+        iaa.Add((-5, 5), name="Add"),
+        iaa.AddElementwise((-5, 5), name="AddElementwise"),
+        iaa.AdditiveGaussianNoise(0.01*255, name="AdditiveGaussianNoise"),
+        iaa.Multiply((0.95, 1.05), name="Multiply"),
+        iaa.Dropout(0.01, name="Dropout"),
+        iaa.CoarseDropout(0.01, size_px=6, name="CoarseDropout"),
+        iaa.Invert(0.01, per_channel=True, name="Invert"),
+        iaa.ContrastNormalization((0.95, 1.05), name="ContrastNormalization"),
+        iaa.GaussianBlur(sigma=(0.95, 1.05), name="GaussianBlur"),
+        iaa.AverageBlur((3, 5), name="AverageBlur"),
+        iaa.MedianBlur((3, 5), name="MedianBlur"),
+        #iaa.BilateralBlur((3, 5), name="BilateralBlur"), # works only with 3/RGB channels
+        # WithColorspace ?
+        #iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"), # works only with 3/RGB channels
+        # ChangeColorspace ?
+        #iaa.Grayscale((0.0, 0.1), name="Grayscale"), # works only with 3 channels
+        # Convolve ?
+        iaa.Sharpen((0.0, 0.1), lightness=(1.0, 1.2), name="Sharpen"),
+        iaa.Emboss(alpha=(0.0, 0.1), strength=(0.5, 1.5), name="Emboss"),
+        iaa.EdgeDetect(alpha=(0.0, 0.1), name="EdgeDetect"),
+        iaa.DirectedEdgeDetect(alpha=(0.0, 0.1), direction=0, name="DirectedEdgeDetect"),
+        iaa.Fliplr(0.5, name="Fliplr"),
+        iaa.Flipud(0.5, name="Flipud"),
+        iaa.Affine(translate_px=(-5, 5), name="Affine-translate-px"),
+        iaa.Affine(translate_percent=(-0.05, 0.05), name="Affine-translate-percent"),
+        iaa.Affine(rotate=(-20, 20), name="Affine-rotate"),
+        iaa.Affine(shear=(-20, 20), name="Affine-shear"),
+        iaa.Affine(scale=(0.9, 1.1), name="Affine-scale"),
+        iaa.PiecewiseAffine(scale=(0.001, 0.005), name="PiecewiseAffine"),
+        iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"),
+        iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"),
+        iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
+        iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
+        iaa.OneOf(iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))),
+        iaa.Sometimes(0.5, iaa.Add((-5, 5)), name="Sometimes"),
+        # WithChannels
+        iaa.Noop(name="Noop"),
+        # Lambda
+        # AssertLambda
+        # AssertShape
+        iaa.Alpha((0.0, 0.1), iaa.Add(10), name="Alpha"),
+        iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"),
+        iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"),
+        iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"),
+        iaa.Superpixels(p_replace=0.01, n_segments=64),
+        #iaa.Scale(0.5, name="Scale"),
+        iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
+        iaa.Pad(px=(0, 10), name="Pad"),
+        iaa.Crop(px=(0, 10), name="Crop")
+    ]
+
+    for aug in augs:
+        for (nb_channels, images_c) in images:
+            #print("shape", images_c.shape, aug.name)
+            images_aug = aug.augment_images(images_c)
+            assert images_aug.shape == images_c.shape
+            image_aug = aug.augment_image(images_c[0])
+            assert image_aug.shape == images_c[0].shape
 
 def test_copy_random_state():
     image = ia.quokka_square(size=(128, 128))
