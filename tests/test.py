@@ -2770,7 +2770,7 @@ def test_unusual_channel_numbers():
         iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"),
         iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"),
         iaa.Superpixels(p_replace=0.01, n_segments=64),
-        #iaa.Scale(0.5, name="Scale"),
+        iaa.Scale({"height": 4, "width": 4}, name="Scale"),
         iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
         iaa.Pad(px=(0, 10), name="Pad"),
         iaa.Crop(px=(0, 10), name="Crop")
@@ -2779,10 +2779,20 @@ def test_unusual_channel_numbers():
     for aug in augs:
         for (nb_channels, images_c) in images:
             #print("shape", images_c.shape, aug.name)
-            images_aug = aug.augment_images(images_c)
-            assert images_aug.shape == images_c.shape
-            image_aug = aug.augment_image(images_c[0])
-            assert image_aug.shape == images_c[0].shape
+            if aug.name != "Scale":
+                images_aug = aug.augment_images(images_c)
+                assert images_aug.shape == images_c.shape
+                image_aug = aug.augment_image(images_c[0])
+                assert image_aug.shape == images_c[0].shape
+            else:
+                images_aug = aug.augment_images(images_c)
+                image_aug = aug.augment_image(images_c[0])
+                if images_c.ndim == 3:
+                    assert images_aug.shape == (4, 4, 4)
+                    assert image_aug.shape == (4, 4)
+                else:
+                    assert images_aug.shape == (4, 4, 4, images_c.shape[3])
+                    assert image_aug.shape == (4, 4, images_c.shape[3])
 
 def test_copy_random_state():
     image = ia.quokka_square(size=(128, 128))
