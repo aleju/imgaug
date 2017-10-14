@@ -295,7 +295,12 @@ class MedianBlur(Augmenter):
             ki = samples[i]
             if ki > 1:
                 ki = ki + 1 if ki % 2 == 0 else ki
-                result[i] = cv2.medianBlur(result[i], ki)
+                image_aug = cv2.medianBlur(result[i], ki)
+                # cv2.medianBlur() removes channel axis for single-channel
+                # images
+                if image_aug.ndim == 2:
+                    image_aug = image_aug[..., np.newaxis]
+                result[i] = image_aug
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
