@@ -989,10 +989,18 @@ class PerspectiveTransform(Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             # cv2.warpPerspective only supports <=4 channels
-            assert images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels."
-            warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
-            if warped.ndim == 2 and images[i].ndim == 3:
-                warped = np.expand_dims(warped, 2)
+            #assert images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels."
+            nb_channels = images[i].shape[2]
+            if nb_channels <= 4:
+                warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
+                if warped.ndim == 2 and images[i].ndim == 3:
+                    warped = np.expand_dims(warped, 2)
+            else:
+                # warp each channel on its own, re-add channel axis, then stack
+                # the result from a list of [H, W, 1] to (H, W, C).
+                warped = [cv2.warpPerspective(images[i][..., c], M, (max_width, max_height)) for c in sm.xrange(nb_channels)]
+                warped = [warped_i[..., np.newaxis] for warped_i in warped]
+                warped = np.dstack(warped)
             #print(np.min(warped), np.max(warped), warped.dtype)
             if self.keep_size:
                 h, w = images[i].shape[0:2]

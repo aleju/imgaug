@@ -44,5 +44,14 @@ def main():
         print(aug.name)
         misc.imshow(ia.draw_grid(images_aug))
 
+    print("----------------")
+    print("6 channels")
+    print("----------------")
+    image6 = np.dstack([image, image])
+    image6_aug = augs[1].augment_image(image6)
+    misc.imshow(
+        np.hstack([image6_aug[..., 0:3], image6_aug[..., 3:6]])
+    )
+
 if __name__ == "__main__":
     main()
