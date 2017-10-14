@@ -210,8 +210,13 @@ class AverageBlur(Augmenter):
             )
         for i in sm.xrange(nb_images):
             kh, kw = samples[0][i], samples[1][i]
+            #print(images.shape, result.shape, result[i].shape)
             if kh > 1 or kw > 1:
-                result[i] = cv2.blur(result[i], (kh, kw))
+                image_aug = cv2.blur(result[i], (kh, kw))
+                # cv2.blur() removes channel axis for single-channel images
+                if image_aug.ndim == 2:
+                    image_aug = image_aug[..., np.newaxis]
+                result[i] = image_aug
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
