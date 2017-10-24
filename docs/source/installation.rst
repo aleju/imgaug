@@ -29,7 +29,7 @@ Alternatively, you can install the latest version which was added to pypi via
 
 In rare cases, one might prefer to install from the locally cloned repository.
 This is possible using ``python setup.py sdist && sudo pip install dist/imgaug-VERSION.tar.gz``,
-where `VERSION` must be replaced by the current version of the library (e.g. ``imgaug-0.2.4.tar.gz``).
+where `VERSION` must be replaced by the current version of the library (e.g. ``imgaug-0.2.5.tar.gz``).
 The current version can be derived from `setup.py`'s content.
 
 To deinstall the library use ``pip uninstall imgaug``.
