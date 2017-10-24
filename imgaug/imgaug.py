@@ -1662,7 +1662,7 @@ class BatchLoader(object):
             True if all workers have finished. Else False.
 
         """
-        return all([event.is_set() for event in self.finished_signal])
+        return all([event.is_set() for event in self.finished_signals])
 
     def _load_batches(self, load_batch_func, queue, finished_signal, join_signal, seedval):
         if seedval is not None:
