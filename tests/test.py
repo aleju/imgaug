@@ -2364,7 +2364,7 @@ def test_background_augmentation():
                       [0, 1, 1, 1]], dtype=np.uint8)
     image_flipped = np.fliplr(image)
     keypoint = ia.Keypoint(x=2, y=1)
-    keypoints = [ia.KeypointsOnImage([keypoint], shape=image.shape)]
+    keypoints = [ia.KeypointsOnImage([keypoint], shape=image.shape + (1,))]
     kp_flipped = ia.Keypoint(
         x=image.shape[1]-1-keypoint.x,
         y=keypoint.y
@@ -2687,7 +2687,8 @@ def test_keypoint_augmentation():
             kp_image_aug = aug_det.augment_image(kp_image)
             kp_image_aug_rev = ia.KeypointsOnImage.from_keypoint_image(
                 kp_image_aug,
-                if_not_found_coords={"x": -9999, "y": -9999}
+                if_not_found_coords={"x": -9999, "y": -9999},
+                nb_channels=1
             )
             kp_aug = aug_det.augment_keypoints([keypoints_oi])[0]
             ds = []
