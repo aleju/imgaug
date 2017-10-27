@@ -664,7 +664,7 @@ class CropAndPad(Augmenter):
             shifted.shape = (
                 height - crop_top - crop_bottom + pad_top + pad_bottom,
                 width - crop_left - crop_right + pad_left + pad_right
-            )
+            ) + shifted.shape[2:]
             if self.keep_size:
                 result.append(shifted.on(keypoints_on_image.shape))
             else:
