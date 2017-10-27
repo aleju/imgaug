@@ -150,7 +150,7 @@ class Affine(Augmenter):
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
         The constant value used for skimage's transform function.
         This is the value used to fill up pixels in the result image that
         didn't exist in the input image (e.g. when translating to the left,
@@ -831,8 +831,11 @@ class PiecewiseAffine(Augmenter):
 
                 kps_aug = ia.KeypointsOnImage.from_keypoint_image(
                     kp_image_warped,
-                    if_not_found_coords={"x": -1, "y": -1}
+                    if_not_found_coords={"x": -1, "y": -1},
+                    nb_channels=None if len(kpsoi.shape) < 3 else kpsoi.shape[2]
                 )
+                # TODO is this still necessary after nb_channels was added to
+                # from_keypoint_image() ?
                 if len(kpsoi.shape) > 2:
                     kps_aug.shape = (
                         kps_aug.shape[0],
@@ -1019,12 +1022,13 @@ class PerspectiveTransform(Augmenter):
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             keypoints_on_image = keypoints_on_images[i]
             kps_arr = keypoints_on_image.get_coords_array()
+            #nb_channels = keypoints_on_image.shape[2] if len(keypoints_on_image.shape) >= 3 else None
 
             warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
             warped = warped[0]
             warped_kps = ia.KeypointsOnImage.from_coords_array(
                 np.around(warped, decimals=0).astype(np.int32),
-                shape=(max_height, max_width)
+                shape=(max_height, max_width) + keypoints_on_image.shape[2:]
             )
             if self.keep_size:
                 warped_kps = warped_kps.on(keypoints_on_image.shape)
