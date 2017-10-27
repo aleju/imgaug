@@ -27,7 +27,7 @@ import six
 import six.moves as sm
 import warnings
 
-from .meta import Augmenter
+from .meta import Augmenter, Sequential
 
 # TODO tests
 class Alpha(Augmenter):
@@ -153,19 +153,25 @@ class Alpha(Augmenter):
 
         if first is None:
             self.first = None
-        elif isinstance(first, Augmenter):
-            self.first = first
         elif ia.is_iterable(first):
-            self.first = iaa.Sequential(first, name="%s-first" % (self.name,))
+            if isinstance(first, Augmenter):
+                self.first = first
+            else:
+                self.first = Sequential(first, name="%s-first" % (self.name,))
+        elif isinstance(first, Augmenter):
+            self.first = Sequential([first], name="%s-first" % (self.name,))
         else:
             raise Exception("Expected 'first' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(first),))
 
         if second is None:
             self.second = None
-        elif isinstance(second, Augmenter):
-            self.second = second
         elif ia.is_iterable(second):
-            self.second = iaa.Sequential(second, name="%s-second" % (self.name,))
+            if isinstance(second, Augmenter):
+                self.second = second
+            else:
+                self.second = Sequential(second, name="%s-second" % (self.name,))
+        elif isinstance(second, Augmenter):
+            self.second = Sequential([second], name="%s-second" % (self.name,))
         else:
             raise Exception("Expected 'second' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(second),))
 
