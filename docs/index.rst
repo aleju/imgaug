@@ -19,6 +19,7 @@ processes for improved performance.
    source/installation
    source/examples_basics
    source/examples_keypoints
+   source/examples_bounding_boxes
    source/parameters
    source/alpha
    source/augmenters
