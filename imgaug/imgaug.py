@@ -586,10 +586,11 @@ def draw_grid(images, rows=None, cols=None):
         assert is_iterable(images) and is_np_array(images[0]) and images[0].ndim == 3
 
     nb_images = len(images)
+    assert nb_images > 0
     cell_height = max([image.shape[0] for image in images])
     cell_width = max([image.shape[1] for image in images])
     channels = set([image.shape[2] for image in images])
-    assert len(channels) == 1
+    assert len(channels) == 1, "All images are expected to have the same number of channels, but got channel set %s with length %d instead." % (str(channels), len(channels))
     nb_channels = list(channels)[0]
     if rows is None and cols is None:
         rows = cols = int(math.ceil(math.sqrt(nb_images)))
@@ -1296,6 +1297,14 @@ class BoundingBox(object):
                 y2=y2
             )
 
+    def extend(self, all_sides=0, top=0, right=0, bottom=0, left=0):
+        return BoundingBox(
+            x1=self.x1 - all_sides - left,
+            x2=self.x2 + all_sides + right,
+            y1=self.y1 - all_sides - top,
+            y2=self.y2 + all_sides + bottom
+        )
+
     def intersection(self, other, default=None):
         x1_i = max(self.x1, other.x1)
         y1_i = max(self.y1, other.y1)
@@ -1319,7 +1328,7 @@ class BoundingBox(object):
         if inters is None:
             return 0
         else:
-            return inters / self.union(other)
+            return inters.area / self.union(other).area
 
     def is_fully_within_image(self, image):
         if isinstance(image, tuple):
@@ -1338,8 +1347,13 @@ class BoundingBox(object):
         img_bb = BoundingBox(x1=0, x2=width, y1=0, y2=height)
         return self.intersection(img_bb) is not None
 
-    def is_out_of_image(self, image):
-        return not self.is_partly_within_image(image)
+    def is_out_of_image(self, image, fully=True, partly=False):
+        if self.is_fully_within_image(image):
+            return False
+        elif self.is_partly_within_image(image):
+            return partly
+        else:
+            return fully
 
     def cut_out_of_image(self, image):
         if isinstance(image, tuple):
@@ -1576,13 +1590,17 @@ class BoundingBoxesOnImage(object):
 
         return image
 
-    def remove_out_of_image(self):
-        bbs_clean = [bb for bb in self.bounding_boxes if not bb.is_out_of_image(self.shape)]
+    def remove_out_of_image(self, fully=True, partly=False):
+        bbs_clean = [bb for bb in self.bounding_boxes if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
     def cut_out_of_image(self):
-        bbs_cut = [bb.cut_out_of_image(self.shape) for bb in self.bounding_boxes]
+        bbs_cut = [bb.cut_out_of_image(self.shape) for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
         return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
+
+    def shift(self, top=None, right=None, bottom=None, left=None):
+        bbs_new = [bb.shift(top=top, right=right, bottom=bottom, left=left) for bb in self.bounding_boxes]
+        return BoundingBoxesOnImage(bbs_new, shape=self.shape)
 
 ############################
 # Background augmentation
