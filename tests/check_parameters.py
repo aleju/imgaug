@@ -4,7 +4,7 @@ from imgaug import parameters as iap
 from imgaug.parameters import (
     Binomial, Choice, DiscreteUniform, Poisson, Normal, Laplace, ChiSquare,
     Weibull, Uniform, Beta, Deterministic, Clip, Discretize, Multiply, Add,
-    Absolute, RandomSign, ForceSign, Positive, Negative,
+    Divide, Power, Absolute, RandomSign, ForceSign, Positive, Negative,
     SimplexNoise, FrequencyNoise, Sigmoid
 )
 from scipy import misc
@@ -49,9 +49,17 @@ def main():
     params_arithmetic = [
         ("Normal(0, 1.0)", Normal(0.0, 1.0)),
         ("Normal(0, 1.0) + 5", Normal(0.0, 1.0) + 5),
+        ("5 + Normal(0, 1.0)", 5 + Normal(0.0, 1.0)),
+        ("5 + Normal(0, 1.0)", Add(5, Normal(0.0, 1.0), elementwise=True)),
         ("Normal(0, 1.0) * 10", Normal(0.0, 1.0) * 10),
+        ("10 * Normal(0, 1.0)", 10 * Normal(0.0, 1.0)),
+        ("10 * Normal(0, 1.0)", Multiply(10, Normal(0.0, 1.0), elementwise=True)),
         ("Normal(0, 1.0) / 10", Normal(0.0, 1.0) / 10),
-        ("Normal(0, 1.0) ** 2", Normal(0.0, 1.0) ** 2)
+        ("10 / Normal(0, 1.0)", 10 / Normal(0.0, 1.0)),
+        ("10 / Normal(0, 1.0)", Divide(10, Normal(0.0, 1.0), elementwise=True)),
+        ("Normal(0, 1.0) ** 2", Normal(0.0, 1.0) ** 2),
+        ("2 ** Normal(0, 1.0)", 2 ** Normal(0.0, 1.0)),
+        ("2 ** Normal(0, 1.0)", Power(2, Normal(0.0, 1.0), elementwise=True))
     ]
 
     params_noise = [

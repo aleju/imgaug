@@ -10,6 +10,8 @@ import scipy
 import numbers
 from collections import defaultdict
 
+NP_FLOAT_TYPES = set(np.sctypes["float"])
+
 def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
     def check_value_range(v):
         if value_range is None:
@@ -98,6 +100,24 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
             raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
         else:
             raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
+
+def force_np_float_dtype(val):
+    if val.dtype in NP_FLOAT_TYPES:
+        return val
+    else:
+        return val.astype(np.float32)
+
+def both_np_float_if_one_is_float(a, b):
+    a_f = a.dtype in NP_FLOAT_TYPES
+    b_f = b.dtype in NP_FLOAT_TYPES
+    if a_f and b_f:
+        return a, b
+    elif a_f:
+        return a, b.astype(np.float32)
+    elif b_f:
+        return a.astype(np.float32), b
+    else:
+        return a.astype(np.float32), b.astype(np.float32)
 
 def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
     if titles is None:
@@ -209,7 +229,7 @@ class StochasticParameter(object):
 
     def __pow__(self, other, z=None):
         if z is not None:
-            raise NotImplementedError("Modulo power is currently supported by StochasticParameter.")
+            raise NotImplementedError("Modulo power is currently not supported by StochasticParameter.")
         if ia.is_single_number(other) or isinstance(other, StochasticParameter):
             return Power(self, other)
         else:
@@ -226,6 +246,44 @@ class StochasticParameter(object):
             return Divide(self, other)
         else:
             raise Exception("Invalid datatypes in: StochasticParameter / %s (truediv). Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __radd__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Add(other, self)
+        else:
+            raise Exception("Invalid datatypes in: %s + StochasticParameter. Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rsub__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Subtract(other, self)
+        else:
+            raise Exception("Invalid datatypes in: %s - StochasticParameter. Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rmul__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Multiply(other, self)
+        else:
+            raise Exception("Invalid datatypes in: %s * StochasticParameter. Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rpow__(self, other, z=None):
+        if z is not None:
+            raise NotImplementedError("Modulo power is currently not supported by StochasticParameter.")
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Power(other, self)
+        else:
+            raise Exception("Invalid datatypes in: %s ** StochasticParameter. Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rdiv__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Divide(other, self)
+        else:
+            raise Exception("Invalid datatypes in: %s / StochasticParameter. Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rtruediv__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Divide(other, self)
+        else:
+            raise Exception("Invalid datatypes in: %s / StochasticParameter (truediv). Expected second argument to be number or StochasticParameter." % (type(other),))
 
     def copy(self):
         """
@@ -1200,7 +1258,7 @@ class Multiply(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : number or tuple of two number or list of number or StochasticParameter
         Other parameter which's sampled values are to be
         multiplied.
 
@@ -1227,29 +1285,31 @@ class Multiply(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Multiply, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-
-        self.other_param = other_param
+        self.other_param = handle_continuous_param(other_param, "other_param")
         self.val = handle_continuous_param(val, "val")
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
-        if self.elementwise and not isinstance(self.val, Deterministic):
-            return np.multiply(
-                samples,
-                self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
-            )
+
+        elementwise = self.elementwise and not isinstance(self.val, Deterministic)
+
+        if elementwise:
+            val_samples = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
         else:
-            return samples * self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+
+        if elementwise:
+            return np.multiply(samples, val_samples)
+        else:
+            return samples * val_samples
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        opstr = str(self.other_param)
-        return "Multiply(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+        return "Multiply(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Divide(StochasticParameter):
     """
@@ -1260,7 +1320,7 @@ class Divide(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : number or tuple of two number or list of number or StochasticParameter
         Other parameter which's sampled values are to be
         divided.
 
@@ -1287,16 +1347,17 @@ class Divide(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Divide, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-
-        self.other_param = other_param
+        self.other_param = handle_continuous_param(other_param, "other_param")
         self.val = handle_continuous_param(val, "val")
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
-        if self.elementwise and not isinstance(self.val, Deterministic):
+
+        elementwise = self.elementwise and not isinstance(self.val, Deterministic)
+
+        if elementwise:
             val_samples = self.val.draw_samples(
                 size,
                 random_state=ia.new_random_state(seed+1)
@@ -1306,8 +1367,8 @@ class Divide(StochasticParameter):
             val_samples[val_samples == 0] = 1
 
             return np.multiply(
-                samples,
-                val_samples.astype(np.float32)
+                force_np_float_dtype(samples),
+                force_np_float_dtype(val_samples)
             )
         else:
             val_sample = self.val.draw_sample(
@@ -1318,14 +1379,14 @@ class Divide(StochasticParameter):
             if val_sample == 0:
                 val_sample = 1
 
-            return samples / float(val_sample)
+            return force_np_float_dtype(samples) / float(val_sample)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         opstr = str(self.other_param)
-        return "Divide(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+        return "Divide(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Add(StochasticParameter):
     """
@@ -1333,7 +1394,7 @@ class Add(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : number or tuple of two number or list of number or StochasticParameter
         Other parameter which's sampled values are to be
         modified.
 
@@ -1359,29 +1420,31 @@ class Add(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Add, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-
-        self.other_param = other_param
+        self.other_param = handle_continuous_param(other_param, "other_param")
         self.val = handle_continuous_param(val, "val")
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
-        if self.elementwise and not isinstance(self.val, Deterministic):
-            return np.add(
-                samples,
-                self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
-            )
+
+        elementwise = self.elementwise and not isinstance(self.val, Deterministic)
+
+        if elementwise:
+            val_samples = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
         else:
-            return samples + self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+
+        if elementwise:
+            return np.add(samples, val_samples)
+        else:
+            return samples + val_samples
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        opstr = str(self.other_param)
-        return "Add(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+        return "Add(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Subtract(StochasticParameter):
     """
@@ -1389,7 +1452,7 @@ class Subtract(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : number or tuple of two number or list of number or StochasticParameter
         Other parameter which's sampled values are to be
         modified.
 
@@ -1415,29 +1478,31 @@ class Subtract(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Subtract, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-
-        self.other_param = other_param
+        self.other_param = handle_continuous_param(other_param, "other_param")
         self.val = handle_continuous_param(val, "val")
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
-        if self.elementwise and not isinstance(self.val, Deterministic):
-            return np.subtract(
-                samples,
-                self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
-            )
+
+        elementwise = self.elementwise and not isinstance(self.val, Deterministic)
+
+        if elementwise:
+            val_samples = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
         else:
-            return samples - self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+
+        if elementwise:
+            return np.subtract(samples, val_samples)
+        else:
+            return samples - val_samples
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        opstr = str(self.other_param)
-        return "Subtract(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+        return "Subtract(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Power(StochasticParameter):
     """
@@ -1445,7 +1510,7 @@ class Power(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : number or tuple of two number or list of number or StochasticParameter
         Other parameter which's sampled values are to be
         modified.
 
@@ -1473,32 +1538,33 @@ class Power(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Power, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-
-        self.other_param = other_param
+        self.other_param = handle_continuous_param(other_param, "other_param")
         self.val = handle_continuous_param(val, "val")
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
-        samples_dtype = samples.dtype
 
-        if self.elementwise and not isinstance(self.val, Deterministic):
+        elementwise = self.elementwise and not isinstance(self.val, Deterministic)
+
+        if elementwise:
             exponents = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
         else:
             exponents = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
 
-        #print("[power] samples", samples[0:100])
-        #print("[power] exponents", exponents[0:100] if ia.is_np_array(exponents) else exponents)
+        # without this we get int results in the case of
+        # Power(<int>, <stochastic float param>)
+        samples, exponents = both_np_float_if_one_is_float(samples, exponents)
+        samples_dtype = samples.dtype
+
         # float_power requires numpy>=1.12
         #result = np.float_power(samples, exponents)
-        #result = np.power(samples.astype(np.float64), exponents)
+        # TODO why was float32 type here replaced with complex number
+        # formulation?
         result = np.power(samples.astype(np.complex), exponents).real
-        #print("[power] result", result[0:100])
         if result.dtype != samples_dtype:
             result = result.astype(samples_dtype)
-        #print("[power] result cast", result[0:100])
 
         return result
 
@@ -1506,8 +1572,7 @@ class Power(StochasticParameter):
         return self.__str__()
 
     def __str__(self):
-        opstr = str(self.other_param)
-        return "Power(%s, %s, %s)" % (opstr, str(self.val), self.elementwise)
+        return "Power(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Absolute(StochasticParameter):
     """
