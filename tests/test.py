@@ -14,6 +14,7 @@ import six.moves as sm
 from scipy import misc
 from skimage import data
 
+
 def main():
     test_is_single_integer()
     test_is_single_float()
@@ -50,6 +51,7 @@ def main():
 
     print("Finished without errors.")
 
+
 def test_is_single_integer():
     assert ia.is_single_integer("A") == False
     assert ia.is_single_integer(None) == False
@@ -61,6 +63,7 @@ def test_is_single_integer():
     assert ia.is_single_integer(np.ones((1,), dtype=np.uint8)[0]) == True
     assert ia.is_single_integer(np.ones((1,), dtype=np.int32)[0]) == True
 
+
 def test_is_single_float():
     assert ia.is_single_float("A") == False
     assert ia.is_single_float(None) == False
@@ -71,6 +74,7 @@ def test_is_single_float():
     assert ia.is_single_float(1234) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
+
 
 def test_find():
     reseed()
@@ -114,6 +118,7 @@ def test_find():
     assert augs[0] == seq1
     assert augs[1] == [seq2]
 
+
 def test_remove():
     reseed()
 
@@ -147,6 +152,7 @@ def test_remove():
     augs = get_seq()
     augs = augs.remove_augmenters(lambda aug, parents: True, noop_if_topmost=False)
     assert augs is None
+
 
 def test_hooks():
     reseed()
@@ -212,6 +218,7 @@ def test_hooks():
     images_aug = seq.augment_images([image], hooks=hooks)
     assert np.array_equal(images_aug[0], image_lr)
 
+
 def test_Noop():
     reseed()
 
@@ -236,6 +243,7 @@ def test_Noop():
     expected = keypoints
     assert keypoints_equal(observed, expected)
 
+
 def test_Lambda():
     reseed()
 
@@ -249,8 +257,10 @@ def test_Lambda():
     images_aug = images + 1
     images_aug_list = [image + 1 for image in images_list]
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=1), ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=1),
+                                          ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
 
     def func_images(images, random_state, parents, hooks):
         if isinstance(images, list):
@@ -294,6 +304,7 @@ def test_Lambda():
         expected = keypoints_aug
         assert keypoints_equal(observed, expected)
 
+
 def test_AssertLambda():
     reseed()
 
@@ -304,7 +315,8 @@ def test_AssertLambda():
     images = np.array([base_img])
     images_list = [base_img]
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     def func_images_succeeds(images, random_state, parents, hooks):
         return images[0][0, 0] == 0 and images[0][2, 2] == 1
@@ -392,6 +404,7 @@ def test_AssertLambda():
         errored = True
     assert errored
 
+
 def test_AssertShape():
     reseed()
 
@@ -401,7 +414,8 @@ def test_AssertShape():
     base_img = base_img[:, :, np.newaxis]
     images = np.array([base_img])
     images_list = [base_img]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     base_img_h4 = np.array([[0, 0, 1, 0],
                             [0, 0, 1, 0],
@@ -409,7 +423,8 @@ def test_AssertShape():
                             [1, 0, 1, 0]], dtype=np.uint8)
     base_img_h4 = base_img_h4[:, :, np.newaxis]
     images_h4 = np.array([base_img_h4])
-    keypoints_h4 = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img_h4.shape)]
+    keypoints_h4 = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                         ia.Keypoint(x=2, y=2)], shape=base_img_h4.shape)]
 
     # image must have exactly shape (1, 3, 4, 1)
     aug = iaa.AssertShape((1, 3, 4, 1))
@@ -557,6 +572,7 @@ def test_AssertShape():
             errored = True
         assert errored
 
+
 def test_Crop():
     reseed()
 
@@ -568,7 +584,8 @@ def test_Crop():
     images = np.array([base_img])
     images_list = [base_img]
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     # test crop by 1 pixel on each side
     crops = [
@@ -624,17 +641,20 @@ def test_Crop():
         for i in sm.xrange(100):
             observed = aug.augment_images(images)
 
-            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0
+                       for base_img_cropped in images_cropped]
             movements.append(np.argmax(np.array(matches)))
             assert any([val == 1 for val in matches])
 
             observed = aug_det.augment_images(images)
-            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0
+                       for base_img_cropped in images_cropped]
             movements_det.append(np.argmax(np.array(matches)))
             assert any([val == 1 for val in matches])
 
             observed = aug.augment_images(images_list)
-            assert any([array_equal_lists(observed, [base_img_cropped]) for base_img_cropped in images_cropped])
+            assert any([array_equal_lists(observed, [base_img_cropped])
+                        for base_img_cropped in images_cropped])
 
             observed = aug.augment_keypoints(keypoints)
             assert any([keypoints_equal(observed, [kp]) for kp in keypoints_cropped])
@@ -672,17 +692,20 @@ def test_Crop():
         movements_det = []
         for i in sm.xrange(100):
             observed = aug.augment_images(images)
-            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0
+                       for base_img_cropped in images_cropped]
             movements.append(np.argmax(np.array(matches)))
             assert any([val == 1 for val in matches])
 
             observed = aug_det.augment_images(images)
-            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0 for base_img_cropped in images_cropped]
+            matches = [1 if np.array_equal(observed, np.array([base_img_cropped])) else 0
+                       for base_img_cropped in images_cropped]
             movements_det.append(np.argmax(np.array(matches)))
             assert any([val == 1 for val in matches])
 
             observed = aug.augment_images(images_list)
-            assert any([array_equal_lists(observed, [base_img_cropped]) for base_img_cropped in images_cropped])
+            assert any([array_equal_lists(observed, [base_img_cropped])
+                        for base_img_cropped in images_cropped])
 
             observed = aug.augment_keypoints(keypoints)
             assert any([keypoints_equal(observed, [kp]) for kp in keypoints_cropped])
@@ -693,6 +716,7 @@ def test_Crop():
     # TODO
     print("[Note] Crop by percentages is currently not tested.")
     print("[Note] Landmark projection after crop with resize is currently not tested.")
+
 
 def test_Fliplr():
     reseed()
@@ -710,8 +734,10 @@ def test_Fliplr():
     images = np.array([base_img])
     images_flipped = np.array([base_img_flipped])
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
-    keypoints_flipped = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints_flipped = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=0), ia.Keypoint(x=1, y=1),
+                                              ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
 
     # 0% chance of flip
     aug = iaa.Fliplr(0)
@@ -810,6 +836,7 @@ def test_Fliplr():
     for val in nb_flipped_by_pos_det:
         assert val in [0, nb_iterations]
 
+
 def test_Flipud():
     reseed()
 
@@ -826,8 +853,10 @@ def test_Flipud():
     images = np.array([base_img])
     images_flipped = np.array([base_img_flipped])
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
-    keypoints_flipped = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=2), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=0)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints_flipped = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=2), ia.Keypoint(x=1, y=1),
+                                              ia.Keypoint(x=2, y=0)], shape=base_img.shape)]
 
     # 0% chance of flip
     aug = iaa.Flipud(0)
@@ -926,6 +955,7 @@ def test_Flipud():
     for val in nb_flipped_by_pos_det:
         assert val in [0, nb_iterations]
 
+
 def test_GaussianBlur():
     reseed()
 
@@ -943,7 +973,8 @@ def test_GaussianBlur():
                 outer_pixels[0].append(i)
                 outer_pixels[1].append(j)
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     # no blur, shouldnt change anything
     aug = iaa.GaussianBlur(sigma=0)
@@ -1031,7 +1062,8 @@ def test_AdditiveGaussianNoise():
     images = np.array([base_img])
     images_list = [base_img]
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     # no noise, shouldnt change anything
     aug = iaa.AdditiveGaussianNoise(loc=0, scale=0)
@@ -1145,6 +1177,7 @@ def test_AdditiveGaussianNoise():
 #def test_ReplacingGaussianNoise():
 #    pass
 
+
 def test_Dropout():
     reseed()
 
@@ -1153,7 +1186,8 @@ def test_Dropout():
     images = np.array([base_img])
     images_list = [base_img]
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     # no dropout, shouldnt change anything
     aug = iaa.Dropout(p=0)
@@ -1181,22 +1215,26 @@ def test_Dropout():
 
     observed = aug.augment_images(images)
     assert not np.array_equal(observed, images)
-    percent_nonzero = len(observed.flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    percent_nonzero = len(observed.flatten().nonzero()[0]) \
+                      / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
     assert 0.35 <= (1 - percent_nonzero) <= 0.65
 
     observed = aug_det.augment_images(images)
     assert not np.array_equal(observed, images)
-    percent_nonzero = len(observed.flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    percent_nonzero = len(observed.flatten().nonzero()[0]) \
+                      / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
     assert 0.35 <= (1 - percent_nonzero) <= 0.65
 
     observed = aug.augment_images(images_list)
     assert not array_equal_lists(observed, images_list)
-    percent_nonzero = len(observed[0].flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    percent_nonzero = len(observed[0].flatten().nonzero()[0]) \
+                      / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
     assert 0.35 <= (1 - percent_nonzero) <= 0.65
 
     observed = aug_det.augment_images(images_list)
     assert not array_equal_lists(observed, images_list)
-    percent_nonzero = len(observed[0].flatten().nonzero()[0]) / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
+    percent_nonzero = len(observed[0].flatten().nonzero()[0]) \
+                      / (base_img.shape[0] * base_img.shape[1] * base_img.shape[2])
     assert 0.35 <= (1 - percent_nonzero) <= 0.65
 
     observed = aug.augment_keypoints(keypoints)
@@ -1230,13 +1268,15 @@ def test_Dropout():
     assert nb_changed_aug >= int(nb_iterations * 0.95)
     assert nb_changed_aug_det == 0
 
+
 def test_Multiply():
     reseed()
 
     base_img = np.ones((3, 3, 1), dtype=np.uint8) * 100
     images = np.array([base_img])
     images_list = [base_img]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     # no multiply, shouldnt change anything
     aug = iaa.Multiply(mul=1.0)
@@ -1351,7 +1391,8 @@ def test_Affine():
                 outer_pixels[0].append(i)
                 outer_pixels[1].append(j)
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
     # no translation/scale/rotate/shear, shouldnt change nothing
     aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
@@ -1538,8 +1579,12 @@ def test_Affine():
             outer_pixels[0].append(y)
             outer_pixels[1].append(x)
     inner_pixels = ([1, 1, 2, 2], [1, 2, 1, 2])
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=0), ia.Keypoint(x=0, y=3), ia.Keypoint(x=3, y=3)], shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1), ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=0),
+                                      ia.Keypoint(x=0, y=3), ia.Keypoint(x=3, y=3)],
+                                     shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1),
+                                          ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2)],
+                                         shape=base_img.shape)]
 
     observed = aug.augment_images(images)
     assert (observed[0][outer_pixels] < 25).all()
@@ -1564,7 +1609,8 @@ def test_Affine():
     assert keypoints_equal(observed, keypoints_aug)
 
     # varying scales
-    aug = iaa.Affine(scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, translate_px=0, rotate=0, shear=0)
+    aug = iaa.Affine(scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, translate_px=0,
+                     rotate=0, shear=0)
     aug_det = aug.to_deterministic()
 
     image = np.array([[0, 0, 0, 0, 0],
@@ -1783,8 +1829,10 @@ def test_Affine():
     images_aug = np.array([image_aug])
     images_list = [image]
     images_aug_list = [image_aug]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1)], shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=1, y=2)], shape=base_img.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=1)], shape=base_img.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1),
+                                          ia.Keypoint(x=1, y=2)], shape=base_img.shape)]
 
     observed = aug.augment_images(images)
     observed[observed >= 100] = 255
@@ -1930,6 +1978,7 @@ def test_ElasticTransformation():
     # TODO
     print("[Note] Elastic Transformations are currently not tested.")
 
+
 def test_Sequential():
     reseed()
 
@@ -1959,8 +2008,10 @@ def test_Sequential():
     images_lr_ud_list = [image_lr_ud]
     images_lr_ud = np.array([image_lr_ud])
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0), ia.Keypoint(x=2, y=1)], shape=image.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=0, y=2), ia.Keypoint(x=0, y=1)], shape=image.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=0, y=2),
+                                          ia.Keypoint(x=0, y=1)], shape=image.shape)]
 
     aug = iaa.Sequential([
         iaa.Fliplr(1.0),
@@ -2011,8 +2062,14 @@ def test_Sequential():
             last_aug = observed_aug
             last_aug_det = observed_aug_det
 
-        assert np.array_equal(observed_aug, images) or np.array_equal(observed_aug, images_lr) or np.array_equal(observed_aug, images_ud) or np.array_equal(observed_aug, images_lr_ud)
-        assert np.array_equal(observed_aug_det, images) or np.array_equal(observed_aug_det, images_lr) or np.array_equal(observed_aug_det, images_ud) or np.array_equal(observed_aug_det, images_lr_ud)
+        assert np.array_equal(observed_aug, images) \
+               or np.array_equal(observed_aug, images_lr) \
+               or np.array_equal(observed_aug, images_ud) \
+               or np.array_equal(observed_aug, images_lr_ud)
+        assert np.array_equal(observed_aug_det, images) \
+               or np.array_equal(observed_aug_det, images_lr) \
+               or np.array_equal(observed_aug_det, images_ud) \
+               or np.array_equal(observed_aug_det, images_lr_ud)
 
     assert (0.25 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.25 + 0.10) # should be the same in roughly 25% of all cases
     assert nb_changed_aug_det == 0
@@ -2136,6 +2193,7 @@ def test_Sequential():
     assert (0.50 - 0.1) <= nb_keypoints_first_second_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
 
+
 def test_Sometimes():
     reseed()
 
@@ -2160,9 +2218,12 @@ def test_Sometimes():
     images_ud_list = [image_ud]
     images_ud = np.array([image_ud])
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0), ia.Keypoint(x=2, y=1)], shape=image.shape)]
-    keypoints_lr = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=0, y=0), ia.Keypoint(x=0, y=1)], shape=image.shape)]
-    keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2), ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints_lr = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=0, y=0),
+                                         ia.Keypoint(x=0, y=1)], shape=image.shape)]
+    keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2),
+                                         ia.Keypoint(x=2, y=1)], shape=image.shape)]
 
     # 100% chance of if-branch
     aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -2306,6 +2367,7 @@ def test_Sometimes():
     assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
     assert nb_changed_aug_det == 0
 
+
 def test_2d_inputs():
     """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work.
     """
@@ -2355,6 +2417,7 @@ def test_2d_inputs():
 
     observed = noaug.augment_images(images_list2d3d)
     assert array_equal_lists(observed, images_list2d3d)
+
 
 def test_background_augmentation():
     reseed()
@@ -2514,7 +2577,8 @@ def test_background_augmentation():
         iaa.CoarseDropout((0.3, 0.5), size_percent=(0.05, 0.2)),
         iaa.Invert(0.5),
         iaa.ContrastNormalization((0.6, 1.4)),
-        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1), rotate=(-20, 20), shear=(-20, 20), order=ia.ALL, mode=ia.ALL, cval=(0, 255)),
+        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1), rotate=(-20, 20),
+                   shear=(-20, 20), order=ia.ALL, mode=ia.ALL, cval=(0, 255)),
         iaa.PiecewiseAffine(scale=(0.1, 0.3)),
         iaa.ElasticTransformation(alpha=0.5)
     ]
@@ -2522,7 +2586,8 @@ def test_background_augmentation():
     nb_iterations = 100
     image = ia.quokka(size=(64, 64))
     batch = ia.Batch(images=np.array([image]), keypoints=keypoints)
-    batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
+    batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()])
+               for _ in sm.xrange(nb_iterations)]
     for aug in augs:
         nb_changed = 0
         batches_aug = list(aug.augment_batches(batches, background=True))
@@ -2536,6 +2601,7 @@ def test_background_augmentation():
             assert nb_changed > 0
         else:
             assert nb_changed == 0
+
 
 def test_determinism():
     reseed()
@@ -2602,7 +2668,9 @@ def test_determinism():
         iaa.CoarseDropout((0.3, 0.5), size_percent=(0.05, 0.2)),
         iaa.Invert(0.5),
         iaa.ContrastNormalization((0.6, 1.4)),
-        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1), rotate=(-20, 20), shear=(-20, 20), order=ia.ALL, mode=ia.ALL, cval=(0, 255)),
+        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1),
+                   rotate=(-20, 20), shear=(-20, 20), order=ia.ALL,
+                   mode=ia.ALL, cval=(0, 255)),
         iaa.PiecewiseAffine(scale=(0.1, 0.3)),
         iaa.ElasticTransformation(alpha=0.5)
     ]
@@ -2613,8 +2681,11 @@ def test_determinism():
         images_aug2 = aug_det.augment_images(images)
         kps_aug1 = aug_det.augment_keypoints(keypoints)
         kps_aug2 = aug_det.augment_keypoints(keypoints)
-        assert array_equal_lists(images_aug1, images_aug2), "Images not identical for %s" % (aug.name,)
-        assert keypoints_equal(kps_aug1, kps_aug2), "Keypoints not identical for %s" % (aug.name,)
+        assert array_equal_lists(images_aug1, images_aug2), \
+            "Images not identical for %s" % (aug.name,)
+        assert keypoints_equal(kps_aug1, kps_aug2), \
+            "Keypoints not identical for %s" % (aug.name,)
+
 
 def test_keypoint_augmentation():
     ia.seed(1)
@@ -2669,7 +2740,8 @@ def test_keypoint_augmentation():
         iaa.Alpha((0.0, 0.1), iaa.Add(10), name="Alpha"),
         iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"),
         iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"),
-        iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"),
+        iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10),
+                                name="SimplexNoiseAlpha"),
         iaa.Superpixels(p_replace=0.01, n_segments=64),
         iaa.Scale(0.5, name="Scale"),
         iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
@@ -2692,7 +2764,9 @@ def test_keypoint_augmentation():
             )
             kp_aug = aug_det.augment_keypoints([keypoints_oi])[0]
             ds = []
-            assert len(kp_image_aug_rev.keypoints) == len(kp_aug.keypoints), "Lost keypoints for '%s' (%d vs expected %d)" % (aug.name, len(kp_aug.keypoints), len(kp_image_aug_rev.keypoints))
+            assert len(kp_image_aug_rev.keypoints) == len(kp_aug.keypoints),\
+                "Lost keypoints for '%s' (%d vs expected %d)" \
+                % (aug.name, len(kp_aug.keypoints), len(kp_image_aug_rev.keypoints))
             for kp_pred, kp_pred_img in zip(kp_aug.keypoints, kp_image_aug_rev.keypoints):
                 kp_pred_lost = (kp_pred.x == -9999 and kp_pred.y == -9999)
                 kp_pred_img_lost = (kp_pred_img.x == -9999 and kp_pred_img.y == -9999)
@@ -2704,13 +2778,18 @@ def test_keypoint_augmentation():
                 #    print("lost both keypoints")
 
                 if not kp_pred_lost and not kp_pred_img_lost:
-                    d = np.sqrt((kp_pred.x - kp_pred_img.x) ** 2 + (kp_pred.y - kp_pred_img.y) ** 2)
+                    d = np.sqrt((kp_pred.x - kp_pred_img.x) ** 2
+                                + (kp_pred.y - kp_pred_img.y) ** 2)
                     ds.append(d)
             #print(aug.name, np.average(ds), ds)
             dss.extend(ds)
             if len(ds) == 0:
-                print("[INFO] No valid keypoints found for '%s' in test_keypoint_augmentation()" % (str(aug),))
-        assert np.average(dss) < 5.0, "Average distance too high (%.2f, with ds: %s)" % (np.average(dss), str(dss))
+                print("[INFO] No valid keypoints found for '%s' "
+                      "in test_keypoint_augmentation()" % (str(aug),))
+        assert np.average(dss) < 5.0, \
+            "Average distance too high (%.2f, with ds: %s)" \
+            % (np.average(dss), str(dss))
+
 
 def test_unusual_channel_numbers():
     ia.seed(1)
@@ -2746,7 +2825,8 @@ def test_unusual_channel_numbers():
         iaa.Sharpen((0.0, 0.1), lightness=(1.0, 1.2), name="Sharpen"),
         iaa.Emboss(alpha=(0.0, 0.1), strength=(0.5, 1.5), name="Emboss"),
         iaa.EdgeDetect(alpha=(0.0, 0.1), name="EdgeDetect"),
-        iaa.DirectedEdgeDetect(alpha=(0.0, 0.1), direction=0, name="DirectedEdgeDetect"),
+        iaa.DirectedEdgeDetect(alpha=(0.0, 0.1), direction=0,
+                               name="DirectedEdgeDetect"),
         iaa.Fliplr(0.5, name="Fliplr"),
         iaa.Flipud(0.5, name="Flipud"),
         iaa.Affine(translate_px=(-5, 5), name="Affine-translate-px"),
@@ -2756,7 +2836,8 @@ def test_unusual_channel_numbers():
         iaa.Affine(scale=(0.9, 1.1), name="Affine-scale"),
         iaa.PiecewiseAffine(scale=(0.001, 0.005), name="PiecewiseAffine"),
         iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"),
-        iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"),
+        iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2),
+                                  name="ElasticTransformation"),
         iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
         iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
         iaa.OneOf(iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))),
@@ -2769,7 +2850,8 @@ def test_unusual_channel_numbers():
         iaa.Alpha((0.0, 0.1), iaa.Add(10), name="Alpha"),
         iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"),
         iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"),
-        iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"),
+        iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10),
+                                name="SimplexNoiseAlpha"),
         iaa.Superpixels(p_replace=0.01, n_segments=64),
         iaa.Scale({"height": 4, "width": 4}, name="Scale"),
         iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
@@ -2794,6 +2876,7 @@ def test_unusual_channel_numbers():
                 else:
                     assert images_aug.shape == (4, 4, 4, images_c.shape[3])
                     assert image_aug.shape == (4, 4, images_c.shape[3])
+
 
 def test_copy_random_state():
     image = ia.quokka_square(size=(128, 128))
@@ -2828,7 +2911,8 @@ def test_copy_random_state():
 
     source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
     source_det = source_alt.to_deterministic()
-    target_cprs_det = target.copy_random_state(source_det, matching="name", copy_determinism=True)
+    target_cprs_det = target.copy_random_state(source_det, matching="name",
+                                               copy_determinism=True)
     images_aug_source1 = source_det.augment_images(images)
     images_aug_target1 = target_cprs_det.augment_images(images)
     images_aug_source2 = source_det.augment_images(images)
@@ -2838,8 +2922,10 @@ def test_copy_random_state():
     assert np.array_equal(images_aug_source1, images_aug_target1)
     assert np.array_equal(images_aug_source2, images_aug_target2)
 
+
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)
+
 
 def create_random_keypoints(size_images, nb_keypoints_per_img):
     result = []
@@ -2853,6 +2939,7 @@ def create_random_keypoints(size_images, nb_keypoints_per_img):
         result.append(ia.KeypointsOnImage(kps, shape=size_images[1:]))
     return result
 
+
 def array_equal_lists(list1, list2):
     assert isinstance(list1, list)
     assert isinstance(list2, list)
@@ -2865,6 +2952,7 @@ def array_equal_lists(list1, list2):
             return False
 
     return True
+
 
 def keypoints_equal(kps1, kps2):
     if len(kps1) != len(kps2):
@@ -2882,10 +2970,12 @@ def keypoints_equal(kps1, kps2):
 
     return True
 
+
 def reseed(seed=0):
     ia.seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+
 
 if __name__ == "__main__":
     main()
