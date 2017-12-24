@@ -894,7 +894,7 @@ class Augmenter(object):
         Usually there is no need to change global into local random states.
         The only noteworthy exceptions are
             * whenever you want to use determinism (so that the global random
-              state is not accidently reverted)
+              state is not accidentally reverted)
             * whenever you want to copy random states from one augmenter to
               another. (Copying the global random state doesn't help very
               much. If you copy the state from A to B, then execute A and then

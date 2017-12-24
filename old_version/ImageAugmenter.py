@@ -174,7 +174,7 @@ def create_aug_matrices(nb_matrices, img_width_px, img_height_px,
         # create three affine transformation matrices
         # 1st one moves the image to the top left, 2nd one transforms it, 3rd one
         # moves it back to the center.
-        # The movement is neccessary, because rotation is applied to the top left
+        # The movement is necessary, because rotation is applied to the top left
         # and not to the image's center (same for scaling and shear).
         matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
         matrix_transforms = tf.AffineTransform(scale=(scale_x, scale_y),
