@@ -33,7 +33,7 @@ install:
 
 script:
   - python tests/test.py
-  - coverage run --source imgaug -m pytest tests/test.py --verbose  --doctest-modules --cov=imgaug
+  - coverage run --source imgaug --omit ./imgaug -m pytest tests/test.py --verbose --doctest-modules
 #  - nosetests tests/test.py -v --exe --with-doctest --with-xunit --with-coverage --cover-package=imgaug
 
 
