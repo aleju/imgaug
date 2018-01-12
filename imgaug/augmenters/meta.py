@@ -1907,8 +1907,11 @@ class Sometimes(Augmenter):
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+            input_is_np_array = ia.is_np_array(images)
+            if input_is_np_array:
+                input_dtype = images.dtype
+
             nb_images = len(images)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
@@ -1943,8 +1946,10 @@ class Sometimes(Augmenter):
 
             # if input was a list, keep the output as a list too,
             # otherwise it was a numpy array, so make the output a numpy array too
-            if not isinstance(images, list):
-                result = np.array(result, dtype=np.uint8)
+            if input_is_np_array:
+                result = np.array(result, dtype=input_dtype)
+        else:
+            result = images
 
         return result
 
