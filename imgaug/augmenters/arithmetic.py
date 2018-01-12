@@ -37,6 +37,7 @@ import six.moves as sm
 #import types
 import warnings
 
+from . import meta
 from .meta import Augmenter
 
 # TODO tests
@@ -537,6 +538,8 @@ class MultiplyElementwise(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -551,9 +554,12 @@ class MultiplyElementwise(Augmenter):
             else:
                 samples = self.mul.draw_samples((height, width, 1), random_state=rs_image)
                 samples = np.tile(samples, (1, 1, nb_channels))
-            after_multiply = image * samples
-            np.clip(after_multiply, 0, 255, out=after_multiply)
-            result[i] = after_multiply.astype(np.uint8)
+            result[i] = image * samples
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
