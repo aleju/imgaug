@@ -38,6 +38,7 @@ import six.moves as sm
 import types
 import warnings
 
+from . import meta
 from .meta import Augmenter
 
 # TODO tests
@@ -118,6 +119,8 @@ class Convolve(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         for i in sm.xrange(nb_images):
@@ -139,7 +142,11 @@ class Convolve(Augmenter):
                 if matrices[channel] is not None:
                     # ndimage.convolve caused problems here
                     result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
-            result[i] = np.clip(result[i], 0, 255).astype(np.uint8)
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):

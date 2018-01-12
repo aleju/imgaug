@@ -37,6 +37,7 @@ import six.moves as sm
 import types
 import warnings
 
+from . import meta
 from .meta import Augmenter
 
 # TODO rename to Resize to avoid confusion with Affine's scale
@@ -615,6 +616,8 @@ class CropAndPad(Augmenter):
         self.sample_independently = sample_independently
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = []
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -645,9 +648,11 @@ class CropAndPad(Augmenter):
 
             result.append(image_cr_pa)
 
-        if not isinstance(images, list):
+        if ia.is_np_array(images):
             if self.keep_size:
-                result = np.array(result, dtype=np.uint8)
+                # this converts the list to an array of original input dtype
+                result = np.array(result) # without this, restore_augmented_images_dtypes_() expects input_dtypes to be a list
+                meta.restore_augmented_images_dtypes_(result, input_dtypes)
 
         return result
 

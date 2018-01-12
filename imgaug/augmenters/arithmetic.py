@@ -120,6 +120,8 @@ class Add(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -131,16 +133,20 @@ class Add(Augmenter):
                 nb_channels = image.shape[2]
                 samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
+                    # TODO make value range more flexible
                     assert -255 <= sample <= 255
                     image[..., c] += sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
             else:
                 sample = self.value.draw_sample(random_state=rs_image)
+                # TODO make value range more flexible
                 assert -255 <= sample <= 255
                 image += sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
+            result[i] = image
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -209,10 +215,6 @@ class AddElementwise(Augmenter):
     """
 
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
-        """Create a new AddElementwise instance.
-
-
-        """
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
@@ -235,6 +237,8 @@ class AddElementwise(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -250,8 +254,12 @@ class AddElementwise(Augmenter):
                 samples = self.value.draw_samples((height, width, 1), random_state=rs_image)
                 samples = np.tile(samples, (1, 1, nb_channels))
             after_add = image + samples
-            np.clip(after_add, 0, 255, out=after_add)
-            result[i] = after_add.astype(np.uint8)
+            result[i] = after_add
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -425,6 +433,8 @@ class Multiply(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -438,14 +448,17 @@ class Multiply(Augmenter):
                 for c, sample in enumerate(samples):
                     assert sample >= 0
                     image[..., c] *= sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
+                result[i] = image
             else:
                 sample = self.mul.draw_sample(random_state=rs_image)
                 assert sample >= 0
                 image *= sample
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
+                result[i] = image
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -854,6 +867,8 @@ class ReplaceElementwise(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -886,8 +901,12 @@ class ReplaceElementwise(Augmenter):
 
             mask_thresh = mask_samples > 0.5
             image_repl = image * (~mask_thresh) + replacement_samples * mask_thresh
-            np.clip(image_repl, 0, 255, out=image_repl)
-            result[i] = image_repl.astype(np.uint8)
+            result[i] = image_repl
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -1491,6 +1510,8 @@ class Invert(Augmenter):
         self.max_value = max_value
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -1507,16 +1528,18 @@ class Invert(Augmenter):
                         image_c = image[..., c]
                         distance_from_min = np.abs(image_c - self.min_value) # d=abs(v-m)
                         image[..., c] = -distance_from_min + self.max_value # v'=M-d
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(np.uint8)
+                result[i] = image
             else:
                 p_sample = self.p.draw_sample(random_state=rs_image)
                 assert 0 <= p_sample <= 1.0
                 if p_sample > 0.5:
                     distance_from_min = np.abs(image - self.min_value) # d=abs(v-m)
                     image = -distance_from_min + self.max_value
-                    np.clip(image, 0, 255, out=image)
-                    result[i] = image.astype(np.uint8)
+                    result[i] = image
+
+        meta.clip_augmented_images_(result, self.min_value, self.max_value)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -1596,6 +1619,8 @@ class ContrastNormalization(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images)
+
         result = images
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -1611,8 +1636,12 @@ class ContrastNormalization(Augmenter):
             else:
                 alpha = self.alpha.draw_sample(random_state=rs_image)
                 image = alpha * (image - 128) + 128
-            np.clip(image, 0, 255, out=image)
-            result[i] = image.astype(np.uint8)
+            result[i] = image
+
+        # TODO make value range more flexible
+        meta.clip_augmented_images_(result, 0, 255)
+        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
