@@ -42,6 +42,37 @@ import six.moves as sm
 import types
 import warnings
 
+def copy_dtypes_for_restore(images):
+    return images.dtype if ia.is_np_array(images) else [image.dtype for image in images]
+
+def restore_augmented_images_dtypes_(images, orig_dtypes):
+    if ia.is_np_array(images):
+        images = images.astype(orig_dtypes)
+    else:
+        for i in sm.xrange(len(images)):
+            images[i] = images[i].astype(orig_dtypes[i])
+
+def restore_augmented_images_dtypes(images, orig_dtypes):
+    if ia.is_np_array(images):
+        images = np.copy(images)
+    else:
+        images = [np.copy(image) for image in images]
+    return restore_augmented_images_dtypes_(images, orig_dtypes)
+
+def clip_augmented_images_(images, minval, maxval):
+    if ia.is_np_array(images):
+        np.clip(images, minval, maxval, out=images)
+    else:
+        for i in sm.xrange(len(images)):
+            np.clip(images[i], minval, maxval, out=images[i])
+
+def clip_augmented_images(images, minval, maxval):
+    if ia.is_np_array(images):
+        images = np.copy(images)
+    else:
+        images = [np.copy(image) for image in images]
+    return clip_augmented_images_(images, minval, maxval)
+
 @six.add_metaclass(ABCMeta)
 class Augmenter(object):
     """
@@ -894,7 +925,7 @@ class Augmenter(object):
         Usually there is no need to change global into local random states.
         The only noteworthy exceptions are
             * whenever you want to use determinism (so that the global random
-              state is not accidently reverted)
+              state is not accidentally reverted)
             * whenever you want to copy random states from one augmenter to
               another. (Copying the global random state doesn't help very
               much. If you copy the state from A to B, then execute A and then
@@ -1859,6 +1890,7 @@ class Sometimes(Augmenter):
         if then_list is None:
             self.then_list = Sequential([], name="%s-then" % (self.name,))
         elif ia.is_iterable(then_list):
+            # TODO does this work with SomeOf(), Sequential(), ... ?
             self.then_list = Sequential(then_list, name="%s-then" % (self.name,))
         elif isinstance(then_list, Augmenter):
             self.then_list = Sequential([then_list], name="%s-then" % (self.name,))
@@ -1875,8 +1907,11 @@ class Sometimes(Augmenter):
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+            input_is_np_array = ia.is_np_array(images)
+            if input_is_np_array:
+                input_dtype = images.dtype
+
             nb_images = len(images)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
@@ -1911,8 +1946,10 @@ class Sometimes(Augmenter):
 
             # if input was a list, keep the output as a list too,
             # otherwise it was a numpy array, so make the output a numpy array too
-            if not isinstance(images, list):
-                result = np.array(result, dtype=np.uint8)
+            if input_is_np_array:
+                result = np.array(result, dtype=input_dtype)
+        else:
+            result = images
 
         return result
 
