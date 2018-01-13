@@ -8,7 +8,8 @@ language:
 
 env:
   global:
-    - CODACY_PROJECT_TOKEN=63be83274aee4264aae7ba4c31d40677
+#    - CODACY_PROJECT_TOKEN=63be83274aee4264aae7ba4c31d40677
+    - CODACY_PROJECT_TOKEN=1370ce38e99e40af842d47a8dd721444
 
 cache:
   directories:
@@ -38,7 +39,8 @@ script:
 
 
 after_success:
-  - codecov -t 1be5afbb-64c5-40e0-a31d-9661518c0fd4
+#  - codecov -t 1be5afbb-64c5-40e0-a31d-9661518c0fd4
+  - codecov -t feeff9b2-3750-4246-befb-8cde60dc28aa
   - coverage xml
   - python-codacy-coverage -r coverage.xml
   - coverage report
