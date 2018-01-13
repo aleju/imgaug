@@ -4,6 +4,8 @@ This python library helps you with augmenting images for your machine learning p
 It converts a set of input images into a new, much larger set of slightly altered images.
 
 [![Build Status](https://travis-ci.org/aleju/imgaug.svg?branch=master)](https://travis-ci.org/aleju/imgaug)
+[![codecov](https://codecov.io/gh/Borda/imgaug/branch/master/graph/badge.svg)](https://codecov.io/gh/Borda/imgaug)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/376bd45be5af418e9dcd3f2e3c7ee1dc)](https://www.codacy.com/app/Borda/imgaug?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Borda/imgaug&amp;utm_campaign=Badge_Grade)
 
 ![64 quokkas](examples_grid.jpg?raw=true "64 quokkas")
 
