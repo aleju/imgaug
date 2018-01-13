@@ -1059,7 +1059,7 @@ class Augmenter(object):
             for name in target_augs_dict:
                 if name in source_augs_dict:
                     if source_augs_dict[name].random_state == global_rs:
-                        raise Exception(global_error_msg)
+                        raise Exception(global_rs_exc_msg)
                     target_augs_dict[name].random_state = ia.copy_random_state(source_augs_dict[name].random_state)
                     if copy_determinism:
                         target_augs_dict[name].deterministic = source_augs_dict[name].deterministic
@@ -1074,7 +1074,7 @@ class Augmenter(object):
                 )
             for source_aug, target_aug in zip(source_augs, target_augs):
                 if source_aug.random_state == global_rs:
-                    raise Exception(global_error_msg)
+                    raise Exception(global_rs_exc_msg)
                 target_aug.random_state = ia.copy_random_state(source_aug.random_state, force_copy=True)
                 if copy_determinism:
                     target_aug.deterministic = source_aug.deterministic

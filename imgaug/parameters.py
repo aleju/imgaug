@@ -9,6 +9,7 @@ import six.moves as sm
 import scipy
 import numbers
 from collections import defaultdict
+from scipy import misc
 
 NP_FLOAT_TYPES = set(np.sctypes["float"])
 
@@ -203,6 +204,7 @@ class StochasticParameter(object):
         random_state = random_state if random_state is not None else ia.current_random_state()
         samples = self._draw_samples(size, random_state)
         ia.forward_random_state(random_state)
+
         return samples
 
     @abstractmethod
@@ -2500,7 +2502,7 @@ class FrequencyNoise(StochasticParameter):
             assert all([ia.is_single_integer(val) for val in size_px_max])
             assert all([1 <= val <= 10000 for val in size_px_max])
             self.size_px_max = DiscreteUniform(size_px_max[0], size_px_max[1])
-        elif ia.is_iterable(sigmoid_thresh):
+        elif ia.is_iterable(size_px_max):
             assert len(size_px_max) > 0
             assert all([1 <= val <= 10000 for val in size_px_max])
             self.size_px_max = Choice(size_px_max)

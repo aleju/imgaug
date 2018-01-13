@@ -301,7 +301,7 @@ def derive_random_state(random_state):
 # TODO use this everywhere instead of manual seed + create
 def derive_random_states(random_state, n=1):
     seed = random_state.randint(0, 10**6, 1)[0]
-    return [ia.new_random_state(seed+i) for i in sm.xrange(n)]
+    return [new_random_state(seed+i) for i in sm.xrange(n)]
 
 def forward_random_state(random_state):
     random_state.uniform()
