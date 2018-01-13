@@ -1533,7 +1533,7 @@ def test_Affine():
     # this one uses a 4x4 area of all 255, which is zoomed out to a 4x4 area
     # in which the center 2x2 area is 255
     # zoom in should probably be adapted to this style
-    # no seperate tests here for x/y axis, should work fine if zoom in works with that
+    # no separate tests here for x/y axis, should work fine if zoom in works with that
     aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
     aug_det = aug.to_deterministic()
 
