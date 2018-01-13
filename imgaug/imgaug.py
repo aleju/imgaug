@@ -739,7 +739,7 @@ class HooksImages(object):
         Returns
         -------
         out : bool
-            If True, the augmenter may be propagate to its children.
+            If True, the augmenter may be propagate to its childen.
             If False, it may not.
 
         """

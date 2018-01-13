@@ -1250,7 +1250,7 @@ class ElasticTransformation(Augmenter):
     """
 
     # no transformation of keypoints for this currently,
-    # it seems like this is the more appropriate choice overall for this augmentation
+    # it seems like this is the more appropiate choice overall for this augmentation
     # technique
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
