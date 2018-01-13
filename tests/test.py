@@ -2882,7 +2882,7 @@ def test_dtype_preservation():
     ]
 
     for (aug, allowed_dtypes) in augs:
-        print(aug.name, allowed_dtypes)
+        #print(aug.name, allowed_dtypes)
         for images_i in images:
             if images_i.dtype in allowed_dtypes:
                 #print("shape", images_i.shape, images_i.dtype, aug.name)
@@ -2890,7 +2890,8 @@ def test_dtype_preservation():
                 #assert images_aug.shape == images_i.shape
                 assert images_aug.dtype == images_i.dtype
             else:
-                print("Skipped dtype %s for augmenter %s" % (images_i.dtype, aug.name))
+                #print("Skipped dtype %s for augmenter %s" % (images_i.dtype, aug.name))
+                pass
 
 def test_copy_random_state():
     image = ia.quokka_square(size=(128, 128))
