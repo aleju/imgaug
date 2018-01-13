@@ -286,7 +286,7 @@ class ChangeColorspace(Augmenter):
         elif ia.is_iterable(alpha):
             assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
             self.alpha = Uniform(alpha[0], alpha[1])
-        elif isinstance(p, StochasticParameter):
+        elif isinstance(alpha, StochasticParameter):
             self.alpha = alpha
         else:
             raise Exception("Expected alpha to be int or float or tuple/list of ints/floats or StochasticParameter, got %s." % (type(alpha),))
