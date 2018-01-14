@@ -290,7 +290,7 @@ class Affine(Augmenter):
         elif isinstance(order, StochasticParameter):
             self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
+            raise Exception("Expected order to be imgaug.ALL, int, list of int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
             self.cval = DiscreteUniform(0, 255)
@@ -561,6 +561,569 @@ class Affine(Augmenter):
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
 
         cval_samples = self.cval.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 90))
+        mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
+        order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
+
+        return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples
+
+class AffineOpenCV(Augmenter):
+    """
+    Augmenter to apply affine transformations to images using OpenCV backend.
+
+    This is mostly a wrapper around skimage's AffineTransform class and
+    warp function.
+
+    Affine transformations
+    involve:
+        - Translation ("move" image on the x-/y-axis)
+        - Rotation
+        - Scaling ("zoom" in/out)
+        - Shear (move one side of the image, turning a square into a trapezoid)
+
+    All such transformations can create "new" pixels in the image without a
+    defined content, e.g. if the image is translated to the left, pixels
+    are created on the right.
+    A method has to be defined to deal with these pixel values. The
+    parameters `cval` and `mode` of this class deal with this.
+
+    Some transformations involve interpolations between several pixels
+    of the input image to generate output pixel values. The parameter `order`
+    deals with the method of interpolation used for this.
+
+    Parameters
+    ----------
+    scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+        Scaling factor to use, where 1.0 represents no change and 0.5 is
+        zoomed out to 50 percent of the original size.
+            * If a single float, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled from the range
+              a <= x <= b per image. That value will be used identically for
+              both x- and y-axis.
+            * If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`scale`). Using a dictionary allows to
+              set different values for the axis. If they are set to the same
+              ranges, different values may still be sampled per axis.
+
+    translate_percent : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+        Translation in percent relative to the image
+        height/width (x-translation, y-translation) to use,
+        where 0 represents no change and 0.5 is half of the image
+        height/width.
+            * If a single float, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled from the range
+              a <= x <= b per image. That percent value will be used identically
+              for both x- and y-axis.
+            * If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`translate_percent`).
+              Using a dictionary allows to set different values for the axis.
+              If they are set to the same ranges, different values may still
+              be sampled per axis.
+
+    translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
+        Translation in
+        pixels.
+            * If a single int, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled from the discrete
+              range [a .. b] per image. That number will be used identically
+              for both x- and y-axis.
+            * If a StochasticParameter, then from that parameter a value will
+              be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys "x" and/or "y".
+              Each of these keys can have the same values as described before
+              for this whole parameter (`translate_px`).
+              Using a dictionary allows to set different values for the axis.
+              If they are set to the same ranges, different values may still
+              be sampled per axis.
+
+    rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+        Rotation in degrees (NOT radians), i.e. expected value range is
+        0 to 360 for positive rotations (may also be negative).
+            * If a float/int, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the rotation value.
+            * If a StochasticParameter, then this parameter will be used to
+              sample the rotation value per image.
+
+    shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+        Shear in degrees (NOT radians), i.e. expected value range is
+        0 to 360 for positive shear (may also be negative).
+            * If a float/int, then that value will be used for all images.
+            * If a tuple (a, b), then a value will be sampled per image from the
+              range a <= x <= b and be used as the rotation value.
+            * If a StochasticParameter, then this parameter will be used to
+              sample the shear value per image.
+
+    order : int or iterable of int or string or iterable of string or ia.ALL or StochasticParameter, optional(default=1)
+        Interpolation order to use. Allowed are:
+            * cv2.INTER_NEAREST - a nearest-neighbor interpolation
+            * cv2.INTER_LINEAR - a bilinear interpolation (used by default)
+            * cv2.INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood
+            * cv2.INTER_LANCZOS4
+            * "nearest"
+            * "linear"
+            * "cubic",
+            * "lanczos4"
+        The first four are OpenCV constants, the other four are strings that
+        are automatically replaced by the OpenCV constants.
+        INTER_NEAREST (nearest neighbour interpolation) and INTER_NEAREST
+        (linear interpolation) are the fastest.
+            * If a single int, then that order will be used for all images.
+            * If a string, then it must be one of: "nearest", "linear", "cubic",
+              "lanczos4".
+            * If an iterable of int/string, then for each image a random value
+              will be sampled from that iterable (i.e. list of allowed order
+              values).
+            * If ia.ALL, then equivalant to list [cv2.INTER_NEAREST,
+              cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4].
+            * If StochasticParameter, then that parameter is queried per image
+              to sample the order value to use.
+
+    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
+        The constant value used for skimage's transform function.
+        This is the value used to fill up pixels in the result image that
+        didn't exist in the input image (e.g. when translating to the left,
+        some new pixels are created at the right). Such a fill-up with a
+        constant value only happens, when `mode` is "constant".
+        For standard uint8 images (value range 0-255), this value may also
+        come from the range 0-255. It may be a float value, even for
+        integer image dtypes.
+            * If this is a single int or float, then that value will be used
+              (e.g. 0 results in black pixels).
+            * If a tuple (a, b), then a random value from the range a <= x <= b
+              is picked per image.
+            * If ia.ALL, a value from the discrete range [0 .. 255] will be
+              sampled per image.
+            * If a StochasticParameter, a new value will be sampled from the
+              parameter per image.
+
+    mode : int or string or list of string or list of ints or ia.ALL or StochasticParameter, optional(default="constant")
+        Parameter that defines the handling of newly created pixels.
+        Same meaning as in opencv's border mode. Let `abcdefgh` be an image
+        content and `|` be an image boundary, then:
+            * `cv2.BORDER_REPLICATE`: `aaaaaa|abcdefgh|hhhhhhh`
+            * `cv2.BORDER_REFLECT`: `fedcba|abcdefgh|hgfedcb`
+            * `cv2.BORDER_REFLECT_101`: `gfedcb|abcdefgh|gfedcba`
+            * `cv2.BORDER_WRAP`: `cdefgh|abcdefgh|abcdefg`
+            * `cv2.BORDER_CONSTANT`: `iiiiii|abcdefgh|iiiiiii`, where `i` is
+              the defined cval.
+            * "replicate": Same as cv2.BORDER_REPLICATE.
+            * "reflect": Same as cv2.BORDER_REFLECT.
+            * "reflect_101": Same as cv2.BORDER_REFLECT_101.
+            * "wrap": Same as cv2.BORDER_WRAP.
+            * "constant": Same as cv2.BORDER_CONSTANT.
+        The datatype of the parameter may
+        be:
+            * If a single int, then it must be one of `cv2.BORDER_*`.
+            * If a single string, then it must be one of: "replicate",
+              "reflect", "reflect_101", "wrap", "constant".
+            * If a list of ints/strings, then per image a random mode will be
+              picked from that list.
+            * If ia.ALL, then a random mode from all possible modes will be
+              picked.
+            * If StochasticParameter, then the mode will be sampled from that
+              parameter per image, i.e. it must return only the above mentioned
+              strings.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.AffineOpenCV(scale=2.0)
+
+    zooms all images by a factor of 2.
+
+    >>> aug = iaa.AffineOpenCV(translate_px=16)
+
+    translates all images on the x- and y-axis by 16 pixels (to the
+    right/top), fills up any new pixels with zero (black values).
+
+    >>> aug = iaa.AffineOpenCV(translate_percent=0.1)
+
+    translates all images on the x- and y-axis by 10 percent of their
+    width/height (to the right/top), fills up any new pixels with zero
+    (black values).
+
+    >>> aug = iaa.AffineOpenCV(rotate=35)
+
+    rotates all images by 35 degrees, fills up any new pixels with zero
+    (black values).
+
+    >>> aug = iaa.AffineOpenCV(shear=15)
+
+    rotates all images by 15 degrees, fills up any new pixels with zero
+    (black values).
+
+    >>> aug = iaa.AffineOpenCV(translate_px=(-16, 16))
+
+    translates all images on the x- and y-axis by a random value
+    between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
+    sampled once per image), fills up any new pixels with zero (black values).
+
+    >>> aug = iaa.AffineOpenCV(translate_px={"x": (-16, 16), "y": (-4, 4)})
+
+    translates all images on the x-axis by a random value
+    between -16 and 16 pixels (to the right) and on the y-axis by a
+    random value between -4 and 4 pixels to the top. Even if both ranges
+    were the same, both axis could use different samples.
+    Fills up any new pixels with zero (black values).
+
+    >>> aug = iaa.AffineOpenCV(scale=2.0, order=[0, 1])
+
+    same as previously, but uses (randomly) either nearest neighbour
+    interpolation or linear interpolation.
+
+    >>> aug = iaa.AffineOpenCV(translate_px=16, cval=(0, 255))
+
+    same as previously, but fills up any new pixels with a random
+    brightness (same for the whole image).
+
+    >>> aug = iaa.AffineOpenCV(translate_px=16, mode=["constant", "replicate"])
+
+    same as previously, but fills up the new pixels in only 50 percent
+    of all images with black values. In the other 50 percent of all cases,
+    the value of the closest edge is used.
+
+    """
+
+    def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
+                 rotate=0.0, shear=0.0, order=cv2.INTER_LINEAR, cval=0, mode=cv2.BORDER_CONSTANT,
+                 name=None, deterministic=False, random_state=None):
+        super(AffineOpenCV, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        available_orders = [cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
+        available_orders_str = ["nearest", "linear", "cubic", "lanczos4"]
+
+        if order == ia.ALL:
+            # self.order = DiscreteUniform(0, 5)
+            self.order = Choice(available_orders)
+        elif ia.is_single_integer(order):
+            assert order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order)
+            self.order = Deterministic(order)
+        elif ia.is_string(order):
+            assert order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order)
+            #self.order = Deterministic(order_str_to_int[order])
+            self.order = Deterministic(order)
+        elif isinstance(order, list):
+            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),)
+            assert all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),)
+            #self.order = Choice([val if ia.is_single_integer(val) else order_str_to_int[val] for val in order])
+            self.order = Choice(order)
+        elif isinstance(order, StochasticParameter):
+            self.order = order
+        else:
+            raise Exception("Expected order to be imgaug.ALL, int, string, a list of int/string or StochasticParameter, got %s." % (type(order),))
+
+        if cval == ia.ALL:
+            self.cval = DiscreteUniform(0, 255)
+        elif ia.is_single_number(cval):
+            self.cval = Deterministic(cval)
+        elif ia.is_iterable(cval):
+            assert len(cval) == 2
+            assert 0 <= cval[0] <= 255
+            assert 0 <= cval[1] <= 255
+            self.cval = Uniform(cval[0], cval[1])
+        elif isinstance(cval, StochasticParameter):
+            self.cval = cval
+        else:
+            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+
+        available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_REFLECT_101, cv2.BORDER_WRAP, cv2.BORDER_CONSTANT]
+        available_modes_str = ["replicate", "reflect", "reflect_101", "wrap", "constant"]
+        if mode == ia.ALL:
+            self.mode = Choice(available_modes)
+        elif ia.is_single_integer(mode):
+            assert mode in available_modes, "Expected mode to be in %s, got %d." % (str(available_modes), mode)
+            self.mode = Deterministic(mode)
+        elif ia.is_string(mode):
+            assert mode in available_modes_str, "Expected mode to be in %s, got %s." % (str(available_modes_str), mode)
+            self.mode = Deterministic(mode)
+        elif isinstance(mode, list):
+            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), "Expected mode list to only contain integers/strings, got types %s." % (str([type(val) for val in mode]),)
+            assert all([val in available_modes + available_modes_str for val in mode]), "Expected all mode values to be in %s, got %s." % (str(available_modes + available_modes_str), str(mode))
+            self.mode = Choice(mode)
+        elif isinstance(mode, StochasticParameter):
+            self.mode = mode
+        else:
+            raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or StochasticParameter, got %s." % (type(mode),))
+
+        # scale
+        # float | (float, float) | [float, float] | StochasticParameter
+        def scale_handle_param(param, allow_dict):
+            if isinstance(param, StochasticParameter):
+                return param
+            elif ia.is_single_number(param):
+                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,)
+                return Deterministic(param)
+            elif ia.is_iterable(param) and not isinstance(param, dict):
+                assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),)
+                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1])
+                return Uniform(param[0], param[1])
+            elif allow_dict and isinstance(param, dict):
+                assert "x" in param or "y" in param
+                x = param.get("x")
+                y = param.get("y")
+
+                x = x if x is not None else 1.0
+                y = y if y is not None else 1.0
+
+                return (scale_handle_param(x, False), scale_handle_param(y, False))
+            else:
+                raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
+        self.scale = scale_handle_param(scale, True)
+
+        # translate
+        if translate_percent is None and translate_px is None:
+            translate_px = 0
+
+        assert translate_percent is None or translate_px is None
+
+        if translate_percent is not None:
+            # translate by percent
+            def translate_handle_param(param, allow_dict):
+                if ia.is_single_number(param):
+                    return Deterministic(float(param))
+                elif ia.is_iterable(param) and not isinstance(param, dict):
+                    assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),)
+                    all_numbers = all([ia.is_single_number(p) for p in param])
+                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),)
+                    #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    return Uniform(param[0], param[1])
+                elif allow_dict and isinstance(param, dict):
+                    assert "x" in param or "y" in param
+                    x = param.get("x")
+                    y = param.get("y")
+
+                    x = x if x is not None else 0
+                    y = y if y is not None else 0
+
+                    return (translate_handle_param(x, False), translate_handle_param(y, False))
+                elif isinstance(param, StochasticParameter):
+                    return param
+                else:
+                    raise Exception("Expected float, int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
+            self.translate = translate_handle_param(translate_percent, True)
+        else:
+            # translate by pixels
+            def translate_handle_param(param, allow_dict):
+                if ia.is_single_integer(param):
+                    return Deterministic(param)
+                elif ia.is_iterable(param) and not isinstance(param, dict):
+                    assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),)
+                    all_integer = all([ia.is_single_integer(p) for p in param])
+                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),)
+                    return DiscreteUniform(param[0], param[1])
+                elif allow_dict and isinstance(param, dict):
+                    assert "x" in param or "y" in param
+                    x = param.get("x")
+                    y = param.get("y")
+
+                    x = x if x is not None else 0
+                    y = y if y is not None else 0
+
+                    return (translate_handle_param(x, False), translate_handle_param(y, False))
+                elif isinstance(param, StochasticParameter):
+                    return param
+                else:
+                    raise Exception("Expected int or tuple/list with 2 ints or StochasticParameter. Got %s." % (type(param),))
+            self.translate = translate_handle_param(translate_px, True)
+
+        # rotate
+        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
+        if isinstance(rotate, StochasticParameter):
+            self.rotate = rotate
+        elif ia.is_single_number(rotate):
+            self.rotate = Deterministic(rotate)
+        elif ia.is_iterable(rotate):
+            assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),)
+            assert all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list"
+            self.rotate = Uniform(rotate[0], rotate[1])
+        else:
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
+
+        # shear
+        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
+        if isinstance(shear, StochasticParameter):
+            self.shear = shear
+        elif ia.is_single_number(shear):
+            self.shear = Deterministic(shear)
+        elif ia.is_iterable(shear):
+            assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),)
+            assert all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list."
+            self.shear = Uniform(shear[0], shear[1])
+        else:
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        order_str_to_int = {
+            "nearest": cv2.INTER_NEAREST,
+            "linear": cv2.INTER_LINEAR,
+            "cubic": cv2.INTER_CUBIC,
+            "lanczos4": cv2.INTER_LANCZOS4
+        }
+        mode_str_to_int = {
+            "replicate": cv2.BORDER_REPLICATE,
+            "reflect": cv2.BORDER_REFLECT,
+            "reflect_101": cv2.BORDER_REFLECT_101,
+            "wrap": cv2.BORDER_WRAP,
+            "constant": cv2.BORDER_CONSTANT
+        }
+
+        #images = images if isinstance(images, list) else [images]
+        nb_images = len(images)
+        #result = [None] * nb_images
+        result = images
+
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+
+        for i in sm.xrange(nb_images):
+            height, width = images[i].shape[0], images[i].shape[1]
+            shift_x = width / 2.0 - 0.5
+            shift_y = height / 2.0 - 0.5
+            scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
+            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            #assert isinstance(translate_x, (float, int))
+            #assert isinstance(translate_y, (float, int))
+            if ia.is_single_float(translate_y):
+                translate_y_px = int(round(translate_y * images[i].shape[0]))
+            else:
+                translate_y_px = translate_y
+            if ia.is_single_float(translate_x):
+                translate_x_px = int(round(translate_x * images[i].shape[1]))
+            else:
+                translate_x_px = translate_x
+            rotate = rotate_samples[i]
+            shear = shear_samples[i]
+            cval = cval_samples[i]
+            #if ia.is_single_number(cval) or (ia.is_np_array(cval) and cval.shape == (1,)):
+            #    cval = [cval, cval, cval]
+            mode = mode_samples[i]
+            order = order_samples[i]
+
+            mode = mode if ia.is_single_integer(mode) else mode_str_to_int[mode]
+            order = order if ia.is_single_integer(order) else order_str_to_int[order]
+
+            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
+                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+                matrix_transforms = tf.AffineTransform(
+                    scale=(scale_x, scale_y),
+                    translation=(translate_x_px, translate_y_px),
+                    rotation=math.radians(rotate),
+                    shear=math.radians(shear)
+                )
+                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+
+                image_warped = cv2.warpAffine(
+                    images[i],
+                    matrix.params[:2],
+                    #np.zeros((2, 3)),
+                    dsize=(width, height),
+                    flags=order,
+                    borderMode=mode,
+                    borderValue=cval
+                )
+
+                # warp changes uint8 to float64, making this necessary
+                #if image_warped.dtype != images[i].dtype:
+                #    image_warped = image_warped.astype(images[i].dtype, copy=False)
+                result[i] = image_warped
+            else:
+                result[i] = images[i]
+
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        result = []
+        nb_images = len(keypoints_on_images)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+
+        for i, keypoints_on_image in enumerate(keypoints_on_images):
+            height, width = keypoints_on_image.height, keypoints_on_image.width
+            shift_x = width / 2.0 - 0.5
+            shift_y = height / 2.0 - 0.5
+            scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
+            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            #assert isinstance(translate_x, (float, int))
+            #assert isinstance(translate_y, (float, int))
+            if ia.is_single_float(translate_y):
+                translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
+            else:
+                translate_y_px = translate_y
+            if ia.is_single_float(translate_x):
+                translate_x_px = int(round(translate_x * keypoints_on_image.shape[1]))
+            else:
+                translate_x_px = translate_x
+            rotate = rotate_samples[i]
+            shear = shear_samples[i]
+            #cval = cval_samples[i]
+            #mode = mode_samples[i]
+            #order = order_samples[i]
+            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
+                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+                matrix_transforms = tf.AffineTransform(
+                    scale=(scale_x, scale_y),
+                    translation=(translate_x_px, translate_y_px),
+                    rotation=math.radians(rotate),
+                    shear=math.radians(shear)
+                )
+                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+
+                coords = keypoints_on_image.get_coords_array()
+                #print("coords", coords)
+                #print("matrix", matrix.params)
+                coords_aug = tf.matrix_transform(coords, matrix.params)
+                #print("coords before", coords)
+                #print("coordsa ftre", coords_aug, np.around(coords_aug).astype(np.int32))
+                result.append(ia.KeypointsOnImage.from_coords_array(np.around(coords_aug).astype(np.int32), shape=keypoints_on_image.shape))
+            else:
+                result.append(keypoints_on_image)
+        return result
+
+    def get_parameters(self):
+        return [self.scale, self.translate, self.rotate, self.shear]
+
+    def _draw_samples(self, nb_samples, random_state):
+        seed = random_state.randint(0, 10**6, 1)[0]
+
+        if isinstance(self.scale, tuple):
+            scale_samples = (
+                self.scale[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 10)),
+                self.scale[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 20)),
+            )
+        else:
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 30))
+            scale_samples = (scale_samples, scale_samples)
+
+        if isinstance(self.translate, tuple):
+            translate_samples = (
+                self.translate[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 40)),
+                self.translate[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 50)),
+            )
+        else:
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
+            translate_samples = (translate_samples, translate_samples)
+
+        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
+        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
+
+        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
+        shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
+
+        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=ia.new_random_state(seed + 90))
         mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
         order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
 
