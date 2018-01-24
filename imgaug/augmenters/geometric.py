@@ -534,6 +534,10 @@ class Affine(Augmenter):
                     )
                 else:
                     assert not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, got %s." % (image.dtype,)
+                    # opencv seems to support arrays of three cvals (ie RGB)
+                    # in python2, but for some reason not in python3, so
+                    # we chose one cval here
+                    cval = cval[0]
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
