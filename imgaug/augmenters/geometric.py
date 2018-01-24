@@ -1852,6 +1852,47 @@ class ElasticTransformation(Augmenter):
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
+    order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
+        Interpolation order to use. Same meaning as in
+        `scipy.ndimage.map_coordinates` and may take any integer value
+        in the range 0 to 5, where orders close to 0 are faster.
+            * If a single int, then that order will be used for all images.
+            * If an iterable, then for each image a random value will be sampled
+              from that iterable (i.e. list of allowed order values).
+            * If ia.ALL, then equivalant to list [0, 1, 2, 3, 4, 5].
+            * If StochasticParameter, then that parameter is queried per image
+              to sample the order value to use.
+
+    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
+        The constant intensity value used to fill in new pixels.
+        This value is only used if `mode` is set to "constant".
+        For standard uint8 images (value range 0-255), this value may also
+        come from the range 0-255. It may be a float value, even for
+        integer image dtypes.
+            * If this is a single int or float, then that value will be used
+              (e.g. 0 results in black pixels).
+            * If a tuple (a, b), then a random value from the range a <= x <= b
+              is picked per image.
+            * If ia.ALL, a value from the discrete range [0 .. 255] will be
+              sampled per image.
+            * If a StochasticParameter, a new value will be sampled from the
+              parameter per image.
+
+    mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
+        Parameter that defines the handling of newly created pixels.
+        May take the same values as in `scipy.ndimage.map_coordinates`,
+        i.e. "constant", "nearest", "reflect" or "wrap".
+        The datatype of the parameter may
+        be:
+            * If a single string, then that mode will be used for all images.
+            * If a list of strings, then per image a random mode will be picked
+              from that list.
+            * If ia.ALL, then a random mode from all possible modes will be
+              picked.
+            * If StochasticParameter, then the mode will be sampled from that
+              parameter per image, i.e. it must return only the above mentioned
+              strings.
+
     name : string, optional(default=None)
         See `Augmenter.__init__()`
 
@@ -1877,8 +1918,8 @@ class ElasticTransformation(Augmenter):
 
     """
 
-    def __init__(self, alpha=0, sigma=0, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
+                 name=None, deterministic=False, random_state=None):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
@@ -1903,17 +1944,67 @@ class ElasticTransformation(Augmenter):
         else:
             raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
 
+        if order == ia.ALL:
+            self.order = Choice([0, 1, 2, 3, 4, 5])
+        elif ia.is_single_integer(order):
+            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            self.order = Deterministic(order)
+        elif isinstance(order, list):
+            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
+            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            self.order = Choice(order)
+        elif isinstance(order, StochasticParameter):
+            self.order = order
+        else:
+            raise Exception("Expected order to be imgaug.ALL, int, list of int or StochasticParameter, got %s." % (type(order),))
+
+        if cval == ia.ALL:
+            self.cval = DiscreteUniform(0, 255)
+        elif ia.is_single_number(cval):
+            self.cval = Deterministic(cval)
+        elif ia.is_iterable(cval):
+            assert len(cval) == 2
+            assert 0 <= cval[0] <= 255
+            assert 0 <= cval[1] <= 255
+            self.cval = Uniform(cval[0], cval[1])
+        elif isinstance(cval, StochasticParameter):
+            self.cval = cval
+        else:
+            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+
+        if mode == ia.ALL:
+            self.mode = Choice(["constant", "nearest", "reflect", "wrap"])
+        elif ia.is_string(mode):
+            self.mode = Deterministic(mode)
+        elif isinstance(mode, list):
+            assert all([ia.is_string(val) for val in mode])
+            self.mode = Choice(mode)
+        elif isinstance(mode, StochasticParameter):
+            self.mode = mode
+        else:
+            raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
+
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
-        alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
+        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
+        alphas = self.alpha.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10000))
+        sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10100))
+        orders = self.order.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10200))
+        cvals = self.cval.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10300))
+        modes = self.mode.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10400))
         for i in sm.xrange(nb_images):
             image = images[i]
             image_first_channel = np.squeeze(image[..., 0])
             indices_x, indices_y = ElasticTransformation.generate_indices(image_first_channel.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
-            result[i] = ElasticTransformation.map_coordinates(images[i], indices_x, indices_y)
+            result[i] = ElasticTransformation.map_coordinates(
+                images[i],
+                indices_x,
+                indices_y,
+                order=orders[i],
+                cval=cvals[i],
+                mode=modes[i]
+            )
         return result
 
     """
@@ -1943,7 +2034,7 @@ class ElasticTransformation(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.alpha, self.sigma]
+        return [self.alpha, self.sigma, self.orders, self.cvals, self.modes]
 
     @staticmethod
     def generate_indices(shape, alpha, sigma, random_state):
@@ -1956,12 +2047,18 @@ class ElasticTransformation(Augmenter):
         return np.reshape(x+dx, (-1, 1)), np.reshape(y+dy, (-1, 1))
 
     @staticmethod
-    def map_coordinates(image, indices_x, indices_y):
+    def map_coordinates(image, indices_x, indices_y, order=1, cval=0, mode="constant"):
         assert len(image.shape) == 3
         result = np.copy(image)
         height, width = image.shape[0:2]
         for c in sm.xrange(image.shape[2]):
-            remapped_flat = ndimage.interpolation.map_coordinates(image[..., c], (indices_x, indices_y), order=1)
+            remapped_flat = ndimage.interpolation.map_coordinates(
+                image[..., c],
+                (indices_x, indices_y),
+                order=order,
+                cval=cval,
+                mode=mode
+            )
             remapped = remapped_flat.reshape((height, width))
             result[..., c] = remapped
         return result
