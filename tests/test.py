@@ -2885,7 +2885,7 @@ def test_unusual_channel_numbers():
                     assert images_aug.shape == (4, 4, 4, images_c.shape[3])
                     assert image_aug.shape == (4, 4, images_c.shape[3])
 
-                    
+
 #@attr("now")
 def test_dtype_preservation():
     ia.seed(1)

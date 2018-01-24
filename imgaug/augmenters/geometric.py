@@ -143,6 +143,15 @@ class Affine(Augmenter):
             * 5: Bi-quintic
         Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very
         slow.
+        If the backend is `cv2`, the mapping to opencv's interpolation modes
+        is as follows:
+            * 0 -> cv2.INTER_NEAREST
+            * 1 -> cv2.INTER_LINEAR
+            * 2 -> cv2.INTER_CUBIC
+            * 3 -> cv2.INTER_CUBIC
+            * 4 -> cv2.INTER_CUBIC
+        As datatypes this parameter
+        accepts:
             * If a single int, then that order will be used for all images.
             * If an iterable, then for each image a random value will be sampled
               from that iterable (i.e. list of allowed order values).
@@ -180,6 +189,13 @@ class Affine(Augmenter):
             * "wrap": Pads with the wrap of the vector along the axis.
               The first values are used to pad the end and the end values
               are used to pad the beginning.
+        If `cv2` is chosen as the backend the mapping is as
+        follows:
+            * "constant" -> cv2.BORDER_CONSTANT
+            * "edge" -> cv2.BORDER_REPLICATE
+            * "symmetric" -> cv2.BORDER_REFLECT
+            * "reflect" -> cv2.BORDER_REFLECT_101
+            * "wrap" -> cv2.BORDER_WRAP
         The datatype of the parameter may
         be:
             * If a single string, then that mode will be used for all images.
@@ -190,6 +206,18 @@ class Affine(Augmenter):
             * If StochasticParameter, then the mode will be sampled from that
               parameter per image, i.e. it must return only the above mentioned
               strings.
+
+    backend : string, optional(default="auto")
+        Framework to use as a backend. Valid values are `auto`, `skimage`
+        (scikit-image's warp) and `cv2` (opencv's warp).
+        If `auto` is used, the augmenter will automatically try
+        to use cv2 where possible (order must be in [0, 1, 3] and
+        image's dtype uint8, otherwise skimage is chosen). It will
+        silently fall back to skimage if order/dtype is not supported by cv2.
+        cv2 is generally faster than skimage. It also supports RGB cvals,
+        while skimage will resort to intensity cvals (i.e. 3x the same value
+        as RGB). If `cv2` is chosen and order is 2 or 4, it will automatically
+        fall back to order 3.
 
     name : string, optional(default=None)
         See `Augmenter.__init__()`
@@ -261,14 +289,27 @@ class Affine(Augmenter):
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
+                 backend="auto",
                  name=None, deterministic=False, random_state=None):
-        """Create a new Affine instance.
-
-
-        """
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        # Peformance:
+        assert backend in ["auto", "skimage", "cv2"]
+        self.backend = backend
+
+        # skimage | cv2
+        # 0       | cv2.INTER_NEAREST
+        # 1       | cv2.INTER_LINEAR
+        # 2       | -
+        # 3       | cv2.INTER_CUBIC
+        # 4       | -
+        self.order_map_skimage_cv2 = {
+            0: cv2.INTER_NEAREST,
+            1: cv2.INTER_LINEAR,
+            2: cv2.INTER_CUBIC,
+            3: cv2.INTER_CUBIC,
+            4: cv2.INTER_CUBIC
+        }
+        # Peformance in skimage:
         #  1.0x order 0
         #  1.5x order 1
         #  3.0x order 3
@@ -278,14 +319,20 @@ class Affine(Augmenter):
         # on smaller images (seems to grow more like exponentially with image
         # size)
         if order == ia.ALL:
-            # self.order = DiscreteUniform(0, 5)
-            self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
+            if backend == "auto" or backend == "cv2":
+                self.order = Choice([0, 1, 3])
+            else:
+                self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
             assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            if backend == "cv2":
+                assert order in [0, 1, 3]
             self.order = Deterministic(order)
         elif isinstance(order, list):
             assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
             assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            if backend == "cv2":
+                assert all([val in [0, 1, 3] for val in order])
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -293,20 +340,33 @@ class Affine(Augmenter):
             raise Exception("Expected order to be imgaug.ALL, int, list of int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = DiscreteUniform(0, 255)
+            self.cval = Uniform(0, 255) # skimage transform expects float
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
             assert len(cval) == 2
             assert 0 <= cval[0] <= 255
             assert 0 <= cval[1] <= 255
-            self.cval = Uniform(cval[0], cval[1])
+            self.cval = Uniform(cval[0], cval[1]) # skimage transform expects float
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
         else:
             raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
 
         # constant, edge, symmetric, reflect, wrap
+        # skimage   | cv2
+        # constant  | cv2.BORDER_CONSTANT
+        # edge      | cv2.BORDER_REPLICATE
+        # symmetric | cv2.BORDER_REFLECT
+        # reflect   | cv2.BORDER_REFLECT_101
+        # wrap      | cv2.BORDER_WRAP
+        self.mode_map_skimage_cv2 = {
+            "constant": cv2.BORDER_CONSTANT,
+            "edge": cv2.BORDER_REPLICATE,
+            "symmetric": cv2.BORDER_REFLECT,
+            "reflect": cv2.BORDER_REFLECT_101,
+            "wrap": cv2.BORDER_WRAP
+        }
         if mode == ia.ALL:
             self.mode = Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
         elif ia.is_string(mode):
@@ -435,9 +495,7 @@ class Affine(Augmenter):
         scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
 
         for i in sm.xrange(nb_images):
-            height, width = images[i].shape[0], images[i].shape[1]
-            shift_x = width / 2.0 - 0.5
-            shift_y = height / 2.0 - 0.5
+            image = images[i]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
             #assert isinstance(translate_x, (float, int))
@@ -456,26 +514,36 @@ class Affine(Augmenter):
             mode = mode_samples[i]
             order = order_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
-                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
-                matrix_transforms = tf.AffineTransform(
-                    scale=(scale_x, scale_y),
-                    translation=(translate_x_px, translate_y_px),
-                    rotation=math.radians(rotate),
-                    shear=math.radians(shear)
-                )
-                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
-                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
-                image_warped = tf.warp(
-                    images[i],
-                    matrix.inverse,
-                    order=order,
-                    mode=mode,
-                    cval=cval,
-                    preserve_range=True
-                )
-                # warp changes uint8 to float64, making this necessary
-                if image_warped.dtype != images[i].dtype:
-                    image_warped = image_warped.astype(images[i].dtype, copy=False)
+                cv2_bad_order = order not in [0, 1, 3]
+                cv2_bad_dtype = image.dtype not in [np.uint8]
+                cv2_bad_shape = image.shape[2] > 4
+                cv2_impossible = cv2_bad_order or cv2_bad_dtype or cv2_bad_shape
+                if self.backend == "skimage" or (self.backend == "auto" and cv2_impossible):
+                    # cval contains 3 values as cv2 can handle 3, but skimage only 1
+                    cval = cval[0]
+                    # skimage does not clip automatically
+                    if image.dtype == np.uint8:
+                        cval = np.clip(cval, 0, 255)
+                    image_warped = self._warp_skimage(
+                        image,
+                        scale_x, scale_y,
+                        translate_x_px, translate_y_px,
+                        rotate, shear,
+                        cval,
+                        mode, order
+                    )
+                else:
+                    assert not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, got %s." % (image.dtype,)
+                    image_warped = self._warp_cv2(
+                        image,
+                        scale_x, scale_y,
+                        translate_x_px, translate_y_px,
+                        rotate, shear,
+                        cval,
+                        self.mode_map_skimage_cv2[mode],
+                        self.order_map_skimage_cv2[order]
+                    )
+
                 result[i] = image_warped
             else:
                 result[i] = images[i]
@@ -560,15 +628,74 @@ class Affine(Augmenter):
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
 
-        cval_samples = self.cval.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 90))
+        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=ia.new_random_state(seed + 90))
         mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
         order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples
 
-class AffineOpenCV(Augmenter):
+    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order):
+        height, width = image.shape[0], image.shape[1]
+        shift_x = width / 2.0 - 0.5
+        shift_y = height / 2.0 - 0.5
+
+        matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+        matrix_transforms = tf.AffineTransform(
+            scale=(scale_x, scale_y),
+            translation=(translate_x_px, translate_y_px),
+            rotation=math.radians(rotate),
+            shear=math.radians(shear)
+        )
+        matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+        matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+        image_warped = tf.warp(
+            image,
+            matrix.inverse,
+            order=order,
+            mode=mode,
+            cval=cval,
+            preserve_range=True
+        )
+        # warp changes uint8 to float64, making this necessary
+        if image_warped.dtype != image.dtype:
+            image_warped = image_warped.astype(image.dtype, copy=False)
+        return image_warped
+
+    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order):
+        height, width = image.shape[0], image.shape[1]
+        shift_x = width / 2.0 - 0.5
+        shift_y = height / 2.0 - 0.5
+
+        matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+        matrix_transforms = tf.AffineTransform(
+            scale=(scale_x, scale_y),
+            translation=(translate_x_px, translate_y_px),
+            rotation=math.radians(rotate),
+            shear=math.radians(shear)
+        )
+        matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+        matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+
+        image_warped = cv2.warpAffine(
+            image,
+            matrix.params[:2],
+            #np.zeros((2, 3)),
+            dsize=(width, height),
+            flags=order,
+            borderMode=mode,
+            borderValue=cval
+        )
+
+        # cv2 warp drops last axis if shape is (H, W, 1)
+        if image_warped.ndim == 2:
+            image_warped = image_warped[..., np.newaxis]
+
+        return image_warped
+
+class AffineCv2(Augmenter):
     """
-    Augmenter to apply affine transformations to images using OpenCV backend.
+    Augmenter to apply affine transformations to images using cv2 (i.e. opencv)
+    backend.
 
     This is mostly a wrapper around skimage's AffineTransform class and
     warp function.
@@ -741,38 +868,38 @@ class AffineOpenCV(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.AffineOpenCV(scale=2.0)
+    >>> aug = iaa.AffineCv2(scale=2.0)
 
     zooms all images by a factor of 2.
 
-    >>> aug = iaa.AffineOpenCV(translate_px=16)
+    >>> aug = iaa.AffineCv2(translate_px=16)
 
     translates all images on the x- and y-axis by 16 pixels (to the
     right/top), fills up any new pixels with zero (black values).
 
-    >>> aug = iaa.AffineOpenCV(translate_percent=0.1)
+    >>> aug = iaa.AffineCv2(translate_percent=0.1)
 
     translates all images on the x- and y-axis by 10 percent of their
     width/height (to the right/top), fills up any new pixels with zero
     (black values).
 
-    >>> aug = iaa.AffineOpenCV(rotate=35)
+    >>> aug = iaa.AffineCv2(rotate=35)
 
     rotates all images by 35 degrees, fills up any new pixels with zero
     (black values).
 
-    >>> aug = iaa.AffineOpenCV(shear=15)
+    >>> aug = iaa.AffineCv2(shear=15)
 
     rotates all images by 15 degrees, fills up any new pixels with zero
     (black values).
 
-    >>> aug = iaa.AffineOpenCV(translate_px=(-16, 16))
+    >>> aug = iaa.AffineCv2(translate_px=(-16, 16))
 
     translates all images on the x- and y-axis by a random value
     between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
     sampled once per image), fills up any new pixels with zero (black values).
 
-    >>> aug = iaa.AffineOpenCV(translate_px={"x": (-16, 16), "y": (-4, 4)})
+    >>> aug = iaa.AffineCv2(translate_px={"x": (-16, 16), "y": (-4, 4)})
 
     translates all images on the x-axis by a random value
     between -16 and 16 pixels (to the right) and on the y-axis by a
@@ -780,17 +907,17 @@ class AffineOpenCV(Augmenter):
     were the same, both axis could use different samples.
     Fills up any new pixels with zero (black values).
 
-    >>> aug = iaa.AffineOpenCV(scale=2.0, order=[0, 1])
+    >>> aug = iaa.AffineCv2(scale=2.0, order=[0, 1])
 
     same as previously, but uses (randomly) either nearest neighbour
     interpolation or linear interpolation.
 
-    >>> aug = iaa.AffineOpenCV(translate_px=16, cval=(0, 255))
+    >>> aug = iaa.AffineCv2(translate_px=16, cval=(0, 255))
 
     same as previously, but fills up any new pixels with a random
     brightness (same for the whole image).
 
-    >>> aug = iaa.AffineOpenCV(translate_px=16, mode=["constant", "replicate"])
+    >>> aug = iaa.AffineCv2(translate_px=16, mode=["constant", "replicate"])
 
     same as previously, but fills up the new pixels in only 50 percent
     of all images with black values. In the other 50 percent of all cases,
@@ -801,25 +928,22 @@ class AffineOpenCV(Augmenter):
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=cv2.INTER_LINEAR, cval=0, mode=cv2.BORDER_CONSTANT,
                  name=None, deterministic=False, random_state=None):
-        super(AffineOpenCV, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(AffineCv2, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         available_orders = [cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
         available_orders_str = ["nearest", "linear", "cubic", "lanczos4"]
 
         if order == ia.ALL:
-            # self.order = DiscreteUniform(0, 5)
             self.order = Choice(available_orders)
         elif ia.is_single_integer(order):
             assert order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order)
             self.order = Deterministic(order)
         elif ia.is_string(order):
             assert order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order)
-            #self.order = Deterministic(order_str_to_int[order])
             self.order = Deterministic(order)
         elif isinstance(order, list):
             assert all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),)
             assert all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),)
-            #self.order = Choice([val if ia.is_single_integer(val) else order_str_to_int[val] for val in order])
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -834,7 +958,7 @@ class AffineOpenCV(Augmenter):
             assert len(cval) == 2
             assert 0 <= cval[0] <= 255
             assert 0 <= cval[1] <= 255
-            self.cval = Uniform(cval[0], cval[1])
+            self.cval = DiscreteUniform(cval[0], cval[1])
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
         else:
