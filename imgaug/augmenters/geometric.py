@@ -538,12 +538,13 @@ class Affine(Augmenter):
                     # in python2, but for some reason not in python3, so
                     # we chose one cval here
                     cval = cval[0]
+                    #print(cval, type(cval), int(cval), type(int(cval)))
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
                         translate_x_px, translate_y_px,
                         rotate, shear,
-                        cval,
+                        int(cval),
                         self.mode_map_skimage_cv2[mode],
                         self.order_map_skimage_cv2[order]
                     )
