@@ -1438,6 +1438,7 @@ def test_Affine():
     aug_det = aug.to_deterministic()
 
     observed = aug.augment_images(images)
+    #exit()
     assert observed[0][1, 1] > 250
     assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
     assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
@@ -1589,10 +1590,10 @@ def test_Affine():
     inner_pixels = ([1, 1, 2, 2], [1, 2, 1, 2])
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=0),
                                       ia.Keypoint(x=0, y=3), ia.Keypoint(x=3, y=3)],
-                                     shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1),
-                                          ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2)],
-                                         shape=base_img.shape)]
+                                     shape=image.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=0.765, y=0.765), ia.Keypoint(x=2.235, y=0.765),
+                                          ia.Keypoint(x=0.765, y=2.235), ia.Keypoint(x=2.235, y=2.235)],
+                                         shape=image.shape)]
 
     observed = aug.augment_images(images)
     assert (observed[0][outer_pixels] < 25).all()
@@ -3051,7 +3052,7 @@ def array_equal_lists(list1, list2):
     return True
 
 
-def keypoints_equal(kps1, kps2):
+def keypoints_equal(kps1, kps2, eps=0.001):
     if len(kps1) != len(kps2):
         return False
 
@@ -3062,7 +3063,9 @@ def keypoints_equal(kps1, kps2):
             return False
 
         for j in sm.xrange(len(a)):
-            if a[j].x != b[j].x or a[j].y != b[j].y:
+            x_equal = float(b[j].x) - eps <= float(a[j].x) <= float(b[j].x) + eps
+            y_equal = float(b[j].y) - eps <= float(a[j].y) <= float(b[j].y) + eps
+            if not x_equal or not y_equal:
                 return False
 
     return True

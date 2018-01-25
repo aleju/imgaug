@@ -515,6 +515,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     result = np.zeros((nb_images, height, width, nb_channels), dtype=np.uint8)
     for img_idx in sm.xrange(nb_images):
+        # TODO fallback to scipy here if image isn't uint8
         result_img = cv2.resize(images[img_idx], (width, height), interpolation=ip)
         if len(result_img.shape) == 2:
             result_img = result_img[:, :, np.newaxis]
@@ -800,10 +801,10 @@ class Keypoint(object):
 
     Parameters
     ----------
-    x : int
+    x : number
         Coordinate of the keypoint on the x axis.
 
-    y : int
+    y : number
         Coordinate of the keypoint on the y axis.
 
     """
@@ -815,6 +816,14 @@ class Keypoint(object):
         #assert is_single_integer(y), type(y)
         self.x = x
         self.y = y
+
+    @property
+    def x_int(self):
+        return int(round(self.x))
+
+    @property
+    def y_int(self):
+        return int(round(self.y))
 
     def project(self, from_shape, to_shape):
         """
@@ -846,8 +855,8 @@ class Keypoint(object):
         else:
             from_height, from_width = from_shape[0:2]
             to_height, to_width = to_shape[0:2]
-            x = int(round((self.x / from_width) * to_width))
-            y = int(round((self.y / from_height) * to_height))
+            x = (self.x / from_width) * to_width
+            y = (self.y / from_height) * to_height
             return Keypoint(x=x, y=y)
 
     def shift(self, x, y):
@@ -856,10 +865,10 @@ class Keypoint(object):
 
         Parameters
         ----------
-        x : int
+        x : number
             Move by this value on the x axis.
 
-        y : int
+        y : number
             Move by this value on the y axis.
 
         Returns
@@ -874,7 +883,7 @@ class Keypoint(object):
         return self.__str__()
 
     def __str__(self):
-        return "Keypoint(x=%d, y=%d)" % (self.x, self.y)
+        return "Keypoint(x=%.8f, y=%.8f)" % (self.x, self.y)
 
 
 class KeypointsOnImage(object):
@@ -978,7 +987,7 @@ class KeypointsOnImage(object):
         height, width = image.shape[0:2]
 
         for keypoint in self.keypoints:
-            y, x = keypoint.y, keypoint.x
+            y, x = keypoint.y_int, keypoint.x_int
             if 0 <= y < height and 0 <= x < width:
                 x1 = max(x - size//2, 0)
                 x2 = min(x + 1 + size//2, width - 1)
@@ -987,7 +996,7 @@ class KeypointsOnImage(object):
                 image[y1:y2, x1:x2] = color
             else:
                 if raise_if_out_of_image:
-                    raise Exception("Cannot draw keypoint x=%d, y=%d on image with shape %s." % (y, x, image.shape))
+                    raise Exception("Cannot draw keypoint x=%.8f, y=%.8f on image with shape %s." % (y, x, image.shape))
 
         return image
 
@@ -997,10 +1006,10 @@ class KeypointsOnImage(object):
 
         Parameters
         ----------
-        x : int
+        x : number
             Move each keypoint by this value on the x axis.
 
-        y : int
+        y : number
             Move each keypoint by this value on the y axis.
 
         Returns
@@ -1024,7 +1033,7 @@ class KeypointsOnImage(object):
             x coordinate, each second value is the y coordinate.
 
         """
-        result = np.zeros((len(self.keypoints), 2), np.int32)
+        result = np.zeros((len(self.keypoints), 2), np.float32)
         for i, keypoint in enumerate(self.keypoints):
             result[i, 0] = keypoint.x
             result[i, 1] = keypoint.y
@@ -1052,7 +1061,6 @@ class KeypointsOnImage(object):
             KeypointsOnImage object that contains all keypoints from the array.
 
         """
-        assert is_integer_array(coords), coords.dtype
         keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
@@ -1085,8 +1093,10 @@ class KeypointsOnImage(object):
         assert size % 2 != 0
         sizeh = max(0, (size-1)//2)
         for i, keypoint in enumerate(self.keypoints):
-            y = keypoint.y
-            x = keypoint.x
+            # TODO for float values spread activation over several cells
+            # here and do voting at the end
+            y = keypoint.y_int
+            x = keypoint.x_int
 
             x1 = np.clip(x - sizeh, 0, width-1)
             x2 = np.clip(x + sizeh + 1, 0, width-1)
@@ -1222,6 +1232,22 @@ class BoundingBox(object):
         self.y2 = y2
 
     @property
+    def x1_int(self):
+        return int(round(self.x1))
+
+    @property
+    def y1_int(self):
+        return int(round(self.y1))
+
+    @property
+    def x2_int(self):
+        return int(round(self.x2))
+
+    @property
+    def y2_int(self):
+        return int(round(self.y2))
+
+    @property
     def height(self):
         return self.y2 - self.y1
 
@@ -1276,10 +1302,10 @@ class BoundingBox(object):
             assert from_width > 0
             assert to_height > 0
             assert to_width > 0
-            x1 = int(round((self.x1 / from_width) * to_width))
-            y1 = int(round((self.y1 / from_height) * to_height))
-            x2 = int(round((self.x2 / from_width) * to_width))
-            y2 = int(round((self.y2 / from_height) * to_height))
+            x1 = (self.x1 / from_width) * to_width
+            y1 = (self.y1 / from_height) * to_height
+            x2 = (self.x2 / from_width) * to_width
+            y2 = (self.y2 / from_height) * to_height
             if x1 == x2:
                 if x1 == 0:
                     x2 += 1
@@ -1401,12 +1427,12 @@ class BoundingBox(object):
 
     def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         if raise_if_out_of_image and self.is_out_of_image(image):
-            raise Exception("Cannot draw bounding box x1=%d, y1=%d, x2=%d, y2=%d on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
+            raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
 
         result = np.copy(image) if copy else image
         for i in range(thickness):
-            y = [self.y1-i, self.y1-i, self.y2+i, self.y2+i]
-            x = [self.x1-i, self.x2+i, self.x2+i, self.x1-i]
+            y = [self.y1_int-i, self.y1_int-i, self.y2_int+i, self.y2_int+i]
+            x = [self.x1_int-i, self.x2_int+i, self.x2_int+i, self.x1_int-i]
             rr, cc = draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
                 result[rr, cc, 0] = color[0]
@@ -1435,7 +1461,7 @@ class BoundingBox(object):
         pad_left = 0
 
         height, width = image.shape[0], image.shape[1]
-        x1, x2, y1, y2 = self.x1, self.x2, self.y1, self.y2
+        x1, x2, y1, y2 = self.x1_int, self.x2_int, self.y1_int, self.y2_int
 
         # if the bb is outside of the image area, the following pads the image
         # first with black pixels until the bb is inside the image

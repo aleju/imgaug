@@ -598,7 +598,7 @@ class Affine(Augmenter):
                 coords_aug = tf.matrix_transform(coords, matrix.params)
                 #print("coords before", coords)
                 #print("coordsa ftre", coords_aug, np.around(coords_aug).astype(np.int32))
-                result.append(ia.KeypointsOnImage.from_coords_array(np.around(coords_aug).astype(np.int32), shape=keypoints_on_image.shape))
+                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=keypoints_on_image.shape))
             else:
                 result.append(keypoints_on_image)
         return result
@@ -1217,7 +1217,7 @@ class AffineCv2(Augmenter):
                 coords_aug = tf.matrix_transform(coords, matrix.params)
                 #print("coords before", coords)
                 #print("coordsa ftre", coords_aug, np.around(coords_aug).astype(np.int32))
-                result.append(ia.KeypointsOnImage.from_coords_array(np.around(coords_aug).astype(np.int32), shape=keypoints_on_image.shape))
+                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=keypoints_on_image.shape))
             else:
                 result.append(keypoints_on_image)
         return result
@@ -1264,7 +1264,7 @@ class PiecewiseAffine(Augmenter):
     moves the neighbourhood of these point around via affine transformations.
     This leads to local distortions.
 
-    This is mostly a wrapper around around scikit-image's PiecewiseAffine.
+    This is mostly a wrapper around scikit-image's PiecewiseAffine.
     See also the Affine augmenter for a similar technique.
 
     Parameters
@@ -1499,7 +1499,7 @@ class PiecewiseAffine(Augmenter):
                 coords_aug = transformer.inverse(coords)
                 result.append(
                     ia.KeypointsOnImage.from_coords_array(
-                        np.around(coords_aug).astype(np.int32),
+                        coords_aug,
                         shape=keypoints_on_images[i].shape
                     )
                 )
@@ -1719,7 +1719,7 @@ class PerspectiveTransform(Augmenter):
             warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
             warped = warped[0]
             warped_kps = ia.KeypointsOnImage.from_coords_array(
-                np.around(warped, decimals=0).astype(np.int32),
+                warped,
                 shape=(max_height, max_width) + keypoints_on_image.shape[2:]
             )
             if self.keep_size:

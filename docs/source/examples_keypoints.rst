@@ -55,10 +55,11 @@ on it).
     keypoints_aug = seq_det.augment_keypoints([keypoints])[0]
 
     # print coordinates before/after augmentation (see below)
+    # use after.x_int and after.y_int to get rounded integer coordinates
     for i in range(len(keypoints.keypoints)):
         before = keypoints.keypoints[i]
         after = keypoints_aug.keypoints[i]
-        print("Keypoint %d: (%d, %d) -> (%d, %d)" % (
+        print("Keypoint %d: (%.8f, %.8f) -> (%.8f, %.8f)" % (
             i, before.x, before.y, after.x, after.y)
         )
 
@@ -68,10 +69,10 @@ on it).
 
 Console output of the example::
 
-    Keypoint 0: (65, 100) -> (94, 105)
-    Keypoint 1: (75, 200) -> (90, 164)
-    Keypoint 2: (100, 100) -> (115, 109)
-    Keypoint 3: (200, 80) -> (175, 107)
+    Keypoint 0: (65.00000000, 100.00000000) -> (94.11840007, 105.19555403)
+    Keypoint 1: (75.00000000, 200.00000000) -> (89.69884728, 164.11942850)
+    Keypoint 2: (100.00000000, 100.00000000) -> (114.38441167, 108.76899867)
+    Keypoint 3: (200.00000000, 80.00000000) -> (174.32927032, 107.39826243)
 
 .. figure:: ../images/examples_keypoints/simple.jpg
     :alt: Simple keypoint augmentation example
