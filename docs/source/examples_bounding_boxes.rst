@@ -62,10 +62,11 @@ drawn on it).
     bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
 
     # print coordinates before/after augmentation (see below)
+    # use .x1_int, .y_int, ... to get integer coordinates
     for i in range(len(bbs.bounding_boxes)):
         before = bbs.bounding_boxes[i]
         after = bbs_aug.bounding_boxes[i]
-        print("BB %d: (%d, %d, %d, %d) -> (%d, %d, %d, %d)" % (
+        print("BB %d: (%.4f, %.4f, %.4f, %.4f) -> (%.4f, %.4f, %.4f, %.4f)" % (
             i,
             before.x1, before.y1, before.x2, before.y2,
             after.x1, after.y1, after.x2, after.y2)
@@ -77,8 +78,8 @@ drawn on it).
 
 Console output of the example::
 
-    BB 0: (65, 100, 200, 150) -> (131, 171, 210, 201)
-    BB 1: (150, 80, 200, 130) -> (181, 160, 210, 189)
+    BB 0: (65.0000, 100.0000, 200.0000, 150.0000) -> (130.7524, 171.3311, 210.1272, 200.7291)
+    BB 1: (150.0000, 80.0000, 200.0000, 130.0000) -> (180.7291, 159.5718, 210.1272, 188.9699)
 
 .. figure:: ../images/examples_bounding_boxes/simple.jpg
     :alt: Simple bounding box augmentation example
