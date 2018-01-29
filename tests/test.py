@@ -43,8 +43,10 @@ def main():
     # ReplacingGaussianNoise
     test_Dropout()
     test_Multiply()
+    test_MultiplyElementwise()
     test_Add()
     test_AddElementwise()
+    test_ReplaceElementwise()
     test_Affine()
     test_ElasticTransformation()
     test_Sequential()
@@ -1508,6 +1510,108 @@ def test_MultiplyElementwise():
                     nb_different += 1
             last = observed_aug_flat[j]
     assert nb_different > 0.95 * (nb_different + nb_same)
+
+def test_ReplaceElementwise():
+    reseed()
+
+    base_img = np.ones((3, 3, 1), dtype=np.uint8) + 99
+    images = np.array([base_img])
+    images_list = [base_img]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no replace, shouldnt change anything
+    aug = iaa.ReplaceElementwise(mask=0, replacement=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    # replace at 100 percent prob., should change everything
+    aug = iaa.ReplaceElementwise(mask=1, replacement=0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = np.zeros((1, 3, 3, 1), dtype=np.uint8)
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.zeros((3, 3, 1), dtype=np.uint8)]
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = np.zeros((1, 3, 3, 1), dtype=np.uint8)
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = [np.zeros((3, 3, 1), dtype=np.uint8)]
+    assert array_equal_lists(observed, expected)
+
+    # replace half
+    aug = iaa.ReplaceElementwise(mask=iap.Binomial(p=0.5), replacement=0)
+
+    nb_iterations = 100
+    nb_diff_all = 0
+    for i in sm.xrange(nb_iterations):
+        img = np.ones((100, 100, 1))
+        observed = aug.augment_image(img, dtype=np.uint8)
+        nb_diff = np.sum(img != observed)
+        nb_diff_all += nb_diff
+    p = nb_diff_all / (nb_iterations * 100 * 100)
+    assert 0.45 <= p <= 0.55
+
+    observed = aug.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
+    assert array_equal_lists(observed, expected)
+
+    # keypoints shouldnt be changed
+    aug = iaa.ReplaceElementwise(mask=iap.Binomial(p=0.5), replacement=0)
+    aug_det = iaa.ReplaceElementwise(mask=iap.Binomial(p=0.5), replacement=0).to_deterministic()
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    # different replacements
+    aug = iaa.ReplaceElementwise(mask=1, replacement=iap.Choice([100, 200]))
+    img = np.zeros((1000, 1000, 1), dtype=np.uint8)
+    img100 = img + 100
+    img200 = img + 200
+    observed = aug.augment_image(img)
+    nb_diff_100 = np.sum(img100 != observed)
+    nb_diff_200 = np.sum(img200 != observed)
+    p100 = nb_diff_100 / (1000 * 1000)
+    p200 = nb_diff_200 / (1000 * 1000)
+    assert 0.45 <= p100 <= 0.55
+    assert 0.45 <= p200 <= 0.55
 
 def test_Add():
     reseed()
