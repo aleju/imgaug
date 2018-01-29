@@ -47,6 +47,7 @@ def main():
     test_Add()
     test_AddElementwise()
     test_ReplaceElementwise()
+    test_Invert()
     test_Affine()
     test_ElasticTransformation()
     test_Sequential()
@@ -1842,6 +1843,53 @@ def test_AddElementwise():
                     nb_different += 1
             last = observed_aug_flat[j]
     assert nb_different > 0.9 * (nb_different + nb_same)
+
+def test_Invert():
+    reseed()
+
+    zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    observed = iaa.Invert(p=1.0).augment_image(zeros + 256)
+    expected = zeros
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.Invert(p=0.0).augment_image(zeros + 256)
+    expected = zeros + 256
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.Invert(p=1.0, maxval=200).augment_image(zeros + 200)
+    expected = zeros
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.Invert(p=1.0, maxval=200, minval=100).augment_image(zeros + 200)
+    expected = zeros + 100
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.Invert(p=1.0, maxval=200, minval=100).augment_image(zeros + 100)
+    expected = zeros + 200
+    assert np.array_equal(observed, expected)
+
+    nb_iterations = 1000
+    nb_inverted = 0
+    for i in sm.xrange(nb_iterations):
+        observed = iaa.Invert(p=0.5).augment_image(zeros + 256)
+        if np.array_equal(observed, zeros):
+            nb_inverted += 1
+    pinv = nb_inverted / nb_iterations
+    assert 0.4 <= pinv <= 0.6
+
+    # keypoints shouldnt be changed
+    aug = iaa.Invert(p=1.0)
+    aug_det = iaa.Invert(p=1.0).to_deterministic()
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
 
 def test_Affine():
     reseed()
