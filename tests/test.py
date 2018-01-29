@@ -43,6 +43,8 @@ def main():
     # ReplacingGaussianNoise
     test_Dropout()
     test_Multiply()
+    test_Add()
+    test_AddElementwise()
     test_Affine()
     test_ElasticTransformation()
     test_Sequential()
@@ -1382,6 +1384,131 @@ def test_Multiply():
     assert nb_changed_aug >= int(nb_iterations * 0.95)
     assert nb_changed_aug_det == 0
 
+def test_MultiplyElementwise():
+    reseed()
+
+    base_img = np.ones((3, 3, 1), dtype=np.uint8) * 100
+    images = np.array([base_img])
+    images_list = [base_img]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # no multiply, shouldnt change anything
+    aug = iaa.MultiplyElementwise(mul=1.0)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = images_list
+    assert array_equal_lists(observed, expected)
+
+    # multiply >1.0
+    aug = iaa.MultiplyElementwise(mul=1.2)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 120
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 120]
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 120
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 120]
+    assert array_equal_lists(observed, expected)
+
+    # multiply <1.0
+    aug = iaa.MultiplyElementwise(mul=0.8)
+    aug_det = aug.to_deterministic()
+
+    observed = aug.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
+    assert np.array_equal(observed, expected)
+
+    observed = aug.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
+    assert array_equal_lists(observed, expected)
+
+    observed = aug_det.augment_images(images)
+    expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
+    assert np.array_equal(observed, expected)
+
+    observed = aug_det.augment_images(images_list)
+    expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
+    assert array_equal_lists(observed, expected)
+
+    # keypoints shouldnt be changed
+    aug = iaa.MultiplyElementwise(mul=1.2)
+    aug_det = iaa.Multiply(mul=1.2).to_deterministic()
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    # varying multiply factors
+    aug = iaa.MultiplyElementwise(mul=(0, 2.0))
+    aug_det = aug.to_deterministic()
+
+    last_aug = None
+    last_aug_det = None
+    nb_changed_aug = 0
+    nb_changed_aug_det = 0
+    nb_iterations = 1000
+    for i in sm.xrange(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_det = aug_det.augment_images(images)
+        if i == 0:
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+        else:
+            if not np.array_equal(observed_aug, last_aug):
+                nb_changed_aug += 1
+            if not np.array_equal(observed_aug_det, last_aug_det):
+                nb_changed_aug_det += 1
+            last_aug = observed_aug
+            last_aug_det = observed_aug_det
+    assert nb_changed_aug >= int(nb_iterations * 0.95)
+    assert nb_changed_aug_det == 0
+
+    # values should change between pixels
+    aug = iaa.MultiplyElementwise(mul=(0.5, 1.5))
+
+    nb_same = 0
+    nb_different = 0
+    nb_iterations = 1000
+    for i in sm.xrange(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_flat = observed_aug.flatten()
+        last = None
+        for j in sm.xrange(observed_aug.size):
+            if last is not None:
+                v = observed_aug[j]
+                if v - 0.0001 <= last <= v + 0.0001:
+                    nb_same += 1
+                else:
+                    nb_different += 1
+            last = observed_aug_flat[j]
+    assert nb_different > 0.95 * (nb_different + nb_same)
+
 def test_Add():
     reseed()
 
@@ -1591,6 +1718,26 @@ def test_AddElementwise():
             last_aug_det = observed_aug_det
     assert nb_changed_aug >= int(nb_iterations * 0.7)
     assert nb_changed_aug_det == 0
+
+    # values should change between pixels
+    aug = iaa.AddElementwise(value=(-50, 50))
+
+    nb_same = 0
+    nb_different = 0
+    nb_iterations = 1000
+    for i in sm.xrange(nb_iterations):
+        observed_aug = aug.augment_images(images)
+        observed_aug_flat = observed_aug.flatten()
+        last = None
+        for j in sm.xrange(observed_aug.size):
+            if last is not None:
+                v = observed_aug[j]
+                if v - 0.0001 <= last <= v + 0.0001:
+                    nb_same += 1
+                else:
+                    nb_different += 1
+            last = observed_aug_flat[j]
+    assert nb_different > 0.9 * (nb_different + nb_same)
 
 def test_Affine():
     reseed()
