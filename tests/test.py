@@ -86,7 +86,7 @@ def main():
     # TODO clip_augmented_images()
     # TODO Augmenter
     test_Sequential()
-    # TODO SomeOf
+    test_SomeOf()
     # TODO OneOf
     test_Sometimes()
     # TODO WithChannels
@@ -2829,7 +2829,78 @@ def test_Sequential():
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
 
 
+def test_SomeOf():
+    reseed()
 
+    zeros = np.zeros((3, 3, 1), dtype=np.uint8)
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
+
+    # no child augmenters
+    observed = iaa.SomeOf(n=0, children=[]).augment_image(zeros)
+    assert np.array_equal(observed, zeros)
+
+    observed = iaa.SomeOf(n=0).augment_image(zeros)
+    assert np.array_equal(observed, zeros)
+
+    # up to three child augmenters
+    augs = [iaa.Add(1), iaa.Add(2), iaa.Add(3)]
+
+    observed = iaa.SomeOf(n=0, children=augs).augment_image(zeros)
+    assert np.array_equal(observed, zeros)
+
+    observed = iaa.SomeOf(n=1, children=augs).augment_image(zeros)
+    assert np.sum(observed) in [9*1, 9*2, 9*3]
+
+    observed = iaa.SomeOf(n=2, children=augs).augment_image(zeros)
+    assert np.sum(observed) in [9*1+9*2, 9*1+9*3, 9*2+9*3]
+
+    observed = iaa.SomeOf(n=3, children=augs).augment_image(zeros)
+    assert np.sum(observed) in [9*1+9*2+9*3]
+
+    observed = iaa.SomeOf(n=4, children=augs).augment_image(zeros)
+    assert np.sum(observed) in [9*1+9*2+9*3]
+
+    # n as tuple
+    nb_iterations = 1000
+    nb_observed = [0, 0, 0]
+    for i in sm.xrange(nb_iterations):
+        observed = iaa.SomeOf(n=(0, 3), children=augs).augment_image(zeros)
+        s = np.sum(observed)
+        if s == 9*1:
+            nb_observed[0] += 1
+        elif s == 9*2:
+            nb_observed[1] += 1
+        elif s == 9*3:
+            nb_observed[2] += 1
+        else:
+            raise Exception("Unexpected sum %.8f (@1)" % (s,))
+    p_observed = [n/nb_iterations for n in nb_observed]
+    assert 0.33-0.1 <= p_observed[0] 0.33+0.1
+    assert 0.33-0.1 <= p_observed[1] 0.33+0.1
+    assert 0.33-0.1 <= p_observed[2] 0.33+0.1
+
+    # in-order vs random order
+    augs = [iaa.Multiply(2.0), iaa.Add(100)]
+    observed = iaa.SomeOf(n=2, children=augs, random_order=False).augment_image(zeros)
+    assert np.sum(observed) == 9*100
+
+    nb_iterations = 1000
+    nb_observed = [0, 0]
+    for i in sm.xrange(nb_iterations):
+        augs = [iaa.Multiply(2.0), iaa.Add(100)]
+        observed = iaa.SomeOf(n=2, children=augs, random_order=True).augment_image(zeros)
+        s = np.sum(observed)
+        if s == 9*100:
+            nb_observed[0] += 1
+        elif s == 0:
+            nb_observed[1] += 1
+        else:
+            raise Exception("Unexpected sum: %.8f (@2)" % (s,))
+    p_observed = [n/nb_iterations for n in nb_observed]
+    assert 0.5-0.1 <= p_observed[0] 0.5+0.1
+    assert 0.5-0.1 <= p_observed[1] 0.5+0.1
 
 def test_Sometimes():
     reseed()
