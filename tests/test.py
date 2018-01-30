@@ -30,18 +30,6 @@ def main():
     test_remove()
     test_hooks()
 
-    test_Noop()
-    test_Lambda()
-    test_AssertLambda()
-    test_AssertShape()
-    test_Crop()
-    test_Fliplr()
-    test_Flipud()
-    test_GaussianBlur()
-
-    # MultiplicativeGaussianNoise
-    # ReplacingGaussianNoise
-
     # arithmetic
     test_Add()
     test_AddElementwise()
@@ -58,12 +46,69 @@ def main():
     # TODO CoarsePepper
     test_ReplaceElementwise()
     test_Invert()
-    test_ContrastNormalization
+    test_ContrastNormalization()
 
+    # blur
+    test_GaussianBlur()
+    # TODO AverageBlur
+    # TODO MedianBlur
+    # TODO BilateralBlur
+
+    # color
+    # TODO WithColorspace
+    # TODO AddToHueAndSaturation
+    # TODO ChangeColorspace
+    # TODO Grayscale
+
+    # convolutional
+    # TODO Convolve
+    # TODO Sharpen
+    # TODO Emboss
+    # TODO EdgeDetect
+    # TODO DirectedEdgeDetect
+
+    # flip
+    test_Fliplr()
+    test_Flipud()
+
+    # geometric
     test_Affine()
-    test_ElasticTransformation()
+    # TODO AffineCv2
+    # TODO PiecewiseAffine
+    # TODO PerspectiveTransform
+    # TODO ElasticTransformation
+
+    # meta
+    # TODO copy_dtypes_for_restore()
+    # TODO restore_augmented_images_dtypes_()
+    # TODO restore_augmented_images_dtypes()
+    # TODO clip_augmented_images_()
+    # TODO clip_augmented_images()
+    # TODO Augmenter
     test_Sequential()
+    # TODO SomeOf
+    # TODO OneOf
     test_Sometimes()
+    # TODO WithChannels
+    test_Noop()
+    test_Lambda()
+    test_AssertLambda()
+    test_AssertShape()
+
+    # overlay
+    # TODO Alpha
+    # TODO AlphaElementwise
+    # TODO SimplexNoiseAlpha
+    # TODO FrequencyNoiseAlpha
+
+    # segmentation
+    # TODO superpixels
+
+    # size
+    # TODO Scale
+    # TODO CropAndPad
+    # TODO Pad
+    test_Crop()
 
     # these functions use various augmenters, so test them last
     test_2d_inputs()
@@ -2501,7 +2546,7 @@ def test_Affine():
     # shear
     # ---------------------
     # TODO
-    print("[Note] There is currently no test for shear in test_Affine().")
+    #print("[Note] There is currently no test for shear in test_Affine().")
 
     # ---------------------
     # cval
@@ -2566,13 +2611,7 @@ def test_Affine():
     # order
     # ---------------------
     # TODO
-    print("[Note] There is currently no test for (interpolation) order in test_Affine().")
-
-
-def test_ElasticTransformation():
-    reseed()
-    # TODO
-    print("[Note] Elastic Transformations are currently not tested.")
+    #print("[Note] There is currently no test for (interpolation) order in test_Affine().")
 
 
 def test_Sequential():
@@ -2788,6 +2827,8 @@ def test_Sequential():
     assert (0.50 - 0.1) <= nb_images_second_first_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_keypoints_first_second_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
+
+
 
 
 def test_Sometimes():
