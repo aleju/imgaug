@@ -38,16 +38,28 @@ def main():
     test_Fliplr()
     test_Flipud()
     test_GaussianBlur()
-    test_AdditiveGaussianNoise()
+
     # MultiplicativeGaussianNoise
     # ReplacingGaussianNoise
-    test_Dropout()
-    test_Multiply()
-    test_MultiplyElementwise()
+
+    # arithmetic
     test_Add()
     test_AddElementwise()
+    test_AdditiveGaussianNoise()
+    test_Multiply()
+    test_MultiplyElementwise()
+    test_Dropout()
+    # TODO CoarseDropout
+    # TODO SaltAndPepper
+    # TODO CoarseSaltAndPepper
+    # TODO Salt
+    # TODO CoarseSalt
+    # TODO Pepper
+    # TODO CoarsePepper
     test_ReplaceElementwise()
     test_Invert()
+    test_ContrastNormalization
+
     test_Affine()
     test_ElasticTransformation()
     test_Sequential()
@@ -1883,6 +1895,72 @@ def test_Invert():
     # keypoints shouldnt be changed
     aug = iaa.Invert(p=1.0)
     aug_det = iaa.Invert(p=1.0).to_deterministic()
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+    observed = aug_det.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+
+def test_ContrastNormalization():
+    reseed()
+
+    zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # contrast stays the same
+    observed = iaa.ContrastNormalization(alpha=1.0).augment_image(zeros + 50)
+    expected = zeros + 50
+    assert np.array_equal(observed, expected)
+
+    # image with mean intensity (ie 128), contrast cannot be changed
+    observed = iaa.ContrastNormalization(alpha=2.0).augment_image(zeros + 128)
+    expected = zeros + 128
+    assert np.array_equal(observed, expected)
+
+    # increase contrast
+    observed = iaa.ContrastNormalization(alpha=2.0).augment_image(zeros + 128 + 10)
+    expected = zeros + 128 + 20
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.ContrastNormalization(alpha=2.0).augment_image(zeros + 128 - 10)
+    expected = zeros + 128 - 20
+    assert np.array_equal(observed, expected)
+
+    # decrease contrast
+    observed = iaa.ContrastNormalization(alpha=0.5).augment_image(zeros + 128 + 10)
+    expected = zeros + 128 + 5
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.ContrastNormalization(alpha=0.5).augment_image(zeros + 128 - 10)
+    expected = zeros + 128 - 5
+    assert np.array_equal(observed, expected)
+
+    # increase contrast by stochastic parameter
+    observed = iaa.ContrastNormalization(alpha=iap.Choice([2.0, 3.0])).augment_image(zeros + 128 + 10)
+    expected1 = zeros + 128 + 20
+    expected2 = zeros + 128 + 30
+    assert np.array_equal(observed, expected1) or np.array_equal(observed, expected2)
+
+    # change contrast by tuple
+    nb_iterations = 1000
+    nb_changed = 0
+    last = None
+    for i in sm.xrange(nb_iterations):
+        observed = iaa.ContrastNormalization(alpha=(0.5, 2.0)).augment_image(zeros + 128 + 40)
+        if last is None:
+            last = observed
+        else:
+            if not np.array_equal(observed, last):
+                nb_changed += 1
+    p_changed = nb_changed / (nb_iterations-1)
+    assert pinv > 0.5
+
+    # keypoints shouldnt be changed
+    aug = iaa.ContrastNormalization(alpha=2.0)
+    aug_det = iaa.ContrastNormalization(alpha=2.0).to_deterministic()
     observed = aug.augment_keypoints(keypoints)
     expected = keypoints
     assert keypoints_equal(observed, expected)
