@@ -515,7 +515,7 @@ class Affine(Augmenter):
             order = order_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
                 cv2_bad_order = order not in [0, 1, 3]
-                cv2_bad_dtype = image.dtype not in [np.uint8, np.float32]
+                cv2_bad_dtype = image.dtype not in [np.uint8, np.float32, np.float64]
                 cv2_bad_shape = image.shape[2] > 4
                 cv2_impossible = cv2_bad_order or cv2_bad_dtype or cv2_bad_shape
                 if self.backend == "skimage" or (self.backend == "auto" and cv2_impossible):
@@ -533,7 +533,7 @@ class Affine(Augmenter):
                         mode, order
                     )
                 else:
-                    assert not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8 and float32, got %s." % (image.dtype,)
+                    assert not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,)
                     # opencv seems to support arrays of three cvals (ie RGB)
                     # in python2, but for some reason not in python3, so
                     # we chose one cval here
