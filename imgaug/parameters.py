@@ -661,7 +661,7 @@ class Normal(StochasticParameter):
         elif ia.is_single_number(loc):
             self.loc = Deterministic(loc)
         else:
-            raise Exception("Expected float, int or StochasticParameter as loc, got %s, %s." % (type(loc),))
+            raise Exception("Expected float, int or StochasticParameter as loc, got %s." % (type(loc),))
 
         if isinstance(scale, StochasticParameter):
             self.scale = scale
@@ -669,7 +669,7 @@ class Normal(StochasticParameter):
             assert scale >= 0, "Expected scale to be in range [0, inf) got %s (type %s)." % (scale, type(scale))
             self.scale = Deterministic(scale)
         else:
-            raise Exception("Expected float, int or StochasticParameter as scale, got %s, %s." % (type(scale),))
+            raise Exception("Expected float, int or StochasticParameter as scale, got %s." % (type(scale),))
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
