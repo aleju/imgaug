@@ -211,7 +211,9 @@ class AverageBlur(Augmenter):
         for i in sm.xrange(nb_images):
             kh, kw = samples[0][i], samples[1][i]
             #print(images.shape, result.shape, result[i].shape)
-            if kh > 1 or kw > 1:
+            kernel_impossible = (kh == 0 or kw == 0)
+            kernel_does_nothing = (kh == 1 and kw == 1)
+            if not kernel_impossible and not kernel_does_nothing:
                 image_aug = cv2.blur(result[i], (kh, kw))
                 # cv2.blur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
