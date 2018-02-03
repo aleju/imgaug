@@ -1064,7 +1064,7 @@ class FromLowerResolution(StochasticParameter):
 
     """
     def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
-        super(StochasticParameter, self).__init__()
+        super(FromLowerResolution, self).__init__()
 
         assert size_percent is not None or size_px is not None
 
