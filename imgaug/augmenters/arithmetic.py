@@ -101,10 +101,10 @@ class Add(Augmenter):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
-            assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
+            ia.do_assert(-255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,))
             self.value = Deterministic(value)
         elif ia.is_iterable(value):
-            assert len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),)
+            ia.do_assert(len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),))
             self.value = DiscreteUniform(value[0], value[1])
         elif isinstance(value, StochasticParameter):
             self.value = value
@@ -114,7 +114,7 @@ class Add(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0, "Expected bool, or number in range [0, 1.0] for per_channel, got %s." % (type(per_channel),))
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -134,12 +134,12 @@ class Add(Augmenter):
                 samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
                     # TODO make value range more flexible
-                    assert -255 <= sample <= 255
+                    ia.do_assert(-255 <= sample <= 255)
                     image[..., c] += sample
             else:
                 sample = self.value.draw_sample(random_state=rs_image)
                 # TODO make value range more flexible
-                assert -255 <= sample <= 255
+                ia.do_assert(-255 <= sample <= 255)
                 image += sample
             result[i] = image
 
@@ -218,10 +218,10 @@ class AddElementwise(Augmenter):
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_integer(value):
-            assert -255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,)
+            ia.do_assert(-255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,))
             self.value = Deterministic(value)
         elif ia.is_iterable(value):
-            assert len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),)
+            ia.do_assert(len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),))
             self.value = DiscreteUniform(value[0], value[1])
         elif isinstance(value, StochasticParameter):
             self.value = value
@@ -231,7 +231,7 @@ class AddElementwise(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -335,7 +335,7 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
     if ia.is_single_number(loc):
         loc2 = Deterministic(loc)
     elif ia.is_iterable(loc):
-        assert len(loc) == 2, "Expected tuple/list with 2 entries for argument 'loc', got %d entries." % (len(scale),)
+        ia.do_assert(len(loc) == 2, "Expected tuple/list with 2 entries for argument 'loc', got %d entries." % (len(loc),))
         loc2 = Uniform(loc[0], loc[1])
     elif isinstance(loc, StochasticParameter):
         loc2 = loc
@@ -345,7 +345,7 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
     if ia.is_single_number(scale):
         scale2 = Deterministic(scale)
     elif ia.is_iterable(scale):
-        assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),)
+        ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
         scale2 = Uniform(scale[0], scale[1])
     elif isinstance(scale, StochasticParameter):
         scale2 = scale
@@ -414,10 +414,10 @@ class Multiply(Augmenter):
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
-            assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
+            ia.do_assert(mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,))
             self.mul = Deterministic(mul)
         elif ia.is_iterable(mul):
-            assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),)
+            ia.do_assert(len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),))
             self.mul = Uniform(mul[0], mul[1])
         elif isinstance(mul, StochasticParameter):
             self.mul = mul
@@ -427,7 +427,7 @@ class Multiply(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -446,12 +446,12 @@ class Multiply(Augmenter):
                 nb_channels = image.shape[2]
                 samples = self.mul.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
-                    assert sample >= 0
+                    ia.do_assert(sample >= 0)
                     image[..., c] *= sample
                 result[i] = image
             else:
                 sample = self.mul.draw_sample(random_state=rs_image)
-                assert sample >= 0
+                ia.do_assert(sample >= 0)
                 image *= sample
                 result[i] = image
 
@@ -532,10 +532,10 @@ class MultiplyElementwise(Augmenter):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(mul):
-            assert mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,)
+            ia.do_assert(mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,))
             self.mul = Deterministic(mul)
         elif ia.is_iterable(mul):
-            assert len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),)
+            ia.do_assert(len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),))
             self.mul = Uniform(mul[0], mul[1])
         elif isinstance(mul, StochasticParameter):
             self.mul = mul
@@ -545,7 +545,7 @@ class MultiplyElementwise(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -643,10 +643,10 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
     if ia.is_single_number(p):
         p2 = Binomial(1 - p)
     elif ia.is_iterable(p):
-        assert len(p) == 2
-        assert p[0] < p[1]
-        assert 0 <= p[0] <= 1.0
-        assert 0 <= p[1] <= 1.0
+        ia.do_assert(len(p) == 2)
+        ia.do_assert(p[0] < p[1])
+        ia.do_assert(0 <= p[0] <= 1.0)
+        ia.do_assert(0 <= p[1] <= 1.0)
         p2 = Binomial(Uniform(1 - p[1], 1 - p[0]))
     elif isinstance(p, StochasticParameter):
         p2 = p
@@ -767,10 +767,10 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
     if ia.is_single_number(p):
         p2 = Binomial(1 - p)
     elif ia.is_iterable(p):
-        assert len(p) == 2
-        assert p[0] < p[1]
-        assert 0 <= p[0] <= 1.0
-        assert 0 <= p[1] <= 1.0
+        ia.do_assert(len(p) == 2)
+        ia.do_assert(p[0] < p[1])
+        ia.do_assert(0 <= p[0] <= 1.0)
+        ia.do_assert(0 <= p[1] <= 1.0)
         p2 = Binomial(Uniform(1 - p[1], 1 - p[0]))
     elif isinstance(p, StochasticParameter):
         p2 = p
@@ -844,12 +844,12 @@ class ReplaceElementwise(Augmenter):
         if ia.is_single_number(mask):
             self.mask = Binomial(mask)
         elif isinstance(mask, tuple):
-            assert len(mask) == 2
-            assert 0 <= mask[0] <= 1.0
-            assert 0 <= mask[1] <= 1.0
+            ia.do_assert(len(mask) == 2)
+            ia.do_assert(0 <= mask[0] <= 1.0)
+            ia.do_assert(0 <= mask[1] <= 1.0)
             self.mask = Binomial(Uniform(mask[0], mask[1]))
         elif ia.is_iterable(mask):
-            assert all([0 <= pi <= 1.0 for pi in mask])
+            ia.do_assert(all([0 <= pi <= 1.0 for pi in mask]))
             self.mask = iap.Choice(mask)
         elif isinstance(mask, StochasticParameter):
             self.mask = mask
@@ -861,7 +861,7 @@ class ReplaceElementwise(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -1048,12 +1048,12 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     if ia.is_single_number(p):
         mask = Binomial(p)
     elif isinstance(p, tuple):
-        assert len(p) == 2
-        assert 0 <= p[0] <= 1.0
-        assert 0 <= p[1] <= 1.0
+        ia.do_assert(len(p) == 2)
+        ia.do_assert(0 <= p[0] <= 1.0)
+        ia.do_assert(0 <= p[1] <= 1.0)
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
-        assert all([0 <= pi <= 1.0 for pi in p])
+        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
         mask = iap.Choice(p)
     elif isinstance(p, StochasticParameter):
         mask = p
@@ -1216,12 +1216,12 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
     if ia.is_single_number(p):
         mask = Binomial(p)
     elif isinstance(p, tuple):
-        assert len(p) == 2
-        assert 0 <= p[0] <= 1.0
-        assert 0 <= p[1] <= 1.0
+        ia.do_assert(len(p) == 2)
+        ia.do_assert(0 <= p[0] <= 1.0)
+        ia.do_assert(0 <= p[1] <= 1.0)
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
-        assert all([0 <= pi <= 1.0 for pi in p])
+        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
         mask = iap.Choice(p)
     elif isinstance(p, StochasticParameter):
         mask = p
@@ -1391,12 +1391,12 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
     if ia.is_single_number(p):
         mask = Binomial(p)
     elif isinstance(p, tuple):
-        assert len(p) == 2
-        assert 0 <= p[0] <= 1.0
-        assert 0 <= p[1] <= 1.0
+        ia.do_assert(len(p) == 2)
+        ia.do_assert(0 <= p[0] <= 1.0)
+        ia.do_assert(0 <= p[1] <= 1.0)
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
-        assert all([0 <= pi <= 1.0 for pi in p])
+        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
         mask = iap.Choice(p)
     elif isinstance(p, StochasticParameter):
         mask = p
@@ -1501,7 +1501,7 @@ class Invert(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -1523,7 +1523,7 @@ class Invert(Augmenter):
                 nb_channels = image.shape[2]
                 p_samples = self.p.draw_samples((nb_channels,), random_state=rs_image)
                 for c, p_sample in enumerate(p_samples):
-                    assert 0 <= p_sample <= 1
+                    ia.do_assert(0 <= p_sample <= 1)
                     if p_sample > 0.5:
                         image_c = image[..., c]
                         distance_from_min = np.abs(image_c - self.min_value) # d=abs(v-m)
@@ -1531,7 +1531,7 @@ class Invert(Augmenter):
                 result[i] = image
             else:
                 p_sample = self.p.draw_sample(random_state=rs_image)
-                assert 0 <= p_sample <= 1.0
+                ia.do_assert(0 <= p_sample <= 1.0)
                 if p_sample > 0.5:
                     distance_from_min = np.abs(image - self.min_value) # d=abs(v-m)
                     image = -distance_from_min + self.max_value
@@ -1600,10 +1600,10 @@ class ContrastNormalization(Augmenter):
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
-            assert alpha >= 0.0, "Expected alpha to have range (0, inf), got value %.4f." % (alpha,)
+            ia.do_assert(alpha >= 0.0, "Expected alpha to have range (0, inf), got value %.4f." % (alpha,))
             self.alpha = Deterministic(alpha)
         elif ia.is_iterable(alpha):
-            assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
             self.alpha = Uniform(alpha[0], alpha[1])
         elif isinstance(alpha, StochasticParameter):
             self.alpha = alpha
@@ -1613,7 +1613,7 @@ class ContrastNormalization(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")

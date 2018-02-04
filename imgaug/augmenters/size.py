@@ -166,18 +166,18 @@ class Scale(Augmenter):
             if val == "keep":
                 return Deterministic("keep")
             elif ia.is_single_integer(val):
-                assert val > 0
+                ia.do_assert(val > 0)
                 return Deterministic(val)
             elif ia.is_single_float(val):
-                assert 0 <= val <= 1.0
+                ia.do_assert(0 <= val <= 1.0)
                 return Deterministic(val)
             elif allow_dict and isinstance(val, dict):
                 if len(val.keys()) == 0:
                     return Deterministic("keep")
                 else:
-                    assert all([key in ["height", "width"] for key in val.keys()])
+                    ia.do_assert(all([key in ["height", "width"] for key in val.keys()]))
                     if "height" in val and "width" in val:
-                        assert val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio"
+                        ia.do_assert(val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio")
 
                     size_tuple = []
                     for k in ["height", "width"]:
@@ -191,12 +191,12 @@ class Scale(Augmenter):
                         size_tuple.append(entry)
                     return tuple(size_tuple)
             elif isinstance(val, tuple):
-                assert len(val) == 2
+                ia.do_assert(len(val) == 2)
                 if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
-                    assert 0 <= val[0] <= 1.0 and 0 <= val[1] <= 1.0
+                    ia.do_assert(0 <= val[0] <= 1.0 and 0 <= val[1] <= 1.0)
                     return Uniform(val[0], val[1])
                 else:
-                    assert val[0] > 0 and val[1] > 0
+                    ia.do_assert(val[0] > 0 and val[1] > 0)
                     return DiscreteUniform(val[0], val[1])
             elif isinstance(val, list):
                 if len(val) == 0:
@@ -204,11 +204,11 @@ class Scale(Augmenter):
                 else:
                     all_int = all([ia.is_single_integer(v) for v in val])
                     all_float = all([ia.is_single_float(v) for v in val])
-                    assert all_int or all_float
+                    ia.do_assert(all_int or all_float)
                     if all_int:
-                        assert all([v > 0 for v in val])
+                        ia.do_assert(all([v > 0 for v in val]))
                     else:
-                        assert all([0 <= v <= 1.0 for v in val])
+                        ia.do_assert(all([0 <= v <= 1.0 for v in val]))
                     return Choice(val)
             elif isinstance(val, StochasticParameter):
                 return val
@@ -236,7 +236,7 @@ class Scale(Augmenter):
         samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
-            assert image.dtype == np.uint8, "Scale() can currently only process images of dtype uint8 (got %s)" % (image.dtype,)
+            ia.do_assert(image.dtype == np.uint8, "Scale() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
             h, w = self._compute_height_width(image.shape, sample_h, sample_w)
             image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
@@ -285,13 +285,13 @@ class Scale(Augmenter):
         h, w = sample_h, sample_w
 
         if ia.is_single_float(h):
-            assert 0 <= h <= 1.0
+            ia.do_assert(0 <= h <= 1.0)
             h = int(imh * h)
             h = h if h > 0 else 1
         elif h == "keep":
             h = imh
         if ia.is_single_float(w):
-            assert 0 <= w <= 1.0
+            ia.do_assert(0 <= w <= 1.0)
             w = int(imw * w)
             w = w if w > 0 else 1
         elif w == "keep":
@@ -511,18 +511,18 @@ class CropAndPad(Augmenter):
             if ia.is_single_integer(px):
                 self.all_sides = Deterministic(px)
             elif isinstance(px, tuple):
-                assert len(px) in [2, 4]
+                ia.do_assert(len(px) in [2, 4])
                 def handle_param(p):
                     if ia.is_single_integer(p):
                         return Deterministic(p)
                     elif isinstance(p, tuple):
-                        assert len(p) == 2
-                        assert ia.is_single_integer(p[0])
-                        assert ia.is_single_integer(p[1])
+                        ia.do_assert(len(p) == 2)
+                        ia.do_assert(ia.is_single_integer(p[0]))
+                        ia.do_assert(ia.is_single_integer(p[1]))
                         return DiscreteUniform(p[0], p[1])
                     elif isinstance(p, list):
-                        assert len(p) > 0
-                        assert all([ia.is_single_integer(val) for val in p])
+                        ia.do_assert(len(p) > 0)
+                        ia.do_assert(all([ia.is_single_integer(val) for val in p]))
                         return Choice(p)
                     elif isinstance(p, StochasticParameter):
                         return p
@@ -544,25 +544,25 @@ class CropAndPad(Augmenter):
         else: # = elif percent is not None:
             self.mode = "percent"
             if ia.is_single_number(percent):
-                assert -1.0 < percent
+                ia.do_assert(-1.0 < percent)
                 #self.top = self.right = self.bottom = self.left = Deterministic(percent)
                 self.all_sides = Deterministic(percent)
             elif isinstance(percent, tuple):
-                assert len(percent) in [2, 4]
+                ia.do_assert(len(percent) in [2, 4])
                 def handle_param(p):
                     if ia.is_single_number(p):
                         return Deterministic(p)
                     elif isinstance(p, tuple):
-                        assert len(p) == 2
-                        assert ia.is_single_number(p[0])
-                        assert ia.is_single_number(p[1])
-                        assert -1.0 < p[0]
-                        assert -1.0 < p[1]
+                        ia.do_assert(len(p) == 2)
+                        ia.do_assert(ia.is_single_number(p[0]))
+                        ia.do_assert(ia.is_single_number(p[1]))
+                        ia.do_assert(-1.0 < p[0])
+                        ia.do_assert(-1.0 < p[1])
                         return Uniform(p[0], p[1])
                     elif isinstance(p, list):
-                        assert len(p) > 0
-                        assert all([ia.is_single_number(val) for val in p])
-                        assert all([-1.0 < val for val in p])
+                        ia.do_assert(len(p) > 0)
+                        ia.do_assert(all([ia.is_single_number(val) for val in p]))
+                        ia.do_assert(all([-1.0 < val for val in p]))
                         return Choice(p)
                     elif isinstance(p, StochasticParameter):
                         return p
@@ -586,10 +586,10 @@ class CropAndPad(Augmenter):
         if pad_mode == ia.ALL:
             self.pad_mode = Choice(list(pad_modes_available))
         elif ia.is_string(pad_mode):
-            assert pad_mode in pad_modes_available
+            ia.do_assert(pad_mode in pad_modes_available)
             self.pad_mode = Deterministic(pad_mode)
         elif isinstance(pad_mode, list):
-            assert all([v in pad_modes_available for v in pad_mode])
+            ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
             self.pad_mode = Choice(pad_mode)
         elif isinstance(pad_mode, StochasticParameter):
             self.pad_mode = pad_mode
@@ -599,13 +599,13 @@ class CropAndPad(Augmenter):
         if ia.is_single_number(pad_cval):
             self.pad_cval = Deterministic(pad_cval)
         elif isinstance(pad_cval, tuple):
-            assert len(pad_cval) == 2
+            ia.do_assert(len(pad_cval) == 2)
             if ia.is_single_float(pad_cval[0]) or ia.is_single_float(pad_cval[1]):
                 self.pad_cval = Uniform(pad_cval[0], pad_cval[1])
             else:
                 self.pad_cval = DiscreteUniform(pad_cval[0], pad_cval[1])
         elif isinstance(pad_cval, list):
-            assert all([ia.is_single_number(v) for v in pad_cval])
+            ia.do_assert(all([ia.is_single_number(v) for v in pad_cval]))
             self.pad_cval = Choice(pad_cval)
         elif isinstance(pad_cval, StochasticParameter):
             self.pad_cval = pad_cval
@@ -739,8 +739,8 @@ class CropAndPad(Augmenter):
                 regain_bottom = crop_bottom
                 regain_top += diff
 
-            assert regain_top <= crop_top
-            assert regain_bottom <= crop_bottom
+            ia.do_assert(regain_top <= crop_top)
+            ia.do_assert(regain_bottom <= crop_bottom)
 
             crop_top = crop_top - regain_top
             crop_bottom = crop_bottom - regain_bottom
@@ -761,15 +761,15 @@ class CropAndPad(Augmenter):
                 regain_left = crop_left
                 regain_right += diff
 
-            assert regain_right <= crop_right
-            assert regain_left <= crop_left
+            ia.do_assert(regain_right <= crop_right)
+            ia.do_assert(regain_left <= crop_left)
 
             crop_right = crop_right - regain_right
             crop_left = crop_left - regain_left
 
-        assert crop_top >= 0 and crop_right >= 0 and crop_bottom >= 0 and crop_left >= 0
-        assert crop_top + crop_bottom < height
-        assert crop_right + crop_left < width
+        ia.do_assert(crop_top >= 0 and crop_right >= 0 and crop_bottom >= 0 and crop_left >= 0)
+        ia.do_assert(crop_top + crop_bottom < height)
+        ia.do_assert(crop_right + crop_left < width)
 
         return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
 
@@ -938,7 +938,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         if v is None:
             return v
         elif ia.is_single_number(v):
-            assert v >= 0
+            ia.do_assert(v >= 0)
             return v
         elif isinstance(v, StochasticParameter):
             return v
@@ -1075,7 +1075,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
         if v is None:
             return v
         elif ia.is_single_number(v):
-            assert v >= 0
+            ia.do_assert(v >= 0)
             return -v
         elif isinstance(v, StochasticParameter):
             return iap.Multiply(v, -1)

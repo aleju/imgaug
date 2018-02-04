@@ -139,17 +139,17 @@ class Alpha(Augmenter):
         super(Alpha, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(factor):
-            assert 0.0 <= factor <= 1.0, "Expected factor to have range [0, 1.0], got value %.2f." % (factor,)
+            ia.do_assert(0.0 <= factor <= 1.0, "Expected factor to have range [0, 1.0], got value %.2f." % (factor,))
             self.factor = Deterministic(factor)
         elif ia.is_iterable(factor):
-            assert len(factor) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(factor),)
+            ia.do_assert(len(factor) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(factor),))
             self.factor = Uniform(factor[0], factor[1])
         elif isinstance(factor, StochasticParameter):
             self.factor = factor
         else:
             raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(factor),))
 
-        assert first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values."
+        ia.do_assert(first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values.")
 
         if first is None:
             self.first = None
@@ -178,7 +178,7 @@ class Alpha(Augmenter):
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -223,7 +223,7 @@ class Alpha(Augmenter):
                 nb_channels = image.shape[2]
                 samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
-                    assert 0 <= sample <= 1.0
+                    ia.do_assert(0 <= sample <= 1.0)
                     # if the value is nearly 1.0 or 0.0 skip the computation
                     # and just use only the first/second image
                     if sample >= 1.0 - self.epsilon:
@@ -236,7 +236,7 @@ class Alpha(Augmenter):
                 result[i] = image.astype(input_dtype)
             else:
                 sample = self.factor.draw_sample(random_state=rs_image)
-                assert 0 <= sample <= 1.0
+                ia.do_assert(0 <= sample <= 1.0)
                 # if the value is nearly 1.0 or 0.0 skip the computation
                 # and just use only the first/second image
                 if sample >= 1.0 - self.epsilon:
@@ -290,7 +290,7 @@ class Alpha(Augmenter):
                 sample = np.average(samples)
             else:
                 sample = self.factor.draw_sample(random_state=rs_image)
-                assert 0 <= sample <= 1.0
+                ia.do_assert(0 <= sample <= 1.0)
 
             # We cant choose "just a bit" of one keypoint augmentation result
             # without messing up the positions (interpolation doesn't make much
@@ -471,14 +471,14 @@ class AlphaElementwise(Alpha):
             if per_channel == 1:
                 for c in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
-                    assert 0 <= samples_c.item(0) <= 1.0 # validate only first value
+                    ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
                     image[..., c] = samples_c * image_first[..., c] + (1.0 - samples_c) * image_second[..., c]
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
             else:
                 samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
                 samples = np.tile(samples[..., np.newaxis], (1, 1, nb_channels))
-                assert 0.0 <= samples.item(0) <= 1.0
+                ia.do_assert(0.0 <= samples.item(0) <= 1.0)
 
                 image = samples * image_first + (1.0 - samples) * image_second
                 np.clip(image, 0, 255, out=image)
@@ -516,12 +516,14 @@ class AlphaElementwise(Alpha):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
             #rs_image = ia.new_random_state(seeds[i])
-            assert len(kps_oi_first.shape) == 3, \
+            ia.do_assert(
+                len(kps_oi_first.shape) == 3,
                 "Keypoint augmentation in AlphaElementwise requires " \
                 "KeypointsOnImage.shape to have channel information (i.e. " \
                 "tuple with 3 entries), which you did not provide (input " \
                 "shape: %s). The channels must match the corresponding " \
                 "image channels." % (kps_oi_first.shape,)
+            )
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
             # keypoint augmentation also works channel-wise, even though
@@ -536,7 +538,7 @@ class AlphaElementwise(Alpha):
                     samples[:, :, c] = samples_c
             else:
                 samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
-            assert 0.0 <= samples.item(0) <= 1.0
+            ia.do_assert(0.0 <= samples.item(0) <= 1.0)
             sample = np.average(samples)
 
             # We cant choose "just a bit" of one keypoint augmentation result

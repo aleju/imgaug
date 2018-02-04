@@ -106,7 +106,7 @@ class Convolve(Augmenter):
             self.matrix = None #np.array([[1]], dtype=np.float32)
             self.matrix_type = "None"
         elif ia.is_np_array(matrix):
-            assert len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape)
+            ia.do_assert(len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape))
             self.matrix = matrix
             self.matrix_type = "constant"
         elif isinstance(matrix, StochasticParameter):
@@ -133,8 +133,10 @@ class Convolve(Augmenter):
                 matrices = self.matrix.draw_samples((nb_channels), random_state=random_state)
             elif self.matrix_type == "function":
                 matrices = self.matrix(images[i], nb_channels, random_state)
-                assert isinstance(matrices, list) and len(matrices) == nb_channels \
-                       or ia.is_np_array(matrices) and matrices.ndim == 3
+                ia.do_assert(
+                    (isinstance(matrices, list) and len(matrices) == nb_channels)
+                    or (ia.is_np_array(matrices) and matrices.ndim == 3)
+                )
             else:
                 raise Exception("Invalid matrix type")
 
@@ -209,7 +211,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
-        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
         alpha_param = Uniform(alpha[0], alpha[1])
     elif isinstance(alpha, StochasticParameter):
         alpha_param = alpha
@@ -219,7 +221,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     if ia.is_single_number(lightness):
         lightness_param = Deterministic(lightness)
     elif ia.is_iterable(lightness):
-        assert len(lightness) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(lightness),)
+        ia.do_assert(len(lightness) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(lightness),))
         lightness_param = Uniform(lightness[0], lightness[1])
     elif isinstance(lightness, StochasticParameter):
         lightness_param = lightness
@@ -228,7 +230,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        assert 0 <= alpha_sample <= 1.0
+        ia.do_assert(0 <= alpha_sample <= 1.0)
         lightness_sample = lightness_param.draw_sample(random_state=random_state_func)
         matrix_nochange = np.array([
             [0, 0, 0],
@@ -297,7 +299,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
-        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
         alpha_param = Uniform(alpha[0], alpha[1])
     elif isinstance(alpha, StochasticParameter):
         alpha_param = alpha
@@ -307,7 +309,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     if ia.is_single_number(strength):
         strength_param = Deterministic(strength)
     elif ia.is_iterable(strength):
-        assert len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(strength),)
+        ia.do_assert(len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(strength),))
         strength_param = Uniform(strength[0], strength[1])
     elif isinstance(strength, StochasticParameter):
         strength_param = strength
@@ -316,7 +318,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        assert 0 <= alpha_sample <= 1.0
+        ia.do_assert(0 <= alpha_sample <= 1.0)
         strength_sample = strength_param.draw_sample(random_state=random_state_func)
         matrix_nochange = np.array([
             [0, 0, 0],
@@ -371,7 +373,7 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
-        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
         alpha_param = Uniform(alpha[0], alpha[1])
     elif isinstance(alpha, StochasticParameter):
         alpha_param = alpha
@@ -380,7 +382,7 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        assert 0 <= alpha_sample <= 1.0
+        ia.do_assert(0 <= alpha_sample <= 1.0)
         matrix_nochange = np.array([
             [0, 0, 0],
             [0, 1, 0],
@@ -463,7 +465,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     if ia.is_single_number(alpha):
         alpha_param = Deterministic(alpha)
     elif ia.is_iterable(alpha):
-        assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
         alpha_param = Uniform(alpha[0], alpha[1])
     elif isinstance(alpha, StochasticParameter):
         alpha_param = alpha
@@ -473,7 +475,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     if ia.is_single_number(direction):
         direction_param = Deterministic(direction)
     elif ia.is_iterable(direction):
-        assert len(direction) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(direction),)
+        ia.do_assert(len(direction) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(direction),))
         direction_param = Uniform(direction[0], direction[1])
     elif isinstance(direction, StochasticParameter):
         direction_param = direction
@@ -482,7 +484,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        assert 0 <= alpha_sample <= 1.0
+        ia.do_assert(0 <= alpha_sample <= 1.0)
         direction_sample = direction_param.draw_sample(random_state=random_state_func)
 
         deg = int(direction_sample * 360) % 360

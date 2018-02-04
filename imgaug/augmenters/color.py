@@ -284,7 +284,7 @@ class ChangeColorspace(Augmenter):
         if ia.is_single_number(alpha):
             self.alpha = Deterministic(alpha)
         elif ia.is_iterable(alpha):
-            assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
             self.alpha = Uniform(alpha[0], alpha[1])
         elif isinstance(alpha, StochasticParameter):
             self.alpha = alpha
@@ -292,11 +292,11 @@ class ChangeColorspace(Augmenter):
             raise Exception("Expected alpha to be int or float or tuple/list of ints/floats or StochasticParameter, got %s." % (type(alpha),))
 
         if ia.is_string(to_colorspace):
-            assert to_colorspace in ChangeColorspace.COLORSPACES
+            ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
             self.to_colorspace = Deterministic(to_colorspace)
         elif ia.is_iterable(to_colorspace):
-            assert all([ia.is_string(colorspace) for colorspace in to_colorspace])
-            assert all([(colorspace in ChangeColorspace.COLORSPACES) for colorspace in to_colorspace])
+            ia.do_assert(all([ia.is_string(colorspace) for colorspace in to_colorspace]))
+            ia.do_assert(all([(colorspace in ChangeColorspace.COLORSPACES) for colorspace in to_colorspace]))
             self.to_colorspace = Choice(to_colorspace)
         elif isinstance(to_colorspace, StochasticParameter):
             self.to_colorspace = to_colorspace
@@ -304,8 +304,8 @@ class ChangeColorspace(Augmenter):
             raise Exception("Expected to_colorspace to be string, list of strings or StochasticParameter, got %s." % (type(to_colorspace),))
 
         self.from_colorspace = from_colorspace
-        assert self.from_colorspace in ChangeColorspace.COLORSPACES
-        assert from_colorspace != ChangeColorspace.GRAY
+        ia.do_assert(self.from_colorspace in ChangeColorspace.COLORSPACES)
+        ia.do_assert(from_colorspace != ChangeColorspace.GRAY)
 
         self.eps = 0.001 # epsilon value to check if alpha is close to 1.0 or 0.0
 
@@ -319,8 +319,8 @@ class ChangeColorspace(Augmenter):
             to_colorspace = to_colorspaces[i]
             image = images[i]
 
-            assert 0.0 <= alpha <= 1.0
-            assert to_colorspace in ChangeColorspace.COLORSPACES
+            ia.do_assert(0.0 <= alpha <= 1.0)
+            ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
 
             if alpha == 0 or self.from_colorspace == to_colorspace:
                 pass # no change necessary

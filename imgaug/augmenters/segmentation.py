@@ -109,10 +109,10 @@ class Superpixels(Augmenter):
         if ia.is_single_number(p_replace):
             self.p_replace = Binomial(p_replace)
         elif ia.is_iterable(p_replace):
-            assert len(p_replace) == 2
-            assert p_replace[0] < p_replace[1]
-            assert 0 <= p_replace[0] <= 1.0
-            assert 0 <= p_replace[1] <= 1.0
+            ia.do_assert(len(p_replace) == 2)
+            ia.do_assert(p_replace[0] < p_replace[1])
+            ia.do_assert(0 <= p_replace[0] <= 1.0)
+            ia.do_assert(0 <= p_replace[1] <= 1.0)
             self.p_replace = p_replace = Binomial(Uniform(p_replace[0], p_replace[1]))
         elif isinstance(p_replace, StochasticParameter):
             self.p_replace = p_replace
@@ -122,7 +122,7 @@ class Superpixels(Augmenter):
         if ia.is_single_integer(n_segments):
             self.n_segments = Deterministic(n_segments)
         elif ia.is_iterable(n_segments):
-            assert len(n_segments) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(n_segments),)
+            ia.do_assert(len(n_segments) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(n_segments),))
             self.n_segments = DiscreteUniform(n_segments[0], n_segments[1])
         elif isinstance(n_segments, StochasticParameter):
             self.n_segments = n_segments

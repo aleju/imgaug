@@ -422,7 +422,7 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
     # keeping PIL here so that it is not a dependency of the library right now
     from PIL import Image, ImageDraw, ImageFont
 
-    assert img.dtype in [np.uint8, np.float32]
+    do_assert(img.dtype in [np.uint8, np.float32])
 
     input_dtype = img.dtype
     if img.dtype == np.float32:
@@ -486,7 +486,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     """
     s = images.shape
-    assert len(s) == 4, s
+    do_assert(len(s) == 4, s)
     nb_images = s[0]
     im_height, im_width = s[1], s[2]
     nb_channels = s[3]
@@ -496,7 +496,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         return np.copy(images)
 
     ip = interpolation
-    assert ip is None or ip in ["nearest", "linear", "area", "cubic", cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+    do_assert(ip is None or ip in ["nearest", "linear", "area", "cubic", cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC])
     if ip is None:
         if height > im_height or width > im_width:
             ip = cv2.INTER_AREA
@@ -549,7 +549,7 @@ def imresize_single_image(image, sizes, interpolation=None):
     if image.ndim == 2:
         grayscale = True
         image = image[:, :, np.newaxis]
-    assert len(image.shape) == 3, image.shape
+    do_assert(len(image.shape) == 3, image.shape)
     rs = imresize_many_images(image[np.newaxis, :, :, :], sizes, interpolation=interpolation)
     if grayscale:
         return np.squeeze(rs[0, :, :, 0])
@@ -582,16 +582,16 @@ def draw_grid(images, rows=None, cols=None):
 
     """
     if is_np_array(images):
-        assert images.ndim == 4
+        do_assert(images.ndim == 4)
     else:
-        assert is_iterable(images) and is_np_array(images[0]) and images[0].ndim == 3
+        do_assert(is_iterable(images) and is_np_array(images[0]) and images[0].ndim == 3)
 
     nb_images = len(images)
-    assert nb_images > 0
+    do_assert(nb_images > 0)
     cell_height = max([image.shape[0] for image in images])
     cell_width = max([image.shape[1] for image in images])
     channels = set([image.shape[2] for image in images])
-    assert len(channels) == 1, "All images are expected to have the same number of channels, but got channel set %s with length %d instead." % (str(channels), len(channels))
+    do_assert(len(channels) == 1, "All images are expected to have the same number of channels, but got channel set %s with length %d instead." % (str(channels), len(channels)))
     nb_channels = list(channels)[0]
     if rows is None and cols is None:
         rows = cols = int(math.ceil(math.sqrt(nb_images)))
@@ -599,7 +599,7 @@ def draw_grid(images, rows=None, cols=None):
         cols = int(math.ceil(nb_images / rows))
     elif cols is not None:
         rows = int(math.ceil(nb_images / cols))
-    assert rows * cols >= nb_images
+    do_assert(rows * cols >= nb_images)
 
     width = cell_width * cols
     height = cell_height * rows
@@ -641,6 +641,26 @@ def show_grid(images, rows=None, cols=None):
     grid = draw_grid(images, rows=rows, cols=cols)
     misc.imshow(grid)
 
+def do_assert(condition, message="Assertion failed."):
+    """
+    Function that behaves equally to an `assert` statement, but raises an
+    Exception.
+
+    This is added because `assert` statements are removed in optimized code.
+    It replaces `assert` statements throughout the library that should be
+    kept even in optimized code.
+
+    Parameters
+    ----------
+    condition : bool
+        If False, an exception is raised.
+
+    message : string, optional(default="Assertion failed.")
+        Error message.
+
+    """
+    if not condition:
+        raise AssertionError(str(message))
 
 class HooksImages(object):
     """
@@ -910,7 +930,7 @@ class KeypointsOnImage(object):
         if is_np_array(shape):
             self.shape = shape.shape
         else:
-            assert isinstance(shape, (tuple, list))
+            do_assert(isinstance(shape, (tuple, list)))
             self.shape = tuple(shape)
 
     @property
@@ -1087,10 +1107,10 @@ class KeypointsOnImage(object):
 
 
         """
-        assert len(self.keypoints) > 0
+        do_assert(len(self.keypoints) > 0)
         height, width = self.shape[0:2]
         image = np.zeros((height, width, len(self.keypoints)), dtype=np.uint8)
-        assert size % 2 != 0
+        do_assert(size % 2 != 0)
         sizeh = max(0, (size-1)//2)
         for i, keypoint in enumerate(self.keypoints):
             # TODO for float values spread activation over several cells
@@ -1147,7 +1167,7 @@ class KeypointsOnImage(object):
             The extracted keypoints.
 
         """
-        assert len(image.shape) == 3
+        do_assert(len(image.shape) == 3)
         height, width, nb_keypoints = image.shape
 
         drop_if_not_found = False
@@ -1156,7 +1176,7 @@ class KeypointsOnImage(object):
             if_not_found_x = -1
             if_not_found_y = -1
         elif isinstance(if_not_found_coords, (tuple, list)):
-            assert len(if_not_found_coords) == 2
+            do_assert(len(if_not_found_coords) == 2)
             if_not_found_x = if_not_found_coords[0]
             if_not_found_y = if_not_found_coords[1]
         elif isinstance(if_not_found_coords, dict):
@@ -1221,10 +1241,10 @@ class BoundingBox(object):
     def __init__(self, x1, y1, x2, y2):
         if x1 > x2:
             x2, x1 = x1, x2
-        assert x2 > x1
+        do_assert(x2 > x1)
         if y1 > y2:
             y2, y1 = y1, y2
-        assert y2 > y1
+        do_assert(y2 > y1)
 
         self.x1 = x1
         self.y1 = y1
@@ -1298,10 +1318,10 @@ class BoundingBox(object):
         else:
             from_height, from_width = from_shape[0:2]
             to_height, to_width = to_shape[0:2]
-            assert from_height > 0
-            assert from_width > 0
-            assert to_height > 0
-            assert to_width > 0
+            do_assert(from_height > 0)
+            do_assert(from_width > 0)
+            do_assert(to_height > 0)
+            do_assert(to_width > 0)
             x1 = (self.x1 / from_width) * to_width
             y1 = (self.y1 / from_height) * to_height
             x2 = (self.x2 / from_width) * to_width
@@ -1388,8 +1408,8 @@ class BoundingBox(object):
             shape = image.shape
 
         height, width = shape[0:2]
-        assert height > 0
-        assert width > 0
+        do_assert(height > 0)
+        do_assert(width > 0)
 
         x1 = np.clip(self.x1, 0, width)
         x2 = np.clip(self.x2, 0, width)
@@ -1532,7 +1552,7 @@ class BoundingBoxesOnImage(object):
         if is_np_array(shape):
             self.shape = shape.shape
         else:
-            assert isinstance(shape, (tuple, list))
+            do_assert(isinstance(shape, (tuple, list)))
             self.shape = tuple(shape)
 
     @property
@@ -1687,8 +1707,8 @@ class BatchLoader(object):
     """
 
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
-        assert queue_size > 0
-        assert nb_workers >= 1
+        do_assert(queue_size > 0)
+        do_assert(nb_workers >= 1)
         self.queue = multiprocessing.Queue(queue_size)
         self.join_signal = multiprocessing.Event()
         self.finished_signals = []
@@ -1725,7 +1745,7 @@ class BatchLoader(object):
             seed(seedval)
 
         for batch in load_batch_func():
-            assert isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),)
+            do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
             queue.put(pickle.dumps(batch, protocol=-1))
             if join_signal.is_set():
                 break
@@ -1775,7 +1795,7 @@ class BackgroundAugmenter(object):
 
     """
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
-        assert queue_size > 0
+        do_assert(queue_size > 0)
         self.augseq = augseq
         self.source_finished_signals = batch_loader.finished_signals
         self.queue_source = batch_loader.queue
@@ -1789,7 +1809,7 @@ class BackgroundAugmenter(object):
             # try to reserve at least one core for the main process
             nb_workers = max(1, nb_workers - 1)
         else:
-            assert nb_workers >= 1
+            do_assert(nb_workers >= 1)
         #print("Starting %d background processes" % (nb_workers,))
 
         self.nb_workers = nb_workers

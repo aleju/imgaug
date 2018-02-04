@@ -83,7 +83,7 @@ class GaussianBlur(Augmenter):
         if ia.is_single_number(sigma):
             self.sigma = Deterministic(sigma)
         elif ia.is_iterable(sigma):
-            assert len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),)
+            ia.do_assert(len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),))
             self.sigma = Uniform(sigma[0], sigma[1])
         elif isinstance(sigma, StochasticParameter):
             self.sigma = sigma
@@ -168,7 +168,7 @@ class AverageBlur(Augmenter):
         if ia.is_single_number(k):
             self.k = Deterministic(int(k))
         elif ia.is_iterable(k):
-            assert len(k) == 2
+            ia.do_assert(len(k) == 2)
             if all([ia.is_single_number(ki) for ki in k]):
                 self.k = DiscreteUniform(int(k[0]), int(k[1]))
             elif all([isinstance(ki, StochasticParameter) for ki in k]):
@@ -276,13 +276,13 @@ class MedianBlur(Augmenter):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(k):
-            assert k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),)
+            ia.do_assert(k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),))
             self.k = Deterministic(int(k))
         elif ia.is_iterable(k):
-            assert len(k) == 2
-            assert all([ia.is_single_number(ki) for ki in k])
-            assert k[0] % 2 != 0, "Expected k[0] to be odd, got %d. Add or subtract 1." % (int(k[0]),)
-            assert k[1] % 2 != 0, "Expected k[1] to be odd, got %d. Add or subtract 1." % (int(k[1]),)
+            ia.do_assert(len(k) == 2)
+            ia.do_assert(all([ia.is_single_number(ki) for ki in k]))
+            ia.do_assert(k[0] % 2 != 0, "Expected k[0] to be odd, got %d. Add or subtract 1." % (int(k[0]),))
+            ia.do_assert(k[1] % 2 != 0, "Expected k[1] to be odd, got %d. Add or subtract 1." % (int(k[1]),))
             self.k = DiscreteUniform(int(k[0]), int(k[1]))
         elif isinstance(k, StochasticParameter):
             self.k = k
@@ -382,8 +382,8 @@ class BilateralBlur(Augmenter):
             if ia.is_single_number(var):
                 return Deterministic(int(var))
             elif ia.is_iterable(var):
-                assert len(var) == 2
-                assert all([ia.is_single_number(var_i) for var_i in var])
+                ia.do_assert(len(var) == 2)
+                ia.do_assert(all([ia.is_single_number(var_i) for var_i in var]))
                 return DiscreteUniform(int(var[0]), int(var[1]))
             elif isinstance(d, StochasticParameter):
                 return var
@@ -402,7 +402,7 @@ class BilateralBlur(Augmenter):
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
         for i in sm.xrange(nb_images):
-            assert images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels."
+            ia.do_assert(images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels.")
             di = samples_d[i]
             sigma_color_i = samples_sigma_color[i]
             sigma_space_i = samples_sigma_space[i]

@@ -293,7 +293,7 @@ class Affine(Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        assert backend in ["auto", "skimage", "cv2"]
+        ia.do_assert(backend in ["auto", "skimage", "cv2"])
         self.backend = backend
 
         # skimage | cv2
@@ -324,15 +324,15 @@ class Affine(Augmenter):
             else:
                 self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             if backend == "cv2":
-                assert order in [0, 1, 3]
+                ia.do_assert(order in [0, 1, 3])
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
-            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             if backend == "cv2":
-                assert all([val in [0, 1, 3] for val in order])
+                ia.do_assert(all([val in [0, 1, 3] for val in order]))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -344,9 +344,9 @@ class Affine(Augmenter):
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
             self.cval = Uniform(cval[0], cval[1]) # skimage transform expects float
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -372,7 +372,7 @@ class Affine(Augmenter):
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode])
+            ia.do_assert(all([ia.is_string(val) for val in mode]))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -385,14 +385,14 @@ class Affine(Augmenter):
             if isinstance(param, StochasticParameter):
                 return param
             elif ia.is_single_number(param):
-                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,)
+                ia.do_assert(param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,))
                 return Deterministic(param)
             elif ia.is_iterable(param) and not isinstance(param, dict):
-                assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),)
-                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1])
+                ia.do_assert(len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),))
+                ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1]))
                 return Uniform(param[0], param[1])
             elif allow_dict and isinstance(param, dict):
-                assert "x" in param or "y" in param
+                ia.do_assert("x" in param or "y" in param)
                 x = param.get("x")
                 y = param.get("y")
 
@@ -408,7 +408,7 @@ class Affine(Augmenter):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
-        assert translate_percent is None or translate_px is None
+        ia.do_assert(translate_percent is None or translate_px is None)
 
         if translate_percent is not None:
             # translate by percent
@@ -416,13 +416,13 @@ class Affine(Augmenter):
                 if ia.is_single_number(param):
                     return Deterministic(float(param))
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_numbers = all([ia.is_single_number(p) for p in param])
-                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),)
-                    #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    ia.do_assert(all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),))
+                    #ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1]))
                     return Uniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -441,12 +441,12 @@ class Affine(Augmenter):
                 if ia.is_single_integer(param):
                     return Deterministic(param)
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_integer = all([ia.is_single_integer(p) for p in param])
-                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),)
+                    ia.do_assert(all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),))
                     return DiscreteUniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -467,8 +467,8 @@ class Affine(Augmenter):
         elif ia.is_single_number(rotate):
             self.rotate = Deterministic(rotate)
         elif ia.is_iterable(rotate):
-            assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),)
-            assert all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list"
+            ia.do_assert(len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),))
+            ia.do_assert(all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list")
             self.rotate = Uniform(rotate[0], rotate[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
@@ -480,8 +480,8 @@ class Affine(Augmenter):
         elif ia.is_single_number(shear):
             self.shear = Deterministic(shear)
         elif ia.is_iterable(shear):
-            assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),)
-            assert all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list."
+            ia.do_assert(len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),))
+            ia.do_assert(all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list.")
             self.shear = Uniform(shear[0], shear[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
@@ -498,8 +498,8 @@ class Affine(Augmenter):
             image = images[i]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * images[i].shape[0]))
             else:
@@ -533,7 +533,7 @@ class Affine(Augmenter):
                         mode, order
                     )
                 else:
-                    assert not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,)
+                    ia.do_assert(not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,))
                     # opencv seems to support arrays of three cvals (ie RGB)
                     # in python2, but for some reason not in python3, so
                     # we chose one cval here
@@ -566,8 +566,8 @@ class Affine(Augmenter):
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
             else:
@@ -627,8 +627,8 @@ class Affine(Augmenter):
             translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
             translate_samples = (translate_samples, translate_samples)
 
-        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
-        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
+        ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
+        ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
 
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
@@ -941,14 +941,14 @@ class AffineCv2(Augmenter):
         if order == ia.ALL:
             self.order = Choice(available_orders)
         elif ia.is_single_integer(order):
-            assert order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order)
+            ia.do_assert(order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order))
             self.order = Deterministic(order)
         elif ia.is_string(order):
-            assert order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order)
+            ia.do_assert(order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order))
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),)
-            assert all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -960,9 +960,9 @@ class AffineCv2(Augmenter):
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
             self.cval = DiscreteUniform(cval[0], cval[1])
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -974,14 +974,14 @@ class AffineCv2(Augmenter):
         if mode == ia.ALL:
             self.mode = Choice(available_modes)
         elif ia.is_single_integer(mode):
-            assert mode in available_modes, "Expected mode to be in %s, got %d." % (str(available_modes), mode)
+            ia.do_assert(mode in available_modes, "Expected mode to be in %s, got %d." % (str(available_modes), mode))
             self.mode = Deterministic(mode)
         elif ia.is_string(mode):
-            assert mode in available_modes_str, "Expected mode to be in %s, got %s." % (str(available_modes_str), mode)
+            ia.do_assert(mode in available_modes_str, "Expected mode to be in %s, got %s." % (str(available_modes_str), mode))
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), "Expected mode list to only contain integers/strings, got types %s." % (str([type(val) for val in mode]),)
-            assert all([val in available_modes + available_modes_str for val in mode]), "Expected all mode values to be in %s, got %s." % (str(available_modes + available_modes_str), str(mode))
+            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), "Expected mode list to only contain integers/strings, got types %s." % (str([type(val) for val in mode]),))
+            ia.do_assert(all([val in available_modes + available_modes_str for val in mode]), "Expected all mode values to be in %s, got %s." % (str(available_modes + available_modes_str), str(mode)))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -994,14 +994,14 @@ class AffineCv2(Augmenter):
             if isinstance(param, StochasticParameter):
                 return param
             elif ia.is_single_number(param):
-                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,)
+                ia.do_assert(param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,))
                 return Deterministic(param)
             elif ia.is_iterable(param) and not isinstance(param, dict):
-                assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),)
-                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1])
+                ia.do_assert(len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),))
+                ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1]))
                 return Uniform(param[0], param[1])
             elif allow_dict and isinstance(param, dict):
-                assert "x" in param or "y" in param
+                ia.do_assert("x" in param or "y" in param)
                 x = param.get("x")
                 y = param.get("y")
 
@@ -1017,7 +1017,7 @@ class AffineCv2(Augmenter):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
-        assert translate_percent is None or translate_px is None
+        ia.do_assert(translate_percent is None or translate_px is None)
 
         if translate_percent is not None:
             # translate by percent
@@ -1025,13 +1025,13 @@ class AffineCv2(Augmenter):
                 if ia.is_single_number(param):
                     return Deterministic(float(param))
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_numbers = all([ia.is_single_number(p) for p in param])
-                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),)
-                    #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    ia.do_assert(all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),))
+                    #ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1]))
                     return Uniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -1050,12 +1050,12 @@ class AffineCv2(Augmenter):
                 if ia.is_single_integer(param):
                     return Deterministic(param)
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_integer = all([ia.is_single_integer(p) for p in param])
-                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),)
+                    ia.do_assert(all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),))
                     return DiscreteUniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -1076,8 +1076,8 @@ class AffineCv2(Augmenter):
         elif ia.is_single_number(rotate):
             self.rotate = Deterministic(rotate)
         elif ia.is_iterable(rotate):
-            assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),)
-            assert all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list"
+            ia.do_assert(len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),))
+            ia.do_assert(all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list")
             self.rotate = Uniform(rotate[0], rotate[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
@@ -1089,8 +1089,8 @@ class AffineCv2(Augmenter):
         elif ia.is_single_number(shear):
             self.shear = Deterministic(shear)
         elif ia.is_iterable(shear):
-            assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),)
-            assert all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list."
+            ia.do_assert(len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),))
+            ia.do_assert(all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list.")
             self.shear = Uniform(shear[0], shear[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
@@ -1123,8 +1123,8 @@ class AffineCv2(Augmenter):
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * images[i].shape[0]))
             else:
@@ -1185,8 +1185,8 @@ class AffineCv2(Augmenter):
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
             else:
@@ -1246,8 +1246,8 @@ class AffineCv2(Augmenter):
             translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
             translate_samples = (translate_samples, translate_samples)
 
-        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
-        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
+        ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
+        ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
 
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
@@ -1339,7 +1339,7 @@ class PiecewiseAffine(Augmenter):
         if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
         elif ia.is_iterable(scale):
-            assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),)
+            ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
             self.scale = Uniform(scale[0], scale[1])
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
@@ -1349,12 +1349,12 @@ class PiecewiseAffine(Augmenter):
         self.jitter = Normal(loc=0, scale=self.scale)
 
         if ia.is_single_number(nb_rows):
-            assert nb_rows >= 2
+            ia.do_assert(nb_rows >= 2)
             self.nb_rows = Deterministic(int(nb_rows))
         elif ia.is_iterable(nb_rows):
-            assert len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),)
-            assert nb_rows[0] >= 2
-            assert nb_rows[1] >= 2
+            ia.do_assert(len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),))
+            ia.do_assert(nb_rows[0] >= 2)
+            ia.do_assert(nb_rows[1] >= 2)
             self.nb_rows = DiscreteUniform(nb_rows[0], nb_rows[1])
         elif isinstance(nb_rows, StochasticParameter):
             self.nb_rows = nb_rows
@@ -1362,12 +1362,12 @@ class PiecewiseAffine(Augmenter):
             raise Exception("Expected int, tuple of two ints or StochasticParameter as nb_rows, got %s." % (type(nb_rows),))
 
         if ia.is_single_number(nb_cols):
-            assert nb_cols >= 2
+            ia.do_assert(nb_cols >= 2)
             self.nb_cols = Deterministic(int(nb_cols))
         elif ia.is_iterable(nb_cols):
-            assert len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),)
-            assert nb_cols[0] >= 2
-            assert nb_cols[1] >= 2
+            ia.do_assert(len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),))
+            ia.do_assert(nb_cols[0] >= 2)
+            ia.do_assert(nb_cols[1] >= 2)
             self.nb_cols = DiscreteUniform(nb_cols[0], nb_cols[1])
         elif isinstance(nb_cols, StochasticParameter):
             self.nb_cols = nb_cols
@@ -1392,11 +1392,11 @@ class PiecewiseAffine(Augmenter):
             # self.order = DiscreteUniform(0, 5)
             self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
-            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -1408,9 +1408,9 @@ class PiecewiseAffine(Augmenter):
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
             self.cval = Uniform(cval[0], cval[1])
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -1423,7 +1423,7 @@ class PiecewiseAffine(Augmenter):
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode])
+            ia.do_assert(all([ia.is_string(val) for val in mode]))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -1661,7 +1661,7 @@ class PerspectiveTransform(Augmenter):
         if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
         elif ia.is_iterable(scale):
-            assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),)
+            ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
             self.scale = Uniform(scale[0], scale[1])
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
@@ -1684,7 +1684,7 @@ class PerspectiveTransform(Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             # cv2.warpPerspective only supports <=4 channels
-            #assert images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels."
+            #ia.do_assert(images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels.")
             nb_channels = images[i].shape[2]
             if nb_channels <= 4:
                 warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
@@ -1928,10 +1928,10 @@ class ElasticTransformation(Augmenter):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
-            assert alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,)
+            ia.do_assert(alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,))
             self.alpha = Deterministic(alpha)
         elif ia.is_iterable(alpha):
-            assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
             self.alpha = Uniform(alpha[0], alpha[1])
         elif isinstance(alpha, StochasticParameter):
             self.alpha = alpha
@@ -1939,10 +1939,10 @@ class ElasticTransformation(Augmenter):
             raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
 
         if ia.is_single_number(sigma):
-            assert sigma >= 0.0, "Expected sigma to have range [0, inf), got value %.4f." % (sigma,)
+            ia.do_assert(sigma >= 0.0, "Expected sigma to have range [0, inf), got value %.4f." % (sigma,))
             self.sigma = Deterministic(sigma)
         elif ia.is_iterable(sigma):
-            assert len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),)
+            ia.do_assert(len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),))
             self.sigma = Uniform(sigma[0], sigma[1])
         elif isinstance(sigma, StochasticParameter):
             self.sigma = sigma
@@ -1952,11 +1952,11 @@ class ElasticTransformation(Augmenter):
         if order == ia.ALL:
             self.order = Choice([0, 1, 2, 3, 4, 5])
         elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
-            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -1968,9 +1968,9 @@ class ElasticTransformation(Augmenter):
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
             self.cval = Uniform(cval[0], cval[1])
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -1982,7 +1982,7 @@ class ElasticTransformation(Augmenter):
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode])
+            ia.do_assert(all([ia.is_string(val) for val in mode]))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -2043,7 +2043,7 @@ class ElasticTransformation(Augmenter):
 
     @staticmethod
     def generate_indices(shape, alpha, sigma, random_state):
-        assert len(shape) == 2
+        ia.do_assert(len(shape) == 2)
 
         dx = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
         dy = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
@@ -2053,7 +2053,7 @@ class ElasticTransformation(Augmenter):
 
     @staticmethod
     def map_coordinates(image, indices_x, indices_y, order=1, cval=0, mode="constant"):
-        assert len(image.shape) == 3
+        ia.do_assert(len(image.shape) == 3)
         result = np.copy(image)
         height, width = image.shape[0:2]
         for c in sm.xrange(image.shape[2]):

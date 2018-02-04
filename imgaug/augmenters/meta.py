@@ -177,10 +177,10 @@ class Augmenter(object):
             Datatype usually matches the input datatypes per list element.
 
         """
-        assert isinstance(batches, list)
-        assert len(batches) > 0
+        ia.do_assert(isinstance(batches, list))
+        ia.do_assert(len(batches) > 0)
         if background:
-            assert hooks is None, "Hooks can not be used when background augmentation is activated."
+            ia.do_assert(hooks is None, "Hooks can not be used when background augmentation is activated.")
 
         batches_normalized = []
         batches_original_dts = []
@@ -190,7 +190,7 @@ class Augmenter(object):
                 batches_normalized.append(batch)
                 batches_original_dts.append("imgaug.Batch")
             elif ia.is_np_array(batch):
-                assert batch.ndim in (3, 4), "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,)
+                ia.do_assert(batch.ndim in (3, 4), "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,))
                 batches_normalized.append(ia.Batch(images=batch, data=i))
                 batches_original_dts.append("numpy_array")
             elif isinstance(batch, list):
@@ -284,7 +284,7 @@ class Augmenter(object):
             The corresponding augmented image.
 
         """
-        assert image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,)
+        ia.do_assert(image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,))
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
@@ -330,7 +330,7 @@ class Augmenter(object):
             input_type = "array"
             input_added_axis = False
 
-            assert images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width) or (N, height, width, channels), got shape %s." % (images.shape,)
+            ia.do_assert(images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width) or (N, height, width, channels), got shape %s." % (images.shape,))
 
             # copy the input, we don't want to augment it in-place
             images_copy = np.copy(images)
@@ -356,7 +356,7 @@ class Augmenter(object):
             if len(images) == 0:
                 images_copy = []
             else:
-                assert all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width) or (height, width, channels), got shapes %s." % ([image.shape for image in images],)
+                ia.do_assert(all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width) or (height, width, channels), got shapes %s." % ([image.shape for image in images],))
 
                 # copy images and add channel axis for 2D images (see above,
                 # as for list inputs each image can have different shape, it
@@ -379,7 +379,7 @@ class Augmenter(object):
         #if ia.is_np_array(images) != ia.is_np_array(images_copy):
         #    print("[WARNING] images vs images_copy", ia.is_np_array(images), ia.is_np_array(images_copy))
         #if ia.is_np_array(images):
-            #assert images.shape[0] > 0, images.shape
+            #ia.do_assert(images.shape[0] > 0, images.shape)
         #    print("images.shape", images.shape)
         #if ia.is_np_array(images_copy):
         #    print("images_copy.shape", images_copy.shape)
@@ -518,8 +518,8 @@ class Augmenter(object):
         if hooks is None:
             hooks = ia.HooksKeypoints()
 
-        assert ia.is_iterable(keypoints_on_images)
-        assert all([isinstance(keypoints_on_image, ia.KeypointsOnImage) for keypoints_on_image in keypoints_on_images])
+        ia.do_assert(ia.is_iterable(keypoints_on_images))
+        ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage) for keypoints_on_image in keypoints_on_images]))
 
         keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
 
@@ -726,7 +726,7 @@ class Augmenter(object):
                     images[i] = image[:, :, np.newaxis]
                 else:
                     raise Exception("Unexpected image shape at index %d, expected 2- or 3-dimensional array, got shape %s." % (i, image.shape,))
-        assert isinstance(images, list)
+        ia.do_assert(isinstance(images, list))
 
         det = self if self.deterministic else self.to_deterministic()
         augs = []
@@ -826,7 +826,7 @@ class Augmenter(object):
             otherwise a list of Augmenter objects (even if n was 1).
 
         """
-        assert n is None or n >= 1
+        ia.do_assert(n is None or n >= 1)
         if n is None:
             return self.to_deterministic(1)[0]
         else:
@@ -873,7 +873,7 @@ class Augmenter(object):
             object is `A` or one of its children is `A`.
 
         """
-        assert isinstance(deterministic_too, bool)
+        ia.do_assert(isinstance(deterministic_too, bool))
 
         if random_state is None:
             random_state = ia.current_random_state()
@@ -1607,7 +1607,7 @@ class SomeOf(Augmenter, list):
             self.n = None
             self.n_mode = "None"
         elif ia.is_iterable(n):
-            assert len(n) == 2
+            ia.do_assert(len(n) == 2)
             if ia.is_single_number(n[0]) and n[1] is None:
                 self.n = (int(n[0]), None)
                 self.n_mode = "(int,None)"
@@ -1880,7 +1880,7 @@ class Sometimes(Augmenter):
         super(Sometimes, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_float(p) or ia.is_single_integer(p):
-            assert 0 <= p <= 1
+            ia.do_assert(0 <= p <= 1)
             self.p = Binomial(p)
         elif isinstance(p, StochasticParameter):
             self.p = p
@@ -2052,7 +2052,7 @@ class WithChannels(Augmenter):
         elif ia.is_single_integer(channels):
             self.channels = [channels]
         elif ia.is_iterable(channels):
-            assert all([ia.is_single_integer(channel) for channel in channels]), "Expected integers as channels, got %s." % ([type(channel) for channel in channels],)
+            ia.do_assert(all([ia.is_single_integer(channel) for channel in channels]), "Expected integers as channels, got %s." % ([type(channel) for channel in channels],))
             self.channels = channels
         else:
             raise Exception("Expected None, int or list of ints as channels, got %s." % (type(channels),))
@@ -2216,8 +2216,8 @@ class Lambda(Augmenter):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
-        assert isinstance(result, list)
-        assert all([isinstance(el, ia.KeypointsOnImage) for el in result])
+        ia.do_assert(isinstance(result, list))
+        ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]))
         return result
 
     def get_parameters(self):
@@ -2258,10 +2258,10 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
         See `Augmenter.__init__()`
     """
     def func_images_assert(images, random_state, parents, hooks):
-        assert func_images(images, random_state, parents=parents, hooks=hooks)
+        ia.do_assert(func_images(images, random_state, parents=parents, hooks=hooks), "Input images did not fulfill user-defined assertion in AssertLambda.")
         return images
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
-        assert func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
+        ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks), "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
         return keypoints_on_images
     if name is None:
         name = "UnnamedAssertLambda"
@@ -2324,36 +2324,36 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
     like above, but now the height may be in the range 32 <= H < 64 and
     the number of channels may be either 1 or 3.
     """
-    assert len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape))
+    ia.do_assert(len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape)))
 
     def compare(observed, expected, dimension, image_index):
         if expected is not None:
             if ia.is_single_integer(expected):
-                assert observed == expected, "Expected dim %d (entry index: %s) to have value %d, got %d." % (dimension, image_index, expected, observed)
+                ia.do_assert(observed == expected, "Expected dim %d (entry index: %s) to have value %d, got %d." % (dimension, image_index, expected, observed))
             elif isinstance(expected, tuple):
-                assert len(expected) == 2
-                assert expected[0] <= observed < expected[1], "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (dimension, image_index, expected[0], expected[1], observed)
+                ia.do_assert(len(expected) == 2)
+                ia.do_assert(expected[0] <= observed < expected[1], "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (dimension, image_index, expected[0], expected[1], observed))
             elif isinstance(expected, list):
-                assert any([observed == val for val in expected]), "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed)
+                ia.do_assert(any([observed == val for val in expected]), "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed))
             else:
                 raise Exception("Invalid datatype for shape entry %d, expected each entry to be an integer, a tuple (with two entries) or a list, got %s." % (dimension, type(expected),))
 
     def func_images(images, random_state, parents, hooks):
         if check_images:
-            #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
+            #ia.do_assert(is_np_array(images), "AssertShape can currently only handle numpy arrays, got ")
             if isinstance(images, list):
                 if shape[0] is not None:
                     compare(len(images), shape[0], 0, "ALL")
 
                 for i in sm.xrange(len(images)):
                     image = images[i]
-                    assert len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape))
+                    ia.do_assert(len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape)))
                     for j in sm.xrange(len(shape)-1):
                         expected = shape[j+1]
                         observed = image.shape[j]
                         compare(observed, expected, j, i)
             else:
-                assert len(images.shape) == 4, "Expected image's shape to have length 4, got %d (shape: %s)." % (len(images.shape), str(images.shape))
+                ia.do_assert(len(images.shape) == 4, "Expected image's shape to have length 4, got %d (shape: %s)." % (len(images.shape), str(images.shape)))
                 for i in range(4):
                     expected = shape[i]
                     observed = images.shape[i]
@@ -2362,7 +2362,7 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
 
     def func_keypoints(keypoints_on_images, random_state, parents, hooks):
         if check_keypoints:
-            #assert is_np_array(images), "AssertShape can currently only handle numpy arrays, got "
+            #ia.do_assert(is_np_array(images), "AssertShape can currently only handle numpy arrays, got ")
             if shape[0] is not None:
                 compare(len(keypoints_on_images), shape[0], 0, "ALL")
 
