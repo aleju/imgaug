@@ -19,13 +19,10 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
+from ..parameters import StochasticParameter, Deterministic, Binomial, Uniform
 from .. import parameters as iap
 import numpy as np
-import cv2
-import six
 import six.moves as sm
-import warnings
 
 from .meta import Augmenter, Sequential
 

@@ -1,10 +1,10 @@
 from __future__ import print_function, division
 import imgaug as ia
-from imgaug import parameters as iap
+# TODO ForceSign
 from imgaug.parameters import (
     Binomial, Choice, DiscreteUniform, Poisson, Normal, Laplace, ChiSquare,
     Weibull, Uniform, Beta, Deterministic, Clip, Discretize, Multiply, Add,
-    Divide, Power, Absolute, RandomSign, ForceSign, Positive, Negative,
+    Divide, Power, Absolute, RandomSign, Positive, Negative,
     SimplexNoise, FrequencyNoise, Sigmoid
 )
 from scipy import misc

@@ -4,19 +4,11 @@ Run these checks from the project directory (i.e. parent directory) via
     python check_performance.py
 """
 from __future__ import print_function, division
-
-#import sys
-#import os
-#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
-#from scipy import ndimage, misc
-#from skimage import data
 import time
 import random
-import six
 import six.moves as sm
 
 """

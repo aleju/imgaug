@@ -1,10 +1,8 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc, ndimage
 import numpy as np
 from skimage import data
-import cv2
 
 NB_ROWS = 10
 NB_COLS = 10
