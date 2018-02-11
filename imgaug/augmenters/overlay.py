@@ -728,7 +728,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
 def FrequencyNoiseAlpha(exponent=(-4, 4),
                         first=None, second=None, per_channel=False,
                         size_px_max=(4, 16), upscale_method=None,
-                        iterations=(1, 3), aggregation_method=["avg", "max"],
+                        iterations=(1, 3), aggregation_method=["avg", "max"], # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
                         sigmoid=0.5, sigmoid_thresh=None,
                         name=None, deterministic=False, random_state=None):
     """
