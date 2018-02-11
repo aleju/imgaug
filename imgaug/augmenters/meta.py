@@ -68,7 +68,7 @@ def clip_augmented_images(images, minval, maxval):
     return clip_augmented_images_(images, minval, maxval)
 
 @six.add_metaclass(ABCMeta)
-class Augmenter(object):
+class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Base class for Augmenter objects.
     All augmenters derive from this class.

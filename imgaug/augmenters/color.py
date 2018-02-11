@@ -130,7 +130,7 @@ class WithColorspace(Augmenter):
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
-def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):
+def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
     """
     Augmenter that transforms images into HSV space, selects the H and S
     channels and then adds a given range of values to these.

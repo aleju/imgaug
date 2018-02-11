@@ -1886,7 +1886,7 @@ class IterativeNoiseAggregator(StochasticParameter):
     combines these noise maps to a single map using elementwise maximum.
 
     """
-    def __init__(self, other_param, iterations=(1, 3), aggregation_method=["max", "avg"]):
+    def __init__(self, other_param, iterations=(1, 3), aggregation_method=["max", "avg"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
         ia.do_assert(isinstance(other_param, StochasticParameter))
         self.other_param = other_param
 
@@ -2478,7 +2478,7 @@ class FrequencyNoise(StochasticParameter):
     Generates noise with cloud-like patterns.
 
     """
-    def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]):
+    def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
         if ia.is_single_number(exponent):
             self.exponent = Deterministic(exponent)
         elif isinstance(exponent, tuple):
