@@ -23,7 +23,6 @@ from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Uniform
 import numpy as np
-from scipy import ndimage
 import cv2
 import six.moves as sm
 import types

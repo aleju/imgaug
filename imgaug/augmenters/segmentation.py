@@ -17,8 +17,6 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Uniform
-from .. import parameters as iap
-from abc import abstractmethod
 import numpy as np
 from skimage import segmentation, measure
 import six.moves as sm

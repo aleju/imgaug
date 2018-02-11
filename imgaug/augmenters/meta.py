@@ -25,13 +25,11 @@ Note that WithColorspace is in `color.py`.
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform
+from ..parameters import StochasticParameter, Binomial, DiscreteUniform
 from abc import ABCMeta, abstractmethod
-import random
 import numpy as np
 import copy as copy_module
 import re
-import math
 from scipy import misc
 import itertools
 import six

@@ -22,7 +22,6 @@ from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Choice, DiscreteUniform, Uniform
 from .. import parameters as iap
-import random
 import numpy as np
 import six.moves as sm
 
