@@ -148,7 +148,7 @@ def show_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350)
     )
 
 @six.add_metaclass(ABCMeta)
-class StochasticParameter(object):
+class StochasticParameter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Abstract parent class for all stochastic parameters.
 
@@ -2307,7 +2307,7 @@ class SimplexNoise(StochasticParameter):
     Results in rectangular simplex noise of rather high detail.
 
     """
-    def __init__(self, size_px_max=(2, 16), upscale_method=["linear", "nearest"]):
+    def __init__(self, size_px_max=(2, 16), upscale_method=["linear", "nearest"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
         if ia.is_single_integer(size_px_max):
             ia.do_assert(1 <= size_px_max <= 10000)
             self.size_px_max = Deterministic(size_px_max)
