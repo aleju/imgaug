@@ -486,7 +486,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
         #print("direction_vector", direction_vector)
 
-        vertical_vector = np.array([0, 1])
+        #vertical_vector = np.array([0, 1])
 
         matrix_effect = np.array([
             [0, 0, 0],

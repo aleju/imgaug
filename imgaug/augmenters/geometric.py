@@ -549,7 +549,7 @@ class Affine(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width

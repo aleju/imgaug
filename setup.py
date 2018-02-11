@@ -7,7 +7,7 @@ import os
 READ_THE_DOCS = os.environ.get('READTHEDOCS') == 'True'
 if not READ_THE_DOCS:
     try:
-        import cv2
+        import cv2 # pylint: disable=locally-disabled, unused-import, line-too-long
     except ImportError as e:
         raise Exception("Could not find package 'cv2' (OpenCV). It cannot be automatically installed, so you will have to manually install it.")
 
