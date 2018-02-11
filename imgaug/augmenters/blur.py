@@ -28,7 +28,7 @@ import six.moves as sm
 
 from .meta import Augmenter
 
-class GaussianBlur(Augmenter):
+class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to blur images using gaussian kernels.
 
@@ -103,7 +103,7 @@ class GaussianBlur(Augmenter):
     def get_parameters(self):
         return [self.sigma]
 
-class AverageBlur(Augmenter):
+class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing simple means over neighbourhoods.
 
@@ -217,7 +217,7 @@ class AverageBlur(Augmenter):
         return [self.k]
 
 # TODO tests
-class MedianBlur(Augmenter):
+class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing median values over neighbourhoods.
 
@@ -301,7 +301,7 @@ class MedianBlur(Augmenter):
         return [self.k]
 
 # TODO tests
-class BilateralBlur(Augmenter):
+class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur/Denoise an image using a bilateral filter.
 

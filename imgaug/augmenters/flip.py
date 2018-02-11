@@ -24,7 +24,7 @@ import six.moves as sm
 
 from .meta import Augmenter
 
-class Fliplr(Augmenter):
+class Fliplr(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images horizontally.
 
@@ -87,7 +87,7 @@ class Fliplr(Augmenter):
         return [self.p]
 
 
-class Flipud(Augmenter):
+class Flipud(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
 

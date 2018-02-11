@@ -27,7 +27,7 @@ import six.moves as sm
 from .meta import Augmenter, Sequential
 
 # TODO tests
-class Alpha(Augmenter):
+class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using an
     alpha/transparency value.
@@ -320,7 +320,7 @@ class Alpha(Augmenter):
             result.append(self.second)
         return result
 
-class AlphaElementwise(Alpha):
+class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using pixelwise
     alpha values.
