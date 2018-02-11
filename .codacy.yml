@@ -3,3 +3,5 @@ exclude_paths:
   - checks/*
   - imgaug/external/*
   - old_version/*
+  - generate_documentation_images.py
+  - generate_example_images.py
