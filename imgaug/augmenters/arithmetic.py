@@ -864,7 +864,6 @@ class ReplaceElementwise(Augmenter):
             seed = seeds[i]
             image = images[i].astype(np.float32)
             height, width, nb_channels = image.shape
-            rs_image = ia.new_random_state(seed)
             per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seed+1))
             if per_channel == 1:
                 mask_samples = self.mask.draw_samples(

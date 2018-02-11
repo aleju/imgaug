@@ -1387,7 +1387,6 @@ class Divide(StochasticParameter):
         return self.__str__()
 
     def __str__(self):
-        opstr = str(self.other_param)
         return "Divide(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Add(StochasticParameter):

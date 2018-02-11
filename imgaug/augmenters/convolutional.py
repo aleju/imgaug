@@ -114,7 +114,7 @@ class Convolve(Augmenter):
         result = images
         nb_images = len(images)
         for i in sm.xrange(nb_images):
-            height, width, nb_channels = images[i].shape
+            _height, _width, nb_channels = images[i].shape
             if self.matrix_type == "None":
                 matrices = [None] * nb_channels
             elif self.matrix_type == "constant":

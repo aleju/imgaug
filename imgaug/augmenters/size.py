@@ -241,7 +241,7 @@ class Scale(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
+        samples_h, samples_w, _samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
             sample_h, sample_w = samples_h[i], samples_w[i]
@@ -653,7 +653,7 @@ class CropAndPad(Augmenter):
             seed = seeds[i]
             height, width = keypoints_on_image.shape[0:2]
             #top, right, bottom, left = self._draw_samples_image(seed, height, width)
-            crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval = self._draw_samples_image(seed, height, width)
+            crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, _pad_mode, _pad_cval = self._draw_samples_image(seed, height, width)
             shifted = keypoints_on_image.shift(x=-crop_left+pad_left, y=-crop_top+pad_top)
             shifted.shape = (
                 height - crop_top - crop_bottom + pad_top + pad_bottom,

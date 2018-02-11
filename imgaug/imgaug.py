@@ -427,7 +427,6 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
     input_dtype = img.dtype
     if img.dtype == np.float32:
         img = img.astype(np.uint8)
-        is_float32 = False
 
     for i in range(len(color)):
         val = color[i]
@@ -436,7 +435,6 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25):
             val = np.clip(val, 0, 255)
             color[i] = val
 
-    shape = img.shape
     img = Image.fromarray(img)
     font = ImageFont.truetype(DEFAULT_FONT_FP, size)
     context = ImageDraw.Draw(img)
@@ -1883,7 +1881,7 @@ class BackgroundAugmenter(object):
                 # send augmented batch to output queue
                 batch_str = pickle.dumps(batch, protocol=-1)
                 queue_result.put(batch_str)
-            except QueueEmpty as e:
+            except QueueEmpty:
                 if all([signal.is_set() for signal in source_finished_signals]):
                     queue_result.put(pickle.dumps(None, protocol=-1))
                     return
