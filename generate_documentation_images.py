@@ -1176,11 +1176,11 @@ def chapter_augmenters_emboss():
         [ia.quokka(size=(64, 64)) for _ in range(8)], cols=8, rows=1
     )
 
-    #strength = [0.5+(0.5/8)*i for i in range(8)]
-    strength = np.linspace(0.5, 1.5, num=8)
+    #strengths = [0.5+(0.5/8)*i for i in range(8)]
+    strengths = np.linspace(0.5, 1.5, num=8)
     run_and_save_augseq(
         "emboss_vary_strength.jpg",
-        [iaa.Emboss(alpha=1.0, strength=strength) for strength in strength],
+        [iaa.Emboss(alpha=1.0, strength=strength) for strength in strengths],
         [ia.quokka(size=(64, 64)) for _ in range(8)], cols=8, rows=1
     )
 
