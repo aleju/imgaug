@@ -38,6 +38,7 @@ and also changes the contrast as well as brightness. ::
 
     import imgaug as ia
     from imgaug import augmenters as iaa
+    import numpy as np
 
     ia.seed(1)
 
