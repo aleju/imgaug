@@ -1763,6 +1763,8 @@ class BatchLoader(object):
                 worker.terminate()
                 finished_signal.set()
 
+        self.queue.close()
+
 class BackgroundAugmenter(object):
     """
     Class to augment batches in the background (while training on the GPU).
@@ -1893,3 +1895,5 @@ class BackgroundAugmenter(object):
         """
         for worker in self.workers:
             worker.terminate()
+
+        self.queue_result.close()
