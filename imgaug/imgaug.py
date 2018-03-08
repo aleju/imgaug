@@ -1645,6 +1645,33 @@ class BoundingBoxesOnImage(object):
         bbs_new = [bb.shift(top=top, right=right, bottom=bottom, left=left) for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs_new, shape=self.shape)
 
+    def copy(self):
+        """
+        Create a shallow copy of the BoundingBoxesOnImage object.
+
+        Returns
+        -------
+        out : BoundingBoxesOnImage
+            Shallow copy.
+
+        """
+        return copy.copy(self)
+
+    def deepcopy(self):
+        """
+        Create a deep copy of the BoundingBoxesOnImage object.
+
+        Returns
+        -------
+        out : KeypointsOnImage
+            Deep copy.
+
+        """
+        # Manual copy is far faster than deepcopy for KeypointsOnImage,
+        # so use manual copy here too
+        bbs = [BoundingBox(x1=bb.x1, y1=bb.y1, x2=bb.x2, y2=bb.y2) for bb in self.bounding_boxes]
+        return BoundingBoxesOnImage(bbs, tuple(self.shape))
+
 ############################
 # Background augmentation
 ############################
