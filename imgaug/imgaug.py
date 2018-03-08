@@ -1523,6 +1523,12 @@ class BoundingBox(object):
             y2=self.y2 if y2 is None else y2
         )
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f)" % (self.x1, self.y1, self.x2, self.y2)
+
 class BoundingBoxesOnImage(object):
     """
     Object that represents all bounding boxes on a single image.
