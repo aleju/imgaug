@@ -1672,6 +1672,12 @@ class BoundingBoxesOnImage(object):
         bbs = [BoundingBox(x1=bb.x1, y1=bb.y1, x2=bb.x2, y2=bb.y2) for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs, tuple(self.shape))
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "BoundingBoxesOnImage(%s, shape=%s)" % (str(self.bounding_boxes), self.shape)
+
 ############################
 # Background augmentation
 ############################
