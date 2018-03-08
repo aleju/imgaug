@@ -157,7 +157,7 @@ class Scale(Augmenter):
                 ia.do_assert(val > 0)
                 return Deterministic(val)
             elif ia.is_single_float(val):
-                ia.do_assert(0 <= val <= 1.0)
+                ia.do_assert(val > 0)
                 return Deterministic(val)
             elif allow_dict and isinstance(val, dict):
                 if len(val.keys()) == 0:
@@ -180,11 +180,10 @@ class Scale(Augmenter):
                     return tuple(size_tuple)
             elif isinstance(val, tuple):
                 ia.do_assert(len(val) == 2)
+                ia.do_assert(val[0] > 0 and val[1] > 0)
                 if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
-                    ia.do_assert(0 <= val[0] <= 1.0 and 0 <= val[1] <= 1.0)
                     return Uniform(val[0], val[1])
                 else:
-                    ia.do_assert(val[0] > 0 and val[1] > 0)
                     return DiscreteUniform(val[0], val[1])
             elif isinstance(val, list):
                 if len(val) == 0:
@@ -193,10 +192,7 @@ class Scale(Augmenter):
                     all_int = all([ia.is_single_integer(v) for v in val])
                     all_float = all([ia.is_single_float(v) for v in val])
                     ia.do_assert(all_int or all_float)
-                    if all_int:
-                        ia.do_assert(all([v > 0 for v in val]))
-                    else:
-                        ia.do_assert(all([0 <= v <= 1.0 for v in val]))
+                    ia.do_assert(all([v > 0 for v in val]))
                     return Choice(val)
             elif isinstance(val, StochasticParameter):
                 return val
