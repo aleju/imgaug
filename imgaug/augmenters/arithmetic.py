@@ -108,7 +108,7 @@ class Add(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -126,14 +126,13 @@ class Add(Augmenter):
                     image[..., c] += sample
             else:
                 sample = self.value.draw_sample(random_state=rs_image)
-                # TODO make value range more flexible
-                ia.do_assert(-255 <= sample <= 255)
+                ia.do_assert(-255 <= sample <= 255) # TODO make value range more flexible
                 image += sample
-            result[i] = image
 
-        # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
+            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+
+            result[i] = image
 
         return result
 
@@ -225,7 +224,7 @@ class AddElementwise(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -242,11 +241,11 @@ class AddElementwise(Augmenter):
                 samples = self.value.draw_samples((height, width, 1), random_state=rs_image)
                 samples = np.tile(samples, (1, 1, nb_channels))
             after_add = image + samples
-            result[i] = after_add
 
-        # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            after_add = meta.clip_augmented_image_(after_add, 0, 255) # TODO make value range more flexible
+            after_add = meta.restore_augmented_image_dtype_(after_add, input_dtypes[i])
+
+            result[i] = after_add
 
         return result
 
@@ -421,7 +420,7 @@ class Multiply(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -436,16 +435,15 @@ class Multiply(Augmenter):
                 for c, sample in enumerate(samples):
                     ia.do_assert(sample >= 0)
                     image[..., c] *= sample
-                result[i] = image
             else:
                 sample = self.mul.draw_sample(random_state=rs_image)
                 ia.do_assert(sample >= 0)
                 image *= sample
-                result[i] = image
 
-        # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
+            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+
+            result[i] = image
 
         return result
 
@@ -539,7 +537,7 @@ class MultiplyElementwise(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -555,11 +553,12 @@ class MultiplyElementwise(Augmenter):
             else:
                 samples = self.mul.draw_samples((height, width, 1), random_state=rs_image)
                 samples = np.tile(samples, (1, 1, nb_channels))
-            result[i] = image * samples
+            image = image * samples
 
-        # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
+            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+
+            result[i] = image
 
         return result
 
@@ -855,7 +854,7 @@ class ReplaceElementwise(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -888,11 +887,11 @@ class ReplaceElementwise(Augmenter):
 
             mask_thresh = mask_samples > 0.5
             image_repl = image * (~mask_thresh) + replacement_samples * mask_thresh
-            result[i] = image_repl
 
-        # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            image_repl = meta.clip_augmented_image_(image_repl, 0, 255) # TODO make value range more flexible
+            image_repl = meta.restore_augmented_image_dtype_(image_repl, input_dtypes[i])
+
+            result[i] = image_repl
 
         return result
 
@@ -1497,7 +1496,7 @@ class Invert(Augmenter):
         self.max_value = max_value
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -1515,17 +1514,17 @@ class Invert(Augmenter):
                         image_c = image[..., c]
                         distance_from_min = np.abs(image_c - self.min_value) # d=abs(v-m)
                         image[..., c] = -distance_from_min + self.max_value # v'=M-d
-                result[i] = image
             else:
                 p_sample = self.p.draw_sample(random_state=rs_image)
                 ia.do_assert(0 <= p_sample <= 1.0)
                 if p_sample > 0.5:
                     distance_from_min = np.abs(image - self.min_value) # d=abs(v-m)
                     image = -distance_from_min + self.max_value
-                    result[i] = image
 
-        meta.clip_augmented_images_(result, self.min_value, self.max_value)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            image = meta.clip_augmented_image_(image, self.min_value, self.max_value)
+            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+
+            result[i] = image
 
         return result
 
@@ -1606,7 +1605,7 @@ class ContrastNormalization(Augmenter):
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -1623,11 +1622,11 @@ class ContrastNormalization(Augmenter):
             else:
                 alpha = self.alpha.draw_sample(random_state=rs_image)
                 image = alpha * (image - 128) + 128
-            result[i] = image
 
-        # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
+            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+
+            result[i] = image
 
         return result
 

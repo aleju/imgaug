@@ -229,6 +229,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
                         image[..., c] = image_second[..., c]
                     else:
                         image[..., c] = sample * image_first[..., c] + (1 - sample) * image_second[..., c]
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
             else:
@@ -242,6 +243,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
                     image = image_second
                 else:
                     image = sample * image_first + (1 - sample) * image_second
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
         return result
@@ -470,6 +472,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
                     ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
                     image[..., c] = samples_c * image_first[..., c] + (1.0 - samples_c) * image_second[..., c]
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
             else:
@@ -478,6 +481,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
                 ia.do_assert(0.0 <= samples.item(0) <= 1.0)
 
                 image = samples * image_first + (1.0 - samples) * image_second
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
         return result

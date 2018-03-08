@@ -36,15 +36,23 @@ import six
 import six.moves as sm
 import warnings
 
-def copy_dtypes_for_restore(images):
-    return images.dtype if ia.is_np_array(images) else [image.dtype for image in images]
+def copy_dtypes_for_restore(images, force_list=False):
+    if ia.is_np_array(images):
+        if force_list:
+            return [images.dtype for _ in sm.xrange(len(images))]
+        else:
+            return images.dtype
+    else:
+        return [image.dtype for image in images]
+
+def restore_augmented_image_dtype_(image, orig_dtype):
+    return image.astype(orig_dtype, copy=False)
 
 def restore_augmented_images_dtypes_(images, orig_dtypes):
     if ia.is_np_array(images):
-        images = images.astype(orig_dtypes)
+        return images.astype(orig_dtypes, copy=False)
     else:
-        for i in sm.xrange(len(images)):
-            images[i] = images[i].astype(orig_dtypes[i])
+        return [image.astype(orig_dtype, copy=False) for image, orig_dtype in zip(images, orig_dtypes)]
 
 def restore_augmented_images_dtypes(images, orig_dtypes):
     if ia.is_np_array(images):
@@ -53,12 +61,14 @@ def restore_augmented_images_dtypes(images, orig_dtypes):
         images = [np.copy(image) for image in images]
     return restore_augmented_images_dtypes_(images, orig_dtypes)
 
+def clip_augmented_image_(image, minval, maxval):
+    return clip_augmented_images_(image, minval, maxval)
+
 def clip_augmented_images_(images, minval, maxval):
     if ia.is_np_array(images):
-        np.clip(images, minval, maxval, out=images)
+        return np.clip(images, minval, maxval, out=images)
     else:
-        for i in sm.xrange(len(images)):
-            np.clip(images[i], minval, maxval, out=images[i])
+        return [np.clip(image, minval, maxval, out=image) for image in images]
 
 def clip_augmented_images(images, minval, maxval):
     if ia.is_np_array(images):

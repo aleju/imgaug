@@ -134,9 +134,10 @@ class Convolve(Augmenter):
                     # ndimage.convolve caused problems here
                     result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
 
+        # TODO move this into the loop to avoid overflows
         # TODO make value range more flexible
-        meta.clip_augmented_images_(result, 0, 255)
-        meta.restore_augmented_images_dtypes_(result, input_dtypes)
+        result = meta.clip_augmented_images_(result, 0, 255)
+        result = meta.restore_augmented_images_dtypes_(result, input_dtypes)
 
         return result
 
