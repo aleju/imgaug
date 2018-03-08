@@ -1523,6 +1523,9 @@ class BoundingBox(object):
             y2=self.y2 if y2 is None else y2
         )
 
+    def deepcopy(self, x1=None, y1=None, x2=None, y2=None):
+        return self.copy(x1=x1, y1=y1, x2=x2, y2=y2)
+
     def __repr__(self):
         return self.__str__()
 
@@ -1675,7 +1678,7 @@ class BoundingBoxesOnImage(object):
         """
         # Manual copy is far faster than deepcopy for KeypointsOnImage,
         # so use manual copy here too
-        bbs = [BoundingBox(x1=bb.x1, y1=bb.y1, x2=bb.x2, y2=bb.y2) for bb in self.bounding_boxes]
+        bbs = [bb.deepcopy() for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs, tuple(self.shape))
 
     def __repr__(self):
