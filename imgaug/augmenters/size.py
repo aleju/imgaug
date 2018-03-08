@@ -144,10 +144,6 @@ class Scale(Augmenter):
 
     """
     def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
-        """Initialize Scale augmenter.
-
-
-        """
         super(Scale, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         def handle(val, allow_dict):
