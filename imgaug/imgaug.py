@@ -1264,10 +1264,7 @@ class BoundingBox(object):
     @property
     def y2_int(self):
         return int(round(self.y2))
-
-    def label(self):
-        return str(self.label)
-
+        
     @property
     def height(self):
         return self.y2 - self.y1
