@@ -1235,7 +1235,7 @@ class KeypointsOnImage(object):
 
 # TODO functions: square(), to_aspect_ratio(), extend()/add_border(), contains_point()
 class BoundingBox(object):
-    def __init__(self, x1, y1, x2, y2):
+    def __init__(self, x1, y1, x2, y2, label=None):
         if x1 > x2:
             x2, x1 = x1, x2
         do_assert(x2 > x1)
@@ -1247,6 +1247,7 @@ class BoundingBox(object):
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
+        self.label = label
 
     @property
     def x1_int(self):
@@ -1263,6 +1264,9 @@ class BoundingBox(object):
     @property
     def y2_int(self):
         return int(round(self.y2))
+
+    def label(self):
+        return str(self.label)
 
     @property
     def height(self):
@@ -1337,7 +1341,8 @@ class BoundingBox(object):
                 x1=x1,
                 y1=y1,
                 x2=x2,
-                y2=y2
+                y2=y2,
+                label=self.label
             )
 
     def extend(self, all_sides=0, top=0, right=0, bottom=0, left=0):
@@ -1363,7 +1368,7 @@ class BoundingBox(object):
             x1=min(self.x1, other.x1),
             y1=min(self.y1, other.y1),
             x2=max(self.x2, other.x2),
-            y2=max(self.y2, other.y2)
+            y2=max(self.y2, other.y2),
         )
 
     def iou(self, other):
@@ -1427,7 +1432,8 @@ class BoundingBox(object):
             x1=x1,
             y1=y1,
             x2=x2,
-            y2=y2
+            y2=y2,
+            label=self.label
         )
 
     def shift(self, top=None, right=None, bottom=None, left=None):
@@ -1439,7 +1445,8 @@ class BoundingBox(object):
             x1=self.x1+left-right,
             x2=self.x2+left-right,
             y1=self.y1+top-bottom,
-            y2=self.y2+top-bottom
+            y2=self.y2+top-bottom,
+            label=self.label
         )
 
     def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
@@ -1515,22 +1522,23 @@ class BoundingBox(object):
             Keypoint(x=self.x1, y=self.y2)
         ]
 
-    def copy(self, x1=None, y1=None, x2=None, y2=None):
+    def copy(self, x1=None, y1=None, x2=None, y2=None, label=None):
         return BoundingBox(
             x1=self.x1 if x1 is None else x1,
             x2=self.x2 if x2 is None else x2,
             y1=self.y1 if y1 is None else y1,
-            y2=self.y2 if y2 is None else y2
+            y2=self.y2 if y2 is None else y2,
+            label=self.label
         )
 
-    def deepcopy(self, x1=None, y1=None, x2=None, y2=None):
-        return self.copy(x1=x1, y1=y1, x2=x2, y2=y2)
+    def deepcopy(self, x1=None, y1=None, x2=None, y2=None, label=None):
+        return self.copy(x1=x1, y1=y1, x2=x2, y2=y2, label=label)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f)" % (self.x1, self.y1, self.x2, self.y2)
+        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f, label=%s)" % (self.x1, self.y1, self.x2, self.y2, self.label)
 
 class BoundingBoxesOnImage(object):
     """
