@@ -1803,6 +1803,11 @@ class BatchLoader(object):
         """
         self.join_signal.set()
         if self.threaded:
+            while True:
+                try:
+                    self.queue.get(timeout=1)
+                except QueueEmpty:
+                    break
             for worker in self.workers:
                 worker.join()
         else:
