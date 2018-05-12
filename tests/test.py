@@ -650,47 +650,46 @@ def test_Alpha():
 
     base_img = np.zeros((3, 3, 1), dtype=np.uint8)
 
-    aug = Alpha(1, iaa.Add(100), iaa.Add(255))
+    aug = iaa.Alpha(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = base_img + 100
+    expected = (base_img + 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
-    aug = Alpha(0, iaa.Add(100), iaa.Add(255))
+    aug = iaa.Alpha(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = base_img + 255
+    expected = (base_img + 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
-    aug = Alpha(0.75, iaa.Add(100), iaa.Add(255))
+    aug = iaa.Alpha(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = base_img + 0.25 * 100 + 0.75 * 255
+    expected = (base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
-    aug = Alpha(0.75, None, iaa.Add(255))
+    aug = iaa.Alpha(0.75, None, iaa.Add(20))
     observed = aug.augment_image(base_img + 10)
-    expected = base_img + 0.25 * 10 + 0.75 * 255
+    expected = (base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
     assert np.allclose(observed, expected)
 
-    aug = Alpha(0.75, iaa.Add(100), None)
+    aug = iaa.Alpha(0.75, iaa.Add(10), None)
     observed = aug.augment_image(base_img + 10)
-    expected = base_img + 0.25 * 100 + 0.75 * 10
-    assert np.allclose(observed, expected)
-
-    aug = Alpha(0.75, None, None)
-    observed = aug.augment_image(base_img + 10)
-    expected = base_img + 0.25 * 10 + 0.75 * 10
+    expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     nb_iterations = 1000
-    aug = Alpha((0.0, 1.0), iaa.Add(100), iaa.Add(105))
-    results = dict(0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0)
+    aug = iaa.Alpha((0.0, 1.0), iaa.Add(10), iaa.Add(110))
+    values = []
     for _ in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
-        results[int(np.average(observed))] += 1
+        observed_val = np.round(np.average(observed)) - 10
+        values.append(observed_val / 100)
 
-    expected = nb_iterations / 6
-    expected_tolerance = nb_iterations * 0.05
-    for key, val in results.items():
-        assert expected - expected_tolerance < val < expected + expected_tolerance
+    nb_bins = 5
+    hist, _ = np.histogram(values, bins=nb_bins, range=(0.0, 1.0), density=False)
+    density_expected = 1.0/nb_bins
+    density_tolerance = 0.05
+    for nb_samples in hist:
+        density = nb_samples / nb_iterations
+        assert density_expected - density_tolerance < density < density_expected + density_tolerance
 
 
 def test_Crop():
@@ -1353,34 +1352,36 @@ def test_Grayscale():
     aug = iaa.Grayscale(1.0)
     observed = aug.augment_image(base_img)
     luminosity = _compute_luminosity(10, 20, 30)
-    expected = np.zeros_like(base_img) + luminosity/3
-    assert np.allclose(observed, expected)
+    expected = np.zeros_like(base_img) + luminosity
+    assert np.allclose(observed, expected.astype(np.uint8))
 
     aug = iaa.Grayscale(0.5)
     observed = aug.augment_image(base_img)
     luminosity = _compute_luminosity(10, 20, 30)
-    expected = 0.5 * base_img + 0.5 * (luminosity/3)
-    assert np.allclose(observed, expected)
+    expected = 0.5 * base_img + 0.5 * luminosity
+    assert np.allclose(observed, expected.astype(np.uint8))
 
     aug = iaa.Grayscale((0.0, 1.0))
-    base_img = base_img[0, 0, :]
+    base_img = base_img[0:1, 0:1, :]
     base_img_gray = iaa.Grayscale(1.0).augment_image(base_img)
-    distance_max = np.average(np.abs(base_img_gray - base_img))
+    distance_max = np.average(np.abs(base_img_gray.astype(np.int32) - base_img.astype(np.int32)))
     nb_iterations = 1000
     distances = []
     for _ in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
-        distance = np.average(np.abs(observed - base_img)) / distance_max
+        distance = np.average(np.abs(observed.astype(np.int32) - base_img.astype(np.int32))) / distance_max
         distances.append(distance)
 
     assert 0 - 1e-4 < min(distances) < 0.1
+    assert 0.4 < np.average(distances) < 0.6
     assert 0.9 < max(distances) < 1.0 + 1e-4
 
     nb_bins = 5
-    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=True)
+    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=False)
     density_expected = 1.0/nb_bins
     density_tolerance = 0.05
-    for density in hist:
+    for nb_samples in hist:
+        density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
 
 
@@ -3175,19 +3176,20 @@ def test_OneOf():
 
     zeros = np.zeros((3, 3, 1), dtype=np.uint8)
 
-    # no child augmenters
-    observed = iaa.OneOf(children=[]).augment_image(zeros)
-    assert np.array_equal(observed, zeros)
-
-    observed = iaa.OneOf().augment_image(zeros)
-    assert np.array_equal(observed, zeros)
+    # one child augmenter
+    observed = iaa.OneOf(children=iaa.Add(1)).augment_image(zeros)
+    assert np.array_equal(observed, zeros + 1)
+    observed = iaa.OneOf(children=iaa.Sequential([iaa.Add(1)])).augment_image(zeros)
+    assert np.array_equal(observed, zeros + 1)
+    observed = iaa.OneOf(children=[iaa.Add(1)]).augment_image(zeros)
+    assert np.array_equal(observed, zeros + 1)
 
     # up to three child augmenters
     augs = [iaa.Add(1), iaa.Add(2), iaa.Add(3)]
     aug = iaa.OneOf(augs)
 
     results = {9*1: 0, 9*2: 0, 9*3: 0}
-    nb_iteratios = 1000
+    nb_iterations = 1000
     for _ in sm.xrange(nb_iterations):
         result = aug.augment_image(zeros)
         s = np.sum(result)
@@ -3377,24 +3379,27 @@ def test_WithChannels():
     base_img[..., 1] += 200
 
     aug = iaa.WithChannels(None, iaa.Add(10))
-    observed = aug.augment_image(aug)
+    observed = aug.augment_image(base_img)
     expected = base_img + 10
     assert np.allclose(observed, expected)
 
     aug = iaa.WithChannels(0, iaa.Add(10))
-    observed = aug.augment_image(aug)
+    observed = aug.augment_image(base_img)
     expected = np.copy(base_img)
     expected[..., 0] += 10
     assert np.allclose(observed, expected)
 
     aug = iaa.WithChannels(1, iaa.Add(10))
-    observed = aug.augment_image(aug)
+    observed = aug.augment_image(base_img)
     expected = np.copy(base_img)
     expected[..., 1] += 10
     assert np.allclose(observed, expected)
 
+    base_img = np.zeros((3, 3, 2), dtype=np.uint8)
+    base_img[..., 0] += 5
+    base_img[..., 1] += 10
     aug = iaa.WithChannels(1, [iaa.Add(10), iaa.Multiply(2.0)])
-    observed = aug.augment_image(aug)
+    observed = aug.augment_image(base_img)
     expected = np.copy(base_img)
     expected[..., 1] += 10
     expected[..., 1] *= 2
