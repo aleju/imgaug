@@ -97,7 +97,7 @@ def main():
     test_AssertShape()
 
     # overlay
-    # TODO Alpha
+    test_Alpha()
     # TODO AlphaElementwise
     # TODO SimplexNoiseAlpha
     # TODO FrequencyNoiseAlpha
@@ -642,6 +642,54 @@ def test_AssertShape():
         except AssertionError as e:
             errored = True
         assert errored
+
+
+def test_Alpha():
+    reseed()
+
+    base_img = np.zeros((3, 3, 1), dtype=np.uint8)
+
+    aug = Alpha(1, iaa.Add(100), iaa.Add(255))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 100
+    assert np.allclose(observed, expected)
+
+    aug = Alpha(0, iaa.Add(100), iaa.Add(255))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 255
+    assert np.allclose(observed, expected)
+
+    aug = Alpha(0.75, iaa.Add(100), iaa.Add(255))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 0.25 * 100 + 0.75 * 255
+    assert np.allclose(observed, expected)
+
+    aug = Alpha(0.75, None, iaa.Add(255))
+    observed = aug.augment_image(base_img + 10)
+    expected = base_img + 0.25 * 10 + 0.75 * 255
+    assert np.allclose(observed, expected)
+
+    aug = Alpha(0.75, iaa.Add(100), None)
+    observed = aug.augment_image(base_img + 10)
+    expected = base_img + 0.25 * 100 + 0.75 * 10
+    assert np.allclose(observed, expected)
+
+    aug = Alpha(0.75, None, None)
+    observed = aug.augment_image(base_img + 10)
+    expected = base_img + 0.25 * 10 + 0.75 * 10
+    assert np.allclose(observed, expected)
+
+    nb_iterations = 1000
+    aug = Alpha((0.0, 1.0), iaa.Add(100), iaa.Add(105))
+    results = dict(0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0)
+    for _ in sm.xrange(nb_iterations):
+        observed = aug.augment_image(base_img)
+        results[int(np.average(observed))] += 1
+
+    expected = nb_iterations / 6
+    expected_tolerance = nb_iterations * 0.05
+    for key, val in results.items():
+        assert expected - expected_tolerance < val < expected + expected_tolerance
 
 
 def test_Crop():
