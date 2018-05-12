@@ -59,7 +59,6 @@ def main():
     # TODO WithColorspace
     # TODO AddToHueAndSaturation
     # TODO ChangeColorspace
-    # TODO Grayscale
     test_Grayscale()
 
     # convolutional
@@ -109,7 +108,7 @@ def main():
     # size
     # TODO Scale
     # TODO CropAndPad
-    # TODO Pad
+    test_Pad()
     test_Crop()
 
     # these functions use various augmenters, so test them last
@@ -690,6 +689,152 @@ def test_Alpha():
     for nb_samples in hist:
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
+
+def test_Pad():
+    reseed()
+
+    base_img = np.array([[0, 0, 0],
+                         [0, 1, 0],
+                         [0, 0, 0]], dtype=np.uint8)
+    base_img = base_img[:, :, np.newaxis]
+
+    images = np.array([base_img])
+    images_list = [base_img]
+
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+                                      ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+
+    # test pad by 1 pixel on each side
+    pads = [
+        (1, 0, 0, 0),
+        (0, 1, 0, 0),
+        (0, 0, 1, 0),
+        (0, 0, 0, 1),
+    ]
+    for pad in pads:
+        top, right, bottom, left = pad
+        height, width = base_img.shape[0:2]
+        aug = iaa.Pad(px=pad, keep_size=False)
+        base_img_padded = np.pad(base_img, ((top, bottom), (left, right), (0, 0)),
+                                 mode="constant",
+                                 constant_values=0)
+        observed = aug.augment_images(images)
+        assert np.array_equal(observed, np.array([base_img_padded]))
+
+        observed = aug.augment_images(images_list)
+        assert array_equal_lists(observed, [base_img_padded])
+
+        keypoints_moved = [keypoints[0].shift(x=left, y=top)]
+        observed = aug.augment_keypoints(keypoints)
+        assert keypoints_equal(observed, keypoints_moved)
+
+    # test pad by range of pixels
+    pads = [
+        ((0, 2), 0, 0, 0),
+        (0, (0, 2), 0, 0),
+        (0, 0, (0, 2), 0),
+        (0, 0, 0, (0, 2)),
+    ]
+    for pad in pads:
+        top, right, bottom, left = pad
+        height, width = base_img.shape[0:2]
+        aug = iaa.Pad(px=pad, keep_size=False)
+        aug_det = aug.to_deterministic()
+
+        images_padded = []
+        keypoints_padded = []
+        top_range = top if isinstance(top, tuple) else (top, top)
+        right_range = right if isinstance(right, tuple) else (right, right)
+        bottom_range = bottom if isinstance(bottom, tuple) else (bottom, bottom)
+        left_range = left if isinstance(left, tuple) else (left, left)
+        for top_val in sm.xrange(top_range[0], top_range[1]+1):
+            for right_val in sm.xrange(right_range[0], right_range[1]+1):
+                for bottom_val in sm.xrange(bottom_range[0], bottom_range[1]+1):
+                    for left_val in sm.xrange(left_range[0], left_range[1]+1):
+                        images_padded.append(np.pad(base_img, ((top_val, bottom_val), (left_val, right_val), (0, 0)), mode="constant", constant_values=0))
+                        keypoints_padded.append(keypoints[0].shift(x=left_val, y=top_val))
+
+        movements = []
+        movements_det = []
+        for i in sm.xrange(100):
+            observed = aug.augment_images(images)
+
+            matches = [1 if np.array_equal(observed, np.array([base_img_padded])) else 0
+                       for base_img_padded in images_padded]
+            movements.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug_det.augment_images(images)
+            matches = [1 if np.array_equal(observed, np.array([base_img_padded])) else 0
+                       for base_img_padded in images_padded]
+            movements_det.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug.augment_images(images_list)
+            assert any([array_equal_lists(observed, [base_img_padded])
+                        for base_img_padded in images_padded])
+
+            observed = aug.augment_keypoints(keypoints)
+            assert any([keypoints_equal(observed, [kp]) for kp in keypoints_padded])
+
+        assert len(set(movements)) == 3
+        assert len(set(movements_det)) == 1
+
+    # test pad by list of exact pixel values
+    pads = [
+        ([0, 2], 0, 0, 0),
+        (0, [0, 2], 0, 0),
+        (0, 0, [0, 2], 0),
+        (0, 0, 0, [0, 2]),
+    ]
+    for pad in pads:
+        top, right, bottom, left = pad
+        height, width = base_img.shape[0:2]
+        aug = iaa.Pad(px=pad, keep_size=False)
+        aug_det = aug.to_deterministic()
+
+        images_padded = []
+        keypoints_padded = []
+        top_range = top if isinstance(top, list) else [top]
+        right_range = right if isinstance(right, list) else [right]
+        bottom_range = bottom if isinstance(bottom, list) else [bottom]
+        left_range = left if isinstance(left, list) else [left]
+        for top_val in top_range:
+            for right_val in right_range:
+                for bottom_val in bottom_range:
+                    for left_val in left_range:
+                        images_padded.append(np.pad(base_img, ((top_val, bottom_val), (left_val, right_val), (0, 0)), mode="constant", constant_values=0))
+                        keypoints_padded.append(keypoints[0].shift(x=left_val, y=top_val))
+
+        movements = []
+        movements_det = []
+        for i in sm.xrange(100):
+            observed = aug.augment_images(images)
+            matches = [1 if np.array_equal(observed, np.array([base_img_padded])) else 0
+                       for base_img_padded in images_padded]
+            movements.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug_det.augment_images(images)
+            matches = [1 if np.array_equal(observed, np.array([base_img_padded])) else 0
+                       for base_img_padded in images_padded]
+            movements_det.append(np.argmax(np.array(matches)))
+            assert any([val == 1 for val in matches])
+
+            observed = aug.augment_images(images_list)
+            assert any([array_equal_lists(observed, [base_img_padded])
+                        for base_img_padded in images_padded])
+
+            observed = aug.augment_keypoints(keypoints)
+            assert any([keypoints_equal(observed, [kp]) for kp in keypoints_padded])
+
+        assert len(set(movements)) == 2
+        assert len(set(movements_det)) == 1
+
+    # TODO
+    #print("[Note] Pad by percentages is currently not tested.")
+    #print("[Note] Landmark projection after pad with resize is currently not tested.")
 
 
 def test_Crop():
