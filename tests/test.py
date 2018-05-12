@@ -88,7 +88,7 @@ def main():
     # TODO Augmenter
     test_Sequential()
     test_SomeOf()
-    # TODO OneOf
+    test_OneOf()
     test_Sometimes()
     # TODO WithChannels
     test_Noop()
@@ -3069,6 +3069,33 @@ def test_SomeOf():
     p_observed = [n/nb_iterations for n in nb_observed]
     assert 0.5-0.1 <= p_observed[0] <= 0.5+0.1
     assert 0.5-0.1 <= p_observed[1] <= 0.5+0.1
+
+def test_OneOf():
+    reseed()
+
+    zeros = np.zeros((3, 3, 1), dtype=np.uint8)
+
+    # no child augmenters
+    observed = iaa.OneOf(children=[]).augment_image(zeros)
+    assert np.array_equal(observed, zeros)
+
+    observed = iaa.OneOf().augment_image(zeros)
+    assert np.array_equal(observed, zeros)
+
+    # up to three child augmenters
+    augs = [iaa.Add(1), iaa.Add(2), iaa.Add(3)]
+    aug = iaa.OneOf(augs)
+
+    results = {9*1: 0, 9*2: 0, 9*3: 0}
+    nb_iteratios = 1000
+    for _ in sm.xrange(nb_iterations):
+        result = aug.augment_image(zeros)
+        s = np.sum(result)
+        results[s] += 1
+    expected = int(nb_iterations / len(augs))
+    expected_tolerance = int(nb_iterations * 0.05)
+    for key, val in results.items():
+        assert expected - expected_tolerance < val < expected + expected_tolerance
 
 def test_Sometimes():
     reseed()
