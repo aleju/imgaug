@@ -60,6 +60,7 @@ def main():
     # TODO AddToHueAndSaturation
     # TODO ChangeColorspace
     # TODO Grayscale
+    test_Grayscale()
 
     # convolutional
     # TODO Convolve
@@ -1331,6 +1332,57 @@ def test_AverageBlur():
     observed = aug_det.augment_keypoints(keypoints)
     expected = keypoints
     assert keypoints_equal(observed, expected)
+
+
+def test_Grayscale():
+    reseed()
+
+    def _compute_luminosity(r, g, b):
+        return 0.21 * r + 0.72 * g + 0.07 * b
+
+    base_img = np.zeros((4, 4, 3), dtype=np.uint8)
+    base_img[..., 0] += 10
+    base_img[..., 1] += 20
+    base_img[..., 2] += 30
+
+    aug = iaa.Grayscale(0.0)
+    observed = aug.augment_image(base_img)
+    expected = np.copy(base_img)
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Grayscale(1.0)
+    observed = aug.augment_image(base_img)
+    luminosity = _compute_luminosity(10, 20, 30)
+    expected = np.zeros_like(base_img) + luminosity/3
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Grayscale(0.5)
+    observed = aug.augment_image(base_img)
+    luminosity = _compute_luminosity(10, 20, 30)
+    expected = 0.5 * base_img + 0.5 * (luminosity/3)
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Grayscale((0.0, 1.0))
+    base_img = base_img[0, 0, :]
+    base_img_gray = iaa.Grayscale(1.0).augment_image(base_img)
+    distance_max = np.average(np.abs(base_img_gray - base_img))
+    nb_iterations = 1000
+    distances = []
+    for _ in sm.xrange(nb_iterations):
+        observed = aug.augment_image(base_img)
+        distance = np.average(np.abs(observed - base_img)) / distance_max
+        distances.append(distance)
+
+    assert 0 - 1e-4 < min(distances) < 0.1
+    assert 0.9 < max(distances) < 1.0 + 1e-4
+
+    nb_bins = 5
+    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=True)
+    density_expected = 1.0/nb_bins
+    density_tolerance = 0.05
+    for density in hist:
+        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
 
 def test_AdditiveGaussianNoise():
     reseed()
