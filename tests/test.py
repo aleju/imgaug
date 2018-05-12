@@ -90,7 +90,7 @@ def main():
     test_SomeOf()
     test_OneOf()
     test_Sometimes()
-    # TODO WithChannels
+    test_WithChannels()
     test_Noop()
     test_Lambda()
     test_AssertLambda()
@@ -3317,6 +3317,36 @@ def test_Sometimes():
     assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
     assert nb_changed_aug_det == 0
+
+
+def test_WithChannels():
+    base_img = np.zeros((3, 3, 2), dtype=np.uint8)
+    base_img[..., 0] += 100
+    base_img[..., 1] += 200
+
+    aug = iaa.WithChannels(None, iaa.Add(10))
+    observed = aug.augment_image(aug)
+    expected = base_img + 10
+    assert np.allclose(observed, expected)
+
+    aug = iaa.WithChannels(0, iaa.Add(10))
+    observed = aug.augment_image(aug)
+    expected = np.copy(base_img)
+    expected[..., 0] += 10
+    assert np.allclose(observed, expected)
+
+    aug = iaa.WithChannels(1, iaa.Add(10))
+    observed = aug.augment_image(aug)
+    expected = np.copy(base_img)
+    expected[..., 1] += 10
+    assert np.allclose(observed, expected)
+
+    aug = iaa.WithChannels(1, [iaa.Add(10), iaa.Multiply(2.0)])
+    observed = aug.augment_image(aug)
+    expected = np.copy(base_img)
+    expected[..., 1] += 10
+    expected[..., 1] *= 2
+    assert np.allclose(observed, expected)
 
 
 def test_2d_inputs():
