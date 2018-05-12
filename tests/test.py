@@ -63,7 +63,7 @@ def main():
 
     # convolutional
     # TODO Convolve
-    # TODO Sharpen
+    test_Sharpen()
     # TODO Emboss
     # TODO EdgeDetect
     # TODO DirectedEdgeDetect
@@ -1529,6 +1529,125 @@ def test_Grayscale():
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
 
+
+def test_Sharpen():
+    reseed()
+
+    def _compute_sharpened_base_img(lightness, m):
+        base_img_sharpened = np.zeros((3, 3), dtype=np.float32)
+        k = 1
+        # note that cv2 uses reflection padding by default
+        base_img_sharpened[0, 0] = (m[1, 1] + lightness)/k * 10 + 4 * (m[0, 0]/k) * 10 + 4 * (m[2, 2]/k) * 20
+        base_img_sharpened[0, 2] = base_img_sharpened[0, 0]
+        base_img_sharpened[2, 0] = base_img_sharpened[0, 0]
+        base_img_sharpened[2, 2] = base_img_sharpened[0, 0]
+        base_img_sharpened[0, 1] = (m[1, 1] + lightness)/k * 10 + 6 * (m[0, 1]/k) * 10 + 2 * (m[2, 2]/k) * 20
+        base_img_sharpened[1, 0] = base_img_sharpened[0, 1]
+        base_img_sharpened[1, 2] = base_img_sharpened[0, 1]
+        base_img_sharpened[2, 1] = base_img_sharpened[0, 1]
+        base_img_sharpened[1, 1] = (m[1, 1] + lightness)/k * 20 + 8 * (m[0, 1]/k) * 10
+
+        #print("A", base_img_sharpened, "Am", m)
+        base_img_sharpened = np.clip(base_img_sharpened, 0, 255).astype(np.uint8)
+
+        return base_img_sharpened
+
+    base_img = [[10, 10, 10],
+                [10, 20, 10],
+                [10, 10, 10]]
+    base_img = np.uint8(base_img)
+    m = np.float32([[-1, -1, -1],
+                    [-1, 8, -1],
+                    [-1, -1, -1]])
+    m_noop = np.float32([[0, 0, 0],
+                         [0, 1, 0],
+                         [0, 0, 0]])
+    base_img_sharpened = _compute_sharpened_base_img(1, m)
+
+    aug = iaa.Sharpen(alpha=0, lightness=1)
+    observed = aug.augment_image(base_img)
+    expected = base_img
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Sharpen(alpha=1.0, lightness=1)
+    observed = aug.augment_image(base_img)
+    expected = base_img_sharpened
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Sharpen(alpha=0.5, lightness=1)
+    observed = aug.augment_image(base_img)
+    expected = _compute_sharpened_base_img(0.5*1, 0.5 * m_noop + 0.5 * m)
+    assert np.allclose(observed, expected.astype(np.uint8))
+
+    aug = iaa.Sharpen(alpha=0.75, lightness=1)
+    observed = aug.augment_image(base_img)
+    expected = _compute_sharpened_base_img(0.75*1, 0.25 * m_noop + 0.75 * m)
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Sharpen(alpha=1.0, lightness=2)
+    observed = aug.augment_image(base_img)
+    expected = _compute_sharpened_base_img(1.0*2, m)
+    assert np.allclose(observed, expected)
+
+    aug = iaa.Sharpen(alpha=1.0, lightness=3)
+    observed = aug.augment_image(base_img)
+    expected = _compute_sharpened_base_img(1.0*3, m)
+    assert np.allclose(observed, expected)
+
+    # this part doesnt really work so far due to nonlinearities resulting from clipping to uint8
+    """
+    # alpha range
+    aug = iaa.Sharpen(alpha=(0.0, 1.0), lightness=1)
+    base_img = np.copy(base_img)
+    base_img_sharpened_min = _compute_sharpened_base_img(0.0*1, 1.0 * m_noop + 0.0 * m)
+    base_img_sharpened_max = _compute_sharpened_base_img(1.0*1, 0.0 * m_noop + 1.0 * m)
+    #distance_max = np.average(np.abs(base_img_sharpened.astype(np.float32) - base_img.astype(np.float32)))
+    distance_max = np.average(np.abs(base_img_sharpened_max - base_img_sharpened_min))
+    nb_iterations = 250
+    distances = []
+    for _ in sm.xrange(nb_iterations):
+        observed = aug.augment_image(base_img)
+        distance = np.average(np.abs(observed.astype(np.float32) - base_img_sharpened_max.astype(np.float32))) / distance_max
+        distances.append(distance)
+
+    print(distances)
+    print(min(distances), np.average(distances), max(distances))
+    assert 0 - 1e-4 < min(distances) < 0.1
+    assert 0.4 < np.average(distances) < 0.6
+    assert 0.9 < max(distances) < 1.0 + 1e-4
+
+    nb_bins = 5
+    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=False)
+    density_expected = 1.0/nb_bins
+    density_tolerance = 0.05
+    for nb_samples in hist:
+        density = nb_samples / nb_iterations
+        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
+    # lightness range
+    aug = iaa.Sharpen(alpha=1.0, lightness=(0.5, 2.0))
+    base_img = np.copy(base_img)
+    base_img_sharpened = _compute_sharpened_base_img(1.0*2.0, m)
+    distance_max = np.average(np.abs(base_img_sharpened.astype(np.int32) - base_img.astype(np.int32)))
+    nb_iterations = 250
+    distances = []
+    for _ in sm.xrange(nb_iterations):
+        observed = aug.augment_image(base_img)
+        distance = np.average(np.abs(observed.astype(np.int32) - base_img.astype(np.int32))) / distance_max
+        distances.append(distance)
+
+    assert 0 - 1e-4 < min(distances) < 0.1
+    assert 0.4 < np.average(distances) < 0.6
+    assert 0.9 < max(distances) < 1.0 + 1e-4
+
+    nb_bins = 5
+    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=False)
+    density_expected = 1.0/nb_bins
+    density_tolerance = 0.05
+    for nb_samples in hist:
+        density = nb_samples / nb_iterations
+        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+    """
 
 def test_AdditiveGaussianNoise():
     reseed()
