@@ -106,7 +106,7 @@ def main():
     test_Superpixels()
 
     # size
-    # TODO Scale
+    test_Scale()
     # TODO CropAndPad
     test_Pad()
     test_Crop()
@@ -745,6 +745,259 @@ def test_Superpixels():
         if all(seen.values()):
             break
     assert all(seen.values())
+
+
+def test_Scale():
+    reseed()
+
+    base_img2d = [
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 255, 255, 255, 255, 255, 255, 0],
+        [0, 255, 255, 255, 255, 255, 255, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0]
+    ]
+    base_img2d = np.array(base_img2d, dtype=np.uint8)
+    base_img3d = np.tile(base_img2d[..., np.newaxis], (1, 1, 3))
+
+    intensity_avg = np.average(base_img2d)
+    intensity_low = intensity_avg - 0.2 * np.abs(intensity_avg - 128)
+    intensity_high = intensity_avg + 0.2 * np.abs(intensity_avg - 128)
+
+    aspect_ratio2d = base_img2d.shape[1] / base_img2d.shape[0]
+    aspect_ratio3d = base_img3d.shape[1] / base_img3d.shape[0]
+
+    aug = iaa.Scale(12)
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (12, 12)
+    assert observed3d.shape == (12, 12, 3)
+    assert 50 < np.average(observed2d) < 205
+    assert 50 < np.average(observed3d) < 205
+
+    aug = iaa.Scale([12, 14])
+    seen2d = [False, False]
+    seen3d = [False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(12, 12), (14, 14)]
+        assert observed3d.shape in [(12, 12, 3), (14, 14, 3)]
+        if observed2d.shape == (12, 12):
+            seen2d[0] = True
+        else:
+            seen2d[1] = True
+        if observed3d.shape == (12, 12, 3):
+            seen3d[0] = True
+        else:
+            seen3d[1] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    aug = iaa.Scale((12, 14))
+    seen2d = [False, False, False]
+    seen3d = [False, False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(12, 12), (13, 13), (14, 14)]
+        assert observed3d.shape in [(12, 12, 3), (13, 13, 3), (14, 14, 3)]
+        if observed2d.shape == (12, 12):
+            seen2d[0] = True
+        elif observed2d.shape == (13, 13):
+            seen2d[1] = True
+        else:
+            seen2d[2] = True
+        if observed3d.shape == (12, 12, 3):
+            seen3d[0] = True
+        elif observed3d.shape == (13, 13, 3):
+            seen3d[1] = True
+        else:
+            seen3d[2] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    aug = iaa.Scale({"height": 12, "width": 13})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (12, 13)
+    assert observed3d.shape == (12, 13, 3)
+
+    aug = iaa.Scale({"height": 12, "width": "keep"})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (12, base_img2d.shape[1])
+    assert observed3d.shape == (12, base_img3d.shape[1], 3)
+
+    aug = iaa.Scale({"height": "keep", "width": 12})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (base_img2d.shape[0], 12)
+    assert observed3d.shape == (base_img3d.shape[0], 12, 3)
+
+    aug = iaa.Scale({"height": 12, "width": "keep-aspect-ratio"})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (12, int(12 * aspect_ratio2d))
+    assert observed3d.shape == (12, int(12 * aspect_ratio3d), 3)
+
+    aug = iaa.Scale({"height": "keep-aspect-ratio", "width": 12})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (int(12 * (1/aspect_ratio2d)), 12)
+    assert observed3d.shape == (int(12 * (1/aspect_ratio3d)), 12, 3)
+
+    aug = iaa.Scale({"height": [12, 14], "width": 12})
+    seen2d = [False, False]
+    seen3d = [False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(12, 12), (14, 12)]
+        assert observed3d.shape in [(12, 12, 3), (14, 12, 3)]
+        if observed2d.shape == (12, 12):
+            seen2d[0] = True
+        else:
+            seen2d[1] = True
+        if observed3d.shape == (12, 12, 3):
+            seen3d[0] = True
+        else:
+            seen3d[1] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    aug = iaa.Scale({"height": 12, "width": [12, 14]})
+    seen2d = [False, False]
+    seen3d = [False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(12, 12), (12, 14)]
+        assert observed3d.shape in [(12, 12, 3), (12, 14, 3)]
+        if observed2d.shape == (12, 12):
+            seen2d[0] = True
+        else:
+            seen2d[1] = True
+        if observed3d.shape == (12, 12, 3):
+            seen3d[0] = True
+        else:
+            seen3d[1] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    aug = iaa.Scale({"height": (12, 14), "width": 12})
+    seen2d = [False, False, False]
+    seen3d = [False, False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(12, 12), (13, 12), (14, 12)]
+        assert observed3d.shape in [(12, 12, 3), (13, 12, 3), (14, 12, 3)]
+        if observed2d.shape == (12, 12):
+            seen2d[0] = True
+        elif observed2d.shape == (13, 12):
+            seen2d[1] = True
+        else:
+            seen2d[2] = True
+        if observed3d.shape == (12, 12, 3):
+            seen3d[0] = True
+        elif observed3d.shape == (13, 12, 3):
+            seen3d[1] = True
+        else:
+            seen3d[2] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    aug = iaa.Scale(2.0)
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (base_img2d.shape[0]*2, base_img2d.shape[1]*2)
+    assert observed3d.shape == (base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3)
+    assert intensity_low < np.average(observed2d) < intensity_high
+    assert intensity_low < np.average(observed3d) < intensity_high
+
+    aug = iaa.Scale([2.0, 4.0])
+    seen2d = [False, False]
+    seen3d = [False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(base_img2d.shape[0]*2, base_img2d.shape[1]*2), (base_img2d.shape[0]*4, base_img2d.shape[1]*4)]
+        assert observed3d.shape in [(base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3), (base_img3d.shape[0]*4, base_img3d.shape[1]*4, 3)]
+        if observed2d.shape == (base_img2d.shape[0]*2, base_img2d.shape[1]*2):
+            seen2d[0] = True
+        else:
+            seen2d[1] = True
+        if observed3d.shape == (base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3):
+            seen3d[0] = True
+        else:
+            seen3d[1] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    base_img2d = base_img2d[0:4, 0:4]
+    base_img3d = base_img3d[0:4, 0:4, :]
+    aug = iaa.Scale((0.76, 1.0))
+    not_seen2d = set()
+    not_seen3d = set()
+    for size in sm.xrange(3, 4+1):
+        not_seen2d.add((size, size))
+    for size in sm.xrange(3, 4+1):
+        not_seen3d.add((size, size, 3))
+    possible2d = set(list(not_seen2d))
+    possible3d = set(list(not_seen3d))
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in possible2d
+        assert observed3d.shape in possible3d
+        if observed2d.shape in not_seen2d:
+            not_seen2d.remove(observed2d.shape)
+        if observed3d.shape in not_seen3d:
+            not_seen3d.remove(observed3d.shape)
+        if not not_seen2d and not not_seen3d:
+            break
+    assert not not_seen2d
+    assert not not_seen3d
+
+    base_img2d = base_img2d[0:4, 0:4]
+    base_img3d = base_img3d[0:4, 0:4, :]
+    aug = iaa.Scale({"height": (0.76, 1.0), "width": (0.76, 1.0)})
+    not_seen2d = set()
+    not_seen3d = set()
+    for hsize in sm.xrange(3, 4+1):
+        for wsize in sm.xrange(3, 4+1):
+            not_seen2d.add((hsize, wsize))
+    #print(base_img3d.shape[0]//2, base_img3d.shape[1]+1)
+    for hsize in sm.xrange(3, 4+1):
+        for wsize in sm.xrange(3, 4+1):
+            not_seen3d.add((hsize, wsize, 3))
+    possible2d = set(list(not_seen2d))
+    possible3d = set(list(not_seen3d))
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in possible2d
+        assert observed3d.shape in possible3d
+        if observed2d.shape in not_seen2d:
+            not_seen2d.remove(observed2d.shape)
+        if observed3d.shape in not_seen3d:
+            not_seen3d.remove(observed3d.shape)
+        if not not_seen2d and not not_seen3d:
+            break
+    assert not not_seen2d
+    assert not not_seen3d
 
 
 def test_Pad():
