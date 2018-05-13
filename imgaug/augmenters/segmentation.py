@@ -170,7 +170,7 @@ class Superpixels(Augmenter):
                             #print("changing region %d of %d, channel %d, #indices %d" % (ridx, np.max(segments), c, len(np.where(segments == ridx)[0])))
                             mean_intensity = region.mean_intensity
                             image_sp_c = image_sp[..., c]
-                            image_sp_c[segments == ridx] = mean_intensity
+                            image_sp_c[segments == ridx] = np.clip(int(np.round(mean_intensity)), 0, 255)
                 #print("colored in %.4fs" % (time.time() - time_start))
 
                 if orig_shape != image.shape:
