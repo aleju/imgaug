@@ -265,14 +265,14 @@ class Scale(Augmenter):
         h, w = sample_h, sample_w
 
         if ia.is_single_float(h):
-            ia.do_assert(0 <= h <= 1.0)
-            h = int(imh * h)
+            ia.do_assert(0 < h)
+            h = int(np.round(imh * h))
             h = h if h > 0 else 1
         elif h == "keep":
             h = imh
         if ia.is_single_float(w):
-            ia.do_assert(0 <= w <= 1.0)
-            w = int(imw * w)
+            ia.do_assert(0 < w)
+            w = int(np.round(imw * w))
             w = w if w > 0 else 1
         elif w == "keep":
             w = imw
@@ -282,10 +282,10 @@ class Scale(Augmenter):
         # this is also why these are not written as elifs
         if h == "keep-aspect-ratio":
             h_per_w_orig = imh / imw
-            h = int(w * h_per_w_orig)
+            h = int(np.round(w * h_per_w_orig))
         if w == "keep-aspect-ratio":
             w_per_h_orig = imw / imh
-            w = int(h * w_per_h_orig)
+            w = int(np.round(h * w_per_h_orig))
 
         return h, w
 
