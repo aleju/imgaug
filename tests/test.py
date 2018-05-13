@@ -18,7 +18,7 @@ import random
 import six
 import six.moves as sm
 from scipy import misc
-from skimage import data
+from skimage import data, color
 import cv2
 
 #from nose.plugins.attrib import attr
@@ -57,7 +57,7 @@ def main():
 
     # color
     # TODO WithColorspace
-    # TODO AddToHueAndSaturation
+    test_AddToHueAndSaturation()
     # TODO ChangeColorspace
     test_Grayscale()
 
@@ -1476,6 +1476,62 @@ def test_AverageBlur():
     observed = aug_det.augment_keypoints(keypoints)
     expected = keypoints
     assert keypoints_equal(observed, expected)
+
+
+def test_AddToHueAndSaturation():
+    reseed()
+
+    # interestingly, when using this RGB2HSV and HSV2RGB conversion from skimage, the results
+    # differ quite a bit from the cv2 ones
+    """
+    def _add_hue_saturation(img, value):
+        img_hsv = color.rgb2hsv(img / 255.0)
+        img_hsv[..., 0:2] += (value / 255.0)
+        return color.hsv2rgb(img_hsv) * 255
+    """
+
+    def _add_hue_saturation(img, value):
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        img_hsv[..., 0:2] += value
+        return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
+
+    base_img = np.zeros((2, 2, 3), dtype=np.uint8)
+    base_img[..., 0] += 20
+    base_img[..., 1] += 40
+    base_img[..., 2] += 60
+
+    aug = iaa.AddToHueAndSaturation(0)
+    observed = aug.augment_image(base_img)
+    expected = base_img
+    assert np.allclose(observed, expected)
+
+    aug = iaa.AddToHueAndSaturation(30)
+    observed = aug.augment_image(base_img)
+    expected = _add_hue_saturation(base_img, 30)
+    diff = np.abs(observed.astype(np.float32) - expected)
+    assert np.all(diff <= 3)
+
+    aug = iaa.AddToHueAndSaturation((0, 2))
+    base_img = base_img[0:1, 0:1, :]
+    expected_imgs = [
+        iaa.AddToHueAndSaturation(0).augment_image(base_img),
+        iaa.AddToHueAndSaturation(1).augment_image(base_img),
+        iaa.AddToHueAndSaturation(2).augment_image(base_img)
+    ]
+    assert not np.array_equal(expected_imgs[0], expected_imgs[1])
+    assert not np.array_equal(expected_imgs[1], expected_imgs[2])
+    assert not np.array_equal(expected_imgs[0], expected_imgs[2])
+    nb_iterations = 300
+    seen = dict([(i, 0) for i, _ in enumerate(expected_imgs)])
+    for _ in sm.xrange(nb_iterations):
+        observed = aug.augment_image(base_img)
+        for i, expected_img in enumerate(expected_imgs):
+            if np.allclose(observed, expected_img):
+                seen[i] += 1
+    assert np.sum(seen.values()) == nb_iterations
+    n_exp = nb_iterations / 3
+    n_exp_tol = nb_iterations * 0.1
+    assert all([n_exp - n_exp_tol < v < n_exp + n_exp_tol for v in seen.values()])
 
 
 def test_Grayscale():
