@@ -38,7 +38,7 @@ def main():
     test_Multiply()
     test_MultiplyElementwise()
     test_Dropout()
-    # TODO CoarseDropout
+    test_CoarseDropout()
     # TODO SaltAndPepper
     # TODO CoarseSaltAndPepper
     # TODO Salt
@@ -2231,6 +2231,49 @@ def test_Dropout():
             last_aug_det = observed_aug_det
     assert nb_changed_aug >= int(nb_iterations * 0.95)
     assert nb_changed_aug_det == 0
+
+
+def test_CoarseDropout():
+    reseed()
+
+    base_img = np.ones((16, 16, 1), dtype=np.uint8) * 100
+
+    aug = iaa.CoarseDropout(p=0, size_px=4, size_percent=None, per_channel=False, min_size=4)
+    observed = aug.augment_image(base_img)
+    expected = base_img
+    assert np.array_equal(observed, expected)
+
+    aug = iaa.CoarseDropout(p=1.0, size_px=4, size_percent=None, per_channel=False, min_size=4)
+    observed = aug.augment_image(base_img)
+    expected = np.zeros_like(base_img)
+    assert np.array_equal(observed, expected)
+
+    aug = iaa.CoarseDropout(p=0.5, size_px=1, size_percent=None, per_channel=False, min_size=1)
+    averages = []
+    for _ in sm.xrange(50):
+        observed = aug.augment_image(base_img)
+        averages.append(np.average(observed))
+    assert all([v in [0, 100] for v in averages])
+    assert 50 - 20 < np.average(averages) < 50 + 20
+
+    aug = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=0.001, per_channel=False, min_size=1)
+    averages = []
+    for _ in sm.xrange(50):
+        observed = aug.augment_image(base_img)
+        averages.append(np.average(observed))
+    assert all([v in [0, 100] for v in averages])
+    assert 50 - 20 < np.average(averages) < 50 + 20
+
+    aug = iaa.CoarseDropout(p=0.5, size_px=1, size_percent=None, per_channel=True, min_size=1)
+    base_img = np.ones((4, 4, 3), dtype=np.uint8) * 100
+    found = False
+    for _ in sm.xrange(100):
+        observed = aug.augment_image(base_img)
+        avgs = np.average(observed, axis=(0, 1))
+        if len(set(avgs)) >= 2:
+            found = True
+            break
+    assert found
 
 
 def test_Multiply():
