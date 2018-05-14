@@ -98,7 +98,7 @@ def main():
 
     # overlay
     test_Alpha()
-    # TODO AlphaElementwise
+    test_AlphaElementwise()
     # TODO SimplexNoiseAlpha
     # TODO FrequencyNoiseAlpha
 
@@ -674,6 +674,7 @@ def test_Alpha():
     expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
+    base_img = np.zeros((1, 2, 1), dtype=np.uint8)
     nb_iterations = 1000
     aug = iaa.Alpha((0.0, 1.0), iaa.Add(10), iaa.Add(110))
     values = []
@@ -690,6 +691,52 @@ def test_Alpha():
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
 
+
+def test_AlphaElementwise():
+    reseed()
+
+    base_img = np.zeros((3, 3, 1), dtype=np.uint8)
+
+    aug = iaa.AlphaElementwise(1, iaa.Add(10), iaa.Add(20))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 10
+    assert np.allclose(observed, expected)
+
+    aug = iaa.AlphaElementwise(0, iaa.Add(10), iaa.Add(20))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 20
+    assert np.allclose(observed, expected)
+
+    aug = iaa.AlphaElementwise(0.75, iaa.Add(10), iaa.Add(20))
+    observed = aug.augment_image(base_img)
+    expected = (base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
+    assert np.allclose(observed, expected)
+
+    aug = iaa.AlphaElementwise(0.75, None, iaa.Add(20))
+    observed = aug.augment_image(base_img + 10)
+    expected = (base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
+    assert np.allclose(observed, expected)
+
+    aug = iaa.AlphaElementwise(0.75, iaa.Add(10), None)
+    observed = aug.augment_image(base_img + 10)
+    expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
+    assert np.allclose(observed, expected)
+
+    base_img = np.zeros((100, 100), dtype=np.uint8)
+    aug = iaa.AlphaElementwise((0.0, 1.0), iaa.Add(10), iaa.Add(110))
+    observed = (aug.augment_image(base_img) - 10) / 100
+    nb_bins = 10
+    hist, _ = np.histogram(observed.flatten(),  bins=nb_bins, range=(0.0, 1.0), density=False)
+    density_expected = 1.0/nb_bins
+    density_tolerance = 0.05
+    for nb_samples in hist:
+        density = nb_samples / observed.size
+        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
+    base_img = np.zeros((1, 1, 100), dtype=np.uint8)
+    aug = iaa.AlphaElementwise((0.0, 1.0), iaa.Add(10), iaa.Add(110), per_channel=True)
+    observed = aug.augment_image(base_img)
+    assert len(set(observed.flatten())) > 1
 
 def test_Superpixels():
     reseed()
