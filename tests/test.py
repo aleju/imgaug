@@ -1984,7 +1984,7 @@ def test_AddToHueAndSaturation():
         for i, expected_img in enumerate(expected_imgs):
             if np.allclose(observed, expected_img):
                 seen[i] += 1
-    assert np.sum(seen.values()) == nb_iterations
+    assert np.sum(list(seen.values())) == nb_iterations
     n_exp = nb_iterations / 3
     n_exp_tol = nb_iterations * 0.1
     assert all([n_exp - n_exp_tol < v < n_exp + n_exp_tol for v in seen.values()])
