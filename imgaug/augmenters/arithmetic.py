@@ -119,13 +119,13 @@ class Add(Augmenter):
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel == 1:
                 nb_channels = image.shape[2]
-                samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
+                samples = self.value.draw_samples((nb_channels,), random_state=rs_image).astype(image.dtype)
                 for c, sample in enumerate(samples):
                     # TODO make value range more flexible
                     ia.do_assert(-255 <= sample <= 255)
                     image[..., c] += sample
             else:
-                sample = self.value.draw_sample(random_state=rs_image)
+                sample = self.value.draw_sample(random_state=rs_image).astype(image.dtype)
                 ia.do_assert(-255 <= sample <= 255) # TODO make value range more flexible
                 image += sample
 
@@ -236,9 +236,9 @@ class AddElementwise(Augmenter):
             rs_image = ia.new_random_state(seed)
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel == 1:
-                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image)
+                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image).astype(image.dtype)
             else:
-                samples = self.value.draw_samples((height, width, 1), random_state=rs_image)
+                samples = self.value.draw_samples((height, width, 1), random_state=rs_image).astype(image.dtype)
                 samples = np.tile(samples, (1, 1, nb_channels))
             after_add = image + samples
 
