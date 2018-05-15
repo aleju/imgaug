@@ -2186,7 +2186,7 @@ def test_AdditiveGaussianNoise():
     assert np.array_equal(observed, expected)
 
     # zero-centered noise
-    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2)
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2 * 255)
     aug_det = aug.to_deterministic()
 
     observed = aug.augment_images(images)
@@ -2827,6 +2827,23 @@ def test_Add():
     expected = [images_list[0] - 1]
     assert array_equal_lists(observed, expected)
 
+    # test other parameters
+    aug = iaa.Add(value=iap.DiscreteUniform(1, 10))
+    observed = aug.augment_images(images)
+    assert 100 + 1 <= np.average(observed) <= 100 + 10
+
+    aug = iaa.Add(value=iap.Uniform(1, 10))
+    observed = aug.augment_images(images)
+    assert 100 + 1 <= np.average(observed) <= 100 + 10
+
+    aug = iaa.Add(value=iap.Clip(iap.Normal(1, 1), -3, 3))
+    observed = aug.augment_images(images)
+    assert 100 - 3 <= np.average(observed) <= 100 + 3
+
+    aug = iaa.Add(value=iap.Discretize(iap.Clip(iap.Normal(1, 1), -3, 3)))
+    observed = aug.augment_images(images)
+    assert 100 - 3 <= np.average(observed) <= 100 + 3
+
     # keypoints shouldnt be changed
     aug = iaa.Add(value=1)
     aug_det = iaa.Add(value=1).to_deterministic()
@@ -2931,6 +2948,27 @@ def test_AddElementwise():
     observed = aug_det.augment_images(images_list)
     expected = [images_list[0] - 1]
     assert array_equal_lists(observed, expected)
+
+    # test other parameters
+    aug = iaa.AddElementwise(value=iap.DiscreteUniform(1, 10))
+    observed = aug.augment_images(images)
+    assert np.min(observed) >= 100 + 1
+    assert np.max(observed) <= 100 + 10
+
+    aug = iaa.AddElementwise(value=iap.Uniform(1, 10))
+    observed = aug.augment_images(images)
+    assert np.min(observed) >= 100 + 1
+    assert np.max(observed) <= 100 + 10
+
+    aug = iaa.AddElementwise(value=iap.Clip(iap.Normal(1, 1), -3, 3))
+    observed = aug.augment_images(images)
+    assert np.min(observed) >= 100 - 3
+    assert np.max(observed) <= 100 + 3
+
+    aug = iaa.AddElementwise(value=iap.Discretize(iap.Clip(iap.Normal(1, 1), -3, 3)))
+    observed = aug.augment_images(images)
+    assert np.min(observed) >= 100 - 3
+    assert np.max(observed) <= 100 + 3
 
     # keypoints shouldnt be changed
     aug = iaa.AddElementwise(value=1)
