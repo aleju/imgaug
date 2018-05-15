@@ -20,10 +20,14 @@ import six.moves as sm
 from scipy import misc
 from skimage import data, color
 import cv2
+import time
 
 #from nose.plugins.attrib import attr
 
+
 def main():
+    time_start = time.time()
+
     test_is_single_integer()
     test_is_single_float()
 
@@ -120,7 +124,8 @@ def main():
     test_dtype_preservation()
     test_copy_random_state()
 
-    print("Finished without errors.")
+    time_end = time.time()
+    print("Finished without errors in %.4fs." % (time_end - time_start,))
 
 
 def test_is_single_integer():
@@ -1670,6 +1675,7 @@ def test_GaussianBlur():
     assert nb_changed_aug >= int(nb_iterations * 0.8)
     assert nb_changed_aug_det == 0
 
+
 def test_AverageBlur():
     reseed()
 
@@ -1747,7 +1753,7 @@ def test_AverageBlur():
 
     # k as (3, 4)
     aug = iaa.AverageBlur(k=(3, 4))
-    nb_iterations = 1000
+    nb_iterations = 100
     nb_seen = [0, 0]
     for i in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
@@ -1763,7 +1769,7 @@ def test_AverageBlur():
 
     # k as (3, 5)
     aug = iaa.AverageBlur(k=(3, 5))
-    nb_iterations = 1000
+    nb_iterations = 100
     nb_seen = [0, 0, 0]
     for i in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
@@ -1782,7 +1788,7 @@ def test_AverageBlur():
 
     # k as stochastic parameter
     aug = iaa.AverageBlur(k=iap.Choice([3, 5]))
-    nb_iterations = 1000
+    nb_iterations = 100
     nb_seen = [0, 0]
     for i in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
@@ -1796,19 +1802,19 @@ def test_AverageBlur():
     assert 0.4 <= p_seen[0] <= 0.6
     assert 0.4 <= p_seen[1] <= 0.6
 
-    # k as ((0, 5), (0, 5))
-    aug = iaa.AverageBlur(k=((0, 5), (0, 5)))
+    # k as ((3, 5), (3, 5))
+    aug = iaa.AverageBlur(k=((3, 5), (3, 5)))
 
     possible = dict()
-    for kh in [0, 1, 3, 4, 5]:
-        for kw in [0, 1, 3, 4, 5]:
+    for kh in [3, 4, 5]:
+        for kw in [3, 4, 5]:
             key = (kh, kw)
             if kh == 0 or kw == 0:
                 possible[key] = np.copy(base_img)
             else:
                 possible[key] = cv2.blur(base_img, (kh, kw))[..., np.newaxis]
 
-    nb_iterations = 10000
+    nb_iterations = 250
     #nb_seen = [0] * len(possible.keys())
     nb_seen = dict([(key, 0) for key, val in possible.items()])
     for i in sm.xrange(nb_iterations):
@@ -2155,6 +2161,7 @@ def test_Sharpen():
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
     """
 
+
 def test_AdditiveGaussianNoise():
     reseed()
 
@@ -2204,7 +2211,7 @@ def test_AdditiveGaussianNoise():
     aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2 * 255)
     aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
-    nb_iterations = 10000
+    nb_iterations = 1000
     values = []
     for i in sm.xrange(nb_iterations):
         images_aug = aug.augment_images(images)
@@ -2217,7 +2224,7 @@ def test_AdditiveGaussianNoise():
     aug = iaa.AdditiveGaussianNoise(loc=0.25 * 255, scale=0.01 * 255)
     aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
-    nb_iterations = 10000
+    nb_iterations = 1000
     values = []
     for i in sm.xrange(nb_iterations):
         images_aug = aug.augment_images(images)
@@ -3762,7 +3769,7 @@ def test_Sequential():
     last_aug_det = None
     nb_changed_aug = 0
     nb_changed_aug_det = 0
-    nb_iterations = 1000
+    nb_iterations = 200
     for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
@@ -3836,7 +3843,7 @@ def test_Sequential():
     last_aug_det = None
     nb_changed_aug = 0
     nb_changed_aug_det = 0
-    nb_iterations = 1000
+    nb_iterations = 200
 
     nb_images_first_second_unrandom = 0
     nb_images_second_first_unrandom = 0
@@ -4377,6 +4384,9 @@ def test_background_augmentation():
     assert 0.4*nb_iterations <= nb_flipped_keypoints <= 0.6*nb_iterations
 
     # test all augmenters
+    # this test is currently skipped by default as it takes around 40s on its own,
+    # probably because of having to start background processes
+    """
     augs = [
         iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
         iaa.SomeOf(1, [iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
@@ -4452,6 +4462,7 @@ def test_background_augmentation():
             assert nb_changed > 0
         else:
             assert nb_changed == 0
+    """
 
 
 def test_determinism():
