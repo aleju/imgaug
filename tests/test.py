@@ -139,7 +139,7 @@ def main():
     #test_parameters_Clip()
     #test_parameters_Discretize()
     test_parameters_Multiply()
-    #test_parameters_Divide()
+    test_parameters_Divide()
     test_parameters_Add()
     test_parameters_Subtract()
     #test_parameters_Power()
@@ -5100,6 +5100,86 @@ def test_parameters_Multiply():
     assert np.all(samples < 2.0 * 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+
+def test_parameters_Divide():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    values_int = [-100, -54, -1, 0, 1, 54, 100]
+    values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
+
+    for v1 in values_int:
+        for v2 in values_int:
+            if v2 == 0:
+                v2 = 1
+
+            p = iap.Divide(iap.Deterministic(v1), v2)
+            assert p.draw_sample() == v1 / v2
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+
+            p = iap.Divide(iap.Deterministic(v1), iap.Deterministic(v2))
+            assert p.draw_sample() == v1 / v2
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+
+    for v1 in values_float:
+        for v2 in values_float:
+            if v2 == 0:
+                v2 = 1
+
+            p = iap.Divide(iap.Deterministic(v1), v2)
+            assert v1 / v2 - eps < p.draw_sample() < v1 / v2 + eps
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+
+            p = iap.Divide(iap.Deterministic(v1), iap.Deterministic(v2))
+            assert v1 / v2 - eps < p.draw_sample() < v1 / v2 + eps
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+
+    param = iap.Divide(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 / 2.0 - eps)
+    assert np.all(samples < 1.0 / 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+
+    param = iap.Divide(iap.Deterministic(1.0), (1.0, 2.0), elementwise=True)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 / 2.0 - eps)
+    assert np.all(samples < 1.0 / 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Divide(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 / 1.0 - eps)
+    assert np.all(samples < 2.0 / 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Divide(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 / 1.0 - eps)
+    assert np.all(samples < 2.0 / 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    # test division by zero automatically being converted to division by 1
+    param = iap.Divide(2, iap.Choice([0, 2]), elementwise=True)
+    samples = param.draw_samples((10, 20))
+    samples_unique = np.sort(np.unique(samples.flatten()))
+    assert samples_unique[0] == 1 and samples_unique[1] == 2
 
 
 def test_parameters_Add():
