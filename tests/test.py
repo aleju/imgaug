@@ -142,7 +142,7 @@ def main():
     test_parameters_Divide()
     test_parameters_Add()
     test_parameters_Subtract()
-    #test_parameters_Power()
+    test_parameters_Power()
     #test_parameters_Absolute()
     #test_parameters_RandomSign()
     #test_parameters_ForceSign()
@@ -5314,6 +5314,65 @@ def test_parameters_Subtract():
     assert samples.shape == (10, 20)
     assert np.all(samples > 1.0 - 1.0 - eps)
     assert np.all(samples < 2.0 - 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+
+def test_parameters_Power():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    values = [-100, -54, -1, 0, 1, 54, 100]
+    values = values + [float(v) for v in values]
+    exponents = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
+
+    for v1 in values:
+        for v2 in exponents:
+            if v1 < 0 and ia.is_single_float(v2):
+                continue
+            if v1 == 0 and v2 < 0:
+                continue
+            p = iap.Power(iap.Deterministic(v1), v2)
+            assert v1 ** v2 - eps < p.draw_sample() < v1 ** v2 + eps
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 ** v2)
+
+            p = iap.Power(iap.Deterministic(v1), iap.Deterministic(v2))
+            assert v1 ** v2 - eps < p.draw_sample() < v1 ** v2 + eps
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 ** v2)
+
+    param = iap.Power(iap.Deterministic(1.5), (1.0, 2.0), elementwise=False)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.5 ** 1.0 - eps)
+    assert np.all(samples < 1.5 ** 2.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+
+    param = iap.Power(iap.Deterministic(1.5), (1.0, 2.0), elementwise=True)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.5 ** 1.0 - eps)
+    assert np.all(samples < 1.5 ** 2.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Power(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 ** 1.0 - eps)
+    assert np.all(samples < 2.0 ** 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Power(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 ** 1.0 - eps)
+    assert np.all(samples < 2.0 ** 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
 
