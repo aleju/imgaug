@@ -141,7 +141,7 @@ def main():
     #test_parameters_Multiply()
     #test_parameters_Divide()
     test_parameters_Add()
-    #test_parameters_Subtract()
+    test_parameters_Subtract()
     #test_parameters_Power()
     #test_parameters_Absolute()
     #test_parameters_RandomSign()
@@ -5089,7 +5089,7 @@ def test_parameters_Add():
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
     assert np.all(samples > 1.0 + 1.0 - eps)
-    assert np.all(samples < 1.0 + 2.0 + eps)
+    assert np.all(samples < 2.0 + 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
 
@@ -5097,7 +5097,75 @@ def test_parameters_Add():
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
     assert np.all(samples > 1.0 + 1.0 - eps)
-    assert np.all(samples < 1.0 + 2.0 + eps)
+    assert np.all(samples < 2.0 + 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+
+def test_parameters_Subtract():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    values_int = [-100, -54, -1, 0, 1, 54, 100]
+    values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
+
+    for v1 in values_int:
+        for v2 in values_int:
+            p = iap.Subtract(iap.Deterministic(v1), v2)
+            assert p.draw_sample() == v1 - v2
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.int64
+            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 - v2)
+
+            p = iap.Subtract(iap.Deterministic(v1), iap.Deterministic(v2))
+            assert p.draw_sample() == v1 - v2
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.int64
+            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 - v2)
+
+    for v1 in values_float:
+        for v2 in values_float:
+            p = iap.Subtract(iap.Deterministic(v1), v2)
+            assert v1 - v2 - eps < p.draw_sample() < v1 - v2 + eps
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 - v2)
+
+            p = iap.Subtract(iap.Deterministic(v1), iap.Deterministic(v2))
+            assert v1 - v2 - eps < p.draw_sample() < v1 - v2 + eps
+            samples = p.draw_samples((2, 3))
+            assert samples.dtype == np.float64
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 - v2)
+
+    param = iap.Subtract(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 - 2.0 - eps)
+    assert np.all(samples < 1.0 - 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+
+    param = iap.Subtract(iap.Deterministic(1.0), (1.0, 2.0), elementwise=True)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 - 2.0 - eps)
+    assert np.all(samples < 1.0 - 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Subtract(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 - 1.0 - eps)
+    assert np.all(samples < 2.0 - 1.0 + eps)
+    samples_sorted = np.sort(samples.flatten())
+    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Subtract(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
+    samples = param.draw_samples((10, 20))
+    assert samples.shape == (10, 20)
+    assert np.all(samples > 1.0 - 1.0 - eps)
+    assert np.all(samples < 2.0 - 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
 
