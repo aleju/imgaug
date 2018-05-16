@@ -106,7 +106,7 @@ def force_np_float_dtype(val):
     if val.dtype in NP_FLOAT_TYPES:
         return val
     else:
-        return val.astype(np.float32)
+        return val.astype(np.float64)
 
 def both_np_float_if_one_is_float(a, b):
     a_f = a.dtype in NP_FLOAT_TYPES
@@ -114,11 +114,11 @@ def both_np_float_if_one_is_float(a, b):
     if a_f and b_f:
         return a, b
     elif a_f:
-        return a, b.astype(np.float32)
+        return a, b.astype(np.float64)
     elif b_f:
-        return a.astype(np.float32), b
+        return a.astype(np.float64), b
     else:
-        return a.astype(np.float32), b.astype(np.float32)
+        return a.astype(np.float64), b.astype(np.float64)
 
 def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
     if titles is None:
