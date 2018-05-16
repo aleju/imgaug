@@ -143,7 +143,7 @@ def main():
     test_parameters_Add()
     test_parameters_Subtract()
     test_parameters_Power()
-    #test_parameters_Absolute()
+    test_parameters_Absolute()
     #test_parameters_RandomSign()
     #test_parameters_ForceSign()
     #test_parameters_Positive()
@@ -5375,6 +5375,37 @@ def test_parameters_Power():
     assert np.all(samples < 2.0 ** 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+
+def test_parameters_Absolute():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    simple_values = [-1.5, -1, -1.0, -0.1, 0, 0.0, 0.1, 1, 1.0, 1.5]
+
+    for value in simple_values:
+        param = iap.Absolute(iap.Deterministic(value))
+        sample = param.draw_sample()
+        samples = param.draw_samples((10, 5))
+        assert sample.shape == tuple()
+        assert samples.shape == (10, 5)
+        if ia.is_single_float(value):
+            assert abs(value) - eps < sample < abs(value) + eps
+            assert np.all(abs(value) - eps < samples)
+            assert np.all(samples < abs(value) + eps)
+        else:
+            assert sample == abs(value)
+            assert np.all(samples == abs(value))
+
+    param = iap.Absolute(iap.Choice([-3, -1, 1, 3]))
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 10))
+    samples_uq = np.sort(np.unique(samples))
+    assert sample.shape == tuple()
+    assert sample in [3, 1]
+    assert samples.shape == (10, 10)
+    assert len(samples_uq) == 2
+    assert samples_uq[0] == 1 and samples_uq[1] == 3
 
 
 def create_random_images(size):
