@@ -1368,7 +1368,7 @@ class Divide(StochasticParameter):
             # prevent division by zero
             val_samples[val_samples == 0] = 1
 
-            return np.multiply(
+            return np.divide(
                 force_np_float_dtype(samples),
                 force_np_float_dtype(val_samples)
             )
