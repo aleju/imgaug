@@ -28,6 +28,7 @@ import time
 def main():
     time_start = time.time()
 
+    """
     test_is_single_integer()
     test_is_single_float()
 
@@ -123,6 +124,37 @@ def main():
     test_unusual_channel_numbers()
     test_dtype_preservation()
     test_copy_random_state()
+    """
+
+    #test_parameters_Biomial()
+    #test_parameters_Choice()
+    #test_parameters_DiscreteUniform()
+    #test_parameters_Poisson()
+    #test_parameters_Normal()
+    #test_parameters_Laplace()
+    #test_parameters_ChiSquare()
+    #test_parameters_Weibull()
+    #test_parameters_Uniform()
+    #test_parameters_Beta()
+    test_parameters_Deterministic()
+    #test_parameters_FromLowerResolution()
+    #test_parameters_Clip()
+    #test_parameters_Discretize()
+    #test_parameters_Multiply()
+    #test_parameters_Divide()
+    test_parameters_Add()
+    #test_parameters_Subtract()
+    #test_parameters_Power()
+    #test_parameters_Absolute()
+    #test_parameters_RandomSign()
+    #test_parameters_ForceSign()
+    #test_parameters_Positive()
+    #test_parameters_Negative()
+    #test_parameters_IterativeNoiseAggregator()
+    #test_parameters_Sigmoid()
+    #test_parameters_SimplexNoise()
+    #test_parameters_FrequencyNoise()
+    #test_parameters_operators()
 
     time_end = time.time()
     print("Finished without errors in %.4fs." % (time_end - time_start,))
@@ -4910,6 +4942,98 @@ def test_copy_random_state():
     assert np.array_equal(images_aug_target1, images_aug_target2)
     assert np.array_equal(images_aug_source1, images_aug_target1)
     assert np.array_equal(images_aug_source2, images_aug_target2)
+
+
+def test_parameters_Deterministic():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    values_int = [-100, -54, -1, 0, 1, 54, 100]
+    values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
+
+    for value in values_int:
+        param = iap.Deterministic(value)
+
+        sample1 = param.draw_sample()
+        sample2 = param.draw_sample()
+        assert sample1.shape == tuple()
+        assert sample1 == sample2
+
+        samples1 = param.draw_samples(10)
+        samples2 = param.draw_samples(10)
+        samples3 = param.draw_samples((5, 3))
+        samples4 = param.draw_samples((5, 3))
+        samples5 = param.draw_samples((4, 5, 3))
+        samples6 = param.draw_samples((4, 5, 3))
+
+        samples1_unique = np.unique(samples1)
+        samples2_unique = np.unique(samples2)
+        samples3_unique = np.unique(samples3)
+        samples4_unique = np.unique(samples4)
+        samples5_unique = np.unique(samples5)
+        samples6_unique = np.unique(samples6)
+
+        assert samples1.shape == (10,)
+        assert samples2.shape == (10,)
+        assert samples3.shape == (5, 3)
+        assert samples4.shape == (5, 3)
+        assert samples5.shape == (4, 5, 3)
+        assert samples6.shape == (4, 5, 3)
+        assert len(samples1_unique) == 1 and samples1_unique[0] == value
+        assert len(samples2_unique) == 1 and samples2_unique[0] == value
+        assert len(samples3_unique) == 1 and samples3_unique[0] == value
+        assert len(samples4_unique) == 1 and samples4_unique[0] == value
+        assert len(samples5_unique) == 1 and samples5_unique[0] == value
+        assert len(samples6_unique) == 1 and samples6_unique[0] == value
+
+        rs1 = np.random.RandomState(123456)
+        rs2 = np.random.RandomState(123456)
+        assert np.array_equal(
+            param.draw_samples(20, random_state=rs1),
+            param.draw_samples(20, random_state=rs2)
+        )
+
+    for value in values_float:
+        param = iap.Deterministic(value)
+
+        sample1 = param.draw_sample()
+        sample2 = param.draw_sample()
+        assert sample1.shape == tuple()
+        assert sample1 - eps < sample2 < sample1 + eps
+
+        samples1 = param.draw_samples(10)
+        samples2 = param.draw_samples(10)
+        samples3 = param.draw_samples((5, 3))
+        samples4 = param.draw_samples((5, 3))
+        samples5 = param.draw_samples((4, 5, 3))
+        samples6 = param.draw_samples((4, 5, 3))
+
+        samples1_sorted = np.sort(samples1)
+        samples2_sorted = np.sort(samples2)
+        samples3_sorted = np.sort(samples3.flatten())
+        samples4_sorted = np.sort(samples4.flatten())
+        samples5_sorted = np.sort(samples5.flatten())
+        samples6_sorted = np.sort(samples6.flatten())
+
+        assert samples1.shape == (10,)
+        assert samples2.shape == (10,)
+        assert samples3.shape == (5, 3)
+        assert samples4.shape == (5, 3)
+        assert samples5.shape == (4, 5, 3)
+        assert samples6.shape == (4, 5, 3)
+        assert samples1_sorted[0] - eps < samples1_sorted[-1] < samples1_sorted[0] + eps
+        assert samples2_sorted[0] - eps < samples2_sorted[-1] < samples2_sorted[0] + eps
+        assert samples3_sorted[0] - eps < samples3_sorted[-1] < samples3_sorted[0] + eps
+        assert samples4_sorted[0] - eps < samples4_sorted[-1] < samples4_sorted[0] + eps
+        assert samples5_sorted[0] - eps < samples5_sorted[-1] < samples5_sorted[0] + eps
+        assert samples6_sorted[0] - eps < samples6_sorted[-1] < samples6_sorted[0] + eps
+
+        rs1 = np.random.RandomState(123456)
+        rs2 = np.random.RandomState(123456)
+        assert np.allclose(
+            param.draw_samples(20, random_state=rs1),
+            param.draw_samples(20, random_state=rs2)
+        )
 
 
 def create_random_images(size):
