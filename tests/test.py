@@ -146,7 +146,7 @@ def main():
     test_parameters_Absolute()
     test_parameters_RandomSign()
     test_parameters_ForceSign()
-    #test_parameters_Positive()
+    test_parameters_Positive()
     #test_parameters_Negative()
     #test_parameters_IterativeNoiseAggregator()
     #test_parameters_Sigmoid()
@@ -5518,6 +5518,15 @@ def test_parameters_ForceSign():
     assert samples1.shape == (100, 10)
     assert samples2.shape == (100, 10)
     assert np.array_equal(samples1, samples2)
+
+
+def test_parameters_Positive():
+    reseed()
+
+    param = iap.Positive(iap.Deterministic(-1), mode="reroll", reroll_count_max=1)
+    samples = param.draw_samples((100,))
+    assert samples.shape == (100,)
+    assert np.all(samples == 1)
 
 
 def create_random_images(size):
