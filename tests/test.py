@@ -152,7 +152,7 @@ def main():
     #test_parameters_Sigmoid()
     #test_parameters_SimplexNoise()
     #test_parameters_FrequencyNoise()
-    #test_parameters_operators()
+    test_parameters_operators()
 
     time_end = time.time()
     print("Finished without errors in %.4fs." % (time_end - time_start,))
@@ -5536,6 +5536,103 @@ def test_parameters_Negative():
     samples = param.draw_samples((100,))
     assert samples.shape == (100,)
     assert np.all(samples == -1)
+
+
+def test_parameters_operators():
+    reseed()
+
+    param1 = iap.Normal(0, 1)
+    param2 = iap.Uniform(-1.0, 1.0)
+
+    # Multiply
+    param3 = param1 * param2
+    assert isinstance(param3, iap.Multiply)
+    assert param3.other_param == param1
+    assert param3.val == param2
+
+    param3 = param1 * 2
+    assert isinstance(param3, iap.Multiply)
+    assert param3.other_param == param1
+    assert isinstance(param3.val, iap.Deterministic)
+    assert param3.val.value == 2
+
+    param3 = 2 * param1
+    assert isinstance(param3, iap.Multiply)
+    assert isinstance(param3.other_param, iap.Deterministic)
+    assert param3.other_param.value == 2
+    assert param3.val == param1
+
+    # Divide
+    param3 = param1 / param2
+    assert isinstance(param3, iap.Divide)
+    assert param3.other_param == param1
+    assert param3.val == param2
+
+    param3 = param1 / 2
+    assert isinstance(param3, iap.Divide)
+    assert param3.other_param == param1
+    assert isinstance(param3.val, iap.Deterministic)
+    assert param3.val.value == 2
+
+    param3 = 2 / param1
+    assert isinstance(param3, iap.Divide)
+    assert isinstance(param3.other_param, iap.Deterministic)
+    assert param3.other_param.value == 2
+    assert param3.val == param1
+
+    # Add
+    param3 = param1 + param2
+    assert isinstance(param3, iap.Add)
+    assert param3.other_param == param1
+    assert param3.val == param2
+
+    param3 = param1 + 2
+    assert isinstance(param3, iap.Add)
+    assert param3.other_param == param1
+    assert isinstance(param3.val, iap.Deterministic)
+    assert param3.val.value == 2
+
+    param3 = 2 + param1
+    assert isinstance(param3, iap.Add)
+    assert isinstance(param3.other_param, iap.Deterministic)
+    assert param3.other_param.value == 2
+    assert param3.val == param1
+
+    # Subtract
+    param3 = param1 - param2
+    assert isinstance(param3, iap.Subtract)
+    assert param3.other_param == param1
+    assert param3.val == param2
+
+    param3 = param1 - 2
+    assert isinstance(param3, iap.Subtract)
+    assert param3.other_param == param1
+    assert isinstance(param3.val, iap.Deterministic)
+    assert param3.val.value == 2
+
+    param3 = 2 - param1
+    assert isinstance(param3, iap.Subtract)
+    assert isinstance(param3.other_param, iap.Deterministic)
+    assert param3.other_param.value == 2
+    assert param3.val == param1
+
+    # Power
+    param3 = param1 ** param2
+    assert isinstance(param3, iap.Power)
+    assert param3.other_param == param1
+    assert param3.val == param2
+
+    param3 = param1 ** 2
+    assert isinstance(param3, iap.Power)
+    assert param3.other_param == param1
+    assert isinstance(param3.val, iap.Deterministic)
+    assert param3.val.value == 2
+
+    param3 = 2 ** param1
+    assert isinstance(param3, iap.Power)
+    assert isinstance(param3.other_param, iap.Deterministic)
+    assert param3.other_param.value == 2
+    assert param3.val == param1
 
 
 def create_random_images(size):
