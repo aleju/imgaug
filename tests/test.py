@@ -144,7 +144,7 @@ def main():
     test_parameters_Subtract()
     test_parameters_Power()
     test_parameters_Absolute()
-    #test_parameters_RandomSign()
+    test_parameters_RandomSign()
     #test_parameters_ForceSign()
     #test_parameters_Positive()
     #test_parameters_Negative()
@@ -5406,6 +5406,51 @@ def test_parameters_Absolute():
     assert samples.shape == (10, 10)
     assert len(samples_uq) == 2
     assert samples_uq[0] == 1 and samples_uq[1] == 3
+
+
+def test_parameters_RandomSign():
+    reseed()
+
+    param = iap.RandomSign(iap.Deterministic(1))
+    samples = param.draw_samples((1000,))
+    n_positive = np.sum(samples == 1)
+    n_negative = np.sum(samples == -1)
+    assert samples.shape == (1000,)
+    assert n_positive + n_negative == 1000
+    assert 350 < n_positive < 750
+
+    seen = [0, 0]
+    for _ in sm.xrange(1000):
+        sample = param.draw_sample()
+        assert sample.shape == tuple()
+        if sample == 1:
+            seen[1] += 1
+        else:
+            seen[0] += 1
+    n_negative, n_positive = seen
+    assert n_positive + n_negative == 1000
+    assert 350 < n_positive < 750
+
+    param = iap.RandomSign(iap.Choice([1, 2]))
+    samples = param.draw_samples((4000,))
+    seen = [0, 0, 0, 0]
+    seen[0] = np.sum(samples == -2)
+    seen[1] = np.sum(samples == -1)
+    seen[2] = np.sum(samples == 1)
+    seen[3] = np.sum(samples == 2)
+    assert np.sum(seen) == 4000
+    assert all([700 < v < 1300 for v in seen])
+
+    param = iap.RandomSign(iap.Choice([1, 2]))
+    samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    assert samples1.shape == (100, 10)
+    assert samples2.shape == (100, 10)
+    assert np.array_equal(samples1, samples2)
+    assert np.sum(samples == -2) > 50
+    assert np.sum(samples == -1) > 50
+    assert np.sum(samples == 1) > 50
+    assert np.sum(samples == 2) > 50
 
 
 def create_random_images(size):
