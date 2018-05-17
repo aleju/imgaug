@@ -147,7 +147,7 @@ def main():
     test_parameters_RandomSign()
     test_parameters_ForceSign()
     test_parameters_Positive()
-    #test_parameters_Negative()
+    test_parameters_Negative()
     #test_parameters_IterativeNoiseAggregator()
     #test_parameters_Sigmoid()
     #test_parameters_SimplexNoise()
@@ -5527,6 +5527,15 @@ def test_parameters_Positive():
     samples = param.draw_samples((100,))
     assert samples.shape == (100,)
     assert np.all(samples == 1)
+
+
+def test_parameters_Negative():
+    reseed()
+
+    param = iap.Negative(iap.Deterministic(1), mode="reroll", reroll_count_max=1)
+    samples = param.draw_samples((100,))
+    assert samples.shape == (100,)
+    assert np.all(samples == -1)
 
 
 def create_random_images(size):
