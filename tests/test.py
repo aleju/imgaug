@@ -145,7 +145,7 @@ def main():
     test_parameters_Power()
     test_parameters_Absolute()
     test_parameters_RandomSign()
-    #test_parameters_ForceSign()
+    test_parameters_ForceSign()
     #test_parameters_Positive()
     #test_parameters_Negative()
     #test_parameters_IterativeNoiseAggregator()
@@ -5451,6 +5451,73 @@ def test_parameters_RandomSign():
     assert np.sum(samples == -1) > 50
     assert np.sum(samples == 1) > 50
     assert np.sum(samples == 2) > 50
+
+
+def test_parameters_ForceSign():
+    reseed()
+
+    param = iap.ForceSign(iap.Deterministic(1), positive=True, mode="invert")
+    sample = param.draw_sample()
+    assert sample.shape == tuple()
+    assert sample == 1
+
+    param = iap.ForceSign(iap.Deterministic(1), positive=False, mode="invert")
+    sample = param.draw_sample()
+    assert sample.shape == tuple()
+    assert sample == -1
+
+    param = iap.ForceSign(iap.Deterministic(1), positive=True, mode="invert")
+    samples = param.draw_samples(100)
+    assert samples.shape == (100,)
+    assert np.all(samples == 1)
+
+    param = iap.ForceSign(iap.Deterministic(1), positive=False, mode="invert")
+    samples = param.draw_samples(100)
+    assert samples.shape == (100,)
+    assert np.all(samples == -1)
+
+    param = iap.ForceSign(iap.Deterministic(-1), positive=True, mode="invert")
+    samples = param.draw_samples(100)
+    assert samples.shape == (100,)
+    assert np.all(samples == 1)
+
+    param = iap.ForceSign(iap.Deterministic(-1), positive=False, mode="invert")
+    samples = param.draw_samples(100)
+    assert samples.shape == (100,)
+    assert np.all(samples == -1)
+
+    param = iap.ForceSign(iap.Choice([-2, 1]), positive=True, mode="invert")
+    samples = param.draw_samples(1000)
+    assert samples.shape == (1000,)
+    n_twos = np.sum(samples == 2)
+    n_ones = np.sum(samples == 1)
+    assert n_twos + n_ones == 1000
+    assert 200 < n_twos < 700
+    assert 200 < n_ones < 700
+
+    param = iap.ForceSign(iap.Choice([-2, 1]), positive=True, mode="reroll")
+    samples = param.draw_samples(1000)
+    assert samples.shape == (1000,)
+    n_twos = np.sum(samples == 2)
+    n_ones = np.sum(samples == 1)
+    assert n_twos + n_ones == 1000
+    assert n_twos > 0
+    assert n_ones > 0
+
+    param = iap.ForceSign(iap.Choice([-2, 1]), positive=True, mode="reroll", reroll_count_max=100)
+    samples = param.draw_samples(100)
+    assert samples.shape == (100,)
+    n_twos = np.sum(samples == 2)
+    n_ones = np.sum(samples == 1)
+    assert n_twos + n_ones == 100
+    assert n_twos < 5
+
+    param = iap.ForceSign(iap.Choice([-2, 1]), positive=True, mode="invert")
+    samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    assert samples1.shape == (100, 10)
+    assert samples2.shape == (100, 10)
+    assert np.array_equal(samples1, samples2)
 
 
 def create_random_images(size):
