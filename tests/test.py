@@ -136,7 +136,7 @@ def main():
     #test_parameters_Beta()
     test_parameters_Deterministic()
     #test_parameters_FromLowerResolution()
-    #test_parameters_Clip()
+    test_parameters_Clip()
     #test_parameters_Discretize()
     test_parameters_Multiply()
     test_parameters_Divide()
@@ -5032,6 +5032,71 @@ def test_parameters_Deterministic():
             param.draw_samples(20, random_state=rs1),
             param.draw_samples(20, random_state=rs2)
         )
+
+
+def test_parameters_Clip():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Clip(iap.Deterministic(0), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == 0
+    assert np.all(samples == 0)
+
+    param = iap.Clip(iap.Deterministic(1), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == 1
+    assert np.all(samples == 1)
+
+    param = iap.Clip(iap.Deterministic(-1), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == -1
+    assert np.all(samples == -1)
+
+    param = iap.Clip(iap.Deterministic(0.5), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert 0.5 - eps < sample < 0.5 + eps
+    assert np.all(np.logical_or(0.5 - eps < samples, samples < 0.5 + eps))
+
+    param = iap.Clip(iap.Deterministic(2), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == 1
+    assert np.all(samples == 1)
+
+    param = iap.Clip(iap.Deterministic(-2), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == -1
+    assert np.all(samples == -1)
+
+    param = iap.Clip(iap.Choice([0, 2]), -1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [0, 1]
+    assert np.all(np.logical_or(samples == 0, samples == 1))
+
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.array_equal(samples1, samples2)
 
 
 def test_parameters_Multiply():
