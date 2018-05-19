@@ -137,7 +137,7 @@ def main():
     test_parameters_Deterministic()
     #test_parameters_FromLowerResolution()
     test_parameters_Clip()
-    #test_parameters_Discretize()
+    test_parameters_Discretize()
     test_parameters_Multiply()
     test_parameters_Divide()
     test_parameters_Add()
@@ -5094,6 +5094,43 @@ def test_parameters_Clip():
     assert sample in [0, 1]
     assert np.all(np.logical_or(samples == 0, samples == 1))
 
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.array_equal(samples1, samples2)
+
+
+def test_parameters_Discretize():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    values = [-100.2, -54.3, -1.0, -1, -0.7, -0.00043, 0, 0.00043, 0.7, 1.0, 1, 54.3, 100.2]
+    for value in values:
+        value_expected = np.round(np.float64([value])).astype(np.int32)[0]
+        param = iap.Discretize(iap.Deterministic(value))
+        sample = param.draw_sample()
+        samples = param.draw_samples((10, 5))
+        assert sample.shape == tuple()
+        assert samples.shape == (10, 5)
+        assert sample == value_expected
+        assert np.all(samples == value_expected)
+
+    param_orig = iap.DiscreteUniform(0, 1)
+    param = iap.Discretize(param_orig)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [0, 1]
+    assert np.all(np.logical_or(samples == 0, samples == 1))
+
+    param_orig = iap.DiscreteUniform(0, 2)
+    param = iap.Discretize(param_orig)
+    samples1 = param_orig.draw_samples((10000,))
+    samples2 = param.draw_samples((10000,))
+    assert np.all(np.abs(samples1 - samples2) < 0.2*(10000/3))
+
+    param_orig = iap.DiscreteUniform(0, 2)
+    param = iap.Discretize(param_orig)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.array_equal(samples1, samples2)
