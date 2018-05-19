@@ -127,7 +127,7 @@ def main():
     test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
-    #test_parameters_Poisson()
+    test_parameters_Poisson()
     #test_parameters_Normal()
     #test_parameters_Laplace()
     #test_parameters_ChiSquare()
@@ -5138,6 +5138,30 @@ def test_parameters_DiscreteUniform():
     assert np.all(np.logical_or(np.logical_or(samples == -1, samples == 0), samples==1))
 
     param = iap.Uniform(-1, 1)
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.array_equal(samples1, samples2)
+
+
+def test_parameters_Poisson():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Poisson(1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((100, 1000))
+    samples_direct = np.random.RandomState(1234).poisson(lam=1, size=(100, 1000))
+    assert sample.shape == tuple()
+    assert samples.shape == (100, 1000)
+    assert 0 < sample
+
+    for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
+        count_direct = np.sum(samples_direct == i)
+        count = np.sum(samples == i)
+        tolerance = max(count_direct * 0.1, 250)
+        assert count_direct - tolerance < count < count_direct + tolerance
+
+    param = iap.Poisson(1)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.array_equal(samples1, samples2)
