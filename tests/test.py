@@ -126,7 +126,7 @@ def main():
 
     #test_parameters_Biomial()
     #test_parameters_Choice()
-    #test_parameters_DiscreteUniform()
+    test_parameters_DiscreteUniform()
     #test_parameters_Poisson()
     #test_parameters_Normal()
     #test_parameters_Laplace()
@@ -4942,6 +4942,55 @@ def test_copy_random_state():
     assert np.array_equal(images_aug_source2, images_aug_target2)
 
 
+def test_parameters_DiscreteUniform():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.DiscreteUniform(0, 2)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [0, 1, 2]
+    assert np.all(np.logical_or(np.logical_or(samples == 0, samples == 1), samples==2))
+
+    samples = param.draw_samples((10000,))
+    expected = 10000/3
+    expected_tolerance = expected * 0.05
+    for v in [0, 1, 2]:
+        count = np.sum(samples == v)
+        assert expected - expected_tolerance < count < expected + expected_tolerance
+
+    param = iap.DiscreteUniform(-1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [-1, 0, 1]
+    assert np.all(np.logical_or(np.logical_or(samples == -1, samples == 0), samples==1))
+
+    param = iap.DiscreteUniform(-1.2, 1.2)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [-1, 0, 1]
+    assert np.all(np.logical_or(np.logical_or(samples == -1, samples == 0), samples==1))
+
+    param = iap.DiscreteUniform(1, -1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [-1, 0, 1]
+    assert np.all(np.logical_or(np.logical_or(samples == -1, samples == 0), samples==1))
+
+    param = iap.Uniform(-1, 1)
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.array_equal(samples1, samples2)
+
+
 def test_parameters_Uniform():
     reseed()
     eps = np.finfo(np.float32).eps
@@ -4987,6 +5036,7 @@ def test_parameters_Uniform():
     assert -1.0 - eps < sample < 1.0 + eps
     assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
 
+    param = iap.Uniform(-1.0, 1.0)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.allclose(samples1, samples2)
