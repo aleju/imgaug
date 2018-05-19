@@ -125,7 +125,7 @@ def main():
     test_copy_random_state()
 
     #test_parameters_Biomial()
-    #test_parameters_Choice()
+    test_parameters_Choice()
     test_parameters_DiscreteUniform()
     #test_parameters_Poisson()
     #test_parameters_Normal()
@@ -4940,6 +4940,99 @@ def test_copy_random_state():
     assert np.array_equal(images_aug_target1, images_aug_target2)
     assert np.array_equal(images_aug_source1, images_aug_target1)
     assert np.array_equal(images_aug_source2, images_aug_target2)
+
+
+def test_parameters_Choice():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Choice([0, 1, 2])
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [0, 1, 2]
+    assert np.all(np.logical_or(np.logical_or(samples == 0, samples == 1), samples==2))
+
+    samples = param.draw_samples((10000,))
+    expected = 10000/3
+    expected_tolerance = expected * 0.05
+    for v in [0, 1, 2]:
+        count = np.sum(samples == v)
+        assert expected - expected_tolerance < count < expected + expected_tolerance
+
+    param = iap.Choice([-1, 1])
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in [-1, 1]
+    assert np.all(np.logical_or(samples == -1, samples == 1))
+
+    param = iap.Choice([-1.2, 1.7])
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert -1.2 - eps < sample < -1.2 + eps or 1.7 - eps < sample < 1.7 + eps
+    assert np.all(
+        np.logical_or(
+            np.logical_or(-1.2 - eps < samples, samples < -1.2 + eps),
+            np.logical_or(1.7 - eps < samples, samples < 1.7 + eps)
+        )
+    )
+
+    param = iap.Choice(["first", "second", "third"])
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample in ["first", "second", "third"]
+    assert np.all(
+        np.logical_or(
+            np.logical_or(
+                samples == "first",
+                samples == "second"
+            ),
+            samples == "third"
+        )
+    )
+
+    param = iap.Choice([1+i for i in sm.xrange(100)], replace=False)
+    samples = param.draw_samples((50,))
+    seen = [0 for _ in sm.xrange(100)]
+    for sample in samples:
+        seen[sample-1] += 1
+    assert all([count in [0, 1] for count in seen])
+
+    param = iap.Choice([0, 1], p=[0.25, 0.75])
+    samples = param.draw_samples((10000,))
+    unique, counts = np.unique(samples, return_counts=True)
+    assert len(unique) == 2
+    for val, count in zip(unique, counts):
+        if val == 0:
+            assert 2500 - 500 < count < 2500 + 500
+        elif val == 1:
+            assert 7500 - 500 < count < 7500 + 500
+        else:
+            assert False
+
+    param = iap.Choice([iap.Choice([0, 1]), 2])
+    samples = param.draw_samples((10000,))
+    unique, counts = np.unique(samples, return_counts=True)
+    assert len(unique) == 3
+    for val, count in zip(unique, counts):
+        if val in [0, 1]:
+            assert 2500 - 500 < count < 2500 + 500
+        elif val == 2:
+            assert 5000 - 500 < count < 5000 + 500
+        else:
+            assert False
+
+    param = iap.Choice([-1, 0, 1, 2, 3])
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.array_equal(samples1, samples2)
 
 
 def test_parameters_DiscreteUniform():
