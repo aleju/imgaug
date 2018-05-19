@@ -132,7 +132,7 @@ def main():
     #test_parameters_Laplace()
     #test_parameters_ChiSquare()
     #test_parameters_Weibull()
-    #test_parameters_Uniform()
+    test_parameters_Uniform()
     #test_parameters_Beta()
     test_parameters_Deterministic()
     #test_parameters_FromLowerResolution()
@@ -4940,6 +4940,56 @@ def test_copy_random_state():
     assert np.array_equal(images_aug_target1, images_aug_target2)
     assert np.array_equal(images_aug_source1, images_aug_target1)
     assert np.array_equal(images_aug_source2, images_aug_target2)
+
+
+def test_parameters_Uniform():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Uniform(0, 1.0)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert 0 - eps < sample < 1.0 + eps
+    assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
+
+    samples = param.draw_samples((10000,))
+    nb_bins = 10
+    hist, _ = np.histogram(samples, bins=nb_bins, range=(0.0, 1.0), density=False)
+    density_expected = 1.0/nb_bins
+    density_tolerance = 0.05
+    for nb_samples in hist:
+        density = nb_samples / len(samples)
+        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
+    param = iap.Uniform(-1.0, 1.0)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert -1.0 - eps < sample < 1.0 + eps
+    assert np.all(np.logical_or(-1.0 - eps < samples, samples < 1.0 + eps))
+
+    param = iap.Uniform(1.0, -1.0)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert -1.0 - eps < sample < 1.0 + eps
+    assert np.all(np.logical_or(-1.0 - eps < samples, samples < 1.0 + eps))
+
+    param = iap.Uniform(-1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert -1.0 - eps < sample < 1.0 + eps
+    assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
+
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.allclose(samples1, samples2)
 
 
 def test_parameters_Deterministic():
