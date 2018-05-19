@@ -124,7 +124,7 @@ def main():
     test_dtype_preservation()
     test_copy_random_state()
 
-    #test_parameters_Biomial()
+    test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
     #test_parameters_Poisson()
@@ -4940,6 +4940,65 @@ def test_copy_random_state():
     assert np.array_equal(images_aug_target1, images_aug_target2)
     assert np.array_equal(images_aug_source1, images_aug_target1)
     assert np.array_equal(images_aug_source2, images_aug_target2)
+
+
+def test_parameters_Biomial():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Binomial(0)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == 0
+    assert np.all(samples == 0)
+
+    param = iap.Binomial(1.0)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert sample == 1
+    assert np.all(samples == 1)
+
+    param = iap.Binomial(0.5)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10000))
+    assert sample.shape == tuple()
+    assert samples.shape == (10000,)
+    assert sample in [0, 1]
+    unique, counts = np.unique(samples, return_counts=True)
+    assert len(unique) == 2
+    for val, count in zip(unique, counts):
+        if val == 0:
+            assert 5000 - 500 < count < 5000 + 500
+        elif val == 1:
+            assert 5000 - 500 < count < 5000 + 500
+        else:
+            assert False
+
+    param = iap.Binomial(iap.Choice([0.25, 0.75]))
+    for _ in sm.xrange(10):
+        samples = param.draw_samples((1000,))
+        p = np.sum(samples) / samples.size
+        assert (0.25 - 0.05 < p < 0.25 + 0.05) or (0.75 - 0.05 < p < 0.75 + 0.05)
+
+    param = iap.Binomial((0.0, 1.0))
+    last_p = 0.5
+    diffs = []
+    for _ in sm.xrange(30):
+        samples = param.draw_samples((1000,))
+        p = np.sum(samples).astype(np.float32) / samples.size
+        diffs.append(abs(p - last_p))
+        last_p = p
+    nb_p_changed = sum([diff > 0.05 for diff in diffs])
+    assert nb_p_changed > 15
+
+    param = iap.Binomial(0.5)
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.array_equal(samples1, samples2)
 
 
 def test_parameters_Choice():
