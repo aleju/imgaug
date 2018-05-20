@@ -1921,17 +1921,19 @@ class IterativeNoiseAggregator(StochasticParameter):
             raise Exception("Expected aggregation_method to be string or list of strings or StochasticParameter, got %s." % (type(aggregation_method),))
 
     def _draw_samples(self, size, random_state):
-        ia.do_assert(len(size) == 2, "Expected requested other_param to have shape (H, W), got shape %s." % (size,))
-        h, w = size
+        #ia.do_assert(len(size) == 2, "Expected requested other_param to have shape (H, W), got shape %s." % (size,))
+        #h, w = size
 
         seed = random_state.randint(0, 10**6)
         aggregation_method = self.aggregation_method.draw_sample(random_state=ia.new_random_state(seed))
         iterations = self.iterations.draw_sample(random_state=ia.new_random_state(seed+1))
         ia.do_assert(iterations > 0)
 
-        result = np.zeros((h, w), dtype=np.float32)
+        #result = np.zeros((h, w), dtype=np.float32)
+        result = np.zeros(size, dtype=np.float32)
         for i in sm.xrange(iterations):
-            noise_iter = self.other_param.draw_samples((h, w), random_state=ia.new_random_state(seed+2+i))
+            #noise_iter = self.other_param.draw_samples((h, w), random_state=ia.new_random_state(seed+2+i))
+            noise_iter = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed+2+i))
             if aggregation_method == "avg":
                 result += noise_iter
             elif aggregation_method == "min":
