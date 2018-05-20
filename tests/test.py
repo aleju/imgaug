@@ -150,7 +150,7 @@ def main():
     test_parameters_Positive()
     test_parameters_Negative()
     #test_parameters_IterativeNoiseAggregator()
-    #test_parameters_Sigmoid()
+    test_parameters_Sigmoid()
     #test_parameters_SimplexNoise()
     #test_parameters_FrequencyNoise()
     test_parameters_operators()
@@ -6186,6 +6186,87 @@ def test_parameters_Negative():
     samples = param.draw_samples((100,))
     assert samples.shape == (100,)
     assert np.all(samples == -1)
+
+
+def test_parameters_Sigmoid():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=True)
+    expected = 1 / (1 + np.exp(-(5 * 1 + 0 - 0.5)))
+    sample = param.draw_sample()
+    samples = param.draw_samples((5, 10))
+    assert sample.shape == tuple()
+    assert samples.shape == (5, 10)
+    assert expected - eps < sample < expected + eps
+    assert np.all(np.logical_or(expected - eps < samples, samples < expected + eps))
+
+    param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=False)
+    expected = 5
+    sample = param.draw_sample()
+    samples = param.draw_samples((5, 10))
+    assert sample.shape == tuple()
+    assert samples.shape == (5, 10)
+    assert expected - eps < sample < expected + eps
+    assert np.all(np.logical_or(expected - eps < samples, samples < expected + eps))
+
+    param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=0.5)
+    expected_first = 5
+    expected_second = 1 / (1 + np.exp(-(5 * 1 + 0 - 0.5)))
+    seen = [0, 0]
+    for _ in sm.xrange(1000):
+        sample = param.draw_sample()
+        diff_first = abs(sample - expected_first)
+        diff_second = abs(sample - expected_second)
+        if diff_first < eps:
+            seen[0] += 1
+        elif diff_second < eps:
+            seen[1] += 1
+        else:
+            assert False
+    assert 500 - 150 < seen[0] < 500 + 150
+    assert 500 - 150 < seen[1] < 500 + 150
+
+    param = iap.Sigmoid(iap.Choice([1, 10]), add=0, mul=1, threshold=0.5, activated=True)
+    expected_first = 1 / (1 + np.exp(-(1 * 1 + 0 - 0.5)))
+    expected_second = 1 / (1 + np.exp(-(10 * 1 + 0 - 0.5)))
+    seen = [0, 0]
+    for _ in sm.xrange(1000):
+        sample = param.draw_sample()
+        diff_first = abs(sample - expected_first)
+        diff_second = abs(sample - expected_second)
+        if diff_first < eps:
+            seen[0] += 1
+        elif diff_second < eps:
+            seen[1] += 1
+        else:
+            assert False
+    assert 500 - 150 < seen[0] < 500 + 150
+    assert 500 - 150 < seen[1] < 500 + 150
+
+    muls = [0.1, 1, 10.3]
+    adds = [-5.7, -1, -0.0734, 0, 0.0734, 1, 5.7]
+    vals = [-1, -0.7, 0, 0.7, 1]
+    threshs = [-5.7, -1, -0.0734, 0, 0.0734, 1, 5.7]
+    for mul in muls:
+        for add in adds:
+            for val in vals:
+                for thresh in threshs:
+                    param = iap.Sigmoid(iap.Deterministic(val), add=add, mul=mul, threshold=thresh)
+                    sample = param.draw_sample()
+                    samples = param.draw_samples((2, 3))
+                    assert sample.shape == tuple()
+                    assert samples.shape == (2, 3)
+                    expected = 1 / (1 + np.exp(-(val * mul + add - thresh)))
+                    assert expected - eps < sample < expected + eps
+                    assert np.all(np.logical_or(expected - eps < samples, samples < expected + eps))
+
+    param = iap.Sigmoid(iap.Choice([1, 10]), add=0, mul=1, threshold=0.5, activated=True)
+    samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    assert samples1.shape == (100, 10)
+    assert samples2.shape == (100, 10)
+    assert np.array_equal(samples1, samples2)
 
 
 def test_parameters_operators():
