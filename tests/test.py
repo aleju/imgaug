@@ -134,7 +134,7 @@ def main():
     test_parameters_ChiSquare()
     test_parameters_Weibull()
     test_parameters_Uniform()
-    #test_parameters_Beta()
+    test_parameters_Beta()
     test_parameters_Deterministic()
     #test_parameters_FromLowerResolution()
     test_parameters_Clip()
@@ -5423,6 +5423,68 @@ def test_parameters_Uniform():
     assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
 
     param = iap.Uniform(-1.0, 1.0)
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.allclose(samples1, samples2)
+
+
+def test_parameters_Beta():
+    def _mean(alpha, beta):
+        return alpha / (alpha + beta)
+
+    def _var(alpha, beta):
+        return (alpha * beta) / ((alpha + beta)**2 * (alpha + beta + 1))
+
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.Beta(0.5, 0.5)
+    sample = param.draw_sample()
+    samples = param.draw_samples((100, 1000))
+    samples_direct = np.random.RandomState(1234).beta(a=0.5, b=0.5, size=(100, 1000))
+    assert sample.shape == tuple()
+    assert samples.shape == (100, 1000)
+    assert 0 - eps < sample < 1.0 + eps
+    assert np.all(np.logical_or(0 - eps <= samples, samples <= 1.0 + eps))
+
+    nb_bins = 10
+    hist, _ = np.histogram(samples, bins=nb_bins, range=(0, 1.0), density=False)
+    hist_direct, _ = np.histogram(samples_direct, bins=nb_bins, range=(0, 1.0), density=False)
+    tolerance = 0.05
+    for nb_samples, nb_samples_direct in zip(hist, hist_direct):
+        density = nb_samples / samples.size
+        density_direct = nb_samples_direct / samples_direct.size
+        assert density_direct - tolerance < density < density_direct + tolerance
+
+    param = iap.Beta(iap.Choice([0.5, 2]), 0.5)
+    expected_first = _mean(0.5, 0.5)
+    expected_second = _mean(2, 0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(100):
+        samples = param.draw_samples((10000,))
+        observed = np.mean(samples)
+
+        if expected_first - 0.05 < observed < expected_first + 0.05:
+            seen[0] += 1
+        elif expected_second - 0.05 < observed < expected_second + 0.05:
+            seen[1] += 1
+        else:
+            assert False
+
+    assert 50 - 25 < seen[0] < 50 + 25
+    assert 50 - 25 < seen[1] < 50 + 25
+
+    param1 = iap.Beta(2, 2)
+    param2 = iap.Beta(0.5, 0.5)
+    samples1 = param1.draw_samples((10000,))
+    samples2 = param2.draw_samples((10000,))
+    assert np.var(samples1) < np.var(samples2)
+    expected_first = _var(2, 2)
+    expected_second = _var(0.5, 0.5)
+    assert expected_first - 0.1 * expected_first < np.var(samples1) < expected_first + 0.1 * expected_first
+    assert expected_second - 0.1 * expected_second < np.var(samples2) < expected_second + 0.1 * expected_second
+
+    param = iap.Beta(0.5, 0.5)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.allclose(samples1, samples2)
