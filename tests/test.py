@@ -18,6 +18,7 @@ import random
 import six
 import six.moves as sm
 from scipy import misc
+import skimage
 from skimage import data, color
 import cv2
 import time
@@ -29,7 +30,6 @@ import scipy
 def main():
     time_start = time.time()
 
-    """
     test_is_single_integer()
     test_is_single_float()
 
@@ -125,7 +125,6 @@ def main():
     test_unusual_channel_numbers()
     test_dtype_preservation()
     test_copy_random_state()
-    """
 
     test_parameters_Biomial()
     test_parameters_Choice()
@@ -138,7 +137,7 @@ def main():
     test_parameters_Uniform()
     test_parameters_Beta()
     test_parameters_Deterministic()
-    #test_parameters_FromLowerResolution()
+    test_parameters_FromLowerResolution()
     test_parameters_Clip()
     test_parameters_Discretize()
     test_parameters_Multiply()
@@ -5582,6 +5581,79 @@ def test_parameters_Deterministic():
             param.draw_samples(20, random_state=rs1),
             param.draw_samples(20, random_state=rs2)
         )
+
+
+def test_parameters_FromLowerResolution():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=8)
+    samples = param.draw_samples((8, 8, 1))
+    assert samples.shape == (8, 8, 1)
+    uq = np.unique(samples)
+    assert len(uq) == 2 and (0 in uq or 1 in uq)
+
+    param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=8)
+    samples = param.draw_samples((8, 8, 3))
+    assert samples.shape == (8, 8, 3)
+    uq = np.unique(samples)
+    assert len(uq) == 2 and (0 in uq or 1 in uq)
+
+    param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
+    param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=16)
+    seen_components = [0, 0]
+    seen_pixels = [0, 0]
+    for _ in sm.xrange(100):
+        samples1 = param1.draw_samples((16, 16, 1))
+        samples2 = param2.draw_samples((16, 16, 1))
+        _, num1 = skimage.morphology.label(samples1, neighbors=4, background=0, return_num=True)
+        _, num2 = skimage.morphology.label(samples2, neighbors=4, background=0, return_num=True)
+        seen_components[0] += num1
+        seen_components[1] += num2
+        seen_pixels[0] += np.sum(samples1 == 1)
+        seen_pixels[1] += np.sum(samples2 == 1)
+
+    assert seen_components[0] < seen_components[1]
+    assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
+
+    param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
+    param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=1, min_size=16)
+    seen_components = [0, 0]
+    seen_pixels = [0, 0]
+    for _ in sm.xrange(100):
+        samples1 = param1.draw_samples((16, 16, 1))
+        samples2 = param2.draw_samples((16, 16, 1))
+        _, num1 = skimage.morphology.label(samples1, neighbors=4, background=0, return_num=True)
+        _, num2 = skimage.morphology.label(samples2, neighbors=4, background=0, return_num=True)
+        seen_components[0] += num1
+        seen_components[1] += num2
+        seen_pixels[0] += np.sum(samples1 == 1)
+        seen_pixels[1] += np.sum(samples2 == 1)
+
+    assert seen_components[0] < seen_components[1]
+    assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
+
+    param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=0.01)
+    param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=0.8)
+    seen_components = [0, 0]
+    seen_pixels = [0, 0]
+    for _ in sm.xrange(100):
+        samples1 = param1.draw_samples((16, 16, 1))
+        samples2 = param2.draw_samples((16, 16, 1))
+        _, num1 = skimage.morphology.label(samples1, neighbors=4, background=0, return_num=True)
+        _, num2 = skimage.morphology.label(samples2, neighbors=4, background=0, return_num=True)
+        seen_components[0] += num1
+        seen_components[1] += num2
+        seen_pixels[0] += np.sum(samples1 == 1)
+        seen_pixels[1] += np.sum(samples2 == 1)
+
+    assert seen_components[0] < seen_components[1]
+    assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
+
+    param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
+    samples1 = param.draw_samples((10, 5, 1), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5, 1), random_state=np.random.RandomState(1234))
+    assert np.allclose(samples1, samples2)
 
 
 def test_parameters_Clip():
