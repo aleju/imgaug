@@ -29,6 +29,7 @@ import scipy
 def main():
     time_start = time.time()
 
+    """
     test_is_single_integer()
     test_is_single_float()
 
@@ -124,6 +125,7 @@ def main():
     test_unusual_channel_numbers()
     test_dtype_preservation()
     test_copy_random_state()
+    """
 
     test_parameters_Biomial()
     test_parameters_Choice()
@@ -149,7 +151,7 @@ def main():
     test_parameters_ForceSign()
     test_parameters_Positive()
     test_parameters_Negative()
-    #test_parameters_IterativeNoiseAggregator()
+    test_parameters_IterativeNoiseAggregator()
     test_parameters_Sigmoid()
     #test_parameters_SimplexNoise()
     #test_parameters_FrequencyNoise()
@@ -6186,6 +6188,76 @@ def test_parameters_Negative():
     samples = param.draw_samples((100,))
     assert samples.shape == (100,)
     assert np.all(samples == -1)
+
+
+def test_parameters_IterativeNoiseAggregator():
+    reseed()
+    eps = np.finfo(np.float32).eps
+
+    param = iap.IterativeNoiseAggregator(iap.Deterministic(1), iterations=1, aggregation_method="max")
+    sample = param.draw_sample()
+    samples = param.draw_samples((2, 4))
+    assert sample.shape == tuple()
+    assert samples.shape == (2, 4)
+    assert sample == 1
+    assert np.all(samples == 1)
+
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method="avg")
+    sample = param.draw_sample()
+    samples = param.draw_samples((2, 4))
+    assert sample.shape == tuple()
+    assert samples.shape == (2, 4)
+    assert 25 - 5 < sample < 25 + 5
+    assert np.all(np.logical_or(25 - 5 < samples, samples < 25 + 5))
+
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method="max")
+    sample = param.draw_sample()
+    samples = param.draw_samples((2, 4))
+    assert sample.shape == tuple()
+    assert samples.shape == (2, 4)
+    assert sample == 50
+    assert np.all(samples == 50)
+
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method="min")
+    sample = param.draw_sample()
+    samples = param.draw_samples((2, 4))
+    assert sample.shape == tuple()
+    assert samples.shape == (2, 4)
+    assert sample == 0
+    assert np.all(samples == 0)
+
+    seen = [0, 0, 0]
+    for _ in sm.xrange(100):
+        param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method=["avg", "max"])
+        samples = param.draw_samples((1, 1))
+        diff_0 = abs(0 - samples[0, 0])
+        diff_25 = abs(25 - samples[0, 0])
+        diff_50 = abs(50 - samples[0, 0])
+        if diff_25 < 10.0:
+            seen[0] += 1
+        elif diff_50 < eps:
+            seen[1] += 1
+        elif diff_0 < eps:
+            seen[2] += 1
+        else:
+            assert False
+    assert seen[2] < 5
+    assert 50 - 20 < seen[0] < 50 + 20
+    assert 50 - 20 < seen[1] < 50 + 20
+
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=2, aggregation_method="max")
+    samples = param.draw_samples((2, 1000))
+    nb_0 = np.sum(samples == 0)
+    nb_50 = np.sum(samples == 50)
+    assert nb_0 + nb_50 == 2 * 1000
+    assert 0.25 - 0.05 < nb_0 / (2 * 1000) < 0.25 + 0.05
+
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=5, aggregation_method="avg")
+    samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
+    assert samples1.shape == (100, 10)
+    assert samples2.shape == (100, 10)
+    assert np.allclose(samples1, samples2)
 
 
 def test_parameters_Sigmoid():
