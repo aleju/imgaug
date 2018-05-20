@@ -21,6 +21,7 @@ from scipy import misc
 from skimage import data, color
 import cv2
 import time
+import scipy
 
 #from nose.plugins.attrib import attr
 
@@ -131,7 +132,7 @@ def main():
     test_parameters_Normal()
     test_parameters_Laplace()
     test_parameters_ChiSquare()
-    #test_parameters_Weibull()
+    test_parameters_Weibull()
     test_parameters_Uniform()
     #test_parameters_Beta()
     test_parameters_Deterministic()
@@ -5281,8 +5282,8 @@ def test_parameters_ChiSquare():
     samples = np.clip(samples, 0, 3)
     samples_direct = np.clip(samples_direct, 0, 3)
     nb_bins = 10
-    hist, _ = np.histogram(samples, bins=nb_bins, range=(-1.0, 1.0), density=False)
-    hist_direct, _ = np.histogram(samples_direct, bins=nb_bins, range=(-1.0, 1.0), density=False)
+    hist, _ = np.histogram(samples, bins=nb_bins, range=(0, 3.0), density=False)
+    hist_direct, _ = np.histogram(samples_direct, bins=nb_bins, range=(0, 3.0), density=False)
     tolerance = 0.05
     for nb_samples, nb_samples_direct in zip(hist, hist_direct):
         density = nb_samples / samples.size
@@ -5314,6 +5315,63 @@ def test_parameters_ChiSquare():
     assert 2*10 - 5.0 < np.var(samples2) < 2*10 + 5.0
 
     param = iap.ChiSquare(1)
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.allclose(samples1, samples2)
+
+
+def test_parameters_Weibull():
+    reseed()
+
+    param = iap.Weibull(1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((100, 1000))
+    samples_direct = np.random.RandomState(1234).weibull(a=1, size=(100, 1000))
+    assert sample.shape == tuple()
+    assert samples.shape == (100, 1000)
+    assert 0 <= sample
+    assert np.all(0 <= samples)
+
+    samples = np.clip(samples, 0, 2)
+    samples_direct = np.clip(samples_direct, 0, 2)
+    nb_bins = 10
+    hist, _ = np.histogram(samples, bins=nb_bins, range=(0, 2.0), density=False)
+    hist_direct, _ = np.histogram(samples_direct, bins=nb_bins, range=(0, 2.0), density=False)
+    tolerance = 0.05
+    for nb_samples, nb_samples_direct in zip(hist, hist_direct):
+        density = nb_samples / samples.size
+        density_direct = nb_samples_direct / samples_direct.size
+        assert density_direct - tolerance < density < density_direct + tolerance
+
+    param = iap.Weibull(iap.Choice([1, 0.5]))
+    expected_first = scipy.special.gamma(1 + 1/1)
+    expected_second = scipy.special.gamma(1 + 1/0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(100):
+        samples = param.draw_samples((50000,))
+        observed = np.mean(samples)
+
+        if expected_first - 0.2 * expected_first < observed < expected_first + 0.2 * expected_first:
+            seen[0] += 1
+        elif expected_second - 0.2 * expected_second < observed < expected_second + 0.2 * expected_second:
+            seen[1] += 1
+        else:
+            assert False
+
+    assert 50 - 25 < seen[0] < 50 + 25
+    assert 50 - 25 < seen[1] < 50 + 25
+
+    param1 = iap.Weibull(1)
+    param2 = iap.Weibull(0.5)
+    samples1 = param1.draw_samples((10000,))
+    samples2 = param2.draw_samples((10000,))
+    assert np.var(samples1) < np.var(samples2)
+    expected_first = scipy.special.gamma(1 + 2/1) - (scipy.special.gamma(1 + 1/1))**2
+    expected_second = scipy.special.gamma(1 + 2/0.5) - (scipy.special.gamma(1 + 1/0.5))**2
+    assert expected_first - 0.2 * expected_first < np.var(samples1) < expected_first + 0.2 * expected_first
+    assert expected_second - 0.2 * expected_second < np.var(samples2) < expected_second + 0.2 * expected_second
+
+    param = iap.Weibull(1)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.allclose(samples1, samples2)
