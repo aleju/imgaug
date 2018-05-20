@@ -130,7 +130,7 @@ def main():
     test_parameters_Poisson()
     test_parameters_Normal()
     test_parameters_Laplace()
-    #test_parameters_ChiSquare()
+    test_parameters_ChiSquare()
     #test_parameters_Weibull()
     test_parameters_Uniform()
     #test_parameters_Beta()
@@ -5176,7 +5176,6 @@ def test_parameters_Normal():
     samples_direct = np.random.RandomState(1234).normal(loc=0, scale=1, size=(100, 1000))
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
-    assert 0 < sample
 
     samples = np.clip(samples, -1, 1)
     samples_direct = np.clip(samples_direct, -1, 1)
@@ -5224,10 +5223,9 @@ def test_parameters_Laplace():
     param = iap.Laplace(0, 1)
     sample = param.draw_sample()
     samples = param.draw_samples((100, 1000))
-    samples_direct = np.random.RandomState(1234).normal(loc=0, scale=1, size=(100, 1000))
+    samples_direct = np.random.RandomState(1234).laplace(loc=0, scale=1, size=(100, 1000))
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
-    assert 0 < sample
 
     samples = np.clip(samples, -1, 1)
     samples_direct = np.clip(samples_direct, -1, 1)
@@ -5263,6 +5261,59 @@ def test_parameters_Laplace():
     assert np.var(samples1) < np.var(samples2)
 
     param = iap.Laplace(0, 1)
+    samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
+    assert np.allclose(samples1, samples2)
+
+
+def test_parameters_ChiSquare():
+    reseed()
+
+    param = iap.ChiSquare(1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((100, 1000))
+    samples_direct = np.random.RandomState(1234).chisquare(df=1, size=(100, 1000))
+    assert sample.shape == tuple()
+    assert samples.shape == (100, 1000)
+    assert 0 <= sample
+    assert np.all(0 <= samples)
+
+    samples = np.clip(samples, 0, 3)
+    samples_direct = np.clip(samples_direct, 0, 3)
+    nb_bins = 10
+    hist, _ = np.histogram(samples, bins=nb_bins, range=(-1.0, 1.0), density=False)
+    hist_direct, _ = np.histogram(samples_direct, bins=nb_bins, range=(-1.0, 1.0), density=False)
+    tolerance = 0.05
+    for nb_samples, nb_samples_direct in zip(hist, hist_direct):
+        density = nb_samples / samples.size
+        density_direct = nb_samples_direct / samples_direct.size
+        assert density_direct - tolerance < density < density_direct + tolerance
+
+    param = iap.ChiSquare(iap.Choice([1, 10]))
+    seen = [0, 0]
+    for _ in sm.xrange(1000):
+        samples = param.draw_samples((100,))
+        exp = np.mean(samples)
+
+        if 1 - 1.0 < exp < 1 + 1.0:
+            seen[0] += 1
+        elif 10 - 4.0 < exp < 10 + 4.0:
+            seen[1] += 1
+        else:
+            assert False
+
+    assert 500 - 100 < seen[0] < 500 + 100
+    assert 500 - 100 < seen[1] < 500 + 100
+
+    param1 = iap.ChiSquare(1)
+    param2 = iap.ChiSquare(10)
+    samples1 = param1.draw_samples((1000,))
+    samples2 = param2.draw_samples((1000,))
+    assert np.var(samples1) < np.var(samples2)
+    assert 2*1 - 1.0 < np.var(samples1) < 2*1 + 1.0
+    assert 2*10 - 5.0 < np.var(samples2) < 2*10 + 5.0
+
+    param = iap.ChiSquare(1)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.allclose(samples1, samples2)
