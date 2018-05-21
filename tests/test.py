@@ -30,9 +30,102 @@ import scipy
 def main():
     time_start = time.time()
 
+    # ----------------------
+    # imgaug
+    # ----------------------
+    is_np_array()
     test_is_single_integer()
     test_is_single_float()
+    test_is_single_number()
+    test_is_iterable()
+    test_is_string()
+    test_is_integer_array()
+    test_is_callable()
+    test_seed()
+    test_current_random_state()
+    test_new_random_state()
+    test_dummy_random_state()
+    test_copy_random_state()
+    test_derive_random_state()
+    test_derive_random_states()
+    test_forward_random_state()
+    # test_quokka()
+    # test_quokka_square()
+    # test_angle_between_vectors()
+    # test_draw_text()
+    # test_imresize_many_images()
+    # test_imresize_single_image()
+    # test_draw_grid()
+    # test_show_grid()
+    # test_do_assert()
+    # test_HooksImages_is_activated()
+    # test_HooksImages_is_propagating()
+    # test_HooksImages_preprocess()
+    # test_HooksImages_postprocess()
+    # test_Keypoint_x_int()
+    # test_Keypoint_y_int()
+    # test_Keypoint_project()
+    # test_Keypoint_shift()
+    # test_Keypoint_repr()
+    # test_Keypoint_str()
+    # test_KeypointsOnImage_height()
+    # test_KeypointsOnImage_width()
+    # test_KeypointsOnImage_on()
+    # test_KeypointsOnImage_draw_on_image()
+    # test_KeypointsOnImage_shift()
+    # test_KeypointsOnImage_get_coords_array()
+    # test_KeypointsOnImage_from_coords_array()
+    # test_KeypointsOnImage_to_keypoint_image()
+    # test_KeypointsOnImage_from_keypoint_image()
+    # test_KeypointsOnImage_copy()
+    # test_KeypointsOnImage_deepcopy()
+    # test_BoundingBox_x1_int()
+    # test_BoundingBox_y1_int()
+    # test_BoundingBox_x2_int()
+    # test_BoundingBox_y2_int()
+    # test_BoundingBox_height()
+    # test_BoundingBox_width()
+    # test_BoundingBox_center_x()
+    # test_BoundingBox_center_y()
+    # test_BoundingBox_area()
+    # test_BoundingBox_project()
+    # test_BoundingBox_extend()
+    # test_BoundingBox_intersection()
+    # test_BoundingBox_union()
+    # test_BoundingBox_iou()
+    # test_BoundingBox_is_fully_within_image()
+    # test_BoundingBox_is_out_of_image()
+    # test_BoundingBox_cut_out_of_image()
+    # test_BoundingBox_shift()
+    # test_BoundingBox_draw_on_image()
+    # test_BoundingBox_extract_from_image()
+    # test_BoundingBox_to_keypoints()
+    # test_BoundingBox_copy()
+    # test_BoundingBox_deepcopy()
+    # test_BoundingBox_repr()
+    # test_BoundingBox_str()
+    # test_BoundingBoxesOnImage_height()
+    # test_BoundingBoxesOnImage_width()
+    # test_BoundingBoxesOnImage_on()
+    # test_BoundingBoxesOnImage_draw_on_image()
+    # test_BoundingBoxesOnImage_remove_out_of_image()
+    # test_BoundingBoxesOnImage_cut_out_of_image()
+    # test_BoundingBoxesOnImage_shift()
+    # test_BoundingBoxesOnImage_copy()
+    # test_BoundingBoxesOnImage_deepcopy()
+    # test_BoundingBoxesOnImage_repr()
+    # test_BoundingBoxesOnImage_str()
+    # test_Batch()
+    # test_BatchLoader.all_finished()
+    # test_BatchLoader._load_batches()
+    # test_BatchLoader.terminate()
+    # test_BackgroundAugmenter.get_batch()
+    # test_BackgroundAugmenter._augment_images_worker()
+    # test_BackgroundAugmenter.terminate()
 
+    # ----------------------
+    # augmenters
+    # ----------------------
     test_find()
     test_remove()
     test_hooks()
@@ -126,6 +219,9 @@ def main():
     test_dtype_preservation()
     test_copy_random_state()
 
+    # ----------------------
+    # parameters
+    # ----------------------
     test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
@@ -160,6 +256,25 @@ def main():
     print("Finished without errors in %.4fs." % (time_end - time_start,))
 
 
+def is_np_array():
+    class _Dummy(object):
+        pass
+    values_true = [
+        np.zeros((1, 2), dtype=np.uint8),
+        np.zeros((64, 64, 3), dtype=np.uint8),
+        np.zeros((1, 2), dtype=np.float32),
+        np.zeros((100,), dtype=np.float64)
+    ]
+    values_false = [
+        "A", "BC", "1", True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(),
+        -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4
+    ]
+    for value in values_true:
+        assert ia.is_np_array(value) == True
+    for value in values_false:
+        assert ia.is_np_array(value) == False
+
+
 def test_is_single_integer():
     assert ia.is_single_integer("A") == False
     assert ia.is_single_integer(None) == False
@@ -182,6 +297,169 @@ def test_is_single_float():
     assert ia.is_single_float(1234) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
+
+
+def test_is_single_number():
+    class _Dummy(object):
+        pass
+    values_true = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4]
+    values_false = ["A", "BC", "1", True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
+    for value in values_true:
+        assert ia.is_single_number(value) == True
+    for value in values_false:
+        assert ia.is_single_number(value) == False
+
+
+def test_is_iterable():
+    class _Dummy(object):
+        pass
+    values_true = [
+        [0, 1, 2],
+        ["A", "X"],
+        [[123], [456, 789]],
+        [],
+        (1, 2, 3),
+        (1,),
+        tuple(),
+        "A",
+        "ABC",
+        "",
+        np.zeros((100,), dtype=np.uint8)
+    ]
+    values_false = [1, 100, 0, -100, -1, 1.2, -1.2, True, False, _Dummy()]
+    for value in values_true:
+        assert ia.is_iterable(value) == True, value
+    for value in values_false:
+        assert ia.is_iterable(value) == False
+
+
+def test_is_string():
+    class _Dummy(object):
+        pass
+    values_true = ["A", "BC", "1", ""]
+    values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
+    for value in values_true:
+        assert ia.is_string(value) == True
+    for value in values_false:
+        assert ia.is_string(value) == False
+
+
+def test_is_integer_array():
+    class _Dummy(object):
+        pass
+    values_true = [
+        np.zeros((1, 2), dtype=np.uint8),
+        np.zeros((100,), dtype=np.uint8),
+        np.zeros((1, 2), dtype=np.uint16),
+        np.zeros((1, 2), dtype=np.int32),
+        np.zeros((1, 2), dtype=np.int64)
+    ]
+    values_false = [
+        "A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False,
+        (1.0, 2.0), [1.0, 2.0], _Dummy(),
+        np.zeros((1, 2), dtype=np.float16),
+        np.zeros((100,), dtype=np.float32),
+        np.zeros((1, 2), dtype=np.float64),
+        np.zeros((1, 2), dtype=np.bool)
+    ]
+    for value in values_true:
+        assert ia.is_integer_array(value) == True
+    for value in values_false:
+        assert ia.is_integer_array(value) == False
+
+
+def test_is_callable():
+    def _dummy_func():
+        pass
+    _dummy_func2 = lambda x: x
+    class _Dummy1(object):
+        pass
+    class _Dummy2(object):
+        def __call__(self):
+            pass
+    values_true = [_dummy_func, _dummy_func2, _Dummy2()]
+    values_false = ["A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy1(), np.zeros((1, 2), dtype=np.uint8)]
+    for value in values_true:
+        assert ia.is_callable(value) == True
+    for value in values_false:
+        assert ia.is_callable(value) == False
+
+
+def test_seed():
+    ia.seed(10017)
+    rs = np.random.RandomState(10017)
+    assert ia.CURRENT_RANDOM_STATE.randint(0, 1000*1000) == rs.randint(0, 1000*1000)
+    reseed()
+
+
+def test_current_random_state():
+    assert ia.current_random_state() == ia.CURRENT_RANDOM_STATE
+
+
+def test_new_random_state():
+    seed = 1000
+    ia.seed(seed)
+
+    rs_observed = ia.new_random_state(seed=None, fully_random=False)
+    rs_expected = np.random.RandomState(np.random.RandomState(seed).randint(0, 10**6, 1)[0])
+    assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+    rs_observed1 = ia.new_random_state(seed=None, fully_random=False)
+    rs_observed2 = ia.new_random_state(seed=None, fully_random=False)
+    assert rs_observed1.randint(0, 10**6) != rs_observed2.randint(0, 10**6)
+
+    ia.seed(seed)
+    np.random.seed(seed)
+    rs_observed = ia.new_random_state(seed=None, fully_random=True)
+    rs_not_expected = np.random.RandomState(np.random.RandomState(seed).randint(0, 10**6, 1)[0])
+    assert rs_observed.randint(0, 10**6) != rs_not_expected.randint(0, 10**6)
+
+    rs_observed1 = ia.new_random_state(seed=None, fully_random=True)
+    rs_observed2 = ia.new_random_state(seed=None, fully_random=True)
+    assert rs_observed1.randint(0, 10**6) != rs_observed2.randint(0, 10**6)
+
+    rs_observed1 = ia.new_random_state(seed=1234)
+    rs_observed2 = ia.new_random_state(seed=1234)
+    rs_expected = np.random.RandomState(1234)
+    assert rs_observed1.randint(0, 10**6) == rs_observed2.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+
+
+def test_dummy_random_state():
+    assert ia.dummy_random_state().randint(0, 10**6) == np.random.RandomState(1).randint(0, 10**6)
+
+
+def test_copy_random_state():
+    rs = np.random.RandomState(1017)
+    rs_copy = ia.copy_random_state(rs)
+    assert rs != rs_copy
+    assert rs.randint(0, 10**6) == rs_copy.randint(0, 10**6)
+
+    assert ia.copy_random_state(np.random) == np.random
+    assert ia.copy_random_state(np.random, force_copy=True) != np.random
+
+
+def test_derive_random_state():
+    rs = np.random.RandomState(1017)
+    rs_observed = ia.derive_random_state(np.random.RandomState(1017))
+    rs_expected = np.random.RandomState(np.random.RandomState(1017).randint(0, 10**6))
+    assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+
+
+def test_derive_random_states():
+    rs = np.random.RandomState(1017)
+    rs_observed1, rs_observed2 = ia.derive_random_states(np.random.RandomState(1017), n=2)
+    seed = np.random.RandomState(1017).randint(0, 10**6)
+    rs_expected1 = np.random.RandomState(seed+0)
+    rs_expected2 = np.random.RandomState(seed+1)
+    assert rs_observed1.randint(0, 10**6) == rs_expected1.randint(0, 10**6)
+    assert rs_observed2.randint(0, 10**6) == rs_expected2.randint(0, 10**6)
+
+
+def test_forward_random_state():
+    rs1 = np.random.RandomState(1017)
+    rs2 = np.random.RandomState(1017)
+    ia.forward_random_state(rs1)
+    rs2.uniform()
+    assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
 
 
 def test_find():
