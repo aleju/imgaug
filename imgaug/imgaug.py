@@ -78,7 +78,7 @@ def is_single_integer(val):
         True if the variable is an integer. Otherwise False.
 
     """
-    return isinstance(val, numbers.Integral)
+    return isinstance(val, numbers.Integral) and not isinstance(val, bool)
 
 def is_single_float(val):
     """
@@ -96,7 +96,7 @@ def is_single_float(val):
         True if the variable is a float. Otherwise False.
 
     """
-    return isinstance(val, numbers.Real) and not is_single_integer(val)
+    return isinstance(val, numbers.Real) and not is_single_integer(val) and not isinstance(val, bool)
 
 def is_single_number(val):
     """
