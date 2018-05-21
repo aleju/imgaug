@@ -1461,9 +1461,6 @@ class BoundingBox(object):
             rr, cc = draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
                 result[rr, cc, :] = color
-                #result[rr, cc, 0] = color[0]
-                #result[rr, cc, 1] = color[1]
-                #result[rr, cc, 2] = color[2]
             else:
                 if result.dtype in [np.float32, np.float64]:
                     result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
