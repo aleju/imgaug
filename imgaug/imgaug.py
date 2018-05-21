@@ -1451,26 +1451,27 @@ class BoundingBox(object):
             raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
 
         result = np.copy(image) if copy else image
+
+        if isinstance(color, (tuple, list)):
+            color = np.uint8(color)
+
         for i in range(thickness):
             y = [self.y1_int-i, self.y1_int-i, self.y2_int+i, self.y2_int+i]
             x = [self.x1_int-i, self.x2_int+i, self.x2_int+i, self.x1_int-i]
             rr, cc = draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
-                result[rr, cc, 0] = color[0]
-                result[rr, cc, 1] = color[1]
-                result[rr, cc, 2] = color[2]
+                result[rr, cc, :] = color
+                #result[rr, cc, 0] = color[0]
+                #result[rr, cc, 1] = color[1]
+                #result[rr, cc, 2] = color[2]
             else:
                 if result.dtype in [np.float32, np.float64]:
-                    result[rr, cc, 0] = (1 - alpha) * result[rr, cc, 0] + alpha * color[0]
-                    result[rr, cc, 1] = (1 - alpha) * result[rr, cc, 1] + alpha * color[1]
-                    result[rr, cc, 2] = (1 - alpha) * result[rr, cc, 2] + alpha * color[2]
+                    result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
                     result = np.clip(result, 0, 255)
                 else:
                     input_dtype = result.dtype
                     result = result.astype(np.float32)
-                    result[rr, cc, 0] = (1 - alpha) * result[rr, cc, 0] + alpha * color[0]
-                    result[rr, cc, 1] = (1 - alpha) * result[rr, cc, 1] + alpha * color[1]
-                    result[rr, cc, 2] = (1 - alpha) * result[rr, cc, 2] + alpha * color[2]
+                    result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
                     result = np.clip(result, 0, 255).astype(input_dtype)
 
         return result
