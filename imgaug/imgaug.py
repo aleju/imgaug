@@ -13,6 +13,7 @@ import six
 import six.moves as sm
 import os
 from skimage import draw
+import collections
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -132,8 +133,7 @@ def is_iterable(val):
         True if the variable is an iterable. Otherwise False.
 
     """
-    # TODO make this more abstract, not just restricted to tuple/list
-    return isinstance(val, (tuple, list))
+    return isinstance(val, collections.Iterable)
 
 # TODO convert to is_single_string() or rename is_single_integer/float/number()
 def is_string(val):
