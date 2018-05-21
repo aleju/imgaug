@@ -79,31 +79,7 @@ def main():
     # test_KeypointsOnImage_from_keypoint_image()
     # test_KeypointsOnImage_copy()
     # test_KeypointsOnImage_deepcopy()
-    # test_BoundingBox_x1_int()
-    # test_BoundingBox_y1_int()
-    # test_BoundingBox_x2_int()
-    # test_BoundingBox_y2_int()
-    # test_BoundingBox_height()
-    # test_BoundingBox_width()
-    # test_BoundingBox_center_x()
-    # test_BoundingBox_center_y()
-    # test_BoundingBox_area()
-    # test_BoundingBox_project()
-    # test_BoundingBox_extend()
-    # test_BoundingBox_intersection()
-    # test_BoundingBox_union()
-    # test_BoundingBox_iou()
-    # test_BoundingBox_is_fully_within_image()
-    # test_BoundingBox_is_out_of_image()
-    # test_BoundingBox_cut_out_of_image()
-    # test_BoundingBox_shift()
-    # test_BoundingBox_draw_on_image()
-    # test_BoundingBox_extract_from_image()
-    # test_BoundingBox_to_keypoints()
-    # test_BoundingBox_copy()
-    # test_BoundingBox_deepcopy()
-    # test_BoundingBox_repr()
-    # test_BoundingBox_str()
+    test_BoundingBox()
     # test_BoundingBoxesOnImage_height()
     # test_BoundingBoxesOnImage_width()
     # test_BoundingBoxesOnImage_on()
@@ -460,6 +436,390 @@ def test_forward_random_state():
     ia.forward_random_state(rs1)
     rs2.uniform()
     assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
+
+
+def test_BoundingBox():
+    eps = 1e-8
+
+    # properties with ints
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.y1_int == 10
+    assert bb.x1_int == 20
+    assert bb.y2_int == 30
+    assert bb.x2_int == 40
+    assert bb.width == 40 - 20
+    assert bb.height == 30 - 10
+    center_x = bb.x1 + (bb.x2 - bb.x1)/2
+    center_y = bb.y1 + (bb.y2 - bb.y1)/2
+    assert center_x - eps < bb.center_x < center_x + eps
+    assert center_y - eps < bb.center_y < center_y + eps
+
+    # properties with floats
+    bb = ia.BoundingBox(y1=10.1, x1=20.1, y2=30.9, x2=40.9, label=None)
+    assert bb.y1_int == 10
+    assert bb.x1_int == 20
+    assert bb.y2_int == 31
+    assert bb.x2_int == 41
+    assert bb.width == 40.9 - 20.1
+    assert bb.height == 30.9 - 10.1
+    center_x = bb.x1 + (bb.x2 - bb.x1)/2
+    center_y = bb.y1 + (bb.y2 - bb.y1)/2
+    assert center_x - eps < bb.center_x < center_x + eps
+    assert center_y - eps < bb.center_y < center_y + eps
+
+    # area
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.area == (30-10) * (40-20)
+
+    # project
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = bb.project((10, 10), (20, 20))
+    assert 10*2 - eps < bb2.y1 < 10*2 + eps
+    assert 20*2 - eps < bb2.x1 < 20*2 + eps
+    assert 30*2 - eps < bb2.y2 < 30*2 + eps
+    assert 40*2 - eps < bb2.x2 < 40*2 + eps
+
+    bb2 = bb.project((10, 10), (5, 5))
+    assert 10*0.5 - eps < bb2.y1 < 10*0.5 + eps
+    assert 20*0.5 - eps < bb2.x1 < 20*0.5 + eps
+    assert 30*0.5 - eps < bb2.y2 < 30*0.5 + eps
+    assert 40*0.5 - eps < bb2.x2 < 40*0.5 + eps
+
+    bb2 = bb.project((10, 10), (10, 20))
+    assert 10*1 - eps < bb2.y1 < 10*1 + eps
+    assert 20*2 - eps < bb2.x1 < 20*2 + eps
+    assert 30*1 - eps < bb2.y2 < 30*1 + eps
+    assert 40*2 - eps < bb2.x2 < 40*2 + eps
+
+    bb2 = bb.project((10, 10), (20, 10))
+    assert 10*2 - eps < bb2.y1 < 10*2 + eps
+    assert 20*1 - eps < bb2.x1 < 20*1 + eps
+    assert 30*2 - eps < bb2.y2 < 30*2 + eps
+    assert 40*1 - eps < bb2.x2 < 40*1 + eps
+
+    # extend
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = bb.extend(all_sides=1)
+    assert bb2.y1 == 10-1
+    assert bb2.y2 == 30+1
+    assert bb2.x1 == 20-1
+    assert bb2.x2 == 40+1
+
+    bb2 = bb.extend(all_sides=-1)
+    assert bb2.y1 == 10-(-1)
+    assert bb2.y2 == 30+(-1)
+    assert bb2.x1 == 20-(-1)
+    assert bb2.x2 == 40+(-1)
+
+    bb2 = bb.extend(top=1)
+    assert bb2.y1 == 10-1
+    assert bb2.y2 == 30+0
+    assert bb2.x1 == 20-0
+    assert bb2.x2 == 40+0
+
+    bb2 = bb.extend(right=1)
+    assert bb2.y1 == 10-0
+    assert bb2.y2 == 30+0
+    assert bb2.x1 == 20-0
+    assert bb2.x2 == 40+1
+
+    bb2 = bb.extend(bottom=1)
+    assert bb2.y1 == 10-0
+    assert bb2.y2 == 30+1
+    assert bb2.x1 == 20-0
+    assert bb2.x2 == 40+0
+
+    bb2 = bb.extend(left=1)
+    assert bb2.y1 == 10-0
+    assert bb2.y2 == 30+0
+    assert bb2.x1 == 20-1
+    assert bb2.x2 == 40+0
+
+    # intersection
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=39, y2=30, x2=59, label=None)
+    bb_inter = bb1.intersection(bb2)
+    assert bb_inter.x1 == 39
+    assert bb_inter.x2 == 40
+    assert bb_inter.y1 == 10
+    assert bb_inter.y2 == 30
+
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=41, y2=30, x2=61, label=None)
+    bb_inter = bb1.intersection(bb2, default=False)
+    assert bb_inter == False
+
+    # union
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=39, y2=30, x2=59, label=None)
+    bb_union = bb1.union(bb2)
+    assert bb_union.x1 == 20
+    assert bb_union.x2 == 59
+    assert bb_union.y1 == 10
+    assert bb_union.y2 == 30
+
+    # iou
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    iou = bb1.iou(bb2)
+    assert 1.0 - eps < iou < 1.0 + eps
+
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=41, y2=30, x2=61, label=None)
+    iou = bb1.iou(bb2)
+    assert 0.0 - eps < iou < 0.0 + eps
+
+    bb1 = ia.BoundingBox(y1=10, x1=10, y2=20, x2=20, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=15, y2=25, x2=25, label=None)
+    iou = bb1.iou(bb2)
+    area_union = 15 * 15
+    area_intersection = 5 * 5
+    iou_expected = area_intersection / area_union
+    assert iou_expected - eps < iou < iou_expected + eps
+
+    # is_fully_within_image
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.is_fully_within_image((100, 100, 3)) == True
+    assert bb.is_fully_within_image((20, 100, 3)) == False
+    assert bb.is_fully_within_image((100, 30, 3)) == False
+    assert bb.is_fully_within_image((1, 1, 3)) == False
+
+    # is_partly_within_image
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.is_partly_within_image((100, 100, 3)) == True
+    assert bb.is_partly_within_image((20, 100, 3)) == True
+    assert bb.is_partly_within_image((100, 30, 3)) == True
+    assert bb.is_partly_within_image((1, 1, 3)) == False
+
+    # test_BoundingBox_is_out_of_image()
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=True) == False
+    assert bb.is_out_of_image((100, 100, 3), partly=False, fully=True) == False
+    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=False) == False
+    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=True) == True
+    assert bb.is_out_of_image((20, 100, 3), partly=False, fully=True) == False
+    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=False) == True
+    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=True) == True
+    assert bb.is_out_of_image((100, 30, 3), partly=False, fully=True) == False
+    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=False) == True
+    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=True) == True
+    assert bb.is_out_of_image((1, 1, 3), partly=False, fully=True) == True
+    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=False) == False
+
+    # cut_out_of_image
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb_cut = bb.cut_out_of_image((100, 100, 3))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 30
+    assert bb_cut.x2 == 40
+    bb_cut = bb.cut_out_of_image((20, 100, 3))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 20
+    assert bb_cut.x2 == 40
+    bb_cut = bb.cut_out_of_image((100, 30, 3))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 30
+    assert bb_cut.x2 == 30
+
+    # shift
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb_top = bb.shift(top=0)
+    bb_right = bb.shift(right=0)
+    bb_bottom = bb.shift(bottom=0)
+    bb_left = bb.shift(left=0)
+    assert bb_top.y1 == 10
+    assert bb_top.x1 == 20
+    assert bb_top.y2 == 30
+    assert bb_top.x2 == 40
+    assert bb_right.y1 == 10
+    assert bb_right.x1 == 20
+    assert bb_right.y2 == 30
+    assert bb_right.x2 == 40
+    assert bb_bottom.y1 == 10
+    assert bb_bottom.x1 == 20
+    assert bb_bottom.y2 == 30
+    assert bb_bottom.x2 == 40
+    assert bb_left.y1 == 10
+    assert bb_left.x1 == 20
+    assert bb_left.y2 == 30
+    assert bb_left.x2 == 40
+    bb_top = bb.shift(top=1)
+    bb_right = bb.shift(right=1)
+    bb_bottom = bb.shift(bottom=1)
+    bb_left = bb.shift(left=1)
+    assert bb_top.y1 == 10+1
+    assert bb_top.x1 == 20
+    assert bb_top.y2 == 30+1
+    assert bb_top.x2 == 40
+    assert bb_right.y1 == 10
+    assert bb_right.x1 == 20-1
+    assert bb_right.y2 == 30
+    assert bb_right.x2 == 40-1
+    assert bb_bottom.y1 == 10-1
+    assert bb_bottom.x1 == 20
+    assert bb_bottom.y2 == 30-1
+    assert bb_bottom.x2 == 40
+    assert bb_left.y1 == 10
+    assert bb_left.x1 == 20+1
+    assert bb_left.y2 == 30
+    assert bb_left.x2 == 40+1
+    bb_top = bb.shift(top=-1)
+    bb_right = bb.shift(right=-1)
+    bb_bottom = bb.shift(bottom=-1)
+    bb_left = bb.shift(left=-1)
+    assert bb_top.y1 == 10-1
+    assert bb_top.x1 == 20
+    assert bb_top.y2 == 30-1
+    assert bb_top.x2 == 40
+    assert bb_right.y1 == 10
+    assert bb_right.x1 == 20+1
+    assert bb_right.y2 == 30
+    assert bb_right.x2 == 40+1
+    assert bb_bottom.y1 == 10+1
+    assert bb_bottom.x1 == 20
+    assert bb_bottom.y2 == 30+1
+    assert bb_bottom.x2 == 40
+    assert bb_left.y1 == 10
+    assert bb_left.x1 == 20-1
+    assert bb_left.y2 == 30
+    assert bb_left.x2 == 40-1
+    bb_mix = bb.shift(top=1, bottom=2, left=3, right=4)
+    assert bb_mix.y1 == 10+1-2
+    assert bb_mix.x1 == 20+3-4
+    assert bb_mix.y2 == 30+3-4
+    assert bb_mix.x2 == 40+1-2
+
+    # draw_on_image()
+    image = np.zeros((10, 10, 3), dtype=np.uint8)
+    bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[1:3+1, 1] = True
+    bb_mask[1:3+1, 3] = True
+    bb_mask[1, 1:3+1] = True
+    bb_mask[3, 1:3+1] = True
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+    assert np.all(image == 0)
+
+    image_bb = bb.draw_on_image(image, color=[255, 0, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 0, 0])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    image_bb = bb.draw_on_image(image, color=128, alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [128, 128, 128])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    image_bb = bb.draw_on_image(image+100, color=[200, 200, 200], alpha=0.5, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [150, 150, 150])
+    assert np.all(image_bb[~bb_mask] == [100, 100, 100])
+
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=False, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+    assert np.all(image[bb_mask] == [255, 255, 255])
+    assert np.all(image[~bb_mask] == [0, 0, 0])
+
+    image = np.zeros_like(image)
+    bb = ia.BoundingBox(y1=-1, x1=-1, y2=2, x2=2, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[2, 0:3] = True
+    bb_mask[0:3, 2] = True
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[0:5, 0:5] = True
+    bb_mask[2, 2] = False
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=2, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[0:1+1, 1] = True
+    bb_mask[1, 0:1+1] = True
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1, label=None)
+    got_exception = False
+    try:
+        image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=True)
+    except Exception as e:
+        got_exception = True
+    assert got_exception == False
+
+    bb = ia.BoundingBox(y1=-5, x1=-5, y2=-1, x2=-1, label=None)
+    got_exception = False
+    try:
+        image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=True)
+    except Exception as e:
+        got_exception = True
+    assert got_exception == True
+
+    # extract_from_image()
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:3, 1:3, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    image_pad = np.pad(image, ((0, 1), (0, 1), (0, 0)), mode="constant", constant_values=0)
+    bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image_pad[8:11, 8:11, :])
+
+    # to_keypoints()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    kps = bb.to_keypoints()
+    assert kps[0].y == 1
+    assert kps[0].x == 1
+    assert kps[1].y == 1
+    assert kps[1].x == 3
+    assert kps[2].y == 3
+    assert kps[2].x == 3
+    assert kps[3].y == 3
+    assert kps[3].x == 1
+
+    # copy()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label="test")
+    bb2 = bb.copy()
+    assert bb2.y1 == 1
+    assert bb2.y2 == 3
+    assert bb2.x1 == 1
+    assert bb2.x2 == 3
+    assert bb2.label == "test"
+
+    bb2 = bb.copy(y1=10, x1=20, y2=30, x2=40, label="test2")
+    assert bb2.y1 == 10
+    assert bb2.x1 == 20
+    assert bb2.y2 == 30
+    assert bb2.x2 == 40
+    assert bb2.label == "test2"
+
+    # deepcopy()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=["test"])
+    bb2 = bb.deepcopy()
+    assert bb2.y1 == 1
+    assert bb2.y2 == 3
+    assert bb2.x1 == 1
+    assert bb2.x2 == 3
+    assert bb2.label[0] == "test"
+
+    # BoundingBox_repr()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    assert bb.__repr__() == "BoundingBox(x1=1.0000, y1=1.0000, x2=3.0000, y2=3.0000, label=None)"
+
+    # test_BoundingBox_str()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    assert bb.__str__() == "BoundingBox(x1=1.0000, y1=1.0000, x2=3.0000, y2=3.0000, label=None)"
 
 
 def test_find():
