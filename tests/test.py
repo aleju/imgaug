@@ -62,12 +62,7 @@ def main():
     # test_HooksImages_is_propagating()
     # test_HooksImages_preprocess()
     # test_HooksImages_postprocess()
-    # test_Keypoint_x_int()
-    # test_Keypoint_y_int()
-    # test_Keypoint_project()
-    # test_Keypoint_shift()
-    # test_Keypoint_repr()
-    # test_Keypoint_str()
+    test_Keypoint()
     # test_KeypointsOnImage_height()
     # test_KeypointsOnImage_width()
     # test_KeypointsOnImage_on()
@@ -479,6 +474,61 @@ def test_draw_grid():
         np.hstack([image, image])
     ])
     assert np.array_equal(grid, expected)
+
+
+def test_Keypoint():
+    eps = 1e-8
+
+    # x/y/x_int/y_int
+    kp = ia.Keypoint(y=1, x=2)
+    assert kp.y == 1
+    assert kp.x == 2
+    assert kp.y_int == 1
+    assert kp.x_int == 2
+    kp = ia.Keypoint(y=1.1, x=2.7)
+    assert 1.1 - eps < kp.y < 1.1 + eps
+    assert 2.7 - eps < kp.x < 2.7 + eps
+    assert kp.y_int == 1
+    assert kp.x_int == 3
+
+    # project
+    kp = ia.Keypoint(y=1, x=2)
+    kp2 = kp.project((10, 10), (10, 10))
+    assert kp2.y == 1
+    assert kp2.x == 2
+    kp2 = kp.project((10, 10), (20, 10))
+    assert kp2.y == 2
+    assert kp2.x == 2
+    kp2 = kp.project((10, 10), (10, 20))
+    assert kp2.y == 1
+    assert kp2.x == 4
+    kp2 = kp.project((10, 10), (20, 20))
+    assert kp2.y == 2
+    assert kp2.x == 4
+
+    # shift
+    kp = ia.Keypoint(y=1, x=2)
+    kp2 = kp.shift(y=1)
+    assert kp2.y == 2
+    assert kp2.x == 2
+    kp2 = kp.shift(y=-1)
+    assert kp2.y == 0
+    assert kp2.x == 2
+    kp2 = kp.shift(x=1)
+    assert kp2.y == 1
+    assert kp2.x == 3
+    kp2 = kp.shift(x=-1)
+    assert kp2.y == 1
+    assert kp2.x == 1
+    kp2 = kp.shift(y=1, x=2)
+    assert kp2.y == 2
+    assert kp2.x == 4
+
+    # __repr__ / __str_
+    kp = ia.Keypoint(y=1, x=2)
+    assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.00000000, y=1.00000000)"
+    kp = ia.Keypoint(y=1.2, x=2.7)
+    assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.70000000, y=1.20000000)"
 
 
 def test_BoundingBox():
