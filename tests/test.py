@@ -55,7 +55,7 @@ def main():
     # test_draw_text()
     # test_imresize_many_images()
     # test_imresize_single_image()
-    # test_draw_grid()
+    test_draw_grid()
     # test_show_grid()
     # test_do_assert()
     # test_HooksImages_is_activated()
@@ -436,6 +436,49 @@ def test_forward_random_state():
     ia.forward_random_state(rs1)
     rs2.uniform()
     assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
+
+
+def test_draw_grid():
+    image = np.zeros((2, 2, 3), dtype=np.uint8)
+    image[0, 0] = 64
+    image[0, 1] = 128
+    image[1, 0] = 192
+    image[1, 1] = 256
+
+    grid = ia.draw_grid([image], rows=1, cols=1)
+    assert np.array_equal(grid, image)
+
+    grid = ia.draw_grid([image, image, image, image], rows=2, cols=2)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image], rows=1, cols=2)
+    expected = np.hstack([image, image])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image, image, image], rows=2, cols=None)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image, image, image], rows=None, cols=2)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image, image, image], rows=None, cols=None)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
 
 
 def test_BoundingBox():
