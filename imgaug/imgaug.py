@@ -1007,9 +1007,9 @@ class KeypointsOnImage(object):
             y, x = keypoint.y_int, keypoint.x_int
             if 0 <= y < height and 0 <= x < width:
                 x1 = max(x - size//2, 0)
-                x2 = min(x + 1 + size//2, width - 1)
+                x2 = min(x + 1 + size//2, width)
                 y1 = max(y - size//2, 0)
-                y2 = min(y + 1 + size//2, height - 1)
+                y2 = min(y + 1 + size//2, height)
                 image[y1:y2, x1:x2] = color
             else:
                 if raise_if_out_of_image:
