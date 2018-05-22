@@ -1017,16 +1017,16 @@ class KeypointsOnImage(object):
 
         return image
 
-    def shift(self, x, y):
+    def shift(self, x=0, y=0):
         """
         Move the keypoints around on an image.
 
         Parameters
         ----------
-        x : number
+        x : number, optional(default=0)
             Move each keypoint by this value on the x axis.
 
-        y : number
+        y : number, optional(default=0)
             Move each keypoint by this value on the y axis.
 
         Returns
