@@ -876,16 +876,16 @@ class Keypoint(object):
             y = (self.y / from_height) * to_height
             return Keypoint(x=x, y=y)
 
-    def shift(self, x, y):
+    def shift(self, x=0, y=0):
         """
         Move the keypoint around on an image.
 
         Parameters
         ----------
-        x : number
+        x : number, optional(default=0)
             Move by this value on the x axis.
 
-        y : number
+        y : number, optional(default=0)
             Move by this value on the y axis.
 
         Returns
