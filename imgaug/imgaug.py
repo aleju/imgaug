@@ -1116,9 +1116,9 @@ class KeypointsOnImage(object):
             x = keypoint.x_int
 
             x1 = np.clip(x - sizeh, 0, width-1)
-            x2 = np.clip(x + sizeh + 1, 0, width-1)
+            x2 = np.clip(x + sizeh + 1, 0, width)
             y1 = np.clip(y - sizeh, 0, height-1)
-            y2 = np.clip(y + sizeh + 1, 0, height-1)
+            y2 = np.clip(y + sizeh + 1, 0, height)
 
             #if 0 <= y < height and 0 <= x < width:
             #    image[y, x, i] = 255
