@@ -30,7 +30,6 @@ import scipy
 def main():
     time_start = time.time()
 
-    """
     # ----------------------
     # imgaug
     # ----------------------
@@ -184,7 +183,6 @@ def main():
     # ----------------------
     # parameters
     # ----------------------
-    """
     test_handle_continuous_param()
     test_handle_discrete_param()
     test_force_np_float_dtype()
@@ -6312,6 +6310,7 @@ def test_parameters_Biomial():
     assert samples.shape == (10, 5)
     assert sample == 0
     assert np.all(samples == 0)
+    assert param.__str__() == param.__repr__() == "Binomial(Deterministic(int 0))"
 
     param = iap.Binomial(1.0)
     sample = param.draw_sample()
@@ -6320,6 +6319,7 @@ def test_parameters_Biomial():
     assert samples.shape == (10, 5)
     assert sample == 1
     assert np.all(samples == 1)
+    assert param.__str__() == param.__repr__() == "Binomial(Deterministic(float 1.00000000))"
 
     param = iap.Binomial(0.5)
     sample = param.draw_sample()
@@ -6371,6 +6371,7 @@ def test_parameters_Choice():
     assert samples.shape == (10, 5)
     assert sample in [0, 1, 2]
     assert np.all(np.logical_or(np.logical_or(samples == 0, samples == 1), samples==2))
+    assert param.__str__() == param.__repr__() == "Choice(a=[0, 1, 2], replace=True, p=None)"
 
     samples = param.draw_samples((10000,))
     expected = 10000/3
@@ -6464,6 +6465,7 @@ def test_parameters_DiscreteUniform():
     assert samples.shape == (10, 5)
     assert sample in [0, 1, 2]
     assert np.all(np.logical_or(np.logical_or(samples == 0, samples == 1), samples==2))
+    assert param.__str__() == param.__repr__() == "DiscreteUniform(Deterministic(int 0), Deterministic(int 2))"
 
     samples = param.draw_samples((10000,))
     expected = 10000/3
@@ -6513,6 +6515,7 @@ def test_parameters_Poisson():
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
     assert 0 < sample
+    assert param.__str__() == param.__repr__() == "Poisson(Deterministic(int 1))"
 
     for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
         count_direct = np.sum(samples_direct == i)
@@ -6535,6 +6538,7 @@ def test_parameters_Normal():
     samples_direct = np.random.RandomState(1234).normal(loc=0, scale=1, size=(100, 1000))
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
+    assert param.__str__() == param.__repr__() == "Normal(loc=Deterministic(int 0), scale=Deterministic(int 1))"
 
     samples = np.clip(samples, -1, 1)
     samples_direct = np.clip(samples_direct, -1, 1)
@@ -6585,6 +6589,7 @@ def test_parameters_Laplace():
     samples_direct = np.random.RandomState(1234).laplace(loc=0, scale=1, size=(100, 1000))
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
+    assert param.__str__() == param.__repr__() == "Laplace(loc=Deterministic(int 0), scale=Deterministic(int 1))"
 
     samples = np.clip(samples, -1, 1)
     samples_direct = np.clip(samples_direct, -1, 1)
@@ -6636,6 +6641,7 @@ def test_parameters_ChiSquare():
     assert samples.shape == (100, 1000)
     assert 0 <= sample
     assert np.all(0 <= samples)
+    assert param.__str__() == param.__repr__() == "ChiSquare(df=Deterministic(int 1))"
 
     samples = np.clip(samples, 0, 3)
     samples_direct = np.clip(samples_direct, 0, 3)
@@ -6689,6 +6695,7 @@ def test_parameters_Weibull():
     assert samples.shape == (100, 1000)
     assert 0 <= sample
     assert np.all(0 <= samples)
+    assert param.__str__() == param.__repr__() == "Weibull(a=Deterministic(int 1))"
 
     samples = np.clip(samples, 0, 2)
     samples_direct = np.clip(samples_direct, 0, 2)
@@ -6746,6 +6753,7 @@ def test_parameters_Uniform():
     assert samples.shape == (10, 5)
     assert 0 - eps < sample < 1.0 + eps
     assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
+    assert param.__str__() == param.__repr__() == "Uniform(Deterministic(int 0), Deterministic(float 1.00000000))"
 
     samples = param.draw_samples((10000,))
     nb_bins = 10
@@ -6804,6 +6812,7 @@ def test_parameters_Beta():
     assert samples.shape == (100, 1000)
     assert 0 - eps < sample < 1.0 + eps
     assert np.all(np.logical_or(0 - eps <= samples, samples <= 1.0 + eps))
+    assert param.__str__() == param.__repr__() == "Beta(Deterministic(float 0.50000000), Deterministic(float 0.50000000))"
 
     nb_bins = 10
     hist, _ = np.histogram(samples, bins=nb_bins, range=(0, 1.0), density=False)
@@ -6939,6 +6948,13 @@ def test_parameters_Deterministic():
             param.draw_samples(20, random_state=rs2)
         )
 
+    param = iap.Deterministic(0)
+    assert param.__str__() == param.__repr__() == "Deterministic(int 0)"
+    param = iap.Deterministic(1.0)
+    assert param.__str__() == param.__repr__() == "Deterministic(float 1.00000000)"
+    param = iap.Deterministic("test")
+    assert param.__str__() == param.__repr__() == "Deterministic(test)"
+
 
 def test_parameters_FromLowerResolution():
     reseed()
@@ -7012,6 +7028,11 @@ def test_parameters_FromLowerResolution():
     samples2 = param.draw_samples((10, 5, 1), random_state=np.random.RandomState(1234))
     assert np.allclose(samples1, samples2)
 
+    param = iap.FromLowerResolution(other_param=iap.Deterministic(0), size_percent=1, method="nearest")
+    assert param.__str__() == param.__repr__() == "FromLowerResolution(size_percent=Deterministic(int 1), method=Deterministic(nearest), other_param=Deterministic(int 0))"
+    param = iap.FromLowerResolution(other_param=iap.Deterministic(0), size_px=1, method="nearest")
+    assert param.__str__() == param.__repr__() == "FromLowerResolution(size_px=Deterministic(int 1), method=Deterministic(nearest), other_param=Deterministic(int 0))"
+
 
 def test_parameters_Clip():
     reseed()
@@ -7024,6 +7045,7 @@ def test_parameters_Clip():
     assert samples.shape == (10, 5)
     assert sample == 0
     assert np.all(samples == 0)
+    assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), -1.000000, 1.000000)"
 
     param = iap.Clip(iap.Deterministic(1), -1, 1)
     sample = param.draw_sample()
@@ -7077,6 +7099,13 @@ def test_parameters_Clip():
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.array_equal(samples1, samples2)
 
+    param = iap.Clip(iap.Deterministic(0), None, 1)
+    assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), None, 1.000000)"
+    param = iap.Clip(iap.Deterministic(0), 0, None)
+    assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), 0.000000, None)"
+    param = iap.Clip(iap.Deterministic(0), None, None)
+    assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), None, None)"
+
 
 def test_parameters_Discretize():
     reseed()
@@ -7113,6 +7142,9 @@ def test_parameters_Discretize():
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.array_equal(samples1, samples2)
+
+    param = iap.Discretize(iap.Deterministic(0))
+    assert param.__str__() == param.__repr__() == "Discretize(Deterministic(int 0))"
 
 
 def test_parameters_Multiply():
@@ -7181,6 +7213,9 @@ def test_parameters_Multiply():
     assert np.all(samples < 2.0 * 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Multiply(iap.Deterministic(0), 1, elementwise=False)
+    assert param.__str__() == param.__repr__() == "Multiply(Deterministic(int 0), Deterministic(int 1), False)"
 
 
 def test_parameters_Divide():
@@ -7262,6 +7297,9 @@ def test_parameters_Divide():
     samples_unique = np.sort(np.unique(samples.flatten()))
     assert samples_unique[0] == 1 and samples_unique[1] == 2
 
+    param = iap.Divide(iap.Deterministic(0), 1, elementwise=False)
+    assert param.__str__() == param.__repr__() == "Divide(Deterministic(int 0), Deterministic(int 1), False)"
+
 
 def test_parameters_Add():
     reseed()
@@ -7329,6 +7367,9 @@ def test_parameters_Add():
     assert np.all(samples < 2.0 + 1.0 + eps)
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+
+    param = iap.Add(iap.Deterministic(0), 1, elementwise=False)
+    assert param.__str__() == param.__repr__() == "Add(Deterministic(int 0), Deterministic(int 1), False)"
 
 
 def test_parameters_Subtract():
@@ -7398,6 +7439,9 @@ def test_parameters_Subtract():
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
 
+    param = iap.Subtract(iap.Deterministic(0), 1, elementwise=False)
+    assert param.__str__() == param.__repr__() == "Subtract(Deterministic(int 0), Deterministic(int 1), False)"
+
 
 def test_parameters_Power():
     reseed()
@@ -7457,6 +7501,9 @@ def test_parameters_Power():
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
 
+    param = iap.Power(iap.Deterministic(0), 1, elementwise=False)
+    assert param.__str__() == param.__repr__() == "Power(Deterministic(int 0), Deterministic(int 1), False)"
+
 
 def test_parameters_Absolute():
     reseed()
@@ -7487,6 +7534,9 @@ def test_parameters_Absolute():
     assert samples.shape == (10, 10)
     assert len(samples_uq) == 2
     assert samples_uq[0] == 1 and samples_uq[1] == 3
+
+    param = iap.Absolute(iap.Deterministic(0))
+    assert param.__str__() == param.__repr__() == "Absolute(Deterministic(int 0))"
 
 
 def test_parameters_RandomSign():
@@ -7532,6 +7582,9 @@ def test_parameters_RandomSign():
     assert np.sum(samples == -1) > 50
     assert np.sum(samples == 1) > 50
     assert np.sum(samples == 2) > 50
+
+    param = iap.RandomSign(iap.Deterministic(0), 0.5)
+    assert param.__str__() == param.__repr__() == "RandomSign(Deterministic(int 0), 0.50)"
 
 
 def test_parameters_ForceSign():
@@ -7599,6 +7652,9 @@ def test_parameters_ForceSign():
     assert samples1.shape == (100, 10)
     assert samples2.shape == (100, 10)
     assert np.array_equal(samples1, samples2)
+
+    param = iap.ForceSign(iap.Deterministic(0), True, "invert", 1)
+    assert param.__str__() == param.__repr__() == "ForceSign(Deterministic(int 0), True, invert, 1)"
 
 
 def test_parameters_Positive():
@@ -7688,6 +7744,9 @@ def test_parameters_IterativeNoiseAggregator():
     assert samples2.shape == (100, 10)
     assert np.allclose(samples1, samples2)
 
+    param = iap.IterativeNoiseAggregator(iap.Deterministic(0), iterations=(1, 3), aggregation_method="max")
+    assert param.__str__() == param.__repr__() == "IterativeNoiseAggregator(Deterministic(int 0), DiscreteUniform(Deterministic(int 1), Deterministic(int 3)), Deterministic(max))"
+
 
 def test_parameters_Sigmoid():
     reseed()
@@ -7768,6 +7827,9 @@ def test_parameters_Sigmoid():
     assert samples1.shape == (100, 10)
     assert samples2.shape == (100, 10)
     assert np.array_equal(samples1, samples2)
+
+    param = iap.Sigmoid(iap.Deterministic(0), threshold=(-10, 10), activated=True, mul=1, add=0)
+    assert param.__str__() == param.__repr__() == "Sigmoid(Deterministic(int 0), Uniform(Deterministic(int -10), Deterministic(int 10)), Deterministic(int 1), 1, 0)"
 
 
 def test_parameters_operators():
