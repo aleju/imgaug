@@ -109,8 +109,8 @@ def force_np_float_dtype(val):
         return val.astype(np.float64)
 
 def both_np_float_if_one_is_float(a, b):
-    a_f = a.dtype in NP_FLOAT_TYPES
-    b_f = b.dtype in NP_FLOAT_TYPES
+    a_f = a.dtype.type in NP_FLOAT_TYPES
+    b_f = b.dtype.type in NP_FLOAT_TYPES
     if a_f and b_f:
         return a, b
     elif a_f:
