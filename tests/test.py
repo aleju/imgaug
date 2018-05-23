@@ -184,7 +184,7 @@ def main():
     # parameters
     # ----------------------
     test_handle_continuous_param()
-    # handle_discrete_param
+    test_handle_discrete_param()
     # force_np_float_dtype
     # both_np_float_if_one_is_float
     test_parameters_Biomial()
@@ -6071,6 +6071,188 @@ def test_handle_continuous_param():
     got_exception = False
     try:
         result = iap.handle_continuous_param([1, 2], "[test17]", value_range=(3, 13), tuple_to_uniform=True, list_to_choice=True)
+        assert isinstance(result, iap.Choice)
+    except Exception as e:
+        got_exception = True
+        assert "[test17]" in str(e)
+    assert got_exception == True
+
+
+def test_handle_discrete_param():
+    # float value without value range when no float value is allowed
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1.5, "[test0]", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test0]" in str(e)
+    assert got_exception == True
+
+    # value without value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test1]", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test1]" in str(e)
+    assert got_exception == False
+
+    # stochastic parameter
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(iap.Deterministic(1), "[test2]", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test2]" in str(e)
+    assert got_exception == False
+
+    # value within value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test3]", value_range=(0, 10), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test3]" in str(e)
+    assert got_exception == False
+
+    # value outside of value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test4]", value_range=(2, 12), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test4]" in str(e)
+    assert got_exception == True
+
+    # value within value range (without lower bound)
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test5]", value_range=(None, 12), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test5]" in str(e)
+    assert got_exception == False
+
+    # value outside of value range (without lower bound)
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test6]", value_range=(None, 0), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test6]" in str(e)
+    assert got_exception == True
+
+    # value within value range (without upper bound)
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test7]", value_range=(-1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test7]" in str(e)
+    assert got_exception == False
+
+    # value outside of value range (without upper bound)
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test8]", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test8]" in str(e)
+    assert got_exception == True
+
+    # tuple as value, but no tuples allowed
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param((1, 2), "[test9]", value_range=None, tuple_to_uniform=False, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.DiscreteUniform)
+    except Exception as e:
+        got_exception = True
+        assert "[test9]" in str(e)
+    assert got_exception == True
+
+    # tuple as value and tuple allowed
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param((1, 2), "[test10]", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.DiscreteUniform)
+    except Exception as e:
+        got_exception = True
+        assert "[test10]" in str(e)
+    assert got_exception == False
+
+    # tuple as value and tuple allowed and tuple within value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param((1, 2), "[test11]", value_range=(0, 10), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.DiscreteUniform)
+    except Exception as e:
+        got_exception = True
+        assert "[test11]" in str(e)
+    assert got_exception == False
+
+    # tuple as value and tuple allowed and tuple partially outside of value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param((1, 3), "[test12]", value_range=(2, 13), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.DiscreteUniform)
+    except Exception as e:
+        got_exception = True
+        assert "[test12]" in str(e)
+    assert got_exception == True
+
+    # tuple as value and tuple allowed and tuple fully outside of value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param((1, 2), "[test13]", value_range=(3, 13), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.DiscreteUniform)
+    except Exception as e:
+        got_exception = True
+        assert "[test13]" in str(e)
+    assert got_exception == True
+
+    # list as value, but no list allowed
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param([1, 2, 3], "[test14]", value_range=None, tuple_to_uniform=True, list_to_choice=False, allow_floats=True)
+        assert isinstance(result, iap.Choice)
+    except Exception as e:
+        got_exception = True
+        assert "[test14]" in str(e)
+    assert got_exception == True
+
+    # list as value and list allowed
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param([1, 2, 3], "[test15]", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Choice)
+    except Exception as e:
+        got_exception = True
+        assert "[test15]" in str(e)
+    assert got_exception == False
+
+    # list as value and list allowed and list partially outside of value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param([1, 3], "[test16]", value_range=(2, 13), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Choice)
+    except Exception as e:
+        got_exception = True
+        assert "[test16]" in str(e)
+    assert got_exception == True
+
+    # list as value and list allowed and list fully outside of value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param([1, 2], "[test17]", value_range=(3, 13), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
         assert isinstance(result, iap.Choice)
     except Exception as e:
         got_exception = True
