@@ -90,7 +90,7 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         check_value_range(param[0])
         check_value_range(param[1])
         return DiscreteUniform(int(param[0]), int(param[1]))
-    elif list_to_choice and ia.is_iterable(param):
+    elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
         for param_i in param:
             check_value_range(param_i)
         return Choice([int(param_i) for param_i in param])
