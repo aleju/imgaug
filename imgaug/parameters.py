@@ -44,7 +44,7 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
         check_value_range(param[0])
         check_value_range(param[1])
         return Uniform(param[0], param[1])
-    elif list_to_choice and ia.is_iterable(param):
+    elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
         for param_i in param:
             check_value_range(param_i)
         return Choice(param)
