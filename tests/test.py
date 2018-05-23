@@ -30,6 +30,7 @@ import scipy
 def main():
     time_start = time.time()
 
+    """
     # ----------------------
     # imgaug
     # ----------------------
@@ -183,10 +184,11 @@ def main():
     # ----------------------
     # parameters
     # ----------------------
+    """
     test_handle_continuous_param()
     test_handle_discrete_param()
     test_force_np_float_dtype()
-    #both_np_float_if_one_is_float
+    test_both_np_float_if_one_is_float()
     test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
@@ -6271,6 +6273,32 @@ def test_force_np_float_dtype():
     for i, (dtype_in, dtype_out) in enumerate(dtypes):
         assert iap.force_np_float_dtype(np.zeros((1,), dtype=dtype_in)).dtype == dtype_out,\
             "force_np_float_dtype() failed at %d" % (i,)
+
+
+def test_both_np_float_if_one_is_float():
+    a1 = np.zeros((1,), dtype=np.float16)
+    b1 = np.zeros((1,), dtype=np.float32)
+    a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
+    assert a2.dtype.type == np.float16, a2.dtype.type
+    assert b2.dtype.type == np.float32, b2.dtype.type
+
+    a1 = np.zeros((1,), dtype=np.float16)
+    b1 = np.zeros((1,), dtype=np.int32)
+    a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
+    assert a2.dtype.type == np.float16, a2.dtype.type
+    assert b2.dtype.type == np.float64, b2.dtype.type
+
+    a1 = np.zeros((1,), dtype=np.int32)
+    b1 = np.zeros((1,), dtype=np.float16)
+    a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
+    assert a2.dtype.type == np.float64, a2.dtype.type
+    assert b2.dtype.type == np.float16, b2.dtype.type
+
+    a1 = np.zeros((1,), dtype=np.int32)
+    b1 = np.zeros((1,), dtype=np.uint8)
+    a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
+    assert a2.dtype.type == np.float64, a2.dtype.type
+    assert b2.dtype.type == np.float64, b2.dtype.type
 
 
 def test_parameters_Biomial():
