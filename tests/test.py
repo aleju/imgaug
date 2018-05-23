@@ -185,8 +185,8 @@ def main():
     # ----------------------
     test_handle_continuous_param()
     test_handle_discrete_param()
-    # force_np_float_dtype
-    # both_np_float_if_one_is_float
+    test_force_np_float_dtype()
+    #both_np_float_if_one_is_float
     test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
@@ -6258,6 +6258,19 @@ def test_handle_discrete_param():
         got_exception = True
         assert "[test17]" in str(e)
     assert got_exception == True
+
+
+def test_force_np_float_dtype():
+    dtypes = [
+        (np.float16, np.float16),
+        (np.float32, np.float32),
+        (np.float64, np.float64),
+        (np.uint8, np.float64),
+        (np.int32, np.float64)
+    ]
+    for i, (dtype_in, dtype_out) in enumerate(dtypes):
+        assert iap.force_np_float_dtype(np.zeros((1,), dtype=dtype_in)).dtype == dtype_out,\
+            "force_np_float_dtype() failed at %d" % (i,)
 
 
 def test_parameters_Biomial():
