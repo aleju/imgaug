@@ -103,7 +103,7 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
             raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
 
 def force_np_float_dtype(val):
-    if val.dtype in NP_FLOAT_TYPES:
+    if val.dtype.type in NP_FLOAT_TYPES:
         return val
     else:
         return val.astype(np.float64)
