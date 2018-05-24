@@ -4189,7 +4189,6 @@ def test_Affine():
     aug_det = aug.to_deterministic()
 
     observed = aug.augment_images(images)
-    #exit()
     assert observed[0][1, 1] > 250
     assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
     assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
@@ -4439,6 +4438,42 @@ def test_Affine():
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_aug)
 
+    # move one pixel to the right
+    # with backend = skimage
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0, backend="skimage")
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    # move one pixel to the right
+    # with backend = skimage
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0, backend="skimage")
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    # move one pixel to the right
+    # with backend = skimage, order=ALL
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0, backend="skimage", order=ia.ALL)
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    # move one pixel to the right
+    # with backend = skimage, order=list
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0, backend="skimage", order=[0, 1, 3])
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    # move one pixel to the right
+    # with backend = cv2, order=list
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0, backend="cv2", order=[0, 1, 3])
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
+    # move one pixel to the right
+    # with backend = cv2, order=StochasticParameter
+    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0, shear=0, backend="cv2", order=iap.Choice([0, 1, 3]))
+    observed = aug.augment_images(images)
+    assert np.array_equal(observed, images_aug)
+
     # move one pixel to the bottom
     aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0, shear=0)
     aug_det = aug.to_deterministic()
@@ -4620,6 +4655,22 @@ def test_Affine():
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_aug)
 
+    # rotate by StochasticParameter
+    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=iap.Uniform(10, 20), shear=0)
+    assert isinstance(aug.rotate, iap.Uniform)
+    assert isinstance(aug.rotate.a, iap.Deterministic)
+    assert aug.rotate.a.value == 10
+    assert isinstance(aug.rotate.b, iap.Deterministic)
+    assert aug.rotate.b.value == 20
+
+    # wrong datatype for rotate
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
     # random rotation 0-364 degrees
     aug = iaa.Affine(scale=1.0, translate_px=0, rotate=(0, 364), shear=0)
     aug_det = aug.to_deterministic()
@@ -4665,7 +4716,22 @@ def test_Affine():
     # shear
     # ---------------------
     # TODO
-    #print("[Note] There is currently no test for shear in test_Affine().")
+
+    # shear by StochasticParameter
+    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=iap.Uniform(10, 20))
+    assert isinstance(aug.shear, iap.Uniform)
+    assert isinstance(aug.shear.a, iap.Deterministic)
+    assert aug.shear.a.value == 10
+    assert isinstance(aug.shear.b, iap.Deterministic)
+    assert aug.shear.b.value == 20
+
+    # wrong datatype for rotate
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False)
+    except Exception:
+        got_exception = True
+    assert got_exception
 
     # ---------------------
     # cval
@@ -4726,11 +4792,39 @@ def test_Affine():
     assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
     assert len(set(averages)) > 200
 
-    # ---------------------
-    # order
-    # ---------------------
-    # TODO
-    #print("[Note] There is currently no test for (interpolation) order in test_Affine().")
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=ia.ALL)
+    assert isinstance(aug.cval, iap.Uniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 0
+    assert aug.cval.b.value == 255
+
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # mode
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=ia.ALL)
+    assert isinstance(aug.mode, iap.Choice)
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode="edge")
+    assert isinstance(aug.mode, iap.Deterministic)
+    assert aug.mode.value == "edge"
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=["constant", "edge"])
+    assert isinstance(aug.mode, iap.Choice)
+    assert len(aug.mode.a) == 2 and "constant" in aug.mode.a and "edge" in aug.mode.a
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=iap.Choice(["constant", "edge"]))
+    assert isinstance(aug.mode, iap.Choice)
+    assert len(aug.mode.a) == 2 and "constant" in aug.mode.a and "edge" in aug.mode.a
+
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=False)
+    except Exception:
+        got_exception = True
+    assert got_exception
 
 
 def test_Sequential():
