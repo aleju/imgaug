@@ -3746,6 +3746,51 @@ def test_MultiplyElementwise():
             last = observed_aug_flat[j]
     assert nb_different > 0.95 * (nb_different + nb_same)
 
+    # test channelwise
+    aug = iaa.MultiplyElementwise(mul=iap.Choice([0, 1]), per_channel=True)
+    observed = aug.augment_image(np.ones((100, 100, 3), dtype=np.uint8))
+    sums = np.sum(observed, axis=2)
+    values = np.unique(sums)
+    assert all([(value in values) for value in [0, 1, 2, 3]])
+
+    # test channelwise with probability
+    aug = iaa.MultiplyElementwise(mul=iap.Choice([0, 1]), per_channel=0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(400):
+        observed = aug.augment_image(np.ones((20, 20, 3), dtype=np.uint8))
+        sums = np.sum(observed, axis=2)
+        values = np.unique(sums)
+        all_values_found = all([(value in values) for value in [0, 1, 2, 3]])
+        if all_values_found:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert 150 < seen[0] < 250
+    assert 150 < seen[1] < 250
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.MultiplyElementwise(mul="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.MultiplyElementwise(mul=1, per_channel="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.MultiplyElementwise(mul=1, per_channel=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].value == 1
+    assert params[1].value == 0
+
 def test_ReplaceElementwise():
     reseed()
 
