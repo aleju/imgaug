@@ -100,7 +100,7 @@ def main():
     test_Dropout()
     test_CoarseDropout()
     test_SaltAndPepper()
-    # TODO CoarseSaltAndPepper
+    test_CoarseSaltAndPepper()
     # TODO Salt
     # TODO CoarseSalt
     # TODO Pepper
@@ -4023,7 +4023,7 @@ def test_SaltAndPepper():
     base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
     aug = iaa.SaltAndPepper(p=0.5)
     observed = aug.augment_image(base_img)
-    p = np.mean(observed == 128)
+    p = np.mean(observed != 128)
     assert 0.4 < p < 0.6
 
     aug = iaa.SaltAndPepper(p=1.0)
@@ -4035,6 +4035,78 @@ def test_SaltAndPepper():
     # not more tests necessary here as SaltAndPepper is just a tiny wrapper around
     # ReplaceElementwise
 
+
+def test_CoarseSaltAndPepper():
+    reseed()
+
+    base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
+    aug = iaa.CoarseSaltAndPepper(p=0.5, size_px=100)
+    observed = aug.augment_image(base_img)
+    p = np.mean(observed != 128)
+    assert 0.4 < p < 0.6
+
+    aug1 = iaa.CoarseSaltAndPepper(p=0.5, size_px=100)
+    aug2 = iaa.CoarseSaltAndPepper(p=0.5, size_px=10)
+    base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
+    ps1 = []
+    ps2 = []
+    for _ in sm.xrange(100):
+        observed1 = aug1.augment_image(base_img)
+        observed2 = aug2.augment_image(base_img)
+        p1 = np.mean(observed1 != 128)
+        p2 = np.mean(observed2 != 128)
+        ps1.append(p1)
+        ps2.append(p2)
+    assert 0.4 < np.mean(ps2) < 0.6
+    assert np.std(ps1)*1.5 < np.std(ps2)
+
+    aug = iaa.CoarseSaltAndPepper(p=[0.2, 0.5], size_px=100)
+    base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
+    seen = [0, 0, 0]
+    for _ in sm.xrange(200):
+        observed = aug.augment_image(base_img)
+        p = np.mean(observed != 128)
+        diff_020 = abs(0.2 - p)
+        diff_050 = abs(0.5 - p)
+        if diff_020 < 0.025:
+            seen[0] += 1
+        elif diff_050 < 0.025:
+            seen[1] += 1
+        else:
+            seen[2] += 1
+    assert seen[2] < 10
+    assert 75 < seen[0] < 125
+    assert 75 < seen[1] < 125
+
+    aug = iaa.CoarseSaltAndPepper(p=(0.0, 1.0), size_px=50)
+    base_img = np.zeros((50, 50, 1), dtype=np.uint8) + 128
+    ps = []
+    for _ in sm.xrange(200):
+        observed = aug.augment_image(base_img)
+        p = np.mean(observed != 128)
+        ps.append(p)
+
+    nb_bins = 5
+    hist, _ = np.histogram(ps, bins=nb_bins, range=(0.0, 1.0), density=False)
+    tolerance = 0.05
+    for nb_seen in hist:
+        density = nb_seen / len(ps)
+        assert density - tolerance < density < density + tolerance
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.CoarseSaltAndPepper(p="test", size_px=100)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.CoarseSaltAndPepper(p=0.5, size_px=None, size_percent=None)
+    except Exception:
+        got_exception = True
+    assert got_exception
 
 def test_Add():
     reseed()
