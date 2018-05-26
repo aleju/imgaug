@@ -840,7 +840,7 @@ class ReplaceElementwise(Augmenter):
             self.mask = Binomial(Uniform(mask[0], mask[1]))
         elif ia.is_iterable(mask):
             ia.do_assert(all([0 <= pi <= 1.0 for pi in mask]))
-            self.mask = iap.Choice(mask)
+            self.mask = iap.Binomial(iap.Choice(mask))
         elif isinstance(mask, StochasticParameter):
             self.mask = mask
         else:
