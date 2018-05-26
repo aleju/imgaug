@@ -4108,6 +4108,28 @@ def test_CoarseSaltAndPepper():
         got_exception = True
     assert got_exception
 
+
+def test_Salt():
+    reseed()
+
+    base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
+    aug = iaa.Salt(p=0.5)
+    observed = aug.augment_image(base_img)
+    p = np.mean(observed != 128)
+    assert 0.4 < p < 0.6
+    assert np.all(observed >= 127)  # Salt() occasionally replaces with 127,
+                                    # which probably should be the center-point here anyways
+
+    aug = iaa.SaltAndPepper(p=1.0)
+    nb_pepper = np.sum(observed < 40)
+    nb_salt = np.sum(observed > 255 - 40)
+    assert nb_pepper == 0
+    assert nb_salt > 200
+
+    # not more tests necessary here as Salt is just a tiny wrapper around
+    # ReplaceElementwise
+
+
 def test_Add():
     reseed()
 
