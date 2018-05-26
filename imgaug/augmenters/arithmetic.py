@@ -451,7 +451,7 @@ class Multiply(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.mul]
+        return [self.mul, self.per_channel]
 
 
 # TODO tests
