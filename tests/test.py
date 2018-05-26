@@ -3494,6 +3494,38 @@ def test_CoarseDropout():
             break
     assert found
 
+    # varying p by stochastic parameter
+    aug = iaa.CoarseDropout(p=iap.Binomial(1-iap.Choice([0.0, 0.5])), size_px=50)
+    images = np.ones((1, 100, 100, 1), dtype=np.uint8) * 255
+    seen = [0, 0, 0]
+    for i in sm.xrange(400):
+        observed = aug.augment_images(images)
+        p = np.mean(observed == 0)
+        if 0.4 < p < 0.6:
+            seen[0] += 1
+        elif p < 0.1:
+            seen[1] += 1
+        else:
+            seen[2] += 1
+    assert seen[2] <= 10
+    assert 150 < seen[0] < 250
+    assert 150 < seen[1] < 250
+
+    # test exception for bad parameters
+    got_exception = False
+    try:
+        aug = iaa.CoarseDropout(p="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
 
 def test_Multiply():
     reseed()
