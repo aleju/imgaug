@@ -99,7 +99,7 @@ def main():
     test_MultiplyElementwise()
     test_Dropout()
     test_CoarseDropout()
-    # TODO SaltAndPepper
+    test_SaltAndPepper()
     # TODO CoarseSaltAndPepper
     # TODO Salt
     # TODO CoarseSalt
@@ -4015,6 +4015,25 @@ def test_ReplaceElementwise():
     assert params[0].p >= 1 - 1e-8
     assert params[1].value == 2
     assert params[2].value == 0
+
+
+def test_SaltAndPepper():
+    reseed()
+
+    base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
+    aug = iaa.SaltAndPepper(p=0.5)
+    observed = aug.augment_image(base_img)
+    p = np.mean(observed == 128)
+    assert 0.4 < p < 0.6
+
+    aug = iaa.SaltAndPepper(p=1.0)
+    nb_pepper = np.sum(observed < 40)
+    nb_salt = np.sum(observed > 255 - 40)
+    assert nb_pepper > 200
+    assert nb_salt > 200
+
+    # not more tests necessary here as SaltAndPepper is just a tiny wrapper around
+    # ReplaceElementwise
 
 
 def test_Add():
