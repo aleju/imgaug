@@ -1386,7 +1386,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
         ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = iap.Choice(p)
+        mask = Binomial(iap.Choice(p))
     elif isinstance(p, StochasticParameter):
         mask = p
     else:
