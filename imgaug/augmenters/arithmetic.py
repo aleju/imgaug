@@ -140,7 +140,7 @@ class Add(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.value]
+        return [self.value, self.per_channel]
 
 # TODO tests
 class AddElementwise(Augmenter):
