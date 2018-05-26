@@ -3899,16 +3899,34 @@ def test_ReplaceElementwise():
 
     # replace half
     aug = iaa.ReplaceElementwise(mask=iap.Binomial(p=0.5), replacement=0)
+    img = np.ones((100, 100, 1), dtype=np.uint8)
 
     nb_iterations = 100
     nb_diff_all = 0
     for i in sm.xrange(nb_iterations):
-        img = np.ones((100, 100, 1), dtype=np.uint8)
         observed = aug.augment_image(img)
         nb_diff = np.sum(img != observed)
         nb_diff_all += nb_diff
     p = nb_diff_all / (nb_iterations * 100 * 100)
     assert 0.45 <= p <= 0.55
+
+    # mask is list
+    aug = iaa.ReplaceElementwise(mask=[0.2, 0.7], replacement=1)
+    img = np.zeros((20, 20, 1), dtype=np.uint8)
+
+    seen = [0, 0, 0]
+    for i in sm.xrange(400):
+        observed = aug.augment_image(img)
+        p = np.mean(observed)
+        if 0.1 < p < 0.3:
+            seen[0] += 1
+        elif 0.6 < p < 0.8:
+            seen[1] += 1
+        else:
+            seen[2] += 1
+    assert seen[2] <= 10
+    assert 150 < seen[0] < 250
+    assert 150 < seen[1] < 250
 
     """
     observed = aug.augment_images(images)
@@ -3951,6 +3969,53 @@ def test_ReplaceElementwise():
     p200 = nb_diff_200 / (1000 * 1000)
     assert 0.45 <= p100 <= 0.55
     assert 0.45 <= p200 <= 0.55
+    # test channelwise
+    aug = iaa.MultiplyElementwise(mul=iap.Choice([0, 1]), per_channel=True)
+    observed = aug.augment_image(np.ones((100, 100, 3), dtype=np.uint8))
+    sums = np.sum(observed, axis=2)
+    values = np.unique(sums)
+    assert all([(value in values) for value in [0, 1, 2, 3]])
+
+    # test channelwise with probability
+    aug = iaa.ReplaceElementwise(mask=iap.Choice([0, 1]), replacement=1, per_channel=0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(400):
+        observed = aug.augment_image(np.zeros((20, 20, 3), dtype=np.uint8))
+        sums = np.sum(observed, axis=2)
+        values = np.unique(sums)
+        all_values_found = all([(value in values) for value in [0, 1, 2, 3]])
+        if all_values_found:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert 150 < seen[0] < 250
+    assert 150 < seen[1] < 250
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.ReplaceElementwise(mask="test", replacement=1)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.ReplaceElementwise(mask=1, replacement=1, per_channel="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.ReplaceElementwise(mask=1, replacement=2, per_channel=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Binomial)
+    assert isinstance(params[1], iap.Deterministic)
+    assert isinstance(params[2], iap.Deterministic)
+    assert params[0].p >= 1 - 1e-8
+    assert params[1].value == 2
+    assert params[2].value == 0
+
 
 def test_Add():
     reseed()
