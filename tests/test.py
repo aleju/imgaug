@@ -3874,6 +3874,28 @@ def test_Add():
     assert nb_changed_aug >= int(nb_iterations * 0.7)
     assert nb_changed_aug_det == 0
 
+    # test channelwise
+    aug = iaa.Add(value=iap.Choice([0, 1]), per_channel=True)
+    observed = aug.augment_image(np.zeros((1, 1, 100), dtype=np.uint8))
+    uq = np.unique(observed)
+    assert 0 in uq
+    assert 1 in uq
+    assert len(uq) == 2
+
+    # test channelwise with probability
+    aug = iaa.Add(value=iap.Choice([0, 1]), per_channel=0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(400):
+        observed = aug.augment_image(np.zeros((1, 1, 20), dtype=np.uint8))
+        uq = np.unique(observed)
+        per_channel = (len(uq) == 2)
+        if per_channel:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert 150 < seen[0] < 250
+    assert 150 < seen[1] < 250
+
 def test_AddElementwise():
     reseed()
 
