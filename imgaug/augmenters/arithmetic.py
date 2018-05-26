@@ -902,7 +902,7 @@ class ReplaceElementwise(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.mask, self.replacement]
+        return [self.mask, self.replacement, self.per_channel]
 
 def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
