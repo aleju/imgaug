@@ -3251,6 +3251,24 @@ def test_AdditiveGaussianNoise():
     assert nb_changed_aug >= int(nb_iterations * 0.95)
     assert nb_changed_aug_det == 0
 
+    # varying locs by stochastic param
+    aug = iaa.AdditiveGaussianNoise(loc=iap.Choice([-20, 20]), scale=0.0001 * 255)
+    images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
+    seen = [0, 0]
+    for i in sm.xrange(200):
+        observed = aug.augment_images(images)
+        mean = np.mean(observed)
+        diff_m20 = abs(mean - (128-20))
+        diff_p20 = abs(mean - (128+20))
+        if diff_m20 <= 1:
+            seen[0] += 1
+        elif diff_p20 <= 1:
+            seen[1] += 1
+        else:
+            assert False
+    assert 75 < seen[0] < 125
+    assert 75 < seen[1] < 125
+
     # varying stds
     aug = iaa.AdditiveGaussianNoise(loc=0, scale=(0.01 * 255, 0.2 * 255))
     aug_det = aug.to_deterministic()
@@ -3275,6 +3293,40 @@ def test_AdditiveGaussianNoise():
             last_aug_det = observed_aug_det
     assert nb_changed_aug >= int(nb_iterations * 0.95)
     assert nb_changed_aug_det == 0
+
+    # varying stds by stochastic param
+    aug = iaa.AdditiveGaussianNoise(loc=0, scale=iap.Choice([1, 20]))
+    images = np.ones((1, 20, 20, 1), dtype=np.uint8) * 128
+    seen = [0, 0, 0]
+    for i in sm.xrange(200):
+        observed = aug.augment_images(images)
+        std = np.std(observed.astype(np.int32) - 128)
+        diff_1 = abs(std - 1)
+        diff_20 = abs(std - 20)
+        if diff_1 <= 2:
+            seen[0] += 1
+        elif diff_20 <= 5:
+            seen[1] += 1
+        else:
+            seen[2] += 1
+    assert seen[2] <= 5
+    assert 75 < seen[0] < 125
+    assert 75 < seen[1] < 125
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.AdditiveGaussianNoise(loc="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.AdditiveGaussianNoise(scale="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
 
 
 #def test_MultiplicativeGaussianNoise():
