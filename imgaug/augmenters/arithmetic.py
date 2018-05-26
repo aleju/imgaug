@@ -253,7 +253,7 @@ class AddElementwise(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.value]
+        return [self.value, self.per_channel]
 
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
