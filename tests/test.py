@@ -3896,6 +3896,29 @@ def test_Add():
     assert 150 < seen[0] < 250
     assert 150 < seen[1] < 250
 
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.Add(value="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.Add(value=1, per_channel="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.Add(value=1, per_channel=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].value == 1
+    assert params[1].value == 0
+
 def test_AddElementwise():
     reseed()
 
