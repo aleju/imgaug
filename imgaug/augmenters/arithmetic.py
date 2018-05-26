@@ -566,7 +566,7 @@ class MultiplyElementwise(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.mul]
+        return [self.mul, self.per_channel]
 
 def Dropout(p=0, per_channel=False, name=None, deterministic=False,
             random_state=None):
@@ -588,6 +588,9 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
             * If a StochasticParameter, then this parameter will be used to
               determine per pixel whether it should be dropped (sampled value
               of 0) or shouldn't (sampled value of 1).
+              If you instead want to provide the probability as a stochastic
+              parameter, you can usually do `Binomial(1-p)` to convert parameter
+              `p` to a 0/1 representation.
 
     per_channel : bool or float, optional(default=False)
         Whether to use the same value (is dropped / is not dropped)
