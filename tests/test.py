@@ -103,7 +103,7 @@ def main():
     test_CoarseSaltAndPepper()
     test_Salt()
     test_CoarseSalt()
-    # TODO Pepper
+    test_Pepper()
     # TODO CoarsePepper
     test_ReplaceElementwise()
     test_Invert()
@@ -4027,6 +4027,7 @@ def test_SaltAndPepper():
     assert 0.4 < p < 0.6
 
     aug = iaa.SaltAndPepper(p=1.0)
+    observed = aug.augment_image(base_img)
     nb_pepper = np.sum(observed < 40)
     nb_salt = np.sum(observed > 255 - 40)
     assert nb_pepper > 200
@@ -4120,7 +4121,8 @@ def test_Salt():
     assert np.all(observed >= 127)  # Salt() occasionally replaces with 127,
                                     # which probably should be the center-point here anyways
 
-    aug = iaa.SaltAndPepper(p=1.0)
+    aug = iaa.Salt(p=1.0)
+    observed = aug.augment_image(base_img)
     nb_pepper = np.sum(observed < 40)
     nb_salt = np.sum(observed > 255 - 40)
     assert nb_pepper == 0
@@ -4201,6 +4203,27 @@ def test_CoarseSalt():
     except Exception:
         got_exception = True
     assert got_exception
+
+
+def test_Pepper():
+    reseed()
+
+    base_img = np.zeros((100, 100, 1), dtype=np.uint8) + 128
+    aug = iaa.Pepper(p=0.5)
+    observed = aug.augment_image(base_img)
+    p = np.mean(observed != 128)
+    assert 0.4 < p < 0.6
+    assert np.all(observed <= 128)
+
+    aug = iaa.Pepper(p=1.0)
+    observed = aug.augment_image(base_img)
+    nb_pepper = np.sum(observed < 40)
+    nb_salt = np.sum(observed > 255 - 40)
+    assert nb_pepper > 200
+    assert nb_salt == 0
+
+    # not more tests necessary here as Salt is just a tiny wrapper around
+    # ReplaceElementwise
 
 
 def test_Add():
