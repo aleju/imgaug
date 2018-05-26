@@ -3575,6 +3575,52 @@ def test_Multiply():
     assert nb_changed_aug >= int(nb_iterations * 0.95)
     assert nb_changed_aug_det == 0
 
+    # test channelwise
+    aug = iaa.Multiply(mul=iap.Choice([0, 2]), per_channel=True)
+    observed = aug.augment_image(np.ones((1, 1, 100), dtype=np.uint8))
+    uq = np.unique(observed)
+    assert 0 in uq
+    assert 2 in uq
+    assert len(uq) == 2
+
+    # test channelwise with probability
+    aug = iaa.Multiply(mul=iap.Choice([0, 2]), per_channel=0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(400):
+        observed = aug.augment_image(np.ones((1, 1, 20), dtype=np.uint8))
+        uq = np.unique(observed)
+        per_channel = (len(uq) == 2)
+        if per_channel:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert 150 < seen[0] < 250
+    assert 150 < seen[1] < 250
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.Multiply(mul="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.Multiply(mul=1, per_channel="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.Multiply(mul=1, per_channel=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].value == 1
+    assert params[1].value == 0
+
+
 def test_MultiplyElementwise():
     reseed()
 
