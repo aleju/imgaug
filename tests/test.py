@@ -145,8 +145,10 @@ def main():
     test_restore_augmented_image_dtype()
     test_restore_augmented_images_dtypes_()
     test_restore_augmented_images_dtypes()
-    # TODO clip_augmented_images_()
-    # TODO clip_augmented_images()
+    test_clip_augmented_image_()
+    test_clip_augmented_image()
+    test_clip_augmented_images_()
+    test_clip_augmented_images()
     # TODO Augmenter
     test_Sequential()
     test_SomeOf()
@@ -6608,6 +6610,72 @@ def test_restore_augmented_images_dtypes():
     assert all([image.dtype.type == np.uint8 for image in images])
     images_restored = iaa.restore_augmented_images_dtypes(images, dtypes)
     assert all([image_restored.dtype.type == np.int32 for image_restored in images_restored])
+
+
+def test_clip_augmented_image_():
+    image = np.zeros((1, 3), dtype=np.uint8)
+    image[0, 0] = 10
+    image[0, 1] = 20
+    image[0, 2] = 30
+    image_clipped = iaa.clip_augmented_image_(image, minval=15, maxval=25)
+    assert image_clipped[0, 0] == 15
+    assert image_clipped[0, 1] == 20
+    assert image_clipped[0, 2] == 25
+
+
+def test_clip_augmented_image():
+    image = np.zeros((1, 3), dtype=np.uint8)
+    image[0, 0] = 10
+    image[0, 1] = 20
+    image[0, 2] = 30
+    image_clipped = iaa.clip_augmented_image(image, minval=15, maxval=25)
+    assert image_clipped[0, 0] == 15
+    assert image_clipped[0, 1] == 20
+    assert image_clipped[0, 2] == 25
+
+
+def test_clip_augmented_images_():
+    images = np.zeros((2, 1, 3), dtype=np.uint8)
+    images[:, 0, 0] = 10
+    images[:, 0, 1] = 20
+    images[:, 0, 2] = 30
+    images_clipped = iaa.clip_augmented_images_(images, minval=15, maxval=25)
+    assert np.all(images_clipped[:, 0, 0] == 15)
+    assert np.all(images_clipped[:, 0, 1] == 20)
+    assert np.all(images_clipped[:, 0, 2] == 25)
+
+    images = [np.zeros((1, 3), dtype=np.uint8) for _ in sm.xrange(2)]
+    for i in sm.xrange(len(images)):
+        images[i][0, 0] = 10
+        images[i][0, 1] = 20
+        images[i][0, 2] = 30
+    images_clipped = iaa.clip_augmented_images_(images, minval=15, maxval=25)
+    assert isinstance(images_clipped, list)
+    assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
+    assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
+    assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
+
+
+def test_clip_augmented_images():
+    images = np.zeros((2, 1, 3), dtype=np.uint8)
+    images[:, 0, 0] = 10
+    images[:, 0, 1] = 20
+    images[:, 0, 2] = 30
+    images_clipped = iaa.clip_augmented_images(images, minval=15, maxval=25)
+    assert np.all(images_clipped[:, 0, 0] == 15)
+    assert np.all(images_clipped[:, 0, 1] == 20)
+    assert np.all(images_clipped[:, 0, 2] == 25)
+
+    images = [np.zeros((1, 3), dtype=np.uint8) for _ in sm.xrange(2)]
+    for i in sm.xrange(len(images)):
+        images[i][0, 0] = 10
+        images[i][0, 1] = 20
+        images[i][0, 2] = 30
+    images_clipped = iaa.clip_augmented_images(images, minval=15, maxval=25)
+    assert isinstance(images_clipped, list)
+    assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
+    assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
+    assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
 
 
 def test_Sequential():
