@@ -1434,9 +1434,9 @@ class Invert(Augmenter):
         inverted.
             * If a float, then that probability will be used for all images.
             * If a StochasticParameter, then that parameter will queried per
-              image and is expected too return values in the range [0.0, 1.0],
+              image and is expected to return values in the range [0.0, 1.0],
               where values >0.5 mean that the image/channel is supposed to be
-              inverted.
+              inverted. Recommended to be some form of Binomial(...).
 
     per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
