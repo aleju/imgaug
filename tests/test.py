@@ -6893,6 +6893,15 @@ def test_Augmenter_remove():
     assert isinstance(augs, iaa.Noop)
 
     augs = get_seq()
+    got_exception = False
+    try:
+        augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq", copy=False)
+    except Exception as exc:
+        got_exception = True
+        assert "Inplace removal of topmost augmenter requested, which is currently not possible" in str(exc)
+    assert got_exception
+
+    augs = get_seq()
     augs = augs.remove_augmenters(lambda aug, parents: True, noop_if_topmost=False)
     assert augs is None
 
