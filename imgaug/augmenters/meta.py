@@ -205,7 +205,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batches_original_dts.append("numpy_array")
             elif isinstance(batch, list):
                 if len(batch) == 0:
-                    batches_normalized.append(ia.Batch())
+                    batches_normalized.append(ia.Batch(data=i))
                     batches_original_dts.append("empty_list")
                 elif ia.is_np_array(batch[0]):
                     batches_normalized.append(ia.Batch(images=batch, data=i))
