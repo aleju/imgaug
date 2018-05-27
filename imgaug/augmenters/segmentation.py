@@ -43,6 +43,10 @@ class Superpixels(Augmenter):
         by their average color (resulting in a standard superpixel image).
         This parameter can be a tuple (a, b), e.g. (0.5, 1.0). In this case,
         a random probability p with a <= p <= b will be rolled per image.
+        If this parameter is a StochasticParameter, it is expected to return
+        values between 0 and 1. Values >=0.5 will be interpreted as the command
+        to replace a superpixel region with its mean. Recommended to be some
+        form of Binomial(...).
 
     n_segments : int or tuple/list of ints or StochasticParameter, optional(default=100)
         Target number of superpixels to generate.
@@ -166,7 +170,7 @@ class Superpixels(Augmenter):
                         # with mod here, because slic can sometimes create more superpixel
                         # than requested. replace_samples then does not have enough
                         # values, so we just start over with the first one again.
-                        if replace_samples[ridx % len(replace_samples)] == 1:
+                        if replace_samples[ridx % len(replace_samples)] >= 0.5:
                             #print("changing region %d of %d, channel %d, #indices %d" % (ridx, np.max(segments), c, len(np.where(segments == ridx)[0])))
                             mean_intensity = region.mean_intensity
                             image_sp_c = image_sp[..., c]
@@ -183,4 +187,4 @@ class Superpixels(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.n_segments, self.max_size]
+        return [self.p_replace, self.n_segments, self.max_size, self.interpolation]
