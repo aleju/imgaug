@@ -141,9 +141,10 @@ def main():
 
     # meta
     test_copy_dtypes_for_restore()
-    # TODO copy_dtypes_for_restore()
-    # TODO restore_augmented_images_dtypes_()
-    # TODO restore_augmented_images_dtypes()
+    test_restore_augmented_image_dtype_()
+    test_restore_augmented_image_dtype()
+    test_restore_augmented_images_dtypes_()
+    test_restore_augmented_images_dtypes()
     # TODO clip_augmented_images_()
     # TODO clip_augmented_images()
     # TODO Augmenter
@@ -6563,6 +6564,51 @@ def test_copy_dtypes_for_restore():
         dtypes_copy = iaa.copy_dtypes_for_restore(images, force_list=True)
         assert isinstance(dtypes_copy, list)
         assert all([dtype_i.type == dt for dtype_i in dtypes_copy])
+
+
+def test_restore_augmented_image_dtype_():
+    image = np.zeros((16, 32, 3), dtype=np.uint8)
+    image_result = iaa.restore_augmented_image_dtype_(image, np.int32)
+    assert image_result.dtype.type == np.int32
+
+
+def test_restore_augmented_image_dtype():
+    image = np.zeros((16, 32, 3), dtype=np.uint8)
+    image_result = iaa.restore_augmented_image_dtype(image, np.int32)
+    assert image_result.dtype.type == np.int32
+
+
+def test_restore_augmented_images_dtypes_():
+    images = np.zeros((10, 16, 32, 3), dtype=np.int32)
+    dtypes = iaa.copy_dtypes_for_restore(images)
+    images = images.astype(np.uint8)
+    assert images.dtype.type == np.uint8
+    images_result = iaa.restore_augmented_images_dtypes_(images, dtypes)
+    assert images_result.dtype.type == np.int32
+
+    images = [np.zeros((16, 32, 3), dtype=np.int32) for _ in sm.xrange(10)]
+    dtypes = iaa.copy_dtypes_for_restore(images)
+    images = [image.astype(np.uint8) for image in images]
+    assert all([image.dtype.type == np.uint8 for image in images])
+    images_result = iaa.restore_augmented_images_dtypes_(images, dtypes)
+    assert all([image_result.dtype.type == np.int32 for image_result in images_result])
+
+
+def test_restore_augmented_images_dtypes():
+    images = np.zeros((10, 16, 32, 3), dtype=np.int32)
+    dtypes = iaa.copy_dtypes_for_restore(images)
+    images = images.astype(np.uint8)
+    assert images.dtype.type == np.uint8
+    images_restored = iaa.restore_augmented_images_dtypes(images, dtypes)
+    assert images_restored.dtype.type == np.int32
+
+    images = [np.zeros((16, 32, 3), dtype=np.int32) for _ in sm.xrange(10)]
+    dtypes = iaa.copy_dtypes_for_restore(images)
+    images = [image.astype(np.uint8) for image in images]
+    assert all([image.dtype.type == np.uint8 for image in images])
+    images_restored = iaa.restore_augmented_images_dtypes(images, dtypes)
+    assert all([image_restored.dtype.type == np.int32 for image_restored in images_restored])
+
 
 def test_Sequential():
     reseed()
