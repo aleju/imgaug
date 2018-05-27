@@ -1774,6 +1774,15 @@ def test_Superpixels():
     expected = base_img_superpixels
     assert _array_equals_tolerant(observed, expected, 2)
 
+    aug = iaa.Superpixels(p_replace=1.0, n_segments=iap.Deterministic(2))
+    observed = aug.augment_image(base_img)
+    expected = base_img_superpixels
+    assert _array_equals_tolerant(observed, expected, 2)
+
+    aug = iaa.Superpixels(p_replace=iap.Binomial(iap.Choice([0.0, 1.0])), n_segments=2)
+    observed = aug.augment_image(base_img)
+    assert np.allclose(observed, base_img) or _array_equals_tolerant(observed, base_img_superpixels, 2)
+
     aug = iaa.Superpixels(p_replace=0.5, n_segments=2)
     seen = {"none": False, "left": False, "right": False, "both": False}
     for _ in sm.xrange(100):
@@ -1791,6 +1800,32 @@ def test_Superpixels():
         if all(seen.values()):
             break
     assert all(seen.values())
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.Superpixels(p_replace="test", n_segments=100)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.Superpixels(p_replace=1, n_segments="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.Superpixels(p_replace=1, n_segments=2, max_size=100, interpolation="nearest")
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Binomial)
+    assert isinstance(params[0].p, iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].p.value == 1
+    assert params[1].value == 2
+    assert params[2] == 100
+    assert params[3] == "nearest"
 
 
 def test_Scale():
