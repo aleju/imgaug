@@ -67,6 +67,9 @@ def restore_augmented_images_dtypes(images, orig_dtypes):
 def clip_augmented_image_(image, minval, maxval):
     return clip_augmented_images_(image, minval, maxval)
 
+def clip_augmented_image(image, minval, maxval):
+    return clip_augmented_images(image, minval, maxval)
+
 def clip_augmented_images_(images, minval, maxval):
     if ia.is_np_array(images):
         return np.clip(images, minval, maxval, out=images)
