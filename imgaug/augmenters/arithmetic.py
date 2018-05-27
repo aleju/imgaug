@@ -1637,4 +1637,4 @@ class ContrastNormalization(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.alpha]
+        return [self.alpha, self.per_channel]
