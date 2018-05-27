@@ -1123,10 +1123,11 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             for aug in lst:
                 result.append(aug)
                 children = aug.get_all_children(flat=flat)
-                if flat:
-                    result.extend(children)
-                else:
-                    result.append(children)
+                if len(children) > 0:
+                    if flat:
+                        result.extend(children)
+                    else:
+                        result.append(children)
         return result
 
     def find_augmenters(self, func, parents=None, flat=True):
