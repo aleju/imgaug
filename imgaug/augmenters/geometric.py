@@ -1153,7 +1153,7 @@ class AffineCv2(Augmenter):
                     dsize=(width, height),
                     flags=order,
                     borderMode=mode,
-                    borderValue=cval
+                    borderValue=tuple([int(v) for v in cval])
                 )
 
                 # cv2 warp drops last axis if shape is (H, W, 1)
