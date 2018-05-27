@@ -87,9 +87,7 @@ def main():
     # ----------------------
     # augmenters
     # ----------------------
-    test_find()
-    test_remove()
-    test_hooks()
+
 
     # arithmetic
     test_Add()
@@ -150,6 +148,9 @@ def main():
     test_clip_augmented_images_()
     test_clip_augmented_images()
     # TODO Augmenter
+    test_Augmenter_find()
+    test_Augmenter_remove()
+    test_Augmenter_hooks()
     test_Sequential()
     test_SomeOf()
     test_OneOf()
@@ -1148,149 +1149,6 @@ def test_BoundingBox():
     # test_BoundingBox_str()
     bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
     assert bb.__str__() == "BoundingBox(x1=1.0000, y1=1.0000, x2=3.0000, y2=3.0000, label=None)"
-
-
-def test_find():
-    reseed()
-
-    noop1 = iaa.Noop(name="Noop")
-    fliplr = iaa.Fliplr(name="Fliplr")
-    flipud = iaa.Flipud(name="Flipud")
-    noop2 = iaa.Noop(name="Noop2")
-    seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
-    seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
-
-    augs = seq1.find_augmenters_by_name("Seq")
-    assert len(augs) == 1
-    assert augs[0] == seq1
-
-    augs = seq1.find_augmenters_by_name("Seq2")
-    assert len(augs) == 1
-    assert augs[0] == seq2
-
-    augs = seq1.find_augmenters_by_names(["Seq", "Seq2"])
-    assert len(augs) == 2
-    assert augs[0] == seq1
-    assert augs[1] == seq2
-
-    augs = seq1.find_augmenters_by_name(r"Seq.*", regex=True)
-    assert len(augs) == 2
-    assert augs[0] == seq1
-    assert augs[1] == seq2
-
-    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"])
-    assert len(augs) == 2
-    assert augs[0] == seq1
-    assert augs[1] == seq2
-
-    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"] and len(parents) > 0)
-    assert len(augs) == 1
-    assert augs[0] == seq2
-
-    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"], flat=False)
-    assert len(augs) == 2
-    assert augs[0] == seq1
-    assert augs[1] == [seq2]
-
-
-def test_remove():
-    reseed()
-
-    def get_seq():
-        noop1 = iaa.Noop(name="Noop")
-        fliplr = iaa.Fliplr(name="Fliplr")
-        flipud = iaa.Flipud(name="Flipud")
-        noop2 = iaa.Noop(name="Noop2")
-        seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
-        seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
-        return seq1
-
-    augs = get_seq()
-    augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq2")
-    seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
-    assert len(seqs) == 1
-    assert seqs[0].name == "Seq"
-
-    augs = get_seq()
-    augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq2" and len(parents) == 0)
-    seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
-    assert len(seqs) == 2
-    assert seqs[0].name == "Seq"
-    assert seqs[1].name == "Seq2"
-
-    augs = get_seq()
-    augs = augs.remove_augmenters(lambda aug, parents: True)
-    assert augs is not None
-    assert isinstance(augs, iaa.Noop)
-
-    augs = get_seq()
-    augs = augs.remove_augmenters(lambda aug, parents: True, noop_if_topmost=False)
-    assert augs is None
-
-
-def test_hooks():
-    reseed()
-
-    image = np.array([[0, 0, 1],
-                      [0, 0, 1],
-                      [0, 1, 1]], dtype=np.uint8)
-    image_lr = np.array([[1, 0, 0],
-                         [1, 0, 0],
-                         [1, 1, 0]], dtype=np.uint8)
-    image_ud = np.array([[0, 1, 1],
-                         [0, 0, 1],
-                         [0, 0, 1]], dtype=np.uint8)
-    image_lrud = np.array([[1, 1, 0],
-                           [1, 0, 0],
-                           [1, 0, 0]], dtype=np.uint8)
-    image = image[:, :, np.newaxis]
-    image_lr = image_lr[:, :, np.newaxis]
-    image_ud = image_ud[:, :, np.newaxis]
-    image_lrud = image_lrud[:, :, np.newaxis]
-
-    seq = iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)])
-
-    # preprocessing
-    def preprocessor(images, augmenter, parents):
-        img = np.copy(images)
-        img[0][1, 1, 0] += 1
-        return img
-    hooks = ia.HooksImages(preprocessor=preprocessor)
-    images_aug = seq.augment_images([image], hooks=hooks)
-    expected = np.copy(image_lrud)
-    expected[1, 1, 0] = 3
-    assert np.array_equal(images_aug[0], expected)
-
-    # postprocessing
-    def postprocessor(images, augmenter, parents):
-        img = np.copy(images)
-        img[0][1, 1, 0] += 1
-        return img
-    hooks = ia.HooksImages(postprocessor=postprocessor)
-    images_aug = seq.augment_images([image], hooks=hooks)
-    expected = np.copy(image_lrud)
-    expected[1, 1, 0] = 3
-    assert np.array_equal(images_aug[0], expected)
-
-    # propagating
-    def propagator(images, augmenter, parents, default):
-        if "Seq" in augmenter.name:
-            return False
-        else:
-            return default
-    hooks = ia.HooksImages(propagator=propagator)
-    images_aug = seq.augment_images([image], hooks=hooks)
-    assert np.array_equal(images_aug[0], image)
-
-    # activation
-    def activator(images, augmenter, parents, default):
-        if "Flipud" in augmenter.name:
-            return False
-        else:
-            return default
-    hooks = ia.HooksImages(activator=activator)
-    images_aug = seq.augment_images([image], hooks=hooks)
-    assert np.array_equal(images_aug[0], image_lr)
 
 
 def test_Noop():
@@ -6676,6 +6534,149 @@ def test_clip_augmented_images():
     assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
     assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
     assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
+
+
+def test_Augmenter_find():
+    reseed()
+
+    noop1 = iaa.Noop(name="Noop")
+    fliplr = iaa.Fliplr(name="Fliplr")
+    flipud = iaa.Flipud(name="Flipud")
+    noop2 = iaa.Noop(name="Noop2")
+    seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
+    seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
+
+    augs = seq1.find_augmenters_by_name("Seq")
+    assert len(augs) == 1
+    assert augs[0] == seq1
+
+    augs = seq1.find_augmenters_by_name("Seq2")
+    assert len(augs) == 1
+    assert augs[0] == seq2
+
+    augs = seq1.find_augmenters_by_names(["Seq", "Seq2"])
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == seq2
+
+    augs = seq1.find_augmenters_by_name(r"Seq.*", regex=True)
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == seq2
+
+    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"])
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == seq2
+
+    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"] and len(parents) > 0)
+    assert len(augs) == 1
+    assert augs[0] == seq2
+
+    augs = seq1.find_augmenters(lambda aug, parents: aug.name in ["Seq", "Seq2"], flat=False)
+    assert len(augs) == 2
+    assert augs[0] == seq1
+    assert augs[1] == [seq2]
+
+
+def test_Augmenter_remove():
+    reseed()
+
+    def get_seq():
+        noop1 = iaa.Noop(name="Noop")
+        fliplr = iaa.Fliplr(name="Fliplr")
+        flipud = iaa.Flipud(name="Flipud")
+        noop2 = iaa.Noop(name="Noop2")
+        seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
+        seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
+        return seq1
+
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq2")
+    seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
+    assert len(seqs) == 1
+    assert seqs[0].name == "Seq"
+
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq2" and len(parents) == 0)
+    seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
+    assert len(seqs) == 2
+    assert seqs[0].name == "Seq"
+    assert seqs[1].name == "Seq2"
+
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: True)
+    assert augs is not None
+    assert isinstance(augs, iaa.Noop)
+
+    augs = get_seq()
+    augs = augs.remove_augmenters(lambda aug, parents: True, noop_if_topmost=False)
+    assert augs is None
+
+
+def test_Augmenter_hooks():
+    reseed()
+
+    image = np.array([[0, 0, 1],
+                      [0, 0, 1],
+                      [0, 1, 1]], dtype=np.uint8)
+    image_lr = np.array([[1, 0, 0],
+                         [1, 0, 0],
+                         [1, 1, 0]], dtype=np.uint8)
+    image_ud = np.array([[0, 1, 1],
+                         [0, 0, 1],
+                         [0, 0, 1]], dtype=np.uint8)
+    image_lrud = np.array([[1, 1, 0],
+                           [1, 0, 0],
+                           [1, 0, 0]], dtype=np.uint8)
+    image = image[:, :, np.newaxis]
+    image_lr = image_lr[:, :, np.newaxis]
+    image_ud = image_ud[:, :, np.newaxis]
+    image_lrud = image_lrud[:, :, np.newaxis]
+
+    seq = iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)])
+
+    # preprocessing
+    def preprocessor(images, augmenter, parents):
+        img = np.copy(images)
+        img[0][1, 1, 0] += 1
+        return img
+    hooks = ia.HooksImages(preprocessor=preprocessor)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    expected = np.copy(image_lrud)
+    expected[1, 1, 0] = 3
+    assert np.array_equal(images_aug[0], expected)
+
+    # postprocessing
+    def postprocessor(images, augmenter, parents):
+        img = np.copy(images)
+        img[0][1, 1, 0] += 1
+        return img
+    hooks = ia.HooksImages(postprocessor=postprocessor)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    expected = np.copy(image_lrud)
+    expected[1, 1, 0] = 3
+    assert np.array_equal(images_aug[0], expected)
+
+    # propagating
+    def propagator(images, augmenter, parents, default):
+        if "Seq" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksImages(propagator=propagator)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    assert np.array_equal(images_aug[0], image)
+
+    # activation
+    def activator(images, augmenter, parents, default):
+        if "Flipud" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksImages(activator=activator)
+    images_aug = seq.augment_images([image], hooks=hooks)
+    assert np.array_equal(images_aug[0], image_lr)
 
 
 def test_Sequential():
