@@ -595,7 +595,7 @@ class Affine(Augmenter):
         return result
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear]
+        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode, self.backend]
 
     def _draw_samples(self, nb_samples, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -693,8 +693,8 @@ class AffineCv2(Augmenter):
     Augmenter to apply affine transformations to images using cv2 (i.e. opencv)
     backend.
 
-    This is mostly a wrapper around skimage's AffineTransform class and
-    warp function.
+    NOTE: This augmenter will likely be removed in the future as Affine() already
+    offers a cv2 backend (use `backend="cv2"`).
 
     Affine transformations
     involve:
@@ -1214,7 +1214,7 @@ class AffineCv2(Augmenter):
         return result
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear]
+        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
 
     def _draw_samples(self, nb_samples, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
