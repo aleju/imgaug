@@ -5244,6 +5244,13 @@ def test_Affine():
     assert nb_changed_aug >= int(nb_iterations * 0.8)
     assert nb_changed_aug_det == 0
 
+    aug = iaa.Affine(scale=iap.Uniform(0.7, 0.9))
+    assert isinstance(aug.scale, iap.Uniform)
+    assert isinstance(aug.scale.a, iap.Deterministic)
+    assert isinstance(aug.scale.b, iap.Deterministic)
+    assert 0.7 - 1e-8 < aug.scale.a.value < 0.7 + 1e-8
+    assert 0.9 - 1e-8 < aug.scale.b.value < 0.9 + 1e-8
+
     # ---------------------
     # translate
     # ---------------------
@@ -5449,6 +5456,20 @@ def test_Affine():
     assert (centers_aug > int(nb_iterations * (1/9 * 0.6))).all()
     assert (centers_aug < int(nb_iterations * (1/9 * 1.4))).all()
 
+    aug = iaa.Affine(translate_percent=iap.Uniform(0.7, 0.9))
+    assert isinstance(aug.translate, iap.Uniform)
+    assert isinstance(aug.translate.a, iap.Deterministic)
+    assert isinstance(aug.translate.b, iap.Deterministic)
+    assert 0.7 - 1e-8 < aug.translate.a.value < 0.7 + 1e-8
+    assert 0.9 - 1e-8 < aug.translate.b.value < 0.9 + 1e-8
+
+    aug = iaa.Affine(translate_px=iap.DiscreteUniform(1, 10))
+    assert isinstance(aug.translate, iap.DiscreteUniform)
+    assert isinstance(aug.translate.a, iap.Deterministic)
+    assert isinstance(aug.translate.b, iap.Deterministic)
+    assert aug.translate.a.value == 1
+    assert aug.translate.b.value == 10
+
     # ---------------------
     # rotate
     # ---------------------
@@ -5505,14 +5526,6 @@ def test_Affine():
     assert isinstance(aug.rotate.b, iap.Deterministic)
     assert aug.rotate.b.value == 20
 
-    # wrong datatype for rotate
-    got_exception = False
-    try:
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0)
-    except Exception:
-        got_exception = True
-    assert got_exception
-
     # random rotation 0-364 degrees
     aug = iaa.Affine(scale=1.0, translate_px=0, rotate=(0, 364), shear=0)
     aug_det = aug.to_deterministic()
@@ -5566,14 +5579,6 @@ def test_Affine():
     assert aug.shear.a.value == 10
     assert isinstance(aug.shear.b, iap.Deterministic)
     assert aug.shear.b.value == 20
-
-    # wrong datatype for rotate
-    got_exception = False
-    try:
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False)
-    except Exception:
-        got_exception = True
-    assert got_exception
 
     # ---------------------
     # cval
@@ -5641,14 +5646,16 @@ def test_Affine():
     assert aug.cval.a.value == 0
     assert aug.cval.b.value == 255
 
-    got_exception = False
-    try:
-        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval="test")
-    except Exception:
-        got_exception = True
-    assert got_exception
+    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=iap.DiscreteUniform(1, 5))
+    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 1
+    assert aug.cval.b.value == 5
 
+    # ------------
     # mode
+    # ------------
     aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=ia.ALL)
     assert isinstance(aug.mode, iap.Choice)
     aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode="edge")
@@ -5661,12 +5668,98 @@ def test_Affine():
     assert isinstance(aug.mode, iap.Choice)
     assert len(aug.mode.a) == 2 and "constant" in aug.mode.a and "edge" in aug.mode.a
 
+    # ------------
+    # exceptions for bad inputs
+    # ------------
+    # scale
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=False)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # translate_px
+    got_exception = False
+    try:
+        aug = iaa.Affine(translate_px=False)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # translate_percent
+    got_exception = False
+    try:
+        aug = iaa.Affine(translate_percent=False)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # rotate
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0, cval=0)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # shear
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False, cval=0)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # cval
+    got_exception = False
+    try:
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=None)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # mode
     got_exception = False
     try:
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=False)
     except Exception:
         got_exception = True
     assert got_exception
+
+    # non-existent order in case of backend=cv2
+    got_exception = False
+    try:
+        aug = iaa.Affine(backend="cv2", order=-1)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # bad order datatype in case of backend=cv2
+    got_exception = False
+    try:
+        aug = iaa.Affine(backend="cv2", order="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # ----------
+    # get_parameters
+    # ----------
+    aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4, order=1, cval=0, mode="constant", backend="cv2")
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)  # scale
+    assert isinstance(params[1], iap.Deterministic)  # translate
+    assert isinstance(params[2], iap.Deterministic)  # rotate
+    assert isinstance(params[3], iap.Deterministic)  # shear
+    assert params[0].value == 1  # scale
+    assert params[1].value == 2  # translate
+    assert params[2].value == 3  # rotate
+    assert params[3].value == 4  # shear
+    assert params[4].value == 1  # order
+    assert params[5].value == 0  # cval
+    assert params[6].value == "constant"  # mode
+    assert params[7] == "cv2"  # backend
 
 
 def test_Sequential():
