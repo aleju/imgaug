@@ -2490,6 +2490,35 @@ def test_Fliplr():
     for val in nb_flipped_by_pos_det:
         assert val in [0, nb_iterations]
 
+    # test StochasticParameter as p
+    aug = iaa.Fliplr(p=iap.Choice([0, 1], p=[0.7, 0.3]))
+    seen = [0, 0]
+    for _ in sm.xrange(1000):
+        observed = aug.augment_image(base_img)
+        if np.array_equal(observed, base_img):
+            seen[0] += 1
+        elif np.array_equal(observed, base_img_flipped):
+            seen[1] += 1
+        else:
+            assert False
+    assert 700 - 75 < seen[0] < 700 + 75
+    assert 300 - 75 < seen[1] < 300 + 75
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.Fliplr(p="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.Fliplr(p=1)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Binomial)
+    assert isinstance(params[0].p, iap.Deterministic)
+    assert params[0].p.value == 1
+
 
 def test_Flipud():
     reseed()
