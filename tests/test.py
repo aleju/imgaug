@@ -140,6 +140,7 @@ def main():
     # TODO ElasticTransformation
 
     # meta
+    test_copy_dtypes_for_restore()
     # TODO copy_dtypes_for_restore()
     # TODO restore_augmented_images_dtypes_()
     # TODO restore_augmented_images_dtypes()
@@ -6539,6 +6540,29 @@ def test_AffineCv2():
     assert params[5].value == 0  # cval
     assert params[6].value == "constant"  # mode
 
+
+def test_copy_dtypes_for_restore():
+    # TODO using dtype=np.bool is causing this to fail as it ends up being <type bool> instead of
+    # <type 'numpy.bool_'>. Any problems from that for the library?
+    images = [
+        np.zeros((1, 1, 3), dtype=np.uint8),
+        np.zeros((10, 16, 3), dtype=np.float32),
+        np.zeros((20, 10, 6), dtype=np.int32)
+    ]
+
+    dtypes_copy = iaa.copy_dtypes_for_restore(images, force_list=False)
+    assert all([dtype_i.type == dtype_j for dtype_i, dtype_j in zip(dtypes_copy, [np.uint8, np.float32, np.int32])])
+
+    dts = [np.uint8, np.float32, np.int32]
+    for dt in dts:
+        images = np.zeros((10, 16, 32, 3), dtype=dt)
+        dtypes_copy = iaa.copy_dtypes_for_restore(images)
+        assert isinstance(dtypes_copy, np.dtype)
+        assert dtypes_copy.type == dt
+
+        dtypes_copy = iaa.copy_dtypes_for_restore(images, force_list=True)
+        assert isinstance(dtypes_copy, list)
+        assert all([dtype_i.type == dt for dtype_i in dtypes_copy])
 
 def test_Sequential():
     reseed()
