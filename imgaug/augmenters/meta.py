@@ -48,6 +48,9 @@ def copy_dtypes_for_restore(images, force_list=False):
 def restore_augmented_image_dtype_(image, orig_dtype):
     return image.astype(orig_dtype, copy=False)
 
+def restore_augmented_image_dtype(image, orig_dtype):
+    return image.astype(orig_dtype, copy=True)
+
 def restore_augmented_images_dtypes_(images, orig_dtypes):
     if ia.is_np_array(images):
         return images.astype(orig_dtypes, copy=False)
