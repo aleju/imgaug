@@ -23,6 +23,7 @@ from skimage import data, color
 import cv2
 import time
 import scipy
+import copy
 
 #from nose.plugins.attrib import attr
 
@@ -147,10 +148,11 @@ def main():
     test_clip_augmented_image()
     test_clip_augmented_images_()
     test_clip_augmented_images()
-    # TODO Augmenter
+    test_Augmenter()
     test_Augmenter_find()
     test_Augmenter_remove()
     test_Augmenter_hooks()
+    test_Augmenter_copy_random_state()
     test_Sequential()
     test_SomeOf()
     test_OneOf()
@@ -183,7 +185,6 @@ def main():
     test_keypoint_augmentation()
     test_unusual_channel_numbers()
     test_dtype_preservation()
-    test_copy_random_state()
 
     # ----------------------
     # parameters
@@ -6536,6 +6537,288 @@ def test_clip_augmented_images():
     assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
 
 
+def test_Augmenter():
+    reseed()
+
+    class DummyAugmenter(iaa.Augmenter):
+        def _augment_images(self, images, random_state, parents, hooks):
+            return images
+        def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+            return keypoints_on_images
+        def get_parameters(self):
+            return []
+
+    # --------
+    # __init__
+    # --------
+    # TODO incomplete tests, handle only cases that were missing in code coverage report
+    aug = DummyAugmenter()
+    assert aug.random_state == ia.CURRENT_RANDOM_STATE
+    aug = DummyAugmenter(deterministic=True)
+    assert aug.random_state != ia.CURRENT_RANDOM_STATE
+    rs = np.random.RandomState(123)
+    aug = DummyAugmenter(random_state=rs)
+    assert aug.random_state == rs
+    aug = DummyAugmenter(random_state=123)
+    assert aug.random_state.randint(0, 10**6) == np.random.RandomState(123).randint(0, 10**6)
+
+    # --------
+    # augment_batches
+    # --------
+    # TODO incomplete tests, handle only cases that were missing in code coverage report
+    aug = DummyAugmenter()
+    batches_aug = list(aug.augment_batches([[]]))
+    assert isinstance(batches_aug, list)
+    assert len(batches_aug) == 1
+    assert isinstance(batches_aug[0], list)
+
+    aug = DummyAugmenter()
+    image_batches = [np.zeros((1, 2, 2, 3), dtype=np.uint8)]
+    batches_aug = list(aug.augment_batches(image_batches))
+    assert isinstance(batches_aug, list)
+    assert len(batches_aug) == 1
+    assert array_equal_lists(batches_aug, image_batches)
+
+    aug = DummyAugmenter()
+    got_exception = False
+    try:
+        batches_aug = list(aug.augment_batches(None))
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    aug = DummyAugmenter()
+    got_exception = False
+    try:
+        batches_aug = list(aug.augment_batches([None]))
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # --------
+    # augment_images
+    # --------
+    # TODO incomplete tests, handle only cases that were missing in code coverage report
+    aug = DummyAugmenter()
+    got_exception = False
+    try:
+        images_aug = aug.augment_images(None)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # --------
+    # _augment_images
+    # --------
+    # TODO incomplete tests, handle only cases that were missing in code coverage report
+    """aug = iaa.Augmenter()
+    got_exception = False
+    try:
+        images_aug = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
+    except Exception:
+        got_exception = True
+    assert got_exception"""
+
+    # --------
+    # _augment_keypoints
+    # --------
+    # TODO incomplete tests, handle only cases that were missing in code coverage report
+    """aug = iaa.Augmenter()
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    got_exception = False
+    try:
+        keypoints_aug = aug.augment_keypoints(keypoints)
+    except Exception:
+        got_exception = True
+    assert got_exception"""
+
+    # --------
+    # augment_bounding_boxes
+    # --------
+    class DummyAugmenterBBs(iaa.Augmenter):
+        def _augment_images(self, images, random_state, parents, hooks):
+            return images
+        def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+            return [keypoints_on_images_i.shift(x=1) for keypoints_on_images_i in keypoints_on_images]
+        def get_parameters(self):
+            return []
+    aug = DummyAugmenterBBs()
+    bb = ia.BoundingBox(x1=1, y1=4, x2=2, y2=5)
+    bbs = [bb]
+    bbsois = [ia.BoundingBoxesOnImage(bbs, shape=(10, 10, 3))]
+    bbsois_aug = aug.augment_bounding_boxes(bbsois)
+    bb_aug = bbsois_aug[0].bounding_boxes[0]
+    assert bb_aug.x1 == 1+1
+    assert bb_aug.y1 == 4
+    assert bb_aug.x2 == 2+1
+    assert bb_aug.y2 == 5
+
+    # --------
+    # draw_grid
+    # --------
+    aug = DummyAugmenter()
+    image = np.zeros((3, 3, 3), dtype=np.uint8)
+    image[0, 0, :] = 10
+    image[0, 1, :] = 50
+    image[1, 1, :] = 255
+
+    # list, shape (3, 3, 3)
+    grid = aug.draw_grid([image], rows=2, cols=2)
+    grid_expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, grid_expected)
+
+    # list, shape (3, 3)
+    grid = aug.draw_grid([image[..., 0]], rows=2, cols=2)
+    grid_expected = np.vstack([
+        np.hstack([image[..., 0:1], image[..., 0:1]]),
+        np.hstack([image[..., 0:1], image[..., 0:1]])
+    ])
+    grid_expected = np.tile(grid_expected, (1, 1, 3))
+    assert np.array_equal(grid, grid_expected)
+
+    # list, shape (2,)
+    got_exception = False
+    try:
+        grid = aug.draw_grid([np.zeros((2,), dtype=np.uint8)], rows=2, cols=2)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # array, shape (1, 3, 3, 3)
+    grid = aug.draw_grid(np.uint8([image]), rows=2, cols=2)
+    grid_expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, grid_expected)
+
+    # array, shape (3, 3, 3)
+    grid = aug.draw_grid(image, rows=2, cols=2)
+    grid_expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, grid_expected)
+
+    # array, shape (3, 3)
+    grid = aug.draw_grid(image[..., 0], rows=2, cols=2)
+    grid_expected = np.vstack([
+        np.hstack([image[..., 0:1], image[..., 0:1]]),
+        np.hstack([image[..., 0:1], image[..., 0:1]])
+    ])
+    grid_expected = np.tile(grid_expected, (1, 1, 3))
+    assert np.array_equal(grid, grid_expected)
+
+    # array, shape (2,)
+    got_exception = False
+    try:
+        grid = aug.draw_grid(np.zeros((2,), dtype=np.uint8), rows=2, cols=2)
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # --------
+    # reseed
+    # --------
+    def _same_rs(rs1, rs2):
+        rs1_copy = copy.deepcopy(rs1)
+        rs2_copy = copy.deepcopy(rs2)
+        rnd1 = rs1_copy.randint(0, 10**6)
+        rnd2 = rs2_copy.randint(0, 10**6)
+        return rnd1 == rnd2
+
+    aug1 = DummyAugmenter()
+    aug2 = DummyAugmenter(deterministic=True)
+    aug0 = iaa.Sequential([aug1, aug2])
+
+    aug0_copy = aug0.deepcopy()
+    assert _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+    aug0_copy.reseed()
+    assert not _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+
+    aug0_copy = aug0.deepcopy()
+    assert _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+    aug0_copy.reseed(deterministic_too=True)
+    assert not _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert not _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+
+    aug0_copy = aug0.deepcopy()
+    assert _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+    aug0_copy.reseed(random_state=123)
+    assert not _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+    assert aug0_copy.random_state.randint(0, 10**6) == np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
+
+    aug0_copy = aug0.deepcopy()
+    assert _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+    aug0_copy.reseed(random_state=np.random.RandomState(123))
+    assert not _same_rs(aug0.random_state, aug0_copy.random_state)
+    assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
+    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
+    assert aug0_copy.random_state.randint(0, 10**6) == np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
+
+    # --------
+    # get_parameters
+    # --------
+    """aug = Augmenter()
+    got_exception = False
+    try:
+        aug.get_parameters()
+    except Exception:
+        got_exception = True
+    assert got_exception"""
+
+    # --------
+    # get_all_children
+    # --------
+    aug1 = DummyAugmenter()
+    aug21 = DummyAugmenter()
+    aug2 = iaa.Sequential([aug21])
+    aug0 = iaa.Sequential([aug1, aug2])
+    children = aug0.get_all_children(flat=True)
+    assert isinstance(children, list)
+    assert children[0] == aug1
+    assert children[1] == aug2
+    assert children[2] == aug21
+    children = aug0.get_all_children(flat=False)
+    assert isinstance(children, list)
+    assert children[0] == aug1
+    assert children[1] == aug2
+    assert isinstance(children[2], list)
+    assert children[2][0] == aug21
+
+    # --------
+    # __repr__, __str__
+    # --------
+    class DummyAugmenterRepr(iaa.Augmenter):
+        def _augment_images(self, images, random_state, parents, hooks):
+            return images
+        def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+            return keypoints_on_images
+        def get_parameters(self):
+            return ["A", "B", "C"]
+    aug = DummyAugmenterRepr(name="Example")
+    assert aug.__repr__() == aug.__str__() == "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=False)"
+    aug = DummyAugmenterRepr(name="Example", deterministic=True)
+    assert aug.__repr__() == aug.__str__() == "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=True)"
+
+
 def test_Augmenter_find():
     reseed()
 
@@ -6677,6 +6960,102 @@ def test_Augmenter_hooks():
     hooks = ia.HooksImages(activator=activator)
     images_aug = seq.augment_images([image], hooks=hooks)
     assert np.array_equal(images_aug[0], image_lr)
+
+
+def test_Augmenter_copy_random_state():
+    image = ia.quokka_square(size=(128, 128))
+    images = np.array([image] * 64, dtype=np.uint8)
+
+    source = iaa.Sequential([
+        iaa.Fliplr(0.5, name="hflip"),
+        iaa.Dropout(0.05, name="dropout"),
+        iaa.Affine(translate_px=(-10, 10), name="translate", random_state=3),
+        iaa.GaussianBlur(1.0, name="blur", random_state=4)
+    ], random_state=5)
+    target = iaa.Sequential([
+        iaa.Fliplr(0.5, name="hflip"),
+        iaa.Dropout(0.05, name="dropout"),
+        iaa.Affine(translate_px=(-10, 10), name="translate")
+    ])
+
+    source.localize_random_state_()
+
+    target_cprs = target.copy_random_state(source, matching="position")
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    images_aug_source = source_alt.augment_images(images)
+    images_aug_target = target_cprs.augment_images(images)
+    #misc.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
+    assert np.array_equal(images_aug_source, images_aug_target)
+
+    source[0].deterministic = True
+    target_cprs = target.copy_random_state(source, matching="position", copy_determinism=True)
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    images_aug_source = source_alt.augment_images(images)
+    images_aug_target = target_cprs.augment_images(images)
+    assert target_cprs[0].deterministic == True
+    assert np.array_equal(images_aug_source, images_aug_target)
+
+    source[0].deterministic = False
+    target[0].deterministic = False
+
+    target_cprs = target.copy_random_state(source, matching="name")
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    images_aug_source = source_alt.augment_images(images)
+    images_aug_target = target_cprs.augment_images(images)
+    assert np.array_equal(images_aug_source, images_aug_target)
+
+    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    source_det = source_alt.to_deterministic()
+    target_cprs_det = target.copy_random_state(source_det, matching="name",
+                                               copy_determinism=True)
+    images_aug_source1 = source_det.augment_images(images)
+    images_aug_target1 = target_cprs_det.augment_images(images)
+    images_aug_source2 = source_det.augment_images(images)
+    images_aug_target2 = target_cprs_det.augment_images(images)
+    assert np.array_equal(images_aug_source1, images_aug_source2)
+    assert np.array_equal(images_aug_target1, images_aug_target2)
+    assert np.array_equal(images_aug_source1, images_aug_target1)
+    assert np.array_equal(images_aug_source2, images_aug_target2)
+
+    source = iaa.Fliplr(0.5, name="hflip")
+    target = iaa.Fliplr(0.5, name="hflip")
+    got_exception = False
+    try:
+        target_cprs = target.copy_random_state(source, matching="name")
+    except Exception as exc:
+        got_exception = True
+        assert "localize_random_state" in str(exc)
+    assert got_exception
+
+    source = iaa.Fliplr(0.5, name="hflip-other-name")
+    target = iaa.Fliplr(0.5, name="hflip")
+    got_exception = False
+    try:
+        target_cprs = target.copy_random_state(source, matching="name", matching_tolerant=False)
+    except Exception as exc:
+        got_exception = True
+        assert "not found among source augmenters" in str(exc)
+    assert got_exception
+
+    source = iaa.Fliplr(0.5, name="hflip")
+    target = iaa.Fliplr(0.5, name="hflip")
+    got_exception = False
+    try:
+        target_cprs = target.copy_random_state(source, matching="position")
+    except Exception as exc:
+        got_exception = True
+        assert "localize_random_state" in str(exc)
+    assert got_exception
+
+    source = iaa.Sequential([iaa.Fliplr(0.5, name="hflip"), iaa.Fliplr(0.5, name="hflip2")])
+    target = iaa.Sequential([iaa.Fliplr(0.5, name="hflip")])
+    got_exception = False
+    try:
+        target_cprs = target.copy_random_state(source, matching="position", matching_tolerant=False)
+    except Exception as exc:
+        got_exception = True
+        assert "different lengths" in str(exc)
+    assert got_exception
 
 
 def test_Sequential():
@@ -7806,50 +8185,6 @@ def test_dtype_preservation():
             else:
                 #print("Skipped dtype %s for augmenter %s" % (images_i.dtype, aug.name))
                 pass
-
-def test_copy_random_state():
-    image = ia.quokka_square(size=(128, 128))
-    images = np.array([image] * 64, dtype=np.uint8)
-
-    source = iaa.Sequential([
-        iaa.Fliplr(0.5, name="hflip"),
-        iaa.Dropout(0.05, name="dropout"),
-        iaa.Affine(translate_px=(-10, 10), name="translate", random_state=3),
-        iaa.GaussianBlur(1.0, name="blur", random_state=4)
-    ], random_state=5)
-    target = iaa.Sequential([
-        iaa.Fliplr(0.5, name="hflip"),
-        iaa.Dropout(0.05, name="dropout"),
-        iaa.Affine(translate_px=(-10, 10), name="translate")
-    ])
-
-    source.localize_random_state_()
-
-    target_cprs = target.copy_random_state(source, matching="position")
-    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
-    images_aug_source = source_alt.augment_images(images)
-    images_aug_target = target_cprs.augment_images(images)
-    #misc.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
-    assert np.array_equal(images_aug_source, images_aug_target)
-
-    target_cprs = target.copy_random_state(source, matching="name")
-    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
-    images_aug_source = source_alt.augment_images(images)
-    images_aug_target = target_cprs.augment_images(images)
-    assert np.array_equal(images_aug_source, images_aug_target)
-
-    source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
-    source_det = source_alt.to_deterministic()
-    target_cprs_det = target.copy_random_state(source_det, matching="name",
-                                               copy_determinism=True)
-    images_aug_source1 = source_det.augment_images(images)
-    images_aug_target1 = target_cprs_det.augment_images(images)
-    images_aug_source2 = source_det.augment_images(images)
-    images_aug_target2 = target_cprs_det.augment_images(images)
-    assert np.array_equal(images_aug_source1, images_aug_source2)
-    assert np.array_equal(images_aug_target1, images_aug_target2)
-    assert np.array_equal(images_aug_source1, images_aug_target1)
-    assert np.array_equal(images_aug_source2, images_aug_target2)
 
 
 def test_handle_continuous_param():
