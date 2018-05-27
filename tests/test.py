@@ -4826,6 +4826,27 @@ def test_ContrastNormalization():
     p_changed = nb_changed / (nb_iterations-1)
     assert p_changed > 0.5
 
+    # per_channel=True
+    aug = iaa.ContrastNormalization(alpha=(1.0, 6.0), per_channel=True)
+    img = np.zeros((1, 1, 100), dtype=np.uint8) + 128 + 10
+    observed = aug.augment_image(img)
+    uq = np.unique(observed)
+    assert len(uq) > 5
+
+    # per_channel with probability
+    aug = iaa.ContrastNormalization(alpha=(1.0, 4.0), per_channel=0.7)
+    img = np.zeros((1, 1, 100), dtype=np.uint8) + 128 + 10
+    seen = [0, 0]
+    for _ in sm.xrange(1000):
+        observed = aug.augment_image(img)
+        uq = np.unique(observed)
+        if len(uq) == 1:
+            seen[0] += 1
+        elif len(uq) >= 2:
+            seen[1] += 1
+    assert 300 - 75 < seen[0] < 300 + 75
+    assert 700 - 75 < seen[1] < 700 + 75
+
     # keypoints shouldnt be changed
     aug = iaa.ContrastNormalization(alpha=2.0)
     aug_det = iaa.ContrastNormalization(alpha=2.0).to_deterministic()
@@ -4836,6 +4857,30 @@ def test_ContrastNormalization():
     observed = aug_det.augment_keypoints(keypoints)
     expected = keypoints
     assert keypoints_equal(observed, expected)
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.ContrastNormalization(alpha="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.ContrastNormalization(alpha=1.5, per_channel="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.ContrastNormalization(alpha=1, per_channel=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].value == 1
+    assert params[1].value == 0
+
 
 def test_Affine():
     reseed()
