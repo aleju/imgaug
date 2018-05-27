@@ -1156,6 +1156,10 @@ class AffineCv2(Augmenter):
                     borderValue=cval
                 )
 
+                # cv2 warp drops last axis if shape is (H, W, 1)
+                if image_warped.ndim == 2:
+                    image_warped = image_warped[..., np.newaxis]
+
                 # warp changes uint8 to float64, making this necessary
                 #if image_warped.dtype != images[i].dtype:
                 #    image_warped = image_warped.astype(images[i].dtype, copy=False)
