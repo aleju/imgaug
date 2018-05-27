@@ -4687,12 +4687,51 @@ def test_Invert():
 
     nb_iterations = 1000
     nb_inverted = 0
+    aug = iaa.Invert(p=0.8)
+    img = np.zeros((1, 1, 1), dtype=np.uint8) + 256
+    expected = np.zeros((1, 1, 1), dtype=np.uint8)
     for i in sm.xrange(nb_iterations):
-        observed = iaa.Invert(p=0.5).augment_image(zeros + 256)
-        if np.array_equal(observed, zeros):
+        observed = aug.augment_image(img)
+        if np.array_equal(observed, expected):
             nb_inverted += 1
     pinv = nb_inverted / nb_iterations
-    assert 0.4 <= pinv <= 0.6
+    assert 0.75 <= pinv <= 0.85
+
+    nb_iterations = 1000
+    nb_inverted = 0
+    aug = iaa.Invert(p=iap.Binomial(0.8))
+    img = np.zeros((1, 1, 1), dtype=np.uint8) + 256
+    expected = np.zeros((1, 1, 1), dtype=np.uint8)
+    for i in sm.xrange(nb_iterations):
+        observed = aug.augment_image(img)
+        if np.array_equal(observed, expected):
+            nb_inverted += 1
+    pinv = nb_inverted / nb_iterations
+    assert 0.75 <= pinv <= 0.85
+
+    nb_iterations = 1000
+    nb_inverted = 0
+    aug = iaa.Invert(p=0.5, per_channel=True)
+    img = np.zeros((1, 1, 100), dtype=np.uint8) + 256
+    observed = aug.augment_image(img)
+    assert len(np.unique(observed)) == 2
+
+    nb_iterations = 1000
+    nb_inverted = 0
+    aug = iaa.Invert(p=iap.Binomial(0.8), per_channel=0.7)
+    img = np.zeros((1, 1, 20), dtype=np.uint8) + 256
+    seen = [0, 0]
+    for i in sm.xrange(nb_iterations):
+        observed = aug.augment_image(img)
+        uq = np.unique(observed)
+        if len(uq) == 1:
+            seen[0] += 1
+        elif len(uq) == 2:
+            seen[1] += 1
+        else:
+            assert False
+    assert 300 - 75 < seen[0] < 300 + 75
+    assert 700 - 75 < seen[1] < 700 + 75
 
     # keypoints shouldnt be changed
     aug = iaa.Invert(p=1.0)
@@ -4704,6 +4743,33 @@ def test_Invert():
     observed = aug_det.augment_keypoints(keypoints)
     expected = keypoints
     assert keypoints_equal(observed, expected)
+
+    # test exceptions for wrong parameter types
+    got_exception = False
+    try:
+        aug = iaa.Invert(p="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        aug = iaa.Invert(p=0.5, per_channel="test")
+    except Exception:
+        got_exception = True
+    assert got_exception
+
+    # test get_parameters()
+    aug = iaa.Invert(p=1, per_channel=False, min_value=10, max_value=20)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Binomial)
+    assert isinstance(params[0].p, iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].p.value == 1
+    assert params[1].value == 0
+    assert params[2] == 10
+    assert params[3] == 20
+
 
 def test_ContrastNormalization():
     reseed()
