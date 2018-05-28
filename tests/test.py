@@ -153,6 +153,7 @@ def main():
     test_Augmenter_remove()
     test_Augmenter_hooks()
     test_Augmenter_copy_random_state()
+    test_Augmenter_augment_batches()
     test_Sequential()
     test_SomeOf()
     test_OneOf()
@@ -180,7 +181,6 @@ def main():
 
     # these functions use various augmenters, so test them last
     test_2d_inputs()
-    test_background_augmentation()
     test_determinism()
     test_keypoint_augmentation()
     test_unusual_channel_numbers()
@@ -6581,6 +6581,13 @@ def test_Augmenter():
     assert array_equal_lists(batches_aug, image_batches)
 
     aug = DummyAugmenter()
+    image_batches = [[np.zeros((2, 2, 3), dtype=np.uint8), np.zeros((2, 3, 3))]]
+    batches_aug = list(aug.augment_batches(image_batches))
+    assert isinstance(batches_aug, list)
+    assert len(batches_aug) == 1
+    assert array_equal_lists(batches_aug[0], image_batches[0])
+
+    aug = DummyAugmenter()
     got_exception = False
     try:
         batches_aug = list(aug.augment_batches(None))
@@ -6592,8 +6599,18 @@ def test_Augmenter():
     got_exception = False
     try:
         batches_aug = list(aug.augment_batches([None]))
-    except Exception:
+    except Exception as exc:
         got_exception = True
+        assert "Unknown datatype of batch" in str(exc)
+    assert got_exception
+
+    aug = DummyAugmenter()
+    got_exception = False
+    try:
+        batches_aug = list(aug.augment_batches([[None]]))
+    except Exception as exc:
+        got_exception = True
+        assert "Unknown datatype in batch[0]" in str(exc)
     assert got_exception
 
     # --------
@@ -7644,7 +7661,7 @@ def test_2d_inputs():
     assert array_equal_lists(observed, images_list2d3d)
 
 
-def test_background_augmentation():
+def test_Augmenter_augment_batches():
     reseed()
 
     image = np.array([[0, 0, 1, 1],
@@ -7660,6 +7677,7 @@ def test_background_augmentation():
 
     seq = iaa.Fliplr(0.5)
 
+    """
     # with images as list, background=False
     nb_flipped_images = 0
     nb_flipped_keypoints = 0
@@ -7679,76 +7697,78 @@ def test_background_augmentation():
             nb_flipped_keypoints += 1
     assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
     assert nb_flipped_images == nb_flipped_keypoints
+    """
 
-    # with images as list
-    nb_flipped_images = 0
-    nb_flipped_keypoints = 0
-    nb_iterations = 1000
-    batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
-    batches_aug = list(seq.augment_batches(batches, background=True))
-    for batch_aug in batches_aug:
-        image_aug = batch_aug.images_aug[0]
-        keypoint_aug = batch_aug.keypoints_aug[0].keypoints[0]
-        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
-        if np.array_equal(image_aug, image_flipped):
-            nb_flipped_images += 1
+    for bg in [False, True]:
+        # with images as list
+        nb_flipped_images = 0
+        nb_flipped_keypoints = 0
+        nb_iterations = 1000
+        batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
+        batches_aug = list(seq.augment_batches(batches, background=bg))
+        for batch_aug in batches_aug:
+            image_aug = batch_aug.images_aug[0]
+            keypoint_aug = batch_aug.keypoints_aug[0].keypoints[0]
+            assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+            if np.array_equal(image_aug, image_flipped):
+                nb_flipped_images += 1
 
-        assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
-               or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
-        if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
-            nb_flipped_keypoints += 1
-    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
-    assert nb_flipped_images == nb_flipped_keypoints
+            assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
+                   or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
+            if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
+                nb_flipped_keypoints += 1
+        assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+        assert nb_flipped_images == nb_flipped_keypoints
 
-    # with images as array
-    nb_flipped_images = 0
-    nb_flipped_keypoints = 0
-    nb_iterations = 1000
-    batches = [ia.Batch(images=np.array([np.copy(image)], dtype=np.uint8), keypoints=None) for _ in sm.xrange(nb_iterations)]
-    batches_aug = list(seq.augment_batches(batches, background=True))
-    for batch_aug in batches_aug:
-        #batch = ia.Batch(images=np.array([image], dtype=np.uint8), keypoints=keypoints)
-        #batches_aug = list(seq.augment_batches([batch], background=True))
-        #batch_aug = batches_aug[0]
-        image_aug = batch_aug.images_aug[0]
-        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
-        if np.array_equal(image_aug, image_flipped):
-            nb_flipped_images += 1
-    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+        # with images as array
+        nb_flipped_images = 0
+        nb_flipped_keypoints = 0
+        nb_iterations = 1000
+        batches = [ia.Batch(images=np.array([np.copy(image)], dtype=np.uint8), keypoints=None) for _ in sm.xrange(nb_iterations)]
+        batches_aug = list(seq.augment_batches(batches, background=bg))
+        for batch_aug in batches_aug:
+            #batch = ia.Batch(images=np.array([image], dtype=np.uint8), keypoints=keypoints)
+            #batches_aug = list(seq.augment_batches([batch], background=True))
+            #batch_aug = batches_aug[0]
+            image_aug = batch_aug.images_aug[0]
+            assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+            if np.array_equal(image_aug, image_flipped):
+                nb_flipped_images += 1
+        assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
 
-    # array (N, H, W) as input
-    nb_flipped_images = 0
-    nb_iterations = 1000
-    batches = [np.array([np.copy(image)], dtype=np.uint8) for _ in sm.xrange(nb_iterations)]
-    batches_aug = list(seq.augment_batches(batches, background=True))
-    for batch_aug in batches_aug:
-        #batch = np.array([image], dtype=np.uint8)
-        #batches_aug = list(seq.augment_batches([batch], background=True))
-        #image_aug = batches_aug[0][0]
-        image_aug = batch_aug[0]
-        assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
-        if np.array_equal(image_aug, image_flipped):
-            nb_flipped_images += 1
-    assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
+        # array (N, H, W) as input
+        nb_flipped_images = 0
+        nb_iterations = 1000
+        batches = [np.array([np.copy(image)], dtype=np.uint8) for _ in sm.xrange(nb_iterations)]
+        batches_aug = list(seq.augment_batches(batches, background=bg))
+        for batch_aug in batches_aug:
+            #batch = np.array([image], dtype=np.uint8)
+            #batches_aug = list(seq.augment_batches([batch], background=True))
+            #image_aug = batches_aug[0][0]
+            image_aug = batch_aug[0]
+            assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
+            if np.array_equal(image_aug, image_flipped):
+                nb_flipped_images += 1
+        assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
 
-    # list of list of KeypointsOnImage as input
-    nb_flipped_keypoints = 0
-    nb_iterations = 1000
-    #batches = [ia.Batch(images=[np.copy(image)], keypoints=None) for _ in sm.xrange(nb_iterations)]
-    batches = [[keypoints[0].deepcopy()] for _ in sm.xrange(nb_iterations)]
-    batches_aug = list(seq.augment_batches(batches, background=True))
-    for batch_aug in batches_aug:
-        #batch = [keypoints]
-        #batches_aug = list(seq.augment_batches([batch], background=True))
-        #batch_aug = batches_aug[0]
-        #keypoint_aug = batches_aug[0].keypoints[0].keypoints[0]
-        keypoint_aug = batch_aug[0].keypoints[0]
+        # list of list of KeypointsOnImage as input
+        nb_flipped_keypoints = 0
+        nb_iterations = 1000
+        #batches = [ia.Batch(images=[np.copy(image)], keypoints=None) for _ in sm.xrange(nb_iterations)]
+        batches = [[keypoints[0].deepcopy()] for _ in sm.xrange(nb_iterations)]
+        batches_aug = list(seq.augment_batches(batches, background=bg))
+        for batch_aug in batches_aug:
+            #batch = [keypoints]
+            #batches_aug = list(seq.augment_batches([batch], background=True))
+            #batch_aug = batches_aug[0]
+            #keypoint_aug = batches_aug[0].keypoints[0].keypoints[0]
+            keypoint_aug = batch_aug[0].keypoints[0]
 
-        assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
-               or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
-        if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
-            nb_flipped_keypoints += 1
-    assert 0.4*nb_iterations <= nb_flipped_keypoints <= 0.6*nb_iterations
+            assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
+                   or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
+            if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
+                nb_flipped_keypoints += 1
+        assert 0.4*nb_iterations <= nb_flipped_keypoints <= 0.6*nb_iterations
 
     # test all augmenters
     # this test is currently skipped by default as it takes around 40s on its own,
