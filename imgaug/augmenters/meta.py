@@ -216,7 +216,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 else:
                     raise Exception("Unknown datatype in batch[0]. Expected numpy array or imgaug.KeypointsOnImage, got %s." % (type(batch[0]),))
             else:
-                raise Exception("Unknown datatype in of batch. Expected imgaug.Batch or numpy array or list of numpy arrays/imgaug.KeypointsOnImage. Got %s." % (type(batch),))
+                raise Exception("Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of numpy arrays/imgaug.KeypointsOnImage. Got %s." % (type(batch),))
 
         def unnormalize_batch(batch_aug):
             #if batch_aug.data is None:
