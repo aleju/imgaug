@@ -6629,27 +6629,34 @@ def test_Augmenter():
     # _augment_images
     # --------
     # TODO incomplete tests, handle only cases that were missing in code coverage report
-    """aug = iaa.Augmenter()
+    class DummyAugmenterCallsParent(iaa.Augmenter):
+        def _augment_images(self, images, random_state, parents, hooks):
+            return super(DummyAugmenterCallsParent, self)._augment_images(images, random_state, parents, hooks)
+        def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+            return super(DummyAugmenterCallsParent, self)._augment_keypoints(keypoints_on_images, random_state, parents, hooks)
+        def get_parameters(self):
+            return super(DummyAugmenterCallsParent, self).get_parameters()
+    aug = DummyAugmenterCallsParent()
     got_exception = False
     try:
         images_aug = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
-    except Exception:
+    except NotImplementedError:
         got_exception = True
-    assert got_exception"""
+    assert got_exception
 
     # --------
     # _augment_keypoints
     # --------
     # TODO incomplete tests, handle only cases that were missing in code coverage report
-    """aug = iaa.Augmenter()
+    aug = DummyAugmenterCallsParent()
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
-                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
+                                      ia.Keypoint(x=2, y=1)], shape=(4, 4, 3))]
     got_exception = False
     try:
         keypoints_aug = aug.augment_keypoints(keypoints)
-    except Exception:
+    except NotImplementedError:
         got_exception = True
-    assert got_exception"""
+    assert got_exception
 
     # --------
     # augment_bounding_boxes
@@ -6794,13 +6801,13 @@ def test_Augmenter():
     # --------
     # get_parameters
     # --------
-    """aug = Augmenter()
+    aug = DummyAugmenterCallsParent()
     got_exception = False
     try:
         aug.get_parameters()
-    except Exception:
+    except NotImplementedError:
         got_exception = True
-    assert got_exception"""
+    assert got_exception
 
     # --------
     # get_all_children
@@ -6987,6 +6994,16 @@ def test_Augmenter_hooks():
     hooks = ia.HooksImages(activator=activator)
     images_aug = seq.augment_images([image], hooks=hooks)
     assert np.array_equal(images_aug[0], image_lr)
+
+    # keypoint aug deactivated
+    aug = iaa.Affine(translate_px=1)
+    def activator(keypoints_on_images, augmenter, parents, default):
+        return False
+    hooks = ia.HooksKeypoints(activator=activator)
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints_aug = seq.augment_keypoints(keypoints, hooks=hooks)
+    assert keypoints_equal(keypoints_aug, keypoints)
 
 
 def test_Augmenter_copy_random_state():
