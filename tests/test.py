@@ -24,6 +24,7 @@ import cv2
 import time
 import scipy
 import copy
+import warnings
 
 #from nose.plugins.attrib import attr
 
@@ -6618,6 +6619,16 @@ def test_Augmenter():
     # --------
     # TODO incomplete tests, handle only cases that were missing in code coverage report
     aug = DummyAugmenter()
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        # Trigger a warning.
+        images_aug = aug.augment_images(np.zeros((16, 32, 3), dtype=np.uint8))
+        # Verify some things
+        assert len(caught_warnings) == 1
+        assert "indicates that you provided a single image with shape (H, W, C)" in str(caught_warnings[-1].message)
+
+    aug = DummyAugmenter()
     got_exception = False
     try:
         images_aug = aug.augment_images(None)
@@ -6745,6 +6756,14 @@ def test_Augmenter():
     except Exception:
         got_exception = True
     assert got_exception
+
+    # --------
+    # localize_random_state
+    # --------
+    aug = DummyAugmenter()
+    assert aug.random_state == ia.CURRENT_RANDOM_STATE
+    aug_localized = aug.localize_random_state()
+    assert aug_localized.random_state != ia.CURRENT_RANDOM_STATE
 
     # --------
     # reseed
@@ -7073,6 +7092,7 @@ def test_Augmenter_copy_random_state():
 
     source = iaa.Fliplr(0.5, name="hflip-other-name")
     target = iaa.Fliplr(0.5, name="hflip")
+    source.localize_random_state_()
     got_exception = False
     try:
         target_cprs = target.copy_random_state(source, matching="name", matching_tolerant=False)
@@ -7093,6 +7113,7 @@ def test_Augmenter_copy_random_state():
 
     source = iaa.Sequential([iaa.Fliplr(0.5, name="hflip"), iaa.Fliplr(0.5, name="hflip2")])
     target = iaa.Sequential([iaa.Fliplr(0.5, name="hflip")])
+    source.localize_random_state_()
     got_exception = False
     try:
         target_cprs = target.copy_random_state(source, matching="position", matching_tolerant=False)
@@ -7100,6 +7121,29 @@ def test_Augmenter_copy_random_state():
         got_exception = True
         assert "different lengths" in str(exc)
     assert got_exception
+
+    source = iaa.Sequential([iaa.Fliplr(0.5, name="hflip"), iaa.Fliplr(0.5, name="hflip2")])
+    target = iaa.Sequential([iaa.Fliplr(0.5, name="hflip")])
+    source.localize_random_state_()
+    got_exception = False
+    try:
+        target_cprs = target.copy_random_state(source, matching="test")
+    except Exception as exc:
+        got_exception = True
+        assert "Unknown matching method" in str(exc)
+    assert got_exception
+
+    source = iaa.Sequential([iaa.Fliplr(0.5, name="hflip"), iaa.Fliplr(0.5, name="hflip")])
+    target = iaa.Sequential([iaa.Fliplr(0.5, name="hflip")])
+    source.localize_random_state_()
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        # Trigger a warning.
+        target_cprs = target.copy_random_state(source, matching="name")
+        # Verify some things
+        assert len(caught_warnings) == 1
+        assert "contains multiple augmenters with the same name" in str(caught_warnings[-1].message)
 
 
 def test_Sequential():
