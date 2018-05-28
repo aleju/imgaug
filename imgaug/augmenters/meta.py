@@ -237,10 +237,9 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batch_unnormalized = []
             elif dt_orig == "list_of_numpy_arrays":
                 batch_unnormalized = batch_aug.images_aug
-            elif dt_orig == "list_of_imgaug.KeypointsOnImage":
-                batch_unnormalized = batch_aug.keypoints_aug
             else:
-                raise Exception("Internal error. Unexpected value in dt_orig '%s'. This should never happen." % (dt_orig,))
+                ia.do_assert(dt_orig == "list_of_imgaug.KeypointsOnImage")  # only option left
+                batch_unnormalized = batch_aug.keypoints_aug
             return batch_unnormalized
 
         if not background:
