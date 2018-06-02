@@ -42,6 +42,7 @@ def main():
     test_is_iterable()
     test_is_string()
     test_is_integer_array()
+    #test_is_float_array()
     test_is_callable()
     test_seed()
     test_current_random_state()
@@ -936,6 +937,13 @@ def test_BoundingBox():
     assert center_x - eps < bb.center_x < center_x + eps
     assert center_y - eps < bb.center_y < center_y + eps
 
+    # wrong order of y1/y2, x1/x2
+    bb = ia.BoundingBox(y1=30, x1=40, y2=10, x2=20, label=None)
+    assert bb.y1_int == 10
+    assert bb.x1_int == 20
+    assert bb.y2_int == 30
+    assert bb.x2_int == 40
+
     # properties with floats
     bb = ia.BoundingBox(y1=10.1, x1=20.1, y2=30.9, x2=40.9, label=None)
     assert bb.y1_int == 10
@@ -954,6 +962,13 @@ def test_BoundingBox():
     assert bb.area == (30-10) * (40-20)
 
     # project
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = bb.project((10, 10), (10, 10))
+    assert 10 - eps < bb2.y1 < 10 + eps
+    assert 20 - eps < bb2.x1 < 20 + eps
+    assert 30 - eps < bb2.y2 < 30 + eps
+    assert 40 - eps < bb2.x2 < 40 + eps
+
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = bb.project((10, 10), (20, 20))
     assert 10*2 - eps < bb2.y1 < 10*2 + eps
@@ -1073,7 +1088,7 @@ def test_BoundingBox():
     assert bb.is_partly_within_image((100, 30, 3)) == True
     assert bb.is_partly_within_image((1, 1, 3)) == False
 
-    # test_BoundingBox_is_out_of_image()
+    # is_out_of_image()
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     assert bb.is_out_of_image((100, 100, 3), partly=True, fully=True) == False
     assert bb.is_out_of_image((100, 100, 3), partly=False, fully=True) == False
@@ -1091,6 +1106,11 @@ def test_BoundingBox():
     # cut_out_of_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb_cut = bb.cut_out_of_image((100, 100, 3))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 30
+    assert bb_cut.x2 == 40
+    bb_cut = bb.cut_out_of_image(np.zeros((100, 100, 3), dtype=np.uint8))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
@@ -1199,6 +1219,10 @@ def test_BoundingBox():
     assert np.all(image_bb[bb_mask] == [150, 150, 150])
     assert np.all(image_bb[~bb_mask] == [100, 100, 100])
 
+    image_bb = bb.draw_on_image((image+100).astype(np.float32), color=[200, 200, 200], alpha=0.5, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.sum(np.abs((image_bb - [150, 150, 150])[bb_mask])) < 0.1
+    assert np.sum(np.abs((image_bb - [100, 100, 100])[~bb_mask])) < 0.1
+
     image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=False, raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
@@ -1252,11 +1276,22 @@ def test_BoundingBox():
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image[1:3, 1:3, :])
 
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:3, 1:3])
+
     image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
     image_pad = np.pad(image, ((0, 1), (0, 1), (0, 0)), mode="constant", constant_values=0)
     bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11, label=None)
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image_pad[8:11, 8:11, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    image_pad = np.pad(image, ((1, 0), (1, 0), (0, 0)), mode="constant", constant_values=0)
+    bb = ia.BoundingBox(y1=-1, y2=3, x1=-1, x2=4, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image_pad[0:4, 0:5, :])
 
     # to_keypoints()
     bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
