@@ -8769,8 +8769,8 @@ def test_parameters_Choice():
     assert -1.2 - eps < sample < -1.2 + eps or 1.7 - eps < sample < 1.7 + eps
     assert np.all(
         np.logical_or(
-            np.logical_or(-1.2 - eps < samples, samples < -1.2 + eps),
-            np.logical_or(1.7 - eps < samples, samples < 1.7 + eps)
+            np.logical_and(-1.2 - eps < samples, samples < -1.2 + eps),
+            np.logical_and(1.7 - eps < samples, samples < 1.7 + eps)
         )
     )
 
@@ -9157,7 +9157,7 @@ def test_parameters_Uniform():
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
     assert 0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
+    assert np.all(np.logical_and(0 - eps < samples, samples < 1.0 + eps))
     assert param.__str__() == param.__repr__() == "Uniform(Deterministic(int 0), Deterministic(float 1.00000000))"
 
     samples = param.draw_samples((10000,))
@@ -9175,7 +9175,7 @@ def test_parameters_Uniform():
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
     assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_or(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
 
     param = iap.Uniform(1.0, -1.0)
     sample = param.draw_sample()
@@ -9183,7 +9183,7 @@ def test_parameters_Uniform():
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
     assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_or(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
 
     param = iap.Uniform(-1, 1)
     sample = param.draw_sample()
@@ -9191,7 +9191,7 @@ def test_parameters_Uniform():
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
     assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_or(0 - eps < samples, samples < 1.0 + eps))
+    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
 
     param = iap.Uniform(-1.0, 1.0)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
@@ -9216,7 +9216,7 @@ def test_parameters_Beta():
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
     assert 0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_or(0 - eps <= samples, samples <= 1.0 + eps))
+    assert np.all(np.logical_and(0 - eps <= samples, samples <= 1.0 + eps))
     assert param.__str__() == param.__repr__() == "Beta(Deterministic(float 0.50000000), Deterministic(float 0.50000000))"
 
     nb_bins = 10
@@ -9474,7 +9474,7 @@ def test_parameters_Clip():
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
     assert 0.5 - eps < sample < 0.5 + eps
-    assert np.all(np.logical_or(0.5 - eps < samples, samples < 0.5 + eps))
+    assert np.all(np.logical_and(0.5 - eps < samples, samples < 0.5 + eps))
 
     param = iap.Clip(iap.Deterministic(2), -1, 1)
     sample = param.draw_sample()
@@ -10092,13 +10092,13 @@ def test_parameters_IterativeNoiseAggregator():
     assert sample == 1
     assert np.all(samples == 1)
 
-    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method="avg")
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=200, aggregation_method="avg")
     sample = param.draw_sample()
     samples = param.draw_samples((2, 4))
     assert sample.shape == tuple()
     assert samples.shape == (2, 4)
-    assert 25 - 5 < sample < 25 + 5
-    assert np.all(np.logical_or(25 - 5 < samples, samples < 25 + 5))
+    assert 25 - 10 < sample < 25 + 10
+    assert np.all(np.logical_and(25 - 10 < samples, samples < 25 + 10))
 
     param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method="max")
     sample = param.draw_sample()
@@ -10164,7 +10164,7 @@ def test_parameters_Sigmoid():
     assert sample.shape == tuple()
     assert samples.shape == (5, 10)
     assert expected - eps < sample < expected + eps
-    assert np.all(np.logical_or(expected - eps < samples, samples < expected + eps))
+    assert np.all(np.logical_and(expected - eps < samples, samples < expected + eps))
 
     param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=False)
     expected = 5
@@ -10173,7 +10173,7 @@ def test_parameters_Sigmoid():
     assert sample.shape == tuple()
     assert samples.shape == (5, 10)
     assert expected - eps < sample < expected + eps
-    assert np.all(np.logical_or(expected - eps < samples, samples < expected + eps))
+    assert np.all(np.logical_and(expected - eps < samples, samples < expected + eps))
 
     param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=0.5)
     expected_first = 5
@@ -10224,7 +10224,7 @@ def test_parameters_Sigmoid():
                     assert samples.shape == (2, 3)
                     expected = 1 / (1 + np.exp(-(val * mul + add - thresh)))
                     assert expected - eps < sample < expected + eps
-                    assert np.all(np.logical_or(expected - eps < samples, samples < expected + eps))
+                    assert np.all(np.logical_and(expected - eps < samples, samples < expected + eps))
 
     param = iap.Sigmoid(iap.Choice([1, 10]), add=0, mul=1, threshold=0.5, activated=True)
     samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
