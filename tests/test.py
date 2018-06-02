@@ -65,7 +65,7 @@ def main():
     # test_HooksImages_preprocess()
     # test_HooksImages_postprocess()
     test_Keypoint()
-    test_KeypointOnImage()
+    test_KeypointsOnImage()
     test_BoundingBox()
     # test_BoundingBoxesOnImage_height()
     # test_BoundingBoxesOnImage_width()
@@ -656,7 +656,7 @@ def test_Keypoint():
     assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.70000000, y=1.20000000)"
 
 
-def test_KeypointOnImage():
+def test_KeypointsOnImage():
     eps = 1e-8
 
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
