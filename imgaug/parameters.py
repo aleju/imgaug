@@ -656,7 +656,7 @@ class Normal(StochasticParameter):
         super(Normal, self).__init__()
 
         self.loc = handle_continuous_param(loc, "loc")
-        self.scale = handle_continuous_param(scale, "scale")
+        self.scale = handle_continuous_param(scale, "scale", value_range=(0, None))
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
@@ -716,7 +716,7 @@ class Laplace(StochasticParameter):
         super(Laplace, self).__init__()
 
         self.loc = handle_continuous_param(loc, "loc")
-        self.scale = handle_continuous_param(scale, "scale")
+        self.scale = handle_continuous_param(scale, "scale", value_range=(0, None))
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
