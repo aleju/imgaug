@@ -9719,6 +9719,10 @@ def test_parameters_Divide():
     samples_sorted = np.sort(samples.flatten())
     assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
 
+    param = iap.Divide(iap.Deterministic(1), 0, elementwise=False)
+    sample = param.draw_sample()
+    assert sample == 1
+
     param = iap.Divide(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
