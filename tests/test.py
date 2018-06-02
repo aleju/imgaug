@@ -9193,6 +9193,14 @@ def test_parameters_Uniform():
     assert -1.0 - eps < sample < 1.0 + eps
     assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
 
+    param = iap.Uniform(1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((10, 5))
+    assert sample.shape == tuple()
+    assert samples.shape == (10, 5)
+    assert 1.0 - eps < sample < 1.0 + eps
+    assert np.all(np.logical_and(1.0 - eps < samples, samples < 1.0 + eps))
+
     param = iap.Uniform(-1.0, 1.0)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
