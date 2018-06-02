@@ -10244,7 +10244,7 @@ def test_parameters_operators():
         got_exception = True
     assert got_exception
 
-    # Divide
+    # Divide (__truediv__)
     param3 = param1 / param2
     assert isinstance(param3, iap.Divide)
     assert param3.other_param == param1
@@ -10273,6 +10273,41 @@ def test_parameters_operators():
     got_exception = False
     try:
         param3 = param1 / "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # Divide (__div__)
+    param3 = param1.__div__(param2)
+    assert isinstance(param3, iap.Divide)
+    assert param3.other_param == param1
+    assert param3.val == param2
+
+    param3 = param1.__div__(2)
+    assert isinstance(param3, iap.Divide)
+    assert param3.other_param == param1
+    assert isinstance(param3.val, iap.Deterministic)
+    assert param3.val.value == 2
+
+    got_exception = False
+    try:
+        param3 = param1.__div__("test")
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # Divide (__rdiv__)
+    param3 = param1.__rdiv__(2)
+    assert isinstance(param3, iap.Divide)
+    assert isinstance(param3.other_param, iap.Deterministic)
+    assert param3.other_param.value == 2
+    assert param3.val == param1
+
+    got_exception = False
+    try:
+        param3 = param1.__rdiv__("test")
     except Exception as exc:
         assert "Invalid datatypes" in str(exc)
         got_exception = True
