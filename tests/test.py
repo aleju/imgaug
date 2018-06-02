@@ -9368,6 +9368,21 @@ def test_parameters_Deterministic():
     param = iap.Deterministic("test")
     assert param.__str__() == param.__repr__() == "Deterministic(test)"
 
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        param = iap.Deterministic(iap.Choice([0, 1]))
+        seen[param.value] += 1
+    assert 100 - 50 < seen[0] < 100 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+
+    got_exception = False
+    try:
+        param = iap.Deterministic([1, 2, 3])
+    except Exception as exc:
+        assert "Expected StochasticParameter object or number or string" in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_parameters_FromLowerResolution():
     reseed()
