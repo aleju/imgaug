@@ -102,6 +102,17 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         else:
             raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
 
+def handle_probability_param(param, name):
+    if param in [True, False, 0, 1, 0.0, 1.0]:
+        return Deterministic(int(param))
+    elif ia.is_single_number(param):
+        ia.do_assert(0 <= param <= 1.0)
+        return Binomial(param)
+    elif isinstance(param, StochasticParameter):
+        return param
+    else:
+        raise Exception("Expected boolean or number or StochasticParameter for %s, got %s." % (name, type(param),))
+
 def force_np_float_dtype(val):
     if val.dtype.type in NP_FLOAT_TYPES:
         return val
@@ -1990,14 +2001,7 @@ class Sigmoid(StochasticParameter):
         self.other_param = other_param
 
         self.threshold = handle_continuous_param(threshold, "threshold")
-
-        if activated in [True, False, 0, 1, 0.0, 1.0]:
-            self.activated = Deterministic(int(activated))
-        elif ia.is_single_number(activated):
-            ia.do_assert(0 <= activated <= 1.0)
-            self.activated = Binomial(activated)
-        else:
-            raise Exception("Expected activated to be boolean or number or StochasticParameter, got %s." % (type(activated),))
+        self.activated = handle_probability_param(activated, "activated")
 
         ia.do_assert(ia.is_single_number(mul))
         ia.do_assert(mul > 0)
