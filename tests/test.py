@@ -8826,6 +8826,30 @@ def test_parameters_Choice():
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     assert np.array_equal(samples1, samples2)
 
+    got_exception = False
+    try:
+        param = iap.Choice(123)
+    except Exception as exc:
+        assert "Expected a to be an iterable" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param = iap.Choice([1, 2], p=123)
+    except Exception as exc:
+        assert "Expected p to be" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param = iap.Choice([1, 2], p=[1])
+    except Exception as exc:
+        assert "Expected lengths of" in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_parameters_DiscreteUniform():
     reseed()
