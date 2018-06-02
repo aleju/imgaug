@@ -10313,6 +10313,45 @@ def test_parameters_operators():
         got_exception = True
     assert got_exception
 
+    # Divide (__floordiv__)
+    param1_int = iap.DiscreteUniform(0, 10)
+    param2_int = iap.Choice([1, 2])
+    param3 = param1_int // param2_int
+    assert isinstance(param3, iap.Discretize)
+    assert isinstance(param3.other_param, iap.Divide)
+    assert param3.other_param.other_param == param1_int
+    assert param3.other_param.val == param2_int
+
+    param3 = param1_int // 2
+    assert isinstance(param3, iap.Discretize)
+    assert isinstance(param3.other_param, iap.Divide)
+    assert param3.other_param.other_param == param1_int
+    assert isinstance(param3.other_param.val, iap.Deterministic)
+    assert param3.other_param.val.value == 2
+
+    param3 = 2 // param1_int
+    assert isinstance(param3, iap.Discretize)
+    assert isinstance(param3.other_param, iap.Divide)
+    assert isinstance(param3.other_param.other_param, iap.Deterministic)
+    assert param3.other_param.other_param.value == 2
+    assert param3.other_param.val == param1_int
+
+    got_exception = False
+    try:
+        param3 = "test" // param1_int
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param3 = param1_int // "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
     # Add
     param3 = param1 + param2
     assert isinstance(param3, iap.Add)
