@@ -10228,6 +10228,22 @@ def test_parameters_operators():
     assert param3.other_param.value == 2
     assert param3.val == param1
 
+    got_exception = False
+    try:
+        param3 = "test" * param1
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param3 = param1 * "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
     # Divide
     param3 = param1 / param2
     assert isinstance(param3, iap.Divide)
@@ -10245,6 +10261,22 @@ def test_parameters_operators():
     assert isinstance(param3.other_param, iap.Deterministic)
     assert param3.other_param.value == 2
     assert param3.val == param1
+
+    got_exception = False
+    try:
+        param3 = "test" / param1
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param3 = param1 / "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
 
     # Add
     param3 = param1 + param2
@@ -10264,6 +10296,22 @@ def test_parameters_operators():
     assert param3.other_param.value == 2
     assert param3.val == param1
 
+    got_exception = False
+    try:
+        param3 = "test" + param1
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param3 = param1 + "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
     # Subtract
     param3 = param1 - param2
     assert isinstance(param3, iap.Subtract)
@@ -10282,6 +10330,22 @@ def test_parameters_operators():
     assert param3.other_param.value == 2
     assert param3.val == param1
 
+    got_exception = False
+    try:
+        param3 = "test" - param1
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param3 = param1 - "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
     # Power
     param3 = param1 ** param2
     assert isinstance(param3, iap.Power)
@@ -10299,6 +10363,22 @@ def test_parameters_operators():
     assert isinstance(param3.other_param, iap.Deterministic)
     assert param3.other_param.value == 2
     assert param3.val == param1
+
+    got_exception = False
+    try:
+        param3 = "test" ** param1
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        param3 = param1 ** "test"
+    except Exception as exc:
+        assert "Invalid datatypes" in str(exc)
+        got_exception = True
+    assert got_exception
 
 
 def create_random_images(size):
