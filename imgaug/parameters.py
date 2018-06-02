@@ -1989,19 +1989,7 @@ class Sigmoid(StochasticParameter):
         ia.do_assert(isinstance(other_param, StochasticParameter))
         self.other_param = other_param
 
-        if ia.is_single_number(threshold):
-            self.threshold = Deterministic(threshold)
-        elif isinstance(threshold, tuple):
-            ia.do_assert(len(threshold) == 2)
-            ia.do_assert(all([ia.is_single_number(val) for val in threshold]))
-            self.threshold = Uniform(threshold[0], threshold[1])
-        elif ia.is_iterable(threshold):
-            ia.do_assert(len(threshold) > 0)
-            self.threshold = Choice(threshold)
-        elif isinstance(threshold, StochasticParameter):
-            self.threshold = threshold
-        else:
-            raise Exception("Expected threshold to be number or tuple of two numbers or StochasticParameter, got %s." % (type(threshold),))
+        self.threshold = handle_continuous_param(threshold, "threshold")
 
         if activated in [True, False, 0, 1, 0.0, 1.0]:
             self.activated = Deterministic(int(activated))
