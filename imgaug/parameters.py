@@ -912,21 +912,8 @@ class Beta(StochasticParameter):
     def __init__(self, alpha, beta, epsilon=0.0001):
         super(Beta, self).__init__()
 
-        def handle_param(param, name):
-            if ia.is_single_number(param):
-                return Deterministic(param)
-            elif isinstance(param, tuple):
-                ia.do_assert(len(param) == 2)
-                return Uniform(param[0], param[1])
-            elif ia.is_iterable(param):
-                return Choice(param)
-            elif isinstance(param, StochasticParameter):
-                return param
-            else:
-                raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
-
-        self.alpha = handle_param(alpha, "alpha")
-        self.beta = handle_param(beta, "beta")
+        self.alpha = handle_continuous_param(alpha, "alpha")
+        self.beta = handle_continuous_param(beta, "beta")
 
         ia.do_assert(ia.is_single_number(epsilon))
         self.epsilon = epsilon
