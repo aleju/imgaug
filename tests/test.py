@@ -56,7 +56,7 @@ def main():
     # test_angle_between_vectors()
     # test_draw_text()
     test_imresize_many_images()
-    # test_imresize_single_image()
+    test_imresize_single_image()
     test_draw_grid()
     # test_show_grid()
     # test_do_assert()
@@ -487,6 +487,69 @@ def test_imresize_many_images():
         for interpolation in interpolations:
             images_large_observed = ia.imresize_many_images(images, (32, 32), interpolation=interpolation)
             for image_expected, image_observed in zip(images_large, images_large_observed):
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                assert diff_fraction < 0.5
+
+
+def test_imresize_single_image():
+    for c in [-1, 1, 3]:
+        image1 = np.zeros((16, 16, abs(c)), dtype=np.uint8) + 255
+        image2 = np.zeros((16, 16, abs(c)), dtype=np.uint8)
+        image3 = np.pad(
+            np.zeros((8, 8, abs(c)), dtype=np.uint8) + 255,
+            ((4, 4), (4, 4), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        image1_small = np.zeros((8, 8, abs(c)), dtype=np.uint8) + 255
+        image2_small = np.zeros((8, 8, abs(c)), dtype=np.uint8)
+        image3_small = np.pad(
+            np.zeros((4, 4, abs(c)), dtype=np.uint8) + 255,
+            ((2, 2), (2, 2), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        image1_large = np.zeros((32, 32, abs(c)), dtype=np.uint8) + 255
+        image2_large = np.zeros((32, 32, abs(c)), dtype=np.uint8)
+        image3_large = np.pad(
+            np.zeros((16, 16, abs(c)), dtype=np.uint8) + 255,
+            ((8, 8), (8, 8), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        images = np.uint8([image1, image2, image3])
+        images_small = np.uint8([image1_small, image2_small, image3_small])
+        images_large = np.uint8([image1_large, image2_large, image3_large])
+
+        if c == -1:
+            images = images[:, :, 0]
+            images_small = images_small[:, :, 0]
+            images_large = images_large[:, :, 0]
+
+        interpolations = [None,
+                          "nearest", "linear", "area", "cubic",
+                          cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
+        for interpolation in interpolations:
+            for image in images:
+                image_observed = ia.imresize_single_image(image, (16, 16), interpolation=interpolation)
+                diff = np.abs(image.astype(np.int32) - image_observed.astype(np.int32))
+                assert np.sum(diff) == 0
+
+        for interpolation in interpolations:
+            for image, image_expected in zip(images, images_small):
+                image_observed = ia.imresize_single_image(image, (8, 8), interpolation=interpolation)
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                assert diff_fraction < 0.5
+
+        for interpolation in interpolations:
+            for image, image_expected in zip(images, images_large):
+                image_observed = ia.imresize_single_image(image, (32, 32), interpolation=interpolation)
                 diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
                 diff_fraction = np.sum(diff) / (image_observed.size * 255)
                 assert diff_fraction < 0.5
