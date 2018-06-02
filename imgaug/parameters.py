@@ -2436,36 +2436,8 @@ class FrequencyNoise(StochasticParameter):
 
     """
     def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
-        if ia.is_single_number(exponent):
-            self.exponent = Deterministic(exponent)
-        elif isinstance(exponent, tuple):
-            ia.do_assert(len(exponent) == 2)
-            ia.do_assert(all([ia.is_single_number(val) for val in exponent]))
-            self.exponent = Uniform(exponent[0], exponent[1])
-        elif ia.is_iterable(exponent):
-            ia.do_assert(len(exponent) > 0)
-            self.exponent = Choice(exponent)
-        elif isinstance(exponent, StochasticParameter):
-            self.exponent = exponent
-        else:
-            raise Exception("Expected exponent to be number or tuple of two numbers or StochasticParameter, got %s." % (type(exponent),))
-
-        if ia.is_single_integer(size_px_max):
-            ia.do_assert(1 <= size_px_max <= 10000)
-            self.size_px_max = Deterministic(size_px_max)
-        elif isinstance(size_px_max, tuple):
-            ia.do_assert(len(size_px_max) == 2)
-            ia.do_assert(all([ia.is_single_integer(val) for val in size_px_max]))
-            ia.do_assert(all([1 <= val <= 10000 for val in size_px_max]))
-            self.size_px_max = DiscreteUniform(size_px_max[0], size_px_max[1])
-        elif ia.is_iterable(size_px_max):
-            ia.do_assert(len(size_px_max) > 0)
-            ia.do_assert(all([1 <= val <= 10000 for val in size_px_max]))
-            self.size_px_max = Choice(size_px_max)
-        elif isinstance(size_px_max, StochasticParameter):
-            self.size_px_max = size_px_max
-        else:
-            raise Exception("Expected size_px_max to be int or tuple of two ints or StochasticParameter, got %s." % (type(size_px_max),))
+        self.exponent = handle_continuous_param(exponent, "exponent")
+        self.size_px_max = handle_discrete_param(size_px_max, "size_px_max", value_range=(1, 10000))
 
         if upscale_method == ia.ALL:
             self.upscale_method = Choice(["nearest", "linear", "area", "cubic"])
