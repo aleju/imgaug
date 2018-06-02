@@ -505,10 +505,8 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         ip = cv2.INTER_LINEAR
     elif ip in ["area", cv2.INTER_AREA]:
         ip = cv2.INTER_AREA
-    elif ip in ["cubic", cv2.INTER_CUBIC]:
+    else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
         ip = cv2.INTER_CUBIC
-    else:
-        raise Exception("Invalid interpolation order")
 
     result = np.zeros((nb_images, height, width, nb_channels), dtype=np.uint8)
     for img_idx in sm.xrange(nb_images):
