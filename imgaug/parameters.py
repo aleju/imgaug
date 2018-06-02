@@ -462,8 +462,12 @@ class Choice(StochasticParameter):
     def __init__(self, a, replace=True, p=None):
         super(Choice, self).__init__()
 
+        ia.do_assert(ia.is_iterable(a), "Expected a to be an iterable (e.g. list), got %s." % (type(a),))
         self.a = a
         self.replace = replace
+        if p is not None:
+            ia.do_assert(ia.is_iterable(p), "Expected p to be None or an iterable, got %s." % (type(p),))
+            ia.do_assert(len(p) == len(a), "Expected lengths of a and p to be identical, got %d and %d." % (len(a), len(p)))
         self.p = p
 
     def _draw_samples(self, size, random_state):
