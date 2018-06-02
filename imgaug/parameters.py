@@ -419,10 +419,7 @@ class Binomial(StochasticParameter):
         return self.__str__()
 
     def __str__(self):
-        if isinstance(self.p, float):
-            return "Binomial(%.4f)" % (self.p,)
-        else:
-            return "Binomial(%s)" % (self.p,)
+        return "Binomial(%s)" % (self.p,)
 
 class Choice(StochasticParameter):
     """
