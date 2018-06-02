@@ -8979,6 +8979,7 @@ def test_parameters_Normal():
 
 def test_parameters_Laplace():
     reseed()
+    eps = np.finfo(np.float32).eps
 
     param = iap.Laplace(0, 1)
     sample = param.draw_sample()
@@ -9020,6 +9021,13 @@ def test_parameters_Laplace():
     samples1 = param1.draw_samples((1000,))
     samples2 = param2.draw_samples((1000,))
     assert np.var(samples1) < np.var(samples2)
+
+    param1 = iap.Laplace(1, 0)
+    samples = param1.draw_samples((100,))
+    assert np.all(np.logical_and(
+        samples > 1 - eps,
+        samples < 1 + eps
+    ))
 
     param = iap.Laplace(0, 1)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
