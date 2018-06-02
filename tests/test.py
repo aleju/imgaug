@@ -190,10 +190,10 @@ def main():
     # ----------------------
     # parameters
     # ----------------------
-    test_handle_continuous_param()
-    test_handle_discrete_param()
-    test_force_np_float_dtype()
-    test_both_np_float_if_one_is_float()
+    test_parameters_handle_continuous_param()
+    test_parameters_handle_discrete_param()
+    test_parameters_force_np_float_dtype()
+    test_parameters_both_np_float_if_one_is_float()
     test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
@@ -8278,7 +8278,7 @@ def test_dtype_preservation():
                 pass
 
 
-def test_handle_continuous_param():
+def test_parameters_handle_continuous_param():
     # value without value range
     got_exception = False
     try:
@@ -8450,7 +8450,7 @@ def test_handle_continuous_param():
     assert got_exception == True
 
 
-def test_handle_discrete_param():
+def test_parameters_handle_discrete_param():
     # float value without value range when no float value is allowed
     got_exception = False
     try:
@@ -8632,7 +8632,7 @@ def test_handle_discrete_param():
     assert got_exception == True
 
 
-def test_force_np_float_dtype():
+def test_parameters_force_np_float_dtype():
     dtypes = [
         (np.float16, np.float16),
         (np.float32, np.float32),
@@ -8645,7 +8645,7 @@ def test_force_np_float_dtype():
             "force_np_float_dtype() failed at %d" % (i,)
 
 
-def test_both_np_float_if_one_is_float():
+def test_parameters_both_np_float_if_one_is_float():
     a1 = np.zeros((1,), dtype=np.float16)
     b1 = np.zeros((1,), dtype=np.float32)
     a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
