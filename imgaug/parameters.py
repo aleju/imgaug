@@ -612,17 +612,7 @@ class Poisson(StochasticParameter):
     def __init__(self, lam):
         super(Poisson, self).__init__()
 
-        if ia.is_single_number(lam):
-            self.lam = Deterministic(lam)
-        elif isinstance(lam, tuple):
-            ia.do_assert(len(lam) == 2)
-            self.lam = Uniform(lam[0], lam[1])
-        elif ia.is_iterable(lam):
-            self.lam = Choice(lam)
-        elif isinstance(lam, StochasticParameter):
-            self.lam = lam
-        else:
-            raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for lam, got %s." % (type(lam),))
+        self.lam = handle_continuous_param(lam, "lam")
 
     def _draw_samples(self, size, random_state):
         lam = self.lam.draw_sample(random_state=random_state)
