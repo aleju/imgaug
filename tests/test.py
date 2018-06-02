@@ -9531,7 +9531,7 @@ def test_parameters_Clip():
     sample = param.draw_sample()
     assert sample == 0
     assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), None, 1.000000)"
-    
+
     param = iap.Clip(iap.Deterministic(0), 0, None)
     sample = param.draw_sample()
     assert sample == 0

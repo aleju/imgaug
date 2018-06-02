@@ -1219,7 +1219,7 @@ class Discretize(StochasticParameter):
         samples = self.other_param.draw_samples(
             size, random_state=random_state
         )
-        if isinstance(samples.dtype, numbers.Integral):
+        if ia.is_integer_array(samples):
             # integer array, already discrete
             return samples
         else:
