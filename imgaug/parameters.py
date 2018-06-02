@@ -249,6 +249,12 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
         else:
             raise Exception("Invalid datatypes in: StochasticParameter / %s (truediv). Expected second argument to be number or StochasticParameter." % (type(other),))
 
+    def __floordiv__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Discretize(Divide(self, other))
+        else:
+            raise Exception("Invalid datatypes in: StochasticParameter // %s (floordiv). Expected second argument to be number or StochasticParameter." % (type(other),))
+
     def __radd__(self, other):
         if ia.is_single_number(other) or isinstance(other, StochasticParameter):
             return Add(other, self)
@@ -285,7 +291,13 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
         if ia.is_single_number(other) or isinstance(other, StochasticParameter):
             return Divide(other, self)
         else:
-            raise Exception("Invalid datatypes in: %s / StochasticParameter (truediv). Expected second argument to be number or StochasticParameter." % (type(other),))
+            raise Exception("Invalid datatypes in: %s / StochasticParameter (rtruediv). Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rfloordiv__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Discretize(Divide(other, self))
+        else:
+            raise Exception("Invalid datatypes in: StochasticParameter // %s (rfloordiv). Expected second argument to be number or StochasticParameter." % (type(other),))
 
     def copy(self):
         """
