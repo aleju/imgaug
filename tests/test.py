@@ -223,6 +223,7 @@ def main():
     #test_parameters_SimplexNoise()
     #test_parameters_FrequencyNoise()
     test_parameters_operators()
+    test_parameters_copy()
 
     time_end = time.time()
     print("Finished without errors in %.4fs." % (time_end - time_start,))
@@ -10453,6 +10454,27 @@ def test_parameters_operators():
         assert "Invalid datatypes" in str(exc)
         got_exception = True
     assert got_exception
+
+
+def test_parameters_copy():
+    reseed()
+    other_param = iap.Uniform(1.0, 10.0)
+    param = iap.Discretize(other_param)
+    other_param.a = [1.0]
+    param_copy = param.copy()
+    assert isinstance(param_copy, iap.Discretize)
+    assert isinstance(param_copy.other_param, iap.Uniform)
+    param.other_param.a[0] += 1
+    assert param_copy.other_param.a[0] == param.other_param.a[0]
+
+    other_param = iap.Uniform(1.0, 10.0)
+    param = iap.Discretize(other_param)
+    other_param.a = [1.0]
+    param_copy = param.deepcopy()
+    assert isinstance(param_copy, iap.Discretize)
+    assert isinstance(param_copy.other_param, iap.Uniform)
+    param.other_param.a[0] += 1
+    assert param_copy.other_param.a[0] != param.other_param.a[0]
 
 
 def create_random_images(size):
