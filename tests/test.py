@@ -565,6 +565,9 @@ def test_draw_grid():
     grid = ia.draw_grid([image], rows=1, cols=1)
     assert np.array_equal(grid, image)
 
+    grid = ia.draw_grid(np.uint8([image]), rows=1, cols=1)
+    assert np.array_equal(grid, image)
+
     grid = ia.draw_grid([image, image, image, image], rows=2, cols=2)
     expected = np.vstack([
         np.hstack([image, image]),
