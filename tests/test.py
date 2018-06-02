@@ -9528,10 +9528,18 @@ def test_parameters_Clip():
     assert np.array_equal(samples1, samples2)
 
     param = iap.Clip(iap.Deterministic(0), None, 1)
+    sample = param.draw_sample()
+    assert sample == 0
     assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), None, 1.000000)"
+    
     param = iap.Clip(iap.Deterministic(0), 0, None)
+    sample = param.draw_sample()
+    assert sample == 0
     assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), 0.000000, None)"
+
     param = iap.Clip(iap.Deterministic(0), None, None)
+    sample = param.draw_sample()
+    assert sample == 0
     assert param.__str__() == param.__repr__() == "Clip(Deterministic(int 0), None, None)"
 
 
