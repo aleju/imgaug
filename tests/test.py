@@ -666,11 +666,21 @@ def test_KeypointsOnImage():
     assert kpi.height == 10
     assert kpi.width == 20
 
+    # image instead of shape
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=np.zeros((10, 20, 3), dtype=np.uint8))
+    assert kpi.shape == (10, 20, 3)
+
     # on()
     kpi2 = kpi.on((10, 20, 3))
     assert all([kp_i.x == kp_j.x and kp_i.y == kp_j.y for kp_i, kp_j in zip(kpi.keypoints, kpi2.keypoints)])
 
     kpi2 = kpi.on((20, 40, 3))
+    assert kpi2.keypoints[0].x == 2
+    assert kpi2.keypoints[0].y == 4
+    assert kpi2.keypoints[1].x == 6
+    assert kpi2.keypoints[1].y == 8
+
+    kpi2 = kpi.on(np.zeros((20, 40, 3), dtype=np.uint8))
     assert kpi2.keypoints[0].x == 2
     assert kpi2.keypoints[0].y == 4
     assert kpi2.keypoints[1].x == 6
@@ -821,7 +831,7 @@ def test_KeypointsOnImage():
     assert np.all(image_size3[kps_mask_size3] >= 128)
     assert np.all(image_size3[~kps_mask_size3] == 0)
 
-    # test_KeypointsOnImage_from_keypoint_image()
+    # from_keypoint_image()
     kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
     kps_image[2, 1, 0] = 255
     kps_image[4, 3, 1] = 255
@@ -864,7 +874,18 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[0].y == 2
     assert kpi2.keypoints[0].x == 1
 
-    # test_KeypointsOnImage_copy()
+    got_exception = False
+    try:
+        kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
+        kps_image[2, 1, 0] = 255
+        kps_image[4, 3, 1] = 10
+        kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords="exception-please", threshold=20, nb_channels=3)
+    except Exception as exc:
+        assert "Expected if_not_found_coords to be" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # copy()
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     kpi2 = kpi.copy()
@@ -878,7 +899,7 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[1].x == 3
     assert kpi2.keypoints[1].y == 4
 
-    # test_KeypointsOnImage_deepcopy()
+    # deepcopy()
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     kpi2 = kpi.deepcopy()
@@ -891,6 +912,12 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[0].y == 2
     assert kpi2.keypoints[1].x == 3
     assert kpi2.keypoints[1].y == 4
+
+    # repr/str
+    kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    expected = "KeypointsOnImage([Keypoint(x=1.00000000, y=2.00000000), Keypoint(x=3.00000000, y=4.00000000)], shape=(5, 5, 3))"
+    assert kpi.__repr__() == kpi.__str__() == expected
 
 
 def test_BoundingBox():
