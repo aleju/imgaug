@@ -655,20 +655,8 @@ class Normal(StochasticParameter):
     def __init__(self, loc, scale):
         super(Normal, self).__init__()
 
-        if isinstance(loc, StochasticParameter):
-            self.loc = loc
-        elif ia.is_single_number(loc):
-            self.loc = Deterministic(loc)
-        else:
-            raise Exception("Expected float, int or StochasticParameter as loc, got %s." % (type(loc),))
-
-        if isinstance(scale, StochasticParameter):
-            self.scale = scale
-        elif ia.is_single_number(scale):
-            ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf) got %s (type %s)." % (scale, type(scale)))
-            self.scale = Deterministic(scale)
-        else:
-            raise Exception("Expected float, int or StochasticParameter as scale, got %s." % (type(scale),))
+        self.loc = handle_continuous_param(loc, "loc")
+        self.scale = handle_continuous_param(scale, "scale")
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
