@@ -1322,16 +1322,6 @@ class BoundingBox(object):
             y1 = (self.y1 / from_height) * to_height
             x2 = (self.x2 / from_width) * to_width
             y2 = (self.y2 / from_height) * to_height
-            if x1 == x2:
-                if x1 == 0:
-                    x2 += 1
-                else:
-                    x1 -= 1
-            if y1 == y2:
-                if y1 == 0:
-                    y2 += 1
-                else:
-                    y1 -= 1
             return self.copy(
                 x1=x1,
                 y1=y1,
@@ -1412,16 +1402,6 @@ class BoundingBox(object):
         x2 = np.clip(self.x2, 0, width)
         y1 = np.clip(self.y1, 0, height)
         y2 = np.clip(self.y2, 0, height)
-        if x1 == x2:
-            if x1 == 0:
-                x2 += 1
-            else:
-                x1 -= 1
-        if y1 == y2:
-            if y1 == 0:
-                y2 += 1
-            else:
-                y1 -= 1
 
         return self.copy(
             x1=x1,
