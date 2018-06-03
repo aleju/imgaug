@@ -70,6 +70,7 @@ def main():
     test_BoundingBox()
     test_BoundingBoxesOnImage()
     # test_Batch()
+    test_BatchLoader()
     # test_BatchLoader.all_finished()
     # test_BatchLoader._load_batches()
     # test_BatchLoader.terminate()
@@ -1491,6 +1492,45 @@ def test_BoundingBoxesOnImage():
     bb2_expected = "BoundingBox(x1=25.0000, y1=15.0000, x2=51.0000, y2=35.0000, label=None)"
     expected = "BoundingBoxesOnImage([%s, %s], shape=(40, 50, 3))" % (bb1_expected, bb2_expected)
     assert bbsoi.__repr__() == bbsoi.__str__() == expected
+
+
+def test_BatchLoader():
+    def _load_func():
+        for _ in sm.xrange(20):
+            yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
+
+    for nb_workers in [1, 2]:
+        loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
+        loaded = []
+        counter = 0
+        while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
+            try:
+                batch = loader.queue.get(timeout=0.001)
+                loaded.append(batch)
+            except:
+                pass
+            counter += 1
+        assert len(loaded) == 20*nb_workers
+
+        loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
+        loader.terminate()
+        assert loader.all_finished
+
+        loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=False)
+        loaded = []
+        counter = 0
+        while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
+            try:
+                batch = loader.queue.get(timeout=0.001)
+                loaded.append(batch)
+            except:
+                pass
+            counter += 1
+        assert len(loaded) == 20*nb_workers
+
+        loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
+        loader.terminate()
+        assert loader.all_finished
 
 
 def test_Noop():
