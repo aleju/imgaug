@@ -8,6 +8,7 @@ import math
 from scipy import misc, ndimage
 import multiprocessing
 import threading
+import traceback
 import sys
 import six
 import six.moves as sm
@@ -171,6 +172,24 @@ def is_integer_array(val):
 
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.integer)
+
+def is_float_array(val):
+    """
+    Checks whether a variable is a numpy float array.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a numpy float array. Otherwise False.
+
+    """
+    return is_np_array(val) and issubclass(val.dtype.type, np.float)
 
 def is_callable(val):
     """
@@ -1440,7 +1459,7 @@ class BoundingBox(object):
             if alpha >= 0.99:
                 result[rr, cc, :] = color
             else:
-                if result.dtype in [np.float32, np.float64]:
+                if is_float_array(result):
                     result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
                     result = np.clip(result, 0, 255)
                 else:
@@ -1764,13 +1783,16 @@ class BatchLoader(object):
             np.random.seed(seedval)
             seed(seedval)
 
-        for batch in load_batch_func():
-            do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
-            queue.put(pickle.dumps(batch, protocol=-1))
-            if join_signal.is_set():
-                break
-
-        finished_signal.set()
+        try:
+            for batch in load_batch_func():
+                do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
+                queue.put(pickle.dumps(batch, protocol=-1))
+                if join_signal.is_set():
+                    break
+        except Exception as exc:
+            traceback.print_exc()
+        finally:
+            finished_signal.set()
 
     def terminate(self):
         """
