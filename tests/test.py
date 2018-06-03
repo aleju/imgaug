@@ -1510,7 +1510,7 @@ def test_BatchLoader():
             except:
                 pass
             counter += 1
-        assert len(loaded) == 20*nb_workers
+        assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by threads, got %d for %d workers" % (20*nb_workers, len(loaded), nb_workers)
 
         loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
         loader.terminate()
@@ -1526,7 +1526,7 @@ def test_BatchLoader():
             except:
                 pass
             counter += 1
-        assert len(loaded) == 20*nb_workers
+        assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by background processes, got %d for %d workers" % (20*nb_workers, len(loaded), nb_workers)
 
         loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
         loader.terminate()
