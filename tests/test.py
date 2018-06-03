@@ -68,17 +68,7 @@ def main():
     test_Keypoint()
     test_KeypointsOnImage()
     test_BoundingBox()
-    # test_BoundingBoxesOnImage_height()
-    # test_BoundingBoxesOnImage_width()
-    # test_BoundingBoxesOnImage_on()
-    # test_BoundingBoxesOnImage_draw_on_image()
-    # test_BoundingBoxesOnImage_remove_out_of_image()
-    # test_BoundingBoxesOnImage_cut_out_of_image()
-    # test_BoundingBoxesOnImage_shift()
-    # test_BoundingBoxesOnImage_copy()
-    # test_BoundingBoxesOnImage_deepcopy()
-    # test_BoundingBoxesOnImage_repr()
-    # test_BoundingBoxesOnImage_str()
+    test_BoundingBoxesOnImage()
     # test_Batch()
     # test_BatchLoader.all_finished()
     # test_BatchLoader._load_batches()
@@ -1337,6 +1327,170 @@ def test_BoundingBox():
     # test_BoundingBox_str()
     bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
     assert bb.__str__() == "BoundingBox(x1=1.0000, y1=1.0000, x2=3.0000, y2=3.0000, label=None)"
+
+
+def test_BoundingBoxesOnImage():
+    reseed()
+
+    # test height/width
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    assert bbsoi.height == 40
+    assert bbsoi.width == 50
+
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=np.zeros((40, 50, 3), dtype=np.uint8))
+    assert bbsoi.height == 40
+    assert bbsoi.width == 50
+
+    # on()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=np.zeros((40, 50, 3), dtype=np.uint8))
+
+    bbsoi_projected = bbsoi.on((40, 50))
+    assert bbsoi_projected.bounding_boxes[0].y1 == 10
+    assert bbsoi_projected.bounding_boxes[0].x1 == 20
+    assert bbsoi_projected.bounding_boxes[0].y2 == 30
+    assert bbsoi_projected.bounding_boxes[0].x2 == 40
+    assert bbsoi_projected.bounding_boxes[1].y1 == 15
+    assert bbsoi_projected.bounding_boxes[1].x1 == 25
+    assert bbsoi_projected.bounding_boxes[1].y2 == 35
+    assert bbsoi_projected.bounding_boxes[1].x2 == 45
+
+    bbsoi_projected = bbsoi.on((40*2, 50*2, 3))
+    assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
+    assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
+    assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
+    assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
+    assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
+    assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
+    assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
+    assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+
+    bbsoi_projected = bbsoi.on(np.zeros((40*2, 50*2, 3), dtype=np.uint8))
+    assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
+    assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
+    assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
+    assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
+    assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
+    assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
+    assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
+    assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+
+    # draw_on_image()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    image = bbsoi.draw_on_image(np.zeros(bbsoi.shape, dtype=np.uint8), color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image[10-1, 20-1, :] == [0, 0, 0])
+    assert np.all(image[10-1, 20-0, :] == [0, 0, 0])
+    assert np.all(image[10-0, 20-1, :] == [0, 0, 0])
+    assert np.all(image[10-0, 20-0, :] == [0, 255, 0])
+    assert np.all(image[10+1, 20+1, :] == [0, 0, 0])
+
+    assert np.all(image[30-1, 40-1, :] == [0, 0, 0])
+    assert np.all(image[30+1, 40-0, :] == [0, 0, 0])
+    assert np.all(image[30+0, 40+1, :] == [0, 0, 0])
+    assert np.all(image[30+0, 40+0, :] == [0, 255, 0])
+    assert np.all(image[30+1, 40+1, :] == [0, 0, 0])
+
+    assert np.all(image[15-1, 25-1, :] == [0, 0, 0])
+    assert np.all(image[15-1, 25-0, :] == [0, 0, 0])
+    assert np.all(image[15-0, 25-1, :] == [0, 0, 0])
+    assert np.all(image[15-0, 25-0, :] == [0, 255, 0])
+    assert np.all(image[15+1, 25+1, :] == [0, 0, 0])
+
+    assert np.all(image[35-1, 45-1, :] == [0, 0, 0])
+    assert np.all(image[35+1, 45+0, :] == [0, 0, 0])
+    assert np.all(image[35+0, 45+1, :] == [0, 0, 0])
+    assert np.all(image[35+0, 45+0, :] == [0, 255, 0])
+    assert np.all(image[35+1, 45+1, :] == [0, 0, 0])
+
+    # remove_out_of_image()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_slim = bbsoi.remove_out_of_image(fully=True, partly=True)
+    assert len(bbsoi_slim.bounding_boxes) == 1
+    assert bbsoi_slim.bounding_boxes[0] == bb1
+
+    # cut_out_of_image()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_cut = bbsoi.cut_out_of_image()
+    assert len(bbsoi_cut.bounding_boxes) == 2
+    assert bbsoi_cut.bounding_boxes[0].y1 == 10
+    assert bbsoi_cut.bounding_boxes[0].x1 == 20
+    assert bbsoi_cut.bounding_boxes[0].y2 == 30
+    assert bbsoi_cut.bounding_boxes[0].x2 == 40
+    assert bbsoi_cut.bounding_boxes[1].y1 == 15
+    assert bbsoi_cut.bounding_boxes[1].x1 == 25
+    assert bbsoi_cut.bounding_boxes[1].y2 == 35
+    assert bbsoi_cut.bounding_boxes[1].x2 == 50
+
+    # shift()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_shifted = bbsoi.shift(right=1)
+    assert len(bbsoi_cut.bounding_boxes) == 2
+    assert bbsoi_shifted.bounding_boxes[0].y1 == 10
+    assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
+    assert bbsoi_shifted.bounding_boxes[0].y2 == 30
+    assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
+    assert bbsoi_shifted.bounding_boxes[1].y1 == 15
+    assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
+    assert bbsoi_shifted.bounding_boxes[1].y2 == 35
+    assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+
+    # copy()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_copy = bbsoi.copy()
+    assert len(bbsoi.bounding_boxes) == 2
+    assert bbsoi_copy.bounding_boxes[0].y1 == 10
+    assert bbsoi_copy.bounding_boxes[0].x1 == 20
+    assert bbsoi_copy.bounding_boxes[0].y2 == 30
+    assert bbsoi_copy.bounding_boxes[0].x2 == 40
+    assert bbsoi_copy.bounding_boxes[1].y1 == 15
+    assert bbsoi_copy.bounding_boxes[1].x1 == 25
+    assert bbsoi_copy.bounding_boxes[1].y2 == 35
+    assert bbsoi_copy.bounding_boxes[1].x2 == 51
+
+    bbsoi.bounding_boxes[0].y1 = 0
+    assert bbsoi_copy.bounding_boxes[0].y1 == 0
+
+    # deepcopy()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_copy = bbsoi.deepcopy()
+    assert len(bbsoi.bounding_boxes) == 2
+    assert bbsoi_copy.bounding_boxes[0].y1 == 10
+    assert bbsoi_copy.bounding_boxes[0].x1 == 20
+    assert bbsoi_copy.bounding_boxes[0].y2 == 30
+    assert bbsoi_copy.bounding_boxes[0].x2 == 40
+    assert bbsoi_copy.bounding_boxes[1].y1 == 15
+    assert bbsoi_copy.bounding_boxes[1].x1 == 25
+    assert bbsoi_copy.bounding_boxes[1].y2 == 35
+    assert bbsoi_copy.bounding_boxes[1].x2 == 51
+
+    bbsoi.bounding_boxes[0].y1 = 0
+    assert bbsoi_copy.bounding_boxes[0].y1 == 10
+
+    # repr() / str()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bb1_expected = "BoundingBox(x1=20.0000, y1=10.0000, x2=40.0000, y2=30.0000, label=None)"
+    bb2_expected = "BoundingBox(x1=25.0000, y1=15.0000, x2=51.0000, y2=35.0000, label=None)"
+    expected = "BoundingBoxesOnImage([%s, %s], shape=(40, 50, 3))" % (bb1_expected, bb2_expected)
+    assert bbsoi.__repr__() == bbsoi.__str__() == expected
 
 
 def test_Noop():
