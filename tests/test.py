@@ -71,9 +71,6 @@ def main():
     test_BoundingBoxesOnImage()
     # test_Batch()
     test_BatchLoader()
-    # test_BatchLoader.all_finished()
-    # test_BatchLoader._load_batches()
-    # test_BatchLoader.terminate()
     # test_BackgroundAugmenter.get_batch()
     # test_BackgroundAugmenter._augment_images_worker()
     # test_BackgroundAugmenter.terminate()
@@ -1504,43 +1501,45 @@ def test_BatchLoader():
     # That shouldn't be neccessary due to loader.all_finished(), but something breaks here.
     # queue.close() works on Tavis py2, but not py3 as it raises an `OSError: handle is closed`.
     for nb_workers in [1, 2]:
-        loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
-        loaded = []
-        counter = 0
-        while (not loader.all_finished() or not loader.queue.empty() or len(loaded) < 20*nb_workers) and counter < 1000:
-            try:
-                batch = loader.queue.get(timeout=0.001)
-                loaded.append(batch)
-            except:
-                pass
-            counter += 1
-        #loader.queue.close()
-        #while not loader.queue.empty():
-        #    loaded.append(loader.queue.get())
-        assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
+        # repeat these tests many times to catch rarer race conditions
+        for _ in sm.xrange(50):
+            loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
+            loaded = []
+            counter = 0
+            while (not loader.all_finished() or not loader.queue.empty() or len(loaded) < 20*nb_workers) and counter < 1000:
+                try:
+                    batch = loader.queue.get(timeout=0.001)
+                    loaded.append(batch)
+                except:
+                    pass
+                counter += 1
+            #loader.queue.close()
+            #while not loader.queue.empty():
+            #    loaded.append(loader.queue.get())
+            assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
 
-        loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
-        loader.terminate()
-        assert loader.all_finished
+            loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
+            loader.terminate()
+            assert loader.all_finished
 
-        loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=False)
-        loaded = []
-        counter = 0
-        while (not loader.all_finished() or not loader.queue.empty() or len(loaded) < 20*nb_workers) and counter < 1000:
-            try:
-                batch = loader.queue.get(timeout=0.001)
-                loaded.append(batch)
-            except:
-                pass
-            counter += 1
-        #loader.queue.close()
-        #while not loader.queue.empty():
-        #    loaded.append(loader.queue.get())
-        assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
+            loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=False)
+            loaded = []
+            counter = 0
+            while (not loader.all_finished() or not loader.queue.empty() or len(loaded) < 20*nb_workers) and counter < 1000:
+                try:
+                    batch = loader.queue.get(timeout=0.001)
+                    loaded.append(batch)
+                except:
+                    pass
+                counter += 1
+            #loader.queue.close()
+            #while not loader.queue.empty():
+            #    loaded.append(loader.queue.get())
+            assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
 
-        loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
-        loader.terminate()
-        assert loader.all_finished
+            loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
+            loader.terminate()
+            assert loader.all_finished
 
 
 def test_Noop():
@@ -2155,6 +2154,36 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    aug = iaa.Scale("keep")
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == base_img2d.shape
+    assert observed3d.shape == base_img3d.shape
+
+    aug = iaa.Scale([])
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == base_img2d.shape
+    assert observed3d.shape == base_img3d.shape
+
+    aug = iaa.Scale({})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == base_img2d.shape
+    assert observed3d.shape == base_img3d.shape
+
+    aug = iaa.Scale({"height": 11})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (11, base_img2d.shape[1])
+    assert observed3d.shape == (11, base_img3d.shape[1], 3)
+
+    aug = iaa.Scale({"width": 13})
+    observed2d = aug.augment_image(base_img2d)
+    observed3d = aug.augment_image(base_img3d)
+    assert observed2d.shape == (base_img2d.shape[0], 13)
+    assert observed3d.shape == (base_img3d.shape[0], 13, 3)
+
     aug = iaa.Scale({"height": 12, "width": 13})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
@@ -2207,6 +2236,27 @@ def test_Scale():
     assert all(seen3d)
 
     aug = iaa.Scale({"height": 12, "width": [12, 14]})
+    seen2d = [False, False]
+    seen3d = [False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(12, 12), (12, 14)]
+        assert observed3d.shape in [(12, 12, 3), (12, 14, 3)]
+        if observed2d.shape == (12, 12):
+            seen2d[0] = True
+        else:
+            seen2d[1] = True
+        if observed3d.shape == (12, 12, 3):
+            seen3d[0] = True
+        else:
+            seen3d[1] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
+    aug = iaa.Scale({"height": 12, "width": iap.Choice([12, 14])})
     seen2d = [False, False]
     seen3d = [False, False]
     for _ in sm.xrange(100):
@@ -2281,6 +2331,27 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    aug = iaa.Scale(iap.Choice([2.0, 4.0]))
+    seen2d = [False, False]
+    seen3d = [False, False]
+    for _ in sm.xrange(100):
+        observed2d = aug.augment_image(base_img2d)
+        observed3d = aug.augment_image(base_img3d)
+        assert observed2d.shape in [(base_img2d.shape[0]*2, base_img2d.shape[1]*2), (base_img2d.shape[0]*4, base_img2d.shape[1]*4)]
+        assert observed3d.shape in [(base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3), (base_img3d.shape[0]*4, base_img3d.shape[1]*4, 3)]
+        if observed2d.shape == (base_img2d.shape[0]*2, base_img2d.shape[1]*2):
+            seen2d[0] = True
+        else:
+            seen2d[1] = True
+        if observed3d.shape == (base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3):
+            seen3d[0] = True
+        else:
+            seen3d[1] = True
+        if all(seen2d) and all(seen3d):
+            break
+    assert all(seen2d)
+    assert all(seen3d)
+
     base_img2d = base_img2d[0:4, 0:4]
     base_img3d = base_img3d[0:4, 0:4, :]
     aug = iaa.Scale((0.76, 1.0))
@@ -2333,6 +2404,24 @@ def test_Scale():
             break
     assert not not_seen2d
     assert not not_seen3d
+
+    got_exception = False
+    try:
+        aug = iaa.Scale("foo")
+        observed2d = aug.augment_image(base_img2d)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+
+
+    aug = iaa.Scale(size=1, interpolation="nearest")
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert params[0].value == 1
+    assert params[1].value == "nearest"
 
 
 def test_Pad():
