@@ -193,7 +193,11 @@ class Scale(Augmenter):
             elif isinstance(val, StochasticParameter):
                 return val
             else:
-                raise Exception("Expected integer, float or StochasticParameter, got %s." % (type(val),))
+                raise Exception(
+                    "Expected number, tuple of two numbers, list of numbers, dictionary of "
+                    "form {'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
+                    "'width': <analogous>}, or StochasticParameter, got %s." % (type(val),)
+                )
 
         self.size = handle(size, True)
 
