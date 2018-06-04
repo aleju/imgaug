@@ -15,13 +15,14 @@ import six.moves as sm
 import os
 from skimage import draw
 import collections
+import time
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
-    from Queue import Empty as QueueEmpty
+    from Queue import Empty as QueueEmpty, Full as QueueFull
 elif sys.version_info[0] == 3:
     import pickle
-    from queue import Empty as QueueEmpty
+    from queue import Empty as QueueEmpty, Full as QueueFull
     xrange = range
 
 ALL = "ALL"
@@ -1786,7 +1787,13 @@ class BatchLoader(object):
         try:
             for batch in load_batch_func():
                 do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
-                queue.put(pickle.dumps(batch, protocol=-1))
+                batch_pickled = pickle.dumps(batch, protocol=-1)
+                while not join_signal.is_set():
+                    try:
+                        queue.put(batch_pickled, timeout=0.001)
+                        break
+                    except QueueFull:
+                        pass
                 if join_signal.is_set():
                     break
         except Exception as exc:
@@ -1800,17 +1807,31 @@ class BatchLoader(object):
 
         """
         self.join_signal.set()
+        # give minimal time to put generated batches in queue and gracefully shut down
+        time.sleep(0.002)
+
+        # clean the queue, this reportedly prevents hanging threads
+        while True:
+            try:
+                self.queue.get(timeout=0.005)
+            except QueueEmpty:
+                break
+
         if self.threaded:
-            while True:
-                try:
-                    self.queue.get(timeout=1)
-                except QueueEmpty:
-                    break
             for worker in self.workers:
                 worker.join()
+            # we don't have to set the finished_signals here, because threads always finish
+            # gracefully
         else:
-            for worker, finished_signal in zip(self.workers, self.finished_signals):
+            for worker in self.workers:
                 worker.terminate()
+                worker.join()
+
+            # wait here a tiny bit to really make sure that everything is killed before setting
+            # the finished_signals. calling set() and is_set() (via a subprocess) on them at the
+            # same time apparently results in a deadlock (at least in python 2).
+            #time.sleep(0.02)
+            for finished_signal in self.finished_signals:
                 finished_signal.set()
 
         self.queue.close()
