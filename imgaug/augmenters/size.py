@@ -159,7 +159,7 @@ class Scale(Augmenter):
                 if len(val.keys()) == 0:
                     return Deterministic("keep")
                 else:
-                    ia.do_assert(all([key in ["height", "width"] for key in val.keys()]))
+                    ia.do_assert(any([key in ["height", "width"] for key in val.keys()]))
                     if "height" in val and "width" in val:
                         ia.do_assert(val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio")
 
