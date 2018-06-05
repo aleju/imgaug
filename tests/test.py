@@ -165,7 +165,7 @@ def main():
 
     # size
     test_Scale()
-    # TODO CropAndPad
+    # TODO test_CropAndPad()
     test_Pad()
     test_Crop()
 
@@ -2565,9 +2565,214 @@ def test_Pad():
         assert len(set(movements)) == 2
         assert len(set(movements_det)) == 1
 
-    # TODO
-    #print("[Note] Pad by percentages is currently not tested.")
-    #print("[Note] Landmark projection after pad with resize is currently not tested.")
+    # pad modes
+    image = np.zeros((1, 2), dtype=np.uint8)
+    image[0, 0] = 100
+    image[0, 1] = 50
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=iap.Choice(["constant", "maximum", "edge"]), pad_cval=0, keep_size=False)
+    seen = [0, 0, 0]
+    for _ in sm.xrange(300):
+        observed = aug.augment_image(image)
+        if observed[0, 2] == 0:
+            seen[0] += 1
+        elif observed[0, 2] == 100:
+            seen[1] += 1
+        elif observed[0, 2] == 50:
+            seen[2] += 1
+        else:
+            assert False
+    assert all([100 - 50 < v < 100 + 50 for v in seen])
+
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=ia.ALL, pad_cval=0, keep_size=False)
+    expected = ["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"]
+    assert isinstance(aug.pad_mode, iap.Choice)
+    assert len(aug.pad_mode.a) == len(expected)
+    assert all([v in aug.pad_mode.a for v in expected])
+
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=["constant", "maximum"], pad_cval=0, keep_size=False)
+    expected = ["constant", "maximum"]
+    assert isinstance(aug.pad_mode, iap.Choice)
+    assert len(aug.pad_mode.a) == len(expected)
+    assert all([v in aug.pad_mode.a for v in expected])
+
+    got_exception = False
+    try:
+        aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=False, pad_cval=0, keep_size=False)
+    except Exception as exc:
+        assert "Expected pad_mode to be " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # pad cvals
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=100, keep_size=False)
+    observed = aug.augment_image(np.zeros((1, 1), dtype=np.uint8))
+    assert observed[0, 0] == 0
+    assert observed[0, 1] == 100
+
+    image = np.zeros((1, 1), dtype=np.uint8)
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=iap.Choice([50, 100]), keep_size=False)
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        observed = aug.augment_image(image)
+        if observed[0, 1] == 50:
+            seen[0] += 1
+        elif observed[0, 1] == 100:
+            seen[1] += 1
+        else:
+            assert False
+    assert all([100 - 50 < v < 100 + 50 for v in seen])
+
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=[50, 100], keep_size=False)
+    expected = [50, 100]
+    assert isinstance(aug.pad_cval, iap.Choice)
+    assert len(aug.pad_cval.a) == len(expected)
+    assert all([v in aug.pad_cval.a for v in expected])
+
+    image = np.zeros((1, 1), dtype=np.uint8)
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=(50, 52), keep_size=False)
+    seen = [0, 0, 0]
+    for _ in sm.xrange(300):
+        observed = aug.augment_image(image)
+        if observed[0, 1] == 50:
+            seen[0] += 1
+        elif observed[0, 1] == 51:
+            seen[1] += 1
+        elif observed[0, 1] == 52:
+            seen[2] += 1
+        else:
+            assert False
+    assert all([100 - 50 < v < 100 + 50 for v in seen])
+
+    got_exception = False
+    try:
+        aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval="test", keep_size=False)
+    except Exception as exc:
+        assert "Expected pad_cval " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # ------------------
+    # pad by percentages
+    # ------------------
+    # pad all sides by 100%
+    aug = iaa.Pad(percent=1.0, keep_size=False)
+    observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 1)
+    assert observed.shape == (4+4+4, 4+4+4)
+    assert np.sum(observed[4:-4, 4:-4]) == 4*4
+    assert np.sum(observed) == 4*4
+
+    # pad all sides by StochasticParameter
+    aug = iaa.Pad(percent=iap.Deterministic(1.0), keep_size=False)
+    observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 1)
+    assert observed.shape == (4+4+4, 4+4+4)
+    assert np.sum(observed[4:-4, 4:-4]) == 4*4
+    assert np.sum(observed) == 4*4
+
+    # pad all sides by 100-200%
+    aug = iaa.Pad(percent=(1.0, 2.0), keep_size=False)
+    observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 1)
+    assert np.sum(observed) == 4*4
+    assert (observed.shape[0] - 4) % 2 == 0
+    assert (observed.shape[1] - 4) % 2 == 0
+
+    # pad by invalid value
+    got_exception = False
+    try:
+        aug = iaa.Pad(percent="test", keep_size=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # test pad by 100% on each side
+    image = np.zeros((4, 4), dtype=np.uint8)
+    image[0, 0] = 255
+    image[3, 0] = 255
+    image[0, 3] = 255
+    image[3, 3] = 255
+    height, width = image.shape[0:2]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=3),
+                                      ia.Keypoint(x=3, y=3)], shape=image.shape)]
+    pads = [
+        (1.0, 0, 0, 0),
+        (0, 1.0, 0, 0),
+        (0, 0, 1.0, 0),
+        (0, 0, 0, 1.0),
+    ]
+    for pad in pads:
+        top, right, bottom, left = pad
+        top_px = int(top * height)
+        right_px = int(right * width)
+        bottom_px = int(bottom * height)
+        left_px = int(left * width)
+        aug = iaa.Pad(percent=pad, keep_size=False)
+        image_padded = np.pad(image, ((top_px, bottom_px), (left_px, right_px)),
+                              mode="constant",
+                              constant_values=0)
+        observed = aug.augment_image(image)
+        assert np.array_equal(observed, image_padded)
+
+        keypoints_moved = [keypoints[0].shift(x=left_px, y=top_px)]
+        observed = aug.augment_keypoints(keypoints)
+        assert keypoints_equal(observed, keypoints_moved)
+
+    # test pad by range of percentages
+    aug = iaa.Pad(percent=((0, 1.0), 0, 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 255)
+        n_padded = 0
+        while np.all(observed[0, :] == 0):
+            n_padded += 1
+            observed = observed[1:, :]
+        seen[n_padded] += 1
+    # note that we cant just check for 100-50 < x < 100+50 here. The first and last value (0px
+    # and 4px) padding have half the probability of occuring compared to the other values.
+    # E.g. 0px is padded if sampled p falls in range [0, 0.125). 1px is padded if sampled p
+    # falls in range [0.125, 0.375].
+    assert all([v > 30 for v in seen])
+
+    aug = iaa.Pad(percent=(0, (0, 1.0), 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 255)
+        n_padded = 0
+        while np.all(observed[:, -1] == 0):
+            n_padded += 1
+            observed = observed[:, 0:-1]
+        seen[n_padded] += 1
+    assert all([v > 30 for v in seen])
+
+    # test pad by list of percentages
+    aug = iaa.Pad(percent=([0.0, 1.0], 0, 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 255)
+        n_padded = 0
+        while np.all(observed[0, :] == 0):
+            n_padded += 1
+            observed = observed[1:, :]
+        seen[n_padded] += 1
+    assert 250 - 50 < seen[0] < 250 + 50
+    assert seen[1] == 0
+    assert seen[2] == 0
+    assert seen[3] == 0
+    assert 250 - 50 < seen[4] < 250 + 50
+
+    aug = iaa.Pad(percent=(0, [0.0, 1.0], 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 255)
+        n_padded = 0
+        while np.all(observed[:, -1] == 0):
+            n_padded += 1
+            observed = observed[:, 0:-1]
+        seen[n_padded] += 1
+    assert 250 - 50 < seen[0] < 250 + 50
+    assert seen[1] == 0
+    assert seen[2] == 0
+    assert seen[3] == 0
+    assert 250 - 50 < seen[4] < 250 + 50
 
 
 def test_Crop():
