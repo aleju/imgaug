@@ -2915,9 +2915,110 @@ def test_Crop():
         assert len(set(movements)) == 2
         assert len(set(movements_det)) == 1
 
-    # TODO
-    #print("[Note] Crop by percentages is currently not tested.")
-    #print("[Note] Landmark projection after crop with resize is currently not tested.")
+    # ------------------
+    # crop by percentages
+    # ------------------
+    # crop all sides by 10%
+    aug = iaa.Crop(percent=0.1, keep_size=False)
+    image = np.random.randint(0, 255, size=(50, 50), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert observed.shape == (40, 40)
+    assert np.all(observed == image[5:-5, 5:-5])
+
+    # crop all sides by StochasticParameter
+    aug = iaa.Crop(percent=iap.Deterministic(0.1), keep_size=False)
+    image = np.random.randint(0, 255, size=(50, 50), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert observed.shape == (40, 40)
+    assert np.all(observed == image[5:-5, 5:-5])
+
+    # crop all sides by 10-20%
+    image = np.random.randint(0, 255, size=(50, 50), dtype=np.uint8)
+    aug = iaa.Crop(percent=(0.1, 0.2), keep_size=False)
+    observed = aug.augment_image(image)
+    assert 30 <= observed.shape[0] <= 40
+    assert 30 <= observed.shape[1] <= 40
+
+    # crop by invalid value
+    got_exception = False
+    try:
+        aug = iaa.Crop(percent="test", keep_size=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # test crop by 10% on each side
+    image = np.random.randint(0, 255, size=(50, 50), dtype=np.uint8)
+    height, width = image.shape[0:2]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=10, y=11), ia.Keypoint(x=20, y=21),
+                                      ia.Keypoint(x=30, y=31)], shape=image.shape)]
+    crops = [
+        (0.1, 0, 0, 0),
+        (0, 0.1, 0, 0),
+        (0, 0, 0.1, 0),
+        (0, 0, 0, 0.1),
+    ]
+    for crop in crops:
+        top, right, bottom, left = crop
+        top_px = int(round(top * height))
+        right_px = int(round(right * width))
+        bottom_px = int(round(bottom * height))
+        left_px = int(round(left * width))
+        aug = iaa.Crop(percent=crop, keep_size=False)
+        image_cropped = image[top_px:50-bottom_px, left_px:50-right_px] # dont use :-bottom_px and ;-right_px here, because these values can be 0
+        observed = aug.augment_image(image)
+        assert np.array_equal(observed, image_cropped)
+
+        keypoints_moved = [keypoints[0].shift(x=-left_px, y=-top_px)]
+        observed = aug.augment_keypoints(keypoints)
+        assert keypoints_equal(observed, keypoints_moved)
+
+    # test crop by range of percentages
+    aug = iaa.Crop(percent=((0, 0.1), 0, 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((40, 40), dtype=np.uint8))
+        n_cropped = 40 - observed.shape[0]
+        seen[n_cropped] += 1
+    # note that we cant just check for 100-50 < x < 100+50 here. The first and last value (0px
+    # and 4px) have half the probability of occuring compared to the other values.
+    # E.g. 0px is cropped if sampled p falls in range [0, 0.125). 1px is cropped if sampled p
+    # falls in range [0.125, 0.375].
+    assert all([v > 30 for v in seen])
+
+    aug = iaa.Crop(percent=(0, (0, 0.1), 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((40, 40), dtype=np.uint8) + 255)
+        n_cropped = 40 - observed.shape[1]
+        seen[n_cropped] += 1
+    assert all([v > 30 for v in seen])
+
+    # test crop by list of percentages
+    aug = iaa.Crop(percent=([0.0, 0.1], 0, 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((40, 40), dtype=np.uint8) + 255)
+        n_cropped = 40 - observed.shape[0]
+        seen[n_cropped] += 1
+    assert 250 - 50 < seen[0] < 250 + 50
+    assert seen[1] == 0
+    assert seen[2] == 0
+    assert seen[3] == 0
+    assert 250 - 50 < seen[4] < 250 + 50
+
+    aug = iaa.Crop(percent=(0, [0.0, 0.1], 0, 0), keep_size=False)
+    seen = [0, 0, 0, 0, 0]
+    for _ in sm.xrange(500):
+        observed = aug.augment_image(np.zeros((40, 40), dtype=np.uint8) + 255)
+        n_cropped = 40 - observed.shape[1]
+        seen[n_cropped] += 1
+    assert 250 - 50 < seen[0] < 250 + 50
+    assert seen[1] == 0
+    assert seen[2] == 0
+    assert seen[3] == 0
+    assert 250 - 50 < seen[4] < 250 + 50
 
 
 def test_Fliplr():
