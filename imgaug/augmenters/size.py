@@ -685,10 +685,10 @@ class CropAndPad(Augmenter):
                 pass
             elif self.mode == "percent":
                 # percentage values have to be transformed to pixel values
-                top = int(height * top)
-                right = int(width * right)
-                bottom = int(height * bottom)
-                left = int(width * left)
+                top = int(round(height * top))
+                right = int(round(width * right))
+                bottom = int(round(height * bottom))
+                left = int(round(width * left))
             else:
                 raise Exception("Invalid mode")
 
