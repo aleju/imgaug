@@ -8173,6 +8173,66 @@ def test_Sequential():
     assert (0.50 - 0.1) <= nb_keypoints_first_second_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
 
+    # None as children
+    aug = iaa.Sequential(children=None)
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, image)
+
+    aug = iaa.Sequential()
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, image)
+
+    # Single child
+    aug = iaa.Sequential(iaa.Fliplr(1.0))
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, np.fliplr(image))
+
+    # Sequential of Sequential
+    aug = iaa.Sequential(iaa.Sequential(iaa.Fliplr(1.0)))
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, np.fliplr(image))
+
+    # Sequential of list of Sequentials
+    aug = iaa.Sequential([iaa.Sequential(iaa.Flipud(1.0)), iaa.Sequential(iaa.Fliplr(1.0))])
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, np.fliplr(np.flipud(image)))
+
+    # add
+    aug = iaa.Sequential()
+    aug.add(iaa.Fliplr(1.0))
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, np.fliplr(image))
+
+    aug = iaa.Sequential(iaa.Fliplr(1.0))
+    aug.add(iaa.Flipud(1.0))
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, np.fliplr(np.flipud(image)))
+
+    # get_parameters
+    aug = iaa.Sequential(iaa.Fliplr(1.0), random_order=False)
+    assert aug.get_parameters() == [False]
+
+    aug = iaa.Sequential(iaa.Fliplr(1.0), random_order=True)
+    assert aug.get_parameters() == [True]
+
+    # get_children_lists
+    flip = iaa.Fliplr(1.0)
+    aug = iaa.Sequential(flip)
+    assert aug.get_children_lists() == [aug]
+
+    # str/repr
+    flip = iaa.Fliplr(1.0)
+    aug = iaa.Sequential(flip, random_order=True)
+    expected = "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (aug.name, "True", str(flip), "False")
+    assert aug.__str__() == aug.__repr__() == expected
+
 
 def test_SomeOf():
     reseed()
