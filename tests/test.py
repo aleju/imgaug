@@ -3832,6 +3832,20 @@ def test_Sharpen():
     expected = _compute_sharpened_base_img(0.75*1, 0.25 * m_noop + 0.75 * m)
     assert np.allclose(observed, expected)
 
+    aug = iaa.Sharpen(alpha=iap.Choice([0.5, 1.0]), lightness=1)
+    observed = aug.augment_image(base_img)
+    expected1 = _compute_sharpened_base_img(0.5*1, m)
+    expected2 = _compute_sharpened_base_img(1.0*1, m)
+    assert np.allclose(observed, expected1) or np.allclose(observed, expected2)
+
+    got_exception = False
+    try:
+        aug = iaa.Sharpen(alpha="test", lightness=1)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
     aug = iaa.Sharpen(alpha=1.0, lightness=2)
     observed = aug.augment_image(base_img)
     expected = _compute_sharpened_base_img(1.0*2, m)
@@ -3841,6 +3855,20 @@ def test_Sharpen():
     observed = aug.augment_image(base_img)
     expected = _compute_sharpened_base_img(1.0*3, m)
     assert np.allclose(observed, expected)
+
+    aug = iaa.Sharpen(alpha=1.0, lightness=iap.Choice([1.0, 1.5]))
+    observed = aug.augment_image(base_img)
+    expected1 = _compute_sharpened_base_img(1.0*1.0, m)
+    expected2 = _compute_sharpened_base_img(1.0*1.5, m)
+    assert np.allclose(observed, expected1) or np.allclose(observed, expected2)
+
+    got_exception = False
+    try:
+        aug = iaa.Sharpen(alpha=1.0, lightness="test")
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
 
     # this part doesnt really work so far due to nonlinearities resulting from clipping to uint8
     """
