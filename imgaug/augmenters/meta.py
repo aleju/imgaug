@@ -1515,7 +1515,7 @@ class Sequential(Augmenter, list):
 
     def __str__(self):
         augs_str = ", ".join([aug.__str__() for aug in self])
-        return "Sequential(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
+        return "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (self.name, self.random_order, augs_str, self.deterministic)
 
 class SomeOf(Augmenter, list):
     """
