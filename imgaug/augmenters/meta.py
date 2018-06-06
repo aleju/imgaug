@@ -1446,6 +1446,7 @@ class Sequential(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
+            assert all([isinstance(child, Augmenter) for child in children])
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
@@ -1606,6 +1607,7 @@ class SomeOf(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
+            assert all([isinstance(child, Augmenter) for child in children])
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
@@ -1901,6 +1903,7 @@ class Sometimes(Augmenter):
             self.then_list = Sequential([], name="%s-then" % (self.name,))
         elif ia.is_iterable(then_list):
             # TODO does this work with SomeOf(), Sequential(), ... ?
+            assert all([isinstance(child, Augmenter) for child in then_list])
             self.then_list = Sequential(then_list, name="%s-then" % (self.name,))
         elif isinstance(then_list, Augmenter):
             self.then_list = Sequential([then_list], name="%s-then" % (self.name,))
@@ -1910,6 +1913,7 @@ class Sometimes(Augmenter):
         if else_list is None:
             self.else_list = Sequential([], name="%s-else" % (self.name,))
         elif ia.is_iterable(else_list):
+            assert all([isinstance(child, Augmenter) for child in else_list])
             self.else_list = Sequential(else_list, name="%s-else" % (self.name,))
         elif isinstance(else_list, Augmenter):
             self.else_list = Sequential([else_list], name="%s-else" % (self.name,))
@@ -2070,6 +2074,7 @@ class WithChannels(Augmenter):
         if children is None:
             self.children = Sequential([], name="%s-then" % (self.name,))
         elif ia.is_iterable(children):
+            assert all([isinstance(child, Augmenter) for child in children])
             self.children = Sequential(children, name="%s-then" % (self.name,))
         elif isinstance(children, Augmenter):
             self.children = Sequential([children], name="%s-then" % (self.name,))
