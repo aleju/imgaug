@@ -1498,7 +1498,7 @@ class Sequential(Augmenter, list):
         return seq
 
     def get_parameters(self):
-        return []
+        return [self.random_order]
 
     def add(self, augmenter):
         """Add an augmenter to the list of child augmenters.
