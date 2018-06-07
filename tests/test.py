@@ -1897,6 +1897,16 @@ def test_AssertShape():
             errored = True
         assert errored
 
+    # bad datatype
+    got_exception = False
+    try:
+        aug = iaa.AssertShape((1, False, 4, 1))
+        observed = aug.augment_images(np.zeros((1, 2, 2, 1), dtype=np.uint8))
+    except Exception as exc:
+        assert "Invalid datatype " in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_Alpha():
     reseed()
