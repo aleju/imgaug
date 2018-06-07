@@ -1901,22 +1901,21 @@ class Sometimes(Augmenter):
 
         if then_list is None:
             self.then_list = Sequential([], name="%s-then" % (self.name,))
+        elif isinstance(then_list, Augmenter):
+            self.then_list = then_list
         elif ia.is_iterable(then_list):
-            # TODO does this work with SomeOf(), Sequential(), ... ?
             assert all([isinstance(child, Augmenter) for child in then_list])
             self.then_list = Sequential(then_list, name="%s-then" % (self.name,))
-        elif isinstance(then_list, Augmenter):
-            self.then_list = Sequential([then_list], name="%s-then" % (self.name,))
         else:
             raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
 
         if else_list is None:
             self.else_list = Sequential([], name="%s-else" % (self.name,))
+        elif isinstance(else_list, Augmenter):
+            self.else_list = else_list
         elif ia.is_iterable(else_list):
             assert all([isinstance(child, Augmenter) for child in else_list])
             self.else_list = Sequential(else_list, name="%s-else" % (self.name,))
-        elif isinstance(else_list, Augmenter):
-            self.else_list = Sequential([else_list], name="%s-else" % (self.name,))
         else:
             raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
 
@@ -2016,7 +2015,7 @@ class Sometimes(Augmenter):
         return [self.then_list, self.else_list]
 
     def __str__(self):
-        return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
+        return "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
 
 class WithChannels(Augmenter):
     """
@@ -2073,11 +2072,11 @@ class WithChannels(Augmenter):
 
         if children is None:
             self.children = Sequential([], name="%s-then" % (self.name,))
+        elif isinstance(children, Augmenter):
+            self.children = children
         elif ia.is_iterable(children):
             assert all([isinstance(child, Augmenter) for child in children])
             self.children = Sequential(children, name="%s-then" % (self.name,))
-        elif isinstance(children, Augmenter):
-            self.children = Sequential([children], name="%s-then" % (self.name,))
         else:
             raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
 
@@ -2129,7 +2128,7 @@ class WithChannels(Augmenter):
         return [self.children]
 
     def __str__(self):
-        return "WithChannels(channels=%s, name=%s, children=[%s], deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
+        return "WithChannels(channels=%s, name=%s, children=%s, deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
 
 class Noop(Augmenter):
     """
