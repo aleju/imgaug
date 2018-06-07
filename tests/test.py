@@ -8650,17 +8650,17 @@ def test_Sometimes():
     then_list = iaa.Add(1)
     else_list = iaa.Add(2)
     aug = iaa.Sometimes(0.5, then_list=then_list, else_list=else_list, name="SometimesTest")
-    expected = "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (
+    expected = "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (
         "Binomial(Deterministic(float 0.50000000))",
         "SometimesTest",
-        "Sequential(name=SometimesTest-then, random_order=False, children=[%s], deterministic=False)" % (str(then_list),),
-        "Sequential(name=SometimesTest-else, random_order=False, children=[%s], deterministic=False)" % (str(else_list),),
+        str(then_list),
+        str(else_list),
         "False"
     )
     assert aug.__repr__() == aug.__str__() == expected
 
     aug = iaa.Sometimes(0.5, then_list=None, else_list=None, name="SometimesTest")
-    expected = "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (
+    expected = "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (
         "Binomial(Deterministic(float 0.50000000))",
         "SometimesTest",
         "Sequential(name=SometimesTest-then, random_order=False, children=[], deterministic=False)",
@@ -8701,6 +8701,70 @@ def test_WithChannels():
     expected[..., 1] += 10
     expected[..., 1] *= 2
     assert np.allclose(observed, expected)
+
+    # multiple images, given as array
+    images = np.concatenate([base_img[np.newaxis, ...], base_img[np.newaxis, ...]], axis=0)
+    aug = iaa.WithChannels(1, iaa.Add(10))
+    observed = aug.augment_images(images)
+    expected = np.copy(images)
+    expected[..., 1] += 10
+    assert np.allclose(observed, expected)
+
+    # multiple images, given as list
+    images = [base_img, base_img]
+    aug = iaa.WithChannels(1, iaa.Add(10))
+    observed = aug.augment_images(images)
+    expected = np.copy(base_img)
+    expected[..., 1] += 10
+    expected = [expected, expected]
+    assert array_equal_lists(observed, expected)
+
+    # children list is empty
+    aug = iaa.WithChannels(1, children=None)
+    observed = aug.augment_image(base_img)
+    expected = np.copy(base_img)
+    assert np.array_equal(observed, expected)
+
+    # channel list is empty
+    aug = iaa.WithChannels([], iaa.Add(10))
+    observed = aug.augment_image(base_img)
+    expected = np.copy(base_img)
+    assert np.array_equal(observed, expected)
+
+    # invalid datatype for channels
+    got_exception = False
+    try:
+        aug = iaa.WithChannels(False, iaa.Add(10))
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # invalid datatype for children
+    got_exception = False
+    try:
+        aug = iaa.WithChannels(1, False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # get_parameters
+    aug = iaa.WithChannels([1], iaa.Add(10))
+    params = aug.get_parameters()
+    assert len(params) == 1
+    assert params[0] == [1]
+
+    # get_children_lists
+    children = iaa.Sequential([iaa.Add(10)])
+    aug = iaa.WithChannels(1, children)
+    assert aug.get_children_lists() == [children]
+
+    # repr/str
+    children = iaa.Sequential([iaa.Noop()])
+    aug = iaa.WithChannels(1, children, name="WithChannelsTest")
+    expected = "WithChannels(channels=[1], name=WithChannelsTest, children=%s, deterministic=False)" % (str(children),)
+    assert aug.__repr__() == aug.__str__() == expected
 
 
 def test_2d_inputs():
