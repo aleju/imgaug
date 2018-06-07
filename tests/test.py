@@ -1566,6 +1566,8 @@ def test_Noop():
     expected = keypoints
     assert keypoints_equal(observed, expected)
 
+    assert iaa.Noop().get_parameters() == []
+
 
 def test_Lambda():
     reseed()
