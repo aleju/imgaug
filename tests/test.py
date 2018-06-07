@@ -8309,6 +8309,75 @@ def test_SomeOf():
     assert 0.5-0.1 <= p_observed[0] <= 0.5+0.1
     assert 0.5-0.1 <= p_observed[1] <= 0.5+0.1
 
+    # invalid argument for children
+    got_exception = False
+    try:
+        aug = iaa.SomeOf(1, children=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # n is None
+    aug = iaa.SomeOf(None, children=[iaa.Fliplr(1.0), iaa.Flipud(1.0)])
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, np.flipud(np.fliplr(image)))
+
+    # n is (x, None)
+    children = [iaa.Fliplr(1.0), iaa.Flipud(1.0), iaa.Add(5)]
+    image = np.random.randint(0, 255-5, size=(16, 16), dtype=np.uint8)
+    expected = [iaa.Sequential(children).augment_image(image)]
+    for _, aug in enumerate(children):
+        children_i = [child for child in children if child != aug]
+        expected.append(iaa.Sequential(children_i).augment_image(image))
+    aug = iaa.SomeOf((2, None), children)
+    seen = [0, 0, 0, 0]
+    for _ in sm.xrange(400):
+        observed = aug.augment_image(image)
+        found = 0
+        for i, expected_i in enumerate(expected):
+            if np.array_equal(observed, expected_i):
+                seen[i] += 1
+                found += 1
+        assert found == 1
+    assert 200 - 50 < seen[0] < 200 + 50
+    assert 200 - 50 < seen[1] + seen[2] + seen[3] < 200 + 50
+
+    # n is bad (int, "test")
+    got_exception = False
+    try:
+        aug = iaa.SomeOf((2, "test"), children=iaa.Fliplr(1.0))
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # n is stochastic param
+    aug = iaa.SomeOf(iap.Choice([0, 1]), children=iaa.Fliplr(1.0))
+    image = np.random.randint(0, 255-5, size=(16, 16), dtype=np.uint8)
+    seen = [0, 1]
+    for _ in sm.xrange(100):
+        observed = aug.augment_image(image)
+        if np.array_equal(observed, image):
+            seen[0] += 1
+        elif np.array_equal(observed, np.fliplr(image)):
+            seen[1] += 1
+        else:
+            assert False
+    assert seen[0] > 10
+    assert seen[1] > 10
+
+    # bad datatype for n
+    got_exception = False
+    try:
+        aug = iaa.SomeOf(False, children=iaa.Fliplr(1.0))
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+
 def test_OneOf():
     reseed()
 
@@ -8509,6 +8578,96 @@ def test_Sometimes():
     assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
     assert nb_changed_aug_det == 0
+
+    # p as stochastic parameter
+    image = np.zeros((1, 1), dtype=np.uint8) + 100
+    images = [image] * 10
+    aug = iaa.Sometimes(p=iap.Binomial(iap.Choice([0.0, 1.0])), then_list=iaa.Add(10))
+
+    seen = [0, 0]
+    for _ in sm.xrange(100):
+        observed = aug.augment_images(images)
+        uq = np.unique(np.uint8(observed))
+        assert len(uq) == 1
+        if uq[0] == 100:
+            seen[0] += 1
+        elif uq[0] == 110:
+            seen[1] += 1
+        else:
+            assert False
+    assert seen[0] > 20
+    assert seen[1] > 20
+
+    # bad datatype for p
+    got_exception = False
+    try:
+        aug = iaa.Sometimes(p=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # both lists none
+    aug = iaa.Sometimes(0.2, then_list=None, else_list=None)
+    image = np.random.randint(0, 255, size=(16, 16), dtype=np.uint8)
+    observed = aug.augment_image(image)
+    assert np.array_equal(observed, image)
+
+    # then_list bad datatype
+    got_exception = False
+    try:
+        aug = iaa.Sometimes(p=0.2, then_list=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # else_list bad datatype
+    got_exception = False
+    try:
+        aug = iaa.Sometimes(p=0.2, then_list=None, else_list=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # deactivated propagation via hooks
+    image = np.random.randint(0, 255-10, size=(16, 16), dtype=np.uint8)
+    aug = iaa.Sometimes(1.0, iaa.Add(10))
+    observed1 = aug.augment_image(image)
+    observed2 = aug.augment_image(image, hooks=ia.HooksImages(propagator=lambda images, augmenter, parents, default: False if augmenter == aug else default))
+    assert np.array_equal(observed1, image + 10)
+    assert np.array_equal(observed2, image)
+
+    # get_parameters
+    aug = iaa.Sometimes(0.75)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Binomial)
+    assert isinstance(params[0].p, iap.Deterministic)
+    assert 0.75 - 1e-8 < params[0].p.value < 0.75 + 1e-8
+
+    # str/repr
+    then_list = iaa.Add(1)
+    else_list = iaa.Add(2)
+    aug = iaa.Sometimes(0.5, then_list=then_list, else_list=else_list, name="SometimesTest")
+    expected = "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (
+        "Binomial(Deterministic(float 0.50000000))",
+        "SometimesTest",
+        "Sequential(name=SometimesTest-then, random_order=False, children=[%s], deterministic=False)" % (str(then_list),),
+        "Sequential(name=SometimesTest-else, random_order=False, children=[%s], deterministic=False)" % (str(else_list),),
+        "False"
+    )
+    assert aug.__repr__() == aug.__str__() == expected
+
+    aug = iaa.Sometimes(0.5, then_list=None, else_list=None, name="SometimesTest")
+    expected = "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (
+        "Binomial(Deterministic(float 0.50000000))",
+        "SometimesTest",
+        "Sequential(name=SometimesTest-then, random_order=False, children=[], deterministic=False)",
+        "Sequential(name=SometimesTest-else, random_order=False, children=[], deterministic=False)",
+        "False"
+    )
+    assert aug.__repr__() == aug.__str__() == expected
 
 
 def test_WithChannels():
