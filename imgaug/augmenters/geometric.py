@@ -1269,7 +1269,8 @@ class PiecewiseAffine(Augmenter):
         distribution. This scale factor is equivalent to the normal
         distribution's sigma. Note that the jitter (how far each point is
         moved in which direction) is multiplied by the height/width of the
-        image, so this scale can be the same for different sized images.
+        image if `absolute_scale=False` (default), so this scale can be
+        the same for different sized images.
         Recommended values are in the range 0.01 to 0.05 (weak to strong
         augmentations).
             * If a single float, then that value will always be used as the
@@ -1303,6 +1304,9 @@ class PiecewiseAffine(Augmenter):
     mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
         See Affine.__init__().
 
+    absolute_scale : bool, optional(default=False)
+        Take `scale` as an absolute value rather than a relative value.
+
     name : string, optional(default=None)
         See `Augmenter.__init__()`
 
@@ -1327,7 +1331,7 @@ class PiecewiseAffine(Augmenter):
 
     """
 
-    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant",
+    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant", absolute_scale=False,
                  name=None, deterministic=False, random_state=None):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1424,6 +1428,8 @@ class PiecewiseAffine(Augmenter):
             self.mode = mode
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
+
+        self.absolute_scale = absolute_scale
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -1575,8 +1581,9 @@ class PiecewiseAffine(Augmenter):
         if nb_nonzero == 0:
             return None
         else:
-            jitter_img[:, 0] = jitter_img[:, 0] * h
-            jitter_img[:, 1] = jitter_img[:, 1] * w
+            if not self.absolute_scale:
+                jitter_img[:, 0] = jitter_img[:, 0] * h
+                jitter_img[:, 1] = jitter_img[:, 1] * w
             points_dest = np.copy(points_src)
             points_dest[:, 0] = points_dest[:, 0] + jitter_img[:, 0]
             points_dest[:, 1] = points_dest[:, 1] + jitter_img[:, 1]
