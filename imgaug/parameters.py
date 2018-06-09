@@ -103,11 +103,15 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
             raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
 
 def handle_probability_param(param, name):
-    if param in [True, False, 0, 1, 0.0, 1.0]:
+    eps = 1e-6
+    if param in [True, False, 0, 1]:
         return Deterministic(int(param))
     elif ia.is_single_number(param):
-        ia.do_assert(0 <= param <= 1.0)
-        return Binomial(param)
+        ia.do_assert(0.0 <= param <= 1.0)
+        if (0.0-eps < param < 0.0+eps or 1.0-eps < param < 1.0+eps):
+            return Deterministic(int(round(param)))
+        else:
+            return Binomial(param)
     elif isinstance(param, StochasticParameter):
         return param
     else:
