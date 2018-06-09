@@ -1114,16 +1114,19 @@ class FromLowerResolution(StochasticParameter):
 
         methods = self.method.draw_samples((n,), random_state=random_state)
         result = None
-        #for i, (size_factor, method) in enumerate(zip(size_factors, methods)):
         for i, (hw_px, method) in enumerate(zip(hw_pxs, methods)):
-            #h_small = max(int(h * size_factor), self.min_size)
-            #w_small = max(int(w * size_factor), self.min_size)
             h_small = max(hw_px[0], self.min_size)
             w_small = max(hw_px[1], self.min_size)
             samples = self.other_param.draw_samples((1, h_small, w_small, c), random_state=random_state)
+            if method != "nearest":
+                # hacky cast because opencv resize seems to be unable to handle non-nearest
+                # interpolation methods in combination with large ints
+                # also, using lower ints with interpolation!=nearest seems to not result in the
+                # expected "gradual" values, but rather still behave like nearest
+                samples = samples.astype(np.float32)
             samples_upscaled = ia.imresize_many_images(samples, (h, w), interpolation=method)
             if result is None:
-                result = np.zeros((n, h, w, c), dtype=samples.dtype)
+                result = np.zeros((n, h, w, c), dtype=samples_upscaled.dtype)
             result[i] = samples_upscaled
 
         if len(size) == 3:
