@@ -10128,6 +10128,12 @@ def test_parameters_DiscreteUniform():
     assert sample in [-1, 0, 1]
     assert np.all(np.logical_or(np.logical_or(samples == -1, samples == 0), samples==1))
 
+    param = iap.DiscreteUniform(1, 1)
+    sample = param.draw_sample()
+    samples = param.draw_samples((100,))
+    assert sample == 1
+    assert np.all(samples == 1)
+
     param = iap.Uniform(-1, 1)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
