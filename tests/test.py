@@ -10,6 +10,11 @@ or add @attr("now") in front of a test and then execute
 to only execute a specific test.
 """
 from __future__ import print_function, division
+
+# fix execution of tests involving matplotlib on travis
+import matplotlib
+matplotlib.use('Agg')
+
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
