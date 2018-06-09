@@ -184,6 +184,7 @@ def main():
     test_parameters_handle_probability_param()
     test_parameters_force_np_float_dtype()
     test_parameters_both_np_float_if_one_is_float()
+    test_parameters_draw_distribution_graph()
     test_parameters_Biomial()
     test_parameters_Choice()
     test_parameters_DiscreteUniform()
@@ -9883,6 +9884,25 @@ def test_parameters_both_np_float_if_one_is_float():
     a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
     assert a2.dtype.type == np.float64, a2.dtype.type
     assert b2.dtype.type == np.float64, b2.dtype.type
+
+
+def test_parameters_draw_distribution_graph():
+    # this test is very rough as we get a not-very-well-defined image out of the function
+    param = iap.Uniform(0.0, 1.0)
+
+    graph_img = param.draw_distribution_graph(title=None, size=(10000,), bins=100)
+    assert graph_img.ndim == 3
+    assert graph_img.shape[2] == 3
+
+    # at least 10% of the image should be white-ish (background)
+    nb_white = np.sum(graph_img[..., :] > [200, 200, 200])
+    nb_all = np.prod(graph_img.shape)
+    assert nb_white > 0.1 * nb_all
+
+    graph_img_title = param.draw_distribution_graph(title="test", size=(10000,), bins=100)
+    assert graph_img_title.ndim == 3
+    assert graph_img_title.shape[2] == 3
+    assert not np.array_equal(graph_img_title, graph_img)
 
 
 def test_parameters_Biomial():
