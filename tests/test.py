@@ -184,6 +184,7 @@ def main():
     test_parameters_handle_probability_param()
     test_parameters_force_np_float_dtype()
     test_parameters_both_np_float_if_one_is_float()
+    test_parameters_draw_distribution_grid()
     test_parameters_draw_distribution_graph()
     test_parameters_Biomial()
     test_parameters_Choice()
@@ -9884,6 +9885,30 @@ def test_parameters_both_np_float_if_one_is_float():
     a2, b2 = iap.both_np_float_if_one_is_float(a1, b1)
     assert a2.dtype.type == np.float64, a2.dtype.type
     assert b2.dtype.type == np.float64, b2.dtype.type
+
+
+def test_parameters_draw_distribution_grid():
+    params = [iap.Deterministic(1), iap.Uniform(0, 1.0)]
+    graph1 = params[0].draw_distribution_graph(size=(100000,))
+    graph2 = params[1].draw_distribution_graph(size=(100000,))
+    graph1_rs = ia.imresize_many_images(np.array([graph1]), sizes=(100, 100))[0]
+    graph2_rs = ia.imresize_many_images(np.array([graph2]), sizes=(100, 100))[0]
+    grid_expected = ia.draw_grid([graph1_rs, graph2_rs])
+
+    grid_observed = iap.draw_distributions_grid(
+        params,
+        rows=None,
+        cols=None,
+        graph_sizes=(100, 100),
+        sample_sizes=[(100000,), (100000,)],
+        titles=None
+    )
+
+    diff = np.abs(grid_expected.astype(np.int32) - grid_observed.astype(np.int32))
+    #from scipy import misc
+    #misc.imshow(np.vstack([grid_expected, grid_observed, diff]))
+    #print(diff.flatten()[0:100])
+    assert np.average(diff) < 10
 
 
 def test_parameters_draw_distribution_graph():
