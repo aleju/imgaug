@@ -1889,15 +1889,15 @@ class IterativeNoiseAggregator(StochasticParameter):
         if ia.is_single_integer(iterations):
             ia.do_assert(1 <= iterations <= 1000)
             self.iterations = Deterministic(iterations)
+        elif isinstance(iterations, list):
+            ia.do_assert(len(iterations) > 0)
+            ia.do_assert(all([1 <= val <= 10000 for val in iterations]))
+            self.iterations = Choice(iterations)
         elif ia.is_iterable(iterations):
             ia.do_assert(len(iterations) == 2)
             ia.do_assert(all([ia.is_single_integer(val) for val in iterations]))
             ia.do_assert(all([1 <= val <= 10000 for val in iterations]))
             self.iterations = DiscreteUniform(iterations[0], iterations[1])
-        elif isinstance(iterations, list):
-            ia.do_assert(len(iterations) > 0)
-            ia.do_assert(all([1 <= val <= 10000 for val in iterations]))
-            self.iterations = Choice(iterations)
         elif isinstance(iterations, StochasticParameter):
             self.iterations = iterations
         else:
