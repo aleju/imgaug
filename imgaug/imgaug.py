@@ -528,13 +528,13 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
         ip = cv2.INTER_CUBIC
 
-    result = np.zeros((nb_images, height, width, nb_channels), dtype=np.uint8)
+    result = np.zeros((nb_images, height, width, nb_channels), dtype=images.dtype)
     for img_idx in sm.xrange(nb_images):
         # TODO fallback to scipy here if image isn't uint8
         result_img = cv2.resize(images[img_idx], (width, height), interpolation=ip)
         if len(result_img.shape) == 2:
             result_img = result_img[:, :, np.newaxis]
-        result[img_idx] = result_img
+        result[img_idx] = result_img.astype(images.dtype)
     return result
 
 
