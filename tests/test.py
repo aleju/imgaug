@@ -181,6 +181,7 @@ def main():
     # ----------------------
     test_parameters_handle_continuous_param()
     test_parameters_handle_discrete_param()
+    test_parameters_handle_probability_param()
     test_parameters_force_np_float_dtype()
     test_parameters_both_np_float_if_one_is_float()
     test_parameters_Biomial()
@@ -9804,6 +9805,45 @@ def test_parameters_handle_discrete_param():
         got_exception = True
         assert "Unexpected input for value_range" in str(e)
     assert got_exception == True
+
+
+def test_parameters_handle_probability_param():
+    for val in [True, False, 0, 1, 0.0, 1.0]:
+        p = iap.handle_probability_param(val, "[test1]")
+        assert isinstance(p, iap.Deterministic)
+        assert p.value == int(val)
+
+    for val in [0.0001, 0.001, 0.01, 0.1, 0.9, 0.99, 0.999, 0.9999]:
+        p = iap.handle_probability_param(val, "[test2]")
+        assert isinstance(p, iap.Binomial)
+        assert isinstance(p.p, iap.Deterministic)
+        assert val-1e-8 < p.p.value < val+1e-8
+
+    det = iap.Deterministic(1)
+    p = iap.handle_probability_param(det, "[test3]")
+    assert p == det
+
+    got_exception = False
+    try:
+        p = iap.handle_probability_param("test", "[test4]")
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        p = iap.handle_probability_param(-0.01, "[test5]")
+    except AssertionError:
+        got_exception = True
+    assert got_exception
+
+    got_exception = False
+    try:
+        p = iap.handle_probability_param(1.01, "[test6]")
+    except AssertionError:
+        got_exception = True
+    assert got_exception
 
 
 def test_parameters_force_np_float_dtype():
