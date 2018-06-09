@@ -11525,6 +11525,50 @@ def test_parameters_IterativeNoiseAggregator():
     assert 50 - 20 < seen[0] < 50 + 20
     assert 50 - 20 < seen[1] < 50 + 20
 
+    # iterations as tuple
+    param = iap.IterativeNoiseAggregator(iap.Uniform(-1.0, 1.0), iterations=(1, 100), aggregation_method="avg")
+    diffs = []
+    for _ in sm.xrange(100):
+        samples = param.draw_samples((1, 1))
+        diff = abs(samples[0, 0] - 0.0)
+        diffs.append(diff)
+
+    nb_bins = 3
+    nb_iterations = 100
+    hist, _ = np.histogram(diffs, bins=nb_bins, range=(-1.0, 1.0), density=False)
+    #density_expected = 1.0/nb_bins
+    #density_tolerance = 0.1
+    #for nb_samples in hist:
+    #    density = nb_samples / nb_iterations
+    #    print(hist, nb_samples, nb_iterations, density)
+    #    assert density_expected - density_tolerance < density < density_expected + density_tolerance
+    assert hist[1] > hist[0]
+    assert hist[1] > hist[2]
+
+    # iterations as list
+    seen = [0, 0]
+    for _ in sm.xrange(400):
+        param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=[1, 100], aggregation_method=["max"])
+        samples = param.draw_samples((1, 1))
+        diff_0 = abs(0 - samples[0, 0])
+        diff_50 = abs(50 - samples[0, 0])
+        if diff_50 < eps:
+            seen[0] += 1
+        elif diff_0 < eps:
+            seen[1] += 1
+        else:
+            assert False
+    assert 300 - 50 < seen[0] < 300 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+
+    # test ia.ALL as aggregation_method
+    # note that each method individually and list of methods are already tested, so no in depth
+    # test is needed here
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=100, aggregation_method=ia.ALL)
+    assert isinstance(param.aggregation_method, iap.Choice)
+    assert len(param.aggregation_method.a) == 3
+    assert [v in param.aggregation_method.a for v in ["min", "avg", "max"]]
+
     param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=2, aggregation_method="max")
     samples = param.draw_samples((2, 1000))
     nb_0 = np.sum(samples == 0)
@@ -11538,6 +11582,29 @@ def test_parameters_IterativeNoiseAggregator():
     assert samples1.shape == (100, 10)
     assert samples2.shape == (100, 10)
     assert np.allclose(samples1, samples2)
+
+    # StochasticParameter as aggregation_method
+    param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=5, aggregation_method=iap.Deterministic("max"))
+    assert isinstance(param.aggregation_method, iap.Deterministic)
+    assert param.aggregation_method.value == "max"
+
+    # bad datatype as aggregation_method
+    got_exception = False
+    try:
+        param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=5, aggregation_method=False)
+    except Exception as exc:
+        assert "Expected aggregation_method to be" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # bad datatype as for iterations
+    got_exception = False
+    try:
+        param = iap.IterativeNoiseAggregator(iap.Choice([0, 50]), iterations=False, aggregation_method="max")
+    except Exception as exc:
+        assert "Expected iterations to be" in str(exc)
+        got_exception = True
+    assert got_exception
 
     param = iap.IterativeNoiseAggregator(iap.Deterministic(0), iterations=(1, 3), aggregation_method="max")
     assert param.__str__() == param.__repr__() == "IterativeNoiseAggregator(Deterministic(int 0), DiscreteUniform(Deterministic(int 1), Deterministic(int 3)), Deterministic(max))"
