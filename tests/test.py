@@ -10627,18 +10627,36 @@ def test_parameters_FromLowerResolution():
     reseed()
     eps = np.finfo(np.float32).eps
 
+    # (H, W, C)
     param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=8)
     samples = param.draw_samples((8, 8, 1))
     assert samples.shape == (8, 8, 1)
     uq = np.unique(samples)
     assert len(uq) == 2 and (0 in uq or 1 in uq)
 
+    # (N, H, W, C)
+    samples_nhwc = param.draw_samples((1, 8, 8, 1))
+    assert samples_nhwc.shape == (1, 8, 8, 1)
+    uq = np.unique(samples_nhwc)
+    assert len(uq) == 2 and (0 in uq or 1 in uq)
+
+    # (N, H, W, C, something) causing error
+    got_exception = False
+    try:
+        samples_nhwcx = param.draw_samples((1, 8, 8, 1, 1))
+    except Exception as exc:
+        assert "FromLowerResolution can only generate samples of shape" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # C=3
     param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=8)
     samples = param.draw_samples((8, 8, 3))
     assert samples.shape == (8, 8, 3)
     uq = np.unique(samples)
     assert len(uq) == 2 and (0 in uq or 1 in uq)
 
+    # different sizes in px
     param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
     param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=16)
     seen_components = [0, 0]
@@ -10656,6 +10674,52 @@ def test_parameters_FromLowerResolution():
     assert seen_components[0] < seen_components[1]
     assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
 
+    # different sizes in px, one given as tuple (a, b)
+    param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
+    param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=(2, 16))
+    seen_components = [0, 0]
+    seen_pixels = [0, 0]
+    for _ in sm.xrange(400):
+        samples1 = param1.draw_samples((16, 16, 1))
+        samples2 = param2.draw_samples((16, 16, 1))
+        _, num1 = skimage.morphology.label(samples1, neighbors=4, background=0, return_num=True)
+        _, num2 = skimage.morphology.label(samples2, neighbors=4, background=0, return_num=True)
+        seen_components[0] += num1
+        seen_components[1] += num2
+        seen_pixels[0] += np.sum(samples1 == 1)
+        seen_pixels[1] += np.sum(samples2 == 1)
+
+    assert seen_components[0] < seen_components[1]
+    assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
+
+    # different sizes in px, given as StochasticParameter
+    param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=iap.Deterministic(1))
+    param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=iap.Choice([8, 16]))
+    seen_components = [0, 0]
+    seen_pixels = [0, 0]
+    for _ in sm.xrange(100):
+        samples1 = param1.draw_samples((16, 16, 1))
+        samples2 = param2.draw_samples((16, 16, 1))
+        _, num1 = skimage.morphology.label(samples1, neighbors=4, background=0, return_num=True)
+        _, num2 = skimage.morphology.label(samples2, neighbors=4, background=0, return_num=True)
+        seen_components[0] += num1
+        seen_components[1] += num2
+        seen_pixels[0] += np.sum(samples1 == 1)
+        seen_pixels[1] += np.sum(samples2 == 1)
+
+    assert seen_components[0] < seen_components[1]
+    assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
+
+    # bad datatype for size_px
+    got_exception = False
+    try:
+        param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # min_size
     param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
     param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_px=1, min_size=16)
     seen_components = [0, 0]
@@ -10673,6 +10737,7 @@ def test_parameters_FromLowerResolution():
     assert seen_components[0] < seen_components[1]
     assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
 
+    # different sizes in percent
     param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=0.01)
     param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=0.8)
     seen_components = [0, 0]
@@ -10690,11 +10755,62 @@ def test_parameters_FromLowerResolution():
     assert seen_components[0] < seen_components[1]
     assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
 
+    # different sizes in percent, given as StochasticParameter
+    param1 = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=iap.Deterministic(0.01))
+    param2 = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=iap.Choice([0.4, 0.8]))
+    seen_components = [0, 0]
+    seen_pixels = [0, 0]
+    for _ in sm.xrange(100):
+        samples1 = param1.draw_samples((16, 16, 1))
+        samples2 = param2.draw_samples((16, 16, 1))
+        _, num1 = skimage.morphology.label(samples1, neighbors=4, background=0, return_num=True)
+        _, num2 = skimage.morphology.label(samples2, neighbors=4, background=0, return_num=True)
+        seen_components[0] += num1
+        seen_components[1] += num2
+        seen_pixels[0] += np.sum(samples1 == 1)
+        seen_pixels[1] += np.sum(samples2 == 1)
+
+    assert seen_components[0] < seen_components[1]
+    assert seen_pixels[0] / seen_components[0] > seen_pixels[1] / seen_components[1]
+
+    # bad datatype for size_percent
+    got_exception = False
+    try:
+        param = iap.FromLowerResolution(iap.Binomial(0.5), size_percent=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # method given as StochasticParameter
+    param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=4, method=iap.Choice(["nearest", "linear"]))
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        samples = param.draw_samples((16, 16, 1))
+        nb_in_between = np.sum(np.logical_and(samples < 0.95, samples > 0.05))
+        if nb_in_between == 0:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert 100 - 50 < seen[0] < 100 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+
+    # bad datatype for method
+    got_exception = False
+    try:
+        param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=4, method=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # multiple calls with same random_state
     param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
     samples1 = param.draw_samples((10, 5, 1), random_state=np.random.RandomState(1234))
     samples2 = param.draw_samples((10, 5, 1), random_state=np.random.RandomState(1234))
     assert np.allclose(samples1, samples2)
 
+    # str / repr
     param = iap.FromLowerResolution(other_param=iap.Deterministic(0), size_percent=1, method="nearest")
     assert param.__str__() == param.__repr__() == "FromLowerResolution(size_percent=Deterministic(int 1), method=Deterministic(nearest), other_param=Deterministic(int 0))"
     param = iap.FromLowerResolution(other_param=iap.Deterministic(0), size_px=1, method="nearest")
