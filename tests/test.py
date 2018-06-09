@@ -9397,6 +9397,16 @@ def test_parameters_handle_continuous_param():
         assert "[test1]" in str(e)
     assert got_exception == False
 
+    # value without value range as (None, None)
+    got_exception = False
+    try:
+        result = iap.handle_continuous_param(1, "[test1b]", value_range=(None, None), tuple_to_uniform=True, list_to_choice=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test1b]" in str(e)
+    assert got_exception == False
+
     # stochastic parameter
     got_exception = False
     try:
@@ -9555,6 +9565,24 @@ def test_parameters_handle_continuous_param():
     except Exception as e:
         got_exception = True
         assert "[test17]" in str(e)
+    assert got_exception == True
+
+    # single value within value range given as callable
+    got_exception = False
+    try:
+        result = iap.handle_continuous_param(1, "[test18]", value_range=lambda x: -1 < x < 1, tuple_to_uniform=True, list_to_choice=True)
+    except Exception as e:
+        got_exception = True
+        assert "[test18]" in str(e)
+    assert got_exception == False
+
+    # bad datatype for value range
+    got_exception = False
+    try:
+        result = iap.handle_continuous_param(1, "[test19]", value_range=False, tuple_to_uniform=True, list_to_choice=True)
+    except Exception as e:
+        got_exception = True
+        assert "Unexpected input for value_range" in str(e)
     assert got_exception == True
 
 
