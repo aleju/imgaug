@@ -9607,6 +9607,16 @@ def test_parameters_handle_discrete_param():
         assert "[test1]" in str(e)
     assert got_exception == False
 
+    # value without value range as (None, None)
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test1b]", value_range=(None, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        assert isinstance(result, iap.Deterministic)
+    except Exception as e:
+        got_exception = True
+        assert "[test1b]" in str(e)
+    assert got_exception == False
+
     # stochastic parameter
     got_exception = False
     try:
@@ -9707,6 +9717,16 @@ def test_parameters_handle_discrete_param():
         assert "[test11]" in str(e)
     assert got_exception == False
 
+    # tuple as value and tuple allowed and tuple within value range with allow_floats=False
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param((1, 2), "[test11b]", value_range=(0, 10), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        assert isinstance(result, iap.DiscreteUniform)
+    except Exception as e:
+        got_exception = True
+        assert "[test11b]" in str(e)
+    assert got_exception == False
+
     # tuple as value and tuple allowed and tuple partially outside of value range
     got_exception = False
     try:
@@ -9765,6 +9785,24 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test17]" in str(e)
+    assert got_exception == True
+
+    # single value within value range given as callable
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test18]", value_range=lambda x: -1 < x < 1, tuple_to_uniform=True, list_to_choice=True)
+    except Exception as e:
+        got_exception = True
+        assert "[test18]" in str(e)
+    assert got_exception == False
+
+    # bad datatype for value range
+    got_exception = False
+    try:
+        result = iap.handle_discrete_param(1, "[test19]", value_range=False, tuple_to_uniform=True, list_to_choice=True)
+    except Exception as e:
+        got_exception = True
+        assert "Unexpected input for value_range" in str(e)
     assert got_exception == True
 
 
