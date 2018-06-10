@@ -1992,6 +1992,152 @@ def test_Alpha():
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
 
+    # bad datatype for factor
+    got_exception = False
+    try:
+        aug = iaa.Alpha(False, iaa.Add(10), None)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # per_channel
+    aug = iaa.Alpha(1.0, iaa.Add((0, 100), per_channel=True), None, per_channel=True)
+    observed = aug.augment_image(np.zeros((1, 1, 1000), dtype=np.uint8))
+    uq = np.unique(observed)
+    assert len(uq) > 1
+    assert np.max(observed) > 80
+    assert np.min(observed) < 20
+
+    aug = iaa.Alpha((0.0, 1.0), iaa.Add(100), None, per_channel=True)
+    observed = aug.augment_image(np.zeros((1, 1, 1000), dtype=np.uint8))
+    uq = np.unique(observed)
+    assert len(uq) > 1
+    assert np.max(observed) > 80
+    assert np.min(observed) < 20
+
+    aug = iaa.Alpha((0.0, 1.0), iaa.Add(100), iaa.Add(0), per_channel=0.5)
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        observed = aug.augment_image(np.zeros((1, 1, 100), dtype=np.uint8))
+        uq = np.unique(observed)
+        if len(uq) == 1:
+            seen[0] += 1
+        elif len(uq) > 1:
+            seen[1] += 1
+        else:
+            assert False
+    assert 100 - 50 < seen[0] < 100 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+
+    # bad datatype for per_channel
+    got_exception = False
+    try:
+        aug = iaa.Alpha(0.5, iaa.Add(10), None, per_channel="test")
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # propagating
+    aug = iaa.Alpha(0.5, iaa.Add(100), iaa.Add(50), name="AlphaTest")
+    def propagator(images, augmenter, parents, default):
+        if "Alpha" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksImages(propagator=propagator)
+    image = np.zeros((10, 10, 3), dtype=np.uint8) + 1
+    observed = aug.augment_image(image, hooks=hooks)
+    assert np.array_equal(observed, image)
+
+    # -----
+    # keypoints
+    # -----
+    kps = [ia.Keypoint(x=5, y=10), ia.Keypoint(x=6, y=11)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(20, 20, 3))
+
+    aug = iaa.Alpha(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.deepcopy()
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.Alpha(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.deepcopy()
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.Alpha(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.shift(x=1)
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.Alpha(0.499, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.shift(x=1)
+    assert keypoints_equal([observed], [expected])
+
+    # per_channel
+    aug = iaa.Alpha(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.deepcopy()
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.Alpha(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.shift(x=1)
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.Alpha(iap.Choice([0.49, 0.51]), iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    expected_same = kpsoi.deepcopy()
+    expected_shifted = kpsoi.shift(x=1)
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        observed = aug.augment_keypoints([kpsoi])[0]
+        if keypoints_equal([observed], [expected_same]):
+            seen[0] += 1
+        elif keypoints_equal([observed], [expected_shifted]):
+            seen[1] += 1
+        else:
+            assert False
+    assert 100 - 50 < seen[0] < 100 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+
+    # propagating
+    aug = iaa.Alpha(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaTest")
+    def propagator(kpsoi_to_aug, augmenter, parents, default):
+        if "Alpha" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksKeypoints(propagator=propagator)
+    observed = aug.augment_keypoints([kpsoi], hooks=hooks)[0]
+    assert keypoints_equal([observed], [kpsoi])
+
+    # -----
+    # get_parameters()
+    # -----
+    first = iaa.Noop()
+    second = iaa.Sequential([iaa.Add(1)])
+    aug = iaa.Alpha(0.65, first, second, per_channel=1)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert 0.65 - 1e-6 < params[0].value < 0.65 + 1e-6
+    assert params[1].value == 1
+
+    # -----
+    # get_children_lists()
+    # -----
+    first = iaa.Noop()
+    second = iaa.Sequential([iaa.Add(1)])
+    aug = iaa.Alpha(0.65, first, second, per_channel=1)
+    children_lsts = aug.get_children_lists()
+    assert len(children_lsts) == 2
+    assert ia.is_iterable([lst for lst in children_lsts])
+    assert first in children_lsts[0]
+    assert second == children_lsts[1]
+
 
 def test_AlphaElementwise():
     reseed()
