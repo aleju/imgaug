@@ -2261,9 +2261,9 @@ def test_AlphaElementwise():
     """
 
     # propagating
-    aug = iaa.Alpha(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaTest")
+    aug = iaa.AlphaElementwise(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaElementwiseTest")
     def propagator(kpsoi_to_aug, augmenter, parents, default):
-        if "Alpha" in augmenter.name:
+        if "AlphaElementwise" in augmenter.name:
             return False
         else:
             return default
