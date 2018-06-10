@@ -291,7 +291,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
         return aug
 
     def get_parameters(self):
-        return [self.factor, self.first, self.second, self.per_channel]
+        return [self.factor, self.per_channel]
 
     def get_children_lists(self):
         return [self.first, self.second]
