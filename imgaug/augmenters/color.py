@@ -27,7 +27,7 @@ import cv2
 import six.moves as sm
 import warnings
 
-from .meta import Augmenter, Sequential, WithChannels
+from .meta import Augmenter, Sequential, WithChannels, handle_children_list
 from .arithmetic import Add
 
 # legacy support
@@ -80,15 +80,7 @@ class WithColorspace(Augmenter):
 
         self.to_colorspace = to_colorspace
         self.from_colorspace = from_colorspace
-
-        if children is None:
-            self.children = Sequential([], name="%s-then" % (self.name,))
-        elif ia.is_iterable(children):
-            self.children = Sequential(children, name="%s-then" % (self.name,))
-        elif isinstance(children, Augmenter):
-            self.children = Sequential([children], name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+        self.children = handle_children_list(children, self.name, "then")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images

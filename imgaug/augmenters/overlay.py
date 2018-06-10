@@ -24,7 +24,7 @@ from .. import parameters as iap
 import numpy as np
 import six.moves as sm
 
-from .meta import Augmenter, Sequential
+from .meta import Augmenter, Sequential, handle_children_list
 
 # TODO tests
 class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
@@ -148,29 +148,8 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
 
         ia.do_assert(first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values.")
 
-        if first is None:
-            self.first = None
-        elif ia.is_iterable(first):
-            if isinstance(first, Augmenter):
-                self.first = first
-            else:
-                self.first = Sequential(first, name="%s-first" % (self.name,))
-        elif isinstance(first, Augmenter):
-            self.first = Sequential([first], name="%s-first" % (self.name,))
-        else:
-            raise Exception("Expected 'first' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(first),))
-
-        if second is None:
-            self.second = None
-        elif ia.is_iterable(second):
-            if isinstance(second, Augmenter):
-                self.second = second
-            else:
-                self.second = Sequential(second, name="%s-second" % (self.name,))
-        elif isinstance(second, Augmenter):
-            self.second = Sequential([second], name="%s-second" % (self.name,))
-        else:
-            raise Exception("Expected 'second' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(second),))
+        self.first = handle_children_list(first, self.name, "first")
+        self.second = handle_children_list(second, self.name, "second")
 
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
@@ -315,12 +294,8 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
         return [self.factor, self.first, self.second, self.per_channel]
 
     def get_children_lists(self):
-        result = []
-        if self.first is not None:
-            result.append(self.first)
-        if self.second is not None:
-            result.append(self.second)
-        return result
+        return [self.first, self.second]
+
 
 class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """

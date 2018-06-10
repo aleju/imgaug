@@ -8673,8 +8673,8 @@ def test_Sometimes():
     expected = "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (
         "Binomial(Deterministic(float 0.50000000))",
         "SometimesTest",
-        str(then_list),
-        str(else_list),
+        "Sequential(name=SometimesTest-then, random_order=False, children=[%s], deterministic=False)" % (str(then_list),),
+        "Sequential(name=SometimesTest-else, random_order=False, children=[%s], deterministic=False)" % (str(else_list),),
         "False"
     )
     assert aug.__repr__() == aug.__str__() == expected

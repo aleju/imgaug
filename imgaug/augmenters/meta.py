@@ -36,6 +36,7 @@ import six
 import six.moves as sm
 import warnings
 
+
 def copy_dtypes_for_restore(images, force_list=False):
     if ia.is_np_array(images):
         if force_list:
@@ -45,17 +46,21 @@ def copy_dtypes_for_restore(images, force_list=False):
     else:
         return [image.dtype for image in images]
 
+
 def restore_augmented_image_dtype_(image, orig_dtype):
     return image.astype(orig_dtype, copy=False)
 
+
 def restore_augmented_image_dtype(image, orig_dtype):
     return image.astype(orig_dtype, copy=True)
+
 
 def restore_augmented_images_dtypes_(images, orig_dtypes):
     if ia.is_np_array(images):
         return images.astype(orig_dtypes, copy=False)
     else:
         return [image.astype(orig_dtype, copy=False) for image, orig_dtype in zip(images, orig_dtypes)]
+
 
 def restore_augmented_images_dtypes(images, orig_dtypes):
     if ia.is_np_array(images):
@@ -64,11 +69,14 @@ def restore_augmented_images_dtypes(images, orig_dtypes):
         images = [np.copy(image) for image in images]
     return restore_augmented_images_dtypes_(images, orig_dtypes)
 
+
 def clip_augmented_image_(image, minval, maxval):
     return clip_augmented_images_(image, minval, maxval)
 
+
 def clip_augmented_image(image, minval, maxval):
     return clip_augmented_images(image, minval, maxval)
+
 
 def clip_augmented_images_(images, minval, maxval):
     if ia.is_np_array(images):
@@ -76,12 +84,30 @@ def clip_augmented_images_(images, minval, maxval):
     else:
         return [np.clip(image, minval, maxval, out=image) for image in images]
 
+
 def clip_augmented_images(images, minval, maxval):
     if ia.is_np_array(images):
         images = np.copy(images)
     else:
         images = [np.copy(image) for image in images]
     return clip_augmented_images_(images, minval, maxval)
+
+
+def handle_children_list(lst, augmenter_name, lst_name):
+    if lst is None:
+        return Sequential([], name="%s-%s" % (augmenter_name, lst_name))
+    elif isinstance(lst, Augmenter):
+        if ia.is_iterable(lst):
+            assert all([isinstance(child, Augmenter) for child in lst])
+            return lst
+        else:
+            return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
+    elif ia.is_iterable(lst):
+        assert all([isinstance(child, Augmenter) for child in lst])
+        return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
+    else:
+        raise Exception("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, got %s." % (lst_name, augmenter_name, type(lst),))
+
 
 @six.add_metaclass(ABCMeta)
 class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
@@ -1097,6 +1123,31 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         raise NotImplementedError()
 
     def get_children_lists(self):
+        """
+        Get a list of lists of children of this augmenter.
+
+        For most augmenters, the result will be a single empty list.
+        For augmenters with children it will often be a list with one sublist containing all
+        children. In some cases the augmenter will contain multiple distinct lists of children,
+        e.g. an if-list and an else-list. This will lead to a result consisting of a single
+        list with multiple sublists, each representing the respective sublist of children.
+
+        E.g. for an if/else-augmenter that executes the children A1, A2 if a condition is met
+        and otherwise executes the children B1, B2, B3 the result will be [[A1, A2], [B1, B2, B3]].
+
+        IMPORTANT: While the topmost list may be newly created, each of the sublist must be
+        editable inplace resulting in a changed children list of the augmenter. E.g. if
+        an Augmenter IfElse(condition, [A1, A2], [B1, B2, B3]) returns [[A1, A2], [B1, B2, B3]]
+        for a call to get_children_lists() and A2 is removed inplace from [A1, A2], then the
+        children lists of IfElse(...) must also change to [A1], [B1, B2, B3]. This is used
+        if remove_augmenters_inplace().
+
+        Returns
+        -------
+        children: A list of lists of children (i.e. Augmenter instances).
+            May be a single empty list.
+
+        """
         return []
 
     def get_all_children(self, flat=False):
@@ -1899,25 +1950,8 @@ class Sometimes(Augmenter):
         else:
             raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
 
-        if then_list is None:
-            self.then_list = Sequential([], name="%s-then" % (self.name,))
-        elif isinstance(then_list, Augmenter):
-            self.then_list = then_list
-        elif ia.is_iterable(then_list):
-            assert all([isinstance(child, Augmenter) for child in then_list])
-            self.then_list = Sequential(then_list, name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
-
-        if else_list is None:
-            self.else_list = Sequential([], name="%s-else" % (self.name,))
-        elif isinstance(else_list, Augmenter):
-            self.else_list = else_list
-        elif ia.is_iterable(else_list):
-            assert all([isinstance(child, Augmenter) for child in else_list])
-            self.else_list = Sequential(else_list, name="%s-else" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
+        self.then_list = handle_children_list(then_list, self.name, "then")
+        self.else_list = handle_children_list(else_list, self.name, "else")
 
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
@@ -2070,15 +2104,7 @@ class WithChannels(Augmenter):
         else:
             raise Exception("Expected None, int or list of ints as channels, got %s." % (type(channels),))
 
-        if children is None:
-            self.children = Sequential([], name="%s-then" % (self.name,))
-        elif isinstance(children, Augmenter):
-            self.children = children
-        elif ia.is_iterable(children):
-            assert all([isinstance(child, Augmenter) for child in children])
-            self.children = Sequential(children, name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+        self.children = handle_children_list(children, self.name, "then")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
