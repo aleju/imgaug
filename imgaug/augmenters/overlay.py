@@ -488,6 +488,8 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             kps_ois_first = keypoints_on_images
             kps_ois_second = keypoints_on_images
 
+        # FIXME this is essentially the same behaviour as Alpha, requires inclusion of (x, y)
+        # coordinates to estimate new keypoint coordinates
         for i in sm.xrange(nb_images):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
@@ -509,7 +511,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             if per_channel == 1:
                 #samples = self.factor.draw_samples((h, w, nb_channels,), random_state=rs_image)
                 samples = np.zeros((h, w, nb_channels), dtype=np.float32)
-                for c in nb_channels:
+                for c in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
                     samples[:, :, c] = samples_c
             else:
