@@ -2185,6 +2185,93 @@ def test_AlphaElementwise():
     observed = aug.augment_image(base_img)
     assert len(set(observed.flatten())) > 1
 
+    # propagating
+    aug = iaa.AlphaElementwise(0.5, iaa.Add(100), iaa.Add(50), name="AlphaElementwiseTest")
+    def propagator(images, augmenter, parents, default):
+        if "AlphaElementwise" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksImages(propagator=propagator)
+    image = np.zeros((10, 10, 3), dtype=np.uint8) + 1
+    observed = aug.augment_image(image, hooks=hooks)
+    assert np.array_equal(observed, image)
+
+    # -----
+    # keypoints
+    # -----
+    kps = [ia.Keypoint(x=5, y=10), ia.Keypoint(x=6, y=11)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(20, 20, 3))
+
+    aug = iaa.AlphaElementwise(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.deepcopy()
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.AlphaElementwise(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.deepcopy()
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.AlphaElementwise(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.shift(x=1)
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.AlphaElementwise(0.499, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.shift(x=1)
+    assert keypoints_equal([observed], [expected])
+
+    # per_channel
+    aug = iaa.AlphaElementwise(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.deepcopy()
+    assert keypoints_equal([observed], [expected])
+
+    aug = iaa.AlphaElementwise(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    expected = kpsoi.shift(x=1)
+    assert keypoints_equal([observed], [expected])
+
+    """
+    TODO this test currently doesn't work as AlphaElementwise augments keypoints without sampling
+    overlay factors per (x, y) location. (i.e. similar behaviour to Alpha)
+
+    aug = iaa.Alpha(iap.Choice([0.49, 0.51]), iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    expected_same = kpsoi.deepcopy()
+    expected_both_shifted = kpsoi.shift(x=1)
+    expected_first_shifted = KeypointsOnImage([kps[0].shift(x=1), kps[1]], shape=kpsoi.shape)
+    expected_second_shifted = KeypointsOnImage([kps[0], kps[1].shift(x=1)], shape=kpsoi.shape)
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        observed = aug.augment_keypoints([kpsoi])[0]
+        if keypoints_equal([observed], [expected_same]):
+            seen[0] += 1
+        elif keypoints_equal([observed], [expected_both_shifted]):
+            seen[1] += 1
+        elif keypoints_equal([observed], [expected_first_shifted]):
+            seen[2] += 1
+        elif keypoints_equal([observed], [expected_second_shifted]):
+            seen[3] += 1
+        else:
+            assert False
+    assert 100 - 50 < seen[0] < 100 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+    """
+
+    # propagating
+    aug = iaa.Alpha(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaTest")
+    def propagator(kpsoi_to_aug, augmenter, parents, default):
+        if "Alpha" in augmenter.name:
+            return False
+        else:
+            return default
+    hooks = ia.HooksKeypoints(propagator=propagator)
+    observed = aug.augment_keypoints([kpsoi], hooks=hooks)[0]
+    assert keypoints_equal([observed], [kpsoi])
+
+
 def test_Superpixels():
     reseed()
 
