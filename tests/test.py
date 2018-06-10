@@ -1301,6 +1301,11 @@ def test_BoundingBox():
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image[1:3, 1:3])
 
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:3, 1:3])
+
     image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
     image_pad = np.pad(image, ((0, 1), (0, 1), (0, 0)), mode="constant", constant_values=0)
     bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11, label=None)
