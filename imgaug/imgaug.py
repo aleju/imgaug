@@ -190,7 +190,7 @@ def is_float_array(val):
         True if the variable is a numpy float array. Otherwise False.
 
     """
-    return is_np_array(val) and issubclass(val.dtype.type, np.float)
+    return is_np_array(val) and issubclass(val.dtype.type, np.floating)
 
 def is_callable(val):
     """
