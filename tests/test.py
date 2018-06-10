@@ -47,7 +47,7 @@ def main():
     test_is_iterable()
     test_is_string()
     test_is_integer_array()
-    #test_is_float_array()
+    test_is_float_array()
     test_is_callable()
     test_seed()
     test_current_random_state()
@@ -336,6 +336,30 @@ def test_is_integer_array():
         assert ia.is_integer_array(value) == True
     for value in values_false:
         assert ia.is_integer_array(value) == False
+
+
+def test_is_float_array():
+    class _Dummy(object):
+        pass
+    values_true = [
+        np.zeros((1, 2), dtype=np.float16),
+        np.zeros((100,), dtype=np.float32),
+        np.zeros((1, 2), dtype=np.float64)
+    ]
+    values_false = [
+        "A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False,
+        (1.0, 2.0), [1.0, 2.0], _Dummy(),
+        np.zeros((1, 2), dtype=np.uint8),
+        np.zeros((100,), dtype=np.uint8),
+        np.zeros((1, 2), dtype=np.uint16),
+        np.zeros((1, 2), dtype=np.int32),
+        np.zeros((1, 2), dtype=np.int64),
+        np.zeros((1, 2), dtype=np.bool)
+    ]
+    for value in values_true:
+        assert ia.is_float_array(value) == True
+    for value in values_false:
+        assert ia.is_float_array(value) == False
 
 
 def test_is_callable():
