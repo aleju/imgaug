@@ -130,7 +130,7 @@ def main():
     test_Affine()
     test_AffineCv2()
     # TODO PiecewiseAffine
-    # TODO PerspectiveTransform
+    test_PerspectiveTransform()
     test_ElasticTransformation()
 
     # meta
@@ -7500,7 +7500,138 @@ def test_AffineCv2():
     assert params[6].value == "constant"  # mode
 
 
+def test_PerspectiveTransform():
+    reseed()
+
+    img = np.zeros((30, 30), dtype=np.uint8)
+    img[10:20, 10:20] = 255
+
+    # without keep_size
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_image(img)
+    expected = img[int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8)]
+    assert all([abs(s1-s2)<=1 for s1, s2 in zip(observed.shape, expected.shape)])
+    if observed.shape != expected.shape:
+        observed = ia.imresize_single_image(observed, expected.shape[0:2], interpolation="cubic")
+    # differences seem to mainly appear around the border of the inner rectangle, possibly
+    # due to interpolation
+    """
+    from scipy import misc
+    misc.imshow(
+        np.hstack([
+            observed,
+            expected,
+            np.abs(observed.astype(np.int32) - expected.astype(np.int32)).astype(np.uint8)
+        ])
+    )
+    print(np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))))
+    """
+    assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
+
+    # with keep_size
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_image(img)
+    expected = img[int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8)]
+    expected = ia.imresize_single_image(expected, img.shape[0:2], interpolation="cubic")
+    assert observed.shape == img.shape
+    # differences seem to mainly appear around the border of the inner rectangle, possibly
+    # due to interpolation
+    assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
+    #expected = ia.imresize_single_image(expected, (30, 30))
+
+    # with keep_size, RGB images
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug.jitter = iap.Deterministic(0.2)
+    imgs = np.tile(img[np.newaxis, :, :, np.newaxis], (2, 1, 1, 3))
+    observed = aug.augment_images(imgs)
+    for img_idx in sm.xrange(2):
+        for c in sm.xrange(3):
+            observed_i = observed[img_idx, :, :, c]
+            expected = imgs[img_idx, int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8), c]
+            expected = ia.imresize_single_image(expected, imgs.shape[1:3], interpolation="cubic")
+            assert observed_i.shape == imgs.shape[1:3]
+            # differences seem to mainly appear around the border of the inner rectangle, possibly
+            # due to interpolation
+            assert np.average(np.abs(observed_i.astype(np.int32) - expected.astype(np.int32))) < 30.0
+            #expected = ia.imresize_single_image(expected, (30, 30))
+
+    # tuple for scale
+    aug = iaa.PerspectiveTransform(scale=(0.1, 0.2))
+    assert isinstance(aug.jitter.scale, iap.Uniform)
+    assert isinstance(aug.jitter.scale.a, iap.Deterministic)
+    assert isinstance(aug.jitter.scale.b, iap.Deterministic)
+    assert 0.1 - 1e-8 < aug.jitter.scale.a.value < 0.1 + 1e-8
+    assert 0.2 - 1e-8 < aug.jitter.scale.b.value < 0.2 + 1e-8
+
+    # list for scale
+    aug = iaa.PerspectiveTransform(scale=[0.1, 0.2, 0.3])
+    assert isinstance(aug.jitter.scale, iap.Choice)
+    assert len(aug.jitter.scale.a) == 3
+    assert 0.1 - 1e-8 < aug.jitter.scale.a[0] < 0.1 + 1e-8
+    assert 0.2 - 1e-8 < aug.jitter.scale.a[1] < 0.2 + 1e-8
+    assert 0.3 - 1e-8 < aug.jitter.scale.a[2] < 0.3 + 1e-8
+
+    # StochasticParameter for scale
+    aug = iaa.PerspectiveTransform(scale=iap.Choice([0.1, 0.2, 0.3]))
+    assert isinstance(aug.jitter.scale, iap.Choice)
+    assert len(aug.jitter.scale.a) == 3
+    assert 0.1 - 1e-8 < aug.jitter.scale.a[0] < 0.1 + 1e-8
+    assert 0.2 - 1e-8 < aug.jitter.scale.a[1] < 0.2 + 1e-8
+    assert 0.3 - 1e-8 < aug.jitter.scale.a[2] < 0.3 + 1e-8
+
+    # bad datatype for scale
+    got_exception = False
+    try:
+        aug = iaa.PerspectiveTransform(scale=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # keypoint augmentation without keep_size
+    # TODO deviations of around 0.4-0.7 in this and the next test (between expected and observed
+    # coordinates) -- why?
+    kps = [ia.Keypoint(x=10, y=10), ia.Keypoint(x=14, y=11)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_keypoints([kpsoi])
+    kps_expected = [
+        ia.Keypoint(x=10-0.2*30, y=10-0.2*30),
+        ia.Keypoint(x=14-0.2*30, y=11-0.2*30)
+    ]
+    for kp_observed, kp_expected in zip(observed[0].keypoints, kps_expected):
+        assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
+        assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
+
+    # keypoint augmentation with keep_size
+    kps = [ia.Keypoint(x=10, y=10), ia.Keypoint(x=14, y=11)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_keypoints([kpsoi])
+    kps_expected = [
+        ia.Keypoint(x=((10-0.2*30)/(30*0.6))*30, y=((10-0.2*30)/(30*0.6))*30),
+        ia.Keypoint(x=((14-0.2*30)/(30*0.6))*30, y=((11-0.2*30)/(30*0.6))*30)
+    ]
+    for kp_observed, kp_expected in zip(observed[0].keypoints, kps_expected):
+        assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
+        assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
+
+    # get_parameters
+    aug = iaa.PerspectiveTransform(scale=0.1, keep_size=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Normal)
+    assert isinstance(params[0].scale, iap.Deterministic)
+    assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
+    assert params[1] == False
+
+
 def test_ElasticTransformation():
+    reseed()
+
     img = np.zeros((50, 50), dtype=np.uint8) + 255
     img = np.pad(img, ((100, 100), (100, 100)), mode="constant", constant_values=0)
     mask = img > 0
