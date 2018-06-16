@@ -1628,6 +1628,8 @@ class PerspectiveTransform(Augmenter):
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
               from the interval (a, b) (per image).
+            * If a list of values, a random one of the values will be picked
+              per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
@@ -1662,13 +1664,15 @@ class PerspectiveTransform(Augmenter):
 
         if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
-        elif ia.is_iterable(scale):
-            ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
+        elif isinstance(scale, tuple):
+            ia.do_assert(len(scale) == 2, "Expected tuple with 2 entries for argument 'scale', got %d entries." % (len(scale),))
             self.scale = Uniform(scale[0], scale[1])
+        elif ia.is_iterable(scale):
+            self.scale = Choice(scale)
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
         else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
+            raise Exception("Expected number, tuple of number, list of number or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
 
         self.jitter = Normal(loc=0, scale=self.scale)
 
@@ -2063,7 +2067,7 @@ class ElasticTransformation(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.alpha, self.sigma, self.orders, self.cvals, self.modes]
+        return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
     @staticmethod
     def generate_indices(shape, alpha, sigma, random_state):
