@@ -1826,7 +1826,7 @@ class PerspectiveTransform(Augmenter):
         return pts_ordered
 
     def get_parameters(self):
-        return [self.scale]
+        return [self.jitter, self.keep_size]
 
 # code partially from
 # https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
