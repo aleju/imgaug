@@ -131,7 +131,7 @@ def main():
     test_AffineCv2()
     # TODO PiecewiseAffine
     # TODO PerspectiveTransform
-    # TODO ElasticTransformation
+    test_ElasticTransformation()
 
     # meta
     test_copy_dtypes_for_restore()
@@ -7498,6 +7498,227 @@ def test_AffineCv2():
     assert params[4].value == 1  # order
     assert params[5].value == 0  # cval
     assert params[6].value == "constant"  # mode
+
+
+def test_ElasticTransformation():
+    img = np.zeros((50, 50), dtype=np.uint8) + 255
+    img = np.pad(img, ((100, 100), (100, 100)), mode="constant", constant_values=0)
+    mask = img > 0
+
+    # test basic funtionality
+    aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+    observed = aug.augment_image(img)
+    # assume that some white/255 pixels have been moved away from the center and replaced by black/0 pixels
+    assert np.sum(observed[mask]) < np.sum(img[mask])
+    # assume that some black/0 pixels have been moved away from the outer area and replaced by white/255 pixels
+    assert np.sum(observed[~mask]) > np.sum(img[~mask])
+
+    # test effects of increased alpha strength
+    aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
+    aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
+    observed1 = aug1.augment_image(img)
+    observed2 = aug2.augment_image(img)
+    # assume that the inner area has become more black-ish when using high alphas (more white pixels were moved out of the inner area)
+    assert np.sum(observed1[mask]) > np.sum(observed2[mask])
+    # assume that the outer area has become more white-ish when using high alphas (more black pixels were moved into the inner area)
+    assert np.sum(observed1[~mask]) < np.sum(observed2[~mask])
+
+    # test effectsof increased sigmas
+    aug1 = iaa.ElasticTransformation(alpha=3.0, sigma=0.1)
+    aug2 = iaa.ElasticTransformation(alpha=3.0, sigma=3.0)
+    observed1 = aug1.augment_image(img)
+    observed2 = aug2.augment_image(img)
+    observed1_std_hori = np.std(observed1.astype(np.float32)[:, 1:] - observed1.astype(np.float32)[:, :-1])
+    observed2_std_hori = np.std(observed2.astype(np.float32)[:, 1:] - observed2.astype(np.float32)[:, :-1])
+    observed1_std_vert = np.std(observed1.astype(np.float32)[1:, :] - observed1.astype(np.float32)[:-1, :])
+    observed2_std_vert = np.std(observed2.astype(np.float32)[1:, :] - observed2.astype(np.float32)[:-1, :])
+    observed1_std = (observed1_std_hori + observed1_std_vert) / 2
+    observed2_std = (observed2_std_hori + observed2_std_vert) / 2
+    assert observed1_std > observed2_std
+
+    # test alpha being iap.Choice
+    aug = iaa.ElasticTransformation(alpha=iap.Choice([0.001, 5.0]), sigma=0.25)
+    seen = [0, 0]
+    for _ in sm.xrange(100):
+        observed = aug.augment_image(img)
+        diff = np.average(np.abs(img.astype(np.float32) - observed.astype(np.float32)))
+        if diff < 1.0:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert seen[0] > 10
+    assert seen[1] > 10
+
+    # test alpha being tuple
+    aug = iaa.ElasticTransformation(alpha=(1.0, 2.0), sigma=0.25)
+    assert isinstance(aug.alpha, iap.Uniform)
+    assert isinstance(aug.alpha.a, iap.Deterministic)
+    assert isinstance(aug.alpha.b, iap.Deterministic)
+    assert 1.0 - 1e-8 < aug.alpha.a.value < 1.0 + 1e-8
+    assert 2.0 - 1e-8 < aug.alpha.b.value < 2.0 + 1e-8
+
+    # test alpha having bad datatype
+    got_exception = False
+    try:
+        aug = iaa.ElasticTransformation(alpha=False, sigma=0.25)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # test sigma being iap.Choice
+    aug = iaa.ElasticTransformation(alpha=3.0, sigma=iap.Choice([0.01, 5.0]))
+    seen = [0, 0]
+    for _ in sm.xrange(100):
+        observed = aug.augment_image(img)
+
+        observed_std_hori = np.std(observed.astype(np.float32)[:, 1:] - observed.astype(np.float32)[:, :-1])
+        observed_std_vert = np.std(observed.astype(np.float32)[1:, :] - observed.astype(np.float32)[:-1, :])
+        observed_std = (observed_std_hori + observed_std_vert) / 2
+
+        if observed_std > 10.0:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert seen[0] > 10
+    assert seen[1] > 10
+
+    # test sigma being tuple
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=(1.0, 2.0))
+    assert isinstance(aug.sigma, iap.Uniform)
+    assert isinstance(aug.sigma.a, iap.Deterministic)
+    assert isinstance(aug.sigma.b, iap.Deterministic)
+    assert 1.0 - 1e-8 < aug.sigma.a.value < 1.0 + 1e-8
+    assert 2.0 - 1e-8 < aug.sigma.b.value < 2.0 + 1e-8
+
+    # test sigma having bad datatype
+    got_exception = False
+    try:
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # order
+    # no proper tests here, because unclear how to test
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=ia.ALL)
+    assert isinstance(aug.order, iap.Choice)
+    assert all([order in aug.order.a for order in [0, 1, 2, 3, 4, 5]])
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=1)
+    assert isinstance(aug.order, iap.Deterministic)
+    assert aug.order.value == 1
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=[0, 1, 2])
+    assert isinstance(aug.order, iap.Choice)
+    assert all([order in aug.order.a for order in [0, 1, 2]])
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=iap.Choice([0, 1, 2, 3]))
+    assert isinstance(aug.order, iap.Choice)
+    assert all([order in aug.order.a for order in [0, 1, 2, 3]])
+
+    got_exception = False
+    try:
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # cval
+    # few proper tests here, because unclear how to test
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=ia.ALL)
+    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 0
+    assert aug.cval.b.value == 255
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=128)
+    assert isinstance(aug.cval, iap.Deterministic)
+    assert aug.cval.value == 128
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=(128, 255))
+    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 128
+    assert aug.cval.b.value == 255
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=[16, 32, 64])
+    assert isinstance(aug.cval, iap.Choice)
+    assert all([cval in aug.cval.a for cval in [16, 32, 64]])
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=iap.Choice([16, 32, 64]))
+    assert isinstance(aug.cval, iap.Choice)
+    assert all([cval in aug.cval.a for cval in [16, 32, 64]])
+
+    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant", cval=255)
+    img = np.zeros((50, 50), dtype=np.uint8)
+    observed = aug.augment_image(img)
+    assert np.sum(observed == 255) > 0
+
+    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant", cval=0)
+    img = np.zeros((50, 50), dtype=np.uint8)
+    observed = aug.augment_image(img)
+    assert np.sum(observed == 255) == 0
+
+    got_exception = False
+    try:
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # mode
+    # no proper tests here, because unclear how to test
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=ia.ALL)
+    assert isinstance(aug.mode, iap.Choice)
+    assert all([mode in aug.mode.a for mode in ["constant", "nearest", "reflect", "wrap"]])
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode="nearest")
+    assert isinstance(aug.mode, iap.Deterministic)
+    assert aug.mode.value == "nearest"
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=["constant", "nearest"])
+    assert isinstance(aug.mode, iap.Choice)
+    assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
+
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=iap.Choice(["constant", "nearest"]))
+    assert isinstance(aug.mode, iap.Choice)
+    assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
+
+    got_exception = False
+    try:
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # keypoints
+    # currently shouldnt change
+    kps = [ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(10, 10))
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0)
+    observed = aug.augment_keypoints([kpsoi])
+    assert keypoints_equal([kpsoi], observed)
+
+    # get_parameters()
+    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert isinstance(params[2], iap.Deterministic)
+    assert isinstance(params[3], iap.Deterministic)
+    assert isinstance(params[4], iap.Deterministic)
+    assert 0.25 - 1e-8 < params[0].value < 0.25 + 1e-8
+    assert 1.0 - 1e-8 < params[1].value < 1.0 + 1e-8
+    assert params[2].value == 2
+    assert params[3].value == 10
+    assert params[4].value == "constant"
 
 
 def test_copy_dtypes_for_restore():
