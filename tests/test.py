@@ -35,6 +35,9 @@ import warnings
 
 
 def main():
+    #test_PiecewiseAffine()
+    #exit()
+
     time_start = time.time()
 
     # ----------------------
@@ -129,7 +132,7 @@ def main():
     # geometric
     test_Affine()
     test_AffineCv2()
-    # TODO PiecewiseAffine
+    test_PiecewiseAffine()
     test_PerspectiveTransform()
     test_ElasticTransformation()
 
@@ -7498,6 +7501,404 @@ def test_AffineCv2():
     assert params[4].value == 1  # order
     assert params[5].value == 0  # cval
     assert params[6].value == "constant"  # mode
+
+
+def test_PiecewiseAffine():
+    reseed()
+
+    img = np.zeros((60, 80), dtype=np.uint8)
+    img[:, 9:11+1] = 255
+    img[:, 69:71+1] = 255
+    mask = img > 0
+
+    # -----
+    # scale
+    # -----
+    # basic test
+    aug = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
+    observed = aug.augment_image(img)
+    assert 100.0 < np.average(observed[mask]) < np.average(img[mask])
+    assert 75.0 > np.average(observed[~mask]) > np.average(img[~mask])
+
+    # scale 0
+    aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    # stronger scale should lead to stronger changes
+    aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
+    aug2 = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    observed1 = aug1.augment_image(img)
+    observed2 = aug2.augment_image(img)
+    assert np.average(observed1[~mask]) < np.average(observed2[~mask])
+
+    # scale as list
+    aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
+    aug2 = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    aug = iaa.PiecewiseAffine(scale=[0.01, 0.10], nb_rows=12, nb_cols=4)
+    assert isinstance(aug.scale, iap.Choice)
+    assert 0.01 - 1e-8 < aug.scale.a[0] < 0.01 + 1e-8
+    assert 0.10 - 1e-8 < aug.scale.a[1] < 0.10 + 1e-8
+
+    avg1 = np.average([np.average(aug1.augment_image(img) * (~mask).astype(np.float32)) for _ in sm.xrange(3)])
+    avg2 = np.average([np.average(aug2.augment_image(img) * (~mask).astype(np.float32)) for _ in sm.xrange(3)])
+    seen = [0, 0]
+    for _ in sm.xrange(15):
+        observed = aug.augment_image(img)
+        avg = np.average(observed * (~mask).astype(np.float32))
+        diff1 = abs(avg - avg1)
+        diff2 = abs(avg - avg2)
+        if diff1 < diff2:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert seen[0] > 0
+    assert seen[1] > 0
+
+    # scale as tuple
+    aug = iaa.PiecewiseAffine(scale=(0.01, 0.10), nb_rows=12, nb_cols=4)
+    assert isinstance(aug.jitter.scale, iap.Uniform)
+    assert isinstance(aug.jitter.scale.a, iap.Deterministic)
+    assert isinstance(aug.jitter.scale.b, iap.Deterministic)
+    assert 0.01 - 1e-8 < aug.jitter.scale.a.value < 0.01 + 1e-8
+    assert 0.10 - 1e-8 < aug.jitter.scale.b.value < 0.10 + 1e-8
+
+    # scale as StochasticParameter
+    aug = iaa.PiecewiseAffine(scale=iap.Uniform(0.01, 0.10), nb_rows=12, nb_cols=4)
+    assert isinstance(aug.jitter.scale, iap.Uniform)
+    assert isinstance(aug.jitter.scale.a, iap.Deterministic)
+    assert isinstance(aug.jitter.scale.b, iap.Deterministic)
+    assert 0.01 - 1e-8 < aug.jitter.scale.a.value < 0.01 + 1e-8
+    assert 0.10 - 1e-8 < aug.jitter.scale.b.value < 0.10 + 1e-8
+
+    # bad datatype for scale
+    got_exception = False
+    try:
+        aug = iaa.PiecewiseAffine(scale=False, nb_rows=12, nb_cols=4)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # -----
+    # rows and cols
+    # -----
+    # verify effects of rows/cols
+    aug1 = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=4)
+    aug2 = iaa.PiecewiseAffine(scale=0.05, nb_rows=30, nb_cols=4)
+    std1 = []
+    std2 = []
+    for _ in sm.xrange(3):
+        observed1 = aug1.augment_image(img)
+        observed2 = aug2.augment_image(img)
+        grad_vert1 = observed1[1:, :].astype(np.float32) - observed1[:-1, :].astype(np.float32)
+        grad_vert2 = observed2[1:, :].astype(np.float32) - observed2[:-1, :].astype(np.float32)
+        grad_vert1 = grad_vert1 * (~mask[1:, :]).astype(np.float32)
+        grad_vert2 = grad_vert2 * (~mask[1:, :]).astype(np.float32)
+        std1.append(np.std(grad_vert1))
+        std2.append(np.std(grad_vert2))
+    std1 = np.average(std1)
+    std2 = np.average(std2)
+    assert std1 < std2
+
+    # -----
+    # rows
+    # -----
+    # rows as list
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=[4, 20], nb_cols=4)
+    assert isinstance(aug.nb_rows, iap.Choice)
+    assert aug.nb_rows.a[0] == 4
+    assert aug.nb_rows.a[1] == 20
+
+    seen = [0, 0]
+    for _ in sm.xrange(20):
+        observed = aug.augment_image(img)
+        grad_vert = observed[1:, :].astype(np.float32) - observed[:-1, :].astype(np.float32)
+        grad_vert = grad_vert * (~mask[1:, :]).astype(np.float32)
+        std = np.std(grad_vert)
+        diff1 = abs(std - std1)
+        diff2 = abs(std - std2)
+        if diff1 < diff2:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert seen[0] > 0
+    assert seen[1] > 0
+
+    # rows as tuple
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=(4, 20), nb_cols=4)
+    assert isinstance(aug.nb_rows, iap.DiscreteUniform)
+    assert isinstance(aug.nb_rows.a, iap.Deterministic)
+    assert isinstance(aug.nb_rows.b, iap.Deterministic)
+    assert aug.nb_rows.a.value == 4
+    assert aug.nb_rows.b.value == 20
+
+    # rows as StochasticParameter
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=iap.DiscreteUniform(4, 20), nb_cols=4)
+    assert isinstance(aug.nb_rows, iap.DiscreteUniform)
+    assert isinstance(aug.nb_rows.a, iap.Deterministic)
+    assert isinstance(aug.nb_rows.b, iap.Deterministic)
+    assert aug.nb_rows.a.value == 4
+    assert aug.nb_rows.b.value == 20
+
+    # bad datatype for rows
+    got_exception = False
+    try:
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=False, nb_cols=4)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # -----
+    # nb_cols
+    # -----
+
+    # cols as list
+    img_cols = img.T
+    mask_cols = mask.T
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=[4, 20])
+    assert isinstance(aug.nb_cols, iap.Choice)
+    assert aug.nb_cols.a[0] == 4
+    assert aug.nb_cols.a[1] == 20
+
+    aug1 = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=4)
+    aug2 = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=20)
+
+    std1 = []
+    std2 = []
+    for _ in sm.xrange(3):
+        observed1 = aug1.augment_image(img_cols)
+        observed2 = aug2.augment_image(img_cols)
+        grad_hori1 = observed1[:, 1:].astype(np.float32) - observed1[:, :-1].astype(np.float32)
+        grad_hori2 = observed2[:, 1:].astype(np.float32) - observed2[:, :-1].astype(np.float32)
+        grad_hori1 = grad_hori1 * (~mask_cols[:, 1:]).astype(np.float32)
+        grad_hori2 = grad_hori2 * (~mask_cols[:, 1:]).astype(np.float32)
+        std1.append(np.std(grad_hori1))
+        std2.append(np.std(grad_hori2))
+    std1 = np.average(std1)
+    std2 = np.average(std2)
+
+    seen = [0, 0]
+    for _ in sm.xrange(15):
+        observed = aug.augment_image(img_cols)
+
+        grad_hori = observed[:, 1:].astype(np.float32) - observed[:, :-1].astype(np.float32)
+        grad_hori = grad_hori * (~mask_cols[:, 1:]).astype(np.float32)
+        std = np.std(grad_hori)
+        diff1 = abs(std - std1)
+        diff2 = abs(std - std2)
+
+        if diff1 < diff2:
+            seen[0] += 1
+        else:
+            seen[1] += 1
+    assert seen[0] > 0
+    assert seen[1] > 0
+
+    # cols as tuple
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=(4, 20))
+    assert isinstance(aug.nb_cols, iap.DiscreteUniform)
+    assert isinstance(aug.nb_cols.a, iap.Deterministic)
+    assert isinstance(aug.nb_cols.b, iap.Deterministic)
+    assert aug.nb_cols.a.value == 4
+    assert aug.nb_cols.b.value == 20
+
+    # cols as StochasticParameter
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=iap.DiscreteUniform(4, 20))
+    assert isinstance(aug.nb_cols, iap.DiscreteUniform)
+    assert isinstance(aug.nb_cols.a, iap.Deterministic)
+    assert isinstance(aug.nb_cols.b, iap.Deterministic)
+    assert aug.nb_cols.a.value == 4
+    assert aug.nb_cols.b.value == 20
+
+    # bad datatype for cols
+    got_exception = False
+    try:
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # -----
+    # order
+    # -----
+    # single int for order
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=0)
+    assert isinstance(aug.order, iap.Deterministic)
+    assert aug.order.value == 0
+
+    # list for order
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=[0, 1, 3])
+    assert isinstance(aug.order, iap.Choice)
+    assert all([v in aug.order.a for v in [0, 1, 3]])
+
+    # StochasticParameter for order
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=iap.Choice([0, 1, 3]))
+    assert isinstance(aug.order, iap.Choice)
+    assert all([v in aug.order.a for v in [0, 1, 3]])
+
+    # ALL for order
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=ia.ALL)
+    assert isinstance(aug.order, iap.Choice)
+    assert all([v in aug.order.a for v in [0, 1, 3, 4, 5]])
+
+    # bad datatype for order
+    got_exception = False
+    try:
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # -----
+    # cval
+    # -----
+    # cval as deterministic
+    img = np.zeros((50, 50, 3), dtype=np.uint8) + 255
+    aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10, mode="constant", cval=0)
+    observed = aug.augment_image(img)
+    assert np.sum([observed[:, :] == [0, 0, 0]]) > 0
+
+    # cval as list
+    img = np.zeros((20, 20), dtype=np.uint8) + 255
+    aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=5, nb_cols=5, mode="constant", cval=[0, 10])
+    assert isinstance(aug.cval, iap.Choice)
+    assert aug.cval.a[0] == 0
+    assert aug.cval.a[1] == 10
+
+    seen = [0, 0, 0]
+    for _ in sm.xrange(30):
+        observed = aug.augment_image(img)
+        nb_0 = np.sum([observed[:, :] == 0])
+        nb_10 = np.sum([observed[:, :] == 10])
+        if nb_0 > 0:
+            seen[0] += 1
+        elif nb_10 > 0:
+            seen[1] += 1
+        else:
+            seen[2] += 1
+    assert seen[0] > 5
+    assert seen[1] > 5
+    assert seen[2] <= 4
+
+    # cval as tuple
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=(0, 10))
+    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 0
+    assert aug.cval.b.value == 10
+
+    # cval as StochasticParameter
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=iap.DiscreteUniform(0, 10))
+    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 0
+    assert aug.cval.b.value == 10
+
+    # ALL as cval
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=ia.ALL)
+    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval.a, iap.Deterministic)
+    assert isinstance(aug.cval.b, iap.Deterministic)
+    assert aug.cval.a.value == 0
+    assert aug.cval.b.value == 255
+
+    # bas datatype for cval
+    got_exception = False
+    try:
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, cval=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # -----
+    # mode
+    # -----
+    # single string for mode
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="nearest")
+    assert isinstance(aug.mode, iap.Deterministic)
+    assert aug.mode.value == "nearest"
+
+    # list for mode
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=["nearest", "edge", "symmetric"])
+    assert isinstance(aug.mode, iap.Choice)
+    assert all([v in aug.mode.a for v in ["nearest", "edge", "symmetric"]])
+
+    # StochasticParameter for mode
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=iap.Choice(["nearest", "edge", "symmetric"]))
+    assert isinstance(aug.mode, iap.Choice)
+    assert all([v in aug.mode.a for v in ["nearest", "edge", "symmetric"]])
+
+    # ALL for mode
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=ia.ALL)
+    assert isinstance(aug.mode, iap.Choice)
+    assert all([v in aug.mode.a for v in ["constant", "edge", "symmetric", "reflect", "wrap"]])
+
+    # bad datatype for mode
+    got_exception = False
+    try:
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # ---------
+    # keypoints
+    # ---------
+    # basic test
+    img = np.zeros((100, 80), dtype=np.uint8)
+    img[:, 9:11+1] = 255
+    img[:, 69:71+1] = 255
+    mask = img > 0
+    kps = [ia.Keypoint(x=10, y=20), ia.Keypoint(x=10, y=40),
+           ia.Keypoint(x=70, y=20), ia.Keypoint(x=70, y=40)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
+
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+    aug_det = aug.to_deterministic()
+    observed_img = aug_det.augment_image(img)
+    observed_kpsoi = aug_det.augment_keypoints([kpsoi])
+    assert not keypoints_equal([kpsoi], observed_kpsoi)
+    for kp in observed_kpsoi[0].keypoints:
+        assert observed_img[int(kp.y), int(kp.x)] > 0
+
+    # scale 0
+    aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
+    observed = aug.augment_keypoints([kpsoi])
+    assert keypoints_equal([kpsoi], observed)
+
+    # keypoints outside of image
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+    kps = [ia.Keypoint(x=-10, y=-20)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
+    observed = aug.augment_keypoints([kpsoi])
+    assert keypoints_equal([kpsoi], observed)
+
+    # ---------
+    # get_parameters
+    # ---------
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=10, order=1, cval=2, mode="nearest", absolute_scale=False)
+    params = aug.get_parameters()
+    assert isinstance(params[0], iap.Deterministic)
+    assert isinstance(params[1], iap.Deterministic)
+    assert isinstance(params[2], iap.Deterministic)
+    assert isinstance(params[3], iap.Deterministic)
+    assert isinstance(params[4], iap.Deterministic)
+    assert isinstance(params[5], iap.Deterministic)
+    assert params[6] == False
+    assert 0.1 - 1e-8 < params[0].value < 0.1 + 1e-8
+    assert params[1].value == 8
+    assert params[2].value == 10
+    assert params[3].value == 1
+    assert params[4].value == 2
+    assert params[5].value == "nearest"
 
 
 def test_PerspectiveTransform():
