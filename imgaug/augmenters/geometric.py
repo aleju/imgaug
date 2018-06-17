@@ -1277,6 +1277,8 @@ class PiecewiseAffine(Augmenter):
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
               from the interval (a, b) (per image).
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
@@ -1289,6 +1291,8 @@ class PiecewiseAffine(Augmenter):
               number of rows.
             * If a tuple (a, b), then a value from the discrete interval [a..b]
               will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
@@ -1337,9 +1341,12 @@ class PiecewiseAffine(Augmenter):
 
         if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
-        elif ia.is_iterable(scale):
+        elif isinstance(scale, tuple):
             ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
             self.scale = Uniform(scale[0], scale[1])
+        elif ia.is_iterable(scale):
+            ia.do_assert(len(scale) > 0)
+            self.scale = Choice(scale)
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
         else:
@@ -1350,11 +1357,15 @@ class PiecewiseAffine(Augmenter):
         if ia.is_single_number(nb_rows):
             ia.do_assert(nb_rows >= 2)
             self.nb_rows = Deterministic(int(nb_rows))
-        elif ia.is_iterable(nb_rows):
+        elif isinstance(nb_rows, tuple):
             ia.do_assert(len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),))
             ia.do_assert(nb_rows[0] >= 2)
             ia.do_assert(nb_rows[1] >= 2)
             self.nb_rows = DiscreteUniform(nb_rows[0], nb_rows[1])
+        elif ia.is_iterable(nb_rows):
+            ia.do_assert(len(nb_rows) > 0)
+            ia.do_assert(all([val >= 2 for val in nb_rows]))
+            self.nb_rows = Choice(nb_rows)
         elif isinstance(nb_rows, StochasticParameter):
             self.nb_rows = nb_rows
         else:
@@ -1363,11 +1374,15 @@ class PiecewiseAffine(Augmenter):
         if ia.is_single_number(nb_cols):
             ia.do_assert(nb_cols >= 2)
             self.nb_cols = Deterministic(int(nb_cols))
-        elif ia.is_iterable(nb_cols):
+        elif isinstance(nb_cols, tuple):
             ia.do_assert(len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),))
             ia.do_assert(nb_cols[0] >= 2)
             ia.do_assert(nb_cols[1] >= 2)
             self.nb_cols = DiscreteUniform(nb_cols[0], nb_cols[1])
+        elif ia.is_iterable(nb_cols):
+            ia.do_assert(len(nb_cols) > 0)
+            ia.do_assert(all([val >= 2 for val in nb_cols]))
+            self.nb_cols = Choice(nb_cols)
         elif isinstance(nb_cols, StochasticParameter):
             self.nb_cols = nb_cols
         else:
@@ -1406,11 +1421,15 @@ class PiecewiseAffine(Augmenter):
             self.cval = DiscreteUniform(0, 255)
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
-        elif ia.is_iterable(cval):
+        elif isinstance(cval, tuple):
             ia.do_assert(len(cval) == 2)
             ia.do_assert(0 <= cval[0] <= 255)
             ia.do_assert(0 <= cval[1] <= 255)
-            self.cval = Uniform(cval[0], cval[1])
+            self.cval = DiscreteUniform(cval[0], cval[1])
+        elif ia.is_iterable(cval):
+            ia.do_assert(len(cval) > 0)
+            ia.do_assert([0 <= val <= 255 for val in cval])
+            self.cval = Choice(cval)
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
         else:
