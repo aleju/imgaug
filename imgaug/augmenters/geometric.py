@@ -1621,7 +1621,7 @@ class PiecewiseAffine(Augmenter):
             return matrix
 
     def get_parameters(self):
-        return [self.scale]
+        return [self.scale, self.nb_rows, self.nb_cols, self.order, self.cval, self.mode, self.absolute_scale]
 
 class PerspectiveTransform(Augmenter):
     """
