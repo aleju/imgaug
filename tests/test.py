@@ -35,9 +35,6 @@ import warnings
 
 
 def main():
-    #test_PiecewiseAffine()
-    #exit()
-
     time_start = time.time()
 
     # ----------------------
@@ -121,7 +118,7 @@ def main():
     # convolutional
     # TODO Convolve
     test_Sharpen()
-    # TODO Emboss
+    test_Emboss()
     # TODO EdgeDetect
     # TODO DirectedEdgeDetect
 
@@ -4209,6 +4206,120 @@ def test_Sharpen():
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
     """
+
+
+def test_Emboss():
+    reseed()
+
+    base_img = [[10, 10, 10],
+                [10, 20, 10],
+                [10, 10, 15]]
+    base_img = np.uint8(base_img)
+
+    def _compute_embossed_base_img(img, alpha, strength):
+        img = np.copy(img)
+        base_img_embossed = np.zeros((3, 3), dtype=np.float32)
+
+        m = np.float32([[-1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]])
+        strength_matrix = strength * np.float32([
+            [-1, -1, 0],
+            [-1, 0, 1],
+            [0, 1, 1]
+        ])
+        ms = m + strength_matrix
+
+        #print(ms)
+        for i in range(base_img_embossed.shape[0]):
+            for j in range(base_img_embossed.shape[1]):
+                for u in range(ms.shape[0]):
+                    for v in range(ms.shape[1]):
+                        weight = ms[u, v]
+                        inputs_i = abs(i + (u - (ms.shape[0]-1)//2))
+                        inputs_j = abs(j + (v - (ms.shape[1]-1)//2))
+                        #print("in1", inputs_i, inputs_j)
+                        #print("A", i, j, u, v, "|", inputs_i, inputs_j, "|", None, weight, "->", None)
+                        if inputs_i >= img.shape[0]:
+                            diff = inputs_i - (img.shape[0]-1)
+                            inputs_i = img.shape[0] - 1 - diff
+                        if inputs_j >= img.shape[1]:
+                            diff = inputs_j - (img.shape[1]-1)
+                            inputs_j = img.shape[1] - 1 - diff
+                        #print("in2", inputs_i, inputs_j)
+                        inputs = img[inputs_i, inputs_j]
+                        #print("B", i, j, u, v, "|", inputs_i, inputs_j, "|", inputs, weight, "->", inputs * weight)
+                        base_img_embossed[i, j] += inputs * weight
+        #print(ms)
+        #print(base_img_embossed)
+
+        return np.clip((1-alpha) * img + alpha * base_img_embossed, 0, 255).astype(np.uint8)
+
+    def _allclose(a, b):
+        return np.max(a.astype(np.float32) - b.astype(np.float32)) <= 2.1
+
+    aug = iaa.Emboss(alpha=0, strength=1)
+    observed = aug.augment_image(base_img)
+    expected = base_img
+    assert _allclose(observed, expected)
+
+    aug = iaa.Emboss(alpha=1.0, strength=1)
+    observed = aug.augment_image(base_img)
+    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=1)
+    assert _allclose(observed, expected)
+
+    aug = iaa.Emboss(alpha=0.5, strength=1)
+    observed = aug.augment_image(base_img)
+    expected = _compute_embossed_base_img(base_img, alpha=0.5, strength=1)
+    assert _allclose(observed, expected.astype(np.uint8))
+
+    aug = iaa.Emboss(alpha=0.75, strength=1)
+    observed = aug.augment_image(base_img)
+    expected = _compute_embossed_base_img(base_img, alpha=0.75, strength=1)
+    assert _allclose(observed, expected)
+
+    aug = iaa.Emboss(alpha=iap.Choice([0.5, 1.0]), strength=1)
+    observed = aug.augment_image(base_img)
+    expected1 = _compute_embossed_base_img(base_img, alpha=0.5, strength=1)
+    expected2 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1)
+    assert _allclose(observed, expected1) or np.allclose(observed, expected2)
+
+    got_exception = False
+    try:
+        aug = iaa.Emboss(alpha="test", strength=1)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    aug = iaa.Emboss(alpha=1.0, strength=2)
+    observed = aug.augment_image(base_img)
+    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=2)
+    assert _allclose(observed, expected)
+
+    aug = iaa.Emboss(alpha=1.0, strength=3)
+    observed = aug.augment_image(base_img)
+    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=3)
+    assert _allclose(observed, expected)
+
+    aug = iaa.Emboss(alpha=1.0, strength=6)
+    observed = aug.augment_image(base_img)
+    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=6)
+    assert _allclose(observed, expected)
+
+    aug = iaa.Emboss(alpha=1.0, strength=iap.Choice([1.0, 1.5]))
+    observed = aug.augment_image(base_img)
+    expected1 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1.0)
+    expected2 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1.5)
+    assert _allclose(observed, expected1) or np.allclose(observed, expected2)
+
+    got_exception = False
+    try:
+        aug = iaa.Emboss(alpha=1.0, strength="test")
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
 
 
 def test_AdditiveGaussianNoise():
