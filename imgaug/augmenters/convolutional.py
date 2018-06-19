@@ -44,9 +44,11 @@ class Convolve(Augmenter):
             * If a numpy array, that array will be used for all images and
               channels as the kernel.
             * If a callable, the parameter will be called for each image
-              via param(image, C, random_state). The function must return C
-              matrices, one per channel. It may return None, then that channel
-              will not be changed.
+              via param(image, C, random_state). The function must either return
+              a list of C matrices (i.e. one per channel) or a 2D numpy array
+              (will be used for all channels) or a 3D HxWxC numpy array.
+              If a list is returned, each entry may be None, which will result
+              in no changes to the respective channel.
 
     name : string, optional(default=None)
         See `Augmenter.__init__()`
@@ -106,6 +108,7 @@ class Convolve(Augmenter):
 
         result = images
         nb_images = len(images)
+        seed = random_state.randint(0, 10**6, 1)[0]
         for i in sm.xrange(nb_images):
             _height, _width, nb_channels = images[i].shape
             if self.matrix_type == "None":
@@ -113,11 +116,23 @@ class Convolve(Augmenter):
             elif self.matrix_type == "constant":
                 matrices = [self.matrix] * nb_channels
             elif self.matrix_type == "function":
-                matrices = self.matrix(images[i], nb_channels, random_state)
+                matrices = self.matrix(images[i], nb_channels, ia.new_random_state(seed+i))
+                if ia.is_np_array(matrices) and matrices.ndim == 2:
+                    matrices = np.tile(matrices[..., np.newaxis], (1, 1, nb_channels))
                 ia.do_assert(
                     (isinstance(matrices, list) and len(matrices) == nb_channels)
-                    or (ia.is_np_array(matrices) and matrices.ndim == 3)
+                    or (ia.is_np_array(matrices) and matrices.ndim == 3 and matrices.shape[2] == nb_channels),
+                    "Callable provided to Convole must return either a list of 2D matrices (one per image channel) "
+                    "or a 2D numpy array "
+                    "or a 3D numpy array where the last dimension's size matches the number of image channels. "
+                    "Got type %s." % (type(matrices),)
                 )
+
+                if ia.is_np_array(matrices):
+                    # Shape of matrices is currently (H, W, C), but in the loop below we need the
+                    # first axis to be the channel index to unify handling of lists of arrays
+                    # and arrays. So we move the channel axis here to the start.
+                    matrices = matrices.transpose((2, 0, 1))
             else:
                 raise Exception("Invalid matrix type")
 
