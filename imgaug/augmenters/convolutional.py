@@ -43,9 +43,6 @@ class Convolve(Augmenter):
             * If None, the input images will not be changed.
             * If a numpy array, that array will be used for all images and
               channels as the kernel.
-            * If a stochastic parameter, C new matrices will be generated
-              via param.draw_samples(C) for each image, where C is the number
-              of channels.
             * If a callable, the parameter will be called for each image
               via param(image, C, random_state). The function must return C
               matrices, one per channel. It may return None, then that channel
@@ -98,9 +95,6 @@ class Convolve(Augmenter):
             ia.do_assert(len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape))
             self.matrix = matrix
             self.matrix_type = "constant"
-        elif isinstance(matrix, StochasticParameter):
-            self.matrix = matrix
-            self.matrix_type = "stochastic"
         elif isinstance(matrix, types.FunctionType):
             self.matrix = matrix
             self.matrix_type = "function"
@@ -118,8 +112,6 @@ class Convolve(Augmenter):
                 matrices = [None] * nb_channels
             elif self.matrix_type == "constant":
                 matrices = [self.matrix] * nb_channels
-            elif self.matrix_type == "stochastic":
-                matrices = self.matrix.draw_samples((nb_channels), random_state=random_state)
             elif self.matrix_type == "function":
                 matrices = self.matrix(images[i], nb_channels, random_state)
                 ia.do_assert(
