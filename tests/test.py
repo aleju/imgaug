@@ -116,7 +116,7 @@ def main():
     test_Grayscale()
 
     # convolutional
-    # TODO Convolve
+    test_Convolve()
     test_Sharpen()
     test_Emboss()
     # TODO EdgeDetect
@@ -4058,6 +4058,137 @@ def test_Grayscale():
     for nb_samples in hist:
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
+
+def test_Convolve():
+    reseed()
+
+    img = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+    img = np.uint8(img)
+
+    # matrix is None
+    aug = iaa.Convolve(matrix=None)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: [None])
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    # matrix is [[1]]
+    aug = iaa.Convolve(matrix=np.float32([[1]]))
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: np.float32([[1]]))
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    # matrix is [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
+    m = np.float32([
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ])
+    aug = iaa.Convolve(matrix=m)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, img)
+
+    # matrix is [[0, 0, 0], [0, 2, 0], [0, 0, 0]]
+    m = np.float32([
+        [0, 0, 0],
+        [0, 2, 0],
+        [0, 0, 0]
+    ])
+    aug = iaa.Convolve(matrix=m)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, 2*img)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, 2*img)
+
+    # matrix is [[0, 0, 0], [0, 2, 0], [0, 0, 0]]
+    # with 3 channels
+    m = np.float32([
+        [0, 0, 0],
+        [0, 2, 0],
+        [0, 0, 0]
+    ])
+    img3 = np.tile(img[..., np.newaxis], (1, 1, 3))
+    aug = iaa.Convolve(matrix=m)
+    observed = aug.augment_image(img3)
+    assert np.array_equal(observed, 2*img3)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+    observed = aug.augment_image(img3)
+    assert np.array_equal(observed, 2*img3)
+
+    # matrix is [[0, -1, 0], [0, 10, 0], [0, 0, 0]]
+    m = np.float32([
+        [0, -1, 0],
+        [0, 10, 0],
+        [0, 0, 0]
+    ])
+    expected = np.uint8([
+        [10*1+(-1)*4, 10*2+(-1)*5, 10*3+(-1)*6],
+        [10*4+(-1)*1, 10*5+(-1)*2, 10*6+(-1)*3],
+        [10*7+(-1)*4, 10*8+(-1)*5, 10*9+(-1)*6]
+    ])
+
+    aug = iaa.Convolve(matrix=m)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, expected)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+    observed = aug.augment_image(img)
+    assert np.array_equal(observed, expected)
+
+    # changing matrices when using callable
+    expected = []
+    for i in sm.xrange(5):
+        expected.append(img * i)
+
+    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: np.float32([[random_state.randint(0, 5)]]))
+    seen = [False] * 5
+    for _ in sm.xrange(200):
+        observed = aug.augment_image(img)
+        found = False
+        for i, expected_i in enumerate(expected):
+            if np.array_equal(observed, expected_i):
+                seen[i] = True
+                found = True
+                break
+        assert found
+        if all(seen):
+            break
+    assert all(seen)
+
+    # bad datatype for matrix
+    got_exception = False
+    try:
+        aug = iaa.Convolve(matrix=False)
+    except Exception as exc:
+        assert "Expected " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # get_parameters()
+    matrix = np.int32([[1]])
+    aug = iaa.Convolve(matrix=matrix)
+    params = aug.get_parameters()
+    assert np.array_equal(params[0], matrix)
+    assert params[1] == "constant"
+
+    # TODO add test for keypoints once their handling was improved in Convolve
 
 
 def test_Sharpen():
