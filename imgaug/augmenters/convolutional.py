@@ -104,7 +104,7 @@ class Convolve(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(matrix),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)
@@ -139,12 +139,11 @@ class Convolve(Augmenter):
             for channel in sm.xrange(nb_channels):
                 if matrices[channel] is not None:
                     # ndimage.convolve caused problems here
-                    result[i][..., channel] = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
-
-        # TODO move this into the loop to avoid overflows
-        # TODO make value range more flexible
-        result = meta.clip_augmented_images_(result, 0, 255)
-        result = meta.restore_augmented_images_dtypes_(result, input_dtypes)
+                    result_ic = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
+                    # TODO make value range more flexible
+                    result_ic = meta.clip_augmented_images_(result_ic, 0, 255)
+                    result_ic = meta.restore_augmented_images_dtypes_(result_ic, input_dtypes[i])
+                    result[i][..., channel] = result_ic
 
         return result
 
