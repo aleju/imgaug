@@ -2,8 +2,7 @@
 Installation
 ============
 
-The library uses python, which must be installed. Most development and testing
-is done in python 2.7. Python 3.x is occasionally tested and seems to also work.
+The library uses python, which must be installed. Python 2.7, 3.4, 3.5 and 3.6 are supported.
 
 The following packages must be installed:
 

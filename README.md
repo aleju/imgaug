@@ -93,8 +93,6 @@ Alternatively, you can download the repository via `git clone https://github.com
 
 To deinstall the library, just execute `sudo pip uninstall imgaug`.
 
-The library is currently only tested in python2.7, but the code is written so that it *should* run in python3 too.
-
 ## Examples
 
 A standard machine learning situation.
