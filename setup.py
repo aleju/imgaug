@@ -4,8 +4,9 @@ import os
 # Check if OpenCV is installed and raise an error if it is not
 # but don't do this if the ReadTheDocs systems tries to install
 # the library, as that is configured to mock cv2 anyways
-READ_THE_DOCS = os.environ.get('READTHEDOCS') == 'True'
-if not READ_THE_DOCS:
+READ_THE_DOCS = (os.environ.get("READTHEDOCS", "False") == "True")
+NO_CV2_INSTALLED_CHECK = (os.environ.get("IMGAUG_NO_CV2_INSTALLED_CHECK", "False") == "True")
+if not READ_THE_DOCS and not NO_CV2_INSTALLED_CHECK:
     try:
         import cv2 # pylint: disable=locally-disabled, unused-import, line-too-long
     except ImportError as e:
