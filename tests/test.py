@@ -9654,6 +9654,60 @@ def test_SomeOf():
         got_exception = True
     assert got_exception
 
+    # test for https://github.com/aleju/imgaug/issues/143
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    aug = iaa.SomeOf(1, [
+        iaa.Crop((2, 0, 2, 0), keep_size=False),
+        iaa.Crop((1, 0, 1, 0), keep_size=False)
+    ])
+    for _ in sm.xrange(10):
+        observed = aug.augment_images(np.uint8([image, image, image, image]))
+        assert isinstance(observed, list)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image, image, image, image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_images(np.uint8([image]))
+        assert isinstance(observed, list)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_image(image)
+        assert ia.is_np_array(image)
+        assert observed.shape in [(4, 8, 3), (6, 8, 3)]
+
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    aug = iaa.SomeOf(1, [
+        iaa.Crop((2, 0, 2, 0), keep_size=True),
+        iaa.Crop((1, 0, 1, 0), keep_size=True)
+    ])
+
+    for _ in sm.xrange(10):
+        observed = aug.augment_images(np.uint8([image, image, image, image]))
+        assert ia.is_np_array(observed)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image, image, image, image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images(np.uint8([image]))
+        assert ia.is_np_array(observed)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_image(image)
+        assert ia.is_np_array(observed)
+        assert observed.shape in [(8, 8, 3)]
+
 
 def test_OneOf():
     reseed()

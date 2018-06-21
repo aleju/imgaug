@@ -1761,10 +1761,27 @@ class SomeOf(Augmenter, list):
                         parents=parents + [self],
                         hooks=hooks
                     )
+                    output_is_array = ia.is_np_array(images_to_aug)
+                    output_all_same_shape = len(set([img.shape for img in images_to_aug])) == 1
 
-                    # map them back to their position in the images array/list
+                    # Map them back to their position in the images array/list
+                    # But it can happen that the augmented images have different shape(s) from
+                    # the input image, as well as being suddenly a list instead of a numpy array.
+                    # This is usually the case if a child augmenter has to change shapes, e.g.
+                    # due to cropping (without resize afterwards). So accomodate here for that
+                    # possibility.
                     if input_is_array:
-                        images[active] = images_to_aug
+                        if not output_is_array and output_all_same_shape:
+                            images_to_aug = np.array(images_to_aug, dtype=images.dtype)
+                            output_is_array = True
+
+                        if output_is_array and images_to_aug.shape[1:] == images.shape[1:]:
+                            images[active] = images_to_aug
+                        else:
+                            images = list(images)
+                            for aug_idx, original_idx in enumerate(active):
+                                images[original_idx] = images_to_aug[aug_idx]
+                            input_is_array = False
                     else:
                         for aug_idx, original_idx in enumerate(active):
                             images[original_idx] = images_to_aug[aug_idx]
