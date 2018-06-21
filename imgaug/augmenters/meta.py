@@ -2149,6 +2149,14 @@ class WithChannels(Augmenter):
                     hooks=hooks
                 )
 
+                ia.do_assert(
+                    all([img_out.shape[0:2] == img_in.shape[0:2] for img_out, img_in in zip(result_then_list, result)]),
+                    "Heights/widths of images changed in WithChannels from %s to %s, but expected to be the same." % (
+                        str([img_in.shape[0:2] for img_in in result]),
+                        str([img_out.shape[0:2] for img_out in result_then_list]),
+                    )
+                )
+
                 if ia.is_np_array(images):
                     result[..., self.channels] = result_then_list
                 else:
