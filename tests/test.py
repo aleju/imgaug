@@ -9655,6 +9655,8 @@ def test_SomeOf():
     assert got_exception
 
     # test for https://github.com/aleju/imgaug/issues/143
+    # (shapes change in child augmenters, leading to problems if input arrays are assumed to
+    # stay input arrays)
     image = np.zeros((8, 8, 3), dtype=np.uint8)
     aug = iaa.SomeOf(1, [
         iaa.Crop((2, 0, 2, 0), keep_size=False),
@@ -9999,6 +10001,117 @@ def test_Sometimes():
         "False"
     )
     assert aug.__repr__() == aug.__str__() == expected
+
+    # Test for https://github.com/aleju/imgaug/issues/143
+    # (shapes change in child augmenters, leading to problems if input arrays are assumed to
+    # stay input arrays)
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    aug = iaa.Sometimes(
+        0.5,
+        iaa.Crop((2, 0, 2, 0), keep_size=False),
+        iaa.Crop((1, 0, 1, 0), keep_size=False)
+    )
+    for _ in sm.xrange(10):
+        observed = aug.augment_images(np.uint8([image, image, image, image]))
+        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image, image, image, image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_images(np.uint8([image]))
+        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+
+        observed = aug.augment_image(image)
+        assert ia.is_np_array(image)
+        assert observed.shape in [(4, 8, 3), (6, 8, 3)]
+
+    image = np.zeros((32, 32, 3), dtype=np.uint8)
+    aug = iaa.Sometimes(
+        0.5,
+        iaa.Crop(((1, 4), 0, (1, 4), 0), keep_size=False),
+        iaa.Crop(((4, 8), 0, (4, 8), 0), keep_size=False)
+    )
+    for _ in sm.xrange(10):
+        observed = aug.augment_images(np.uint8([image, image, image, image]))
+        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+
+        observed = aug.augment_images([image, image, image, image])
+        assert isinstance(observed, list)
+        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+
+        observed = aug.augment_images(np.uint8([image]))
+        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+
+        observed = aug.augment_images([image])
+        assert isinstance(observed, list)
+        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+
+        observed = aug.augment_image(image)
+        assert ia.is_np_array(image)
+        assert 16 <= observed.shape[0] <= 30 and observed.shape[1:] == (32, 3)
+
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    aug = iaa.Sometimes(
+        0.5,
+        iaa.Crop((2, 0, 2, 0), keep_size=True),
+        iaa.Crop((1, 0, 1, 0), keep_size=True)
+    )
+    for _ in sm.xrange(10):
+        observed = aug.augment_images(np.uint8([image, image, image, image]))
+        assert ia.is_np_array(observed)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image, image, image, image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images(np.uint8([image]))
+        assert ia.is_np_array(observed)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_image(image)
+        assert ia.is_np_array(observed)
+        assert observed.shape in [(8, 8, 3)]
+
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    aug = iaa.Sometimes(
+        0.5,
+        iaa.Crop(((1, 4), 0, (1, 4), 0), keep_size=True),
+        iaa.Crop(((4, 8), 0, (4, 8), 0), keep_size=True)
+    )
+    for _ in sm.xrange(10):
+        observed = aug.augment_images(np.uint8([image, image, image, image]))
+        assert ia.is_np_array(observed)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image, image, image, image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images(np.uint8([image]))
+        assert ia.is_np_array(observed)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_images([image])
+        assert isinstance(observed, list)
+        assert all([img.shape in [(8, 8, 3)] for img in observed])
+
+        observed = aug.augment_image(image)
+        assert ia.is_np_array(observed)
+        assert observed.shape in [(8, 8, 3)]
 
 
 def test_WithChannels():

@@ -2008,9 +2008,12 @@ class Sometimes(Augmenter):
             for idx_result_else_list, idx_images in enumerate(indices_else_list):
                 result[idx_images] = result_else_list[idx_result_else_list]
 
-            # if input was a list, keep the output as a list too,
-            # otherwise it was a numpy array, so make the output a numpy array too
-            if input_is_np_array:
+            # If input was a list, keep the output as a list too,
+            # otherwise it was a numpy array, so make the output a numpy array too.
+            # Note here though that shapes can differ between images, e.g. when using Crop
+            # without resizing. In these cases, the output has to be a list.
+            all_same_shape = len(set([image.shape for image in result])) == 1
+            if input_is_np_array and all_same_shape:
                 result = np.array(result, dtype=input_dtype)
         else:
             result = images
