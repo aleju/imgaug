@@ -441,10 +441,25 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         images_result = hooks.postprocess(images_result, augmenter=self, parents=parents)
 
         # remove temporarily added channel axis for 2D input images
+        output_type = "list" if isinstance(images_result, list) else "array"
         if input_type == "array":
             if input_added_axis == True:
-                images_result = np.squeeze(images_result, axis=3)
-        if input_type == "list":
+                if output_type == "array":
+                    images_result = np.squeeze(images_result, axis=3)
+                else:
+                    images_result = [np.squeeze(image, axis=2) for image in images_result]
+        else:  # if input_type == "list":
+            # This test was removed for now because hooks can change the type
+            #ia.do_assert(
+            #    isinstance(images_result, list),
+            #    "INTERNAL ERROR: Input was list, output was expected to be list too "
+            #    "but got %s." % (type(images_result),)
+            #)
+            ia.do_assert(
+                len(images_result) == len(images),
+                "INTERNAL ERROR: Expected number of images to be unchanged after augmentation, "
+                "but was changed from %d to %d." % (len(images), len(images_result))
+            )
             for i in sm.xrange(len(images_result)):
                 if input_added_axis[i] == True:
                     images_result[i] = np.squeeze(images_result[i], axis=2)

@@ -83,8 +83,6 @@ def main():
     # ----------------------
     # augmenters
     # ----------------------
-
-
     # arithmetic
     test_Add()
     test_AddElementwise()
@@ -8726,6 +8724,72 @@ def test_Augmenter():
         got_exception = True
     assert got_exception
 
+    # behaviour when getting arrays as input and lists as output of augmenter
+    aug = iaa.Crop(((1, 8), (1, 8), (1, 8), (1, 8)), keep_size=False)
+    images = np.zeros((16, 64, 64, 3), dtype=np.uint8)
+    seen = [0, 0]
+    for _ in sm.xrange(20):
+        observed = aug.augment_images(images)
+        if ia.is_np_array(observed):
+            seen[0] += 1
+        else:
+            seen[1] += 1
+        assert all([image.ndim == 3 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62 and image.shape[2] == 3 for image in observed])
+    assert seen[0] <= 3
+    assert seen[1] >= 17
+
+    # same as above but image's channel axis is now 1
+    aug = iaa.Crop(((1, 8), (1, 8), (1, 8), (1, 8)), keep_size=False)
+    images = np.zeros((16, 64, 64, 1), dtype=np.uint8)
+    seen = [0, 0]
+    for _ in sm.xrange(20):
+        observed = aug.augment_images(images)
+        if ia.is_np_array(observed):
+            seen[0] += 1
+        else:
+            seen[1] += 1
+        assert all([image.ndim == 3 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62  and image.shape[2] == 1 for image in observed])
+    assert seen[0] <= 3
+    assert seen[1] >= 17
+
+    # same as above but now with 2D images
+    aug = iaa.Crop(((1, 8), (1, 8), (1, 8), (1, 8)), keep_size=False)
+    images = np.zeros((16, 64, 64), dtype=np.uint8)
+    seen = [0, 0]
+    for _ in sm.xrange(20):
+        observed = aug.augment_images(images)
+        if ia.is_np_array(observed):
+            seen[0] += 1
+        else:
+            seen[1] += 1
+        assert all([image.ndim == 2 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62 for image in observed])
+    assert seen[0] <= 3
+    assert seen[1] >= 17
+
+    # same as above but image's channel axis now varies between [None, 1, 3, 4, 9]
+    aug = iaa.Crop(((1, 8), (1, 8), (1, 8), (1, 8)), keep_size=False)
+    seen = [0, 0]
+    for _ in sm.xrange(20):
+        channels = np.random.choice([None, 1, 3, 4, 9], size=(16,))
+        images = [np.zeros((64, 64), dtype=np.uint8) if c is None else np.zeros((64, 64, c), dtype=np.uint8) for c in channels]
+
+        observed = aug.augment_images(images)
+        if ia.is_np_array(observed):
+            seen[0] += 1
+        else:
+            seen[1] += 1
+
+        for image, c in zip(observed, channels):
+            if c is None:
+                assert image.ndim == 2
+            else:
+                assert image.ndim == 3
+                assert image.shape[2] == c
+            assert 48 <= image.shape[0] <= 62
+            assert 48 <= image.shape[1] <= 62
+    assert seen[0] == 0
+    assert seen[1] == 20
+
     # --------
     # _augment_images
     # --------
@@ -9041,6 +9105,8 @@ def test_Augmenter_remove():
 
 
 def test_Augmenter_hooks():
+    # TODO these tests change the input type from list to array. Might be reasnoable to change
+    # and test that scenario separetely
     reseed()
 
     image = np.array([[0, 0, 1],
