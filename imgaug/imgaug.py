@@ -1983,14 +1983,14 @@ class HeatmapsOnImage(object):
     def change_normalization(arr, source, target):
         assert is_np_array(arr)
 
-        if isinstance(source, Heatmaps):
+        if isinstance(source, HeatmapsOnImage):
             source = (source.min_value, source.max_value)
         else:
             assert isinstance(source, tuple)
             assert len(source) == 2
             assert source[0] < source[1]
 
-        if isinstance(target, Heatmaps):
+        if isinstance(target, HeatmapsOnImage):
             target = (target.min_value, target.max_value)
         else:
             assert isinstance(target, tuple)
