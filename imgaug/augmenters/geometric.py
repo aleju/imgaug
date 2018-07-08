@@ -478,19 +478,18 @@ class Affine(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        #images = images if isinstance(images, list) else [images]
         nb_images = len(images)
-        #result = [None] * nb_images
-        result = images
-
         scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        return result
 
+    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples):
+        nb_images = len(images)
+        result = images
         for i in sm.xrange(nb_images):
             image = images[i]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #ia.do_assert(isinstance(translate_x, (float, int)))
-            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * images[i].shape[0]))
             else:
@@ -525,11 +524,6 @@ class Affine(Augmenter):
                     )
                 else:
                     ia.do_assert(not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,))
-                    # opencv seems to support arrays of three cvals (ie RGB)
-                    # in python2, but for some reason not in python3, so
-                    # we chose one cval here
-                    #cval = cval[0]
-                    #print(cval, type(cval), int(cval), type(int(cval)))
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
@@ -545,6 +539,20 @@ class Affine(Augmenter):
                 result[i] = images[i]
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        nb_heatmaps = len(heatmaps)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_heatmaps, random_state)
+        cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
+        mode_samples = ["constant"] * len(mode_samples)
+
+        #arrs = [ia.Heatmaps.change_normalization(heatmaps_i.arr, source=heatmaps_i, target=(0.0, 1.0)) for heatmaps_i in heatmaps]
+        arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
+        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        for heatmaps_i, arr_aug in zip(heatmaps, arrs_aug):
+            #heatmaps_i.arr = ia.Heatmaps.change_normalization(arr_aug, source=(0.0, 1.0), target=heatmaps_i)
+            heatmaps_i.arr_0to1 = arr_aug
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
@@ -1087,6 +1095,13 @@ class AffineCv2(Augmenter):
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
+        nb_images = len(images)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        return result
+
+    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples):
+        # TODO change these to class attributes
         order_str_to_int = {
             "nearest": cv2.INTER_NEAREST,
             "linear": cv2.INTER_LINEAR,
@@ -1101,13 +1116,8 @@ class AffineCv2(Augmenter):
             "constant": cv2.BORDER_CONSTANT
         }
 
-        #images = images if isinstance(images, list) else [images]
         nb_images = len(images)
-        #result = [None] * nb_images
         result = images
-
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
-
         for i in sm.xrange(nb_images):
             height, width = images[i].shape[0], images[i].shape[1]
             shift_x = width / 2.0 - 0.5
@@ -1168,6 +1178,17 @@ class AffineCv2(Augmenter):
                 result[i] = images[i]
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        nb_images = len(heatmaps)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
+        mode_samples = ["constant"] * len(mode_samples)
+        arrs = [heatmap_i.arr_0to1 for heatmap_i in heatmaps]
+        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        for heatmap_i, arr_aug in zip(heatmaps, arrs_aug):
+            heatmap_i.arr_0to1 = arr_aug
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
@@ -1488,6 +1509,57 @@ class PiecewiseAffine(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        nb_images = len(heatmaps)
+
+        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
+
+        seed = seeds[-1]
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 1))
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 2))
+        order_samples = self.order.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 5))
+
+        for i in sm.xrange(nb_images):
+            heatmaps_i = heatmaps[i]
+            arr_0to1 = heatmaps_i.arr_0to1
+
+            rs_image = ia.new_random_state(seeds[i])
+            h, w = arr_0to1.shape[0:2]
+            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+
+            if transformer is not None:
+                #reverse_uint8 = False
+                #input_dtype = arr.dtype
+                #if heatmaps_i.min_value < 0 or heatmaps_i.max_value > 1.0:
+                #    arr = heatmaps_i.to_uint8()
+                #    reverse_uint8 = True
+                #arr_0to1 = ia.Heatmaps.change_normalization(arr, source=heatmaps_i, target=(0.0, 1.0))
+
+                arr_0to1_warped = tf.warp(
+                    arr_0to1,
+                    transformer,
+                    order=order_samples[i],
+                    mode="constant",
+                    cval=0,
+                    preserve_range=True,
+                    output_shape=arr_0to1.shape
+                )
+
+                # skimage converts to float64
+                arr_0to1_warped = arr_0to1_warped.astype(np.float32)
+
+                #arr_warped = ia.Heatmaps.change_normalization(arr_0to1_warped, source=(0.0, 1.0), target=heatmaps_i)
+
+                #if reverse_uint8:
+                #    heatmaps_i_aug = ia.Heatmaps.from_uint8(heatmap_warped, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+                #else:
+                #heatmaps_i_aug = ia.Heatmaps.from_0to1(arr_warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+                #heatmaps_i_aug.arr = heatmaps_i_aug.arr.astype(input_dtype)
+                heatmaps_i.arr_0to1 = arr_0to1_warped
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
@@ -1709,7 +1781,6 @@ class PerspectiveTransform(Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             # cv2.warpPerspective only supports <=4 channels
-            #ia.do_assert(images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels.")
             nb_channels = images[i].shape[2]
             if nb_channels <= 4:
                 warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
@@ -1721,11 +1792,40 @@ class PerspectiveTransform(Augmenter):
                 warped = [cv2.warpPerspective(images[i][..., c], M, (max_width, max_height)) for c in sm.xrange(nb_channels)]
                 warped = [warped_i[..., np.newaxis] for warped_i in warped]
                 warped = np.dstack(warped)
-            #print(np.min(warped), np.max(warped), warped.dtype)
+
             if self.keep_size:
                 h, w = images[i].shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w), interpolation="cubic")
             result[i] = warped
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+
+        matrices, max_heights, max_widths = self._create_matrices(
+            [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
+            random_state
+        )
+
+        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            heatmaps_i = heatmaps[i]
+
+            arr = heatmaps_i.arr_0to1
+
+            nb_channels = arr.shape[2]
+
+            warped = [cv2.warpPerspective(arr[..., c], M, (max_width, max_height)) for c in sm.xrange(nb_channels)]
+            warped = [warped_i[..., np.newaxis] for warped_i in warped]
+            warped = np.dstack(warped)
+
+            heatmaps_i_aug = ia.HeatmapsOnImage.from_0to1(warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+
+            if self.keep_size:
+                h, w = arr.shape[0:2]
+                heatmaps_i_aug = heatmaps_i_aug.scale((h, w))
+
+            result[i] = heatmaps_i_aug
 
         return result
 
@@ -2047,7 +2147,7 @@ class ElasticTransformation(Augmenter):
         modes = self.mode.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10400))
         for i in sm.xrange(nb_images):
             image = images[i]
-            image_first_channel = np.squeeze(image[..., 0])
+            image_first_channel = np.squeeze(image[..., 0])  # TODO why this weird formulation instead of image.shape[0:2] ?
             indices_x, indices_y = ElasticTransformation.generate_indices(image_first_channel.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
             result[i] = ElasticTransformation.map_coordinates(
                 images[i],
@@ -2058,6 +2158,47 @@ class ElasticTransformation(Augmenter):
                 mode=modes[i]
             )
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        nb_heatmaps = len(heatmaps)
+        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_heatmaps+1,))
+        alphas = self.alpha.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10000))
+        sigmas = self.sigma.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10100))
+        orders = self.order.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10200))
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_i = heatmaps[i]
+            if heatmaps_i.arr_0to1.shape[0:2] == heatmaps_i.shape[0:2]:
+                indices_x, indices_y = ElasticTransformation.generate_indices(heatmaps_i.arr_0to1.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+                heatmaps_i.arr_0to1 = ElasticTransformation.map_coordinates(
+                    heatmaps_i.arr_0to1,
+                    indices_x,
+                    indices_y,
+                    order=orders[i],
+                    cval=0,
+                    mode="constant"
+                )
+            else:
+                # heatmaps do not have the same size as augmented images
+                # this may result in indices of moved pixels being different
+                # to prevent this, we use the same image size as for the base images, but that
+                # requires resizing the heatmaps temporarily to the image sizes
+                height_orig, width_orig = heatmaps_i.arr_0to1
+                heatmaps_i = heatmaps_i.scale(heatmaps_i.shape[0:2])
+                arr_0to1 = heatmaps_i.arr_0to1
+                indices_x, indices_y = ElasticTransformation.generate_indices(arr_0to1.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+                arr_0to1_warped = ElasticTransformation.map_coordinates(
+                    arr_0to1,
+                    indices_x,
+                    indices_y,
+                    order=orders[i],
+                    cval=0,
+                    mode="constant"
+                )
+                heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(arr_0to1_warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+                heatmaps_i_warped = heatmaps_i_warped.scale((height_orig, width_orig))
+                heatmaps[i] = heatmaps_i_warped
+
+        return heatmaps
 
     """
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):

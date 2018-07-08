@@ -183,6 +183,9 @@ class Superpixels(Augmenter):
                 images[i] = image_sp
         return images
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 

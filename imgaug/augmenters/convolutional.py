@@ -147,6 +147,10 @@ class Convolve(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
         return keypoints_on_images

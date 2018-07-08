@@ -63,6 +63,12 @@ def main():
     # test_draw_text()
     test_imresize_many_images()
     test_imresize_single_image()
+    test_pad()
+    test_compute_paddings_for_aspect_ratio()
+    test_pad_to_aspect_ratio()
+    test_pool()
+    test_avg_pool()
+    test_max_pool()
     test_draw_grid()
     # test_show_grid()
     # test_do_assert()
@@ -74,6 +80,21 @@ def main():
     test_KeypointsOnImage()
     test_BoundingBox()
     test_BoundingBoxesOnImage()
+    # test_HeatmapsOnImage_get_arr()
+    # test_HeatmapsOnImage_find_global_maxima()
+    test_HeatmapsOnImage_draw()
+    test_HeatmapsOnImage_draw_on_image()
+    test_HeatmapsOnImage_pad()
+    # test_HeatmapsOnImage_pad_to_aspect_ratio()
+    test_HeatmapsOnImage_avg_pool()
+    test_HeatmapsOnImage_max_pool()
+    test_HeatmapsOnImage_scale()
+    # test_HeatmapsOnImage_to_uint8()
+    # test_HeatmapsOnImage_from_uint8()
+    # test_HeatmapsOnImage_from_0to1()
+    # test_HeatmapsOnImage_change_normalization()
+    # test_HeatmapsOnImage_copy()
+    # test_HeatmapsOnImage_deepcopy()
     # test_Batch()
     test_BatchLoader()
     # test_BackgroundAugmenter.get_batch()
@@ -572,6 +593,466 @@ def test_imresize_single_image():
                 diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
                 diff_fraction = np.sum(diff) / (image_observed.size * 255)
                 assert diff_fraction < 0.5
+
+
+def test_pad():
+    # -------
+    # uint8, int32
+    # -------
+    for dtype in [np.uint8, np.int32]:
+        arr = np.zeros((3, 3), dtype=dtype) + 255
+
+        arr_pad = ia.pad(arr)
+        assert arr_pad.shape == (3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.array_equal(arr_pad, arr)
+
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :] == 0)
+
+        arr_pad = ia.pad(arr, right=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[:, -1] == 0)
+
+        arr_pad = ia.pad(arr, bottom=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[-1, :] == 0)
+
+        arr_pad = ia.pad(arr, left=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[:, 0] == 0)
+
+        arr_pad = ia.pad(arr, top=1, right=2, bottom=3, left=4)
+        assert arr_pad.shape == (3+(1+3), 3+(2+4))
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :] == 0)
+        assert np.all(arr_pad[:, -2:] == 0)
+        assert np.all(arr_pad[-3:, :] == 0)
+        assert np.all(arr_pad[:, :4] == 0)
+
+        arr_pad = ia.pad(arr, top=1, cval=10)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :] == 10)
+
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 128
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :, 0] == 0)
+        assert np.all(arr_pad[0, :, 1] == 0)
+        assert np.all(arr_pad[0, :, 2] == 0)
+
+        arr = np.zeros((3, 3), dtype=dtype) + 128
+        arr[1, 1] = 200
+        arr_pad = ia.pad(arr, top=1, mode="maximum")
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad[0, 0] == 128
+        assert arr_pad[0, 1] == 200
+        assert arr_pad[0, 2] == 128
+
+    # -------
+    # float32, float64
+    # -------
+    for dtype in [np.float32, np.float64]:
+        arr = np.zeros((3, 3), dtype=dtype) + 1.0
+
+        arr_pad = ia.pad(arr)
+        assert arr_pad.shape == (3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad, arr)
+
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[0, :], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, right=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[:, -1], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, bottom=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[-1, :], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, left=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[:, 0], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, top=1, right=2, bottom=3, left=4)
+        assert arr_pad.shape == (3+(1+3), 3+(2+4))
+        assert arr_pad.dtype.type == dtype
+        assert 0 - 1e-6 < np.max(arr_pad[0, :]) < 0 + 1e-6
+        assert 0 - 1e-6 < np.max(arr_pad[:, -2:]) < 0 + 1e-6
+        assert 0 - 1e-6 < np.max(arr_pad[-3, :]) < 0 + 1e-6
+        assert 0 - 1e-6 < np.max(arr_pad[:, :4]) < 0 + 1e-6
+
+        arr_pad = ia.pad(arr, top=1, cval=0.2)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[0, :], dtype([0.2, 0.2, 0.2]))
+
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 0.5
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[0, :, 0], dtype([0, 0, 0]))
+        assert np.allclose(arr_pad[0, :, 1], dtype([0, 0, 0]))
+        assert np.allclose(arr_pad[0, :, 2], dtype([0, 0, 0]))
+
+        arr = np.zeros((3, 3), dtype=dtype) + 0.5
+        arr[1, 1] = 0.75
+        arr_pad = ia.pad(arr, top=1, mode="maximum")
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert 0.50 - 1e-6 < arr_pad[0, 0] < 0.50 + 1e-6
+        assert 0.75 - 1e-6 < arr_pad[0, 1] < 0.75 + 1e-6
+        assert 0.50 - 1e-6 < arr_pad[0, 2] < 0.50 + 1e-6
+
+
+def test_compute_paddings_for_aspect_ratio():
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 0
+    assert bottom == 0
+    assert left == 0
+
+    arr = np.zeros((1, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 2
+    assert right == 0
+    assert bottom == 1
+    assert left == 0
+
+    arr = np.zeros((4, 1), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 2
+    assert bottom == 0
+    assert left == 1
+
+    arr = np.zeros((2, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 1
+    assert right == 0
+    assert bottom == 1
+    assert left == 0
+
+    arr = np.zeros((4, 2), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 1
+    assert bottom == 0
+    assert left == 1
+
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 0.5)
+    assert top == 2
+    assert right == 0
+    assert bottom == 2
+    assert left == 0
+
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 2.0)
+    assert top == 0
+    assert right == 2
+    assert bottom == 0
+    assert left == 2
+
+
+def test_pad_to_aspect_ratio():
+    for dtype in [np.uint8, np.int32, np.float32]:
+        # aspect_ratio = 1.0
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((1, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((4, 1), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((2, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((4, 2), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        # aspect_ratio != 1.0
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 2.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 8
+
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 0.5)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 8
+        assert arr_pad.shape[1] == 4
+
+        # 3d arr
+        arr = np.zeros((4, 2, 3), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+        assert arr_pad.shape[2] == 3
+
+    # cval
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[:, 0:2]) == 0
+    assert np.max(arr_pad[:, -2:]) == 0
+    assert np.max(arr_pad[:, 2:-2]) == 128
+
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, cval=10)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[:, 0:2]) == 10
+    assert np.max(arr_pad[:, -2:]) == 10
+    assert np.max(arr_pad[:, 2:-2]) == 128
+
+    arr = np.zeros((4, 4), dtype=np.float32) + 0.5
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, cval=0.0)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert 0 - 1e-6 <= np.max(arr_pad[:, 0:2]) <= 0 + 1e-6
+    assert 0 - 1e-6 <= np.max(arr_pad[:, -2:]) <= 0 + 1e-6
+    assert 0.5 - 1e-6 <= np.max(arr_pad[:, 2:-2]) <= 0.5 + 1e-6
+
+    arr = np.zeros((4, 4), dtype=np.float32) + 0.5
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, cval=0.1)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert 0.1 - 1e-6 <= np.max(arr_pad[:, 0:2]) <= 0.1 + 1e-6
+    assert 0.1 - 1e-6 <= np.max(arr_pad[:, -2:]) <= 0.1 + 1e-6
+    assert 0.5 - 1e-6 <= np.max(arr_pad[:, 2:-2]) <= 0.5 + 1e-6
+
+    # mode
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr[1:3, 1:3] = 200
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, mode="maximum")
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[0:1, 0:2]) == 128
+    assert np.max(arr_pad[1:3, 0:2]) == 200
+    assert np.max(arr_pad[3:, 0:2]) == 128
+    assert np.max(arr_pad[0:1, -2:]) == 128
+    assert np.max(arr_pad[1:3, -2:]) == 200
+    assert np.max(arr_pad[3:, -2:]) == 128
+
+
+def test_pool():
+    # basic functionality with uint8, int32, float32
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+    arr = np.int32([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+    arr = np.float32([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert np.allclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
+    assert np.allclose(arr_pooled[0, 1], np.average([2, 3, 6, 7]))
+    assert np.allclose(arr_pooled[1, 0], np.average([8, 9, 12, 13]))
+    assert np.allclose(arr_pooled[1, 1], np.average([10, 11, 14, 15]))
+
+    # preserve_dtype off
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, preserve_dtype=False)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == np.float64
+    assert np.allclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
+    assert np.allclose(arr_pooled[0, 1], np.average([2, 3, 6, 7]))
+    assert np.allclose(arr_pooled[1, 0], np.average([8, 9, 12, 13]))
+    assert np.allclose(arr_pooled[1, 1], np.average([10, 11, 14, 15]))
+
+    # maximum function
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.max)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.max([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.max([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.max([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
+
+    # 3d array
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr = np.tile(arr[..., np.newaxis], (1, 1, 3))
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2, 3)
+    assert np.array_equal(arr_pooled[..., 0], arr_pooled[..., 1])
+    assert np.array_equal(arr_pooled[..., 1], arr_pooled[..., 2])
+    arr_pooled = arr_pooled[..., 0]
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+    # block_size per axis
+    arr = np.float32([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, (2, 1), np.average)
+    assert arr_pooled.shape == (2, 4)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert np.allclose(arr_pooled[0, 0], np.average([0, 4]))
+    assert np.allclose(arr_pooled[0, 1], np.average([1, 5]))
+    assert np.allclose(arr_pooled[0, 2], np.average([2, 6]))
+    assert np.allclose(arr_pooled[0, 3], np.average([3, 7]))
+    assert np.allclose(arr_pooled[1, 0], np.average([8, 12]))
+    assert np.allclose(arr_pooled[1, 1], np.average([9, 13]))
+    assert np.allclose(arr_pooled[1, 2], np.average([10, 14]))
+    assert np.allclose(arr_pooled[1, 3], np.average([11, 15]))
+
+    # cval
+    arr = np.uint8([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 0, 6, 0]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 0, 0]))
+    assert arr_pooled[1, 1] == int(np.average([10, 0, 0, 0]))
+
+    arr = np.uint8([
+        [0, 1],
+        [4, 5]
+    ])
+    arr_pooled = ia.pool(arr, (4, 1), np.average)
+    assert arr_pooled.shape == (1, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 4, 0, 0]))
+    assert arr_pooled[0, 1] == int(np.average([1, 5, 0, 0]))
+
+    arr = np.uint8([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, cval=22)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 22, 6, 22]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 22, 22]))
+    assert arr_pooled[1, 1] == int(np.average([10, 22, 22, 22]))
+
+
+def test_avg_pool():
+    # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.avg_pool(arr, 2)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+
+def test_max_pool():
+    # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.max_pool(arr, 2)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.max([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.max([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.max([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
 
 
 def test_draw_grid():
@@ -1526,6 +2007,208 @@ def test_BoundingBoxesOnImage():
     assert bbsoi.__repr__() == bbsoi.__str__() == expected
 
 
+def test_HeatmapsOnImage_draw():
+    heatmaps_arr = np.float32([
+        [0.5, 0.0, 0.0, 0.5],
+        [0.0, 1.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0, 0.0],
+        [0.5, 0.0, 0.0, 0.5],
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_drawn = heatmaps.draw()[0]
+    assert heatmaps_drawn.shape == (4, 4, 3)
+    v1 = heatmaps_drawn[0, 1]
+    v2 = heatmaps_drawn[0, 0]
+    v3 = heatmaps_drawn[1, 1]
+
+    for y, x in [(0, 1), (0, 2), (1, 0), (1, 3), (2, 0), (2, 3), (3, 1), (3, 2)]:
+        assert np.allclose(heatmaps_drawn[y, x], v1)
+
+    for y, x in [(0, 0), (0, 3), (3, 0), (3, 3)]:
+        assert np.allclose(heatmaps_drawn[y, x], v2)
+
+    for y, x in [(1, 1), (1, 2), (2, 1), (2, 2)]:
+        assert np.allclose(heatmaps_drawn[y, x], v3)
+
+    # size differs from heatmap array size
+    heatmaps_arr = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    heatmaps_drawn = heatmaps.draw(size=(4, 4))[0]
+    assert heatmaps_drawn.shape == (4, 4, 3)
+    v1 = heatmaps_drawn[0, 0]
+    v2 = heatmaps_drawn[0, -1]
+
+    for y in range(4):
+        for x in range(2):
+            assert np.allclose(heatmaps_drawn[y, x], v1)
+
+    for y in range(4):
+        for x in range(2, 4):
+            assert np.allclose(heatmaps_drawn[y, x], v2)
+
+
+def test_HeatmapsOnImage_draw_on_image():
+    heatmaps_arr = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    image = np.uint8([
+        [0, 0, 0, 255],
+        [0, 0, 0, 255],
+        [0, 0, 0, 255],
+        [0, 0, 0, 255]
+    ])
+    image = np.tile(image[..., np.newaxis], (1, 1, 3))
+
+    heatmaps_drawn = heatmaps.draw_on_image(image, alpha=0.5, cmap=None)[0]
+    assert heatmaps_drawn.shape == (4, 4, 3)
+    assert np.all(heatmaps_drawn[0:4, 0:2, :] == 0)
+    assert np.all(heatmaps_drawn[0:4, 2:3, :] == 128) or np.all(heatmaps_drawn[0:4, 2:3, :] == 127)
+    assert np.all(heatmaps_drawn[0:4, 3:4, :] == 255) or np.all(heatmaps_drawn[0:4, 3:4, :] == 254)
+
+    image = np.uint8([
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ])
+    image = np.tile(image[..., np.newaxis], (1, 1, 3))
+
+    heatmaps_drawn = heatmaps.draw_on_image(image, alpha=0.5, resize="image", cmap=None)[0]
+    assert heatmaps_drawn.shape == (2, 2, 3)
+    assert np.all(heatmaps_drawn[0:2, 0, :] == 0)
+    assert np.all(heatmaps_drawn[0:2, 1, :] == 128) or np.all(heatmaps_drawn[0:2, 1, :] == 127)
+
+
+def test_HeatmapsOnImage_pad():
+    heatmaps_arr = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    heatmaps_padded = heatmaps.pad(top=1, right=2, bottom=3, left=4)
+    assert heatmaps_padded.arr_0to1.shape == (2+(1+3), 2+(4+2), 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad(top=1, right=2, bottom=3, left=4, cval=0.5)
+    assert heatmaps_padded.arr_0to1.shape == (2+(1+3), 2+(4+2), 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.0, 1.0, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.0, 1.0, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad(top=1, right=2, bottom=3, left=4, mode="edge")
+    assert heatmaps_padded.arr_0to1.shape == (2+(1+3), 2+(4+2), 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+        ])
+    )
+
+
+def test_HeatmapsOnImage_avg_pool():
+    heatmaps_arr = np.float32([
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_pooled = heatmaps.avg_pool(2)
+    assert heatmaps_pooled.arr_0to1.shape == (2, 2, 1)
+    assert np.allclose(
+        heatmaps_pooled.arr_0to1[:, :, 0],
+        np.float32([[0.0, 0.75],
+                    [0.0, 0.75]])
+    )
+
+
+def test_HeatmapsOnImage_max_pool():
+    heatmaps_arr = np.float32([
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_pooled = heatmaps.max_pool(2)
+    assert heatmaps_pooled.arr_0to1.shape == (2, 2, 1)
+    assert np.allclose(
+        heatmaps_pooled.arr_0to1[:, :, 0],
+        np.float32([[0.0, 1.0],
+                    [0.0, 1.0]])
+    )
+
+
+def test_HeatmapsOnImage_scale():
+    heatmaps_arr = np.float32([
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_scaled = heatmaps.scale(size=(4, 4), interpolation="nearest")
+    assert heatmaps_scaled.arr_0to1.shape == (4, 4, 1)
+    assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
+    assert np.allclose(
+        heatmaps_scaled.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0]
+        ])
+    )
+
+    heatmaps_arr = np.float32([
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_scaled = heatmaps.scale(size=2.0, interpolation="nearest")
+    assert heatmaps_scaled.arr_0to1.shape == (2, 4, 1)
+    assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
+    assert np.allclose(
+        heatmaps_scaled.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0]
+        ])
+    )
+
+
 def test_BatchLoader():
     def _load_func():
         for _ in sm.xrange(20):
@@ -1617,6 +2300,14 @@ def test_Lambda():
     images_aug = images + 1
     images_aug_list = [image + 1 for image in images_list]
 
+    heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
+                               [0.0, 0.0, 1.0],
+                               [0.0, 1.0, 1.0]])
+    heatmaps_arr_aug = np.float32([[0.5, 0.0, 1.0],
+                                   [0.0, 0.0, 1.0],
+                                   [0.0, 1.0, 1.0]])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
     keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=1),
@@ -1629,13 +2320,17 @@ def test_Lambda():
             images = images + 1
         return images
 
+    def func_heatmaps(heatmaps, random_state, parents, hooks):
+        heatmaps[0].arr_0to1[0, 0] += 0.5
+        return heatmaps
+
     def func_keypoints(keypoints_on_images, random_state, parents, hooks):
         for keypoints_on_image in keypoints_on_images:
             for kp in keypoints_on_image.keypoints:
                 kp.x = (kp.x + 1) % 3
         return keypoints_on_images
 
-    aug = iaa.Lambda(func_images, func_keypoints)
+    aug = iaa.Lambda(func_images, func_heatmaps, func_keypoints)
     aug_det = aug.to_deterministic()
 
     # check once that the augmenter can handle lists correctly
@@ -1656,6 +2351,18 @@ def test_Lambda():
         expected = images_aug
         assert np.array_equal(observed, expected)
 
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 3, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps_arr_aug)
+
+        observed = aug_det.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 3, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps_arr_aug)
+
         observed = aug.augment_keypoints(keypoints)
         expected = keypoints_aug
         assert keypoints_equal(observed, expected)
@@ -1675,6 +2382,11 @@ def test_AssertLambda():
     images = np.array([base_img])
     images_list = [base_img]
 
+    heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
+                               [0.0, 0.0, 1.0],
+                               [0.0, 1.0, 1.0]])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
@@ -1684,15 +2396,25 @@ def test_AssertLambda():
     def func_images_fails(images, random_state, parents, hooks):
         return images[0][0, 0] == 1
 
+    def func_heatmaps_succeeds(heatmaps, random_state, parents, hooks):
+        return heatmaps[0].arr_0to1[0, 0] < 0 + 1e-6
+
+    def func_heatmaps_fails(heatmaps, random_state, parents, hooks):
+        return heatmaps[0].arr_0to1[0, 0] > 0 + 1e-6
+
     def func_keypoints_succeeds(keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images[0].keypoints[0].x == 0 and keypoints_on_images[0].keypoints[2].x == 2
 
     def func_keypoints_fails(keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images[0].keypoints[0].x == 2
 
-    aug_succeeds = iaa.AssertLambda(func_images_succeeds, func_keypoints_succeeds)
+    aug_succeeds = iaa.AssertLambda(func_images=func_images_succeeds,
+                                    func_heatmaps=func_heatmaps_succeeds,
+                                    func_keypoints=func_keypoints_succeeds)
     aug_succeeds_det = aug_succeeds.to_deterministic()
-    aug_fails = iaa.AssertLambda(func_images_fails, func_keypoints_fails)
+    aug_fails = iaa.AssertLambda(func_images=func_images_fails,
+                                 func_heatmaps=func_heatmaps_fails,
+                                 func_keypoints=func_keypoints_fails)
     aug_fails_det = aug_fails.to_deterministic()
 
     # images as numpy array
@@ -1741,6 +2463,33 @@ def test_AssertLambda():
         errored = True
     assert errored
 
+    # heatmaps
+    observed = aug_succeeds.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
+    try:
+        observed = aug_fails.augment_heatmaps([heatmaps])[0]
+        errored = False
+    except AssertionError as e:
+        errored = True
+    assert errored
+
+    observed = aug_succeeds_det.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
+    try:
+        observed = aug_fails.augment_heatmaps([heatmaps])[0]
+        errored = False
+    except AssertionError as e:
+        errored = True
+    assert errored
+
     # keypoints
     observed = aug_succeeds.augment_keypoints(keypoints)
     expected = keypoints
@@ -1774,6 +2523,10 @@ def test_AssertShape():
     base_img = base_img[:, :, np.newaxis]
     images = np.array([base_img])
     images_list = [base_img]
+    heatmaps_arr = np.float32([[0.0, 0.0, 1.0, 0.0],
+                               [0.0, 0.0, 1.0, 0.0],
+                               [0.0, 1.0, 1.0, 0.0]])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 4, 3))
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
@@ -1783,6 +2536,11 @@ def test_AssertShape():
                             [1, 0, 1, 0]], dtype=np.uint8)
     base_img_h4 = base_img_h4[:, :, np.newaxis]
     images_h4 = np.array([base_img_h4])
+    heatmaps_arr_h4 = np.float32([[0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 0.0, 1.0, 0.0],
+                                  [0.0, 1.0, 1.0, 0.0],
+                                  [1.0, 0.0, 1.0, 0.0]])
+    heatmaps_h4 = ia.HeatmapsOnImage(heatmaps_arr_h4, shape=(4, 4, 3))
     keypoints_h4 = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                          ia.Keypoint(x=2, y=2)], shape=base_img_h4.shape)]
 
@@ -1808,6 +2566,18 @@ def test_AssertShape():
         expected = images
         assert np.array_equal(observed, expected)
 
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
+        observed = aug_det.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
         observed = aug.augment_keypoints(keypoints)
         expected = keypoints
         assert keypoints_equal(observed, expected)
@@ -1818,6 +2588,13 @@ def test_AssertShape():
 
         try:
             observed = aug.augment_images(images_h4)
+            errored = False
+        except AssertionError as e:
+            errored = True
+        assert errored
+
+        try:
+            observed = aug.augment_heatmaps([heatmaps_h4])[0]
             errored = False
         except AssertionError as e:
             errored = True
@@ -1842,6 +2619,18 @@ def test_AssertShape():
         expected = images
         assert np.array_equal(observed, expected)
 
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
+        observed = aug_det.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
         observed = aug.augment_keypoints(keypoints)
         expected = keypoints
         assert keypoints_equal(observed, expected)
@@ -1852,6 +2641,13 @@ def test_AssertShape():
 
         try:
             observed = aug.augment_images(images_h4)
+            errored = False
+        except AssertionError as e:
+            errored = True
+        assert errored
+
+        try:
+            observed = aug.augment_heatmaps([heatmaps_h4])[0]
             errored = False
         except AssertionError as e:
             errored = True
@@ -1876,6 +2672,18 @@ def test_AssertShape():
         expected = images
         assert np.array_equal(observed, expected)
 
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
+        observed = aug_det.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
         observed = aug.augment_keypoints(keypoints)
         expected = keypoints
         assert keypoints_equal(observed, expected)
@@ -1886,6 +2694,13 @@ def test_AssertShape():
 
         try:
             observed = aug.augment_images(images_h4)
+            errored = False
+        except AssertionError as e:
+            errored = True
+        assert errored
+
+        try:
+            observed = aug.augment_heatmaps([heatmaps_h4])[0]
             errored = False
         except AssertionError as e:
             errored = True
@@ -1910,6 +2725,18 @@ def test_AssertShape():
         expected = images
         assert np.array_equal(observed, expected)
 
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
+        observed = aug_det.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == (3, 4, 3)
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps.get_arr())
+
         observed = aug.augment_keypoints(keypoints)
         expected = keypoints
         assert keypoints_equal(observed, expected)
@@ -1920,6 +2747,13 @@ def test_AssertShape():
 
         try:
             observed = aug.augment_images(images_h4)
+            errored = False
+        except AssertionError as e:
+            errored = True
+        assert errored
+
+        try:
+            observed = aug.augment_heatmaps([heatmaps_h4])[0]
             errored = False
         except AssertionError as e:
             errored = True
@@ -1947,16 +2781,42 @@ def test_Alpha():
     reseed()
 
     base_img = np.zeros((3, 3, 1), dtype=np.uint8)
+    heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
+                               [0.0, 0.0, 1.0],
+                               [0.0, 1.0, 1.0]])
+    heatmaps_arr_r1 = np.float32([[0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0]])
+    heatmaps_arr_l1 = np.float32([[0.0, 1.0, 0.0],
+                                  [0.0, 1.0, 0.0],
+                                  [1.0, 1.0, 0.0]])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
 
     aug = iaa.Alpha(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = (base_img + 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
+    for per_channel in [False, True]:
+        aug = iaa.Alpha(1, iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":-1}), per_channel=per_channel)
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == heatmaps.shape
+        assert 0 - 1e-6 < heatmaps.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < heatmaps.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps_arr_r1)
+
     aug = iaa.Alpha(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = (base_img + 20).astype(np.uint8)
     assert np.allclose(observed, expected)
+
+    for per_channel in [False, True]:
+        aug = iaa.Alpha(0, iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":-1}), per_channel=per_channel)
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        assert observed.shape == heatmaps.shape
+        assert 0 - 1e-6 < heatmaps.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < heatmaps.max_value < 1 + 1e-6
+        assert np.allclose(observed.get_arr(), heatmaps_arr_l1)
 
     aug = iaa.Alpha(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
@@ -2141,16 +3001,40 @@ def test_AlphaElementwise():
     reseed()
 
     base_img = np.zeros((3, 3, 1), dtype=np.uint8)
+    heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
+                               [0.0, 0.0, 1.0],
+                               [0.0, 1.0, 1.0]])
+    heatmaps_arr_r1 = np.float32([[0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 0.0],
+                                  [0.0, 0.0, 1.0]])
+    heatmaps_arr_l1 = np.float32([[0.0, 1.0, 0.0],
+                                  [0.0, 1.0, 0.0],
+                                  [1.0, 1.0, 0.0]])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
 
     aug = iaa.AlphaElementwise(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = base_img + 10
     assert np.allclose(observed, expected)
 
+    aug = iaa.AlphaElementwise(1, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}))
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.get_arr(), heatmaps_arr_r1)
+
     aug = iaa.AlphaElementwise(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = base_img + 20
     assert np.allclose(observed, expected)
+
+    aug = iaa.AlphaElementwise(0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}))
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.get_arr(), heatmaps_arr_l1)
 
     aug = iaa.AlphaElementwise(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
@@ -2194,6 +3078,50 @@ def test_AlphaElementwise():
     image = np.zeros((10, 10, 3), dtype=np.uint8) + 1
     observed = aug.augment_image(image, hooks=hooks)
     assert np.array_equal(observed, image)
+
+    # -----
+    # heatmaps and per_channel
+    # -----
+    class _DummyMaskParameter(iap.StochasticParameter):
+        def __init__(self, inverted=False):
+            super(_DummyMaskParameter, self).__init__()
+            self.nb_calls = 0
+            self.inverted = inverted
+        def _draw_samples(self, size, random_state):
+            self.nb_calls += 1
+            h, w = size
+            ones = np.ones((h, w), dtype=np.float32)
+            zeros = np.zeros((h, w), dtype=np.float32)
+            if self.nb_calls == 1:
+                return zeros if not self.inverted else ones
+            elif self.nb_calls in [2, 3]:
+                return ones if not self.inverted else zeros
+            else:
+                assert False
+
+    aug = iaa.AlphaElementwise(
+        _DummyMaskParameter(inverted=False),
+        iaa.Affine(translate_px={"x": 1}),
+        iaa.Affine(translate_px={"x": -1}),
+        per_channel=True
+    )
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.get_arr(), heatmaps_arr_r1)
+
+    aug = iaa.AlphaElementwise(
+        _DummyMaskParameter(inverted=True),
+        iaa.Affine(translate_px={"x": 1}),
+        iaa.Affine(translate_px={"x": -1}),
+        per_channel=True
+    )
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.get_arr(), heatmaps_arr_l1)
 
     # -----
     # keypoints
@@ -2387,6 +3315,17 @@ def test_Scale():
     assert observed3d.shape == (12, 12, 3)
     assert 50 < np.average(observed2d) < 205
     assert 50 < np.average(observed3d) < 205
+
+    aug = iaa.Scale({"height": 8, "width": 12})
+    heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
+    heatmaps_aug = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img3d.shape)])[0]
+    assert heatmaps_aug.shape == base_img3d.shape
+    assert 0 - 1e-6 < heatmaps_aug.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < heatmaps_aug.max_value < 1 + 1e-6
+    assert np.average(heatmaps_aug.get_arr()[0, :]) < 0.05
+    assert np.average(heatmaps_aug.get_arr()[-1, :]) < 0.05
+    assert np.average(heatmaps_aug.get_arr()[:, 0]) < 0.05
+    assert 0.8 < np.average(heatmaps_aug.get_arr()[2:6, 2:10]) < 1 + 1e-6
 
     aug = iaa.Scale([12, 14])
     seen2d = [False, False]
@@ -2718,6 +3657,10 @@ def test_Pad():
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
+    heatmaps_arr = np.float32([[0, 0, 0],
+                               [0, 1.0, 0],
+                               [0, 0, 0]])
+
     # test pad by 1 pixel on each side
     pads = [
         (1, 0, 0, 0),
@@ -2741,6 +3684,18 @@ def test_Pad():
         keypoints_moved = [keypoints[0].shift(x=left, y=top)]
         observed = aug.augment_keypoints(keypoints)
         assert keypoints_equal(observed, keypoints_moved)
+
+        # heatmaps
+        height, width = heatmaps_arr.shape[0:2]
+        aug = iaa.Pad(px=pad, keep_size=False)
+        heatmaps_arr_padded = np.pad(heatmaps_arr, ((top, bottom), (left, right)),
+                                     mode="constant",
+                                     constant_values=0)
+        observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img.shape)])[0]
+        assert observed.shape == base_img.shape
+        assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+        assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+        assert np.array_equal(observed.get_arr(), heatmaps_arr_padded)
 
     # test pad by range of pixels
     pads = [
@@ -2883,6 +3838,12 @@ def test_Pad():
         got_exception = True
     assert got_exception
 
+    # pad modes, heatmaps
+    heatmaps = ia.HeatmapsOnImage(np.ones((3, 3, 1), dtype=np.float32), shape=(3, 3, 3))
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="edge", pad_cval=0, keep_size=False)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert np.sum(observed.get_arr() <= 1e-4) == 3
+
     # pad cvals
     aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=100, keep_size=False)
     observed = aug.augment_image(np.zeros((1, 1), dtype=np.uint8))
@@ -2931,6 +3892,12 @@ def test_Pad():
         got_exception = True
     assert got_exception
 
+    # pad cvals, heatmaps
+    heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32), shape=(3, 3, 3))
+    aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=255, keep_size=False)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert np.sum(observed.get_arr() > 1e-4) == 0
+
     # ------------------
     # pad by percentages
     # ------------------
@@ -2949,7 +3916,7 @@ def test_Pad():
     assert np.sum(observed) == 4*4
 
     # pad all sides by 100-200%
-    aug = iaa.Pad(percent=(1.0, 2.0), keep_size=False)
+    aug = iaa.Pad(percent=(1.0, 2.0), sample_independently=False, keep_size=False)
     observed = aug.augment_image(np.zeros((4, 4), dtype=np.uint8) + 1)
     assert np.sum(observed) == 4*4
     assert (observed.shape[0] - 4) % 2 == 0
@@ -3069,6 +4036,10 @@ def test_Crop():
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
+    heatmaps_arr = np.float32([[0, 0, 0],
+                               [0, 1.0, 0],
+                               [0, 0, 0]])
+
     # test crop by 1 pixel on each side
     crops = [
         (1, 0, 0, 0),
@@ -3090,6 +4061,12 @@ def test_Crop():
         keypoints_moved = [keypoints[0].shift(x=-left, y=-top)]
         observed = aug.augment_keypoints(keypoints)
         assert keypoints_equal(observed, keypoints_moved)
+
+        height, width = heatmaps_arr.shape[0:2]
+        aug = iaa.Crop(px=crop, keep_size=False)
+        heatmaps_arr_cropped = heatmaps_arr[top:height-bottom, left:width-right]
+        observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img.shape)])[0]
+        assert np.array_equal(observed.get_arr(), heatmaps_arr_cropped)
 
     # test crop by range of pixels
     crops = [
@@ -3343,6 +4320,23 @@ def test_Fliplr():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+    # 0% chance of flip, heatmaps
+    aug = iaa.Fliplr(0)
+    heatmaps = ia.HeatmapsOnImage(
+        np.float32([
+            [0, 0.5, 0.75],
+            [0, 0.5, 0.75],
+            [0.75, 0.75, 0.75],
+        ]),
+        shape=(3, 3, 3)
+    )
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = heatmaps.get_arr()
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), expected)
+
     # 100% chance of flip
     aug = iaa.Fliplr(1.0)
     aug_det = aug.to_deterministic()
@@ -3363,6 +4357,23 @@ def test_Fliplr():
         observed = aug_det.augment_keypoints(keypoints)
         expected = keypoints_flipped
         assert keypoints_equal(observed, expected)
+
+    # 100% chance of flip, heatmaps
+    aug = iaa.Fliplr(1.0)
+    heatmaps = ia.HeatmapsOnImage(
+        np.float32([
+            [0, 0.5, 0.75],
+            [0, 0.5, 0.75],
+            [0.75, 0.75, 0.75],
+        ]),
+        shape=(3, 3, 3)
+    )
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = np.fliplr(heatmaps.get_arr())
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), expected)
 
     # 50% chance of flip
     aug = iaa.Fliplr(0.5)
@@ -3491,6 +4502,23 @@ def test_Flipud():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+    # 0% chance of flip, heatmaps
+    aug = iaa.Flipud(0)
+    heatmaps = ia.HeatmapsOnImage(
+        np.float32([
+            [0, 0.5, 0.75],
+            [0, 0.5, 0.75],
+            [0.75, 0.75, 0.75],
+        ]),
+        shape=(3, 3, 3)
+    )
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = heatmaps.get_arr()
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), expected)
+
     # 100% chance of flip
     aug = iaa.Flipud(1.0)
     aug_det = aug.to_deterministic()
@@ -3511,6 +4539,23 @@ def test_Flipud():
         observed = aug_det.augment_keypoints(keypoints)
         expected = keypoints_flipped
         assert keypoints_equal(observed, expected)
+
+    # 100% chance of flip, heatmaps
+    aug = iaa.Flipud(1.0)
+    heatmaps = ia.HeatmapsOnImage(
+        np.float32([
+            [0, 0.5, 0.75],
+            [0, 0.5, 0.75],
+            [0.75, 0.75, 0.75],
+        ]),
+        shape=(3, 3, 3)
+    )
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = np.flipud(heatmaps.get_arr())
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), expected)
 
     # 50% chance of flip
     aug = iaa.Flipud(0.5)
@@ -6674,6 +7719,44 @@ def test_Affine():
     assert aug.translate.b.value == 10
 
     # ---------------------
+    # translate heatmaps
+    # ---------------------
+    heatmaps = ia.HeatmapsOnImage(
+        np.float32([
+            [0.0, 0.5, 0.75],
+            [0.0, 0.5, 0.75],
+            [0.75, 0.75, 0.75],
+        ]),
+        shape=(3, 3, 3)
+    )
+    arr_expected_1px_right = np.float32([
+        [0.0, 0.0, 0.5],
+        [0.0, 0.0, 0.5],
+        [0.0, 0.75, 0.75],
+    ])
+    aug = iaa.Affine(translate_px={"x": 1})
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # should still use mode=constant cval=0 even when other settings chosen
+    aug = iaa.Affine(translate_px={"x": 1}, cval=255)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    aug = iaa.Affine(translate_px={"x": 1}, mode="edge", cval=255)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # ---------------------
     # rotate
     # ---------------------
     # rotate by 45 degrees
@@ -7453,6 +8536,44 @@ def test_AffineCv2():
     assert aug.translate.b.value == 10
 
     # ---------------------
+    # translate heatmaps
+    # ---------------------
+    heatmaps = ia.HeatmapsOnImage(
+        np.float32([
+            [0.0, 0.5, 0.75],
+            [0.0, 0.5, 0.75],
+            [0.75, 0.75, 0.75],
+        ]),
+        shape=(3, 3, 3)
+    )
+    arr_expected_1px_right = np.float32([
+        [0.0, 0.0, 0.5],
+        [0.0, 0.0, 0.5],
+        [0.0, 0.75, 0.75],
+    ])
+    aug = iaa.AffineCv2(translate_px={"x": 1})
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # should still use mode=constant cval=0 even when other settings chosen
+    aug = iaa.AffineCv2(translate_px={"x": 1}, cval=255)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    aug = iaa.AffineCv2(translate_px={"x": 1}, mode="replicate", cval=255)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # ---------------------
     # rotate
     # ---------------------
     # rotate by 45 degrees
@@ -7750,6 +8871,8 @@ def test_PiecewiseAffine():
     img[:, 9:11+1] = 255
     img[:, 69:71+1] = 255
     mask = img > 0
+    heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=(60, 80, 3))
+    heatmaps_arr = heatmaps.get_arr()
 
     # -----
     # scale
@@ -7760,10 +8883,29 @@ def test_PiecewiseAffine():
     assert 100.0 < np.average(observed[mask]) < np.average(img[mask])
     assert 75.0 > np.average(observed[~mask]) > np.average(img[~mask])
 
+    # basic test, heatmaps
+    aug = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    observed_arr = observed.get_arr()
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert 100.0/255.0 < np.average(observed_arr[mask]) < np.average(heatmaps_arr[mask])
+    assert 75.0/255.0 > np.average(observed_arr[~mask]) > np.average(heatmaps_arr[~mask])
+
     # scale 0
     aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
     observed = aug.augment_image(img)
     assert np.array_equal(observed, img)
+
+    # scale 0, heatmaps
+    aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    observed_arr = observed.get_arr()
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed_arr, heatmaps_arr)
 
     # stronger scale should lead to stronger changes
     aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -7771,6 +8913,21 @@ def test_PiecewiseAffine():
     observed1 = aug1.augment_image(img)
     observed2 = aug2.augment_image(img)
     assert np.average(observed1[~mask]) < np.average(observed2[~mask])
+
+    # stronger scale should lead to stronger changes, heatmaps
+    aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
+    aug2 = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    observed1 = aug1.augment_heatmaps([heatmaps])[0]
+    observed1_arr = observed1.get_arr()
+    observed2 = aug2.augment_heatmaps([heatmaps])[0]
+    observed2_arr = observed2.get_arr()
+    assert observed1.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed1.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed1.max_value < heatmaps.max_value + 1e-6
+    assert observed2.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed2.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed2.max_value < heatmaps.max_value + 1e-6
+    assert np.average(observed1_arr[~mask]) < np.average(observed2_arr[~mask])
 
     # scale as list
     aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -8002,6 +9159,12 @@ def test_PiecewiseAffine():
     observed = aug.augment_image(img)
     assert np.sum([observed[:, :] == [0, 0, 0]]) > 0
 
+    # cval as deterministic, heatmaps should always use cval=0
+    heatmaps = ia.HeatmapsOnImage(np.zeros((50, 50, 1), dtype=np.float32), shape=(50, 50, 3))
+    aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10, mode="constant", cval=255)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert np.sum([observed.get_arr()[:, :] >= 0.01]) == 0
+
     # cval as list
     img = np.zeros((20, 20), dtype=np.uint8) + 255
     aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=5, nb_cols=5, mode="constant", cval=[0, 10])
@@ -8146,6 +9309,7 @@ def test_PerspectiveTransform():
 
     img = np.zeros((30, 30), dtype=np.uint8)
     img[10:20, 10:20] = 255
+    heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
 
     # without keep_size
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
@@ -8180,6 +9344,21 @@ def test_PerspectiveTransform():
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
+    #expected = ia.imresize_single_image(expected, (30, 30))
+
+    # with keep_size, heatmaps
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = heatmaps.get_arr()[int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8)]
+    expected = ia.imresize_single_image((expected*255).astype(np.uint8), img.shape[0:2], interpolation="cubic")
+    expected = (expected / 255.0).astype(np.float32)
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    # differences seem to mainly appear around the border of the inner rectangle, possibly
+    # due to interpolation
+    assert np.average(np.abs(observed.get_arr() - expected)) < 30.0
     #expected = ia.imresize_single_image(expected, (30, 30))
 
     # with keep_size, RGB images
@@ -8276,6 +9455,7 @@ def test_ElasticTransformation():
     img = np.zeros((50, 50), dtype=np.uint8) + 255
     img = np.pad(img, ((100, 100), (100, 100)), mode="constant", constant_values=0)
     mask = img > 0
+    heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
 
     # test basic funtionality
     aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
@@ -8284,6 +9464,15 @@ def test_ElasticTransformation():
     assert np.sum(observed[mask]) < np.sum(img[mask])
     # assume that some black/0 pixels have been moved away from the outer area and replaced by white/255 pixels
     assert np.sum(observed[~mask]) > np.sum(img[~mask])
+
+    # test basic funtionality, heatmaps
+    aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.sum(observed.get_arr()[mask]) < np.sum(heatmaps.get_arr()[mask])
+    assert np.sum(observed.get_arr()[~mask]) > np.sum(heatmaps.get_arr()[~mask])
 
     # test effects of increased alpha strength
     aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
@@ -8294,6 +9483,20 @@ def test_ElasticTransformation():
     assert np.sum(observed1[mask]) > np.sum(observed2[mask])
     # assume that the outer area has become more white-ish when using high alphas (more black pixels were moved into the inner area)
     assert np.sum(observed1[~mask]) < np.sum(observed2[~mask])
+
+    # test effects of increased alpha strength, heatmaps
+    aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
+    aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
+    observed1 = aug1.augment_heatmaps([heatmaps])[0]
+    observed2 = aug2.augment_heatmaps([heatmaps])[0]
+    assert observed1.shape == heatmaps.shape
+    assert observed2.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed1.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed1.max_value < heatmaps.max_value + 1e-6
+    assert heatmaps.min_value - 1e-6 < observed2.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed2.max_value < heatmaps.max_value + 1e-6
+    assert np.sum(observed1.get_arr()[mask]) > np.sum(observed2.get_arr()[mask])
+    assert np.sum(observed1.get_arr()[~mask]) < np.sum(observed2.get_arr()[~mask])
 
     # test effectsof increased sigmas
     aug1 = iaa.ElasticTransformation(alpha=3.0, sigma=0.1)
@@ -8444,6 +9647,15 @@ def test_ElasticTransformation():
         got_exception = True
     assert got_exception
 
+    # cval with heatmaps
+    heatmaps = ia.HeatmapsOnImage(np.zeros((32, 32, 1), dtype=np.float32), shape=(32, 32, 3))
+    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant", cval=255)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.sum(observed.get_arr() > 0.01) == 0
+
     # mode
     # no proper tests here, because unclear how to test
     aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=ia.ALL)
@@ -8566,7 +9778,7 @@ def test_clip_augmented_image_():
     image[0, 0] = 10
     image[0, 1] = 20
     image[0, 2] = 30
-    image_clipped = iaa.clip_augmented_image_(image, minval=15, maxval=25)
+    image_clipped = iaa.clip_augmented_image_(image, min_value=15, max_value=25)
     assert image_clipped[0, 0] == 15
     assert image_clipped[0, 1] == 20
     assert image_clipped[0, 2] == 25
@@ -8577,7 +9789,7 @@ def test_clip_augmented_image():
     image[0, 0] = 10
     image[0, 1] = 20
     image[0, 2] = 30
-    image_clipped = iaa.clip_augmented_image(image, minval=15, maxval=25)
+    image_clipped = iaa.clip_augmented_image(image, min_value=15, max_value=25)
     assert image_clipped[0, 0] == 15
     assert image_clipped[0, 1] == 20
     assert image_clipped[0, 2] == 25
@@ -8588,7 +9800,7 @@ def test_clip_augmented_images_():
     images[:, 0, 0] = 10
     images[:, 0, 1] = 20
     images[:, 0, 2] = 30
-    images_clipped = iaa.clip_augmented_images_(images, minval=15, maxval=25)
+    images_clipped = iaa.clip_augmented_images_(images, min_value=15, max_value=25)
     assert np.all(images_clipped[:, 0, 0] == 15)
     assert np.all(images_clipped[:, 0, 1] == 20)
     assert np.all(images_clipped[:, 0, 2] == 25)
@@ -8598,7 +9810,7 @@ def test_clip_augmented_images_():
         images[i][0, 0] = 10
         images[i][0, 1] = 20
         images[i][0, 2] = 30
-    images_clipped = iaa.clip_augmented_images_(images, minval=15, maxval=25)
+    images_clipped = iaa.clip_augmented_images_(images, min_value=15, max_value=25)
     assert isinstance(images_clipped, list)
     assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
     assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
@@ -8610,7 +9822,7 @@ def test_clip_augmented_images():
     images[:, 0, 0] = 10
     images[:, 0, 1] = 20
     images[:, 0, 2] = 30
-    images_clipped = iaa.clip_augmented_images(images, minval=15, maxval=25)
+    images_clipped = iaa.clip_augmented_images(images, min_value=15, max_value=25)
     assert np.all(images_clipped[:, 0, 0] == 15)
     assert np.all(images_clipped[:, 0, 1] == 20)
     assert np.all(images_clipped[:, 0, 2] == 25)
@@ -8620,7 +9832,7 @@ def test_clip_augmented_images():
         images[i][0, 0] = 10
         images[i][0, 1] = 20
         images[i][0, 2] = 30
-    images_clipped = iaa.clip_augmented_images(images, minval=15, maxval=25)
+    images_clipped = iaa.clip_augmented_images(images, min_value=15, max_value=25)
     assert isinstance(images_clipped, list)
     assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
     assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
@@ -8633,6 +9845,8 @@ def test_Augmenter():
     class DummyAugmenter(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return images
+        def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+            return heatmaps
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return keypoints_on_images
         def get_parameters(self):
@@ -8797,6 +10011,8 @@ def test_Augmenter():
     class DummyAugmenterCallsParent(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return super(DummyAugmenterCallsParent, self)._augment_images(images, random_state, parents, hooks)
+        def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+            return super(DummyAugmenterCallsParent, self)._augment_heatmaps(heatmaps, random_state, parents, hooks)
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return super(DummyAugmenterCallsParent, self)._augment_keypoints(keypoints_on_images, random_state, parents, hooks)
         def get_parameters(self):
@@ -8805,6 +10021,18 @@ def test_Augmenter():
     got_exception = False
     try:
         images_aug = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
+    except NotImplementedError:
+        got_exception = True
+    assert got_exception
+
+    # --------
+    # _augment_heatmaps
+    # --------
+    # TODO incomplete tests, handle only cases that were missing in code coverage report
+    heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32), shape=(3, 3, 3))
+    got_exception = False
+    try:
+        heatmaps_aug = aug.augment_heatmaps([heatmaps])
     except NotImplementedError:
         got_exception = True
     assert got_exception
@@ -8829,6 +10057,8 @@ def test_Augmenter():
     class DummyAugmenterBBs(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return images
+        def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+            return heatmaps
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return [keypoints_on_images_i.shift(x=1) for keypoints_on_images_i in keypoints_on_images]
         def get_parameters(self):
@@ -9007,6 +10237,8 @@ def test_Augmenter():
     class DummyAugmenterRepr(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return images
+        def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+            return heatmaps
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return keypoints_on_images
         def get_parameters(self):
@@ -9360,6 +10592,19 @@ def test_Sequential():
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_aug)
 
+    # heatmaps
+    heatmaps_arr = np.float32([[0, 0, 1.0],
+                               [0, 0, 1.0],
+                               [0, 1.0, 1.0]])
+    heatmaps_arr_expected = np.float32([[1.0, 1.0, 0.0],
+                                        [1.0, 0, 0],
+                                        [1.0, 0, 0]])
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))])[0]
+    assert observed.shape == (3, 3, 3)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1.0 - 1e-6 < observed.max_value < 1.0 + 1e-6
+    assert np.array_equal(observed.get_arr(), heatmaps_arr_expected)
+
     # 50% horizontal flip, 50% vertical flip
     aug = iaa.Sequential([
         iaa.Fliplr(0.5),
@@ -9407,6 +10652,13 @@ def test_Sequential():
     images_first_second = (images + 10) * 10
     images_second_first = (images * 10) + 10
 
+    heatmaps_arr = np.float32([[0.0, 0.5, 0.5],
+                               [0.0, 0.0, 0.5],
+                               [0.0, 0.0, 0.5]])
+    heatmaps_arr_first_second = (heatmaps_arr + 0.1) * 0.5
+    heatmaps_arr_second_first = (heatmaps_arr * 0.5) + 0.1
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=image.shape)]
     keypoints_first_second = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=image.shape)]
     keypoints_second_first = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0)], shape=image.shape)]
@@ -9416,6 +10668,16 @@ def test_Sequential():
 
     def images_second(images, random_state, parents, hooks):
         return images * 10
+
+    def heatmaps_first(heatmaps, random_state, parents, hooks):
+        for heatmaps_i in heatmaps:
+            heatmaps_i.arr_0to1 += 0.1
+        return heatmaps
+
+    def heatmaps_second(heatmaps, random_state, parents, hooks):
+        for heatmaps_i in heatmaps:
+            heatmaps_i.arr_0to1 *= 0.5
+        return heatmaps
 
     def keypoints_first(keypoints_on_images, random_state, parents, hooks):
         for keypoints_on_image in keypoints_on_images:
@@ -9430,15 +10692,15 @@ def test_Sequential():
         return keypoints_on_images
 
     aug_unrandom = iaa.Sequential([
-        iaa.Lambda(images_first, keypoints_first),
-        iaa.Lambda(images_second, keypoints_second)
+        iaa.Lambda(images_first, heatmaps_first, keypoints_first),
+        iaa.Lambda(images_second, heatmaps_second, keypoints_second)
     ], random_order=False)
-    aug_unrandom_det = aug.to_deterministic()
+    aug_unrandom_det = aug_unrandom.to_deterministic()
     aug_random = iaa.Sequential([
-        iaa.Lambda(images_first, keypoints_first),
-        iaa.Lambda(images_second, keypoints_second)
+        iaa.Lambda(images_first, heatmaps_first, keypoints_first),
+        iaa.Lambda(images_second, heatmaps_second, keypoints_second)
     ], random_order=True)
-    aug_random_det = aug.to_deterministic()
+    aug_random_det = aug_random.to_deterministic()
 
     last_aug = None
     last_aug_det = None
@@ -9450,6 +10712,10 @@ def test_Sequential():
     nb_images_second_first_unrandom = 0
     nb_images_first_second_random = 0
     nb_images_second_first_random = 0
+    nb_heatmaps_first_second_unrandom = 0
+    nb_heatmaps_second_first_unrandom = 0
+    nb_heatmaps_first_second_random = 0
+    nb_heatmaps_second_first_random = 0
     nb_keypoints_first_second_unrandom = 0
     nb_keypoints_second_first_unrandom = 0
     nb_keypoints_first_second_random = 0
@@ -9461,10 +10727,11 @@ def test_Sequential():
         observed_aug_random = aug_random.augment_images(images)
         observed_aug_random_det = aug_random_det.augment_images(images)
 
+        heatmaps_aug_unrandom = aug_unrandom.augment_heatmaps([heatmaps])[0]
+        heatmaps_aug_random = aug_random.augment_heatmaps([heatmaps])[0]
+
         keypoints_aug_unrandom = aug_unrandom.augment_keypoints(keypoints)
-        keypoints_aug_unrandom_det = aug_unrandom_det.augment_keypoints(keypoints)
         keypoints_aug_random = aug_random.augment_keypoints(keypoints)
-        keypoints_aug_random_det = aug_random_det.augment_keypoints(keypoints)
 
         if i == 0:
             last_aug = observed_aug
@@ -9491,6 +10758,20 @@ def test_Sequential():
         else:
             raise Exception("Received output doesnt match any expected output.")
 
+        if np.allclose(heatmaps_aug_unrandom.get_arr(), heatmaps_arr_first_second):
+            nb_heatmaps_first_second_unrandom += 1
+        elif np.allclose(heatmaps_aug_unrandom.get_arr(), heatmaps_arr_second_first):
+            nb_heatmaps_second_first_unrandom += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if np.allclose(heatmaps_aug_random.get_arr(), heatmaps_arr_first_second):
+            nb_heatmaps_first_second_random += 1
+        elif np.allclose(heatmaps_aug_random.get_arr(), heatmaps_arr_second_first):
+            nb_heatmaps_second_first_random += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
         if keypoints_equal(keypoints_aug_unrandom, keypoints_first_second):
             nb_keypoints_first_second_unrandom += 1
         elif keypoints_equal(keypoints_aug_unrandom, keypoints_second_first):
@@ -9509,12 +10790,42 @@ def test_Sequential():
     assert nb_changed_aug_det == 0
     assert nb_images_first_second_unrandom == nb_iterations
     assert nb_images_second_first_unrandom == 0
+    assert nb_heatmaps_first_second_unrandom == nb_iterations
+    assert nb_heatmaps_second_first_unrandom == 0
     assert nb_keypoints_first_second_unrandom == nb_iterations
     assert nb_keypoints_second_first_unrandom == 0
     assert (0.50 - 0.1) <= nb_images_first_second_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_images_second_first_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_keypoints_first_second_random / nb_iterations <= (0.50 + 0.1)
     assert (0.50 - 0.1) <= nb_keypoints_second_first_random / nb_iterations <= (0.50 + 0.1)
+
+    # random order for heatmaps
+    # TODO this is now already tested above via lamdba functions?
+    aug = iaa.Sequential([
+        iaa.Affine(translate_px={"x": 1}),
+        iaa.Fliplr(1.0)
+    ], random_order=True)
+    heatmaps_arr = np.float32([[0, 0, 1.0],
+                               [0, 0, 1.0],
+                               [0, 1.0, 1.0]])
+    heatmaps_arr_expected1 = np.float32([[0.0, 0.0, 0.0],
+                                         [0.0, 0.0, 0.0],
+                                         [1.0, 0.0, 0.0]])
+    heatmaps_arr_expected2 = np.float32([[0.0, 1.0, 0.0],
+                                         [0.0, 1.0, 0.0],
+                                         [0.0, 1.0, 1.0]])
+    seen = [False, False]
+    for _ in sm.xrange(100):
+        observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))])[0]
+        if np.allclose(observed.get_arr(), heatmaps_arr_expected1):
+            seen[0] = True
+        elif np.allclose(observed.get_arr(), heatmaps_arr_expected2):
+            seen[1] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
 
     # None as children
     aug = iaa.Sequential(children=None)
@@ -9609,6 +10920,34 @@ def test_SomeOf():
 
     observed = iaa.SomeOf(n=4, children=augs).augment_image(zeros)
     assert np.sum(observed) in [9*1+9*2+9*3]
+
+    # basic heatmaps test
+    augs = [iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":1})]
+    heatmaps_arr = np.float32([[1.0, 0.0, 0.0],
+                               [1.0, 0.0, 0.0],
+                               [1.0, 0.0, 0.0]])
+    heatmaps_arr0 = np.float32([[1.0, 0.0, 0.0],
+                                [1.0, 0.0, 0.0],
+                                [1.0, 0.0, 0.0]])
+    heatmaps_arr1 = np.float32([[0.0, 1.0, 0.0],
+                                [0.0, 1.0, 0.0],
+                                [0.0, 1.0, 0.0]])
+    heatmaps_arr2 = np.float32([[0.0, 0.0, 1.0],
+                                [0.0, 0.0, 1.0],
+                                [0.0, 0.0, 1.0]])
+    heatmaps_arr3 = np.float32([[0.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0]])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+    observed0 = iaa.SomeOf(n=0, children=augs).augment_heatmaps([heatmaps])[0]
+    observed1 = iaa.SomeOf(n=1, children=augs).augment_heatmaps([heatmaps])[0]
+    observed2 = iaa.SomeOf(n=2, children=augs).augment_heatmaps([heatmaps])[0]
+    observed3 = iaa.SomeOf(n=3, children=augs).augment_heatmaps([heatmaps])[0]
+    assert all([obs.shape == (3, 3, 3) for obs in [observed0, observed1, observed2, observed3]])
+    assert all([0 - 1e-6 < obs.min_value < 0 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
+    assert all([1 - 1e-6 < obs.max_value < 1 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
+    for obs, exp in zip([observed0, observed1, observed2, observed3], [heatmaps_arr0, heatmaps_arr1, heatmaps_arr2, heatmaps_arr3]):
+        assert np.array_equal(obs.get_arr(), exp)
 
     # n as tuple
     augs = [iaa.Add(1), iaa.Add(2), iaa.Add(4)]
@@ -9836,6 +11175,13 @@ def test_Sometimes():
     keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2),
                                          ia.Keypoint(x=2, y=1)], shape=image.shape)]
 
+    heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
+                               [0.0, 0.0, 1.0],
+                               [0.0, 1.0, 1.0]])
+    heatmaps_arr_lr = np.fliplr(heatmaps_arr)
+    heatmaps_arr_ud = np.flipud(heatmaps_arr)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+
     # 100% chance of if-branch
     aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
     aug_det = aug.to_deterministic()
@@ -9858,6 +11204,14 @@ def test_Sometimes():
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_lr)
 
+    # 100% chance of if-branch, heatmaps
+    aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.array_equal(observed.get_arr(), heatmaps_arr_lr)
+
     # 100% chance of else-branch
     aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
     aug_det = aug.to_deterministic()
@@ -9879,6 +11233,14 @@ def test_Sometimes():
 
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_ud)
+
+    # 100% chance of else-branch, heatmaps
+    aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    assert observed.shape == heatmaps.shape
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.array_equal(observed.get_arr(), heatmaps_arr_ud)
 
     # 50% if branch, 50% else branch
     aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -10543,11 +11905,13 @@ def test_determinism():
         iaa.Noop(name="Noop-nochange"),
         iaa.Lambda(
             func_images=lambda images, random_state, parents, hooks: images,
+            func_heatmaps=lambda heatmaps, random_state, parents, hooks: heatmaps,
             func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: keypoints_on_images,
             name="Lambda-nochange"
         ),
         iaa.AssertLambda(
             func_images=lambda images, random_state, parents, hooks: True,
+            func_heatmaps=lambda heatmaps, random_state, parents, hooks: True,
             func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: True,
             name="AssertLambda-nochange"
         ),

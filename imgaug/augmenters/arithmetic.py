@@ -136,6 +136,9 @@ class Add(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -248,6 +251,9 @@ class AddElementwise(Augmenter):
             result[i] = after_add
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -447,6 +453,9 @@ class Multiply(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -561,6 +570,9 @@ class MultiplyElementwise(Augmenter):
             result[i] = image
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -897,6 +909,9 @@ class ReplaceElementwise(Augmenter):
             result[i] = image_repl
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -1531,6 +1546,9 @@ class Invert(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -1632,6 +1650,9 @@ class ContrastNormalization(Augmenter):
             result[i] = image
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images

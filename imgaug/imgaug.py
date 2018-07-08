@@ -13,7 +13,8 @@ import sys
 import six
 import six.moves as sm
 import os
-from skimage import draw
+import skimage.draw
+import skimage.measure
 import collections
 import time
 
@@ -476,9 +477,10 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         Array of the images to resize.
         Expected to usually be of dtype uint8.
 
-    sizes : iterable of two ints
-        The new size in (height, width)
-        format.
+    sizes : float or iterable of two ints or iterable of two floats
+        The new size of the images, given either as a fraction (a single float)
+        or as a (height, width) tuple of two integers or as a
+        (height fraction, width fraction) tuple of two floats.
 
     interpolation : None or string or int, optional(default=None)
         The interpolation to use during resize.
@@ -501,13 +503,37 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     result : (N,H',W',C) ndarray
         Array of the resized images.
 
+    Examples
+    --------
+    >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), 2.0)
+    Converts 2 RGB images of height and width 16 to images of height and width 16*2 = 32.
+
+    >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), (16, 32))
+    Converts 2 RGB images of height and width 16 to images of height 16 and width 32.
+
+    >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), (2.0, 4.0))
+    Converts 2 RGB images of height and width 16 to images of height 32 and width 64.
+
     """
-    s = images.shape
-    do_assert(len(s) == 4, s)
-    nb_images = s[0]
-    im_height, im_width = s[1], s[2]
-    nb_channels = s[3]
-    height, width = sizes[0], sizes[1]
+    shape = images.shape
+    do_assert(images.ndim == 4, "Expected array of shape (N, H, W, C), got shape %s" % (str(shape),))
+    nb_images = shape[0]
+    im_height, im_width = shape[1], shape[2]
+    nb_channels = shape[3]
+    if is_single_float(sizes):
+        do_assert(sizes > 0.0)
+        height = int(round(im_height * sizes))
+        width = int(round(im_width * sizes))
+    else:
+        do_assert(len(sizes) == 2)
+        all_int = all([is_single_integer(size) for size in sizes])
+        all_float = all([is_single_float(size) for size in sizes])
+        do_assert(all_int or all_float)
+        if all_int:
+            height, width = sizes[0], sizes[1]
+        else:
+            height = int(round(im_height * sizes[0]))
+            width = int(round(im_width * sizes[1]))
 
     if height == im_height and width == im_width:
         return np.copy(images)
@@ -570,6 +596,105 @@ def imresize_single_image(image, sizes, interpolation=None):
         return np.squeeze(rs[0, :, :, 0])
     else:
         return rs[0, ...]
+
+
+def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
+    assert arr.ndim in [2, 3]
+    assert top >= 0
+    assert right >= 0
+    assert bottom >= 0
+    assert left >= 0
+    if top > 0 or right > 0 or bottom > 0 or left > 0:
+        paddings_np = [(top, bottom), (left, right)]  # paddings for 2d case
+        if arr.ndim == 3:
+            paddings_np.append((0, 0))  # add paddings for 3d case
+
+        if mode == "constant":
+            arr_pad = np.pad(
+                arr,
+                paddings_np,
+                mode=mode,
+                constant_values=cval
+            )
+        else:
+            arr_pad = np.pad(
+                arr,
+                paddings_np,
+                mode=mode
+            )
+        return arr_pad
+    else:
+        return np.copy(arr)
+
+
+def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
+    assert arr.ndim in [2, 3]
+    assert aspect_ratio > 0
+    height, width = arr.shape[0:2]
+    assert height > 0
+    aspect_ratio_current = width / height
+
+    pad_top = 0
+    pad_right = 0
+    pad_bottom = 0
+    pad_left = 0
+
+    if aspect_ratio_current < aspect_ratio:
+        # vertical image, height > width
+        diff = (aspect_ratio * height) - width
+        pad_right = int(np.ceil(diff / 2))
+        pad_left = int(np.floor(diff / 2))
+    elif aspect_ratio_current > aspect_ratio:
+        # horizontal image, width > height
+        diff = ((1/aspect_ratio) * width) - height
+        pad_top = int(np.ceil(diff / 2))
+        pad_bottom = int(np.floor(diff / 2))
+
+    return (pad_top, pad_right, pad_bottom, pad_left)
+
+
+def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
+    pad_top, pad_right, pad_bottom, pad_left = compute_paddings_for_aspect_ratio(arr, aspect_ratio)
+    arr_padded = pad(
+        arr,
+        top=pad_top,
+        right=pad_right,
+        bottom=pad_bottom,
+        left=pad_left,
+        mode=mode,
+        cval=cval
+    )
+
+    if return_pad_amounts:
+        return arr_padded, (pad_top, pad_right, pad_bottom, pad_left)
+    else:
+        return arr_padded
+
+
+def pool(arr, block_size, func, cval=0, preserve_dtype=True):
+    assert arr.ndim in [2, 3]
+    is_valid_int = is_single_integer(block_size) and block_size >= 1
+    is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] and [is_single_integer(val) and val >= 1 for val in block_size]
+    assert is_valid_int or is_valid_tuple
+
+    if is_single_integer(block_size):
+        block_size = [block_size, block_size]
+    if len(block_size) < arr.ndim:
+        block_size = list(block_size) + [1]
+
+    input_dtype = arr.dtype
+    arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func, cval=cval)
+    if preserve_dtype and arr_reduced.dtype.type != input_dtype:
+        arr_reduced = arr_reduced.astype(input_dtype)
+    return arr_reduced
+
+
+def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
+    return pool(arr, block_size, np.average, cval=cval, preserve_dtype=preserve_dtype)
+
+
+def max_pool(arr, block_size, cval=0, preserve_dtype=True):
+    return pool(arr, block_size, np.max, cval=cval, preserve_dtype=preserve_dtype)
 
 
 def draw_grid(images, rows=None, cols=None):
@@ -741,11 +866,13 @@ class HooksImages(object):
 
     """
 
+    #def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None, propagation_method=None):
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
         self.propagator = propagator
         self.preprocessor = preprocessor
         self.postprocessor = postprocessor
+        #self.propagation_method = propagation_method
 
     def is_activated(self, images, augmenter, parents, default):
         """
@@ -784,6 +911,12 @@ class HooksImages(object):
         else:
             return self.propagator(images, augmenter, parents, default)
 
+    #def get_propagation_method(self, images, augmenter, parents, child, default):
+    #    if self.propagation_method is None:
+    #        return default
+    #    else:
+    #        return self.propagation_method(images, augmenter, parents, child, default)
+
     def preprocess(self, images, augmenter, parents):
         """
         A function to be called before the augmentation of images starts (per
@@ -816,6 +949,17 @@ class HooksImages(object):
         else:
             return self.postprocessor(images, augmenter, parents)
 
+class HooksHeatmaps(HooksImages):
+    """
+    Class to intervene with heatmap augmentation runs.
+
+    This is e.g. useful to dynamically deactivate some augmenters.
+
+    This class is currently the same as the one for images. This may or may
+    not change in the future.
+
+    """
+    pass
 
 class HooksKeypoints(HooksImages):
     """
@@ -1456,7 +1600,7 @@ class BoundingBox(object):
         for i in range(thickness):
             y = [self.y1_int-i, self.y1_int-i, self.y2_int+i, self.y2_int+i]
             x = [self.x1_int-i, self.x2_int+i, self.x2_int+i, self.x1_int-i]
-            rr, cc = draw.polygon_perimeter(y, x, shape=result.shape)
+            rr, cc = skimage.draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
                 result[rr, cc, :] = color
             else:
@@ -1687,6 +1831,216 @@ class BoundingBoxesOnImage(object):
 
     def __str__(self):
         return "BoundingBoxesOnImage(%s, shape=%s)" % (str(self.bounding_boxes), self.shape)
+
+
+class HeatmapsOnImage(object):
+    def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
+        assert arr.dtype.type in [np.float32]
+        assert arr.ndim in [2, 3]
+        assert len(shape) in [2, 3]
+        assert min_value < max_value
+        assert np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps
+        assert np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps
+
+        if arr.ndim == 2:
+            arr = arr[..., np.newaxis]
+            self.arr_was_2d = True
+        else:
+            self.arr_was_2d = False
+
+        eps = np.finfo(np.float32).eps
+        min_is_zero = 0.0 - eps  < min_value < 0.0 + eps
+        max_is_one = 1.0 - eps < max_value < 1.0 + eps
+        if min_is_zero and max_is_one:
+            self.arr_0to1 = arr
+        else:
+            self.arr_0to1 = (arr - min_value) / (max_value - min_value)
+        self.shape = shape
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def get_arr(self):
+        if self.arr_was_2d and self.arr_0to1.shape[2] == 1:
+            arr = self.arr_0to1[:, :, 0]
+        else:
+            arr = self.arr_0to1
+
+        eps = np.finfo(np.float32).eps
+        min_is_zero = 0.0 - eps < self.min_value < 0.0 + eps
+        max_is_one = 1.0 - eps < self.max_value < 1.0 + eps
+        if min_is_zero and max_is_one:
+            return np.copy(arr)
+        else:
+            diff = self.max_value - self.min_value
+            return self.min_value + diff * arr
+
+    # TODO
+    #def find_global_maxima(self):
+    #    raise NotImplementedError()
+
+    def draw(self, size=None, cmap="jet"):
+        heatmaps_uint8 = self.to_uint8()
+        heatmaps_drawn = []
+
+        for c in sm.xrange(heatmaps_uint8.shape[2]):
+            # c:c+1 here, because the additional axis is needed by imresize_single_image
+            heatmap_c = heatmaps_uint8[..., c:c+1]
+
+            if size is not None:
+                heatmap_c_rs = imresize_single_image(heatmap_c, size,
+                                                     interpolation="nearest")
+            else:
+                heatmap_c_rs = heatmap_c
+            heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
+
+            if cmap is not None:
+                import matplotlib.pyplot as plt
+
+                cmap_func = plt.get_cmap(cmap)
+                heatmap_cmapped = cmap_func(heatmap_c_rs)
+                heatmap_cmapped = np.delete(heatmap_cmapped, 3, 2)
+            else:
+                heatmap_cmapped = np.tile(heatmap_c_rs[..., np.newaxis], (1, 1, 3))
+
+            heatmap_cmapped = np.clip(heatmap_cmapped * 255, 0, 255).astype(np.uint8)
+
+            heatmaps_drawn.append(heatmap_cmapped)
+        return heatmaps_drawn
+
+    def draw_on_image(self, image, alpha=0.75, cmap="jet", resize="heatmaps"):
+        # assert RGB image
+        assert image.ndim == 3
+        assert image.shape[2] == 3
+        assert image.dtype.type == np.uint8
+
+        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8
+        assert resize in ["heatmaps", "image"]
+
+        if resize == "image":
+            image = imresize_single_image(image, self.arr_0to1.shape[0:2], interpolation="cubic")
+
+        heatmaps_drawn = self.draw(
+            size=image.shape[0:2] if resize == "heatmaps" else None,
+            cmap=cmap
+        )
+
+        mix = [
+            np.clip((1-alpha) * image + alpha * heatmap_i, 0, 255).astype(np.uint8)
+            for heatmap_i
+            in heatmaps_drawn
+        ]
+
+        return mix
+
+    def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0.0):
+        arr_0to1_padded = pad(self.arr_0to1, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
+        return HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
+        arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
+        heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        if return_pad_amounts:
+            return heatmaps, pad_amounts
+        else:
+            return heatmaps
+
+    def avg_pool(self, block_size):
+        arr_0to1_reduced = avg_pool(self.arr_0to1, block_size)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def max_pool(self, block_size):
+        arr_0to1_reduced = max_pool(self.arr_0to1, block_size)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def scale(self, size, interpolation="cubic"):
+        arr_0to1_rescaled = imresize_single_image(self.arr_0to1, size, interpolation=interpolation)
+
+        # cubic interpolation can lead to values outside of [0.0, 1.0],
+        # see https://github.com/opencv/opencv/issues/7195
+        # TODO area interpolation too?
+        arr_0to1_rescaled = np.clip(arr_0to1_rescaled, 0.0, 1.0)
+
+        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def to_uint8(self):
+        arr_0to255 = np.clip(np.round(self.arr_0to1 * 255), 0, 255)
+        arr_uint8 = arr_0to255.astype(np.uint8)
+        return arr_uint8
+
+    @staticmethod
+    def from_uint8(arr_uint8, shape, min_value=0.0, max_value=1.0):
+        arr_0to1 = arr_uint8.astype(np.float32) / 255.0
+        return HeatmapsOnImage.from_0to1(arr_0to1, shape, min_value=min_value, max_value=max_value)
+
+    @staticmethod
+    def from_0to1(arr_0to1, shape, min_value=0.0, max_value=1.0):
+        heatmaps = HeatmapsOnImage(arr_0to1, shape, min_value=0.0, max_value=1.0)
+        heatmaps.min_value = min_value
+        heatmaps.max_value = max_value
+        return heatmaps
+
+    @staticmethod
+    def change_normalization(arr, source, target):
+        assert is_np_array(arr)
+
+        if isinstance(source, Heatmaps):
+            source = (source.min_value, source.max_value)
+        else:
+            assert isinstance(source, tuple)
+            assert len(source) == 2
+            assert source[0] < source[1]
+
+        if isinstance(target, Heatmaps):
+            target = (target.min_value, target.max_value)
+        else:
+            assert isinstance(target, tuple)
+            assert len(target) == 2
+            assert target[0] < target[1]
+
+        # Check if source and target are the same (with a tiny bit of tolerance)
+        # if so, evade compuation and just copy the array instead.
+        # This is reasonable, as source and target will often both be (0.0, 1.0).
+        eps = np.finfo(arr.dtype).eps
+        mins_same = source[0] - 10*eps < target[0] < source[0] + 10*eps
+        maxs_same = source[1] - 10*eps < target[1] < source[1] + 10*eps
+        if mins_same and maxs_same:
+            return np.copy(arr)
+
+        min_source, max_source = source
+        min_target, max_target = target
+
+        diff_source = max_source - min_source
+        diff_target = max_target - min_target
+
+        arr_0to1 = (arr - min_source) / diff_source
+        arr_target = min_target + arr_0to1 * diff_target
+
+        return arr_target
+
+    def copy(self):
+        """
+        Create a shallow copy of the Heatmaps object.
+
+        Returns
+        -------
+        out : Heatmaps
+            Shallow copy.
+
+        """
+        return self.deepcopy()
+
+    def deepcopy(self):
+        """
+        Create a deep copy of the Heatmaps object.
+
+        Returns
+        -------
+        out : Heatmaps
+            Deep copy.
+
+        """
+        return HeatmapsOnImage(self.get_arr(), shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
 
 ############################
 # Background augmentation

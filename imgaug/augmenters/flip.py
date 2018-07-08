@@ -73,6 +73,17 @@ class Fliplr(Augmenter): # pylint: disable=locally-disabled, unused-variable, li
                 images[i] = np.fliplr(images[i])
         return images
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        arrs_flipped = self._augment_images(
+            [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps],
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
+        for heatmaps_i, arr_flipped in zip(heatmaps, arrs_flipped):
+            heatmaps_i.arr_0to1 = arr_flipped
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         nb_images = len(keypoints_on_images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
@@ -134,6 +145,17 @@ class Flipud(Augmenter): # pylint: disable=locally-disabled, unused-variable, li
             if samples[i] == 1:
                 images[i] = np.flipud(images[i])
         return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        arrs_flipped = self._augment_images(
+            [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps],
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
+        for heatmaps_i, arr_flipped in zip(heatmaps, arrs_flipped):
+            heatmaps_i.arr_0to1 = arr_flipped
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         nb_images = len(keypoints_on_images)
