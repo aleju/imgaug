@@ -235,6 +235,9 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
         matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
         return [matrix] * nb_channels
 
+    if name is None:
+        name = "UnnamedSharpen"
+
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO tests
@@ -323,6 +326,9 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
         matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
         return [matrix] * nb_channels
 
+    if name is None:
+        name = "UnnamedEmboss"
+
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO tests
@@ -385,6 +391,9 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
         ], dtype=np.float32)
         matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
         return [matrix] * nb_channels
+
+    if name is None:
+        name = "UnnamedEdgeDetect"
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -523,5 +532,8 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
         matrix = (1-alpha_sample) * matrix_nochange + alpha_sample * matrix_effect
 
         return [matrix] * nb_channels
+
+    if name is None:
+        name = "UnnamedDirectedEdgeDetect"
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)

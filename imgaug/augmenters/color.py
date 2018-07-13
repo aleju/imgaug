@@ -161,6 +161,9 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
     that channel).
 
     """
+    if name is None:
+        name = "UnnamedAddToHueAndSaturation"
+
     return WithColorspace(
         to_colorspace="HSV",
         from_colorspace=from_colorspace,
@@ -408,4 +411,7 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     percent of the grayscale image (i.e. 50 percent of color removed).
 
     """
+    if name is None:
+        name = "UnnamedGrayscale"
+
     return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)
