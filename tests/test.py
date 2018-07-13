@@ -27,6 +27,7 @@ def main():
     test_is_single_integer()
     test_is_single_float()
 
+    test_caller_name()
     test_find()
     test_remove()
     test_hooks()
@@ -145,6 +146,10 @@ def test_is_single_float():
     assert ia.is_single_float(1234) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
+
+
+def test_caller_name():
+    assert ia.caller_name() == 'test_caller_name'
 
 
 def test_find():
