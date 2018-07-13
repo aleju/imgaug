@@ -1075,7 +1075,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
 
     if name is None:
         name = "UnnamedCrop"
-    
+
     aug = CropAndPad(
         px=px, percent=percent,
         keep_size=keep_size, sample_independently=sample_independently,
