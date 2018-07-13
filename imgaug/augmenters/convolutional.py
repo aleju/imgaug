@@ -236,7 +236,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
         return [matrix] * nb_channels
 
     if name is None:
-        name = "UnnamedSharpen"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -327,7 +327,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
         return [matrix] * nb_channels
 
     if name is None:
-        name = "UnnamedEmboss"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -393,7 +393,7 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
         return [matrix] * nb_channels
 
     if name is None:
-        name = "UnnamedEdgeDetect"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -534,6 +534,6 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
         return [matrix] * nb_channels
 
     if name is None:
-        name = "UnnamedDirectedEdgeDetect"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)

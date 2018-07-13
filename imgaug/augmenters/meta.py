@@ -2268,7 +2268,7 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
         ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks), "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
         return keypoints_on_images
     if name is None:
-        name = "UnnamedAssertLambda"
+        name = "Unnamed%s" % (ia.caller_name(),)
     return Lambda(func_images_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
 
 
@@ -2379,6 +2379,6 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
         return keypoints_on_images
 
     if name is None:
-        name = "UnnamedAssertShape"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return Lambda(func_images, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)

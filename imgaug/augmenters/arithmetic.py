@@ -340,7 +340,7 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
         raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
 
     if name is None:
-        name = "UnnamedAdditiveGaussianNoise"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return AddElementwise(Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -644,7 +644,7 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
         raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
 
     if name is None:
-        name = "UnnamedDropout"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -779,7 +779,7 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
         raise Exception("Either size_px or size_percent must be set.")
 
     if name is None:
-        name = "UnnamedCoarseDropout"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return MultiplyElementwise(p3, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -953,7 +953,7 @@ def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random
 
     """
     if name is None:
-        name = "UnnamedSaltAndPepper"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return ReplaceElementwise(
         mask=p,
@@ -1068,7 +1068,7 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     replacement = iap.Beta(0.5, 0.5) * 255
 
     if name is None:
-        name = "UnnamedCoarseSaltAndPepper"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return ReplaceElementwise(
         mask=mask_low,
@@ -1128,7 +1128,7 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
     replacement = replacement01 * 255
 
     if name is None:
-        name = "UnnamedSalt"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return ReplaceElementwise(
         mask=p,
@@ -1248,7 +1248,7 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
     replacement = replacement01 * 255
 
     if name is None:
-        name = "UnnamedCoarseSalt"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return ReplaceElementwise(
         mask=mask_low,
@@ -1310,7 +1310,7 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
     replacement = replacement01 * 255
 
     if name is None:
-        name = "UnnamedPepper"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return ReplaceElementwise(
         mask=p,
@@ -1430,7 +1430,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
     replacement = replacement01 * 255
 
     if name is None:
-        name = "UnnamedCoarsePepper"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return ReplaceElementwise(
         mask=mask_low,

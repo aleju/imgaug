@@ -725,7 +725,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         )
 
     if name is None:
-        name = "UnnamedSimplexNoiseAlpha"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return AlphaElementwise(
         factor=noise, first=first, second=second, per_channel=per_channel,
@@ -926,7 +926,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         )
 
     if name is None:
-        name = "UnnamedFrequencyNoiseAlpha"
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return AlphaElementwise(
         factor=noise, first=first, second=second, per_channel=per_channel,

@@ -194,6 +194,18 @@ def is_callable(val):
     else:
         return callable(val)
 
+def caller_name():
+    """
+    Returns the name of the caller, e.g. a function.
+
+    Returns
+    -------
+    name : str
+        The name of the caller as a string
+
+    """
+    return sys._getframe(1).f_code.co_name
+
 def seed(seedval):
     """
     Set the seed used by the global random state and thereby all randomness
