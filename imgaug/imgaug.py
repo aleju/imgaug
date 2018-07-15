@@ -328,14 +328,56 @@ def copy_random_state(random_state, force_copy=False):
         return rs_copy
 
 def derive_random_state(random_state):
+    """
+    Create a new random states based on an existing random state or seed.
+
+    Parameters
+    ----------
+    random_state : np.random.RandomState
+        Random state or seed from which to derive the new random state.
+
+    Returns
+    -------
+    result : np.random.RandomState
+        Derived random state.
+
+    """
     return derive_random_states(random_state, n=1)[0]
 
 # TODO use this everywhere instead of manual seed + create
 def derive_random_states(random_state, n=1):
+    """
+    Create N new random states based on an existing random state or seed.
+
+    Parameters
+    ----------
+    random_state : np.random.RandomState
+        Random state or seed from which to derive new random states.
+
+    n : int, optional(default=1)
+        Number of random states to derive.
+
+    Returns
+    -------
+    result : list of np.random.RandomState
+        Derived random states.
+
+    """
     seed = random_state.randint(0, 10**6, 1)[0]
     return [new_random_state(seed+i) for i in sm.xrange(n)]
 
 def forward_random_state(random_state):
+    """
+    Forward the internal state of a random state.
+
+    This makes sure that future calls to the random_state will produce new random values.
+
+    Parameters
+    ----------
+    random_state : np.random.RandomState
+        Random state to forward.
+
+    """
     random_state.uniform()
 
 # TODO
@@ -479,6 +521,8 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=lo
 
     return img_np
 
+
+# TODO rename sizes to size?
 def imresize_many_images(images, sizes=None, interpolation=None):
     """
     Resize many images to a specified size.
@@ -586,7 +630,7 @@ def imresize_single_image(image, sizes, interpolation=None):
         Array of the image to resize.
         Expected to usually be of dtype uint8.
 
-    sizes : iterable of two ints
+    sizes : float or iterable of two ints or iterable of two floats
         See `imresize_many_images()`.
 
     interpolation : None or string or int, optional(default=None)
@@ -611,6 +655,40 @@ def imresize_single_image(image, sizes, interpolation=None):
 
 
 def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
+    """
+    Pad an image-like array on its top/right/bottom/left side.
+
+    This function is a wrapper around `numpy.pad()`.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray
+        Image-like array to pad.
+
+    top : int, optional(default=0)
+        Amount of pixels to add at the top side of the image. Must be 0 or greater.
+
+    right : int, optional(default=0)
+        Amount of pixels to add at the right side of the image. Must be 0 or greater.
+
+    bottom : int, optional(default=0)
+        Amount of pixels to add at the bottom side of the image. Must be 0 or greater.
+
+    left : int, optional(default=0)
+        Amount of pixels to add at the left side of the image. Must be 0 or greater.
+
+    mode : string, optional(default="constant")
+        Padding mode to use. See `numpy.pad()` for details.
+
+    cval : number, optional(default=0)
+        Value to use for padding if mode="constant". See `numpy.pad()` for details.
+
+    Returns
+    -------
+    arr_pad : (H',W') or (H',W',C) ndarray
+        Padded array with height H'=H+top+bottom and width W'=W+left+right.
+
+    """
     assert arr.ndim in [2, 3]
     assert top >= 0
     assert right >= 0
@@ -640,6 +718,30 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 
 
 def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
+    """
+    Compute the amount of pixels by which an array has to be padded to fulfill an aspect ratio.
+
+    The aspect ratio is given as width/height.
+    Depending on which dimension is smaller (height or width), only the corresponding
+    sides (left/right or top/bottom) will be padded. In each case, both of the sides will
+    be padded equally.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray
+        Image-like array for which to compute pad amounts.
+
+    aspect_ratio : float
+        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
+        as much width as height.
+
+    Returns
+    -------
+    result : tuple of ints
+        Required paddign amounts to reach the target aspect ratio, given as a tuple
+        of the form (top, right, bottom, left).
+
+    """
     assert arr.ndim in [2, 3]
     assert aspect_ratio > 0
     height, width = arr.shape[0:2]
@@ -666,6 +768,44 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
 
 
 def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
+    """
+    Pad an image-like array on its sides so that it matches a target aspect ratio.
+
+    Depending on which dimension is smaller (height or width), only the corresponding
+    sides (left/right or top/bottom) will be padded. In each case, both of the sides will
+    be padded equally.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray
+        Image-like array to pad.
+
+    aspect_ratio : float
+        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
+        as much width as height.
+
+    mode : string, optional(default="constant")
+        Padding mode to use. See `numpy.pad()` for details.
+
+    cval : number, optional(default=0)
+        Value to use for padding if mode="constant". See `numpy.pad()` for details.
+
+    return_pad_amounts : bool, optional(default=False)
+        If False, then only the padded image will be returned. If True, a tuple with two
+        entries will be returned, where the first entry is the padded image and the second
+        entry are the amounts by which each image side was padded. These amounts are again a
+        tuple of the form (top, right, bottom, left), with each value being an integer.
+
+    Returns
+    -------
+    result : tuple
+        First tuple entry: Padded image as (H',W') or (H',W',C) ndarray, fulfulling the given
+            aspect_ratio.
+        Second tuple entry: Amounts by which the image was padded on each side, given
+            as a tuple (top, right, bottom, left).
+        If return_pad_amounts is False, then only the image is returned.
+
+    """
     pad_top, pad_right, pad_bottom, pad_left = compute_paddings_for_aspect_ratio(arr, aspect_ratio)
     arr_padded = pad(
         arr,
@@ -684,6 +824,41 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
 
 def pool(arr, block_size, func, cval=0, preserve_dtype=True):
+    """
+    Rescale an array by pooling values within blocks.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray
+        Image-like array to pool. Ideally of datatype np.float64.
+
+    block_size : int or tuple of two ints or tuple of three ints
+        Spatial size of each group of each values to pool, aka kernel size.
+        If a single integer, then a symmetric block of that size along height and width will
+        be used.
+        If a tuple of two values, it is assumed to be the block size along height and width
+        of the image-like, with pooling happening per channel.
+        If a tuple of three values, it is assuemd to be the block size along height, width and
+        channels.
+
+    func : callable
+        Function to apply to a given block in order to convert it to a single number,
+        e.g. np.average, np.min, np.max.
+
+    cval : number, optional(default=0)
+        Value to use in order to pad the array along its border if the array cannot be divided
+        by block_size without remainder.
+
+    preserve_dtype : bool, optional(default=True)
+        Whether to convert the array back to the input datatype if it is changed away from
+        that in the pooling process.
+
+    Returns
+    -------
+    arr_reduced : (H',W') or (H',W',C') ndarray
+        Array after pooling.
+
+    """
     assert arr.ndim in [2, 3]
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] and [is_single_integer(val) and val >= 1 for val in block_size]
@@ -702,10 +877,56 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
 
 
 def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
+    """
+    Rescale an array using average pooling.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray
+        Image-like array to pool. See `pool()` for details.
+
+    block_size : int or tuple of two ints or tuple of three ints
+        Size of each block of values to pool. See `pool()` for details.
+
+    cval : number, optional(default=0)
+        Padding value. See `pool()` for details.
+
+    preserve_dtype : bool, optional(default=True)
+        Whether to preserve the input array dtype. See `pool()` for details.
+
+    Returns
+    -------
+    arr_reduced : (H',W') or (H',W',C') ndarray
+        Array after average pooling.
+
+    """
     return pool(arr, block_size, np.average, cval=cval, preserve_dtype=preserve_dtype)
 
 
 def max_pool(arr, block_size, cval=0, preserve_dtype=True):
+    """
+    Rescale an array using max-pooling.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray
+        Image-like array to pool. See `pool()` for details.
+
+    block_size : int or tuple of two ints or tuple of three ints
+        Size of each block of values to pool. See `pool()` for details.
+
+    cval : number, optional(default=0)
+        Padding value. See `pool()` for details.
+
+    preserve_dtype : bool, optional(default=True)
+        Whether to preserve the input array dtype. See `pool()` for details.
+
+    Returns
+    -------
+    arr_reduced : (H',W') or (H',W',C') ndarray
+        Array after max-pooling.
+
+    """
     return pool(arr, block_size, np.max, cval=cval, preserve_dtype=preserve_dtype)
 
 
@@ -1010,10 +1231,26 @@ class Keypoint(object):
 
     @property
     def x_int(self):
+        """
+        Return the keypoint's x-coordinate, rounded to the closest integer.
+
+        Returns
+        -------
+        result : int
+            Keypoint's x-coordinate, rounded to the closest integer.
+        """
         return int(round(self.x))
 
     @property
     def y_int(self):
+        """
+        Return the keypoint's y-coordinate, rounded to the closest integer.
+
+        Returns
+        -------
+        result : int
+            Keypoint's y-coordinate, rounded to the closest integer.
+        """
         return int(round(self.y))
 
     def project(self, from_shape, to_shape):
@@ -1275,8 +1512,6 @@ class KeypointsOnImage(object):
             Image in which the keypoints are marked. H is the height,
             defined in KeypointsOnImage.shape[0] (analogous W). N is the
             number of keypoints.
-
-
         """
         do_assert(len(self.keypoints) > 0)
         height, width = self.shape[0:2]
@@ -1409,7 +1644,30 @@ class KeypointsOnImage(object):
 
 # TODO functions: square(), to_aspect_ratio(), extend()/add_border(), contains_point()
 class BoundingBox(object):
+    """
+    Class representing bounding boxes.
+
+    Each bounding box is parameterized by its top left and bottom right corners. Both are given
+    as x and y-coordinates.
+
+    Parameters
+    ----------
+    x1 : number
+        X-coordinate of the top left of the bounding box.
+
+    y1 : number
+        Y-coordinate of the top left of the bounding box.
+
+    x2 : number
+        X-coordinate of the bottom right of the bounding box.
+
+    y2 : number
+        Y-coordinate of the bottom right of the bounding box.
+
+    """
+
     def __init__(self, x1, y1, x2, y2, label=None):
+        """Create a new BoundingBox instance."""
         if x1 > x2:
             x2, x1 = x1, x2
         do_assert(x2 > x1)
@@ -1425,38 +1683,119 @@ class BoundingBox(object):
 
     @property
     def x1_int(self):
+        """
+        Return the x-coordinate of the top left corner as an integer.
+
+        Returns
+        -------
+        result : int
+            X-coordinate of the top left corner, rounded to the closest integer.
+
+        """
         return int(round(self.x1))
 
     @property
     def y1_int(self):
+        """
+        Return the y-coordinate of the top left corner as an integer.
+
+        Returns
+        -------
+        result : int
+            Y-coordinate of the top left corner, rounded to the closest integer.
+
+        """
         return int(round(self.y1))
 
     @property
     def x2_int(self):
+        """
+        Return the x-coordinate of the bottom left corner as an integer.
+
+        Returns
+        -------
+        result : int
+            X-coordinate of the bottom left corner, rounded to the closest integer.
+
+        """
         return int(round(self.x2))
 
     @property
     def y2_int(self):
+        """
+        Return the y-coordinate of the bottom left corner as an integer.
+
+        Returns
+        -------
+        result : int
+            Y-coordinate of the bottom left corner, rounded to the closest integer.
+
+        """
         return int(round(self.y2))
 
     @property
     def height(self):
+        """
+        Estimate the height of the bounding box.
+
+        Returns
+        -------
+        result : number
+            Height of the bounding box.
+
+        """
         return self.y2 - self.y1
 
     @property
     def width(self):
+        """
+        Estimate the width of the bounding box.
+
+        Returns
+        -------
+        result : number
+            Width of the bounding box.
+
+        """
         return self.x2 - self.x1
 
     @property
     def center_x(self):
+        """
+        Estimate the x-coordinate of the center point of the bounding box.
+
+        Returns
+        -------
+        result : number
+            X-coordinate of the center point of the bounding box.
+
+        """
         return self.x1 + self.width/2
 
     @property
     def center_y(self):
+        """
+        Estimate the y-coordinate of the center point of the bounding box.
+
+        Returns
+        -------
+        result : number
+            Y-coordinate of the center point of the bounding box.
+
+        """
         return self.y1 + self.height/2
 
     @property
     def area(self):
+        """
+        Estimate the area of the bounding box.
+
+        Returns
+        -------
+        result : number
+            Area of the bounding box, i.e. `height * width`.
+
+        """
         return self.height * self.width
 
     def project(self, from_shape, to_shape):
@@ -1507,6 +1846,32 @@ class BoundingBox(object):
             )
 
     def extend(self, all_sides=0, top=0, right=0, bottom=0, left=0):
+        """
+        Extend the size of the bounding box along its sides.
+
+        Parameters
+        ----------
+        all_sides : number, optional(default=0)
+            Value by which to extend the bounding box size along all sides.
+
+        top : number, optional(default=0)
+            Value by which to extend the bounding box size along its top side.
+
+        right : number, optional(default=0)
+            Value by which to extend the bounding box size along its right side.
+
+        bottom : number, optional(default=0)
+            Value by which to extend the bounding box size along its bottom side.
+
+        left : number, optional(default=0)
+            Value by which to extend the bounding box size along its left side.
+
+        Returns
+        -------
+        result : BoundingBox
+            Extended bounding box.
+
+        """
         return BoundingBox(
             x1=self.x1 - all_sides - left,
             x2=self.x2 + all_sides + right,
@@ -1515,6 +1880,20 @@ class BoundingBox(object):
         )
 
     def intersection(self, other, default=None):
+        """
+        Compute the intersection bounding box of this bounding box and another one.
+
+        Parameters
+        ----------
+        other : BoundingBox
+            Other bounding box with which to generate the intersection.
+
+        Returns
+        -------
+        result : BoundingBox
+            Intersection bounding box of the two bounding boxes.
+
+        """
         x1_i = max(self.x1, other.x1)
         y1_i = max(self.y1, other.y1)
         x2_i = min(self.x2, other.x2)
@@ -1525,6 +1904,23 @@ class BoundingBox(object):
             return BoundingBox(x1=x1_i, y1=y1_i, x2=x2_i, y2=y2_i)
 
     def union(self, other):
+        """
+        Compute the union bounding box of this bounding box and another one.
+
+        This is equivalent to drawing a bounding box around all corners points of both
+        bounding boxes.
+
+        Parameters
+        ----------
+        other : BoundingBox
+            Other bounding box with which to generate the union.
+
+        Returns
+        -------
+        result : BoundingBox
+            Union bounding box of the two bounding boxes.
+
+        """
         return BoundingBox(
             x1=min(self.x1, other.x1),
             y1=min(self.y1, other.y1),
@@ -1533,13 +1929,47 @@ class BoundingBox(object):
         )
 
     def iou(self, other):
+        """
+        Compute the IoU of this bounding box with another one.
+
+        IoU is the intersection over union, defined as:
+            area(intersection(A, B)) / area(union(A, B))
+            = area(intersection(A, B)) / (area(A) + area(B) - area(intersection(A, B)))
+
+        Parameters
+        ----------
+        other : BoundingBox
+            Other bounding box with which to compare.
+
+        Returns
+        -------
+        result : float
+            IoU between the two bounding boxes.
+
+        """
         inters = self.intersection(other)
         if inters is None:
             return 0
         else:
-            return inters.area / self.union(other).area
+            return inters.area / (self.area + other.area - inters.area)
 
     def is_fully_within_image(self, image):
+        """
+        Estimate whether the bounding box is fully inside the image area.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
+            assumed to represent the image shape.
+
+        Returns
+        -------
+        result : bool
+            True if the bounding box is fully inside the image area.
+            False otherwise.
+
+        """
         if isinstance(image, tuple):
             shape = image
         else:
@@ -1548,6 +1978,22 @@ class BoundingBox(object):
         return self.x1 >= 0 and self.x2 <= width and self.y1 >= 0 and self.y2 <= height
 
     def is_partly_within_image(self, image):
+        """
+        Estimate whether the bounding box is at least partially inside the image area.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
+            assumed to represent the image shape.
+
+        Returns
+        -------
+        result : bool
+            True if the bounding box is at least partially inside the image area.
+            False otherwise.
+
+        """
         if isinstance(image, tuple):
             shape = image
         else:
@@ -1557,6 +2003,29 @@ class BoundingBox(object):
         return self.intersection(img_bb) is not None
 
     def is_out_of_image(self, image, fully=True, partly=False):
+        """
+        Estimate whether the bounding box is partially or fully outside of the image area.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
+            assumed to represent the image shape.
+
+        fully : bool, optional(default=True)
+            Whether to return True if the bounding box is fully outside fo the image area.
+
+        partly : bool, optional(default=False)
+            Whether to return True if the bounding box is _at least_ partially outside fo the
+            image area.
+
+        Returns
+        -------
+        result : bool
+            True if the bounding box is partially/fully outside of the image area, depending
+            on defined parameters. False otherwise.
+
+        """
         if self.is_fully_within_image(image):
             return False
         elif self.is_partly_within_image(image):
@@ -1565,6 +2034,21 @@ class BoundingBox(object):
             return fully
 
     def cut_out_of_image(self, image):
+        """
+        Cut off all parts of the bounding box that are outside of the image.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use for the clipping of the bounding box. If an ndarray, its
+            shape will be used. If a tuple, it is assumed to represent the image shape.
+
+        Returns
+        -------
+        result : BoundingBox
+            Bounding box, clipped to fall within the image dimensions.
+
+        """
         if isinstance(image, tuple):
             shape = image
         else:
@@ -1588,6 +2072,29 @@ class BoundingBox(object):
         )
 
     def shift(self, top=None, right=None, bottom=None, left=None):
+        """
+        Shift the bounding box from one or more image sides, i.e. move it on the x/y-axis.
+
+        Parameters
+        ----------
+        top : None or int, optional(default=None)
+            Amount of pixels by which to shift the bounding box from the top.
+
+        right : None or int, optional(default=None)
+            Amount of pixels by which to shift the bounding box from the right.
+
+        bottom : None or int, optional(default=None)
+            Amount of pixels by which to shift the bounding box from the bottom.
+
+        left : None or int, optional(default=None)
+            Amount of pixels by which to shift the bounding box from the left.
+
+        Returns
+        -------
+        result : BoundingBox
+            Shifted bounding box.
+
+        """
         top = top if top is not None else 0
         right = right if right is not None else 0
         bottom = bottom if bottom is not None else 0
@@ -1596,11 +2103,44 @@ class BoundingBox(object):
             x1=self.x1+left-right,
             x2=self.x2+left-right,
             y1=self.y1+top-bottom,
-            y2=self.y2+top-bottom,
-            label=self.label
+            y2=self.y2+top-bottom
         )
 
     def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+        """
+        Draw the bounding box on an image.
+
+        Parameters
+        ----------
+        image : (H,W,C) ndarray(uint8)
+            The image onto which to draw the bounding box.
+
+        color : iterable of int, optional(default=[0,255,0])
+            The color to use, corresponding to the channel layout of the image. Usually RGB.
+
+        alpha : float, optional(default=1.0)
+            The transparency of the drawn bounding box, where 1.0 denotes no transparency and
+            0.0 is invisible.
+
+        thickness : int, optional(default=1)
+            The thickness of the bounding box in pixels. If the value is larger than 1, then
+            additional pixels will be added around the bounding box (i.e. extension towards the
+            outside).
+
+        copy : bool, optional(default=True)
+            Whether to copy the input image or change it in-place.
+
+        raise_if_out_of_image : bool, optional(default=False)
+            Whether to raise an error if the bounding box is partially/fully outside of the
+            image. If set to False, no error will be raised and only the parts inside the image
+            will be drawn.
+
+        Returns
+        -------
+        result : (H,W,C) ndarray(uint8)
+            Image with bounding box drawn on it.
+
+        """
         if raise_if_out_of_image and self.is_out_of_image(image):
             raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
 
@@ -1628,6 +2168,24 @@ class BoundingBox(object):
         return result
 
     def extract_from_image(self, image):
+        """
+        Extract the image pixels within the bounding box.
+
+        This function will zero-pad the image if the bounding box is partially/fully outside of
+        the image.
+
+        Parameters
+        ----------
+        image : (H,W) or (H,W,C) ndarray
+            The image from which to extract the pixels within the bounding box.
+
+        Returns
+        -------
+        result : (H',W') or (H',W',C) ndarray
+            Pixels within the bounding box. Zero-padded if the bounding box is partially/fully
+            outside of the image.
+
+        """
         pad_top = 0
         pad_right = 0
         pad_bottom = 0
@@ -1663,7 +2221,17 @@ class BoundingBox(object):
 
         return image[y1:y2, x1:x2]
 
+    # TODO also add to_heatmap
+    # TODO add this to BoundingBoxesOnImage
     def to_keypoints(self):
+        """
+        Convert the corners of the bounding box to keypoints (clockwise, starting at top left).
+
+        Returns
+        -------
+        result : list of Keypoint
+            Corners of the bounding box as keypoints.
+        """
         return [
             Keypoint(x=self.x1, y=self.y1),
             Keypoint(x=self.x2, y=self.y1),
@@ -1672,6 +2240,32 @@ class BoundingBox(object):
         ]
 
     def copy(self, x1=None, y1=None, x2=None, y2=None, label=None):
+        """
+        Create a shallow copy of the BoundingBox object.
+
+        Parameters
+        ----------
+        x1 : None or number
+            If not None, then the x1 coordinate of the copied object will be set to this value.
+
+        y1 : None or number
+            If not None, then the y1 coordinate of the copied object will be set to this value.
+
+        x2 : None or number
+            If not None, then the x2 coordinate of the copied object will be set to this value.
+
+        y2 : None or number
+            If not None, then the y2 coordinate of the copied object will be set to this value.
+
+        label : None or string
+            If not None, then the label of the copied object will be set to this value.
+
+        Returns
+        -------
+        result : BoundingBox
+            Shallow copy.
+
+        """
         return BoundingBox(
             x1=self.x1 if x1 is None else x1,
             x2=self.x2 if x2 is None else x2,
@@ -1681,6 +2275,15 @@ class BoundingBox(object):
         )
 
     def deepcopy(self, x1=None, y1=None, x2=None, y2=None, label=None):
+        """
+        Create a deep copy of the BoundingBoxesOnImage object.
+
+        Returns
+        -------
+        out : KeypointsOnImage
+            Deep copy.
+
+        """
         return self.copy(x1=x1, y1=y1, x2=x2, y2=y2, label=label)
 
     def __repr__(self):
@@ -1720,10 +2323,28 @@ class BoundingBoxesOnImage(object):
 
     @property
     def height(self):
+        """
+        Get the height of the image on which the bounding boxes fall.
+
+        Returns
+        -------
+        result : int
+            Image height.
+
+        """
         return self.shape[0]
 
     @property
     def width(self):
+        """
+        Get the width of the image on which the bounding boxes fall.
+
+        Returns
+        -------
+        result : int
+            Image width.
+
+        """
         return self.shape[1]
 
     def on(self, image):
@@ -1800,14 +2421,64 @@ class BoundingBoxesOnImage(object):
         return image
 
     def remove_out_of_image(self, fully=True, partly=False):
+        """
+        Remove all bounding boxes that are fully or partially outside of the image.
+
+        Parameters
+        ----------
+        fully : bool, optional(default=True)
+            Whether to remove bounding boxes that are fully outside of the image.
+
+        partly : bool, optional(default=False)
+            Whether to remove bounding boxes that are partially outside of the image.
+
+        Returns
+        -------
+        result : BoundingBoxesOnImage
+            Reduced set of bounding boxes, with those that were fully/partially outside of
+            the image removed.
+
+        """
         bbs_clean = [bb for bb in self.bounding_boxes if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
     def cut_out_of_image(self):
+        """
+        Cut off all parts from all bounding boxes that are outside of the image.
+
+        Returns
+        -------
+        result : BoundingBoxesOnImage
+            Bounding boxes, clipped to fall within the image dimensions.
+
+        """
         bbs_cut = [bb.cut_out_of_image(self.shape) for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
         return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
+        """
+        Shift all bounding boxes from one or more image sides, i.e. move them on the x/y-axis.
+
+        Parameters
+        ----------
+        top : None or int, optional(default=None)
+            Amount of pixels by which to shift all bounding boxes from the top.
+
+        right : None or int, optional(default=None)
+            Amount of pixels by which to shift all bounding boxes from the right.
+
+        bottom : None or int, optional(default=None)
+            Amount of pixels by which to shift all bounding boxes from the bottom.
+
+        left : None or int, optional(default=None)
+            Amount of pixels by which to shift all bounding boxes from the left.
+
+        Returns
+        -------
+        result : BoundingBoxesOnImage
+            Shifted bounding boxes.
+
+        """
         bbs_new = [bb.shift(top=top, right=right, bottom=bottom, left=left) for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs_new, shape=self.shape)
 
@@ -1846,7 +2517,33 @@ class BoundingBoxesOnImage(object):
 
 
 class HeatmapsOnImage(object):
+    """
+    Object representing heatmaps on images.
+
+    Parameters
+    ----------
+    arr : (H,W) or (H,W,C) ndarray(float32)
+        Array representing the heatmap(s). If multiple heatmaps, then C is expected to denote
+        their number.
+
+    shape : tuple of ints
+        Shape of the image on which the heatmap(s) is/are placed. NOT the shape of the
+        heatmap(s) array, unless it is identical to the image shape (note the likely
+        difference between the arrays in the number of channels).
+        If there is not a corresponding image, use the shape of the heatmaps array.
+
+    min_value : float, optional(default=0.0)
+        Minimum value for the heatmaps that `arr` represents. This will usually
+        be 0.0.
+
+    max_value : float, optional(default=1.0)
+        Maximum value for the heatmaps that `arr` represents. This will usually
+        be 1.0.
+
+    """
+
     def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
+        """Construct a new HeatmapsOnImage object."""
         assert arr.dtype.type in [np.float32]
         assert arr.ndim in [2, 3]
         assert len(shape) in [2, 3]
@@ -1872,6 +2569,19 @@ class HeatmapsOnImage(object):
         self.max_value = max_value
 
     def get_arr(self):
+        """
+        Get the heatmap array in the desired value range.
+
+        The HeatmapsOnImage object saves heatmaps internally in the value range (min=0.0, max=1.0).
+        This function converts the internal representation to (min=min_value, max=max_value),
+        where min_value and max_value are provided upon instantiation of the object.
+
+        Returns
+        -------
+        result : (H,W) or (H,W,C) ndarray(float32)
+            Heatmap array.
+
+        """
         if self.arr_was_2d and self.arr_0to1.shape[2] == 1:
             arr = self.arr_0to1[:, :, 0]
         else:
@@ -1891,6 +2601,27 @@ class HeatmapsOnImage(object):
     #    raise NotImplementedError()
 
     def draw(self, size=None, cmap="jet"):
+        """
+        Render the heatmaps as RGB images.
+
+        Parameters
+        ----------
+        size : None or float or iterable of two ints or iterable of two floats, optional(default=None)
+            Size of the rendered RGB image as (height, width).
+            See `imresize_single_image()` for details.
+            If set to None, no resizing is performed and the size of the heatmaps array is used.
+
+        cmap : string or None, optional(default="jet")
+            Color map of matplotlib to use in order to convert the heatmaps into RGB images.
+            If set to None, no color map will be used and the heatmaps will be converted
+            as simple intensity maps.
+
+        Returns
+        -------
+        heatmaps_drawn : list of (H,W,3) ndarray(uint8)
+            Rendered heatmaps, one per heatmap array channel.
+
+        """
         heatmaps_uint8 = self.to_uint8()
         heatmaps_drawn = []
 
@@ -1920,6 +2651,32 @@ class HeatmapsOnImage(object):
         return heatmaps_drawn
 
     def draw_on_image(self, image, alpha=0.75, cmap="jet", resize="heatmaps"):
+        """
+        Draw the heatmaps as overlays over an image.
+
+        Parameters
+        ----------
+        image : (H,W,3) ndarray(uint8)
+            Image onto which to draw the heatmaps.
+
+        alpha : float, optional(default=0.75)
+            Alpha/opacity value to use for the mixing of image and heatmaps.
+            Higher values mean that the heatmaps will be more visible and the image less visible.
+
+        cmap : string or None, optional(default="jet")
+            Color map to use. See `HeatmapsOnImage.draw()` for details.
+
+        resize : "heatmaps" or "image", optional(default="heatmaps")
+            In case of size differences between the image and heatmaps, either the image or
+            the heatmaps can be resized. This parameter controls which of the two will be resized
+            to the other's size.
+
+        Returns
+        -------
+        mix : list of (H,W,3) ndarray(uint8)
+            Rendered overlays, one per heatmap array channel.
+
+        """
         # assert RGB image
         assert image.ndim == 3
         assert image.shape[2] == 3
@@ -1945,10 +2702,73 @@ class HeatmapsOnImage(object):
         return mix
 
     def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0.0):
+        """
+        Pad the heatmaps on their top/right/bottom/left side.
+
+        Parameters
+        ----------
+        top : int, optional(default=0)
+            Amount of pixels to add at the top side of the heatmaps. Must be 0 or greater.
+
+        right : int, optional(default=0)
+            Amount of pixels to add at the right side of the heatmaps. Must be 0 or greater.
+
+        bottom : int, optional(default=0)
+            Amount of pixels to add at the bottom side of the heatmaps. Must be 0 or greater.
+
+        left : int, optional(default=0)
+            Amount of pixels to add at the left side of the heatmaps. Must be 0 or greater.
+
+        mode : string, optional(default="constant")
+            Padding mode to use. See `numpy.pad()` for details.
+
+        cval : number, optional(default=0.0)
+            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+
+        Returns
+        -------
+        result : HeatmapsOnImage
+            Padded heatmaps of height H'=H+top+bottom and width W'=W+left+right.
+
+        """
         arr_0to1_padded = pad(self.arr_0to1, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
         return HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
 
     def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
+        """
+        Pad the heatmaps on their sides so that they match a target aspect ratio.
+
+        Depending on which dimension is smaller (height or width), only the corresponding
+        sides (left/right or top/bottom) will be padded. In each case, both of the sides will
+        be padded equally.
+
+        Parameters
+        ----------
+        aspect_ratio : float
+            Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
+            as much width as height.
+
+        mode : string, optional(default="constant")
+            Padding mode to use. See `numpy.pad()` for details.
+
+        cval : number, optional(default=0.0)
+            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+
+        return_pad_amounts : bool, optional(default=False)
+            If False, then only the padded image will be returned. If True, a tuple with two
+            entries will be returned, where the first entry is the padded image and the second
+            entry are the amounts by which each image side was padded. These amounts are again a
+            tuple of the form (top, right, bottom, left), with each value being an integer.
+
+        Returns
+        -------
+        result : tuple
+            First tuple entry: Padded heatmaps as HeatmapsOnImage object.
+            Second tuple entry: Amounts by which the heatamps were padded on each side, given
+                as a tuple (top, right, bottom, left).
+            If return_pad_amounts is False, then only the heatmaps object is returned.
+
+        """
         arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
         heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
         if return_pad_amounts:
@@ -1957,15 +2777,60 @@ class HeatmapsOnImage(object):
             return heatmaps
 
     def avg_pool(self, block_size):
-        arr_0to1_reduced = avg_pool(self.arr_0to1, block_size)
+        """
+        Rescale the heatmap(s) array using average pooling of a given block/kernel size.
+
+        Parameters
+        ----------
+        block_size : int or tuple of two ints or tuple of three ints
+            Size of each block of values to pool, aka kernel size. See `imgaug.pool()` for details.
+
+        Returns
+        -------
+        result : HeatmapsOnImage
+            Heatmaps after average pooling.
+
+        """
+        arr_0to1_reduced = avg_pool(self.arr_0to1, block_size, cval=0.0)
         return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
 
     def max_pool(self, block_size):
+        """
+        Rescale the heatmap(s) array using max-pooling of a given block/kernel size.
+
+        Parameters
+        ----------
+        block_size : int or tuple of two ints or tuple of three ints
+            Size of each block of values to pool, aka kernel size. See `imgaug.pool()` for details.
+
+        Returns
+        -------
+        result : HeatmapsOnImage
+            Heatmaps after max-pooling.
+
+        """
         arr_0to1_reduced = max_pool(self.arr_0to1, block_size)
         return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
 
-    def scale(self, size, interpolation="cubic"):
-        arr_0to1_rescaled = imresize_single_image(self.arr_0to1, size, interpolation=interpolation)
+    def scale(self, sizes, interpolation="cubic"):
+        """
+        Rescale the heatmap(s) array to the provided size given the provided interpolation.
+
+        Parameters
+        ----------
+        sizes : float or iterable of two ints or iterable of two floats
+            New size of the array in (height, width). See `imresize_single_image()` for details.
+
+        interpolation : None or string or int, optional(default="cubic")
+            The interpolation to use during resize. See `imresize_single_image()` for details.
+
+        Returns
+        -------
+        result : HeatmapsOnImage
+            Rescaled heatmaps object.
+
+        """
+        arr_0to1_rescaled = imresize_single_image(self.arr_0to1, sizes, interpolation=interpolation)
 
         # cubic interpolation can lead to values outside of [0.0, 1.0],
         # see https://github.com/opencv/opencv/issues/7195
@@ -1975,17 +2840,89 @@ class HeatmapsOnImage(object):
         return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
 
     def to_uint8(self):
+        """
+        Convert this heatmaps object to a 0-to-255 array.
+
+        Returns
+        -------
+        arr_uint8 : (H,W,C) ndarray(uint8)
+            Heatmap as a 0-to-255 array.
+
+        """
+        # TODO this always returns (H,W,C), even if input ndarray was originall (H,W)
+        # does it make sense here to also return (H,W) if self.arr_was_2d?
         arr_0to255 = np.clip(np.round(self.arr_0to1 * 255), 0, 255)
         arr_uint8 = arr_0to255.astype(np.uint8)
         return arr_uint8
 
     @staticmethod
     def from_uint8(arr_uint8, shape, min_value=0.0, max_value=1.0):
+        """
+        Create a heatmaps object from an heatmap array containing values ranging from 0 to 255.
+
+        Parameters
+        ----------
+        arr_uint8 : (H,W) or (H,W,C) ndarray(uint8)
+            Heatmap(s) array, where H=height, W=width, C=heatmap channels.
+
+        shape : tuple of ints
+            Shape of the image on which the heatmap(s) is/are placed. NOT the shape of the
+            heatmap(s) array, unless it is identical to the image shape (note the likely
+            difference between the arrays in the number of channels).
+            If there is not a corresponding image, use the shape of the heatmaps array.
+
+        min_value : float, optional(default=0.0)
+            Minimum value for the heatmaps that the 0-to-255 array represents. This will usually
+            be 0.0. It is used when calling `HeatmapsOnImage.get_arr()`, which converts the
+            underlying (0, 255) array to value range (min_value, max_value).
+
+        max_value : float, optional(default=1.0)
+            Maximum value for the heatmaps that 0-to-255 array represents.
+            See parameter min_value for details.
+
+        Returns
+        -------
+        heatmaps : HeatmapsOnImage
+            Heatmaps object.
+
+        """
         arr_0to1 = arr_uint8.astype(np.float32) / 255.0
         return HeatmapsOnImage.from_0to1(arr_0to1, shape, min_value=min_value, max_value=max_value)
 
     @staticmethod
     def from_0to1(arr_0to1, shape, min_value=0.0, max_value=1.0):
+        """
+        Create a heatmaps object from an heatmap array containing values ranging from 0.0 to 1.0.
+
+        Parameters
+        ----------
+        arr_0to1 : (H,W) or (H,W,C) ndarray(float32)
+            Heatmap(s) array, where H=height, W=width, C=heatmap channels.
+
+        shape : tuple of ints
+            Shape of the image on which the heatmap(s) is/are placed. NOT the shape of the
+            heatmap(s) array, unless it is identical to the image shape (note the likely
+            difference between the arrays in the number of channels).
+            If there is not a corresponding image, use the shape of the heatmaps array.
+
+        min_value : float, optional(default=0.0)
+            Minimum value for the heatmaps that the 0-to-1 array represents. This will usually
+            be 0.0. It is used when calling `HeatmapsOnImage.get_arr()`, which converts the
+            underlying (0.0, 1.0) array to value range (min_value, max_value).
+            E.g. if you started with heatmaps in the range (-1.0, 1.0) and projected these
+            to (0.0, 1.0), you should call this function with min_value=-1.0, max_value=1.0
+            so that `get_arr()` returns heatmap arrays having value range (-1.0, 1.0).
+
+        max_value : float, optional(default=1.0)
+            Maximum value for the heatmaps that to 0-to-255 array represents.
+            See parameter min_value for details.
+
+        Returns
+        -------
+        heatmaps : HeatmapsOnImage
+            Heatmaps object.
+
+        """
         heatmaps = HeatmapsOnImage(arr_0to1, shape, min_value=0.0, max_value=1.0)
         heatmaps.min_value = min_value
         heatmaps.max_value = max_value
@@ -1993,6 +2930,30 @@ class HeatmapsOnImage(object):
 
     @staticmethod
     def change_normalization(arr, source, target):
+        """
+        Change the value range of a heatmap from one min-max to another min-max.
+
+        E.g. the value range may be changed from min=0.0, max=1.0 to min=-1.0, max=1.0.
+
+        Parameters
+        ----------
+        arr : ndarray
+            Heatmap array to modify.
+
+        source : tuple of two floats
+            Current value range of the input array, given as (min, max), where both are float
+            values.
+
+        target : tuple of two floats
+            Desired output value range of the array, given as (min, max), where both are float
+            values.
+
+        Returns
+        -------
+        arr_target : ndarray
+            Input array, with value range projected to the desired target value range.
+
+        """
         assert is_np_array(arr)
 
         if isinstance(source, HeatmapsOnImage):

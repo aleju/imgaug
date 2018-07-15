@@ -292,7 +292,7 @@ def test_is_single_float():
 def test_caller_name():
     assert ia.caller_name() == 'test_caller_name'
 
-    
+
 def test_is_single_number():
     class _Dummy(object):
         pass
@@ -1573,7 +1573,7 @@ def test_BoundingBox():
     bb1 = ia.BoundingBox(y1=10, x1=10, y2=20, x2=20, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=15, y2=25, x2=25, label=None)
     iou = bb1.iou(bb2)
-    area_union = 15 * 15
+    area_union = 10 * 10 + 10 * 10 - 5 * 5
     area_intersection = 5 * 5
     iou_expected = area_intersection / area_union
     assert iou_expected - eps < iou < iou_expected + eps
@@ -2184,7 +2184,7 @@ def test_HeatmapsOnImage_scale():
     ])
     heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
 
-    heatmaps_scaled = heatmaps.scale(size=(4, 4), interpolation="nearest")
+    heatmaps_scaled = heatmaps.scale((4, 4), interpolation="nearest")
     assert heatmaps_scaled.arr_0to1.shape == (4, 4, 1)
     assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
     assert np.allclose(
@@ -2202,7 +2202,7 @@ def test_HeatmapsOnImage_scale():
     ])
     heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
 
-    heatmaps_scaled = heatmaps.scale(size=2.0, interpolation="nearest")
+    heatmaps_scaled = heatmaps.scale(2.0, interpolation="nearest")
     assert heatmaps_scaled.arr_0to1.shape == (2, 4, 1)
     assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
     assert np.allclose(
