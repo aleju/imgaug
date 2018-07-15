@@ -36,6 +36,7 @@ import six
 import six.moves as sm
 import warnings
 
+
 def copy_dtypes_for_restore(images, force_list=False):
     if ia.is_np_array(images):
         if force_list:
@@ -45,14 +46,21 @@ def copy_dtypes_for_restore(images, force_list=False):
     else:
         return [image.dtype for image in images]
 
+
 def restore_augmented_image_dtype_(image, orig_dtype):
     return image.astype(orig_dtype, copy=False)
+
+
+def restore_augmented_image_dtype(image, orig_dtype):
+    return image.astype(orig_dtype, copy=True)
+
 
 def restore_augmented_images_dtypes_(images, orig_dtypes):
     if ia.is_np_array(images):
         return images.astype(orig_dtypes, copy=False)
     else:
         return [image.astype(orig_dtype, copy=False) for image, orig_dtype in zip(images, orig_dtypes)]
+
 
 def restore_augmented_images_dtypes(images, orig_dtypes):
     if ia.is_np_array(images):
@@ -61,21 +69,45 @@ def restore_augmented_images_dtypes(images, orig_dtypes):
         images = [np.copy(image) for image in images]
     return restore_augmented_images_dtypes_(images, orig_dtypes)
 
-def clip_augmented_image_(image, minval, maxval):
-    return clip_augmented_images_(image, minval, maxval)
 
-def clip_augmented_images_(images, minval, maxval):
+def clip_augmented_image_(image, min_value, max_value):
+    return clip_augmented_images_(image, min_value, max_value)
+
+
+def clip_augmented_image(image, min_value, max_value):
+    return clip_augmented_images(image, min_value, max_value)
+
+
+def clip_augmented_images_(images, min_value, max_value):
     if ia.is_np_array(images):
-        return np.clip(images, minval, maxval, out=images)
+        return np.clip(images, min_value, max_value, out=images)
     else:
-        return [np.clip(image, minval, maxval, out=image) for image in images]
+        return [np.clip(image, min_value, max_value, out=image) for image in images]
 
-def clip_augmented_images(images, minval, maxval):
+
+def clip_augmented_images(images, min_value, max_value):
     if ia.is_np_array(images):
         images = np.copy(images)
     else:
         images = [np.copy(image) for image in images]
-    return clip_augmented_images_(images, minval, maxval)
+    return clip_augmented_images_(images, min_value, max_value)
+
+
+def handle_children_list(lst, augmenter_name, lst_name):
+    if lst is None:
+        return Sequential([], name="%s-%s" % (augmenter_name, lst_name))
+    elif isinstance(lst, Augmenter):
+        if ia.is_iterable(lst):
+            assert all([isinstance(child, Augmenter) for child in lst])
+            return lst
+        else:
+            return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
+    elif ia.is_iterable(lst):
+        assert all([isinstance(child, Augmenter) for child in lst])
+        return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
+    else:
+        raise Exception("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, got %s." % (lst_name, augmenter_name, type(lst),))
+
 
 @six.add_metaclass(ABCMeta)
 class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
@@ -199,7 +231,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batches_original_dts.append("numpy_array")
             elif isinstance(batch, list):
                 if len(batch) == 0:
-                    batches_normalized.append(ia.Batch())
+                    batches_normalized.append(ia.Batch(data=i))
                     batches_original_dts.append("empty_list")
                 elif ia.is_np_array(batch[0]):
                     batches_normalized.append(ia.Batch(images=batch, data=i))
@@ -210,7 +242,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 else:
                     raise Exception("Unknown datatype in batch[0]. Expected numpy array or imgaug.KeypointsOnImage, got %s." % (type(batch[0]),))
             else:
-                raise Exception("Unknown datatype in of batch. Expected imgaug.Batch or numpy array or list of numpy arrays/imgaug.KeypointsOnImage. Got %s." % (type(batch),))
+                raise Exception("Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of numpy arrays/imgaug.KeypointsOnImage. Got %s." % (type(batch),))
 
         def unnormalize_batch(batch_aug):
             #if batch_aug.data is None:
@@ -231,10 +263,9 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batch_unnormalized = []
             elif dt_orig == "list_of_numpy_arrays":
                 batch_unnormalized = batch_aug.images_aug
-            elif dt_orig == "list_of_imgaug.KeypointsOnImage":
-                batch_unnormalized = batch_aug.keypoints_aug
             else:
-                raise Exception("Internal error. Unexpected value in dt_orig '%s'. This should never happen." % (dt_orig,))
+                ia.do_assert(dt_orig == "list_of_imgaug.KeypointsOnImage")  # only option left
+                batch_unnormalized = batch_aug.keypoints_aug
             return batch_unnormalized
 
         if not background:
@@ -410,10 +441,25 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         images_result = hooks.postprocess(images_result, augmenter=self, parents=parents)
 
         # remove temporarily added channel axis for 2D input images
+        output_type = "list" if isinstance(images_result, list) else "array"
         if input_type == "array":
             if input_added_axis == True:
-                images_result = np.squeeze(images_result, axis=3)
-        if input_type == "list":
+                if output_type == "array":
+                    images_result = np.squeeze(images_result, axis=3)
+                else:
+                    images_result = [np.squeeze(image, axis=2) for image in images_result]
+        else:  # if input_type == "list":
+            # This test was removed for now because hooks can change the type
+            #ia.do_assert(
+            #    isinstance(images_result, list),
+            #    "INTERNAL ERROR: Input was list, output was expected to be list too "
+            #    "but got %s." % (type(images_result),)
+            #)
+            ia.do_assert(
+                len(images_result) == len(images),
+                "INTERNAL ERROR: Expected number of images to be unchanged after augmentation, "
+                "but was changed from %d to %d." % (len(images), len(images_result))
+            )
             for i in sm.xrange(len(images_result)):
                 if input_added_axis[i] == True:
                     images_result[i] = np.squeeze(images_result[i], axis=2)
@@ -464,6 +510,124 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         """
         raise NotImplementedError()
+
+    def augment_heatmaps(self, heatmaps, parents=None, hooks=None):
+        """
+        Augment a heatmap.
+
+        Parameters
+        ----------
+        heatmaps : list of ia.HeatmapsOnImage
+            Heatmaps to augment.
+
+        parents : None or list of Augmenter, optional(default=None)
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
+
+        hooks : None or ia.HooksImages, optional(default=None)
+            HooksImages object to dynamically interfere with the augmentation
+            process.
+
+        Returns
+        -------
+        heatmap_result : list of ia.HeatmapsOnImage
+            Corresponding augmented heatmaps.
+
+        """
+        if self.deterministic:
+            state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
+        if hooks is None:
+            hooks = ia.HooksHeatmaps()
+
+        ia.do_assert(ia.is_iterable(heatmaps), "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
+        ia.do_assert(all([isinstance(heatmaps_i, ia.HeatmapsOnImage) for heatmaps_i in heatmaps]), "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % ([type(el) for el in heatmaps],))
+
+        heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
+
+        heatmaps_copy = hooks.preprocess(heatmaps_copy, augmenter=self, parents=parents)
+
+        if hooks.is_activated(heatmaps_copy, augmenter=self, parents=parents, default=self.activated):
+            if len(heatmaps_copy) > 0:
+                heatmaps_result = self._augment_heatmaps(
+                    heatmaps_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
+                ia.forward_random_state(self.random_state)
+            else:
+                heatmaps_result = heatmaps_copy
+        else:
+            heatmaps_result = heatmaps_copy
+
+        heatmaps_result = hooks.postprocess(heatmaps_result, augmenter=self, parents=parents)
+
+        if self.deterministic:
+            self.random_state.set_state(state_orig)
+
+        return heatmaps_result
+
+    @abstractmethod
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        """
+        Augment heatmaps on multiple images.
+
+        This is the internal version of `augment_heatmaps()`.
+        It is called from `augment_heatmaps()` and should usually not be called
+        directly.
+        This method may heatmaps in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's `random_state` variable. The parameter
+        `random_state` takes care of both of these.
+
+        Parameters
+        ----------
+        heatmaps : list of ia.HeatmapsOnImage
+            Heatmaps to augment. They may be changed in-place.
+
+        random_state : np.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of Augmenter
+            See `augment_heatmaps()`.
+
+        hooks : ia.HooksImages
+            See `augment_heatmaps()`.
+
+        Returns
+        ----------
+        images : list of ia.HeatmapsOnImage
+            The augmented heatmaps.
+
+        """
+        raise NotImplementedError()
+
+    def _augment_heatmaps_as_images(self, heatmaps, random_state, parents, hooks):
+        # TODO documentation
+        # TODO keep this? it is afaik not used anywhere
+        heatmaps_uint8 = [heatmaps_i.to_uint8() for heatmaps_i in heatmaps]
+        heatmaps_uint8_aug = [
+            self.augment_images([heatmaps_uint8_i], parents=parents, hooks=hooks)[0]
+            for heatmaps_uint8_i
+            in heatmaps_uint8
+        ]
+        return [
+            ia.Heatmaps.from_uint8(
+                heatmaps_aug,
+                shape=heatmaps_i.shape,
+                min_value=heatmaps_i.min_value,
+                max_value=heatmaps_i.max_value,
+                dtype=heatmaps_i.arr.dtype
+            )
+            for heatmaps_aug, heatmaps_i
+            in zip(heatmaps_uint8_aug, heatmaps)
+        ]
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
         """
@@ -1092,6 +1256,31 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         raise NotImplementedError()
 
     def get_children_lists(self):
+        """
+        Get a list of lists of children of this augmenter.
+
+        For most augmenters, the result will be a single empty list.
+        For augmenters with children it will often be a list with one sublist containing all
+        children. In some cases the augmenter will contain multiple distinct lists of children,
+        e.g. an if-list and an else-list. This will lead to a result consisting of a single
+        list with multiple sublists, each representing the respective sublist of children.
+
+        E.g. for an if/else-augmenter that executes the children A1, A2 if a condition is met
+        and otherwise executes the children B1, B2, B3 the result will be [[A1, A2], [B1, B2, B3]].
+
+        IMPORTANT: While the topmost list may be newly created, each of the sublist must be
+        editable inplace resulting in a changed children list of the augmenter. E.g. if
+        an Augmenter IfElse(condition, [A1, A2], [B1, B2, B3]) returns [[A1, A2], [B1, B2, B3]]
+        for a call to get_children_lists() and A2 is removed inplace from [A1, A2], then the
+        children lists of IfElse(...) must also change to [A1], [B1, B2, B3]. This is used
+        if remove_augmenters_inplace().
+
+        Returns
+        -------
+        children: A list of lists of children (i.e. Augmenter instances).
+            May be a single empty list.
+
+        """
         return []
 
     def get_all_children(self, flat=False):
@@ -1117,10 +1306,11 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             for aug in lst:
                 result.append(aug)
                 children = aug.get_all_children(flat=flat)
-                if flat:
-                    result.extend(children)
-                else:
-                    result.append(children)
+                if len(children) > 0:
+                    if flat:
+                        result.extend(children)
+                    else:
+                        result.append(children)
         return result
 
     def find_augmenters(self, func, parents=None, flat=True):
@@ -1440,6 +1630,7 @@ class Sequential(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
+            assert all([isinstance(child, Augmenter) for child in children])
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
@@ -1448,7 +1639,6 @@ class Sequential(Augmenter, list):
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.random_order:
-                # for augmenter in self.children:
                 for index in random_state.permutation(len(self)):
                     images = self[index].augment_images(
                         images=images,
@@ -1456,7 +1646,6 @@ class Sequential(Augmenter, list):
                         hooks=hooks
                     )
             else:
-                # for augmenter in self.children:
                 for augmenter in self:
                     images = augmenter.augment_images(
                         images=images,
@@ -1464,6 +1653,24 @@ class Sequential(Augmenter, list):
                         hooks=hooks
                     )
         return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            if self.random_order:
+                for index in random_state.permutation(len(self)):
+                    heatmaps = self[index].augment_heatmaps(
+                        heatmaps=heatmaps,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                for augmenter in self:
+                    heatmaps = augmenter.augment_heatmaps(
+                        heatmaps=heatmaps,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
@@ -1492,7 +1699,7 @@ class Sequential(Augmenter, list):
         return seq
 
     def get_parameters(self):
-        return []
+        return [self.random_order]
 
     def add(self, augmenter):
         """Add an augmenter to the list of child augmenters.
@@ -1509,7 +1716,7 @@ class Sequential(Augmenter, list):
 
     def __str__(self):
         augs_str = ", ".join([aug.__str__() for aug in self])
-        return "Sequential(name=%s, augmenters=[%s], deterministic=%s)" % (self.name, augs_str, self.deterministic)
+        return "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (self.name, self.random_order, augs_str, self.deterministic)
 
 class SomeOf(Augmenter, list):
     """
@@ -1600,6 +1807,7 @@ class SomeOf(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
+            assert all([isinstance(child, Augmenter) for child in children])
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
@@ -1702,15 +1910,72 @@ class SomeOf(Augmenter, list):
                         parents=parents + [self],
                         hooks=hooks
                     )
+                    output_is_array = ia.is_np_array(images_to_aug)
+                    output_all_same_shape = len(set([img.shape for img in images_to_aug])) == 1
 
-                    # map them back to their position in the images array/list
+                    # Map them back to their position in the images array/list
+                    # But it can happen that the augmented images have different shape(s) from
+                    # the input image, as well as being suddenly a list instead of a numpy array.
+                    # This is usually the case if a child augmenter has to change shapes, e.g.
+                    # due to cropping (without resize afterwards). So accomodate here for that
+                    # possibility.
                     if input_is_array:
-                        images[active] = images_to_aug
+                        if not output_is_array and output_all_same_shape:
+                            images_to_aug = np.array(images_to_aug, dtype=images.dtype)
+                            output_is_array = True
+
+                        if output_is_array and images_to_aug.shape[1:] == images.shape[1:]:
+                            images[active] = images_to_aug
+                        else:
+                            images = list(images)
+                            for aug_idx, original_idx in enumerate(active):
+                                images[original_idx] = images_to_aug[aug_idx]
+                            input_is_array = False
                     else:
                         for aug_idx, original_idx in enumerate(active):
                             images[original_idx] = images_to_aug[aug_idx]
 
         return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            # This must happen before creating the augmenter_active array,
+            # otherwise in case of determinism the number of augmented images
+            # would change the random_state's state, resulting in the order
+            # being dependent on the number of augmented images (and not be
+            # constant). By doing this first, the random state is always the
+            # same (when determinism is active), so the order is always the
+            # same.
+            augmenter_order = self._get_augmenter_order(random_state)
+
+            # create an array of active augmenters per image
+            # e.g.
+            #  [[0, 0, 1],
+            #   [1, 0, 1],
+            #   [1, 0, 0]]
+            # would signal, that augmenter 3 is active for the first image,
+            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
+            augmenter_active = self._get_augmenter_active(len(heatmaps), random_state)
+
+            for augmenter_index in augmenter_order:
+                active = augmenter_active[:, augmenter_index].nonzero()[0]
+                if len(active) > 0:
+                    # pick images to augment, i.e. images for which
+                    # augmenter at current index is active
+                    heatmaps_to_aug = [heatmaps[idx] for idx in active]
+
+                    # augment the images
+                    heatmaps_aug = self[augmenter_index].augment_heatmaps(
+                        heatmaps_to_aug,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+
+                    # Map them back to their position in the images array/list
+                    for aug_idx, original_idx in enumerate(active):
+                        heatmaps[original_idx] = heatmaps_aug[aug_idx]
+
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
@@ -1891,24 +2156,8 @@ class Sometimes(Augmenter):
         else:
             raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
 
-        if then_list is None:
-            self.then_list = Sequential([], name="%s-then" % (self.name,))
-        elif ia.is_iterable(then_list):
-            # TODO does this work with SomeOf(), Sequential(), ... ?
-            self.then_list = Sequential(then_list, name="%s-then" % (self.name,))
-        elif isinstance(then_list, Augmenter):
-            self.then_list = Sequential([then_list], name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple as then_list, got %s." % (type(then_list),))
-
-        if else_list is None:
-            self.else_list = Sequential([], name="%s-else" % (self.name,))
-        elif ia.is_iterable(else_list):
-            self.else_list = Sequential(else_list, name="%s-else" % (self.name,))
-        elif isinstance(else_list, Augmenter):
-            self.else_list = Sequential([else_list], name="%s-else" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple as else_list, got %s." % (type(else_list),))
+        self.then_list = handle_children_list(then_list, self.name, "then")
+        self.else_list = handle_children_list(else_list, self.name, "else")
 
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
@@ -1948,12 +2197,49 @@ class Sometimes(Augmenter):
             for idx_result_else_list, idx_images in enumerate(indices_else_list):
                 result[idx_images] = result_else_list[idx_result_else_list]
 
-            # if input was a list, keep the output as a list too,
-            # otherwise it was a numpy array, so make the output a numpy array too
-            if input_is_np_array:
+            # If input was a list, keep the output as a list too,
+            # otherwise it was a numpy array, so make the output a numpy array too.
+            # Note here though that shapes can differ between images, e.g. when using Crop
+            # without resizing. In these cases, the output has to be a list.
+            all_same_shape = len(set([image.shape for image in result])) == 1
+            if input_is_np_array and all_same_shape:
                 result = np.array(result, dtype=input_dtype)
         else:
             result = images
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            nb_heatmaps = len(heatmaps)
+            samples = self.p.draw_samples((nb_heatmaps,), random_state=random_state)
+
+            # create lists of heatmaps for if and else lists (one for each)
+            indices_then_list = np.where(samples == 1)[0] # np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            indices_else_list = np.where(samples == 0)[0]
+            heatmaps_then_list = [heatmaps[i] for i in indices_then_list]
+            heatmaps_else_list = [heatmaps[i] for i in indices_else_list]
+
+            # augment according to if and else list
+            result_then_list = self.then_list.augment_heatmaps(
+                heatmaps_then_list,
+                parents=parents + [self],
+                hooks=hooks
+            )
+            result_else_list = self.else_list.augment_heatmaps(
+                heatmaps_else_list,
+                parents=parents + [self],
+                hooks=hooks
+            )
+
+            # map results of if/else lists back to their initial positions (in "heatmaps" variable)
+            result = [None] * len(heatmaps)
+            for idx_result_then_list, idx_heatmaps in enumerate(indices_then_list):
+                result[idx_heatmaps] = result_then_list[idx_result_then_list]
+            for idx_result_else_list, idx_heatmaps in enumerate(indices_else_list):
+                result[idx_heatmaps] = result_else_list[idx_result_else_list]
+        else:
+            result = heatmaps
 
         return result
 
@@ -2006,7 +2292,7 @@ class Sometimes(Augmenter):
         return [self.then_list, self.else_list]
 
     def __str__(self):
-        return "Sometimes(p=%s, name=%s, then_list=[%s], else_list=[%s], deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
+        return "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
 
 class WithChannels(Augmenter):
     """
@@ -2061,14 +2347,7 @@ class WithChannels(Augmenter):
         else:
             raise Exception("Expected None, int or list of ints as channels, got %s." % (type(channels),))
 
-        if children is None:
-            self.children = Sequential([], name="%s-then" % (self.name,))
-        elif ia.is_iterable(children):
-            self.children = Sequential(children, name="%s-then" % (self.name,))
-        elif isinstance(children, Augmenter):
-            self.children = Sequential([children], name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+        self.children = handle_children_list(children, self.name, "then")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -2093,6 +2372,14 @@ class WithChannels(Augmenter):
                     hooks=hooks
                 )
 
+                ia.do_assert(
+                    all([img_out.shape[0:2] == img_in.shape[0:2] for img_out, img_in in zip(result_then_list, result)]),
+                    "Heights/widths of images changed in WithChannels from %s to %s, but expected to be the same." % (
+                        str([img_in.shape[0:2] for img_in in result]),
+                        str([img_out.shape[0:2] for img_out in result_then_list]),
+                    )
+                )
+
                 if ia.is_np_array(images):
                     result[..., self.channels] = result_then_list
                 else:
@@ -2101,8 +2388,47 @@ class WithChannels(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            # Augment heatmaps in the style of the children if all channels or the majority of
+            # them are selected by this layer, otherwise don't change the heatmaps.
+            heatmaps_to_aug = []
+            indices = []
+
+            for i, heatmaps_i in enumerate(heatmaps):
+                nb_channels = heatmaps_i.shape[2] if len(heatmaps_i.shape) >= 3 else 1
+                if self.channels is None or len(self.channels) > nb_channels*0.5:
+                    heatmaps_to_aug.append(heatmaps_i)
+                    indices.append(i)
+
+            if len(heatmaps_to_aug) > 0:
+                heatmaps_aug = self.children.augment_heatmaps(
+                    heatmaps_to_aug,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+                for idx_orig, heatmaps_i_aug in zip(indices, heatmaps_to_aug):
+                    result[idx_orig] = heatmaps_i_aug
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
+        result = keypoints_on_images
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+            # Augment keypoints in the style of the children if all channels or the majority of
+            # them are selected by this layer, otherwise don't change the heatmaps.
+            # We expect here the images channel number to be 3, but actually can't be fully sure
+            # about that.
+            if self.channels is None or len(self.channels) > 1:
+                result = self.children.augment_keypoints(
+                    keypoints_on_images,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+        return result
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -2118,7 +2444,7 @@ class WithChannels(Augmenter):
         return [self.children]
 
     def __str__(self):
-        return "WithChannels(channels=%s, name=%s, children=[%s], deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
+        return "WithChannels(channels=%s, name=%s, children=%s, deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
 
 class Noop(Augmenter):
     """
@@ -2148,6 +2474,9 @@ class Noop(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return images
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -2171,6 +2500,15 @@ class Lambda(Augmenter):
 
         and return the changed images (may be transformed in-place).
         This is essentially the interface of `Augmenter._augment_images()`.
+
+    func_heatmaps : callable,
+        The function to call for each batch of heatmaps.
+        It must follow the form
+
+            ``function(heatmaps, random_state, parents, hooks)``
+
+        and return the changed heatmaps (may be transformed in-place).
+        This is essentially the interface of `Augmenter._augment_heatmaps()`.
 
     func_keypoints : callable,
         The function to call for each batch of image keypoints.
@@ -2196,11 +2534,17 @@ class Lambda(Augmenter):
     >>>     images[:, ::2, :, :] = 0
     >>>     return images
     >>>
+    >>> def func_heatmaps(heatmaps, random_state, parents, hooks):
+    >>>     for heatmaps_i in heatmaps:
+    >>>         heatmaps.arr_0to1[::2, :, :] = 0
+    >>>     return heatmaps
+    >>>
     >>> def func_keypoints(keypoints_on_images, random_state, parents, hooks):
     >>>     return keypoints_on_images
     >>>
     >>> aug = iaa.Lambda(
     >>>     func_images=func_images,
+    >>>     func_heatmaps=func_heatmaps,
     >>>     func_keypoints=func_keypoints
     >>> )
 
@@ -2209,26 +2553,33 @@ class Lambda(Augmenter):
 
     """
 
-    def __init__(self, func_images, func_keypoints, name=None, deterministic=False, random_state=None):
+    def __init__(self, func_images, func_heatmaps, func_keypoints, name=None, deterministic=False, random_state=None):
         #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
+        self.func_heatmaps = func_heatmaps
         self.func_keypoints = func_keypoints
 
     def _augment_images(self, images, random_state, parents, hooks):
         return self.func_images(images, random_state, parents=parents, hooks=hooks)
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = self.func_heatmaps(heatmaps, random_state, parents=parents, hooks=hooks)
+        ia.do_assert(ia.is_iterable(result), "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, got %s." % (type(result),))
+        ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]), "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, got %s." % ([type(el) for el in result],))
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
-        ia.do_assert(isinstance(result, list))
-        ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]))
+        ia.do_assert(ia.is_iterable(result), "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, got %s." % (type(result),))
+        ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]), "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, got %s." % ([type(el) for el in result],))
         return result
 
     def get_parameters(self):
         return []
 
 
-def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, random_state=None):
+def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, deterministic=False, random_state=None):
     """
     Augmenter that runs an assert on each batch of input images
     using a lambda function as condition.
@@ -2244,6 +2595,13 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
             ``function(images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_images().
+
+    func_keypoints : callable,
+        The function to call for each batch of heatmaps.
+        It must follow the form
+            ``function(heatmaps, random_state, parents, hooks)``
+        and return either True (valid input) or False (invalid input).
+        It essentially reuses the interface of Augmenter._augment_heatmaps().
 
     func_keypoints : callable,
         The function to call for each batch of keypoints.
@@ -2264,15 +2622,18 @@ def AssertLambda(func_images, func_keypoints, name=None, deterministic=False, ra
     def func_images_assert(images, random_state, parents, hooks):
         ia.do_assert(func_images(images, random_state, parents=parents, hooks=hooks), "Input images did not fulfill user-defined assertion in AssertLambda.")
         return images
+    def func_heatmaps_assert(heatmaps, random_state, parents, hooks):
+        ia.do_assert(func_heatmaps(heatmaps, random_state, parents=parents, hooks=hooks), "Input heatmaps did not fulfill user-defined assertion in AssertLambda.")
+        return heatmaps
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
         ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks), "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
         return keypoints_on_images
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
-    return Lambda(func_images_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images_assert, func_heatmaps_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
 
 
-def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deterministic=False, random_state=None):
+def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=True, name=None, deterministic=False, random_state=None):
     """
     Augmenter to make assumptions about the shape of input image(s)
     and keypoints.
@@ -2293,6 +2654,13 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
 
     check_images : bool, optional(default=True)
         Whether to validate input images via the given shape.
+
+    check_heatmaps : bool, optional(default=True)
+        Whether to validate input heatmaps via the given shape.
+        The number of heatmaps will be checked and for each Heatmaps
+        instance its array's height and width, but not the channel
+        count as the channel number denotes the expected number of channels
+        in images.
 
     check_keypoints : bool, optional(default=True)
         Whether to validate input keypoints via the given shape.
@@ -2364,6 +2732,19 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
                     compare(observed, expected, i, "ALL")
         return images
 
+    def func_heatmaps(heatmaps, random_state, parents, hooks):
+        if check_heatmaps:
+            if shape[0] is not None:
+                compare(len(heatmaps), shape[0], 0, "ALL")
+
+            for i in sm.xrange(len(heatmaps)):
+                heatmaps_i = heatmaps[i]
+                for j in sm.xrange(len(shape[0:2])):
+                    expected = shape[j+1]
+                    observed = heatmaps_i.arr_0to1.shape[j]
+                    compare(observed, expected, j, i)
+        return heatmaps
+
     def func_keypoints(keypoints_on_images, random_state, parents, hooks):
         if check_keypoints:
             #ia.do_assert(is_np_array(images), "AssertShape can currently only handle numpy arrays, got ")
@@ -2381,4 +2762,4 @@ def AssertShape(shape, check_images=True, check_keypoints=True, name=None, deter
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return Lambda(func_images, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images, func_heatmaps, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)

@@ -8,18 +8,22 @@ import math
 from scipy import misc, ndimage
 import multiprocessing
 import threading
+import traceback
 import sys
 import six
 import six.moves as sm
 import os
-from skimage import draw
+import skimage.draw
+import skimage.measure
+import collections
+import time
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
-    from Queue import Empty as QueueEmpty
+    from Queue import Empty as QueueEmpty, Full as QueueFull
 elif sys.version_info[0] == 3:
     import pickle
-    from queue import Empty as QueueEmpty
+    from queue import Empty as QueueEmpty, Full as QueueFull
     xrange = range
 
 ALL = "ALL"
@@ -78,7 +82,7 @@ def is_single_integer(val):
         True if the variable is an integer. Otherwise False.
 
     """
-    return isinstance(val, numbers.Integral)
+    return isinstance(val, numbers.Integral) and not isinstance(val, bool)
 
 def is_single_float(val):
     """
@@ -96,7 +100,7 @@ def is_single_float(val):
         True if the variable is a float. Otherwise False.
 
     """
-    return isinstance(val, numbers.Real) and not is_single_integer(val)
+    return isinstance(val, numbers.Real) and not is_single_integer(val) and not isinstance(val, bool)
 
 def is_single_number(val):
     """
@@ -132,8 +136,7 @@ def is_iterable(val):
         True if the variable is an iterable. Otherwise False.
 
     """
-    # TODO make this more abstract, not just restricted to tuple/list
-    return isinstance(val, (tuple, list))
+    return isinstance(val, collections.Iterable)
 
 # TODO convert to is_single_string() or rename is_single_integer/float/number()
 def is_string(val):
@@ -171,6 +174,24 @@ def is_integer_array(val):
 
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.integer)
+
+def is_float_array(val):
+    """
+    Checks whether a variable is a numpy float array.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a numpy float array. Otherwise False.
+
+    """
+    return is_np_array(val) and issubclass(val.dtype.type, np.floating)
 
 def is_callable(val):
     """
@@ -468,9 +489,10 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         Array of the images to resize.
         Expected to usually be of dtype uint8.
 
-    sizes : iterable of two ints
-        The new size in (height, width)
-        format.
+    sizes : float or iterable of two ints or iterable of two floats
+        The new size of the images, given either as a fraction (a single float)
+        or as a (height, width) tuple of two integers or as a
+        (height fraction, width fraction) tuple of two floats.
 
     interpolation : None or string or int, optional(default=None)
         The interpolation to use during resize.
@@ -493,13 +515,37 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     result : (N,H',W',C) ndarray
         Array of the resized images.
 
+    Examples
+    --------
+    >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), 2.0)
+    Converts 2 RGB images of height and width 16 to images of height and width 16*2 = 32.
+
+    >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), (16, 32))
+    Converts 2 RGB images of height and width 16 to images of height 16 and width 32.
+
+    >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), (2.0, 4.0))
+    Converts 2 RGB images of height and width 16 to images of height 32 and width 64.
+
     """
-    s = images.shape
-    do_assert(len(s) == 4, s)
-    nb_images = s[0]
-    im_height, im_width = s[1], s[2]
-    nb_channels = s[3]
-    height, width = sizes[0], sizes[1]
+    shape = images.shape
+    do_assert(images.ndim == 4, "Expected array of shape (N, H, W, C), got shape %s" % (str(shape),))
+    nb_images = shape[0]
+    im_height, im_width = shape[1], shape[2]
+    nb_channels = shape[3]
+    if is_single_float(sizes):
+        do_assert(sizes > 0.0)
+        height = int(round(im_height * sizes))
+        width = int(round(im_width * sizes))
+    else:
+        do_assert(len(sizes) == 2)
+        all_int = all([is_single_integer(size) for size in sizes])
+        all_float = all([is_single_float(size) for size in sizes])
+        do_assert(all_int or all_float)
+        if all_int:
+            height, width = sizes[0], sizes[1]
+        else:
+            height = int(round(im_height * sizes[0]))
+            width = int(round(im_width * sizes[1]))
 
     if height == im_height and width == im_width:
         return np.copy(images)
@@ -517,18 +563,16 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         ip = cv2.INTER_LINEAR
     elif ip in ["area", cv2.INTER_AREA]:
         ip = cv2.INTER_AREA
-    elif ip in ["cubic", cv2.INTER_CUBIC]:
+    else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
         ip = cv2.INTER_CUBIC
-    else:
-        raise Exception("Invalid interpolation order")
 
-    result = np.zeros((nb_images, height, width, nb_channels), dtype=np.uint8)
+    result = np.zeros((nb_images, height, width, nb_channels), dtype=images.dtype)
     for img_idx in sm.xrange(nb_images):
         # TODO fallback to scipy here if image isn't uint8
         result_img = cv2.resize(images[img_idx], (width, height), interpolation=ip)
         if len(result_img.shape) == 2:
             result_img = result_img[:, :, np.newaxis]
-        result[img_idx] = result_img
+        result[img_idx] = result_img.astype(images.dtype)
     return result
 
 
@@ -564,6 +608,105 @@ def imresize_single_image(image, sizes, interpolation=None):
         return np.squeeze(rs[0, :, :, 0])
     else:
         return rs[0, ...]
+
+
+def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
+    assert arr.ndim in [2, 3]
+    assert top >= 0
+    assert right >= 0
+    assert bottom >= 0
+    assert left >= 0
+    if top > 0 or right > 0 or bottom > 0 or left > 0:
+        paddings_np = [(top, bottom), (left, right)]  # paddings for 2d case
+        if arr.ndim == 3:
+            paddings_np.append((0, 0))  # add paddings for 3d case
+
+        if mode == "constant":
+            arr_pad = np.pad(
+                arr,
+                paddings_np,
+                mode=mode,
+                constant_values=cval
+            )
+        else:
+            arr_pad = np.pad(
+                arr,
+                paddings_np,
+                mode=mode
+            )
+        return arr_pad
+    else:
+        return np.copy(arr)
+
+
+def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
+    assert arr.ndim in [2, 3]
+    assert aspect_ratio > 0
+    height, width = arr.shape[0:2]
+    assert height > 0
+    aspect_ratio_current = width / height
+
+    pad_top = 0
+    pad_right = 0
+    pad_bottom = 0
+    pad_left = 0
+
+    if aspect_ratio_current < aspect_ratio:
+        # vertical image, height > width
+        diff = (aspect_ratio * height) - width
+        pad_right = int(np.ceil(diff / 2))
+        pad_left = int(np.floor(diff / 2))
+    elif aspect_ratio_current > aspect_ratio:
+        # horizontal image, width > height
+        diff = ((1/aspect_ratio) * width) - height
+        pad_top = int(np.ceil(diff / 2))
+        pad_bottom = int(np.floor(diff / 2))
+
+    return (pad_top, pad_right, pad_bottom, pad_left)
+
+
+def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
+    pad_top, pad_right, pad_bottom, pad_left = compute_paddings_for_aspect_ratio(arr, aspect_ratio)
+    arr_padded = pad(
+        arr,
+        top=pad_top,
+        right=pad_right,
+        bottom=pad_bottom,
+        left=pad_left,
+        mode=mode,
+        cval=cval
+    )
+
+    if return_pad_amounts:
+        return arr_padded, (pad_top, pad_right, pad_bottom, pad_left)
+    else:
+        return arr_padded
+
+
+def pool(arr, block_size, func, cval=0, preserve_dtype=True):
+    assert arr.ndim in [2, 3]
+    is_valid_int = is_single_integer(block_size) and block_size >= 1
+    is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] and [is_single_integer(val) and val >= 1 for val in block_size]
+    assert is_valid_int or is_valid_tuple
+
+    if is_single_integer(block_size):
+        block_size = [block_size, block_size]
+    if len(block_size) < arr.ndim:
+        block_size = list(block_size) + [1]
+
+    input_dtype = arr.dtype
+    arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func, cval=cval)
+    if preserve_dtype and arr_reduced.dtype.type != input_dtype:
+        arr_reduced = arr_reduced.astype(input_dtype)
+    return arr_reduced
+
+
+def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
+    return pool(arr, block_size, np.average, cval=cval, preserve_dtype=preserve_dtype)
+
+
+def max_pool(arr, block_size, cval=0, preserve_dtype=True):
+    return pool(arr, block_size, np.max, cval=cval, preserve_dtype=preserve_dtype)
 
 
 def draw_grid(images, rows=None, cols=None):
@@ -735,11 +878,13 @@ class HooksImages(object):
 
     """
 
+    #def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None, propagation_method=None):
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
         self.propagator = propagator
         self.preprocessor = preprocessor
         self.postprocessor = postprocessor
+        #self.propagation_method = propagation_method
 
     def is_activated(self, images, augmenter, parents, default):
         """
@@ -778,6 +923,12 @@ class HooksImages(object):
         else:
             return self.propagator(images, augmenter, parents, default)
 
+    #def get_propagation_method(self, images, augmenter, parents, child, default):
+    #    if self.propagation_method is None:
+    #        return default
+    #    else:
+    #        return self.propagation_method(images, augmenter, parents, child, default)
+
     def preprocess(self, images, augmenter, parents):
         """
         A function to be called before the augmentation of images starts (per
@@ -810,6 +961,17 @@ class HooksImages(object):
         else:
             return self.postprocessor(images, augmenter, parents)
 
+class HooksHeatmaps(HooksImages):
+    """
+    Class to intervene with heatmap augmentation runs.
+
+    This is e.g. useful to dynamically deactivate some augmenters.
+
+    This class is currently the same as the one for images. This may or may
+    not change in the future.
+
+    """
+    pass
 
 class HooksKeypoints(HooksImages):
     """
@@ -888,16 +1050,16 @@ class Keypoint(object):
             y = (self.y / from_height) * to_height
             return Keypoint(x=x, y=y)
 
-    def shift(self, x, y):
+    def shift(self, x=0, y=0):
         """
         Move the keypoint around on an image.
 
         Parameters
         ----------
-        x : number
+        x : number, optional(default=0)
             Move by this value on the x axis.
 
-        y : number
+        y : number, optional(default=0)
             Move by this value on the y axis.
 
         Returns
@@ -1019,9 +1181,9 @@ class KeypointsOnImage(object):
             y, x = keypoint.y_int, keypoint.x_int
             if 0 <= y < height and 0 <= x < width:
                 x1 = max(x - size//2, 0)
-                x2 = min(x + 1 + size//2, width - 1)
+                x2 = min(x + 1 + size//2, width)
                 y1 = max(y - size//2, 0)
-                y2 = min(y + 1 + size//2, height - 1)
+                y2 = min(y + 1 + size//2, height)
                 image[y1:y2, x1:x2] = color
             else:
                 if raise_if_out_of_image:
@@ -1029,16 +1191,16 @@ class KeypointsOnImage(object):
 
         return image
 
-    def shift(self, x, y):
+    def shift(self, x=0, y=0):
         """
         Move the keypoints around on an image.
 
         Parameters
         ----------
-        x : number
+        x : number, optional(default=0)
             Move each keypoint by this value on the x axis.
 
-        y : number
+        y : number, optional(default=0)
             Move each keypoint by this value on the y axis.
 
         Returns
@@ -1128,9 +1290,9 @@ class KeypointsOnImage(object):
             x = keypoint.x_int
 
             x1 = np.clip(x - sizeh, 0, width-1)
-            x2 = np.clip(x + sizeh + 1, 0, width-1)
+            x2 = np.clip(x + sizeh + 1, 0, width)
             y1 = np.clip(y - sizeh, 0, height-1)
-            y2 = np.clip(y + sizeh + 1, 0, height-1)
+            y2 = np.clip(y + sizeh + 1, 0, height)
 
             #if 0 <= y < height and 0 <= x < width:
             #    image[y, x, i] = 255
@@ -1336,16 +1498,6 @@ class BoundingBox(object):
             y1 = (self.y1 / from_height) * to_height
             x2 = (self.x2 / from_width) * to_width
             y2 = (self.y2 / from_height) * to_height
-            if x1 == x2:
-                if x1 == 0:
-                    x2 += 1
-                else:
-                    x1 -= 1
-            if y1 == y2:
-                if y1 == 0:
-                    y2 += 1
-                else:
-                    y1 -= 1
             return self.copy(
                 x1=x1,
                 y1=y1,
@@ -1426,16 +1578,6 @@ class BoundingBox(object):
         x2 = np.clip(self.x2, 0, width)
         y1 = np.clip(self.y1, 0, height)
         y2 = np.clip(self.y2, 0, height)
-        if x1 == x2:
-            if x1 == 0:
-                x2 += 1
-            else:
-                x1 -= 1
-        if y1 == y2:
-            if y1 == 0:
-                y2 += 1
-            else:
-                y1 -= 1
 
         return self.copy(
             x1=x1,
@@ -1463,26 +1605,24 @@ class BoundingBox(object):
             raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
 
         result = np.copy(image) if copy else image
+
+        if isinstance(color, (tuple, list)):
+            color = np.uint8(color)
+
         for i in range(thickness):
             y = [self.y1_int-i, self.y1_int-i, self.y2_int+i, self.y2_int+i]
             x = [self.x1_int-i, self.x2_int+i, self.x2_int+i, self.x1_int-i]
-            rr, cc = draw.polygon_perimeter(y, x, shape=result.shape)
+            rr, cc = skimage.draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
-                result[rr, cc, 0] = color[0]
-                result[rr, cc, 1] = color[1]
-                result[rr, cc, 2] = color[2]
+                result[rr, cc, :] = color
             else:
-                if result.dtype in [np.float32, np.float64]:
-                    result[rr, cc, 0] = (1 - alpha) * result[rr, cc, 0] + alpha * color[0]
-                    result[rr, cc, 1] = (1 - alpha) * result[rr, cc, 1] + alpha * color[1]
-                    result[rr, cc, 2] = (1 - alpha) * result[rr, cc, 2] + alpha * color[2]
+                if is_float_array(result):
+                    result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
                     result = np.clip(result, 0, 255)
                 else:
                     input_dtype = result.dtype
                     result = result.astype(np.float32)
-                    result[rr, cc, 0] = (1 - alpha) * result[rr, cc, 0] + alpha * color[0]
-                    result[rr, cc, 1] = (1 - alpha) * result[rr, cc, 1] + alpha * color[1]
-                    result[rr, cc, 2] = (1 - alpha) * result[rr, cc, 2] + alpha * color[2]
+                    result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
                     result = np.clip(result, 0, 255).astype(input_dtype)
 
         return result
@@ -1537,7 +1677,7 @@ class BoundingBox(object):
             x2=self.x2 if x2 is None else x2,
             y1=self.y1 if y1 is None else y1,
             y2=self.y2 if y2 is None else y2,
-            label=self.label
+            label=self.label if label is None else label
         )
 
     def deepcopy(self, x1=None, y1=None, x2=None, y2=None, label=None):
@@ -1704,6 +1844,216 @@ class BoundingBoxesOnImage(object):
     def __str__(self):
         return "BoundingBoxesOnImage(%s, shape=%s)" % (str(self.bounding_boxes), self.shape)
 
+
+class HeatmapsOnImage(object):
+    def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
+        assert arr.dtype.type in [np.float32]
+        assert arr.ndim in [2, 3]
+        assert len(shape) in [2, 3]
+        assert min_value < max_value
+        assert np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps
+        assert np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps
+
+        if arr.ndim == 2:
+            arr = arr[..., np.newaxis]
+            self.arr_was_2d = True
+        else:
+            self.arr_was_2d = False
+
+        eps = np.finfo(np.float32).eps
+        min_is_zero = 0.0 - eps  < min_value < 0.0 + eps
+        max_is_one = 1.0 - eps < max_value < 1.0 + eps
+        if min_is_zero and max_is_one:
+            self.arr_0to1 = arr
+        else:
+            self.arr_0to1 = (arr - min_value) / (max_value - min_value)
+        self.shape = shape
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def get_arr(self):
+        if self.arr_was_2d and self.arr_0to1.shape[2] == 1:
+            arr = self.arr_0to1[:, :, 0]
+        else:
+            arr = self.arr_0to1
+
+        eps = np.finfo(np.float32).eps
+        min_is_zero = 0.0 - eps < self.min_value < 0.0 + eps
+        max_is_one = 1.0 - eps < self.max_value < 1.0 + eps
+        if min_is_zero and max_is_one:
+            return np.copy(arr)
+        else:
+            diff = self.max_value - self.min_value
+            return self.min_value + diff * arr
+
+    # TODO
+    #def find_global_maxima(self):
+    #    raise NotImplementedError()
+
+    def draw(self, size=None, cmap="jet"):
+        heatmaps_uint8 = self.to_uint8()
+        heatmaps_drawn = []
+
+        for c in sm.xrange(heatmaps_uint8.shape[2]):
+            # c:c+1 here, because the additional axis is needed by imresize_single_image
+            heatmap_c = heatmaps_uint8[..., c:c+1]
+
+            if size is not None:
+                heatmap_c_rs = imresize_single_image(heatmap_c, size,
+                                                     interpolation="nearest")
+            else:
+                heatmap_c_rs = heatmap_c
+            heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
+
+            if cmap is not None:
+                import matplotlib.pyplot as plt
+
+                cmap_func = plt.get_cmap(cmap)
+                heatmap_cmapped = cmap_func(heatmap_c_rs)
+                heatmap_cmapped = np.delete(heatmap_cmapped, 3, 2)
+            else:
+                heatmap_cmapped = np.tile(heatmap_c_rs[..., np.newaxis], (1, 1, 3))
+
+            heatmap_cmapped = np.clip(heatmap_cmapped * 255, 0, 255).astype(np.uint8)
+
+            heatmaps_drawn.append(heatmap_cmapped)
+        return heatmaps_drawn
+
+    def draw_on_image(self, image, alpha=0.75, cmap="jet", resize="heatmaps"):
+        # assert RGB image
+        assert image.ndim == 3
+        assert image.shape[2] == 3
+        assert image.dtype.type == np.uint8
+
+        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8
+        assert resize in ["heatmaps", "image"]
+
+        if resize == "image":
+            image = imresize_single_image(image, self.arr_0to1.shape[0:2], interpolation="cubic")
+
+        heatmaps_drawn = self.draw(
+            size=image.shape[0:2] if resize == "heatmaps" else None,
+            cmap=cmap
+        )
+
+        mix = [
+            np.clip((1-alpha) * image + alpha * heatmap_i, 0, 255).astype(np.uint8)
+            for heatmap_i
+            in heatmaps_drawn
+        ]
+
+        return mix
+
+    def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0.0):
+        arr_0to1_padded = pad(self.arr_0to1, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
+        return HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
+        arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
+        heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        if return_pad_amounts:
+            return heatmaps, pad_amounts
+        else:
+            return heatmaps
+
+    def avg_pool(self, block_size):
+        arr_0to1_reduced = avg_pool(self.arr_0to1, block_size)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def max_pool(self, block_size):
+        arr_0to1_reduced = max_pool(self.arr_0to1, block_size)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def scale(self, size, interpolation="cubic"):
+        arr_0to1_rescaled = imresize_single_image(self.arr_0to1, size, interpolation=interpolation)
+
+        # cubic interpolation can lead to values outside of [0.0, 1.0],
+        # see https://github.com/opencv/opencv/issues/7195
+        # TODO area interpolation too?
+        arr_0to1_rescaled = np.clip(arr_0to1_rescaled, 0.0, 1.0)
+
+        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+    def to_uint8(self):
+        arr_0to255 = np.clip(np.round(self.arr_0to1 * 255), 0, 255)
+        arr_uint8 = arr_0to255.astype(np.uint8)
+        return arr_uint8
+
+    @staticmethod
+    def from_uint8(arr_uint8, shape, min_value=0.0, max_value=1.0):
+        arr_0to1 = arr_uint8.astype(np.float32) / 255.0
+        return HeatmapsOnImage.from_0to1(arr_0to1, shape, min_value=min_value, max_value=max_value)
+
+    @staticmethod
+    def from_0to1(arr_0to1, shape, min_value=0.0, max_value=1.0):
+        heatmaps = HeatmapsOnImage(arr_0to1, shape, min_value=0.0, max_value=1.0)
+        heatmaps.min_value = min_value
+        heatmaps.max_value = max_value
+        return heatmaps
+
+    @staticmethod
+    def change_normalization(arr, source, target):
+        assert is_np_array(arr)
+
+        if isinstance(source, HeatmapsOnImage):
+            source = (source.min_value, source.max_value)
+        else:
+            assert isinstance(source, tuple)
+            assert len(source) == 2
+            assert source[0] < source[1]
+
+        if isinstance(target, HeatmapsOnImage):
+            target = (target.min_value, target.max_value)
+        else:
+            assert isinstance(target, tuple)
+            assert len(target) == 2
+            assert target[0] < target[1]
+
+        # Check if source and target are the same (with a tiny bit of tolerance)
+        # if so, evade compuation and just copy the array instead.
+        # This is reasonable, as source and target will often both be (0.0, 1.0).
+        eps = np.finfo(arr.dtype).eps
+        mins_same = source[0] - 10*eps < target[0] < source[0] + 10*eps
+        maxs_same = source[1] - 10*eps < target[1] < source[1] + 10*eps
+        if mins_same and maxs_same:
+            return np.copy(arr)
+
+        min_source, max_source = source
+        min_target, max_target = target
+
+        diff_source = max_source - min_source
+        diff_target = max_target - min_target
+
+        arr_0to1 = (arr - min_source) / diff_source
+        arr_target = min_target + arr_0to1 * diff_target
+
+        return arr_target
+
+    def copy(self):
+        """
+        Create a shallow copy of the Heatmaps object.
+
+        Returns
+        -------
+        out : Heatmaps
+            Shallow copy.
+
+        """
+        return self.deepcopy()
+
+    def deepcopy(self):
+        """
+        Create a deep copy of the Heatmaps object.
+
+        Returns
+        -------
+        out : Heatmaps
+            Deep copy.
+
+        """
+        return HeatmapsOnImage(self.get_arr(), shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+
 ############################
 # Background augmentation
 ############################
@@ -1800,13 +2150,22 @@ class BatchLoader(object):
             np.random.seed(seedval)
             seed(seedval)
 
-        for batch in load_batch_func():
-            do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
-            queue.put(pickle.dumps(batch, protocol=-1))
-            if join_signal.is_set():
-                break
-
-        finished_signal.set()
+        try:
+            for batch in load_batch_func():
+                do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
+                batch_pickled = pickle.dumps(batch, protocol=-1)
+                while not join_signal.is_set():
+                    try:
+                        queue.put(batch_pickled, timeout=0.001)
+                        break
+                    except QueueFull:
+                        pass
+                if join_signal.is_set():
+                    break
+        except Exception as exc:
+            traceback.print_exc()
+        finally:
+            finished_signal.set()
 
     def terminate(self):
         """
@@ -1814,17 +2173,31 @@ class BatchLoader(object):
 
         """
         self.join_signal.set()
+        # give minimal time to put generated batches in queue and gracefully shut down
+        time.sleep(0.002)
+
+        # clean the queue, this reportedly prevents hanging threads
+        while True:
+            try:
+                self.queue.get(timeout=0.005)
+            except QueueEmpty:
+                break
+
         if self.threaded:
-            while True:
-                try:
-                    self.queue.get(timeout=1)
-                except QueueEmpty:
-                    break
             for worker in self.workers:
                 worker.join()
+            # we don't have to set the finished_signals here, because threads always finish
+            # gracefully
         else:
-            for worker, finished_signal in zip(self.workers, self.finished_signals):
+            for worker in self.workers:
                 worker.terminate()
+                worker.join()
+
+            # wait here a tiny bit to really make sure that everything is killed before setting
+            # the finished_signals. calling set() and is_set() (via a subprocess) on them at the
+            # same time apparently results in a deadlock (at least in python 2).
+            #time.sleep(0.02)
+            for finished_signal in self.finished_signals:
                 finished_signal.set()
 
         self.queue.close()

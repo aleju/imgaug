@@ -3,4 +3,4 @@ from .imgaug import *
 from . import augmenters
 from . import parameters
 
-__version__ = '0.2.5'
+__version__ = '0.2.6'

@@ -193,7 +193,11 @@ class Scale(Augmenter):
             elif isinstance(val, StochasticParameter):
                 return val
             else:
-                raise Exception("Expected integer, float or StochasticParameter, got %s." % (type(val),))
+                raise Exception(
+                    "Expected number, tuple of two numbers, list of numbers, dictionary of "
+                    "form {'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
+                    "'width': <analogous>}, or StochasticParameter, got %s." % (type(val),)
+                )
 
         self.size = handle(size, True)
 
@@ -226,6 +230,18 @@ class Scale(Augmenter):
             all_same_size = (len(set([image.shape for image in result])) == 1)
             if all_same_size:
                 result = np.array(result, dtype=np.uint8)
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = []
+        nb_heatmaps = len(heatmaps)
+        samples_h, samples_w, samples_ip = self._draw_samples(nb_heatmaps, random_state, do_sample_ip=True)
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_i = heatmaps[i]
+            sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
+            h, w = self._compute_height_width(heatmaps_i.arr_0to1.shape, sample_h, sample_w)
+            result.append(heatmaps_i.scale((h, w), interpolation=sample_ip))
 
         return result
 
@@ -265,14 +281,14 @@ class Scale(Augmenter):
         h, w = sample_h, sample_w
 
         if ia.is_single_float(h):
-            ia.do_assert(0 <= h <= 1.0)
-            h = int(imh * h)
+            ia.do_assert(0 < h)
+            h = int(np.round(imh * h))
             h = h if h > 0 else 1
         elif h == "keep":
             h = imh
         if ia.is_single_float(w):
-            ia.do_assert(0 <= w <= 1.0)
-            w = int(imw * w)
+            ia.do_assert(0 < w)
+            w = int(np.round(imw * w))
             w = w if w > 0 else 1
         elif w == "keep":
             w = imw
@@ -282,10 +298,10 @@ class Scale(Augmenter):
         # this is also why these are not written as elifs
         if h == "keep-aspect-ratio":
             h_per_w_orig = imh / imw
-            h = int(w * h_per_w_orig)
+            h = int(np.round(w * h_per_w_orig))
         if w == "keep-aspect-ratio":
             w_per_h_orig = imw / imh
-            w = int(h * w_per_h_orig)
+            w = int(np.round(h * w_per_h_orig))
 
         return h, w
 
@@ -636,6 +652,45 @@ class CropAndPad(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = []
+        nb_heatmaps = len(heatmaps)
+        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+        for i in sm.xrange(nb_heatmaps):
+            seed = seeds[i]
+            height_image, width_image = heatmaps[i].shape[0:2]
+            height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
+            crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, _pad_mode, _pad_cval = self._draw_samples_image(seed, height_image, width_image)
+
+            if (height_image, width_image) != (height_heatmaps, width_heatmaps):
+                crop_top = int(round(height_heatmaps * (crop_top/height_image)))
+                crop_right = int(round(width_heatmaps * (crop_right/width_image)))
+                crop_bottom = int(round(height_heatmaps * (crop_bottom/height_image)))
+                crop_left = int(round(width_heatmaps * (crop_left/width_image)))
+
+                crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
+
+            arr_cr = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom, crop_left:width_heatmaps-crop_right, :]
+
+            if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
+                if arr_cr.ndim == 2:
+                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right))
+                else:
+                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+
+                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant", constant_values=0)
+            else:
+                arr_cr_pa = arr_cr
+
+            heatmaps[i].arr_0to1 = arr_cr_pa
+
+            if self.keep_size:
+                heatmaps[i] = heatmaps[i].scale((height_heatmaps, width_heatmaps))
+
+            result.append(heatmaps[i])
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
@@ -681,10 +736,10 @@ class CropAndPad(Augmenter):
                 pass
             elif self.mode == "percent":
                 # percentage values have to be transformed to pixel values
-                top = int(height * top)
-                right = int(width * right)
-                bottom = int(height * bottom)
-                left = int(width * left)
+                top = int(round(height * top))
+                right = int(round(width * right))
+                bottom = int(round(height * bottom))
+                left = int(round(width * left))
             else:
                 raise Exception("Invalid mode")
 
@@ -701,6 +756,15 @@ class CropAndPad(Augmenter):
         pad_mode = self.pad_mode.draw_sample(random_state=random_state)
         pad_cval = self.pad_cval.draw_sample(random_state=random_state)
 
+        crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left)
+
+        ia.do_assert(crop_top >= 0 and crop_right >= 0 and crop_bottom >= 0 and crop_left >= 0)
+        ia.do_assert(crop_top + crop_bottom < height)
+        ia.do_assert(crop_right + crop_left < width)
+
+        return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
+
+    def _prevent_zero_size(self, height, width, crop_top, crop_right, crop_bottom, crop_left):
         remaining_height = height - (crop_top + crop_bottom)
         remaining_width = width - (crop_left + crop_right)
         if remaining_height < 1:
@@ -747,11 +811,7 @@ class CropAndPad(Augmenter):
             crop_right = crop_right - regain_right
             crop_left = crop_left - regain_left
 
-        ia.do_assert(crop_top >= 0 and crop_right >= 0 and crop_bottom >= 0 and crop_left >= 0)
-        ia.do_assert(crop_top + crop_bottom < height)
-        ia.do_assert(crop_right + crop_left < width)
-
-        return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
+        return crop_top, crop_right, crop_bottom, crop_left
 
     def get_parameters(self):
         return [self.all_sides, self.top, self.right, self.bottom, self.left, self.pad_mode, self.pad_cval]

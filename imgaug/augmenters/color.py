@@ -27,7 +27,7 @@ import cv2
 import six.moves as sm
 import warnings
 
-from .meta import Augmenter, Sequential, WithChannels
+from .meta import Augmenter, Sequential, WithChannels, handle_children_list
 from .arithmetic import Add
 
 # legacy support
@@ -80,15 +80,7 @@ class WithColorspace(Augmenter):
 
         self.to_colorspace = to_colorspace
         self.from_colorspace = from_colorspace
-
-        if children is None:
-            self.children = Sequential([], name="%s-then" % (self.name,))
-        elif ia.is_iterable(children):
-            self.children = Sequential(children, name="%s-then" % (self.name,))
-        elif isinstance(children, Augmenter):
-            self.children = Sequential([children], name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+        self.children = handle_children_list(children, self.name, "then")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -108,8 +100,25 @@ class WithColorspace(Augmenter):
             ).augment_images(images=result)
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            result = self.children.augment_heatmaps(
+                result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
+        result = keypoints_on_images
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+            result = self.children.augment_keypoints(
+                result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+        return result
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -358,6 +367,9 @@ class ChangeColorspace(Augmenter):
                     result[i] = (alpha * img_to_cs + (1 - alpha) * image).astype(np.uint8)
 
         return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images

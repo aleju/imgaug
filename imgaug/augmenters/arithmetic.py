@@ -119,13 +119,13 @@ class Add(Augmenter):
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel == 1:
                 nb_channels = image.shape[2]
-                samples = self.value.draw_samples((nb_channels,), random_state=rs_image)
+                samples = self.value.draw_samples((nb_channels,), random_state=rs_image).astype(image.dtype)
                 for c, sample in enumerate(samples):
                     # TODO make value range more flexible
                     ia.do_assert(-255 <= sample <= 255)
                     image[..., c] += sample
             else:
-                sample = self.value.draw_sample(random_state=rs_image)
+                sample = self.value.draw_sample(random_state=rs_image).astype(image.dtype)
                 ia.do_assert(-255 <= sample <= 255) # TODO make value range more flexible
                 image += sample
 
@@ -136,11 +136,14 @@ class Add(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.value]
+        return [self.value, self.per_channel]
 
 # TODO tests
 class AddElementwise(Augmenter):
@@ -236,9 +239,9 @@ class AddElementwise(Augmenter):
             rs_image = ia.new_random_state(seed)
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel == 1:
-                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image)
+                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image).astype(image.dtype)
             else:
-                samples = self.value.draw_samples((height, width, 1), random_state=rs_image)
+                samples = self.value.draw_samples((height, width, 1), random_state=rs_image).astype(image.dtype)
                 samples = np.tile(samples, (1, 1, nb_channels))
             after_add = image + samples
 
@@ -249,11 +252,14 @@ class AddElementwise(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.value]
+        return [self.value, self.per_channel]
 
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
@@ -450,11 +456,14 @@ class Multiply(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.mul]
+        return [self.mul, self.per_channel]
 
 
 # TODO tests
@@ -565,11 +574,14 @@ class MultiplyElementwise(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.mul]
+        return [self.mul, self.per_channel]
 
 def Dropout(p=0, per_channel=False, name=None, deterministic=False,
             random_state=None):
@@ -591,6 +603,9 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
             * If a StochasticParameter, then this parameter will be used to
               determine per pixel whether it should be dropped (sampled value
               of 0) or shouldn't (sampled value of 1).
+              If you instead want to provide the probability as a stochastic
+              parameter, you can usually do `Binomial(1-p)` to convert parameter
+              `p` to a 0/1 representation.
 
     per_channel : bool or float, optional(default=False)
         Whether to use the same value (is dropped / is not dropped)
@@ -847,7 +862,7 @@ class ReplaceElementwise(Augmenter):
             self.mask = Binomial(Uniform(mask[0], mask[1]))
         elif ia.is_iterable(mask):
             ia.do_assert(all([0 <= pi <= 1.0 for pi in mask]))
-            self.mask = iap.Choice(mask)
+            self.mask = iap.Binomial(iap.Choice(mask))
         elif isinstance(mask, StochasticParameter):
             self.mask = mask
         else:
@@ -905,11 +920,14 @@ class ReplaceElementwise(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.mask, self.replacement]
+        return [self.mask, self.replacement, self.per_channel]
 
 def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
@@ -1052,7 +1070,7 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
         ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = iap.Choice(p)
+        mask = Binomial(iap.Choice(p))
     elif isinstance(p, StochasticParameter):
         mask = p
     else:
@@ -1227,7 +1245,7 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
         ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = iap.Choice(p)
+        mask = Binomial(iap.Choice(p))
     elif isinstance(p, StochasticParameter):
         mask = p
     else:
@@ -1409,7 +1427,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
         mask = Binomial(Uniform(p[0], p[1]))
     elif ia.is_iterable(p):
         ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = iap.Choice(p)
+        mask = Binomial(iap.Choice(p))
     elif isinstance(p, StochasticParameter):
         mask = p
     else:
@@ -1460,9 +1478,9 @@ class Invert(Augmenter):
         inverted.
             * If a float, then that probability will be used for all images.
             * If a StochasticParameter, then that parameter will queried per
-              image and is expected too return values in the range [0.0, 1.0],
+              image and is expected to return values in the range [0.0, 1.0],
               where values >0.5 mean that the image/channel is supposed to be
-              inverted.
+              inverted. Recommended to be some form of Binomial(...).
 
     per_channel : bool or float, optional(default=False)
         Whether to use the same value for all channels (False)
@@ -1556,6 +1574,9 @@ class Invert(Augmenter):
             result[i] = image
 
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -1659,8 +1680,11 @@ class ContrastNormalization(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.alpha]
+        return [self.alpha, self.per_channel]

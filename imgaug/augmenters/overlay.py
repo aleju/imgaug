@@ -24,7 +24,7 @@ from .. import parameters as iap
 import numpy as np
 import six.moves as sm
 
-from .meta import Augmenter, Sequential
+from .meta import Augmenter, Sequential, handle_children_list
 
 # TODO tests
 class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
@@ -148,29 +148,8 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
 
         ia.do_assert(first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values.")
 
-        if first is None:
-            self.first = None
-        elif ia.is_iterable(first):
-            if isinstance(first, Augmenter):
-                self.first = first
-            else:
-                self.first = Sequential(first, name="%s-first" % (self.name,))
-        elif isinstance(first, Augmenter):
-            self.first = Sequential([first], name="%s-first" % (self.name,))
-        else:
-            raise Exception("Expected 'first' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(first),))
-
-        if second is None:
-            self.second = None
-        elif ia.is_iterable(second):
-            if isinstance(second, Augmenter):
-                self.second = second
-            else:
-                self.second = Sequential(second, name="%s-second" % (self.name,))
-        elif isinstance(second, Augmenter):
-            self.second = Sequential([second], name="%s-second" % (self.name,))
-        else:
-            raise Exception("Expected 'second' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(second),))
+        self.first = handle_children_list(first, self.name, "first")
+        self.second = handle_children_list(second, self.name, "second")
 
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
@@ -248,6 +227,55 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
                 result[i] = image.astype(input_dtype)
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        nb_heatmaps = len(heatmaps)
+        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                heatmaps_first = heatmaps
+            else:
+                heatmaps_first = self.first.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                heatmaps_second = heatmaps
+            else:
+                heatmaps_second = self.second.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            heatmaps_first = heatmaps
+            heatmaps_second = heatmaps
+
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_first_i = heatmaps_first[i]
+            heatmaps_second_i = heatmaps_second[i]
+            rs_image = ia.new_random_state(seeds[i])
+            # sample alphas channelwise if necessary and try to use the image's channel number
+            # values properly synchronized with the image augmentation
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = heatmaps[i].shape[2] if len(heatmaps[i].shape) >= 3 else 1
+                samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
+                sample = np.average(samples)
+            else:
+                sample = self.factor.draw_sample(random_state=rs_image)
+                ia.do_assert(0 <= sample <= 1.0)
+
+            mask = sample >= 0.5
+            heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
+
+            result[i].arr_0to1 = heatmaps_arr_aug
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
         nb_images = len(keypoints_on_images)
@@ -312,15 +340,11 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
         return aug
 
     def get_parameters(self):
-        return [self.factor, self.first, self.second, self.per_channel]
+        return [self.factor, self.per_channel]
 
     def get_children_lists(self):
-        result = []
-        if self.first is not None:
-            result.append(self.first)
-        if self.second is not None:
-            result.append(self.second)
-        return result
+        return [self.first, self.second]
+
 
 class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
@@ -486,6 +510,76 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
                 result[i] = image.astype(input_dtype)
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps, seed):
+            samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
+            ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
+
+            if (h_images, w_images) != (h_heatmaps, w_heatmaps):
+                samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
+                samples_c = ia.imresize_single_image(samples_c, (h_heatmaps, w_heatmaps), interpolation="cubic")
+                samples_c = samples_c.astype(np.float32) / 255.0
+
+            return samples_c
+
+        result = heatmaps
+        nb_heatmaps = len(heatmaps)
+        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                heatmaps_first = heatmaps
+            else:
+                heatmaps_first = self.first.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                heatmaps_second = heatmaps
+            else:
+                heatmaps_second = self.second.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            heatmaps_first = heatmaps
+            heatmaps_second = heatmaps
+
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_i = heatmaps[i]
+            h_img, w_img = heatmaps_i.shape[0:2]
+            h_heatmaps, w_heatmaps = heatmaps_i.arr_0to1.shape[0:2]
+            nb_channels_img = heatmaps_i.shape[2] if len(heatmaps_i.shape) >= 3 else 1
+            nb_channels_heatmaps = heatmaps_i.arr_0to1.shape[2]
+            heatmaps_first_i = heatmaps_first[i]
+            heatmaps_second_i = heatmaps_second[i]
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            if per_channel == 1:
+                samples = []
+                for c in sm.xrange(nb_channels_img):
+                    # We sample here at the same size as the original image, as some effects
+                    # might not scale with image size. We sampled mask is then downscaled to the
+                    # heatmap size.
+                    samples_c = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i]+1+c)
+                    samples.append(samples_c[..., np.newaxis])
+                samples = np.concatenate(samples, axis=2)
+                samples_avg = np.average(samples, axis=2)
+                samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_heatmaps))
+            else:
+                #samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
+                samples = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i])
+                samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_heatmaps))
+
+            mask = samples_tiled >= 0.5
+            heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
+
+            result[i].arr_0to1 = heatmaps_arr_aug
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
         nb_images = len(keypoints_on_images)
@@ -513,6 +607,8 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             kps_ois_first = keypoints_on_images
             kps_ois_second = keypoints_on_images
 
+        # FIXME this is essentially the same behaviour as Alpha, requires inclusion of (x, y)
+        # coordinates to estimate new keypoint coordinates
         for i in sm.xrange(nb_images):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
@@ -534,7 +630,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             if per_channel == 1:
                 #samples = self.factor.draw_samples((h, w, nb_channels,), random_state=rs_image)
                 samples = np.zeros((h, w, nb_channels), dtype=np.float32)
-                for c in nb_channels:
+                for c in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
                     samples[:, :, c] = samples_c
             else:

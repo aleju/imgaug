@@ -97,6 +97,9 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
                     result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -210,6 +213,9 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
                 result[i] = image_aug
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -293,6 +299,9 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
                     image_aug = image_aug[..., np.newaxis]
                 result[i] = image_aug
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -399,6 +408,9 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
             if di != 1:
                 result[i] = cv2.bilateralFilter(images[i], di, sigma_color_i, sigma_space_i)
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
