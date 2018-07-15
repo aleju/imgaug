@@ -820,6 +820,9 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
             activated=sigmoid
         )
 
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
     return AlphaElementwise(
         factor=noise, first=first, second=second, per_channel=per_channel,
         name=name, deterministic=deterministic, random_state=random_state
@@ -1017,6 +1020,9 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
             activated=sigmoid
         )
+
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return AlphaElementwise(
         factor=noise, first=first, second=second, per_channel=per_channel,

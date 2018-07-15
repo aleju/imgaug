@@ -991,6 +991,10 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
 
     px = recursive_validate(px)
     percent = recursive_validate(percent)
+
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
     aug = CropAndPad(
         px=px, percent=percent,
         pad_mode=pad_mode, pad_cval=pad_cval,
@@ -1128,6 +1132,10 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
 
     px = recursive_negate(px)
     percent = recursive_negate(percent)
+
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
     aug = CropAndPad(
         px=px, percent=percent,
         keep_size=keep_size, sample_independently=sample_independently,

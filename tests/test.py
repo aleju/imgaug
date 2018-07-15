@@ -49,6 +49,7 @@ def main():
     test_is_integer_array()
     test_is_float_array()
     test_is_callable()
+    test_caller_name()
     test_seed()
     test_current_random_state()
     test_new_random_state()
@@ -288,6 +289,10 @@ def test_is_single_float():
     assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
 
 
+def test_caller_name():
+    assert ia.caller_name() == 'test_caller_name'
+
+    
 def test_is_single_number():
     class _Dummy(object):
         pass
