@@ -525,8 +525,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             call to this function. Usually you can leave this parameter as None.
             It is set automatically for child augmenters.
 
-        hooks : None or ia.HooksImages, optional(default=None)
-            HooksImages object to dynamically interfere with the augmentation
+        hooks : None or ia.HooksHeatmaps, optional(default=None)
+            HooksHeatmaps object to dynamically interfere with the augmentation
             process.
 
         Returns
@@ -597,7 +597,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         parents : list of Augmenter
             See `augment_heatmaps()`.
 
-        hooks : ia.HooksImages
+        hooks : ia.HooksHeatmaps
             See `augment_heatmaps()`.
 
         Returns
@@ -628,6 +628,40 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             for heatmaps_aug, heatmaps_i
             in zip(heatmaps_uint8_aug, heatmaps)
         ]
+
+    def augment_segmentation_maps(self, segmaps, parents=None, hooks=None):
+        """
+        Augment segmentation maps.
+
+        Parameters
+        ----------
+        segmaps : list of ia.SegmentationMapOnImage
+            The segmentation maps to augment.
+
+        parents : None or list of Augmenter, optional(default=None)
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
+
+        hooks : None or ia.HooksHeatmaps, optional(default=None)
+            HooksHeatmaps object to dynamically interfere with the augmentation
+            process.
+
+        Returns
+        -------
+        segmaps_aug : list of ia.SegmentationMapOnImage
+            Corresponding augmented segmentation maps.
+        """
+        heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True) for segmap in segmaps]
+        heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
+        nonempty_class_indices = [nonempty_class_indices_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
+        heatmaps_aug = self.augment_heatmaps(heatmaps)
+        segmaps_aug = []
+        for segmap, heatmaps_aug_i, nonempty_class_indices_i in zip(segmaps, heatmaps_aug, nonempty_class_indices):
+            segmap_aug = ia.SegmentationMapOnImage.from_heatmaps(heatmaps_aug_i, class_indices=nonempty_class_indices_i, nb_classes=segmap.nb_classes)
+            segmap_aug.input_was = segmap.input_was
+            segmaps_aug.append(segmap_aug)
+        return segmaps_aug
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
         """

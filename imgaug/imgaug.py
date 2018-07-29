@@ -2764,7 +2764,7 @@ class HeatmapsOnImage(object):
         -------
         result : tuple
             First tuple entry: Padded heatmaps as HeatmapsOnImage object.
-            Second tuple entry: Amounts by which the heatamps were padded on each side, given
+            Second tuple entry: Amounts by which the heatmaps were padded on each side, given
                 as a tuple (top, right, bottom, left).
             If return_pad_amounts is False, then only the heatmaps object is returned.
 
@@ -2996,7 +2996,7 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        out : Heatmaps
+        out : HeatmapsOnImage
             Shallow copy.
 
         """
@@ -3008,11 +3008,524 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        out : Heatmaps
+        out : HeatmapsOnImage
             Deep copy.
 
         """
         return HeatmapsOnImage(self.get_arr(), shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+
+
+class SegmentationMapOnImage(object):
+    """
+    Object representing a segmentation map associated with an image.
+
+    Attributes
+    ----------
+    DEFAULT_SEGMENT_COLORS : list of tuple of int
+        Standard RGB colors to use during drawing, ordered by class index.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,1) ndarray or (H,W,C) ndarray
+        Array representing the segmentation map. May have datatypes bool, integer or float.
+            * If bool: Assumed to be of shape (H,W), (H,W,1) or (H,W,C). If (H,W) or (H,W,1) it
+              is assumed to be for the case of having a single class (where any False denotes
+              background). Otherwise there are assumed to be C channels, one for each class,
+              with each of them containing a mask for that class. The masks may overlap.
+            * If integer: Assumed to be of shape (H,W) or (H,W,1). Each pixel is assumed to
+              contain an integer denoting the class index. Classes are assumed to be
+              non-overlapping. The number of classes cannot be guessed from this input, hence
+              nb_classes must be set.
+            * If float: Assumed to b eof shape (H,W), (H,W,1) or (H,W,C) with meanings being
+              similar to the case of `bool`. Values are expected to fall always in the range
+              0.0 to 1.0 and are usually expected to be either 0.0 or 1.0 upon instantiation
+              of a new segmentation map. Classes may overlap.
+    shape
+    nb_classes=None
+    """
+
+    DEFAULT_SEGMENT_COLORS = [
+        (0, 0, 0),  # black
+        (230, 25, 75),  # red
+        (60, 180, 75),  # green
+        (255, 225, 25),  # yellow
+        (0, 130, 200),  # blue
+        (245, 130, 48),  # orange
+        (145, 30, 180),  # purple
+        (70, 240, 240),  # cyan
+        (240, 50, 230),  # magenta
+        (210, 245, 60),  # lime
+        (250, 190, 190),  # pink
+        (0, 128, 128),  # teal
+        (230, 190, 255),  # lavender
+        (170, 110, 40),  # brown
+        (255, 250, 200),  # beige
+        (128, 0, 0),  # maroon
+        (170, 255, 195),  # mint
+        (128, 128, 0),  # olive
+        (255, 215, 180),  # coral
+        (0, 0, 128),  # navy
+        (128, 128, 128),  # grey
+        (255, 255, 255),  # white
+        # --
+        (115, 12, 37),  # dark red
+        (30, 90, 37),  # dark green
+        (127, 112, 12),  # dark yellow
+        (0, 65, 100),  # dark blue
+        (122, 65, 24),  # dark orange
+        (72, 15, 90),  # dark purple
+        (35, 120, 120),  # dark cyan
+        (120, 25, 115),  # dark magenta
+        (105, 122, 30),  # dark lime
+        (125, 95, 95),  # dark pink
+        (0, 64, 64),  # dark teal
+        (115, 95, 127),  # dark lavender
+        (85, 55, 20),  # dark brown
+        (127, 125, 100),  # dark beige
+        (64, 0, 0),  # dark maroon
+        (85, 127, 97),  # dark mint
+        (64, 64, 0),  # dark olive
+        (127, 107, 90),  # dark coral
+        (0, 0, 64),  # dark navy
+        (64, 64, 64),  # dark grey
+    ]
+
+    def __init__(self, arr, shape, nb_classes=None):
+        if arr.dtype.type == np.bool:
+            assert arr.ndim in [2, 3]
+            self.input_was = ("bool", arr.ndim)
+            if arr.ndim == 2:
+                arr = arr[..., np.newaxis]
+            arr = arr.astype(np.float32)
+        elif arr.dtype.type in [np.uint8, np.uint32, np.int8, np.int16, np.int32]:
+            assert arr.ndim == 2 or (arr.ndim == 3 and arr.shape[2] == 1)
+            assert nb_classes is not None
+            assert nb_classes > 0
+            assert np.min(arr.flat[0:100]) >= 0
+            assert np.max(arr.flat[0:100]) <= nb_classes
+            self.input_was = ("int", arr.dtype.type, arr.ndim)
+            if arr.ndim == 3:
+                arr = arr[..., 0]
+            arr = np.eye(nb_classes)[arr]  # from class indices to one hot
+            arr = arr.astype(np.float32)
+        elif arr.dtype.type in [np.float16, np.float32]:
+            assert arr.ndim == 3
+            self.input_was = ("float", arr.dtype.type, arr.ndim)
+            arr = arr.astype(np.float32)
+        else:
+            dt = str(arr.dtype) if ia.is_np_array(arr) else "<no ndarray>"
+            raise Exception("Input was expected to be an ndarray of dtype bool, uint8, uint32 "
+                            "int8, int16, int32 or float32. Got type %s with dtype %s." % (type(arr), dt))
+        assert arr.ndim == 3
+        assert arr.dtype.type == np.float32
+        self.arr = arr
+        self.shape = shape
+        self.nb_classes = nb_classes if nb_classes is not None else arr.shape[2]
+
+    #@property
+    #def nb_classes(self):
+    #    return self.arr.shape[2]
+
+    def get_arr_int(self, background_threshold=0.01, background_class_id=0):
+        """
+        Get the segmentation map array as an integer array of shape (H, W).
+
+        Each pixel in that array contains an integer value representing the pixel's class.
+        If multiple classes overlap, the one with the highest local float value is picked.
+        If that highest local value is below `background_threshold`, the method instead uses
+        the background class id as the pixel's class value.
+
+        Parameters
+        ----------
+        background_threshold : float, optional(default=0.01)
+            At each pixel, each class-heatmap has a value between 0.0 and 1.0. If none of the
+            class-heatmaps has a value above this threshold, the method uses the background class
+            id instead.
+
+        background_class_id : int, optional(default=0)
+            Class id to fall back to if no class-heatmap passes the threshold at a spatial
+            location.
+
+        Returns
+        -------
+        result : (H,W) ndarray(int)
+            Segmentation map array.
+
+        """
+        channelwise_max_idx = np.argmax(self.arr, axis=2)
+        result = channelwise_max_idx
+        if background_threshold is not None and background_threshold > 0:
+            probs = np.amax(self.arr, axis=2)
+            result[probs < background_threshold] = background_class_id
+        return result.astype(np.int32)
+
+    #def get_arr_bool(self, allow_overlapping=False, threshold=0.5, background_threshold=0.01, background_class_id=0):
+    #    # TODO
+    #    raise NotImplementedError()
+
+    def draw(self, size=None, background_threshold=0.01, background_class_id=0, colors=None, return_foreground_mask=False):
+        """
+        Render the segmentation map as an RGB image.
+
+        Parameters
+        ----------
+        size : None or float or iterable of two ints or iterable of two floats, optional(default=None)
+            Size of the rendered RGB image as (height, width).
+            See `imresize_single_image()` for details.
+            If set to None, no resizing is performed and the size of the segmentation map array is
+            used.
+
+        background_threshold : float, optional(default=0.01)
+            At each pixel, each class-heatmap has a value between 0.0 and 1.0. If none of the
+            class-heatmaps has a value above this threshold, the method uses the background class
+            id instead.
+
+        background_class_id : int, optional(default=0)
+            Class id to fall back to if no class-heatmap passes the threshold at a spatial
+            location.
+
+        colors : None or list of tuple of int, optional(default=None)
+            Colors to use. One for each class to draw. If None, then default colors will be used.
+
+        return_foreground_mask : bool, optional(default=False)
+            Whether to return a mask of the same size as the drawn segmentation map, containing
+            True at any spatial location that is not the background class and False everywhere
+            else.
+
+        Returns
+        -------
+        segmap_drawn : (H,W,3) ndarray(uint8)
+            Rendered segmentation map.
+        foreground_mask : (H,W) ndarray(bool)
+            Mask indicating the locations of foreground classes. Only returned if
+            return_foreground_mask is True.
+
+        """
+        arr = self.get_arr_int(background_threshold=background_threshold, background_class_id=background_class_id)
+        nb_classes = self.nb_classes
+        segmap_drawn = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
+        if colors is None:
+            colors = SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS
+        assert nb_classes <= len(colors), "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (nb_classes, len(colors),)
+
+        ids_in_map = np.unique(arr)
+        for c, color in zip(sm.xrange(1+nb_classes), colors):
+            if c in ids_in_map:
+                class_mask = (arr == c)
+                segmap_drawn[class_mask] = color
+
+        if return_foreground_mask:
+            foreground_mask = (arr != background_class_id)
+        else:
+            foreground_mask = None
+
+        if size is not None:
+            segmap_drawn = imresize_single_image(segmap_drawn, size, interpolation="nearest")
+            if foreground_mask is not None:
+                foreground_mask = imresize_single_image(foreground_mask.astype(np.uint8), size, interpolation="nearest") > 0
+
+        if foreground_mask is not None:
+            return segmap_drawn, foreground_mask
+        return segmap_drawn
+
+    def draw_on_image(self, image, alpha=0.5, resize="segmentation_map", background_threshold=0.01, background_class_id=0, colors=None, draw_background=False):
+        """
+        Draw the segmentation map as an overlay over an image.
+
+        Parameters
+        ----------
+        image : (H,W,3) ndarray(uint8)
+            Image onto which to draw the segmentation map.
+
+        alpha : float, optional(default=0.75)
+            Alpha/opacity value to use for the mixing of image and segmentation map.
+            Higher values mean that the segmentation map will be more visible and the image less
+            visible.
+
+        resize : "segmentation_map" or "image", optional(default="segmentation_map")
+            In case of size differences between the image and segmentation map, either the image or
+            the segmentation map can be resized. This parameter controls which of the two will be
+            resized to the other's size.
+
+        background_threshold : float, optional(default=0.01)
+            At each pixel, each class-heatmap has a value between 0.0 and 1.0. If none of the
+            class-heatmaps has a value above this threshold, the method uses the background class
+            id instead.
+
+        background_class_id : int, optional(default=0)
+            Class id to fall back to if no class-heatmap passes the threshold at a spatial
+            location.
+
+        colors : None or list of tuple of int, optional(default=None)
+            Colors to use. One for each class to draw. If None, then default colors will be used.
+
+        draw_background : bool, optional(default=False)
+            If True, the background will be drawn like any other class.
+            If False, the background will not be drawn, i.e. the respective background pixels
+            will be identical with the image's RGB color at the corresponding spatial location
+            and no color overlay will be applied.
+
+        Returns
+        -------
+        mix : (H,W,3) ndarray(uint8)
+            Rendered overlays.
+
+        """
+        # assert RGB image
+        assert image.ndim == 3
+        assert image.shape[2] == 3
+        assert image.dtype.type == np.uint8
+
+        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8
+        assert resize in ["segmentation_map", "image"]
+
+        if resize == "image":
+            image = imresize_single_image(image, self.arr.shape[0:2], interpolation="cubic")
+
+        segmap_drawn, foreground_mask = self.draw(
+            background_threshold=background_threshold,
+            background_class_id=background_class_id,
+            size=image.shape[0:2] if resize == "segmentation_map" else None,
+            colors=colors,
+            return_foreground_mask=True
+        )
+
+        if draw_background:
+            mix = np.clip(
+                (1-alpha) * image + alpha * segmap_drawn,
+                0,
+                255
+            ).astype(np.uint8)
+        else:
+            foreground_mask = foreground_mask[..., np.newaxis]
+            mix = np.zeros_like(image)
+            mix += (~foreground_mask).astype(np.uint8) * image
+            mix += foreground_mask.astype(np.uint8) * np.clip(
+                (1-alpha) * image + alpha * segmap_drawn,
+                0,
+                255
+            ).astype(np.uint8)
+        return mix
+
+    def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0.0):
+        """
+        Pad the segmentation map on its top/right/bottom/left side.
+
+        Parameters
+        ----------
+        top : int, optional(default=0)
+            Amount of pixels to add at the top side of the segmentation map. Must be 0 or
+            greater.
+
+        right : int, optional(default=0)
+            Amount of pixels to add at the right side of the segmentation map. Must be 0 or
+            greater.
+
+        bottom : int, optional(default=0)
+            Amount of pixels to add at the bottom side of the segmentation map. Must be 0 or
+            greater.
+
+        left : int, optional(default=0)
+            Amount of pixels to add at the left side of the segmentation map. Must be 0 or
+            greater.
+
+        mode : string, optional(default="constant")
+            Padding mode to use. See `numpy.pad()` for details.
+
+        cval : number, optional(default=0.0)
+            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+
+        Returns
+        -------
+        result : SegmentationMapOnImage
+            Padded segmentation map of height H'=H+top+bottom and width W'=W+left+right.
+
+        """
+        arr_padded = pad(self.arr, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
+        return SegmentationMapOnImage(arr_padded, shape=self.shape)
+
+    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
+        """
+        Pad the segmentation map on its sides so that its matches a target aspect ratio.
+
+        Depending on which dimension is smaller (height or width), only the corresponding
+        sides (left/right or top/bottom) will be padded. In each case, both of the sides will
+        be padded equally.
+
+        Parameters
+        ----------
+        aspect_ratio : float
+            Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
+            as much width as height.
+
+        mode : string, optional(default="constant")
+            Padding mode to use. See `numpy.pad()` for details.
+
+        cval : number, optional(default=0.0)
+            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+
+        return_pad_amounts : bool, optional(default=False)
+            If False, then only the padded image will be returned. If True, a tuple with two
+            entries will be returned, where the first entry is the padded image and the second
+            entry are the amounts by which each image side was padded. These amounts are again a
+            tuple of the form (top, right, bottom, left), with each value being an integer.
+
+        Returns
+        -------
+        result : tuple
+            First tuple entry: Padded segmentation map as SegmentationMapOnImage object.
+            Second tuple entry: Amounts by which the segmentation map was padded on each side,
+                given as a tuple (top, right, bottom, left).
+            If return_pad_amounts is False, then only the segmentation map object is returned.
+
+        """
+        arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
+        segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
+        if return_pad_amounts:
+            return segmap, pad_amounts
+        else:
+            return segmap
+
+    def scale(self, sizes, interpolation="cubic"):
+        """
+        Rescale the segmentation map array to the provided size given the provided interpolation.
+
+        Parameters
+        ----------
+        sizes : float or iterable of two ints or iterable of two floats
+            New size of the array in (height, width). See `imresize_single_image()` for details.
+
+        interpolation : None or string or int, optional(default="cubic")
+            The interpolation to use during resize. See `imresize_single_image()` for details.
+            Note: The segmentation map is internally stored as multiple float-based heatmaps,
+            making smooth interpolations potentially more reasonable than nearest neighbour
+            interpolation.
+
+        Returns
+        -------
+        result : SegmentationMapOnImage
+            Rescaled segmentation map object.
+
+        """
+        arr_rescaled = imresize_single_image(self.arr, sizes, interpolation=interpolation)
+
+        # cubic interpolation can lead to values outside of [0.0, 1.0],
+        # see https://github.com/opencv/opencv/issues/7195
+        # TODO area interpolation too?
+        arr_rescaled = np.clip(arr_rescaled, 0.0, 1.0)
+
+        return SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+
+    def to_heatmaps(self, only_nonempty=False, not_none_if_no_nonempty=False):
+        """
+        Convert segmentation map to heatmaps object.
+
+        Each segmentation map class will be represented as a single heatmap channel.
+
+        Parameters
+        ----------
+        only_nonempty : bool, optional(default=False)
+            If True, then only heatmaps for classes that appear in the segmentation map will be
+            generated. Additionally, a list of these class ids will be returned.
+
+        not_none_if_no_nonempty : bool, optional(default=False)
+            If `only_nonempty` is True and for a segmentation map no channel was non-empty,
+            this function usually returns None as the heatmaps object. If however this parameter
+            is set to True, a heatmaps object with one channel (representing class 0)
+            will be returned as a fallback in these cases.
+
+        Returns
+        -------
+        result : HeatmapsOnImage or None
+            Segmentation map as heatmaps.
+            If `only_nonempty` was set to True and no class appeared in the segmentation map,
+            then this is None.
+        class_indices : list of int
+            Class ids (0 to C-1) of the classes that were actually added to the heatmaps.
+            Only returned if `only_nonempty` was set to True.
+        """
+        if not only_nonempty:
+            return HeatmapsOnImage.from_0to1(self.arr, self.shape, min_value=0.0, max_value=1.0)
+        else:
+            nonempty_mask = np.sum(self.arr, axis=(0, 1)) > 0 + 1e-4
+            if np.sum(nonempty_mask) == 0:
+                if not_none_if_no_nonempty:
+                    nonempty_mask[0] = True
+                else:
+                    return None, []
+
+            class_indices = np.arange(self.arr.shape[2])[nonempty_mask]
+            channels = self.arr[..., class_indices]
+            return HeatmapsOnImage(channels, self.shape, min_value=0.0, max_value=1.0), class_indices
+
+    @staticmethod
+    def from_heatmaps(heatmaps, class_indices=None, nb_classes=None):
+        """
+        Convert heatmaps to segmentation map.
+
+        Assumes that each class is represented as a single heatmap channel.
+
+        Parameters
+        ----------
+        heatmaps : HeatmapsOnImage
+            Heatmaps to convert.
+
+        class_indices : None or list of int, optional(default=None)
+            List of class indices represented by each heatmap channel. See also the
+            secondary output of `to_heatmap()`. If this is provided, it must have the same
+            length as the number of heatmap channels.
+
+        nb_classes : None or int, optional(default=None)
+            Number of classes. Must be provided if class_indices is set.
+
+        Returns
+        -------
+        result : SegmentationMapOnImage
+            Segmentation map derived from heatmaps.
+        """
+        if class_indices is None:
+            return SegmentationMapOnImage(heatmaps.arr_0to1, shape=heatmaps.shape)
+        else:
+            assert nb_classes is not None
+            assert min(class_indices) >= 0
+            assert max(class_indices) < nb_classes
+            assert len(class_indices) == heatmaps.arr_0to1.shape[2]
+            arr_0to1 = heatmaps.arr_0to1
+            arr_0to1_full = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1], nb_classes), dtype=np.float32)
+            #empty_channel = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1]), dtype=np.float32)
+            class_indices_set = set(class_indices)
+            heatmap_channel = 0
+            for c in sm.xrange(nb_classes):
+                if c in class_indices_set:
+                    arr_0to1_full[:, :, c] = arr_0to1[:, :, heatmap_channel]
+                    heatmap_channel += 1
+            return SegmentationMapOnImage(arr_0to1_full, shape=heatmaps.shape)
+
+    def copy(self):
+        """
+        Create a shallow copy of the segmentation map object.
+
+        Returns
+        -------
+        out : SegmentationMapOnImage
+            Shallow copy.
+
+        """
+        return self.deepcopy()
+
+    def deepcopy(self):
+        """
+        Create a deep copy of the segmentation map object.
+
+        Returns
+        -------
+        out : SegmentationMapOnImage
+            Deep copy.
+
+        """
+        segmap = SegmentationMapOnImage(self.arr, shape=self.shape, nb_classes=self.nb_classes)
+        segmap.input_was = self.input_was
+        return segmap
 
 
 ############################
