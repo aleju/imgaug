@@ -2,8 +2,10 @@
 Augmenters that apply color space oriented changes.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -12,11 +14,13 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * InColorspace (deprecated)
     * WithColorspace
     * AddToHueAndSaturation
     * ChangeColorspace
     * Grayscale
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
@@ -204,6 +208,7 @@ class ChangeColorspace(Augmenter):
     to_colorspace : string or iterable or StochasticParameter
         The target colorspace.
         Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+
             * If a string, it must be among the allowed colorspaces.
             * If an iterable, it is expected to be a list of strings, each one
               being an allowed colorspace. A random element from the list

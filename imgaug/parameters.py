@@ -612,6 +612,7 @@ class Poisson(StochasticParameter):
     lam : number or tuple of two number or list of number or StochasticParameter
         Lambda parameter of the poisson
         distribution.
+
             * If a number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the range [a, b).
@@ -703,6 +704,7 @@ class Laplace(StochasticParameter):
     loc : number or tuple of two number or list of number or StochasticParameter
         The position of the distribution peak, similar to the mean in normal
         distributions.
+
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -715,6 +717,7 @@ class Laplace(StochasticParameter):
     scale : number or tuple of two number or list of number or StochasticParameter
         The exponential decay factor, similar to standard deviation in
         normal distributions.
+
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -763,6 +766,7 @@ class ChiSquare(StochasticParameter):
     df : int or tuple of two int or list of int or StochasticParameter
         Degrees of freedom (must be 1 or
         higher).
+
             * If a single int, this int will be used as a constant value.
             * If a tuple of two ints (a, b), the value will be sampled
               once per call to `_draw_samples()` from the discrete
@@ -806,6 +810,7 @@ class Weibull(StochasticParameter):
     a : number or tuple of two number or list of number or StochasticParameter
         Shape parameter of the
         distribution.
+        
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -903,6 +908,7 @@ class Beta(StochasticParameter):
     {alpha, beta} : number or tuple of two number or list of number or StochasticParameter
         alpha and beta parameters of the beta
         distribution.
+
             * If number, that number will always be used.
             * If tuple of two number, a random value will be sampled per
               call to `_draw_samples()` from the range [a, b).
@@ -910,6 +916,7 @@ class Beta(StochasticParameter):
               sampled per call to `_draw_samples()`.
             * If a StochasticParameter, a random value will be sampled
               from that parameter per call to `_draw_samples()`.
+
         alpha and beta have to be values above 0. If they end up <=0 they
         are automatically clipped to 0+epsilon.
 
@@ -2396,6 +2403,7 @@ class FrequencyNoise(StochasticParameter):
         Exponent to use when scaling in the frequency domain.
         Sane values are in the range -4 (large blobs) to 4 (small patterns).
         To generate cloud-like structures, use roughly -2.
+
             * If number, then that number will be used as the exponent for all
               iterations.
             * If tuple of two numbers (a, b), then a value will be sampled
@@ -2411,6 +2419,7 @@ class FrequencyNoise(StochasticParameter):
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`
         (aspect ratio is kept).
+
             * If int, then that number will be used as the size for all
               iterations.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -2424,6 +2433,7 @@ class FrequencyNoise(StochasticParameter):
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
         the upscaling method.
+
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
             * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'

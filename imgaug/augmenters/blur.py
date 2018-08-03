@@ -2,8 +2,10 @@
 Augmenters that blur images.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -12,10 +14,12 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * GaussianBlur
     * AverageBlur
     * MedianBlur
     * BilateralBlur
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
@@ -37,6 +41,7 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
     sigma : float or tuple of two floats or StochasticParameter
         Standard deviation of the gaussian kernel.
         Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
+
             * If a single float, that value will always be used as the standard
               deviation.
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -114,6 +119,7 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
     ----------
     k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter, optional
         Kernel size to use.
+
             * If a single int, then that value will be used for the height
               and width of the kernel.
             * If a tuple of two ints `(a, b)`, then the kernel size will be
@@ -235,6 +241,7 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
     k : int or tuple of two ints or StochasticParameter
         Kernel
         size.
+
             * If a single int, then that value will be used for the height and
               width of the kernel. Must be an odd value.
             * If a tuple of two ints (a, b), then the kernel size will be an
@@ -326,6 +333,7 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
         Diameter of each pixel neighborhood.
         High values for d lead to significantly worse performance. Values
         equal or less than 10 seem to be good.
+
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
               value sampled from the interval [a..b].
@@ -337,6 +345,7 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
         Filter sigma in the color space. A larger value of the parameter means
         that farther colors within the pixel neighborhood (see sigmaSpace )
         will be mixed together, resulting in larger areas of semi-equal color.
+
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
               value sampled from the interval [a..b].
@@ -347,13 +356,14 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
     sigma_space :
         Filter sigma in the coordinate space. A larger value of the parameter
         means that farther pixels will influence each other as long as their
-        colors are close enough (see sigmaColor ).
-        * If a single int, then that value will be used for the diameter.
-        * If a tuple of two ints (a, b), then the diameter will be a
-          value sampled from the interval [a..b].
-        * If a StochasticParameter, then N samples will be drawn from
-          that parameter per N input images, each representing the diameter
-          for the nth image. Expected to be discrete.
+        colors are close enough (see sigma_color).
+
+            * If a single int, then that value will be used for the diameter.
+            * If a tuple of two ints (a, b), then the diameter will be a
+              value sampled from the interval [a..b].
+            * If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the diameter
+              for the nth image. Expected to be discrete.
 
     name : string, optional(default=None)
         See `Augmenter.__init__()`

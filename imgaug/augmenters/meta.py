@@ -3,12 +3,16 @@ Augmenters that don't apply augmentations themselves, but are needed
 for meta usage.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
-and then e.g.
-    `seq = iaa.Sequential([...])`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
+and then e.g. ::
+
+    seq = iaa.Sequential([...])
 
 List of augmenters:
+
     * Augmenter (base class for all augmenters)
     * Sequential
     * SomeOf
@@ -185,7 +189,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         batches : list
             List of image batches to augment.
             The expected input is a list, with each entry having one of the
-            following datatypes:
+            following datatypes::
+
                 * ia.Batch
                 * []
                 * list of ia.KeypointsOnImage
@@ -193,8 +198,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 * list of (H,W) ndarray
                 * (N,H,W,C) ndarray
                 * (N,H,W) ndarray
-            where N = number of images, H = height, W = width,
-            C = number of channels.
+
+            where N = number of images, H = height, W = width, C = number of channels.
             Each image is recommended to have dtype uint8 (range 0-255).
 
         hooks : None or ia.HooksImages, optional(default=None)
@@ -651,6 +656,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         -------
         segmaps_aug : list of ia.SegmentationMapOnImage
             Corresponding augmented segmentation maps.
+
         """
         heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True) for segmap in segmaps]
         heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
@@ -678,10 +684,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         Make sure to first convert the augmenter(s) to deterministic states
         before augmenting images and their corresponding keypoints,
         e.g. by
-            >>> seq = iaa.Fliplr(0.5)
-            >>> seq_det = seq.to_deterministic()
-            >>> imgs_aug = seq_det.augment_images([A, B, C])
-            >>> kps_aug = seq_det.augment_keypoints([Ak, Bk, Ck])
+        >>> seq = iaa.Fliplr(0.5)
+        >>> seq_det = seq.to_deterministic()
+        >>> imgs_aug = seq_det.augment_images([A, B, C])
+        >>> kps_aug = seq_det.augment_keypoints([Ak, Bk, Ck])
         Otherwise, different random values will be sampled for the image
         and keypoint augmentations, resulting in different augmentations (e.g.
         images might be rotated by `30deg` and keypoints by `-10deg`).
@@ -800,10 +806,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         Make sure to first convert the augmenter(s) to deterministic states
         before augmenting images and their corresponding bounding boxes,
         e.g. by
-            >>> seq = iaa.Fliplr(0.5)
-            >>> seq_det = seq.to_deterministic()
-            >>> imgs_aug = seq_det.augment_images([A, B, C])
-            >>> bbs_aug = seq_det.augment_keypoints([Abb, Bbb, Cbb])
+        >>> seq = iaa.Fliplr(0.5)
+        >>> seq_det = seq.to_deterministic()
+        >>> imgs_aug = seq_det.augment_images([A, B, C])
+        >>> bbs_aug = seq_det.augment_keypoints([Abb, Bbb, Cbb])
         Otherwise, different random values will be sampled for the image
         and bounding box augmentations, resulting in different augmentations
         (e.g. images might be rotated by `30deg` and bounding boxes by
@@ -877,6 +883,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         If multiple images are provided, the row count is multiplied by
         the number of images and each image gets its own row.
         E.g. for `images = [A, B]`, `rows=2`, `cols=3`::
+
             A A A
             B B B
             A A A
@@ -884,6 +891,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         for `images = [A]`, `rows=2`,
         `cols=3`::
+
             A A A
             A A A
 
@@ -963,6 +971,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         If multiple images are provided, the row count is multiplied by
         the number of images and each image gets its own row.
         E.g. for `images = [A, B]`, `rows=2`, `cols=3`::
+
             A A A
             B B B
             A A A
@@ -970,6 +979,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         for `images = [A]`, `rows=2`,
         `cols=3`::
+
             A A A
             A A A
 
@@ -1126,6 +1136,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         Usually there is no need to change global into local random states.
         The only noteworthy exceptions are
+
             * whenever you want to use determinism (so that the global random
               state is not accidentally reverted)
             * whenever you want to copy random states from one augmenter to
@@ -1133,6 +1144,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
               much. If you copy the state from A to B, then execute A and then
               B, B's (global) random state has already changed because of A's
               sampling.)
+
         The case of determinism is handled automatically by to_deterministic().
         Only when you copy random states (via copy_random_state()), you need
         to call this function first.
@@ -1610,6 +1622,7 @@ class Sequential(Augmenter, list):
     augmenters. Each augmenter can be used on its own, e.g the following
     defines an augmenter for horizontal flips and then augments a single
     image::
+
         aug = iaa.Fliplr(0.5)
         image_aug = aug.augment_image(image)
 
@@ -1768,6 +1781,7 @@ class SomeOf(Augmenter, list):
     n : int or tuple of two ints or list of ints or StochasticParameter or None, optional(default=None)
         Count of augmenters to
         apply.
+
             * If int n, then exactly n of the child augmenters are applied to
               every image.
             * If tuple of two ints (a, b), then a <= x <= b augmenters are
@@ -2625,22 +2639,19 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
     ----------
     func_images : callable,
         The function to call for each batch of images.
-        It must follow the form
-            ``function(images, random_state, parents, hooks)``
+        It must follow the form `function(images, random_state, parents, hooks)`
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_images().
 
     func_keypoints : callable,
         The function to call for each batch of heatmaps.
-        It must follow the form
-            ``function(heatmaps, random_state, parents, hooks)``
+        It must follow the form `function(heatmaps, random_state, parents, hooks)`
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_heatmaps().
 
     func_keypoints : callable,
         The function to call for each batch of keypoints.
-        It must follow the form
-            ``function(keypoints_on_images, random_state, parents, hooks)``
+        It must follow the form `function(keypoints_on_images, random_state, parents, hooks)`
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_keypoints().
 
@@ -2652,6 +2663,7 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
 
     random_state : int or np.random.RandomState or None, optional(default=None)
         See `Augmenter.__init__()`
+
     """
     def func_images_assert(images, random_state, parents, hooks):
         ia.do_assert(func_images(images, random_state, parents=parents, hooks=hooks), "Input images did not fulfill user-defined assertion in AssertLambda.")
@@ -2676,8 +2688,8 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
     ----------
     shape : tuple with each entry being None or tuple of two ints or list of ints
         The expected shape. Given as a tuple. The number of entries in the tuple
-        must match the number of dimensions, i.e. usually four entries for
-        (N, H, W, C).
+        must match the number of dimensions, i.e. usually four entries for (N, H, W, C).
+
             * If an entry is None, any value for that dimensions is accepted.
             * If an entry is int, exactly that integer value will be accepted
               or no other value.
@@ -2729,6 +2741,7 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
 
     like above, but now the height may be in the range 32 <= H < 64 and
     the number of channels may be either 1 or 3.
+
     """
     ia.do_assert(len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape)))
 

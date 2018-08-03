@@ -2,8 +2,10 @@
 Augmenters that apply affine transformations or other similar augmentations.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -16,6 +18,7 @@ List of augmenters:
     * PiecewiseAffine
     * PerspectiveTransform
     * ElasticTransformation
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
@@ -39,6 +42,7 @@ class Affine(Augmenter):
 
     Affine transformations
     involve:
+
         - Translation ("move" image on the x-/y-axis)
         - Rotation
         - Scaling ("zoom" in/out)
@@ -59,6 +63,7 @@ class Affine(Augmenter):
     scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
         Scaling factor to use, where 1.0 represents no change and 0.5 is
         zoomed out to 50 percent of the original size.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That value will be used identically for
@@ -76,6 +81,7 @@ class Affine(Augmenter):
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
         height/width.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That percent value will be used identically
@@ -92,6 +98,7 @@ class Affine(Augmenter):
     translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
         Translation in
         pixels.
+
             * If a single int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the discrete
               range [a .. b] per image. That number will be used identically
@@ -108,6 +115,7 @@ class Affine(Augmenter):
     rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Rotation in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive rotations (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -117,6 +125,7 @@ class Affine(Augmenter):
     shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Shear in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -126,23 +135,28 @@ class Affine(Augmenter):
     order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
         Interpolation order to use. Same meaning as in
         skimage:
+
             * 0: Nearest-neighbor
             * 1: Bi-linear (default)
             * 2: Bi-quadratic (not recommended by skimage)
             * 3: Bi-cubic
             * 4: Bi-quartic
             * 5: Bi-quintic
+
         Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very
         slow.
         If the backend is `cv2`, the mapping to opencv's interpolation modes
         is as follows:
+
             * 0 -> cv2.INTER_NEAREST
             * 1 -> cv2.INTER_LINEAR
             * 2 -> cv2.INTER_CUBIC
             * 3 -> cv2.INTER_CUBIC
             * 4 -> cv2.INTER_CUBIC
+
         As datatypes this parameter
         accepts:
+
             * If a single int, then that order will be used for all images.
             * If an iterable, then for each image a random value will be sampled
               from that iterable (i.e. list of allowed order values).
@@ -159,6 +173,7 @@ class Affine(Augmenter):
         For standard uint8 images (value range 0-255), this value may also
         come from the range 0-255. It may be a float value, even for
         integer image dtypes.
+
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -171,6 +186,7 @@ class Affine(Augmenter):
     mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
         Parameter that defines the handling of newly created pixels.
         Same meaning as in skimage (and numpy.pad):
+
             * "constant": Pads with a constant value
             * "edge": Pads with the edge values of array
             * "symmetric": Pads with the reflection of the vector mirrored
@@ -180,15 +196,19 @@ class Affine(Augmenter):
             * "wrap": Pads with the wrap of the vector along the axis.
               The first values are used to pad the end and the end values
               are used to pad the beginning.
+
         If `cv2` is chosen as the backend the mapping is as
         follows:
+
             * "constant" -> cv2.BORDER_CONSTANT
             * "edge" -> cv2.BORDER_REPLICATE
             * "symmetric" -> cv2.BORDER_REFLECT
             * "reflect" -> cv2.BORDER_REFLECT_101
             * "wrap" -> cv2.BORDER_WRAP
+
         The datatype of the parameter may
         be:
+
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.
@@ -706,6 +726,7 @@ class AffineCv2(Augmenter):
 
     Affine transformations
     involve:
+
         - Translation ("move" image on the x-/y-axis)
         - Rotation
         - Scaling ("zoom" in/out)
@@ -726,6 +747,7 @@ class AffineCv2(Augmenter):
     scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
         Scaling factor to use, where 1.0 represents no change and 0.5 is
         zoomed out to 50 percent of the original size.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That value will be used identically for
@@ -743,6 +765,7 @@ class AffineCv2(Augmenter):
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
         height/width.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That percent value will be used identically
@@ -759,6 +782,7 @@ class AffineCv2(Augmenter):
     translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
         Translation in
         pixels.
+
             * If a single int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the discrete
               range [a .. b] per image. That number will be used identically
@@ -775,6 +799,7 @@ class AffineCv2(Augmenter):
     rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Rotation in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive rotations (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -784,6 +809,7 @@ class AffineCv2(Augmenter):
     shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Shear in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -792,6 +818,7 @@ class AffineCv2(Augmenter):
 
     order : int or iterable of int or string or iterable of string or ia.ALL or StochasticParameter, optional(default=1)
         Interpolation order to use. Allowed are:
+
             * cv2.INTER_NEAREST - a nearest-neighbor interpolation
             * cv2.INTER_LINEAR - a bilinear interpolation (used by default)
             * cv2.INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood
@@ -800,10 +827,12 @@ class AffineCv2(Augmenter):
             * "linear"
             * "cubic",
             * "lanczos4"
+
         The first four are OpenCV constants, the other four are strings that
         are automatically replaced by the OpenCV constants.
         INTER_NEAREST (nearest neighbour interpolation) and INTER_NEAREST
         (linear interpolation) are the fastest.
+
             * If a single int, then that order will be used for all images.
             * If a string, then it must be one of: "nearest", "linear", "cubic",
               "lanczos4".
@@ -824,6 +853,7 @@ class AffineCv2(Augmenter):
         For standard uint8 images (value range 0-255), this value may also
         come from the range 0-255. It may be a float value, even for
         integer image dtypes.
+
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -837,6 +867,7 @@ class AffineCv2(Augmenter):
         Parameter that defines the handling of newly created pixels.
         Same meaning as in opencv's border mode. Let `abcdefgh` be an image
         content and `|` be an image boundary, then:
+
             * `cv2.BORDER_REPLICATE`: `aaaaaa|abcdefgh|hhhhhhh`
             * `cv2.BORDER_REFLECT`: `fedcba|abcdefgh|hgfedcb`
             * `cv2.BORDER_REFLECT_101`: `gfedcb|abcdefgh|gfedcba`
@@ -848,8 +879,10 @@ class AffineCv2(Augmenter):
             * "reflect_101": Same as cv2.BORDER_REFLECT_101.
             * "wrap": Same as cv2.BORDER_WRAP.
             * "constant": Same as cv2.BORDER_CONSTANT.
+
         The datatype of the parameter may
         be:
+
             * If a single int, then it must be one of `cv2.BORDER_*`.
             * If a single string, then it must be one of: "replicate",
               "reflect", "reflect_101", "wrap", "constant".
@@ -1294,6 +1327,7 @@ class PiecewiseAffine(Augmenter):
         the same for different sized images.
         Recommended values are in the range 0.01 to 0.05 (weak to strong
         augmentations).
+
             * If a single float, then that value will always be used as the
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
@@ -1308,6 +1342,7 @@ class PiecewiseAffine(Augmenter):
         Must be at least 2. For large images, you might want to pick a
         higher value than 4. You might have to then adjust scale to lower
         values.
+
             * If a single int, then that value will always be used as the
               number of rows.
             * If a tuple (a, b), then a value from the discrete interval [a..b]
@@ -1715,6 +1750,7 @@ class PerspectiveTransform(Augmenter):
         the random distances of the subimage's corners from the full image's
         corners. The sampled values reflect percentage values (with respect
         to image height/width). Recommended values are in the range 0.0 to 0.1.
+
             * If a single float, then that value will always be used as the
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
@@ -1954,12 +1990,14 @@ class ElasticTransformation(Augmenter):
     Augmenter to transform images by moving pixels locally around using
     displacement fields.
 
-    See
+    See ::
+
         Simard, Steinkraus and Platt
         Best Practices for Convolutional Neural Networks applied to Visual
         Document Analysis
         in Proc. of the International Conference on Document Analysis and
         Recognition, 2003
+
     for a detailed explanation.
 
     Parameters
@@ -1967,6 +2005,7 @@ class ElasticTransformation(Augmenter):
     alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
         Strength of the distortion field. Higher values mean more "movement" of
         pixels.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
@@ -1978,6 +2017,7 @@ class ElasticTransformation(Augmenter):
     sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
         Standard deviation of the gaussian kernel used to smooth the distortion
         fields.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
@@ -1990,6 +2030,7 @@ class ElasticTransformation(Augmenter):
         Interpolation order to use. Same meaning as in
         `scipy.ndimage.map_coordinates` and may take any integer value
         in the range 0 to 5, where orders close to 0 are faster.
+
             * If a single int, then that order will be used for all images.
             * If a tuple (a, b), then a random value from the range a <= x <= b
               is picked per image.
@@ -2005,6 +2046,7 @@ class ElasticTransformation(Augmenter):
         For standard uint8 images (value range 0-255), this value may also
         come from the range 0-255. It may be a float value, even for
         integer image dtypes.
+
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -2022,6 +2064,7 @@ class ElasticTransformation(Augmenter):
         i.e. "constant", "nearest", "reflect" or "wrap".
         The datatype of the parameter may
         be:
+
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.

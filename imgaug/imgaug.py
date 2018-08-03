@@ -534,22 +534,26 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         Expected to usually be of dtype uint8.
 
     sizes : float or iterable of two ints or iterable of two floats
-        The new size of the images, given either as a fraction (a single float)
-        or as a (height, width) tuple of two integers or as a
-        (height fraction, width fraction) tuple of two floats.
+        The new size of the images, given either as a fraction (a single float) or as
+        a (height, width) tuple of two integers or as a (height fraction, width fraction)
+        tuple of two floats.
 
     interpolation : None or string or int, optional(default=None)
         The interpolation to use during resize.
         If int, then expected to be one of:
+
             * cv2.INTER_NEAREST (nearest neighbour interpolation)
             * cv2.INTER_LINEAR (linear interpolation)
             * cv2.INTER_AREA (area interpolation)
             * cv2.INTER_CUBIC (cubic interpolation)
+
         If string, then expected to be one of:
+
             * "nearest" (identical to cv2.INTER_NEAREST)
             * "linear" (identical to cv2.INTER_LINEAR)
             * "area" (identical to cv2.INTER_AREA)
             * "cubic" (identical to cv2.INTER_CUBIC)
+
         If None, the interpolation will be chosen automatically. For size
         increases, area interpolation will be picked and for size decreases,
         linear interpolation will be picked.
@@ -800,9 +804,9 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
     -------
     result : tuple
         First tuple entry: Padded image as (H',W') or (H',W',C) ndarray, fulfulling the given
-            aspect_ratio.
+        aspect_ratio.
         Second tuple entry: Amounts by which the image was padded on each side, given
-            as a tuple (top, right, bottom, left).
+        as a tuple (top, right, bottom, left).
         If return_pad_amounts is False, then only the image is returned.
 
     """
@@ -1045,8 +1049,7 @@ class HooksImages(object):
     ----------
     activator : None or callable, optional(default=None)
         A function that gives permission to execute an augmenter.
-        The expected interface is
-            `f(images, augmenter, parents, default)`,
+        The expected interface is `f(images, augmenter, parents, default)`,
         where `images` are the input images to augment, `augmenter` is the
         instance of the augmenter to execute, `parents` are previously
         executed augmenters and `default` is an expected default value to be
@@ -1060,14 +1063,12 @@ class HooksImages(object):
         activator) and then execute child augmenters afterwards (if allowed by
         the propagator). If the activator returned False, the propagation step
         will never be executed.
-        The expected interface is
-            `f(images, augmenter, parents, default)`,
+        The expected interface is `f(images, augmenter, parents, default)`,
         with all arguments having identical meaning to the activator.
 
     preprocessor : None or callable, optional(default=None)
         A function to call before an augmenter performed any augmentations.
-        The interface is
-            `f(images, augmenter, parents)`,
+        The interface is `f(images, augmenter, parents)`,
         with all arguments having identical meaning to the activator.
         It is expected to return the input images, optionally modified.
 
@@ -2008,15 +2009,15 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
+        image : (H,W,...) ndarray or tuple of ints
             Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
-            assumed to represent the image shape.
+            assumed to represent the image shape and must contain at least two integers.
 
         fully : bool, optional(default=True)
             Whether to return True if the bounding box is fully outside fo the image area.
 
         partly : bool, optional(default=False)
-            Whether to return True if the bounding box is _at least_ partially outside fo the
+            Whether to return True if the bounding box is at least partially outside fo the
             image area.
 
         Returns
@@ -2765,7 +2766,7 @@ class HeatmapsOnImage(object):
         result : tuple
             First tuple entry: Padded heatmaps as HeatmapsOnImage object.
             Second tuple entry: Amounts by which the heatmaps were padded on each side, given
-                as a tuple (top, right, bottom, left).
+            as a tuple (top, right, bottom, left).
             If return_pad_amounts is False, then only the heatmaps object is returned.
 
         """
@@ -3028,6 +3029,7 @@ class SegmentationMapOnImage(object):
     ----------
     arr : (H,W) ndarray or (H,W,1) ndarray or (H,W,C) ndarray
         Array representing the segmentation map. May have datatypes bool, integer or float.
+
             * If bool: Assumed to be of shape (H,W), (H,W,1) or (H,W,C). If (H,W) or (H,W,1) it
               is assumed to be for the case of having a single class (where any False denotes
               background). Otherwise there are assumed to be C channels, one for each class,
@@ -3040,8 +3042,18 @@ class SegmentationMapOnImage(object):
               similar to the case of `bool`. Values are expected to fall always in the range
               0.0 to 1.0 and are usually expected to be either 0.0 or 1.0 upon instantiation
               of a new segmentation map. Classes may overlap.
-    shape
-    nb_classes=None
+
+    shape : iterable of int
+        Shape of the corresponding image (NOT the segmentation map array). This is expected
+        to be (H, W) or (H, W, C) with C usually being 3. If there is no corresponding image,
+        then use the segmentation map's shape instead.
+
+    nb_classes : int or None
+        Total number of unique classes that may appear in an segmentation map, i.e. the max
+        class index. This may be None if the input array is of type bool or float. The number
+        of class however must be provided if the input array is of type int, as then the
+        number of classes cannot be guessed.
+
     """
 
     DEFAULT_SEGMENT_COLORS = [
@@ -3375,7 +3387,7 @@ class SegmentationMapOnImage(object):
         result : tuple
             First tuple entry: Padded segmentation map as SegmentationMapOnImage object.
             Second tuple entry: Amounts by which the segmentation map was padded on each side,
-                given as a tuple (top, right, bottom, left).
+            given as a tuple (top, right, bottom, left).
             If return_pad_amounts is False, then only the segmentation map object is returned.
 
         """
@@ -3443,6 +3455,7 @@ class SegmentationMapOnImage(object):
         class_indices : list of int
             Class ids (0 to C-1) of the classes that were actually added to the heatmaps.
             Only returned if `only_nonempty` was set to True.
+
         """
         if not only_nonempty:
             return HeatmapsOnImage.from_0to1(self.arr, self.shape, min_value=0.0, max_value=1.0)
@@ -3482,6 +3495,7 @@ class SegmentationMapOnImage(object):
         -------
         result : SegmentationMapOnImage
             Segmentation map derived from heatmaps.
+
         """
         if class_indices is None:
             return SegmentationMapOnImage(heatmaps.arr_0to1, shape=heatmaps.shape)

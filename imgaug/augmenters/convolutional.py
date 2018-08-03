@@ -2,8 +2,10 @@
 Augmenters that apply convolutions to images.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -12,11 +14,13 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * Convolve
     * Sharpen
     * Emboss
     * EdgeDetect
     * DirectedEdgeDetect
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
@@ -40,6 +44,7 @@ class Convolve(Augmenter):
     matrix : None or (H, W) ndarray or StochasticParameter or callable, optional(default=None)
         The weight matrix of the convolution kernel to
         apply.
+
             * If None, the input images will not be changed.
             * If a numpy array, that array will be used for all images and
               channels as the kernel.
@@ -169,6 +174,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
@@ -180,6 +186,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
         Sane values are somewhere in the range (0.5, 2).
         The value 0 results in an edge map. Values higher than 1 create bright
         images. Default value is 1.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
@@ -264,6 +271,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
@@ -274,6 +282,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
         Parameter that controls the strength of the embossing.
         Sane values are somewhere in the range (0, 2) with 1 being the standard
         embossing effect. Default value is 1.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
@@ -353,6 +362,7 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
@@ -420,6 +430,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
@@ -430,6 +441,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
         Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
         represents 360 degrees (both clockwise, starting at the top).
         Default value is (0.0, 1.0), i.e. pick a random angle per image.
+
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.

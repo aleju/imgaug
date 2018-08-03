@@ -2,8 +2,10 @@
 Augmenters that somehow change the size of the images.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -12,10 +14,12 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * Scale
     * CropAndPad
     * Crop
     * Pad
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
@@ -38,6 +42,7 @@ class Scale(Augmenter):
     size : string "keep" or int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter or dictionary
         The new size of the
         images.
+
             * If this has the string value 'keep', the original height and
               width values will be kept (image is not scaled).
             * If this is an integer, this value will always be used as the new
@@ -69,6 +74,7 @@ class Scale(Augmenter):
     interpolation : ia.ALL or int or string or list of ints/strings or StochasticParameter, optional(default="cubic")
         Interpolation to
         use.
+
             * If ia.ALL, then a random interpolation from `nearest`, `linear`,
               `area` or `cubic` will be picked (per image).
             * If int, then this interpolation will always be used.
@@ -322,6 +328,7 @@ class CropAndPad(Augmenter):
         pad (positive values) on each side of the image.
         Either this or the parameter `percent` may be set, not both at the
         same time.
+
             * If None, then pixel-based cropping will not be used.
             * If int, then that exact number of pixels will always be cropped.
             * If StochasticParameter, then that parameter will be used for each
@@ -350,6 +357,7 @@ class CropAndPad(Augmenter):
         height at the bottom and 10 percent of the width on the left.
         Either this or the parameter `px` may be set, not both at the same
         time.
+
             * If None, then percent-based cropping will not be used.
             * If int, then expected to be 0 (no padding/cropping).
             * If float, then that percentage will always be cropped away.
@@ -377,6 +385,7 @@ class CropAndPad(Augmenter):
         explained in the numpy documentation. The modes "constant" and
         `linear_ramp` use extra values, which are provided by `pad_cval`
         when necessary.
+
             * If ia.ALL, then a random mode from all available
               modes will be sampled per image.
             * If a string, it will be used as the pad mode for all
@@ -390,6 +399,7 @@ class CropAndPad(Augmenter):
         The constant value to use (for numpy's pad function) if the pad
         mode is "constant" or the end value to use if the mode
         is `linear_ramp`.
+
             * If float/int, then that value will be used.
             * If a tuple of two numbers and at least one of them is a float,
               then a random number will be sampled from the continuous range
@@ -827,6 +837,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         The number of pixels to crop away (cut off) on each side of the image.
         Either this or the parameter `percent` may be set, not both at the same
         time.
+
             * If None, then pixel-based cropping will not be used.
             * If int, then that exact number of pixels will always be cropped.
             * If StochasticParameter, then that parameter will be used for each
@@ -851,6 +862,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         of the width on the left.
         Either this or the parameter `px` may be set, not both at the same
         time.
+
             * If None, then percent-based cropping will not be used.
             * If int, then expected to be 0 (no cropping).
             * If float, then that percentage will always be cropped away.
@@ -874,6 +886,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         explained in the numpy documentation. The modes `constant` and
         `linear_ramp` use extra values, which are provided by `pad_cval`
         when necessary.
+
             * If ia.ALL, then a random mode from all available
               modes will be sampled per image.
             * If a string, it will be used as the pad mode for all
@@ -887,6 +900,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         The constant value to use (for numpy's pad function) if the pad
         mode is "constant" or the end value to use if the mode
         is `linear_ramp`.
+
             * If float/int, then that value will be used.
             * If a tuple of two numbers and at least one of them is a float,
               then a random number will be sampled from the continuous range
@@ -1018,6 +1032,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
         The number of pixels to crop away (cut off) on each side of the image.
         Either this or the parameter `percent` may be set, not both at the same
         time.
+
             * If None, then pixel-based cropping will not be used.
             * If int, then that exact number of pixels will always be cropped.
             * If StochasticParameter, then that parameter will be used for each
@@ -1042,6 +1057,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
         of the width on the left.
         Either this or the parameter `px` may be set, not both at the same
         time.
+
             * If None, then percent-based cropping will not be used.
             * If int, then expected to be 0 (no cropping).
             * If float, then that percentage will always be cropped away.

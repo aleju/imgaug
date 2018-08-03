@@ -2,8 +2,10 @@
 Augmenters that overlay two images with each other.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -11,10 +13,12 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * Alpha
     * AlphaElementwise
     * SimplexNoiseAlpha
     * FrequencyNoiseAlpha
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
@@ -35,8 +39,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
     The image sources can be imagined as branches.
     If a source is not given, it is automatically the same as the input.
     Let A be the first branch and B be the second branch.
-    Then the result images are defined as
-        factor * A + (1-factor) * B,
+    Then the result images are defined as `factor * A + (1-factor) * B`,
     where `factor` is an overlay factor.
 
     For keypoint augmentation this augmenter will pick the keypoints either
@@ -50,6 +53,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
         Weighting of the results of the first branch. Values close to 0 mean
         that the results from the second branch (see parameter `second`)
         make up most of the final image.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will
               be sampled per image.
@@ -59,6 +63,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -68,6 +73,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -363,6 +369,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
         Weighting of the results of the first branch. Values close to 0 mean
         that the results from the second branch (see parameter `second`)
         make up most of the final image.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will
               be sampled per image.
@@ -372,6 +379,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -381,6 +389,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -668,6 +677,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -677,6 +687,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -695,6 +706,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`
         (aspect ratio is kept).
+
             * If int, then that number will be used as the size for all
               iterations.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -708,6 +720,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
         the upscaling method.
+
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
             * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
@@ -722,6 +735,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
         How often to repeat the simplex noise generation process per
         image.
+
             * If int, then that number will be used as the iterations for all
               images.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -738,6 +752,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         where 'min' combines the noise maps by taking the (elementwise) minimum
         over all iteration's results, 'max' the (elementwise) maximum and
         'avg' the (elemtwise) average.
+
             * If ia.ALL, then a random value will be picked per image from the
               valid ones.
             * If a string, then that value will always be used as the method.
@@ -749,6 +764,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     sigmoid : bool or number, optional(default=True)
         Whether to apply a sigmoid function to the final noise maps, resulting
         in maps that have more extreme values (close to 0.0 or 1.0).
+
             * If bool, then a sigmoid will always (True) or never (False) be
               applied.
             * If a number p with 0<=p<=1, then a sigmoid will be applied to
@@ -758,6 +774,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         Threshold of the sigmoid, when applied. Thresholds above zero
         (e.g. 5.0) will move the saddle point towards the right, leading to
         more values close to 0.0.
+
             * If None, then Normal(0, 5.0) will be used.
             * If number, then that threshold will be used for all images.
             * If tuple of two numbers (a, b), then a random value will
@@ -849,6 +866,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         Exponent to use when scaling in the frequency domain.
         Sane values are in the range -4 (large blobs) to 4 (small patterns).
         To generate cloud-like structures, use roughly -2.
+
             * If number, then that number will be used as the exponent for all
               iterations.
             * If tuple of two numbers (a, b), then a value will be sampled
@@ -861,6 +879,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -870,6 +889,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -888,6 +908,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`
         (aspect ratio is kept).
+
             * If int, then that number will be used as the size for all
               iterations.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -901,6 +922,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
         the upscaling method.
+
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
             * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
@@ -915,6 +937,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
         How often to repeat the simplex noise generation process per
         image.
+
             * If int, then that number will be used as the iterations for all
               images.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -931,6 +954,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         where 'min' combines the noise maps by taking the (elementwise) minimum
         over all iteration's results, 'max' the (elementwise) maximum and
         'avg' the (elemtwise) average.
+
             * If ia.ALL, then a random value will be picked per image from the
               valid ones.
             * If a string, then that value will always be used as the method.
@@ -942,6 +966,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     sigmoid : bool or number, optional(default=0.5)
         Whether to apply a sigmoid function to the final noise maps, resulting
         in maps that have more extreme values (close to 0.0 or 1.0).
+
             * If bool, then a sigmoid will always (True) or never (False) be
               applied.
             * If a number p with 0<=p<=1, then a sigmoid will be applied to
@@ -951,6 +976,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         Threshold of the sigmoid, when applied. Thresholds above zero
         (e.g. 5.0) will move the saddle point towards the right, leading to
         more values close to 0.0.
+
             * If None, then Normal(0, 5.0) will be used.
             * If number, then that threshold will be used for all images.
             * If tuple of two numbers (a, b), then a random value will
