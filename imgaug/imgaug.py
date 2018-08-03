@@ -3125,7 +3125,7 @@ class SegmentationMapOnImage(object):
             self.input_was = ("float", arr.dtype.type, arr.ndim)
             arr = arr.astype(np.float32)
         else:
-            dt = str(arr.dtype) if ia.is_np_array(arr) else "<no ndarray>"
+            dt = str(arr.dtype) if is_np_array(arr) else "<no ndarray>"
             raise Exception("Input was expected to be an ndarray of dtype bool, uint8, uint32 "
                             "int8, int16, int32 or float32. Got type %s with dtype %s." % (type(arr), dt))
         assert arr.ndim == 3
