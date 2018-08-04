@@ -2,8 +2,10 @@
 Augmenters that apply changes to images based on forms of segmentation.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -11,27 +13,17 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * Superpixels
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
-from .. import parameters as iap
-from abc import ABCMeta, abstractmethod
-import random
+from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Uniform
 import numpy as np
-import copy as copy_module
-import re
-import math
-from scipy import misc, ndimage
-from skimage import transform as tf, segmentation, measure
-import itertools
-import cv2
-import six
+from skimage import segmentation, measure
 import six.moves as sm
-import types
-import warnings
 
 from .meta import Augmenter
 
@@ -55,6 +47,10 @@ class Superpixels(Augmenter):
         by their average color (resulting in a standard superpixel image).
         This parameter can be a tuple (a, b), e.g. (0.5, 1.0). In this case,
         a random probability p with a <= p <= b will be rolled per image.
+        If this parameter is a StochasticParameter, it is expected to return
+        values between 0 and 1. Values >=0.5 will be interpreted as the command
+        to replace a superpixel region with its mean. Recommended to be some
+        form of Binomial(...).
 
     n_segments : int or tuple/list of ints or StochasticParameter, optional(default=100)
         Target number of superpixels to generate.
@@ -109,10 +105,10 @@ class Superpixels(Augmenter):
         if ia.is_single_number(p_replace):
             self.p_replace = Binomial(p_replace)
         elif ia.is_iterable(p_replace):
-            assert len(p_replace) == 2
-            assert p_replace[0] < p_replace[1]
-            assert 0 <= p_replace[0] <= 1.0
-            assert 0 <= p_replace[1] <= 1.0
+            ia.do_assert(len(p_replace) == 2)
+            ia.do_assert(p_replace[0] < p_replace[1])
+            ia.do_assert(0 <= p_replace[0] <= 1.0)
+            ia.do_assert(0 <= p_replace[1] <= 1.0)
             self.p_replace = p_replace = Binomial(Uniform(p_replace[0], p_replace[1]))
         elif isinstance(p_replace, StochasticParameter):
             self.p_replace = p_replace
@@ -122,7 +118,7 @@ class Superpixels(Augmenter):
         if ia.is_single_integer(n_segments):
             self.n_segments = Deterministic(n_segments)
         elif ia.is_iterable(n_segments):
-            assert len(n_segments) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(n_segments),)
+            ia.do_assert(len(n_segments) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(n_segments),))
             self.n_segments = DiscreteUniform(n_segments[0], n_segments[1])
         elif isinstance(n_segments, StochasticParameter):
             self.n_segments = n_segments
@@ -178,11 +174,11 @@ class Superpixels(Augmenter):
                         # with mod here, because slic can sometimes create more superpixel
                         # than requested. replace_samples then does not have enough
                         # values, so we just start over with the first one again.
-                        if replace_samples[ridx % len(replace_samples)] == 1:
+                        if replace_samples[ridx % len(replace_samples)] >= 0.5:
                             #print("changing region %d of %d, channel %d, #indices %d" % (ridx, np.max(segments), c, len(np.where(segments == ridx)[0])))
                             mean_intensity = region.mean_intensity
                             image_sp_c = image_sp[..., c]
-                            image_sp_c[segments == ridx] = mean_intensity
+                            image_sp_c[segments == ridx] = np.clip(int(np.round(mean_intensity)), 0, 255)
                 #print("colored in %.4fs" % (time.time() - time_start))
 
                 if orig_shape != image.shape:
@@ -191,8 +187,11 @@ class Superpixels(Augmenter):
                 images[i] = image_sp
         return images
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.n_segments, self.max_size]
+        return [self.p_replace, self.n_segments, self.max_size, self.interpolation]

@@ -23,7 +23,7 @@ processes for improved performance.
    source/parameters
    source/alpha
    source/augmenters
-   source/modules
+   source/api
 
 See :ref:`modindex` for API.
 

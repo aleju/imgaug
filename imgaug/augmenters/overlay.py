@@ -2,8 +2,10 @@
 Augmenters that overlay two images with each other.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -11,26 +13,25 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * Alpha
     * AlphaElementwise
     * SimplexNoiseAlpha
     * FrequencyNoiseAlpha
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
+from ..parameters import StochasticParameter, Deterministic, Binomial, Uniform
 from .. import parameters as iap
 import numpy as np
-import cv2
-import six
 import six.moves as sm
-import warnings
 
-from .meta import Augmenter, Sequential
+from .meta import Augmenter, Sequential, handle_children_list
 
 # TODO tests
-class Alpha(Augmenter):
+class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using an
     alpha/transparency value.
@@ -38,8 +39,7 @@ class Alpha(Augmenter):
     The image sources can be imagined as branches.
     If a source is not given, it is automatically the same as the input.
     Let A be the first branch and B be the second branch.
-    Then the result images are defined as
-        factor * A + (1-factor) * B,
+    Then the result images are defined as `factor * A + (1-factor) * B`,
     where `factor` is an overlay factor.
 
     For keypoint augmentation this augmenter will pick the keypoints either
@@ -53,6 +53,7 @@ class Alpha(Augmenter):
         Weighting of the results of the first branch. Values close to 0 mean
         that the results from the second branch (see parameter `second`)
         make up most of the final image.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will
               be sampled per image.
@@ -62,6 +63,7 @@ class Alpha(Augmenter):
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -71,6 +73,7 @@ class Alpha(Augmenter):
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -139,46 +142,25 @@ class Alpha(Augmenter):
         super(Alpha, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(factor):
-            assert 0.0 <= factor <= 1.0, "Expected factor to have range [0, 1.0], got value %.2f." % (factor,)
+            ia.do_assert(0.0 <= factor <= 1.0, "Expected factor to have range [0, 1.0], got value %.2f." % (factor,))
             self.factor = Deterministic(factor)
         elif ia.is_iterable(factor):
-            assert len(factor) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(factor),)
+            ia.do_assert(len(factor) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(factor),))
             self.factor = Uniform(factor[0], factor[1])
         elif isinstance(factor, StochasticParameter):
             self.factor = factor
         else:
             raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(factor),))
 
-        assert first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values."
+        ia.do_assert(first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values.")
 
-        if first is None:
-            self.first = None
-        elif ia.is_iterable(first):
-            if isinstance(first, Augmenter):
-                self.first = first
-            else:
-                self.first = Sequential(first, name="%s-first" % (self.name,))
-        elif isinstance(first, Augmenter):
-            self.first = Sequential([first], name="%s-first" % (self.name,))
-        else:
-            raise Exception("Expected 'first' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(first),))
-
-        if second is None:
-            self.second = None
-        elif ia.is_iterable(second):
-            if isinstance(second, Augmenter):
-                self.second = second
-            else:
-                self.second = Sequential(second, name="%s-second" % (self.name,))
-        elif isinstance(second, Augmenter):
-            self.second = Sequential([second], name="%s-second" % (self.name,))
-        else:
-            raise Exception("Expected 'second' to be either None or Augmenter or iterable of Augmenter, got %s." % (type(second),))
+        self.first = handle_children_list(first, self.name, "first")
+        self.second = handle_children_list(second, self.name, "second")
 
         if per_channel in [True, False, 0, 1, 0.0, 1.0]:
             self.per_channel = Deterministic(int(per_channel))
         elif ia.is_single_number(per_channel):
-            assert 0 <= per_channel <= 1.0
+            ia.do_assert(0 <= per_channel <= 1.0)
             self.per_channel = Binomial(per_channel)
         else:
             raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
@@ -223,7 +205,7 @@ class Alpha(Augmenter):
                 nb_channels = image.shape[2]
                 samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
                 for c, sample in enumerate(samples):
-                    assert 0 <= sample <= 1.0
+                    ia.do_assert(0 <= sample <= 1.0)
                     # if the value is nearly 1.0 or 0.0 skip the computation
                     # and just use only the first/second image
                     if sample >= 1.0 - self.epsilon:
@@ -232,11 +214,12 @@ class Alpha(Augmenter):
                         image[..., c] = image_second[..., c]
                     else:
                         image[..., c] = sample * image_first[..., c] + (1 - sample) * image_second[..., c]
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
             else:
                 sample = self.factor.draw_sample(random_state=rs_image)
-                assert 0 <= sample <= 1.0
+                ia.do_assert(0 <= sample <= 1.0)
                 # if the value is nearly 1.0 or 0.0 skip the computation
                 # and just use only the first/second image
                 if sample >= 1.0 - self.epsilon:
@@ -245,8 +228,58 @@ class Alpha(Augmenter):
                     image = image_second
                 else:
                     image = sample * image_first + (1 - sample) * image_second
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        nb_heatmaps = len(heatmaps)
+        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                heatmaps_first = heatmaps
+            else:
+                heatmaps_first = self.first.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                heatmaps_second = heatmaps
+            else:
+                heatmaps_second = self.second.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            heatmaps_first = heatmaps
+            heatmaps_second = heatmaps
+
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_first_i = heatmaps_first[i]
+            heatmaps_second_i = heatmaps_second[i]
+            rs_image = ia.new_random_state(seeds[i])
+            # sample alphas channelwise if necessary and try to use the image's channel number
+            # values properly synchronized with the image augmentation
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = heatmaps[i].shape[2] if len(heatmaps[i].shape) >= 3 else 1
+                samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
+                sample = np.average(samples)
+            else:
+                sample = self.factor.draw_sample(random_state=rs_image)
+                ia.do_assert(0 <= sample <= 1.0)
+
+            mask = sample >= 0.5
+            heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
+
+            result[i].arr_0to1 = heatmaps_arr_aug
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -290,7 +323,7 @@ class Alpha(Augmenter):
                 sample = np.average(samples)
             else:
                 sample = self.factor.draw_sample(random_state=rs_image)
-                assert 0 <= sample <= 1.0
+                ia.do_assert(0 <= sample <= 1.0)
 
             # We cant choose "just a bit" of one keypoint augmentation result
             # without messing up the positions (interpolation doesn't make much
@@ -313,17 +346,13 @@ class Alpha(Augmenter):
         return aug
 
     def get_parameters(self):
-        return [self.factor, self.first, self.second, self.per_channel]
+        return [self.factor, self.per_channel]
 
     def get_children_lists(self):
-        result = []
-        if self.first is not None:
-            result.append(self.first)
-        if self.second is not None:
-            result.append(self.second)
-        return result
+        return [self.first, self.second]
 
-class AlphaElementwise(Alpha):
+
+class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using pixelwise
     alpha values.
@@ -340,6 +369,7 @@ class AlphaElementwise(Alpha):
         Weighting of the results of the first branch. Values close to 0 mean
         that the results from the second branch (see parameter `second`)
         make up most of the final image.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will
               be sampled per image.
@@ -349,6 +379,7 @@ class AlphaElementwise(Alpha):
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -358,6 +389,7 @@ class AlphaElementwise(Alpha):
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -471,18 +503,90 @@ class AlphaElementwise(Alpha):
             if per_channel == 1:
                 for c in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
-                    assert 0 <= samples_c.item(0) <= 1.0 # validate only first value
+                    ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
                     image[..., c] = samples_c * image_first[..., c] + (1.0 - samples_c) * image_second[..., c]
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
             else:
                 samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
                 samples = np.tile(samples[..., np.newaxis], (1, 1, nb_channels))
-                assert 0.0 <= samples.item(0) <= 1.0
+                ia.do_assert(0.0 <= samples.item(0) <= 1.0)
 
                 image = samples * image_first + (1.0 - samples) * image_second
+                # TODO change this to meta.clip_* and meta.restore_*
                 np.clip(image, 0, 255, out=image)
                 result[i] = image.astype(input_dtype)
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps, seed):
+            samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
+            ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
+
+            if (h_images, w_images) != (h_heatmaps, w_heatmaps):
+                samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
+                samples_c = ia.imresize_single_image(samples_c, (h_heatmaps, w_heatmaps), interpolation="cubic")
+                samples_c = samples_c.astype(np.float32) / 255.0
+
+            return samples_c
+
+        result = heatmaps
+        nb_heatmaps = len(heatmaps)
+        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                heatmaps_first = heatmaps
+            else:
+                heatmaps_first = self.first.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                heatmaps_second = heatmaps
+            else:
+                heatmaps_second = self.second.augment_heatmaps(
+                    heatmaps,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            heatmaps_first = heatmaps
+            heatmaps_second = heatmaps
+
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_i = heatmaps[i]
+            h_img, w_img = heatmaps_i.shape[0:2]
+            h_heatmaps, w_heatmaps = heatmaps_i.arr_0to1.shape[0:2]
+            nb_channels_img = heatmaps_i.shape[2] if len(heatmaps_i.shape) >= 3 else 1
+            nb_channels_heatmaps = heatmaps_i.arr_0to1.shape[2]
+            heatmaps_first_i = heatmaps_first[i]
+            heatmaps_second_i = heatmaps_second[i]
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            if per_channel == 1:
+                samples = []
+                for c in sm.xrange(nb_channels_img):
+                    # We sample here at the same size as the original image, as some effects
+                    # might not scale with image size. We sampled mask is then downscaled to the
+                    # heatmap size.
+                    samples_c = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i]+1+c)
+                    samples.append(samples_c[..., np.newaxis])
+                samples = np.concatenate(samples, axis=2)
+                samples_avg = np.average(samples, axis=2)
+                samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_heatmaps))
+            else:
+                #samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
+                samples = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i])
+                samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_heatmaps))
+
+            mask = samples_tiled >= 0.5
+            heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
+
+            result[i].arr_0to1 = heatmaps_arr_aug
+
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -512,16 +616,20 @@ class AlphaElementwise(Alpha):
             kps_ois_first = keypoints_on_images
             kps_ois_second = keypoints_on_images
 
+        # FIXME this is essentially the same behaviour as Alpha, requires inclusion of (x, y)
+        # coordinates to estimate new keypoint coordinates
         for i in sm.xrange(nb_images):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
             #rs_image = ia.new_random_state(seeds[i])
-            assert len(kps_oi_first.shape) == 3, \
+            ia.do_assert(
+                len(kps_oi_first.shape) == 3,
                 "Keypoint augmentation in AlphaElementwise requires " \
                 "KeypointsOnImage.shape to have channel information (i.e. " \
                 "tuple with 3 entries), which you did not provide (input " \
                 "shape: %s). The channels must match the corresponding " \
                 "image channels." % (kps_oi_first.shape,)
+            )
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
             # keypoint augmentation also works channel-wise, even though
@@ -531,12 +639,12 @@ class AlphaElementwise(Alpha):
             if per_channel == 1:
                 #samples = self.factor.draw_samples((h, w, nb_channels,), random_state=rs_image)
                 samples = np.zeros((h, w, nb_channels), dtype=np.float32)
-                for c in nb_channels:
+                for c in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
                     samples[:, :, c] = samples_c
             else:
                 samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
-            assert 0.0 <= samples.item(0) <= 1.0
+            ia.do_assert(0.0 <= samples.item(0) <= 1.0)
             sample = np.average(samples)
 
             # We cant choose "just a bit" of one keypoint augmentation result
@@ -569,6 +677,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -578,6 +687,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -596,6 +706,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`
         (aspect ratio is kept).
+
             * If int, then that number will be used as the size for all
               iterations.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -609,6 +720,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
         the upscaling method.
+
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
             * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
@@ -623,6 +735,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
         How often to repeat the simplex noise generation process per
         image.
+
             * If int, then that number will be used as the iterations for all
               images.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -639,6 +752,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         where 'min' combines the noise maps by taking the (elementwise) minimum
         over all iteration's results, 'max' the (elementwise) maximum and
         'avg' the (elemtwise) average.
+
             * If ia.ALL, then a random value will be picked per image from the
               valid ones.
             * If a string, then that value will always be used as the method.
@@ -650,6 +764,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     sigmoid : bool or number, optional(default=True)
         Whether to apply a sigmoid function to the final noise maps, resulting
         in maps that have more extreme values (close to 0.0 or 1.0).
+
             * If bool, then a sigmoid will always (True) or never (False) be
               applied.
             * If a number p with 0<=p<=1, then a sigmoid will be applied to
@@ -659,6 +774,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         Threshold of the sigmoid, when applied. Thresholds above zero
         (e.g. 5.0) will move the saddle point towards the right, leading to
         more values close to 0.0.
+
             * If None, then Normal(0, 5.0) will be used.
             * If number, then that threshold will be used for all images.
             * If tuple of two numbers (a, b), then a random value will
@@ -721,6 +837,9 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
             activated=sigmoid
         )
 
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
     return AlphaElementwise(
         factor=noise, first=first, second=second, per_channel=per_channel,
         name=name, deterministic=deterministic, random_state=random_state
@@ -729,7 +848,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
 def FrequencyNoiseAlpha(exponent=(-4, 4),
                         first=None, second=None, per_channel=False,
                         size_px_max=(4, 16), upscale_method=None,
-                        iterations=(1, 3), aggregation_method=["avg", "max"],
+                        iterations=(1, 3), aggregation_method=["avg", "max"], # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
                         sigmoid=0.5, sigmoid_thresh=None,
                         name=None, deterministic=False, random_state=None):
     """
@@ -747,6 +866,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         Exponent to use when scaling in the frequency domain.
         Sane values are in the range -4 (large blobs) to 4 (small patterns).
         To generate cloud-like structures, use roughly -2.
+
             * If number, then that number will be used as the exponent for all
               iterations.
             * If tuple of two numbers (a, b), then a value will be sampled
@@ -759,6 +879,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     first : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the first of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the first branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -768,6 +889,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     second : None or Augmenter or iterable of Augmenter, optional(default=None)
         Augmenter(s) that make up the second of the two
         branches.
+
             * If None, then the input images will be reused as the output
               of the second branch.
             * If Augmenter, then that augmenter will be used as the branch.
@@ -786,6 +908,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`
         (aspect ratio is kept).
+
             * If int, then that number will be used as the size for all
               iterations.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -799,6 +922,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
         the upscaling method.
+
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
             * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
@@ -813,6 +937,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     iterations : int or tuple of ints or list of ints or StochasticParameter, optional(default=(1, 3))
         How often to repeat the simplex noise generation process per
         image.
+
             * If int, then that number will be used as the iterations for all
               images.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -829,6 +954,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         where 'min' combines the noise maps by taking the (elementwise) minimum
         over all iteration's results, 'max' the (elementwise) maximum and
         'avg' the (elemtwise) average.
+
             * If ia.ALL, then a random value will be picked per image from the
               valid ones.
             * If a string, then that value will always be used as the method.
@@ -840,6 +966,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
     sigmoid : bool or number, optional(default=0.5)
         Whether to apply a sigmoid function to the final noise maps, resulting
         in maps that have more extreme values (close to 0.0 or 1.0).
+
             * If bool, then a sigmoid will always (True) or never (False) be
               applied.
             * If a number p with 0<=p<=1, then a sigmoid will be applied to
@@ -849,6 +976,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
         Threshold of the sigmoid, when applied. Thresholds above zero
         (e.g. 5.0) will move the saddle point towards the right, leading to
         more values close to 0.0.
+
             * If None, then Normal(0, 5.0) will be used.
             * If number, then that threshold will be used for all images.
             * If tuple of two numbers (a, b), then a random value will
@@ -918,6 +1046,9 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
             activated=sigmoid
         )
+
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
 
     return AlphaElementwise(
         factor=noise, first=first, second=second, per_channel=per_channel,

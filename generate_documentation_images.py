@@ -636,34 +636,6 @@ def chapter_examples_bounding_boxes_shift():
 
     ia.seed(1)
 
-    image = ia.quokka(size=(256, 256))
-    bbs = ia.BoundingBoxesOnImage([
-        ia.BoundingBox(x1=25, x2=75, y1=25, y2=75),
-        ia.BoundingBox(x1=100, x2=150, y1=25, y2=75)
-    ], shape=image.shape)
-
-    # Move both BBs 25px to the right and the second BB 25px down
-    bbs_shifted = bbs.shift(left=25)
-    bbs_shifted.bounding_boxes[1] = bbs_shifted.bounding_boxes[1].shift(top=25)
-
-    image = bbs.draw_on_image(image, color=[0, 255, 0], thickness=2, alpha=0.75)
-    image = bbs_shifted.draw_on_image(image, color=[0, 0, 255], thickness=2, alpha=0.75)
-
-    # ------------
-
-    save(
-        "examples_bounding_boxes",
-        "shift.jpg",
-        grid([image], cols=1, rows=1),
-        quality=75
-    )
-
-def chapter_examples_bounding_boxes_shift():
-    import imgaug as ia
-    from imgaug import augmenters as iaa
-
-    ia.seed(1)
-
     # Define image and two bounding boxes
     image = ia.quokka(size=(256, 256))
     bbs = ia.BoundingBoxesOnImage([
@@ -1204,11 +1176,11 @@ def chapter_augmenters_emboss():
         [ia.quokka(size=(64, 64)) for _ in range(8)], cols=8, rows=1
     )
 
-    #strength = [0.5+(0.5/8)*i for i in range(8)]
-    strength = np.linspace(0.5, 1.5, num=8)
+    #strengths = [0.5+(0.5/8)*i for i in range(8)]
+    strengths = np.linspace(0.5, 1.5, num=8)
     run_and_save_augseq(
         "emboss_vary_strength.jpg",
-        [iaa.Emboss(alpha=1.0, strength=strength) for strength in strength],
+        [iaa.Emboss(alpha=1.0, strength=strength) for strength in strengths],
         [ia.quokka(size=(64, 64)) for _ in range(8)], cols=8, rows=1
     )
 

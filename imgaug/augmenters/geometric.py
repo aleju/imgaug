@@ -2,8 +2,10 @@
 Augmenters that apply affine transformations or other similar augmentations.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -16,26 +18,18 @@ List of augmenters:
     * PiecewiseAffine
     * PerspectiveTransform
     * ElasticTransformation
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
-from .. import parameters as iap
-from abc import ABCMeta, abstractmethod
-import random
+from ..parameters import StochasticParameter, Deterministic, Choice, DiscreteUniform, Normal, Uniform
 import numpy as np
-import copy as copy_module
-import re
 import math
-from scipy import misc, ndimage
-from skimage import transform as tf, segmentation, measure
-import itertools
+from scipy import ndimage
+from skimage import transform as tf
 import cv2
-import six
 import six.moves as sm
-import types
-import warnings
 
 from .meta import Augmenter
 
@@ -48,6 +42,7 @@ class Affine(Augmenter):
 
     Affine transformations
     involve:
+
         - Translation ("move" image on the x-/y-axis)
         - Rotation
         - Scaling ("zoom" in/out)
@@ -68,6 +63,7 @@ class Affine(Augmenter):
     scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
         Scaling factor to use, where 1.0 represents no change and 0.5 is
         zoomed out to 50 percent of the original size.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That value will be used identically for
@@ -85,6 +81,7 @@ class Affine(Augmenter):
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
         height/width.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That percent value will be used identically
@@ -101,6 +98,7 @@ class Affine(Augmenter):
     translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
         Translation in
         pixels.
+
             * If a single int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the discrete
               range [a .. b] per image. That number will be used identically
@@ -117,6 +115,7 @@ class Affine(Augmenter):
     rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Rotation in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive rotations (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -126,6 +125,7 @@ class Affine(Augmenter):
     shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Shear in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -135,23 +135,28 @@ class Affine(Augmenter):
     order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
         Interpolation order to use. Same meaning as in
         skimage:
+
             * 0: Nearest-neighbor
             * 1: Bi-linear (default)
             * 2: Bi-quadratic (not recommended by skimage)
             * 3: Bi-cubic
             * 4: Bi-quartic
             * 5: Bi-quintic
+
         Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very
         slow.
         If the backend is `cv2`, the mapping to opencv's interpolation modes
         is as follows:
+
             * 0 -> cv2.INTER_NEAREST
             * 1 -> cv2.INTER_LINEAR
             * 2 -> cv2.INTER_CUBIC
             * 3 -> cv2.INTER_CUBIC
             * 4 -> cv2.INTER_CUBIC
+
         As datatypes this parameter
         accepts:
+
             * If a single int, then that order will be used for all images.
             * If an iterable, then for each image a random value will be sampled
               from that iterable (i.e. list of allowed order values).
@@ -168,6 +173,7 @@ class Affine(Augmenter):
         For standard uint8 images (value range 0-255), this value may also
         come from the range 0-255. It may be a float value, even for
         integer image dtypes.
+
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -180,6 +186,7 @@ class Affine(Augmenter):
     mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
         Parameter that defines the handling of newly created pixels.
         Same meaning as in skimage (and numpy.pad):
+
             * "constant": Pads with a constant value
             * "edge": Pads with the edge values of array
             * "symmetric": Pads with the reflection of the vector mirrored
@@ -189,15 +196,19 @@ class Affine(Augmenter):
             * "wrap": Pads with the wrap of the vector along the axis.
               The first values are used to pad the end and the end values
               are used to pad the beginning.
+
         If `cv2` is chosen as the backend the mapping is as
         follows:
+
             * "constant" -> cv2.BORDER_CONSTANT
             * "edge" -> cv2.BORDER_REPLICATE
             * "symmetric" -> cv2.BORDER_REFLECT
             * "reflect" -> cv2.BORDER_REFLECT_101
             * "wrap" -> cv2.BORDER_WRAP
+
         The datatype of the parameter may
         be:
+
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.
@@ -293,7 +304,7 @@ class Affine(Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        assert backend in ["auto", "skimage", "cv2"]
+        ia.do_assert(backend in ["auto", "skimage", "cv2"])
         self.backend = backend
 
         # skimage | cv2
@@ -324,15 +335,15 @@ class Affine(Augmenter):
             else:
                 self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             if backend == "cv2":
-                assert order in [0, 1, 3]
+                ia.do_assert(order in [0, 1, 3])
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
-            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             if backend == "cv2":
-                assert all([val in [0, 1, 3] for val in order])
+                ia.do_assert(all([val in [0, 1, 3] for val in order]))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -344,9 +355,9 @@ class Affine(Augmenter):
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
             self.cval = Uniform(cval[0], cval[1]) # skimage transform expects float
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -372,7 +383,7 @@ class Affine(Augmenter):
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode])
+            ia.do_assert(all([ia.is_string(val) for val in mode]))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -385,14 +396,14 @@ class Affine(Augmenter):
             if isinstance(param, StochasticParameter):
                 return param
             elif ia.is_single_number(param):
-                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,)
+                ia.do_assert(param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,))
                 return Deterministic(param)
             elif ia.is_iterable(param) and not isinstance(param, dict):
-                assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),)
-                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1])
+                ia.do_assert(len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),))
+                ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1]))
                 return Uniform(param[0], param[1])
             elif allow_dict and isinstance(param, dict):
-                assert "x" in param or "y" in param
+                ia.do_assert("x" in param or "y" in param)
                 x = param.get("x")
                 y = param.get("y")
 
@@ -408,7 +419,7 @@ class Affine(Augmenter):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
-        assert translate_percent is None or translate_px is None
+        ia.do_assert(translate_percent is None or translate_px is None)
 
         if translate_percent is not None:
             # translate by percent
@@ -416,13 +427,13 @@ class Affine(Augmenter):
                 if ia.is_single_number(param):
                     return Deterministic(float(param))
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_numbers = all([ia.is_single_number(p) for p in param])
-                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),)
-                    #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    ia.do_assert(all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),))
+                    #ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1]))
                     return Uniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -441,12 +452,12 @@ class Affine(Augmenter):
                 if ia.is_single_integer(param):
                     return Deterministic(param)
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_integer = all([ia.is_single_integer(p) for p in param])
-                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),)
+                    ia.do_assert(all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),))
                     return DiscreteUniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -467,8 +478,8 @@ class Affine(Augmenter):
         elif ia.is_single_number(rotate):
             self.rotate = Deterministic(rotate)
         elif ia.is_iterable(rotate):
-            assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),)
-            assert all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list"
+            ia.do_assert(len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),))
+            ia.do_assert(all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list")
             self.rotate = Uniform(rotate[0], rotate[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
@@ -480,26 +491,25 @@ class Affine(Augmenter):
         elif ia.is_single_number(shear):
             self.shear = Deterministic(shear)
         elif ia.is_iterable(shear):
-            assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),)
-            assert all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list."
+            ia.do_assert(len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),))
+            ia.do_assert(all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list.")
             self.shear = Uniform(shear[0], shear[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        #images = images if isinstance(images, list) else [images]
         nb_images = len(images)
-        #result = [None] * nb_images
-        result = images
-
         scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        return result
 
+    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples):
+        nb_images = len(images)
+        result = images
         for i in sm.xrange(nb_images):
             image = images[i]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * images[i].shape[0]))
             else:
@@ -515,7 +525,7 @@ class Affine(Augmenter):
             order = order_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
                 cv2_bad_order = order not in [0, 1, 3]
-                cv2_bad_dtype = image.dtype not in [np.uint8, np.float32]
+                cv2_bad_dtype = image.dtype not in [np.uint8, np.float32, np.float64]
                 cv2_bad_shape = image.shape[2] > 4
                 cv2_impossible = cv2_bad_order or cv2_bad_dtype or cv2_bad_shape
                 if self.backend == "skimage" or (self.backend == "auto" and cv2_impossible):
@@ -533,12 +543,7 @@ class Affine(Augmenter):
                         mode, order
                     )
                 else:
-                    assert not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8 and float32, got %s." % (image.dtype,)
-                    # opencv seems to support arrays of three cvals (ie RGB)
-                    # in python2, but for some reason not in python3, so
-                    # we chose one cval here
-                    #cval = cval[0]
-                    #print(cval, type(cval), int(cval), type(int(cval)))
+                    ia.do_assert(not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,))
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
@@ -555,10 +560,24 @@ class Affine(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        nb_heatmaps = len(heatmaps)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_heatmaps, random_state)
+        cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
+        mode_samples = ["constant"] * len(mode_samples)
+
+        #arrs = [ia.Heatmaps.change_normalization(heatmaps_i.arr, source=heatmaps_i, target=(0.0, 1.0)) for heatmaps_i in heatmaps]
+        arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
+        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        for heatmaps_i, arr_aug in zip(heatmaps, arrs_aug):
+            #heatmaps_i.arr = ia.Heatmaps.change_normalization(arr_aug, source=(0.0, 1.0), target=heatmaps_i)
+            heatmaps_i.arr_0to1 = arr_aug
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width
@@ -566,8 +585,8 @@ class Affine(Augmenter):
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
             else:
@@ -604,7 +623,7 @@ class Affine(Augmenter):
         return result
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear]
+        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode, self.backend]
 
     def _draw_samples(self, nb_samples, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -627,8 +646,8 @@ class Affine(Augmenter):
             translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
             translate_samples = (translate_samples, translate_samples)
 
-        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
-        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
+        ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
+        ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
 
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
@@ -702,11 +721,12 @@ class AffineCv2(Augmenter):
     Augmenter to apply affine transformations to images using cv2 (i.e. opencv)
     backend.
 
-    This is mostly a wrapper around skimage's AffineTransform class and
-    warp function.
+    NOTE: This augmenter will likely be removed in the future as Affine() already
+    offers a cv2 backend (use `backend="cv2"`).
 
     Affine transformations
     involve:
+
         - Translation ("move" image on the x-/y-axis)
         - Rotation
         - Scaling ("zoom" in/out)
@@ -727,6 +747,7 @@ class AffineCv2(Augmenter):
     scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
         Scaling factor to use, where 1.0 represents no change and 0.5 is
         zoomed out to 50 percent of the original size.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That value will be used identically for
@@ -744,6 +765,7 @@ class AffineCv2(Augmenter):
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
         height/width.
+
             * If a single float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That percent value will be used identically
@@ -760,6 +782,7 @@ class AffineCv2(Augmenter):
     translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
         Translation in
         pixels.
+
             * If a single int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the discrete
               range [a .. b] per image. That number will be used identically
@@ -776,6 +799,7 @@ class AffineCv2(Augmenter):
     rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Rotation in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive rotations (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -785,6 +809,7 @@ class AffineCv2(Augmenter):
     shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
         Shear in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
+
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
@@ -793,6 +818,7 @@ class AffineCv2(Augmenter):
 
     order : int or iterable of int or string or iterable of string or ia.ALL or StochasticParameter, optional(default=1)
         Interpolation order to use. Allowed are:
+
             * cv2.INTER_NEAREST - a nearest-neighbor interpolation
             * cv2.INTER_LINEAR - a bilinear interpolation (used by default)
             * cv2.INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood
@@ -801,10 +827,12 @@ class AffineCv2(Augmenter):
             * "linear"
             * "cubic",
             * "lanczos4"
+
         The first four are OpenCV constants, the other four are strings that
         are automatically replaced by the OpenCV constants.
         INTER_NEAREST (nearest neighbour interpolation) and INTER_NEAREST
         (linear interpolation) are the fastest.
+
             * If a single int, then that order will be used for all images.
             * If a string, then it must be one of: "nearest", "linear", "cubic",
               "lanczos4".
@@ -825,6 +853,7 @@ class AffineCv2(Augmenter):
         For standard uint8 images (value range 0-255), this value may also
         come from the range 0-255. It may be a float value, even for
         integer image dtypes.
+
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -838,6 +867,7 @@ class AffineCv2(Augmenter):
         Parameter that defines the handling of newly created pixels.
         Same meaning as in opencv's border mode. Let `abcdefgh` be an image
         content and `|` be an image boundary, then:
+
             * `cv2.BORDER_REPLICATE`: `aaaaaa|abcdefgh|hhhhhhh`
             * `cv2.BORDER_REFLECT`: `fedcba|abcdefgh|hgfedcb`
             * `cv2.BORDER_REFLECT_101`: `gfedcb|abcdefgh|gfedcba`
@@ -849,8 +879,10 @@ class AffineCv2(Augmenter):
             * "reflect_101": Same as cv2.BORDER_REFLECT_101.
             * "wrap": Same as cv2.BORDER_WRAP.
             * "constant": Same as cv2.BORDER_CONSTANT.
+
         The datatype of the parameter may
         be:
+
             * If a single int, then it must be one of `cv2.BORDER_*`.
             * If a single string, then it must be one of: "replicate",
               "reflect", "reflect_101", "wrap", "constant".
@@ -941,14 +973,14 @@ class AffineCv2(Augmenter):
         if order == ia.ALL:
             self.order = Choice(available_orders)
         elif ia.is_single_integer(order):
-            assert order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order)
+            ia.do_assert(order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order))
             self.order = Deterministic(order)
         elif ia.is_string(order):
-            assert order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order)
+            ia.do_assert(order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order))
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),)
-            assert all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -960,9 +992,9 @@ class AffineCv2(Augmenter):
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
             self.cval = DiscreteUniform(cval[0], cval[1])
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
@@ -974,14 +1006,14 @@ class AffineCv2(Augmenter):
         if mode == ia.ALL:
             self.mode = Choice(available_modes)
         elif ia.is_single_integer(mode):
-            assert mode in available_modes, "Expected mode to be in %s, got %d." % (str(available_modes), mode)
+            ia.do_assert(mode in available_modes, "Expected mode to be in %s, got %d." % (str(available_modes), mode))
             self.mode = Deterministic(mode)
         elif ia.is_string(mode):
-            assert mode in available_modes_str, "Expected mode to be in %s, got %s." % (str(available_modes_str), mode)
+            ia.do_assert(mode in available_modes_str, "Expected mode to be in %s, got %s." % (str(available_modes_str), mode))
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), "Expected mode list to only contain integers/strings, got types %s." % (str([type(val) for val in mode]),)
-            assert all([val in available_modes + available_modes_str for val in mode]), "Expected all mode values to be in %s, got %s." % (str(available_modes + available_modes_str), str(mode))
+            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), "Expected mode list to only contain integers/strings, got types %s." % (str([type(val) for val in mode]),))
+            ia.do_assert(all([val in available_modes + available_modes_str for val in mode]), "Expected all mode values to be in %s, got %s." % (str(available_modes + available_modes_str), str(mode)))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -994,14 +1026,14 @@ class AffineCv2(Augmenter):
             if isinstance(param, StochasticParameter):
                 return param
             elif ia.is_single_number(param):
-                assert param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,)
+                ia.do_assert(param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,))
                 return Deterministic(param)
             elif ia.is_iterable(param) and not isinstance(param, dict):
-                assert len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),)
-                assert param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1])
+                ia.do_assert(len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),))
+                ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1]))
                 return Uniform(param[0], param[1])
             elif allow_dict and isinstance(param, dict):
-                assert "x" in param or "y" in param
+                ia.do_assert("x" in param or "y" in param)
                 x = param.get("x")
                 y = param.get("y")
 
@@ -1017,7 +1049,7 @@ class AffineCv2(Augmenter):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
-        assert translate_percent is None or translate_px is None
+        ia.do_assert(translate_percent is None or translate_px is None)
 
         if translate_percent is not None:
             # translate by percent
@@ -1025,13 +1057,13 @@ class AffineCv2(Augmenter):
                 if ia.is_single_number(param):
                     return Deterministic(float(param))
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_numbers = all([ia.is_single_number(p) for p in param])
-                    assert all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),)
-                    #assert param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1])
+                    ia.do_assert(all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),))
+                    #ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1]))
                     return Uniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -1050,12 +1082,12 @@ class AffineCv2(Augmenter):
                 if ia.is_single_integer(param):
                     return Deterministic(param)
                 elif ia.is_iterable(param) and not isinstance(param, dict):
-                    assert len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),)
+                    ia.do_assert(len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),))
                     all_integer = all([ia.is_single_integer(p) for p in param])
-                    assert all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),)
+                    ia.do_assert(all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),))
                     return DiscreteUniform(param[0], param[1])
                 elif allow_dict and isinstance(param, dict):
-                    assert "x" in param or "y" in param
+                    ia.do_assert("x" in param or "y" in param)
                     x = param.get("x")
                     y = param.get("y")
 
@@ -1076,8 +1108,8 @@ class AffineCv2(Augmenter):
         elif ia.is_single_number(rotate):
             self.rotate = Deterministic(rotate)
         elif ia.is_iterable(rotate):
-            assert len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),)
-            assert all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list"
+            ia.do_assert(len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),))
+            ia.do_assert(all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list")
             self.rotate = Uniform(rotate[0], rotate[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
@@ -1089,13 +1121,20 @@ class AffineCv2(Augmenter):
         elif ia.is_single_number(shear):
             self.shear = Deterministic(shear)
         elif ia.is_iterable(shear):
-            assert len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),)
-            assert all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list."
+            ia.do_assert(len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),))
+            ia.do_assert(all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list.")
             self.shear = Uniform(shear[0], shear[1])
         else:
             raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
 
     def _augment_images(self, images, random_state, parents, hooks):
+        nb_images = len(images)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        return result
+
+    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples):
+        # TODO change these to class attributes
         order_str_to_int = {
             "nearest": cv2.INTER_NEAREST,
             "linear": cv2.INTER_LINEAR,
@@ -1110,21 +1149,16 @@ class AffineCv2(Augmenter):
             "constant": cv2.BORDER_CONSTANT
         }
 
-        #images = images if isinstance(images, list) else [images]
         nb_images = len(images)
-        #result = [None] * nb_images
         result = images
-
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
-
         for i in sm.xrange(nb_images):
             height, width = images[i].shape[0], images[i].shape[1]
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * images[i].shape[0]))
             else:
@@ -1162,8 +1196,12 @@ class AffineCv2(Augmenter):
                     dsize=(width, height),
                     flags=order,
                     borderMode=mode,
-                    borderValue=cval
+                    borderValue=tuple([int(v) for v in cval])
                 )
+
+                # cv2 warp drops last axis if shape is (H, W, 1)
+                if image_warped.ndim == 2:
+                    image_warped = image_warped[..., np.newaxis]
 
                 # warp changes uint8 to float64, making this necessary
                 #if image_warped.dtype != images[i].dtype:
@@ -1174,10 +1212,21 @@ class AffineCv2(Augmenter):
 
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        nb_images = len(heatmaps)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
+        mode_samples = ["constant"] * len(mode_samples)
+        arrs = [heatmap_i.arr_0to1 for heatmap_i in heatmaps]
+        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
+        for heatmap_i, arr_aug in zip(heatmaps, arrs_aug):
+            heatmap_i.arr_0to1 = arr_aug
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width
@@ -1185,8 +1234,8 @@ class AffineCv2(Augmenter):
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
-            #assert isinstance(translate_x, (float, int))
-            #assert isinstance(translate_y, (float, int))
+            #ia.do_assert(isinstance(translate_x, (float, int)))
+            #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
                 translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
             else:
@@ -1223,7 +1272,7 @@ class AffineCv2(Augmenter):
         return result
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear]
+        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
 
     def _draw_samples(self, nb_samples, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -1246,8 +1295,8 @@ class AffineCv2(Augmenter):
             translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
             translate_samples = (translate_samples, translate_samples)
 
-        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64]
-        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64]
+        ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
+        ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
 
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
@@ -1274,13 +1323,17 @@ class PiecewiseAffine(Augmenter):
         distribution. This scale factor is equivalent to the normal
         distribution's sigma. Note that the jitter (how far each point is
         moved in which direction) is multiplied by the height/width of the
-        image, so this scale can be the same for different sized images.
+        image if `absolute_scale=False` (default), so this scale can be
+        the same for different sized images.
         Recommended values are in the range 0.01 to 0.05 (weak to strong
         augmentations).
+
             * If a single float, then that value will always be used as the
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
               from the interval (a, b) (per image).
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
@@ -1289,10 +1342,13 @@ class PiecewiseAffine(Augmenter):
         Must be at least 2. For large images, you might want to pick a
         higher value than 4. You might have to then adjust scale to lower
         values.
+
             * If a single int, then that value will always be used as the
               number of rows.
             * If a tuple (a, b), then a value from the discrete interval [a..b]
               will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
@@ -1307,6 +1363,9 @@ class PiecewiseAffine(Augmenter):
 
     mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
         See Affine.__init__().
+
+    absolute_scale : bool, optional(default=False)
+        Take `scale` as an absolute value rather than a relative value.
 
     name : string, optional(default=None)
         See `Augmenter.__init__()`
@@ -1332,15 +1391,18 @@ class PiecewiseAffine(Augmenter):
 
     """
 
-    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant",
+    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant", absolute_scale=False,
                  name=None, deterministic=False, random_state=None):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
-        elif ia.is_iterable(scale):
-            assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),)
+        elif isinstance(scale, tuple):
+            ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
             self.scale = Uniform(scale[0], scale[1])
+        elif ia.is_iterable(scale):
+            ia.do_assert(len(scale) > 0)
+            self.scale = Choice(scale)
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
         else:
@@ -1349,26 +1411,34 @@ class PiecewiseAffine(Augmenter):
         self.jitter = Normal(loc=0, scale=self.scale)
 
         if ia.is_single_number(nb_rows):
-            assert nb_rows >= 2
+            ia.do_assert(nb_rows >= 2)
             self.nb_rows = Deterministic(int(nb_rows))
-        elif ia.is_iterable(nb_rows):
-            assert len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),)
-            assert nb_rows[0] >= 2
-            assert nb_rows[1] >= 2
+        elif isinstance(nb_rows, tuple):
+            ia.do_assert(len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),))
+            ia.do_assert(nb_rows[0] >= 2)
+            ia.do_assert(nb_rows[1] >= 2)
             self.nb_rows = DiscreteUniform(nb_rows[0], nb_rows[1])
+        elif ia.is_iterable(nb_rows):
+            ia.do_assert(len(nb_rows) > 0)
+            ia.do_assert(all([val >= 2 for val in nb_rows]))
+            self.nb_rows = Choice(nb_rows)
         elif isinstance(nb_rows, StochasticParameter):
             self.nb_rows = nb_rows
         else:
             raise Exception("Expected int, tuple of two ints or StochasticParameter as nb_rows, got %s." % (type(nb_rows),))
 
         if ia.is_single_number(nb_cols):
-            assert nb_cols >= 2
+            ia.do_assert(nb_cols >= 2)
             self.nb_cols = Deterministic(int(nb_cols))
-        elif ia.is_iterable(nb_cols):
-            assert len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),)
-            assert nb_cols[0] >= 2
-            assert nb_cols[1] >= 2
+        elif isinstance(nb_cols, tuple):
+            ia.do_assert(len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),))
+            ia.do_assert(nb_cols[0] >= 2)
+            ia.do_assert(nb_cols[1] >= 2)
             self.nb_cols = DiscreteUniform(nb_cols[0], nb_cols[1])
+        elif ia.is_iterable(nb_cols):
+            ia.do_assert(len(nb_cols) > 0)
+            ia.do_assert(all([val >= 2 for val in nb_cols]))
+            self.nb_cols = Choice(nb_cols)
         elif isinstance(nb_cols, StochasticParameter):
             self.nb_cols = nb_cols
         else:
@@ -1392,11 +1462,11 @@ class PiecewiseAffine(Augmenter):
             # self.order = DiscreteUniform(0, 5)
             self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             self.order = Deterministic(order)
         elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
-            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+            ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
+            ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
@@ -1407,11 +1477,15 @@ class PiecewiseAffine(Augmenter):
             self.cval = DiscreteUniform(0, 255)
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
+        elif isinstance(cval, tuple):
+            ia.do_assert(len(cval) == 2)
+            ia.do_assert(0 <= cval[0] <= 255)
+            ia.do_assert(0 <= cval[1] <= 255)
+            self.cval = DiscreteUniform(cval[0], cval[1])
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
-            self.cval = Uniform(cval[0], cval[1])
+            ia.do_assert(len(cval) > 0)
+            ia.do_assert([0 <= val <= 255 for val in cval])
+            self.cval = Choice(cval)
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
         else:
@@ -1423,12 +1497,14 @@ class PiecewiseAffine(Augmenter):
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode])
+            ia.do_assert(all([ia.is_string(val) for val in mode]))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
+
+        self.absolute_scale = absolute_scale
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -1465,6 +1541,57 @@ class PiecewiseAffine(Augmenter):
                     image_warped = image_warped.astype(images[i].dtype, copy=False)
 
                 result[i] = image_warped
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        nb_images = len(heatmaps)
+
+        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
+
+        seed = seeds[-1]
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 1))
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 2))
+        order_samples = self.order.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 5))
+
+        for i in sm.xrange(nb_images):
+            heatmaps_i = heatmaps[i]
+            arr_0to1 = heatmaps_i.arr_0to1
+
+            rs_image = ia.new_random_state(seeds[i])
+            h, w = arr_0to1.shape[0:2]
+            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+
+            if transformer is not None:
+                #reverse_uint8 = False
+                #input_dtype = arr.dtype
+                #if heatmaps_i.min_value < 0 or heatmaps_i.max_value > 1.0:
+                #    arr = heatmaps_i.to_uint8()
+                #    reverse_uint8 = True
+                #arr_0to1 = ia.Heatmaps.change_normalization(arr, source=heatmaps_i, target=(0.0, 1.0))
+
+                arr_0to1_warped = tf.warp(
+                    arr_0to1,
+                    transformer,
+                    order=order_samples[i],
+                    mode="constant",
+                    cval=0,
+                    preserve_range=True,
+                    output_shape=arr_0to1.shape
+                )
+
+                # skimage converts to float64
+                arr_0to1_warped = arr_0to1_warped.astype(np.float32)
+
+                #arr_warped = ia.Heatmaps.change_normalization(arr_0to1_warped, source=(0.0, 1.0), target=heatmaps_i)
+
+                #if reverse_uint8:
+                #    heatmaps_i_aug = ia.Heatmaps.from_uint8(heatmap_warped, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+                #else:
+                #heatmaps_i_aug = ia.Heatmaps.from_0to1(arr_warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+                #heatmaps_i_aug.arr = heatmaps_i_aug.arr.astype(input_dtype)
+                heatmaps_i.arr_0to1 = arr_0to1_warped
 
         return result
 
@@ -1580,8 +1707,9 @@ class PiecewiseAffine(Augmenter):
         if nb_nonzero == 0:
             return None
         else:
-            jitter_img[:, 0] = jitter_img[:, 0] * h
-            jitter_img[:, 1] = jitter_img[:, 1] * w
+            if not self.absolute_scale:
+                jitter_img[:, 0] = jitter_img[:, 0] * h
+                jitter_img[:, 1] = jitter_img[:, 1] * w
             points_dest = np.copy(points_src)
             points_dest[:, 0] = points_dest[:, 0] + jitter_img[:, 0]
             points_dest[:, 1] = points_dest[:, 1] + jitter_img[:, 1]
@@ -1600,7 +1728,7 @@ class PiecewiseAffine(Augmenter):
             return matrix
 
     def get_parameters(self):
-        return [self.scale]
+        return [self.scale, self.nb_rows, self.nb_cols, self.order, self.cval, self.mode, self.absolute_scale]
 
 class PerspectiveTransform(Augmenter):
     """
@@ -1622,10 +1750,13 @@ class PerspectiveTransform(Augmenter):
         the random distances of the subimage's corners from the full image's
         corners. The sampled values reflect percentage values (with respect
         to image height/width). Recommended values are in the range 0.0 to 0.1.
+
             * If a single float, then that value will always be used as the
               scale.
             * If a tuple (a, b) of floats, then a random value will be picked
               from the interval (a, b) (per image).
+            * If a list of values, a random one of the values will be picked
+              per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
@@ -1660,13 +1791,15 @@ class PerspectiveTransform(Augmenter):
 
         if ia.is_single_number(scale):
             self.scale = Deterministic(scale)
-        elif ia.is_iterable(scale):
-            assert len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),)
+        elif isinstance(scale, tuple):
+            ia.do_assert(len(scale) == 2, "Expected tuple with 2 entries for argument 'scale', got %d entries." % (len(scale),))
             self.scale = Uniform(scale[0], scale[1])
+        elif ia.is_iterable(scale):
+            self.scale = Choice(scale)
         elif isinstance(scale, StochasticParameter):
             self.scale = scale
         else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
+            raise Exception("Expected number, tuple of number, list of number or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
 
         self.jitter = Normal(loc=0, scale=self.scale)
 
@@ -1684,7 +1817,6 @@ class PerspectiveTransform(Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             # cv2.warpPerspective only supports <=4 channels
-            #assert images[i].shape[2] <= 4, "PerspectiveTransform is currently limited to images with 4 or less channels."
             nb_channels = images[i].shape[2]
             if nb_channels <= 4:
                 warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
@@ -1696,11 +1828,40 @@ class PerspectiveTransform(Augmenter):
                 warped = [cv2.warpPerspective(images[i][..., c], M, (max_width, max_height)) for c in sm.xrange(nb_channels)]
                 warped = [warped_i[..., np.newaxis] for warped_i in warped]
                 warped = np.dstack(warped)
-            #print(np.min(warped), np.max(warped), warped.dtype)
+
             if self.keep_size:
                 h, w = images[i].shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w), interpolation="cubic")
             result[i] = warped
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+
+        matrices, max_heights, max_widths = self._create_matrices(
+            [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
+            random_state
+        )
+
+        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            heatmaps_i = heatmaps[i]
+
+            arr = heatmaps_i.arr_0to1
+
+            nb_channels = arr.shape[2]
+
+            warped = [cv2.warpPerspective(arr[..., c], M, (max_width, max_height)) for c in sm.xrange(nb_channels)]
+            warped = [warped_i[..., np.newaxis] for warped_i in warped]
+            warped = np.dstack(warped)
+
+            heatmaps_i_aug = ia.HeatmapsOnImage.from_0to1(warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+
+            if self.keep_size:
+                h, w = arr.shape[0:2]
+                heatmaps_i_aug = heatmaps_i_aug.scale((h, w))
+
+            result[i] = heatmaps_i_aug
 
         return result
 
@@ -1820,7 +1981,7 @@ class PerspectiveTransform(Augmenter):
         return pts_ordered
 
     def get_parameters(self):
-        return [self.scale]
+        return [self.jitter, self.keep_size]
 
 # code partially from
 # https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
@@ -1829,12 +1990,14 @@ class ElasticTransformation(Augmenter):
     Augmenter to transform images by moving pixels locally around using
     displacement fields.
 
-    See
+    See ::
+
         Simard, Steinkraus and Platt
         Best Practices for Convolutional Neural Networks applied to Visual
         Document Analysis
         in Proc. of the International Conference on Document Analysis and
         Recognition, 2003
+
     for a detailed explanation.
 
     Parameters
@@ -1842,18 +2005,24 @@ class ElasticTransformation(Augmenter):
     alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
         Strength of the distortion field. Higher values mean more "movement" of
         pixels.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
+            * If a list, then for each image a random value will be sampled
+              from that list.
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
     sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
         Standard deviation of the gaussian kernel used to smooth the distortion
         fields.
+
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
+            * If a list, then for each image a random value will be sampled
+              from that list.
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
@@ -1861,9 +2030,12 @@ class ElasticTransformation(Augmenter):
         Interpolation order to use. Same meaning as in
         `scipy.ndimage.map_coordinates` and may take any integer value
         in the range 0 to 5, where orders close to 0 are faster.
+
             * If a single int, then that order will be used for all images.
-            * If an iterable, then for each image a random value will be sampled
-              from that iterable (i.e. list of allowed order values).
+            * If a tuple (a, b), then a random value from the range a <= x <= b
+              is picked per image.
+            * If a list, then for each image a random value will be sampled
+              from that list.
             * If ia.ALL, then equivalant to list [0, 1, 2, 3, 4, 5].
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
@@ -1874,10 +2046,13 @@ class ElasticTransformation(Augmenter):
         For standard uint8 images (value range 0-255), this value may also
         come from the range 0-255. It may be a float value, even for
         integer image dtypes.
+
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
               is picked per image.
+            * If a list, then a random value will be picked from that list per
+              image.
             * If ia.ALL, a value from the discrete range [0 .. 255] will be
               sampled per image.
             * If a StochasticParameter, a new value will be sampled from the
@@ -1889,6 +2064,7 @@ class ElasticTransformation(Augmenter):
         i.e. "constant", "nearest", "reflect" or "wrap".
         The datatype of the parameter may
         be:
+
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.
@@ -1928,61 +2104,75 @@ class ElasticTransformation(Augmenter):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(alpha):
-            assert alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,)
+            ia.do_assert(alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,))
             self.alpha = Deterministic(alpha)
-        elif ia.is_iterable(alpha):
-            assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+        elif isinstance(alpha, tuple):
+            ia.do_assert(len(alpha) == 2, "Expected tuple with 2 entries, got %d entries." % (len(alpha),))
+            ia.do_assert(all([alpha_i >= 0.0 for alpha_i in alpha]))
             self.alpha = Uniform(alpha[0], alpha[1])
+        elif ia.is_iterable(alpha):
+            ia.do_assert(all([alpha_i >= 0.0 for alpha_i in alpha]))
+            self.alpha = Choice(alpha)
         elif isinstance(alpha, StochasticParameter):
             self.alpha = alpha
         else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
+            raise Exception("Expected number, tuple of number, list of number or StochasticParameter. Got %s." % (type(alpha),))
 
         if ia.is_single_number(sigma):
-            assert sigma >= 0.0, "Expected sigma to have range [0, inf), got value %.4f." % (sigma,)
+            ia.do_assert(sigma >= 0.0, "Expected sigma to have range [0, inf), got value %.4f." % (sigma,))
             self.sigma = Deterministic(sigma)
-        elif ia.is_iterable(sigma):
-            assert len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),)
+        elif isinstance(sigma, tuple):
+            ia.do_assert(len(sigma) == 2, "Expected tuple with 2 entries, got %d entries." % (len(sigma),))
+            ia.do_assert(all([sigma_i >= 0.0 for sigma_i in sigma]))
             self.sigma = Uniform(sigma[0], sigma[1])
+        elif ia.is_iterable(sigma):
+            ia.do_assert(all([sigma_i >= 0.0 for sigma_i in sigma]))
+            self.sigma = Choice(sigma)
         elif isinstance(sigma, StochasticParameter):
             self.sigma = sigma
         else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
+            raise Exception("Expected number, tuple of number, list of number or StochasticParameter. Got %s." % (type(sigma),))
 
         if order == ia.ALL:
             self.order = Choice([0, 1, 2, 3, 4, 5])
         elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,)
+            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             self.order = Deterministic(order)
-        elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),)
-            assert all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),)
+        elif isinstance(order, tuple):
+            ia.do_assert(len(order) == 2, "Expected tuple with 2 entries, got %d entries." % (len(order),))
+            ia.do_assert(all([order_i in [0, 1, 2, 3, 4, 5] for order_i in order]))
+            self.order = DiscreteUniform(order[0], order[1])
+        elif ia.is_iterable(order):
+            ia.do_assert(all([ia.is_single_integer(order_i) for order_i in order]), "Expected order list to only contain integers, got types %s." % (str([type(order_i) for order_i in order]),))
+            ia.do_assert(all([order_i in [0, 1, 2, 3, 4, 5] for order_i in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             self.order = Choice(order)
         elif isinstance(order, StochasticParameter):
             self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int, list of int or StochasticParameter, got %s." % (type(order),))
+            raise Exception("Expected order to be imgaug.ALL, int, tuple of int, list of int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
             self.cval = DiscreteUniform(0, 255)
         elif ia.is_single_number(cval):
             self.cval = Deterministic(cval)
+        elif isinstance(cval, tuple):
+            ia.do_assert(len(cval) == 2, "Expected tuple with 2 entries, got %d entries." % (len(cval),))
+            ia.do_assert(all([0 <= cval_i <= 255 for cval_i in cval]))
+            self.cval = DiscreteUniform(cval[0], cval[1])
         elif ia.is_iterable(cval):
-            assert len(cval) == 2
-            assert 0 <= cval[0] <= 255
-            assert 0 <= cval[1] <= 255
-            self.cval = Uniform(cval[0], cval[1])
+            ia.do_assert(all([0 <= cval_i <= 255 for cval_i in cval]))
+            self.cval = Choice(cval)
         elif isinstance(cval, StochasticParameter):
             self.cval = cval
         else:
-            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+            raise Exception("Expected cval to be imgaug.ALL, number, tuple of number, list of number or StochasticParameter, got %s." % (type(cval),))
 
         if mode == ia.ALL:
             self.mode = Choice(["constant", "nearest", "reflect", "wrap"])
         elif ia.is_string(mode):
             self.mode = Deterministic(mode)
-        elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode])
+        elif ia.is_iterable(mode):
+            ia.do_assert(all([ia.is_string(val) for val in mode]))
             self.mode = Choice(mode)
         elif isinstance(mode, StochasticParameter):
             self.mode = mode
@@ -2000,7 +2190,7 @@ class ElasticTransformation(Augmenter):
         modes = self.mode.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10400))
         for i in sm.xrange(nb_images):
             image = images[i]
-            image_first_channel = np.squeeze(image[..., 0])
+            image_first_channel = np.squeeze(image[..., 0])  # TODO why this weird formulation instead of image.shape[0:2] ?
             indices_x, indices_y = ElasticTransformation.generate_indices(image_first_channel.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
             result[i] = ElasticTransformation.map_coordinates(
                 images[i],
@@ -2011,6 +2201,47 @@ class ElasticTransformation(Augmenter):
                 mode=modes[i]
             )
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        nb_heatmaps = len(heatmaps)
+        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_heatmaps+1,))
+        alphas = self.alpha.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10000))
+        sigmas = self.sigma.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10100))
+        orders = self.order.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10200))
+        for i in sm.xrange(nb_heatmaps):
+            heatmaps_i = heatmaps[i]
+            if heatmaps_i.arr_0to1.shape[0:2] == heatmaps_i.shape[0:2]:
+                indices_x, indices_y = ElasticTransformation.generate_indices(heatmaps_i.arr_0to1.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+                heatmaps_i.arr_0to1 = ElasticTransformation.map_coordinates(
+                    heatmaps_i.arr_0to1,
+                    indices_x,
+                    indices_y,
+                    order=orders[i],
+                    cval=0,
+                    mode="constant"
+                )
+            else:
+                # heatmaps do not have the same size as augmented images
+                # this may result in indices of moved pixels being different
+                # to prevent this, we use the same image size as for the base images, but that
+                # requires resizing the heatmaps temporarily to the image sizes
+                height_orig, width_orig = heatmaps_i.arr_0to1
+                heatmaps_i = heatmaps_i.scale(heatmaps_i.shape[0:2])
+                arr_0to1 = heatmaps_i.arr_0to1
+                indices_x, indices_y = ElasticTransformation.generate_indices(arr_0to1.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+                arr_0to1_warped = ElasticTransformation.map_coordinates(
+                    arr_0to1,
+                    indices_x,
+                    indices_y,
+                    order=orders[i],
+                    cval=0,
+                    mode="constant"
+                )
+                heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(arr_0to1_warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
+                heatmaps_i_warped = heatmaps_i_warped.scale((height_orig, width_orig))
+                heatmaps[i] = heatmaps_i_warped
+
+        return heatmaps
 
     """
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -2039,11 +2270,11 @@ class ElasticTransformation(Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.alpha, self.sigma, self.orders, self.cvals, self.modes]
+        return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
     @staticmethod
     def generate_indices(shape, alpha, sigma, random_state):
-        assert len(shape) == 2
+        ia.do_assert(len(shape) == 2)
 
         dx = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
         dy = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
@@ -2053,7 +2284,7 @@ class ElasticTransformation(Augmenter):
 
     @staticmethod
     def map_coordinates(image, indices_x, indices_y, order=1, cval=0, mode="constant"):
-        assert len(image.shape) == 3
+        ia.do_assert(len(image.shape) == 3)
         result = np.copy(image)
         height, width = image.shape[0:2]
         for c in sm.xrange(image.shape[2]):

@@ -2,8 +2,7 @@
 Installation
 ============
 
-The library uses python, which must be installed. Most development and testing
-is done in python 2.7. Python 3.x is occasionally tested and seems to also work.
+The library uses python, which must be installed. Python 2.7, 3.4, 3.5 and 3.6 are supported.
 
 The following packages must be installed:
 
@@ -29,7 +28,7 @@ Alternatively, you can install the latest version which was added to pypi via
 
 In rare cases, one might prefer to install from the locally cloned repository.
 This is possible using ``python setup.py sdist && sudo pip install dist/imgaug-VERSION.tar.gz``,
-where `VERSION` must be replaced by the current version of the library (e.g. ``imgaug-0.2.5.tar.gz``).
+where `VERSION` must be replaced by the current version of the library (e.g. ``imgaug-0.2.6.tar.gz``).
 The current version can be derived from `setup.py`'s content.
 
 To deinstall the library use ``pip uninstall imgaug``.

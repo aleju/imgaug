@@ -1,6 +1,5 @@
 from __future__ import print_function, division
 from imgaug import augmenters as iaa
-from scipy import misc, ndimage
 import numpy as np
 from skimage import data
 import cv2

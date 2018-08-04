@@ -2,8 +2,10 @@
 Augmenters that blur images.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -12,34 +14,25 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * GaussianBlur
     * AverageBlur
     * MedianBlur
     * BilateralBlur
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
-from .. import parameters as iap
-from abc import ABCMeta, abstractmethod
-import random
+from ..parameters import StochasticParameter, Deterministic, DiscreteUniform, Uniform
 import numpy as np
-import copy as copy_module
-import re
-import math
-from scipy import misc, ndimage
-from skimage import transform as tf, segmentation, measure
-import itertools
+from scipy import ndimage
 import cv2
-import six
 import six.moves as sm
-import types
-import warnings
 
 from .meta import Augmenter
 
-class GaussianBlur(Augmenter):
+class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to blur images using gaussian kernels.
 
@@ -48,6 +41,7 @@ class GaussianBlur(Augmenter):
     sigma : float or tuple of two floats or StochasticParameter
         Standard deviation of the gaussian kernel.
         Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
+
             * If a single float, that value will always be used as the standard
               deviation.
             * If a tuple (a, b), then a random value from the range a <= x <= b
@@ -83,7 +77,7 @@ class GaussianBlur(Augmenter):
         if ia.is_single_number(sigma):
             self.sigma = Deterministic(sigma)
         elif ia.is_iterable(sigma):
-            assert len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),)
+            ia.do_assert(len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),))
             self.sigma = Uniform(sigma[0], sigma[1])
         elif isinstance(sigma, StochasticParameter):
             self.sigma = sigma
@@ -108,13 +102,16 @@ class GaussianBlur(Augmenter):
                     result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
     def get_parameters(self):
         return [self.sigma]
 
-class AverageBlur(Augmenter):
+class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing simple means over neighbourhoods.
 
@@ -122,6 +119,7 @@ class AverageBlur(Augmenter):
     ----------
     k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter, optional
         Kernel size to use.
+
             * If a single int, then that value will be used for the height
               and width of the kernel.
             * If a tuple of two ints `(a, b)`, then the kernel size will be
@@ -168,7 +166,7 @@ class AverageBlur(Augmenter):
         if ia.is_single_number(k):
             self.k = Deterministic(int(k))
         elif ia.is_iterable(k):
-            assert len(k) == 2
+            ia.do_assert(len(k) == 2)
             if all([ia.is_single_number(ki) for ki in k]):
                 self.k = DiscreteUniform(int(k[0]), int(k[1]))
             elif all([isinstance(ki, StochasticParameter) for ki in k]):
@@ -211,13 +209,18 @@ class AverageBlur(Augmenter):
         for i in sm.xrange(nb_images):
             kh, kw = samples[0][i], samples[1][i]
             #print(images.shape, result.shape, result[i].shape)
-            if kh > 1 or kw > 1:
+            kernel_impossible = (kh == 0 or kw == 0)
+            kernel_does_nothing = (kh == 1 and kw == 1)
+            if not kernel_impossible and not kernel_does_nothing:
                 image_aug = cv2.blur(result[i], (kh, kw))
                 # cv2.blur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
                 result[i] = image_aug
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -226,7 +229,7 @@ class AverageBlur(Augmenter):
         return [self.k]
 
 # TODO tests
-class MedianBlur(Augmenter):
+class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing median values over neighbourhoods.
 
@@ -238,6 +241,7 @@ class MedianBlur(Augmenter):
     k : int or tuple of two ints or StochasticParameter
         Kernel
         size.
+
             * If a single int, then that value will be used for the height and
               width of the kernel. Must be an odd value.
             * If a tuple of two ints (a, b), then the kernel size will be an
@@ -274,13 +278,13 @@ class MedianBlur(Augmenter):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if ia.is_single_number(k):
-            assert k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),)
+            ia.do_assert(k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),))
             self.k = Deterministic(int(k))
         elif ia.is_iterable(k):
-            assert len(k) == 2
-            assert all([ia.is_single_number(ki) for ki in k])
-            assert k[0] % 2 != 0, "Expected k[0] to be odd, got %d. Add or subtract 1." % (int(k[0]),)
-            assert k[1] % 2 != 0, "Expected k[1] to be odd, got %d. Add or subtract 1." % (int(k[1]),)
+            ia.do_assert(len(k) == 2)
+            ia.do_assert(all([ia.is_single_number(ki) for ki in k]))
+            ia.do_assert(k[0] % 2 != 0, "Expected k[0] to be odd, got %d. Add or subtract 1." % (int(k[0]),))
+            ia.do_assert(k[1] % 2 != 0, "Expected k[1] to be odd, got %d. Add or subtract 1." % (int(k[1]),))
             self.k = DiscreteUniform(int(k[0]), int(k[1]))
         elif isinstance(k, StochasticParameter):
             self.k = k
@@ -303,6 +307,9 @@ class MedianBlur(Augmenter):
                 result[i] = image_aug
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
@@ -310,7 +317,7 @@ class MedianBlur(Augmenter):
         return [self.k]
 
 # TODO tests
-class BilateralBlur(Augmenter):
+class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur/Denoise an image using a bilateral filter.
 
@@ -326,6 +333,7 @@ class BilateralBlur(Augmenter):
         Diameter of each pixel neighborhood.
         High values for d lead to significantly worse performance. Values
         equal or less than 10 seem to be good.
+
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
               value sampled from the interval [a..b].
@@ -337,6 +345,7 @@ class BilateralBlur(Augmenter):
         Filter sigma in the color space. A larger value of the parameter means
         that farther colors within the pixel neighborhood (see sigmaSpace )
         will be mixed together, resulting in larger areas of semi-equal color.
+
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
               value sampled from the interval [a..b].
@@ -347,13 +356,14 @@ class BilateralBlur(Augmenter):
     sigma_space :
         Filter sigma in the coordinate space. A larger value of the parameter
         means that farther pixels will influence each other as long as their
-        colors are close enough (see sigmaColor ).
-        * If a single int, then that value will be used for the diameter.
-        * If a tuple of two ints (a, b), then the diameter will be a
-          value sampled from the interval [a..b].
-        * If a StochasticParameter, then N samples will be drawn from
-          that parameter per N input images, each representing the diameter
-          for the nth image. Expected to be discrete.
+        colors are close enough (see sigma_color).
+
+            * If a single int, then that value will be used for the diameter.
+            * If a tuple of two ints (a, b), then the diameter will be a
+              value sampled from the interval [a..b].
+            * If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the diameter
+              for the nth image. Expected to be discrete.
 
     name : string, optional(default=None)
         See `Augmenter.__init__()`
@@ -380,8 +390,8 @@ class BilateralBlur(Augmenter):
             if ia.is_single_number(var):
                 return Deterministic(int(var))
             elif ia.is_iterable(var):
-                assert len(var) == 2
-                assert all([ia.is_single_number(var_i) for var_i in var])
+                ia.do_assert(len(var) == 2)
+                ia.do_assert(all([ia.is_single_number(var_i) for var_i in var]))
                 return DiscreteUniform(int(var[0]), int(var[1]))
             elif isinstance(d, StochasticParameter):
                 return var
@@ -400,7 +410,7 @@ class BilateralBlur(Augmenter):
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
         for i in sm.xrange(nb_images):
-            assert images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels."
+            ia.do_assert(images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels.")
             di = samples_d[i]
             sigma_color_i = samples_sigma_color[i]
             sigma_space_i = samples_sigma_space[i]
@@ -408,6 +418,9 @@ class BilateralBlur(Augmenter):
             if di != 1:
                 result[i] = cv2.bilateralFilter(images[i], di, sigma_color_i, sigma_space_i)
         return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images

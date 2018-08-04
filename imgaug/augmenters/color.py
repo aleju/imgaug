@@ -2,8 +2,10 @@
 Augmenters that apply color space oriented changes.
 
 Do not import directly from this file, as the categorization is not final.
-Use instead
-    `from imgaug import augmenters as iaa`
+Use instead ::
+
+    from imgaug import augmenters as iaa
+
 and then e.g. ::
 
     seq = iaa.Sequential([
@@ -12,33 +14,24 @@ and then e.g. ::
     ])
 
 List of augmenters:
+
     * InColorspace (deprecated)
     * WithColorspace
     * AddToHueAndSaturation
     * ChangeColorspace
     * Grayscale
+
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
-from .. import parameters as iap
-from abc import ABCMeta, abstractmethod
-import random
+from ..parameters import StochasticParameter, Deterministic, Choice, Uniform
 import numpy as np
-import copy as copy_module
-import re
-import math
-from scipy import misc, ndimage
-from skimage import transform as tf, segmentation, measure
-import itertools
 import cv2
-import six
 import six.moves as sm
-import types
 import warnings
 
-from .meta import Augmenter, Sequential, WithChannels
+from .meta import Augmenter, Sequential, WithChannels, handle_children_list
 from .arithmetic import Add
 
 # legacy support
@@ -91,15 +84,7 @@ class WithColorspace(Augmenter):
 
         self.to_colorspace = to_colorspace
         self.from_colorspace = from_colorspace
-
-        if children is None:
-            self.children = Sequential([], name="%s-then" % (self.name,))
-        elif ia.is_iterable(children):
-            self.children = Sequential(children, name="%s-then" % (self.name,))
-        elif isinstance(children, Augmenter):
-            self.children = Sequential([children], name="%s-then" % (self.name,))
-        else:
-            raise Exception("Expected None, Augmenter or list/tuple of Augmenter as children, got %s." % (type(children),))
+        self.children = handle_children_list(children, self.name, "then")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -119,8 +104,25 @@ class WithColorspace(Augmenter):
             ).augment_images(images=result)
         return result
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        result = heatmaps
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            result = self.children.augment_heatmaps(
+                result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
+        result = keypoints_on_images
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+            result = self.children.augment_keypoints(
+                result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+        return result
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -141,7 +143,7 @@ class WithColorspace(Augmenter):
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
-def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):
+def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
     """
     Augmenter that transforms images into HSV space, selects the H and S
     channels and then adds a given range of values to these.
@@ -172,6 +174,9 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
     that channel).
 
     """
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
     return WithColorspace(
         to_colorspace="HSV",
         from_colorspace=from_colorspace,
@@ -203,6 +208,7 @@ class ChangeColorspace(Augmenter):
     to_colorspace : string or iterable or StochasticParameter
         The target colorspace.
         Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+
             * If a string, it must be among the allowed colorspaces.
             * If an iterable, it is expected to be a list of strings, each one
               being an allowed colorspace. A random element from the list
@@ -284,7 +290,7 @@ class ChangeColorspace(Augmenter):
         if ia.is_single_number(alpha):
             self.alpha = Deterministic(alpha)
         elif ia.is_iterable(alpha):
-            assert len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),)
+            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
             self.alpha = Uniform(alpha[0], alpha[1])
         elif isinstance(alpha, StochasticParameter):
             self.alpha = alpha
@@ -292,11 +298,11 @@ class ChangeColorspace(Augmenter):
             raise Exception("Expected alpha to be int or float or tuple/list of ints/floats or StochasticParameter, got %s." % (type(alpha),))
 
         if ia.is_string(to_colorspace):
-            assert to_colorspace in ChangeColorspace.COLORSPACES
+            ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
             self.to_colorspace = Deterministic(to_colorspace)
         elif ia.is_iterable(to_colorspace):
-            assert all([ia.is_string(colorspace) for colorspace in to_colorspace])
-            assert all([(colorspace in ChangeColorspace.COLORSPACES) for colorspace in to_colorspace])
+            ia.do_assert(all([ia.is_string(colorspace) for colorspace in to_colorspace]))
+            ia.do_assert(all([(colorspace in ChangeColorspace.COLORSPACES) for colorspace in to_colorspace]))
             self.to_colorspace = Choice(to_colorspace)
         elif isinstance(to_colorspace, StochasticParameter):
             self.to_colorspace = to_colorspace
@@ -304,8 +310,8 @@ class ChangeColorspace(Augmenter):
             raise Exception("Expected to_colorspace to be string, list of strings or StochasticParameter, got %s." % (type(to_colorspace),))
 
         self.from_colorspace = from_colorspace
-        assert self.from_colorspace in ChangeColorspace.COLORSPACES
-        assert from_colorspace != ChangeColorspace.GRAY
+        ia.do_assert(self.from_colorspace in ChangeColorspace.COLORSPACES)
+        ia.do_assert(from_colorspace != ChangeColorspace.GRAY)
 
         self.eps = 0.001 # epsilon value to check if alpha is close to 1.0 or 0.0
 
@@ -319,8 +325,8 @@ class ChangeColorspace(Augmenter):
             to_colorspace = to_colorspaces[i]
             image = images[i]
 
-            assert 0.0 <= alpha <= 1.0
-            assert to_colorspace in ChangeColorspace.COLORSPACES
+            ia.do_assert(0.0 <= alpha <= 1.0)
+            ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
 
             if alpha == 0 or self.from_colorspace == to_colorspace:
                 pass # no change necessary
@@ -366,6 +372,9 @@ class ChangeColorspace(Augmenter):
                     result[i] = (alpha * img_to_cs + (1 - alpha) * image).astype(np.uint8)
 
         return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
@@ -419,4 +428,7 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     percent of the grayscale image (i.e. 50 percent of color removed).
 
     """
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
     return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)

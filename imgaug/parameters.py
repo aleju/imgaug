@@ -18,17 +18,17 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
         if value_range is None:
             return True
         elif isinstance(value_range, tuple):
-            assert len(value_range) == 2
+            ia.do_assert(len(value_range) == 2)
             if value_range[0] is None and value_range[1] is None:
                 return True
             elif value_range[0] is None:
-                assert v <= value_range[1], "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1])
+                ia.do_assert(v <= value_range[1], "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1]))
                 return True
             elif value_range[1] is None:
-                assert value_range[0] <= v, "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0])
+                ia.do_assert(value_range[0] <= v, "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0]))
                 return True
             else:
-                assert value_range[0] <= v <= value_range[1], "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (name, value_range[0], value_range[1])
+                ia.do_assert(value_range[0] <= v <= value_range[1], "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (name, value_range[0], value_range[1]))
                 return True
         elif ia.is_callable(value_range):
             value_range(v)
@@ -40,11 +40,11 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
         check_value_range(param)
         return Deterministic(param)
     elif tuple_to_uniform and isinstance(param, tuple):
-        assert len(param) == 2
+        ia.do_assert(len(param) == 2)
         check_value_range(param[0])
         check_value_range(param[1])
         return Uniform(param[0], param[1])
-    elif list_to_choice and ia.is_iterable(param):
+    elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
         for param_i in param:
             check_value_range(param_i)
         return Choice(param)
@@ -58,17 +58,17 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         if value_range is None:
             return True
         elif isinstance(value_range, tuple):
-            assert len(value_range) == 2
+            ia.do_assert(len(value_range) == 2)
             if value_range[0] is None and value_range[1] is None:
                 return True
             elif value_range[0] is None:
-                assert v <= value_range[1], "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1])
+                ia.do_assert(v <= value_range[1], "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1]))
                 return True
             elif value_range[1] is None:
-                assert value_range[0] <= v, "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0])
+                ia.do_assert(value_range[0] <= v, "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0]))
                 return True
             else:
-                assert value_range[0] <= v <= value_range[1], "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (name, value_range[0], value_range[1])
+                ia.do_assert(value_range[0] <= v <= value_range[1], "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (name, value_range[0], value_range[1]))
                 return True
         elif ia.is_callable(value_range):
             value_range(v)
@@ -80,17 +80,17 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         check_value_range(param)
         return Deterministic(int(param))
     elif tuple_to_uniform and isinstance(param, tuple):
-        assert len(param) == 2
+        ia.do_assert(len(param) == 2)
         if allow_floats:
-            assert ia.is_single_number(param[0]), "Expected number, got %s." % (type(param[0]),)
-            assert ia.is_single_number(param[1]), "Expected number, got %s." % (type(param[1]),)
+            ia.do_assert(ia.is_single_number(param[0]), "Expected number, got %s." % (type(param[0]),))
+            ia.do_assert(ia.is_single_number(param[1]), "Expected number, got %s." % (type(param[1]),))
         else:
-            assert ia.is_single_integer(param[0]), "Expected integer, got %s." % (type(param[0]),)
-            assert ia.is_single_integer(param[1]), "Expected integer, got %s." % (type(param[1]),)
+            ia.do_assert(ia.is_single_integer(param[0]), "Expected integer, got %s." % (type(param[0]),))
+            ia.do_assert(ia.is_single_integer(param[1]), "Expected integer, got %s." % (type(param[1]),))
         check_value_range(param[0])
         check_value_range(param[1])
         return DiscreteUniform(int(param[0]), int(param[1]))
-    elif list_to_choice and ia.is_iterable(param):
+    elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
         for param_i in param:
             check_value_range(param_i)
         return Choice([int(param_i) for param_i in param])
@@ -102,23 +102,38 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         else:
             raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
 
+def handle_probability_param(param, name):
+    eps = 1e-6
+    if param in [True, False, 0, 1]:
+        return Deterministic(int(param))
+    elif ia.is_single_number(param):
+        ia.do_assert(0.0 <= param <= 1.0)
+        if (0.0-eps < param < 0.0+eps or 1.0-eps < param < 1.0+eps):
+            return Deterministic(int(round(param)))
+        else:
+            return Binomial(param)
+    elif isinstance(param, StochasticParameter):
+        return param
+    else:
+        raise Exception("Expected boolean or number or StochasticParameter for %s, got %s." % (name, type(param),))
+
 def force_np_float_dtype(val):
-    if val.dtype in NP_FLOAT_TYPES:
+    if val.dtype.type in NP_FLOAT_TYPES:
         return val
     else:
-        return val.astype(np.float32)
+        return val.astype(np.float64)
 
 def both_np_float_if_one_is_float(a, b):
-    a_f = a.dtype in NP_FLOAT_TYPES
-    b_f = b.dtype in NP_FLOAT_TYPES
+    a_f = a.dtype.type in NP_FLOAT_TYPES
+    b_f = b.dtype.type in NP_FLOAT_TYPES
     if a_f and b_f:
         return a, b
     elif a_f:
-        return a, b.astype(np.float32)
+        return a, b.astype(np.float64)
     elif b_f:
-        return a.astype(np.float32), b
+        return a.astype(np.float64), b
     else:
-        return a.astype(np.float32), b.astype(np.float32)
+        return a.astype(np.float64), b.astype(np.float64)
 
 def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
     if titles is None:
@@ -148,7 +163,7 @@ def show_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350)
     )
 
 @six.add_metaclass(ABCMeta)
-class StochasticParameter(object):
+class StochasticParameter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Abstract parent class for all stochastic parameters.
 
@@ -249,6 +264,12 @@ class StochasticParameter(object):
         else:
             raise Exception("Invalid datatypes in: StochasticParameter / %s (truediv). Expected second argument to be number or StochasticParameter." % (type(other),))
 
+    def __floordiv__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Discretize(Divide(self, other))
+        else:
+            raise Exception("Invalid datatypes in: StochasticParameter // %s (floordiv). Expected second argument to be number or StochasticParameter." % (type(other),))
+
     def __radd__(self, other):
         if ia.is_single_number(other) or isinstance(other, StochasticParameter):
             return Add(other, self)
@@ -285,7 +306,13 @@ class StochasticParameter(object):
         if ia.is_single_number(other) or isinstance(other, StochasticParameter):
             return Divide(other, self)
         else:
-            raise Exception("Invalid datatypes in: %s / StochasticParameter (truediv). Expected second argument to be number or StochasticParameter." % (type(other),))
+            raise Exception("Invalid datatypes in: %s / StochasticParameter (rtruediv). Expected second argument to be number or StochasticParameter." % (type(other),))
+
+    def __rfloordiv__(self, other):
+        if ia.is_single_number(other) or isinstance(other, StochasticParameter):
+            return Discretize(Divide(other, self))
+        else:
+            raise Exception("Invalid datatypes in: StochasticParameter // %s (rfloordiv). Expected second argument to be number or StochasticParameter." % (type(other),))
 
     def copy(self):
         """
@@ -402,7 +429,7 @@ class Binomial(StochasticParameter):
         if isinstance(p, StochasticParameter):
             self.p = p
         elif ia.is_single_number(p):
-            assert 0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,)
+            ia.do_assert(0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,))
             self.p = Deterministic(float(p))
         else:
             raise Exception("Expected StochasticParameter or float/int value, got %s." % (type(p),))
@@ -412,17 +439,14 @@ class Binomial(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         p = self.p.draw_sample(random_state=random_state)
-        assert 0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,)
+        ia.do_assert(0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,))
         return random_state.binomial(1, p, size)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        if isinstance(self.p, float):
-            return "Binomial(%.4f)" % (self.p,)
-        else:
-            return "Binomial(%s)" % (self.p,)
+        return "Binomial(%s)" % (self.p,)
 
 class Choice(StochasticParameter):
     """
@@ -453,8 +477,12 @@ class Choice(StochasticParameter):
     def __init__(self, a, replace=True, p=None):
         super(Choice, self).__init__()
 
+        ia.do_assert(ia.is_iterable(a), "Expected a to be an iterable (e.g. list), got %s." % (type(a),))
         self.a = a
         self.replace = replace
+        if p is not None:
+            ia.do_assert(ia.is_iterable(p), "Expected p to be None or an iterable, got %s." % (type(p),))
+            ia.do_assert(len(p) == len(a), "Expected lengths of a and p to be identical, got %d and %d." % (len(a), len(p)))
         self.p = p
 
     def _draw_samples(self, size, random_state):
@@ -540,8 +568,8 @@ class DiscreteUniform(StochasticParameter):
 
         """
         # for two ints the samples will be from range a <= x <= b
-        assert isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),)
-        assert isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),)
+        ia.do_assert(isinstance(a, (int, StochasticParameter)), "Expected a to be int or StochasticParameter, got %s" % (type(a),))
+        ia.do_assert(isinstance(b, (int, StochasticParameter)), "Expected b to be int or StochasticParameter, got %s" % (type(b),))
 
         if ia.is_single_integer(a):
             self.a = Deterministic(a)
@@ -584,6 +612,7 @@ class Poisson(StochasticParameter):
     lam : number or tuple of two number or list of number or StochasticParameter
         Lambda parameter of the poisson
         distribution.
+
             * If a number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the range [a, b).
@@ -603,17 +632,7 @@ class Poisson(StochasticParameter):
     def __init__(self, lam):
         super(Poisson, self).__init__()
 
-        if ia.is_single_number(lam):
-            self.lam = Deterministic(lam)
-        elif isinstance(lam, tuple):
-            assert len(lam) == 2
-            self.lam = Uniform(lam[0], lam[1])
-        elif ia.is_iterable(lam):
-            self.lam = Choice(lam)
-        elif isinstance(lam, StochasticParameter):
-            self.lam = lam
-        else:
-            raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for lam, got %s." % (type(lam),))
+        self.lam = handle_continuous_param(lam, "lam")
 
     def _draw_samples(self, size, random_state):
         lam = self.lam.draw_sample(random_state=random_state)
@@ -656,25 +675,13 @@ class Normal(StochasticParameter):
     def __init__(self, loc, scale):
         super(Normal, self).__init__()
 
-        if isinstance(loc, StochasticParameter):
-            self.loc = loc
-        elif ia.is_single_number(loc):
-            self.loc = Deterministic(loc)
-        else:
-            raise Exception("Expected float, int or StochasticParameter as loc, got %s, %s." % (type(loc),))
-
-        if isinstance(scale, StochasticParameter):
-            self.scale = scale
-        elif ia.is_single_number(scale):
-            assert scale >= 0, "Expected scale to be in range [0, inf) got %s (type %s)." % (scale, type(scale))
-            self.scale = Deterministic(scale)
-        else:
-            raise Exception("Expected float, int or StochasticParameter as scale, got %s, %s." % (type(scale),))
+        self.loc = handle_continuous_param(loc, "loc")
+        self.scale = handle_continuous_param(scale, "scale", value_range=(0, None))
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
         scale = self.scale.draw_sample(random_state=random_state)
-        assert scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,)
+        ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
             return np.tile(loc, size)
         else:
@@ -697,6 +704,7 @@ class Laplace(StochasticParameter):
     loc : number or tuple of two number or list of number or StochasticParameter
         The position of the distribution peak, similar to the mean in normal
         distributions.
+
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -709,6 +717,7 @@ class Laplace(StochasticParameter):
     scale : number or tuple of two number or list of number or StochasticParameter
         The exponential decay factor, similar to standard deviation in
         normal distributions.
+
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -729,12 +738,12 @@ class Laplace(StochasticParameter):
         super(Laplace, self).__init__()
 
         self.loc = handle_continuous_param(loc, "loc")
-        self.scale = handle_continuous_param(scale, "scale")
+        self.scale = handle_continuous_param(scale, "scale", value_range=(0, None))
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
         scale = self.scale.draw_sample(random_state=random_state)
-        assert scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,)
+        ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
             return np.tile(loc, size)
         else:
@@ -757,6 +766,7 @@ class ChiSquare(StochasticParameter):
     df : int or tuple of two int or list of int or StochasticParameter
         Degrees of freedom (must be 1 or
         higher).
+
             * If a single int, this int will be used as a constant value.
             * If a tuple of two ints (a, b), the value will be sampled
               once per call to `_draw_samples()` from the discrete
@@ -780,7 +790,7 @@ class ChiSquare(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         df = self.df.draw_sample(random_state=random_state)
-        assert df >= 1, "Expected df to be in range [1, inf), got %s." % (df,)
+        ia.do_assert(df >= 1, "Expected df to be in range [1, inf), got %s." % (df,))
         return random_state.chisquare(df, size=size)
 
     def __repr__(self):
@@ -800,6 +810,7 @@ class Weibull(StochasticParameter):
     a : number or tuple of two number or list of number or StochasticParameter
         Shape parameter of the
         distribution.
+        
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -823,7 +834,7 @@ class Weibull(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         a = self.a.draw_sample(random_state=random_state)
-        assert a > 0, "Expected a to be in range (0, inf), got %s." % (a,)
+        ia.do_assert(a > 0, "Expected a to be in range (0, inf), got %s." % (a,))
         return random_state.weibull(a, size=size)
 
     def __repr__(self):
@@ -856,8 +867,8 @@ class Uniform(StochasticParameter):
         super(Uniform, self).__init__()
 
         """
-        assert isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),)
-        assert isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),)
+        ia.do_assert(isinstance(a, (int, float, StochasticParameter)), "Expected a to be int, float or StochasticParameter, got %s" % (type(a),))
+        ia.do_assert(isinstance(b, (int, float, StochasticParameter)), "Expected b to be int, float or StochasticParameter, got %s" % (type(b),))
 
         if ia.is_single_number(a):
             self.a = Deterministic(a)
@@ -897,6 +908,7 @@ class Beta(StochasticParameter):
     {alpha, beta} : number or tuple of two number or list of number or StochasticParameter
         alpha and beta parameters of the beta
         distribution.
+
             * If number, that number will always be used.
             * If tuple of two number, a random value will be sampled per
               call to `_draw_samples()` from the range [a, b).
@@ -904,6 +916,7 @@ class Beta(StochasticParameter):
               sampled per call to `_draw_samples()`.
             * If a StochasticParameter, a random value will be sampled
               from that parameter per call to `_draw_samples()`.
+
         alpha and beta have to be values above 0. If they end up <=0 they
         are automatically clipped to 0+epsilon.
 
@@ -921,23 +934,10 @@ class Beta(StochasticParameter):
     def __init__(self, alpha, beta, epsilon=0.0001):
         super(Beta, self).__init__()
 
-        def handle_param(param, name):
-            if ia.is_single_number(param):
-                return Deterministic(param)
-            elif isinstance(param, tuple):
-                assert len(param) == 2
-                return Uniform(param[0], param[1])
-            elif ia.is_iterable(param):
-                return Choice(param)
-            elif isinstance(param, StochasticParameter):
-                return param
-            else:
-                raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
+        self.alpha = handle_continuous_param(alpha, "alpha")
+        self.beta = handle_continuous_param(beta, "beta")
 
-        self.alpha = handle_param(alpha, "alpha")
-        self.beta = handle_param(beta, "beta")
-
-        assert ia.is_single_number(epsilon)
+        ia.do_assert(ia.is_single_number(epsilon))
         self.epsilon = epsilon
 
     def _draw_samples(self, size, random_state):
@@ -1064,9 +1064,9 @@ class FromLowerResolution(StochasticParameter):
 
     """
     def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
-        super(StochasticParameter, self).__init__()
+        super(FromLowerResolution, self).__init__()
 
-        assert size_percent is not None or size_px is not None
+        ia.do_assert(size_percent is not None or size_px is not None)
 
         if size_percent is not None:
             self.size_method = "percent"
@@ -1074,7 +1074,7 @@ class FromLowerResolution(StochasticParameter):
             if ia.is_single_number(size_percent):
                 self.size_percent = Deterministic(size_percent)
             elif ia.is_iterable(size_percent):
-                assert len(size_percent) == 2
+                ia.do_assert(len(size_percent) == 2)
                 self.size_percent = Uniform(size_percent[0], size_percent[1])
             elif isinstance(size_percent, StochasticParameter):
                 self.size_percent = size_percent
@@ -1086,7 +1086,7 @@ class FromLowerResolution(StochasticParameter):
             if ia.is_single_integer(size_px):
                 self.size_px = Deterministic(size_px)
             elif ia.is_iterable(size_px):
-                assert len(size_px) == 2
+                ia.do_assert(len(size_px) == 2)
                 self.size_px = DiscreteUniform(size_px[0], size_px[1])
             elif isinstance(size_px, StochasticParameter):
                 self.size_px = size_px
@@ -1121,16 +1121,19 @@ class FromLowerResolution(StochasticParameter):
 
         methods = self.method.draw_samples((n,), random_state=random_state)
         result = None
-        #for i, (size_factor, method) in enumerate(zip(size_factors, methods)):
         for i, (hw_px, method) in enumerate(zip(hw_pxs, methods)):
-            #h_small = max(int(h * size_factor), self.min_size)
-            #w_small = max(int(w * size_factor), self.min_size)
             h_small = max(hw_px[0], self.min_size)
             w_small = max(hw_px[1], self.min_size)
             samples = self.other_param.draw_samples((1, h_small, w_small, c), random_state=random_state)
+            if method != "nearest":
+                # hacky cast because opencv resize seems to be unable to handle non-nearest
+                # interpolation methods in combination with large ints
+                # also, using lower ints with interpolation!=nearest seems to not result in the
+                # expected "gradual" values, but rather still behave like nearest
+                samples = samples.astype(np.float32)
             samples_upscaled = ia.imresize_many_images(samples, (h, w), interpolation=method)
             if result is None:
-                result = np.zeros((n, h, w, c), dtype=samples.dtype)
+                result = np.zeros((n, h, w, c), dtype=samples_upscaled.dtype)
             result[i] = samples_upscaled
 
         if len(size) == 3:
@@ -1178,9 +1181,9 @@ class Clip(StochasticParameter):
     def __init__(self, other_param, minval=None, maxval=None):
         super(Clip, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-        assert minval is None or ia.is_single_number(minval)
-        assert maxval is None or ia.is_single_number(maxval)
+        ia.do_assert(isinstance(other_param, StochasticParameter))
+        ia.do_assert(minval is None or ia.is_single_number(minval))
+        ia.do_assert(maxval is None or ia.is_single_number(maxval))
 
         self.other_param = other_param
         self.minval = minval
@@ -1234,14 +1237,14 @@ class Discretize(StochasticParameter):
     """
     def __init__(self, other_param):
         super(Discretize, self).__init__()
-        assert isinstance(other_param, StochasticParameter)
+        ia.do_assert(isinstance(other_param, StochasticParameter))
         self.other_param = other_param
 
     def _draw_samples(self, size, random_state):
         samples = self.other_param.draw_samples(
             size, random_state=random_state
         )
-        if isinstance(samples.dtype, numbers.Integral):
+        if ia.is_integer_array(samples):
             # integer array, already discrete
             return samples
         else:
@@ -1368,7 +1371,7 @@ class Divide(StochasticParameter):
             # prevent division by zero
             val_samples[val_samples == 0] = 1
 
-            return np.multiply(
+            return np.divide(
                 force_np_float_dtype(samples),
                 force_np_float_dtype(val_samples)
             )
@@ -1387,7 +1390,6 @@ class Divide(StochasticParameter):
         return self.__str__()
 
     def __str__(self):
-        opstr = str(self.other_param)
         return "Divide(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 class Add(StochasticParameter):
@@ -1596,7 +1598,7 @@ class Absolute(StochasticParameter):
     def __init__(self, other_param):
         super(Absolute, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
+        ia.do_assert(isinstance(other_param, StochasticParameter))
 
         self.other_param = other_param
 
@@ -1637,9 +1639,9 @@ class RandomSign(StochasticParameter):
     def __init__(self, other_param, p_positive=0.5):
         super(RandomSign, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
-        assert ia.is_single_number(p_positive)
-        assert 0 <= p_positive <= 1
+        ia.do_assert(isinstance(other_param, StochasticParameter))
+        ia.do_assert(ia.is_single_number(p_positive))
+        ia.do_assert(0 <= p_positive <= 1)
 
         self.other_param = other_param
         self.p_positive = p_positive
@@ -1705,17 +1707,17 @@ class ForceSign(StochasticParameter):
     def __init__(self, other_param, positive, mode="invert", reroll_count_max=2):
         super(ForceSign, self).__init__()
 
-        assert isinstance(other_param, StochasticParameter)
+        ia.do_assert(isinstance(other_param, StochasticParameter))
 
         self.other_param = other_param
 
-        assert positive in [True, False]
+        ia.do_assert(positive in [True, False])
         self.positive = positive
 
-        assert mode in ["invert", "reroll"]
+        ia.do_assert(mode in ["invert", "reroll"])
         self.mode = mode
 
-        assert ia.is_single_integer(reroll_count_max)
+        ia.do_assert(ia.is_single_integer(reroll_count_max))
         self.reroll_count_max = reroll_count_max
 
     def _draw_samples(self, size, random_state):
@@ -1887,22 +1889,22 @@ class IterativeNoiseAggregator(StochasticParameter):
     combines these noise maps to a single map using elementwise maximum.
 
     """
-    def __init__(self, other_param, iterations=(1, 3), aggregation_method=["max", "avg"]):
-        assert isinstance(other_param, StochasticParameter)
+    def __init__(self, other_param, iterations=(1, 3), aggregation_method=["max", "avg"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+        ia.do_assert(isinstance(other_param, StochasticParameter))
         self.other_param = other_param
 
         if ia.is_single_integer(iterations):
-            assert 1 <= iterations <= 1000
+            ia.do_assert(1 <= iterations <= 1000)
             self.iterations = Deterministic(iterations)
-        elif ia.is_iterable(iterations):
-            assert len(iterations) == 2
-            assert all([ia.is_single_integer(val) for val in iterations])
-            assert all([1 <= val <= 10000 for val in iterations])
-            self.iterations = DiscreteUniform(iterations[0], iterations[1])
         elif isinstance(iterations, list):
-            assert len(iterations) > 0
-            assert all([1 <= val <= 10000 for val in iterations])
+            ia.do_assert(len(iterations) > 0)
+            ia.do_assert(all([1 <= val <= 10000 for val in iterations]))
             self.iterations = Choice(iterations)
+        elif ia.is_iterable(iterations):
+            ia.do_assert(len(iterations) == 2)
+            ia.do_assert(all([ia.is_single_integer(val) for val in iterations]))
+            ia.do_assert(all([1 <= val <= 10000 for val in iterations]))
+            self.iterations = DiscreteUniform(iterations[0], iterations[1])
         elif isinstance(iterations, StochasticParameter):
             self.iterations = iterations
         else:
@@ -1913,8 +1915,8 @@ class IterativeNoiseAggregator(StochasticParameter):
         elif ia.is_string(aggregation_method):
             self.aggregation_method = Deterministic(aggregation_method)
         elif isinstance(aggregation_method, list):
-            assert len(aggregation_method) >= 1
-            assert all([ia.is_string(val) for val in aggregation_method])
+            ia.do_assert(len(aggregation_method) >= 1)
+            ia.do_assert(all([ia.is_string(val) for val in aggregation_method]))
             self.aggregation_method = Choice(aggregation_method)
         elif isinstance(aggregation_method, StochasticParameter):
             self.aggregation_method = aggregation_method
@@ -1922,17 +1924,19 @@ class IterativeNoiseAggregator(StochasticParameter):
             raise Exception("Expected aggregation_method to be string or list of strings or StochasticParameter, got %s." % (type(aggregation_method),))
 
     def _draw_samples(self, size, random_state):
-        assert len(size) == 2, "Expected requested other_param to have shape (H, W), got shape %s." % (size,)
-        h, w = size
+        #ia.do_assert(len(size) == 2, "Expected requested other_param to have shape (H, W), got shape %s." % (size,))
+        #h, w = size
 
         seed = random_state.randint(0, 10**6)
         aggregation_method = self.aggregation_method.draw_sample(random_state=ia.new_random_state(seed))
         iterations = self.iterations.draw_sample(random_state=ia.new_random_state(seed+1))
-        assert iterations > 0
+        ia.do_assert(iterations > 0)
 
-        result = np.zeros((h, w), dtype=np.float32)
+        #result = np.zeros((h, w), dtype=np.float32)
+        result = np.zeros(size, dtype=np.float32)
         for i in sm.xrange(iterations):
-            noise_iter = self.other_param.draw_samples((h, w), random_state=ia.new_random_state(seed+2+i))
+            #noise_iter = self.other_param.draw_samples((h, w), random_state=ia.new_random_state(seed+2+i))
+            noise_iter = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed+2+i))
             if aggregation_method == "avg":
                 result += noise_iter
             elif aggregation_method == "min":
@@ -2007,36 +2011,17 @@ class Sigmoid(StochasticParameter):
 
     """
     def __init__(self, other_param, threshold=(-10, 10), activated=True, mul=1, add=0):
-        assert isinstance(other_param, StochasticParameter)
+        ia.do_assert(isinstance(other_param, StochasticParameter))
         self.other_param = other_param
 
-        if ia.is_single_number(threshold):
-            self.threshold = Deterministic(threshold)
-        elif isinstance(threshold, tuple):
-            assert len(threshold) == 2
-            assert all([ia.is_single_number(val) for val in threshold])
-            self.threshold = Uniform(threshold[0], threshold[1])
-        elif ia.is_iterable(threshold):
-            assert len(threshold) > 0
-            self.threshold = Choice(threshold)
-        elif isinstance(threshold, StochasticParameter):
-            self.threshold = threshold
-        else:
-            raise Exception("Expected threshold to be number or tuple of two numbers or StochasticParameter, got %s." % (type(threshold),))
+        self.threshold = handle_continuous_param(threshold, "threshold")
+        self.activated = handle_probability_param(activated, "activated")
 
-        if activated in [True, False, 0, 1, 0.0, 1.0]:
-            self.activated = Deterministic(int(activated))
-        elif ia.is_single_number(activated):
-            assert 0 <= activated <= 1.0
-            self.activated = Binomial(activated)
-        else:
-            raise Exception("Expected activated to be boolean or number or StochasticParameter, got %s." % (type(activated),))
-
-        assert ia.is_single_number(mul)
-        assert mul > 0
+        ia.do_assert(ia.is_single_number(mul))
+        ia.do_assert(mul > 0)
         self.mul = mul
 
-        assert ia.is_single_number(add)
+        ia.do_assert(ia.is_single_number(add))
         self.add = add
 
     @staticmethod
@@ -2308,31 +2293,16 @@ class SimplexNoise(StochasticParameter):
     Results in rectangular simplex noise of rather high detail.
 
     """
-    def __init__(self, size_px_max=(2, 16), upscale_method=["linear", "nearest"]):
-        if ia.is_single_integer(size_px_max):
-            assert 1 <= size_px_max <= 10000
-            self.size_px_max = Deterministic(size_px_max)
-        elif isinstance(size_px_max, tuple):
-            assert len(size_px_max) == 2
-            assert all([ia.is_single_integer(val) for val in size_px_max])
-            assert all([1 <= val <= 10000 for val in size_px_max])
-            self.size_px_max = DiscreteUniform(size_px_max[0], size_px_max[1])
-        elif ia.is_iterable(size_px_max):
-            assert len(size_px_max) > 0
-            assert all([1 <= val <= 10000 for val in size_px_max])
-            self.size_px_max = Choice(size_px_max)
-        elif isinstance(size_px_max, StochasticParameter):
-            self.size_px_max = size_px_max
-        else:
-            raise Exception("Expected size_px_max to be int or tuple of two ints or StochasticParameter, got %s." % (type(size_px_max),))
+    def __init__(self, size_px_max=(2, 16), upscale_method=["linear", "nearest"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+        self.size_px_max = handle_discrete_param(size_px_max, "size_px_max", value_range=(1, 10000))
 
         if upscale_method == ia.ALL:
             self.upscale_method = Choice(["nearest", "linear", "area", "cubic"])
         elif ia.is_string(upscale_method):
             self.upscale_method = Deterministic(upscale_method)
         elif isinstance(upscale_method, list):
-            assert len(upscale_method) >= 1
-            assert all([ia.is_string(val) for val in upscale_method])
+            ia.do_assert(len(upscale_method) >= 1)
+            ia.do_assert(all([ia.is_string(val) for val in upscale_method]))
             self.upscale_method = Choice(upscale_method)
         elif isinstance(upscale_method, StochasticParameter):
             self.upscale_method = upscale_method
@@ -2340,7 +2310,7 @@ class SimplexNoise(StochasticParameter):
             raise Exception("Expected upscale_method to be string or list of strings or StochasticParameter, got %s." % (type(upscale_method),))
 
     def _draw_samples(self, size, random_state):
-        assert len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,)
+        ia.do_assert(len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,))
         h, w = size
         seed = random_state.randint(0, 10**6)
         iterations = 1
@@ -2433,6 +2403,7 @@ class FrequencyNoise(StochasticParameter):
         Exponent to use when scaling in the frequency domain.
         Sane values are in the range -4 (large blobs) to 4 (small patterns).
         To generate cloud-like structures, use roughly -2.
+
             * If number, then that number will be used as the exponent for all
               iterations.
             * If tuple of two numbers (a, b), then a value will be sampled
@@ -2448,6 +2419,7 @@ class FrequencyNoise(StochasticParameter):
         pixels). The environment is initialized at the same size as the input
         image and then downscaled, so that no side exceeds `size_px_max`
         (aspect ratio is kept).
+
             * If int, then that number will be used as the size for all
               iterations.
             * If tuple of two ints (a, b), then a value will be sampled
@@ -2461,6 +2433,7 @@ class FrequencyNoise(StochasticParameter):
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
         the upscaling method.
+
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
             * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
@@ -2479,45 +2452,17 @@ class FrequencyNoise(StochasticParameter):
     Generates noise with cloud-like patterns.
 
     """
-    def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]):
-        if ia.is_single_number(exponent):
-            self.exponent = Deterministic(exponent)
-        elif isinstance(exponent, tuple):
-            assert len(exponent) == 2
-            assert all([ia.is_single_number(val) for val in exponent])
-            self.exponent = Uniform(exponent[0], exponent[1])
-        elif ia.is_iterable(exponent):
-            assert len(exponent) > 0
-            self.exponent = Choice(exponent)
-        elif isinstance(exponent, StochasticParameter):
-            self.exponent = exponent
-        else:
-            raise Exception("Expected exponent to be number or tuple of two numbers or StochasticParameter, got %s." % (type(exponent),))
-
-        if ia.is_single_integer(size_px_max):
-            assert 1 <= size_px_max <= 10000
-            self.size_px_max = Deterministic(size_px_max)
-        elif isinstance(size_px_max, tuple):
-            assert len(size_px_max) == 2
-            assert all([ia.is_single_integer(val) for val in size_px_max])
-            assert all([1 <= val <= 10000 for val in size_px_max])
-            self.size_px_max = DiscreteUniform(size_px_max[0], size_px_max[1])
-        elif ia.is_iterable(size_px_max):
-            assert len(size_px_max) > 0
-            assert all([1 <= val <= 10000 for val in size_px_max])
-            self.size_px_max = Choice(size_px_max)
-        elif isinstance(size_px_max, StochasticParameter):
-            self.size_px_max = size_px_max
-        else:
-            raise Exception("Expected size_px_max to be int or tuple of two ints or StochasticParameter, got %s." % (type(size_px_max),))
+    def __init__(self, exponent=(-4, 4), size_px_max=(4, 32), upscale_method=["linear", "nearest"]): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+        self.exponent = handle_continuous_param(exponent, "exponent")
+        self.size_px_max = handle_discrete_param(size_px_max, "size_px_max", value_range=(1, 10000))
 
         if upscale_method == ia.ALL:
             self.upscale_method = Choice(["nearest", "linear", "area", "cubic"])
         elif ia.is_string(upscale_method):
             self.upscale_method = Deterministic(upscale_method)
         elif isinstance(upscale_method, list):
-            assert len(upscale_method) >= 1
-            assert all([ia.is_string(val) for val in upscale_method])
+            ia.do_assert(len(upscale_method) >= 1)
+            ia.do_assert(all([ia.is_string(val) for val in upscale_method]))
             self.upscale_method = Choice(upscale_method)
         elif isinstance(upscale_method, StochasticParameter):
             self.upscale_method = upscale_method
@@ -2529,7 +2474,7 @@ class FrequencyNoise(StochasticParameter):
         #   http://www.redblobgames.com/articles/noise/2d/
         #   http://www.redblobgames.com/articles/noise/2d/2d-noise.js
 
-        assert len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,)
+        ia.do_assert(len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,))
 
         seed = random_state.randint(0, 10**6)
 

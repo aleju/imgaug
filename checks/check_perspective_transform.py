@@ -1,11 +1,8 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from imgaug import parameters as iap
 from scipy import misc
 import numpy as np
-from skimage import data
-import cv2
 
 def main():
     image = ia.quokka(size=0.5)

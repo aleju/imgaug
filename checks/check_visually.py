@@ -7,9 +7,8 @@ from __future__ import print_function, division
 
 import imgaug as ia
 from imgaug import augmenters as iaa
-from imgaug import parameters as iap
 import numpy as np
-from scipy import ndimage, misc
+from scipy import misc
 from skimage import data
 import argparse
 

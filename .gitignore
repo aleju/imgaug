@@ -1,6 +1,15 @@
 *.py~
 *.rst~
 *.md~
+*.bak
+*.lprof
+reinstall.sh
+todo.txt
+pypi-install-guide.txt
+checks/bb_aug.jpg
+checks/elastic_transformations.jpg
+imgaug/parameters-testcode.py
+imgaug/bak/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

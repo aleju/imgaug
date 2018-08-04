@@ -4,10 +4,11 @@ import os
 # Check if OpenCV is installed and raise an error if it is not
 # but don't do this if the ReadTheDocs systems tries to install
 # the library, as that is configured to mock cv2 anyways
-READ_THE_DOCS = os.environ.get('READTHEDOCS') == 'True'
-if not READ_THE_DOCS:
+READ_THE_DOCS = (os.environ.get("READTHEDOCS", "False") == "True")
+NO_CV2_INSTALLED_CHECK = (os.environ.get("IMGAUG_NO_CV2_INSTALLED_CHECK", "False") == "True")
+if not READ_THE_DOCS and not NO_CV2_INSTALLED_CHECK:
     try:
-        import cv2
+        import cv2 # pylint: disable=locally-disabled, unused-import, line-too-long
     except ImportError as e:
         raise Exception("Could not find package 'cv2' (OpenCV). It cannot be automatically installed, so you will have to manually install it.")
 
@@ -16,11 +17,11 @@ Supports augmentation of images and keypoints/landmarks in a variety of differen
 
 setup(
     name="imgaug",
-    version="0.2.5",
+    version="0.2.6",
     author="Alexander Jung",
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
-    download_url="https://github.com/aleju/imgaug/archive/0.2.5.tar.gz",
+    download_url="https://github.com/aleju/imgaug/archive/0.2.6.tar.gz",
     install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six"],
     packages=find_packages(),
     include_package_data=True,
