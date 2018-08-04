@@ -22,18 +22,20 @@ from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Binomial, Choice, DiscreteUniform, Normal, Uniform, FromLowerResolution
 from .. import parameters as iap
+from PIL import Image
+from scipy import misc
 #from abc import ABCMeta, abstractmethod
 #import random
 import numpy as np
 #import copy as copy_module
 #import re
 #import math
-#from scipy import misc, ndimage
 #from skimage import transform as tf, segmentation, measure
 #import itertools
 import cv2
 import six
 import six.moves as sm
+import tempfile
 #import types
 import warnings
 
@@ -1649,3 +1651,93 @@ class ContrastNormalization(Augmenter):
 
     def get_parameters(self):
         return [self.alpha]
+
+
+class JpegCompression(Augmenter):
+    """
+    Noising an image using a jpeg compression.
+
+    During saving an image to `jpeg` format user can select quality of image to preserve. The lower quality,
+    the higher compression is used. After image loading/decoding, artifacts caused by the compression can be noticed.
+    For more details, see https://en.wikipedia.org/wiki/Compression_artifact.
+
+    Parameters
+    ----------
+    compression : int or tuple of two ints or StochasticParameter
+        Degree of compression using saving to `jpeg` format in range [0, 100]
+        High values for compression cause more artifacts. Standard value for image processing software is default value
+        set to between 50 and 80. At 100 image is unreadable and at 0 no compression is used and the image occupies much
+        more memory.
+            * If a single int, then that value will be used for the compression degree.
+            * If a tuple of two ints (a, b), then the compression will be a
+              value sampled from the interval [a..b].
+            * If a StochasticParameter, then N samples will be drawn from
+              that parameter per N input images, each representing the compression
+              for the nth image. Expected to be discrete.
+
+    name : string, optional(default=None)
+        See `Augmenter.__init__()`
+
+    deterministic : bool, optional(default=False)
+        See `Augmenter.__init__()`
+
+    random_state : int or np.random.RandomState or None, optional(default=None)
+        See `Augmenter.__init__()`
+
+    Examples
+    --------
+    >>> aug = iaa.JpegCompression(compression=(80, 95))
+
+    noises all images using a jpeg compression algorithm with max compression 80 to 95
+    """
+    def __init__(self, compression=50, name=None, deterministic=False, random_state=None):
+        super(JpegCompression, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        if ia.is_single_number(compression):
+            assert 100 >= compression >= 0 and type(
+                compression) == int, "Expected compression to have range [0, 100], got value %.4f." % (compression,)
+            self.compression = Deterministic(compression)
+        elif ia.is_iterable(compression):
+            assert len(compression) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(compression),)
+            self.compression = Uniform(compression[0], compression[1])
+        elif isinstance(compression, StochasticParameter):
+            self.compression = compression
+        else:
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (
+                type(compression),))
+
+        self.maximum_quality = 100
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        channels = images[0].shape[-1]
+        reset_last_dim = len(images[0].shape) == 3 and channels == 1
+        result = images
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10 ** 6, (nb_images + 1,))
+
+        samples = self.compression.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]))
+
+        for i in sm.xrange(nb_images):
+            image = images[i].astype(np.float32)
+            if reset_last_dim:
+                image = image[..., 0]
+            sample = int(samples[-1])
+            assert 100 >= sample >= 0
+            img = Image.fromarray(image.astype(np.uint8))
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.jpg') as f:
+                img.save(f, quality=self.maximum_quality - sample)
+                if channels == 1:
+                    image = misc.imread(f.name, mode='L')
+                else:
+                    image = misc.imread(f.name, mode='RGB')
+            if reset_last_dim:
+                image = image[..., np.newaxis]
+            result[i] = image
+        if channels == 1:
+            result = result[..., np.newaxis]
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.compression]
