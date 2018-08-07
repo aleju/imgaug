@@ -28,11 +28,12 @@ elif sys.version_info[0] == 3:
 
 ALL = "ALL"
 
-# filepath to the quokka image
-QUOKKA_FP = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "quokka.jpg"
-)
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# filepath to the quokka image, its annotations and depth map
+QUOKKA_FP = os.path.join(FILE_DIR, "quokka.jpg")
+QUOKKA_ANNOTATIONS_FP = os.path.join(FILE_DIR, "quokka_annotations.json")
+QUOKKA_DEPTH_MAP_HALFRES_FP = os.path.join(FILE_DIR, "quokka_depth_map_halfres.json")
 
 DEFAULT_FONT_FP = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -384,7 +385,106 @@ def forward_random_state(random_state):
 # def from_json(json_str):
 #    pass
 
-def quokka(size=None):
+def _quokka_normalize_extract(extract):
+    """
+    Generate a normalized rectangle to be extract from the standard quokka image.
+
+    Parameters
+    ----------
+    extract : "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+        Unnormalized representation of the image subarea to be extracted.
+
+            * If string "square", then a squared area (x: 0-643, y: 0-643) will be extracted from
+              the image.
+            * If a tuple, then expected to contain four numbers denoting x1, y1, x2 and y2.
+            * If a BoundingBox, then that bounding box's area will be extracted from the image.
+            * If a BoundingBoxesOnImage, then expected to contain exactly one bounding box
+              and a shape matching the full image dimensions (i.e. (643, 960, *)). Then the
+              one bounding box will be used similar to BoundingBox.
+
+    Returns
+    -------
+    bb : BoundingBox
+        Normalized representation of the area to extract from the standard quokka image.
+
+    """
+    if extract == "square":
+        bb = BoundingBox(x1=0, y1=0, x2=643, y2=643)
+    elif isinstance(extract, tuple) and len(extract) == 4:
+        bb = BoundingBox(x1=extract[0], y1=extract[1], x2=extract[2], y2=extract[3])
+    elif isinstance(extract, BoundingBox):
+        bb = extract
+    elif isinstance(extract, BoundingBoxesOnImage):
+        assert len(BoundingBoxesOnImage.bounding_boxes) == 1
+        assert extract.shape[0:2] == (643, 960)
+        bb = extract.bounding_boxes[0]
+    else:
+        raise Exception(
+            "Expected None or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
+            "for parameter 'extract', got %s." % (type(extract),)
+        )
+    return bb
+
+def _compute_resized_shape(from_shape, to_shape):
+    """
+    Computes the intended new shape of an image-like array after resizing.
+
+    Parameters
+    ----------
+    from_shape : tuple or ndarray
+        Old shape of the array. Usually expected to be a tuple of form (H, W) or (H, W, C) or
+        alternatively an array with two or three dimensions.
+
+    to_shape : None or tuple of ints or tuple of floats or int or float
+        New shape of the array.
+
+            * If None, then `from_shape` will be used as the new shape.
+            * If an int V, then the new shape will be (V, V, [C]), where C will be added if it
+              is part of from_shape.
+            * If a float V, then the new shape will be (H*V, W*V, [C]), where H and W are the old
+              height/width.
+            * If a tuple (H', W', [C']) of ints, then H' and W' will be used as the new height
+              and width.
+            * If a tuple (H', W', [C']) of floats (except C), then H' and W' will be used as the new height
+              and width.
+
+    Returns
+    -------
+    to_shape_computed : tuple of int
+        New shape.
+    """
+    if is_np_array(from_shape):
+        from_shape = from_shape.shape
+    if is_np_array(to_shape):
+        to_shape = to_shape.shape
+
+    to_shape_computed = list(from_shape)
+
+    if to_shape is None:
+        pass
+    elif isinstance(to_shape, tuple):
+        if len(from_shape) == 3 and len(to_shape) == 3:
+            assert from_shape[2] == to_shape[2]
+        elif len(to_shape) == 3:
+            to_shape_computed.append(to_shape[2])
+
+        if all([is_single_integer(v) for v in to_shape[0:2]]):
+            to_shape_computed[0] = to_shape[0]
+            to_shape_computed[1] = to_shape[1]
+        elif all([is_single_float(v) for v in to_shape[0:2]]):
+            to_shape_computed[0] = int(round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
+            to_shape_computed[1] = int(round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
+    elif ia.is_single_int(to_shape) or ia.is_single_float(to_shape):
+        if len(to_shape) == 2:
+            to_shape_computed = _compute_resized_shape(from_shape, (to_shape[0], to_shape[1]))
+        else:
+            to_shape_computed = _compute_resized_shape(from_shape, (to_shape[0], to_shape[1], to_shape[2]))
+    else:
+        raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int or single float, got %s." % (type(to_shape),))
+
+    return to_shape_computed
+
+def quokka(size=None, extract=None):
     """
     Returns an image of a quokka as a numpy array.
 
@@ -395,6 +495,18 @@ def quokka(size=None):
         Usually expected to be a tuple (H, W), where H is the desired height
         and W is the width. If None, then the image will not be resized.
 
+    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
+        Subarea of the quokka image to extract::
+
+            * If None, then the whole image will be used.
+            * If string "square", then a squared area (x: 0-643, y: 0-643) will be extracted from
+              the image.
+            * If a tuple, then expected to contain four numbers denoting x1, y1, x2 and y2.
+            * If a BoundingBox, then that bounding box's area will be extracted from the image.
+            * If a BoundingBoxesOnImage, then expected to contain exactly one bounding box
+              and a shape matching the full image dimensions (i.e. (643, 960, *)). Then the
+              one bounding box will be used similar to BoundingBox.
+
     Returns
     -------
     img : (H,W,3) ndarray
@@ -402,8 +514,12 @@ def quokka(size=None):
 
     """
     img = ndimage.imread(QUOKKA_FP, mode="RGB")
+    if extract is not None:
+        bb = _quokka_normalize_extract(extract)
+        img = bb.extract_from_image(img)
     if size is not None:
-        img = misc.imresize(img, size)
+        shape_resized = _compute_resized_shape(img.shape, size)
+        img = misc.imresize(img, shape_resized[0:2])
     return img
 
 def quokka_square(size=None):
@@ -423,11 +539,106 @@ def quokka_square(size=None):
         The image array of dtype uint8.
 
     """
+    return quokka(size=size, extract="square")
+
+def quokka_depth_map(size=None, extract=None):
     img = ndimage.imread(QUOKKA_FP, mode="RGB")
-    img = img[0:643, 0:643]
+    if extract is not None:
+        bb = _quokka_normalize_extract(extract)
+        img = bb.extract_from_image(img)
     if size is not None:
-        img = misc.imresize(img, size)
+        shape_resized = _compute_resized_shape(img.shape, size)
+        img = misc.imresize(img, shape_resized[0:2])
     return img
+
+def quokka_keypoints(size=None, extract=None):
+    """
+    Returns example keypoints on the standard example quokke image.
+
+    The keypoints cover the eyes, ears, nose and paws.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints or tuple of two floats, optional(default=None)
+        Size of the output image on which the keypoints are placed. If None, then the keypoints
+        are not projected to any new size (positions on the original image are used).
+        Floats lead to relative size changes, ints to absolute sizes in pixels.
+
+    extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+        Subarea to extract from the image. See `_quokka_normalize_extract()`.
+
+    Returns
+    -------
+    kpsoi : KeypointsOnImage
+        Example keypoints on the quokka image.
+    """
+    left, top = 0, 0
+    if extract is not None:
+        bb_extract = _quokka_normalize_extract(extract)
+        left = bb_extract.x1
+        top = bb_extract.y1
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+    keypoints = []
+    for kp_dict in json_dict["keypoints"]:
+        keypoints.append(Keypoint(x=kp_dict["x"] - left, y=kp_dict["y"] - top))
+    if extract is not None:
+        shape = (bb_extract.height, bb_extract.width, 3)
+    else:
+        shape = (643, 960, 3)
+    kpsoi = KeypointsOnImage(keypoints, shape=shape)
+    if size is not None:
+        shape_resized = _compute_resized_shape(shape, size)
+        kpsoi = kpsoi.on(shape_resized)
+    return kpsoi
+
+def quokka_bounding_boxes(size=None, extract=None):
+    """
+    Returns example bounding boxes on the standard example quokke image.
+
+    Currently only a single bounding box is returned that covers the quokka.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints or tuple of two floats, optional(default=None)
+        Size of the output image on which the BBs are placed. If None, then the BBs
+        are not projected to any new size (positions on the original image are used).
+        Floats lead to relative size changes, ints to absolute sizes in pixels.
+
+    extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+        Subarea to extract from the image. See `_quokka_normalize_extract()`.
+
+    Returns
+    -------
+    bbsoi : BoundingBoxesOnImage
+        Example BBs on the quokka image.
+    """
+    left, top = 0, 0
+    if extract is not None:
+        bb_extract = _quokka_normalize_extract(extract)
+        left = bb_extract.x1
+        top = bb_extract.y1
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+    bbs = []
+    for bb_dict in json_dict["bounding_boxes"]:
+        bbs.append(
+            BoundingBox(
+                x1=bb_dict["x1"] - left,
+                y1=bb_dict["y1"] - top,
+                x2=bb_dict["x2"] - left,
+                y2=bb_dict["y2"] - top
+            )
+        )
+    if extract is not None:
+        shape = (bb_extract.height, bb_extract.width, 3)
+    else:
+        shape = (643, 960, 3)
+    bbsoi = BoundingBoxesOnImage(bbs, shape=shape)
+    if size is not None:
+        shape_resized = _compute_resized_shape(shape, size)
+        bbsoi = bbsoi.on(shape_resized)
+    return bbsoi
 
 def angle_between_vectors(v1, v2):
     """
@@ -1664,6 +1875,9 @@ class BoundingBox(object):
 
     y2 : number
         Y-coordinate of the bottom right of the bounding box.
+
+    label : None or string, optional(default=None)
+        Label of the bounding box, e.g. a string representing the class.
 
     """
 
