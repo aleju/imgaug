@@ -1350,6 +1350,18 @@ class KeypointsOnImage(object):
     def width(self):
         return self.shape[1]
 
+    @property
+    def empty(self):
+        """
+        Returns whether this object contains zero keypoints.
+
+        Returns
+        -------
+        result : bool
+            True if this object contains zero keypoints.
+        """
+        return len(self.keypoints) == 0
+
     def on(self, image):
         """
         Project keypoints from one image to a new one.
@@ -2347,6 +2359,18 @@ class BoundingBoxesOnImage(object):
 
         """
         return self.shape[1]
+
+    @property
+    def empty(self):
+        """
+        Returns whether this object contains zero bounding boxes.
+
+        Returns
+        -------
+        result : bool
+            True if this object contains zero bounding boxes.
+        """
+        return len(self.bounding_boxes) == 0
 
     def on(self, image):
         """

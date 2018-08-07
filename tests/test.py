@@ -174,6 +174,8 @@ def main():
     test_clip_augmented_image()
     test_clip_augmented_images_()
     test_clip_augmented_images()
+    test_reduce_to_nonempty()
+    test_invert_reduce_to_nonempty()
     test_Augmenter()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_find()
@@ -10448,6 +10450,64 @@ def test_clip_augmented_images():
     assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
 
 
+def test_reduce_to_nonempty():
+    kpsois = [
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=0)], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([], shape=(4, 4, 3))
+    ]
+
+    kpsois_reduced, ids = iaa.reduce_to_nonempty(kpsois)
+    assert kpsois_reduced == [kpsois[0], kpsois[1], kpsois[3]]
+    assert ids == [0, 1, 3]
+
+    kpsois = [
+        ia.KeypointsOnImage([], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([], shape=(4, 4, 3))
+    ]
+
+    kpsois_reduced, ids = iaa.reduce_to_nonempty(kpsois)
+    assert kpsois_reduced == []
+    assert ids == []
+
+    kpsois = [
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(4, 4, 3))
+    ]
+
+    kpsois_reduced, ids = iaa.reduce_to_nonempty(kpsois)
+    assert kpsois_reduced == [kpsois[0]]
+    assert ids == [0]
+
+    kpsois = []
+
+    kpsois_reduced, ids = iaa.reduce_to_nonempty(kpsois)
+    assert kpsois_reduced == []
+    assert ids == []
+
+
+def test_invert_reduce_to_nonempty():
+    kpsois = [
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=0)], shape=(4, 4, 3)),
+        ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4, 3)),
+    ]
+
+    kpsois_recovered = iaa.invert_reduce_to_nonempty(kpsois, [0, 1, 2], ["foo1", "foo2", "foo3"])
+    assert kpsois_recovered == ["foo1", "foo2", "foo3"]
+
+    kpsois_recovered = iaa.invert_reduce_to_nonempty(kpsois, [1], ["foo1"])
+    assert all([isinstance(kpsoi, ia.KeypointsOnImage) for kpsoi in kpsois]) # assert original list not changed
+    assert kpsois_recovered == [kpsois[0], "foo1", kpsois[2]]
+
+    kpsois_recovered = iaa.invert_reduce_to_nonempty(kpsois, [], [])
+    assert kpsois_recovered == [kpsois[0], kpsois[1], kpsois[2]]
+
+    kpsois_recovered = iaa.invert_reduce_to_nonempty([], [], [])
+    assert kpsois_recovered == []
+
+
 def test_Augmenter():
     reseed()
 
@@ -12785,6 +12845,8 @@ def test_keypoint_augmentation():
             keypoints.append(ia.Keypoint(y=y*5, x=x*5))
 
     keypoints_oi = ia.KeypointsOnImage(keypoints, shape=(40, 60, 3))
+    keypoints_oi_empty = ia.KeypointsOnImage([], shape=(40, 60, 3))
+
     augs = [
         iaa.Add((-5, 5), name="Add"),
         iaa.AddElementwise((-5, 5), name="AddElementwise"),
@@ -12844,6 +12906,13 @@ def test_keypoint_augmentation():
         dss = []
         for i in range(10):
             aug_det = aug.to_deterministic()
+
+            kp_fully_empty_aug = aug_det.augment_keypoints([])
+            assert kp_fully_empty_aug == []
+
+            kp_first_empty_aug = aug_det.augment_keypoints([keypoints_oi_empty])[0]
+            assert len(kp_first_empty_aug.keypoints) == 0
+
             kp_image = keypoints_oi.to_keypoint_image(size=5)
             kp_image_aug = aug_det.augment_image(kp_image)
             kp_image_aug_rev = ia.KeypointsOnImage.from_keypoint_image(

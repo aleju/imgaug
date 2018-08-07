@@ -113,6 +113,24 @@ def handle_children_list(lst, augmenter_name, lst_name):
         raise Exception("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, got %s." % (lst_name, augmenter_name, type(lst),))
 
 
+def reduce_to_nonempty(objs):
+    objs_reduced = []
+    ids = []
+    for i, obj in enumerate(objs):
+        ia.do_assert(hasattr(obj, "empty"))
+        if not obj.empty:
+            objs_reduced.append(obj)
+            ids.append(i)
+    return objs_reduced, ids
+
+
+def invert_reduce_to_nonempty(objs, ids, objs_reduced):
+    objs_inv = list(objs)
+    for idx, obj_from_reduced in zip(ids, objs_reduced):
+        objs_inv[idx] = obj_from_reduced
+    return objs_inv
+
+
 @six.add_metaclass(ABCMeta)
 class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
@@ -735,12 +753,21 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         if hooks.is_activated(keypoints_on_images_copy, augmenter=self, parents=parents, default=self.activated):
             if len(keypoints_on_images_copy) > 0:
+                # TODO empty KeypointsOnImage objects are filtered here, which means that their
+                # .shape is not altered by augmentation. Add a separate augment_shape() method and
+                # augment empty KPs via that or alternatively change all augmenters to be able to
+                # handle non-empty KeypointsOnImage objects
+                keypoints_on_images_to_aug, nonempty_idx = reduce_to_nonempty(keypoints_on_images_copy)
+
                 keypoints_on_images_result = self._augment_keypoints(
                     keypoints_on_images_copy,
                     random_state=ia.copy_random_state(self.random_state),
                     parents=parents,
                     hooks=hooks
                 )
+
+                keypoints_on_images_result = invert_reduce_to_nonempty(keypoints_on_images_copy, nonempty_idx, keypoints_on_images_result)
+
                 ia.forward_random_state(self.random_state)
             else:
                 keypoints_on_images_result = keypoints_on_images_copy
