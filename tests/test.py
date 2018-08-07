@@ -10743,6 +10743,15 @@ def test_Augmenter():
     assert bb_aug.x2 == 2+1
     assert bb_aug.y2 == 5
 
+    # empty list of BBs
+    bbsois = [ia.BoundingBoxesOnImage([], shape=(10, 10, 3))]
+    bbsois_aug = aug.augment_bounding_boxes(bbsois)
+    assert len(bbsois_aug) == 1
+    assert bbsois_aug[0].bounding_boxes == []
+
+    bbsois_aug = aug.augment_bounding_boxes([])
+    assert bbsois_aug == []
+
     # --------
     # draw_grid
     # --------
