@@ -20,7 +20,7 @@ Features:
 Documentation:
 * [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code to use the library.
 * [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for each augmentation technique.
-* [http://imgaug.readthedocs.io/en/latest/source/modules.html](http://imgaug.readthedocs.io/en/latest/source/modules.html) - API.
+* [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
 * This README contains more examples. See further below.
 
 The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
