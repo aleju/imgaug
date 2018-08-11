@@ -33,7 +33,7 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 # filepath to the quokka image, its annotations and depth map
 QUOKKA_FP = os.path.join(FILE_DIR, "quokka.jpg")
 QUOKKA_ANNOTATIONS_FP = os.path.join(FILE_DIR, "quokka_annotations.json")
-QUOKKA_DEPTH_MAP_HALFRES_FP = os.path.join(FILE_DIR, "quokka_depth_map_halfres.json")
+QUOKKA_DEPTH_MAP_HALFRES_FP = os.path.join(FILE_DIR, "quokka_depth_map_halfres.png")
 
 DEFAULT_FONT_FP = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
