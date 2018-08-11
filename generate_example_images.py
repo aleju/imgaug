@@ -27,11 +27,11 @@ def main():
 
 def draw_small_overview():
     ia.seed(42)
-    image = ia.quokka(size=0.25)
-    heatmap = ia.quokka_heatmap(size=0.25)
-    segmap = ia.quokka_segmentation_map(size=0.25)
-    kps = ia.quokka_keypoints(size=0.25)
-    bbs = ia.quokka_bounding_boxes(size=0.25)
+    image = ia.quokka(size=0.2)
+    heatmap = ia.quokka_heatmap(size=0.4)
+    segmap = ia.quokka_segmentation_map(size=0.2)
+    kps = ia.quokka_keypoints(size=0.2)
+    bbs = ia.quokka_bounding_boxes(size=0.2)
     batch = ia.Batch(
         images=[image],
         heatmaps=[heatmap.invert()],
@@ -59,13 +59,13 @@ def draw_small_overview():
         image_aug = result.images_aug[0]
         image_aug_heatmap = result.heatmaps_aug[0].draw(cmap=None)[0]
         image_aug_segmap = result.segmentation_maps_aug[0].draw_on_image(image_aug, alpha=0.8)
-        image_aug_kps = result.keypoints_aug[0].draw_on_image(image_aug, color=[0, 255, 0], size=5)
-        image_aug_bbs = result.bounding_boxes_aug[0].cut_out_of_image().draw_on_image(image_aug, thickness=2)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_image.png" % (name,)), image_aug)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.png" % (name,)), image_aug_heatmap)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.png" % (name,)), image_aug_segmap)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.png" % (name,)), image_aug_kps)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.png" % (name,)), image_aug_bbs)
+        image_aug_kps = result.keypoints_aug[0].draw_on_image(image_aug, color=[0, 255, 0], size=7)
+        image_aug_bbs = result.bounding_boxes_aug[0].cut_out_of_image().draw_on_image(image_aug, thickness=3)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_image.jpg" % (name,)), image_aug)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.jpg" % (name,)), image_aug_heatmap)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.jpg" % (name,)), image_aug_segmap)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.jpg" % (name,)), image_aug_kps)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.jpg" % (name,)), image_aug_bbs)
 
 
 def draw_single_sequential_images():
