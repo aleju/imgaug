@@ -630,7 +630,7 @@ def quokka_keypoints(size=None, extract=None):
         Floats lead to relative size changes, ints to absolute sizes in pixels.
 
     extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
-        Subarea to extract from the image. See `_quokka_normalize_extract()`.
+        Subarea to extract from the image. See `quokka()`.
 
     Returns
     -------
@@ -671,7 +671,7 @@ def quokka_bounding_boxes(size=None, extract=None):
         Floats lead to relative size changes, ints to absolute sizes in pixels.
 
     extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
-        Subarea to extract from the image. See `_quokka_normalize_extract()`.
+        Subarea to extract from the image. See `quokka()`.
 
     Returns
     -------
@@ -3360,7 +3360,7 @@ class SegmentationMapOnImage(object):
     nb_classes : int or None
         Total number of unique classes that may appear in an segmentation map, i.e. the max
         class index. This may be None if the input array is of type bool or float. The number
-        of class however must be provided if the input array is of type int, as then the
+        of classes however must be provided if the input array is of type int, as then the
         number of classes cannot be guessed.
 
     """
