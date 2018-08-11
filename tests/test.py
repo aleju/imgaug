@@ -1623,6 +1623,7 @@ def test_BoundingBox():
     # cut_out_of_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb_cut = bb.cut_out_of_image((100, 100, 3))
+    eps = np.finfo(np.float32).eps
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
@@ -1635,13 +1636,13 @@ def test_BoundingBox():
     bb_cut = bb.cut_out_of_image((20, 100, 3))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
-    assert bb_cut.y2 == 20
+    assert 20 - 2*eps < bb_cut.y2 < 20
     assert bb_cut.x2 == 40
     bb_cut = bb.cut_out_of_image((100, 30, 3))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
-    assert bb_cut.x2 == 30
+    assert 30 - 2*eps < bb_cut.x2 < 30
 
     # shift
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -1953,6 +1954,7 @@ def test_BoundingBoxesOnImage():
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
     bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    eps = np.finfo(np.float32).eps
     bbsoi_cut = bbsoi.cut_out_of_image()
     assert len(bbsoi_cut.bounding_boxes) == 2
     assert bbsoi_cut.bounding_boxes[0].y1 == 10
@@ -1962,7 +1964,7 @@ def test_BoundingBoxesOnImage():
     assert bbsoi_cut.bounding_boxes[1].y1 == 15
     assert bbsoi_cut.bounding_boxes[1].x1 == 25
     assert bbsoi_cut.bounding_boxes[1].y2 == 35
-    assert bbsoi_cut.bounding_boxes[1].x2 == 50
+    assert 50 - 2*eps < bbsoi_cut.bounding_boxes[1].x2 < 50
 
     # shift()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)

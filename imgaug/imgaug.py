@@ -1925,7 +1925,10 @@ class BoundingBox(object):
     Class representing bounding boxes.
 
     Each bounding box is parameterized by its top left and bottom right corners. Both are given
-    as x and y-coordinates.
+    as x and y-coordinates. The corners are intended to lie inside the bounding box area.
+    As a result, a bounding box that lies completely inside the image but has maximum extensions
+    would have coordinates `(0.0, 0.0)` and `(W - epsilon, H - epsilon)`. Note that coordinates
+    are saved internally as floats.
 
     Parameters
     ----------
@@ -2255,7 +2258,7 @@ class BoundingBox(object):
         else:
             shape = image.shape
         height, width = shape[0:2]
-        return self.x1 >= 0 and self.x2 <= width and self.y1 >= 0 and self.y2 <= height
+        return self.x1 >= 0 and self.x2 < width and self.y1 >= 0 and self.y2 < height
 
     def is_partly_within_image(self, image):
         """
@@ -2279,7 +2282,8 @@ class BoundingBox(object):
         else:
             shape = image.shape
         height, width = shape[0:2]
-        img_bb = BoundingBox(x1=0, x2=width, y1=0, y2=height)
+        eps = np.finfo(np.float32).eps
+        img_bb = BoundingBox(x1=0, x2=width-eps, y1=0, y2=height-eps)
         return self.intersection(img_bb) is not None
 
     def is_out_of_image(self, image, fully=True, partly=False):
@@ -2338,10 +2342,11 @@ class BoundingBox(object):
         do_assert(height > 0)
         do_assert(width > 0)
 
-        x1 = np.clip(self.x1, 0, width)
-        x2 = np.clip(self.x2, 0, width)
-        y1 = np.clip(self.y1, 0, height)
-        y2 = np.clip(self.y2, 0, height)
+        eps = np.finfo(np.float32).eps
+        x1 = np.clip(self.x1, 0, width - eps)
+        x2 = np.clip(self.x2, 0, width - eps)
+        y1 = np.clip(self.y1, 0, height - eps)
+        y2 = np.clip(self.y2, 0, height - eps)
 
         return self.copy(
             x1=x1,
@@ -2430,8 +2435,21 @@ class BoundingBox(object):
             color = np.uint8(color)
 
         for i in range(thickness):
-            y = [self.y1_int-i, self.y1_int-i, self.y2_int+i, self.y2_int+i]
-            x = [self.x1_int-i, self.x2_int+i, self.x2_int+i, self.x1_int-i]
+            y1, y2, x1, x2 = self.y1_int, self.y2_int, self.x1_int, self.x2_int
+
+            # When y values get into the range (H-0.5, H), the *_int functions round them to H.
+            # That is technically sensible, but in the case of drawing means that the border lies
+            # just barely outside of the image, making the border disappear, even though the BB
+            # is fully inside the image. Here we correct for that because of beauty reasons.
+            # Same is the case for x coordinates.
+            if self.is_fully_within_image(image):
+                y1 = np.clip(y1, 0, image.shape[0]-1)
+                y2 = np.clip(y2, 0, image.shape[0]-1)
+                x1 = np.clip(x1, 0, image.shape[1]-1)
+                x2 = np.clip(x2, 0, image.shape[1]-1)
+
+            y = [y1-i, y1-i, y2+i, y2+i]
+            x = [x1-i, x2+i, x2+i, x1-i]
             rr, cc = skimage.draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
                 result[rr, cc, :] = color
@@ -2473,6 +2491,17 @@ class BoundingBox(object):
 
         height, width = image.shape[0], image.shape[1]
         x1, x2, y1, y2 = self.x1_int, self.x2_int, self.y1_int, self.y2_int
+
+        # When y values get into the range (H-0.5, H), the *_int functions round them to H.
+        # That is technically sensible, but in the case of extraction leads to a black border,
+        # which is both ugly and unexpected after calling cut_out_of_image(). Here we correct for
+        # that because of beauty reasons.
+        # Same is the case for x coordinates.
+        if self.is_fully_within_image(image):
+            y1 = np.clip(y1, 0, image.shape[0]-1)
+            y2 = np.clip(y2, 0, image.shape[0]-1)
+            x1 = np.clip(x1, 0, image.shape[1]-1)
+            x2 = np.clip(x2, 0, image.shape[1]-1)
 
         # if the bb is outside of the image area, the following pads the image
         # first with black pixels until the bb is inside the image
