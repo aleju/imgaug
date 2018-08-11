@@ -17,6 +17,7 @@ import skimage.draw
 import skimage.measure
 import collections
 import time
+import json
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
