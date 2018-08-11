@@ -3770,8 +3770,20 @@ class Batch(object):
         The images to
         augment.
 
+    heatmaps : None or list of HeatmapsOnImage
+        The heatmaps to
+        augment.
+
+    segmentation_maps : None or list of SegmentationMapOnImage
+        The segmentation maps to
+        augment.
+
     keypoints : None or list of KeypointOnImage
         The keypoints to
+        augment.
+
+    bounding_boxes : None or list of BoundingBoxesOnImage
+        The bounding boxes to
         augment.
 
     data : anything
@@ -3782,11 +3794,17 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
-    def __init__(self, images=None, keypoints=None, data=None):
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None, data=None):
         self.images = images
         self.images_aug = None
+        self.heatmaps = heatmaps
+        self.heatmaps_aug = None
+        self.segmentation_maps = segmentation_maps
+        self.segmentation_maps = None
         self.keypoints = keypoints
         self.keypoints_aug = None
+        self.bounding_boxes = bounding_boxes
+        self.bounding_boxes_aug = None
         self.data = data
 
 class BatchLoader(object):
@@ -4005,6 +4023,8 @@ class BackgroundAugmenter(object):
             try:
                 batch_str = queue_source.get(timeout=0.1)
                 batch = pickle.loads(batch_str)
+
+                """
                 # augment the batch
                 batch_augment_images = batch.images is not None and self.augment_images
                 batch_augment_keypoints = batch.keypoints is not None and self.augment_keypoints
@@ -4017,6 +4037,8 @@ class BackgroundAugmenter(object):
                     batch.images_aug = augseq.augment_images(batch.images)
                 elif batch_augment_keypoints:
                     batch.keypoints_aug = augseq.augment_keypoints(batch.keypoints)
+                """
+                batch_aug = list(augseq.augment_batches([batch], background=False))[0]
 
                 # send augmented batch to output queue
                 batch_str = pickle.dumps(batch, protocol=-1)
