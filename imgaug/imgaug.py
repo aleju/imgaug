@@ -539,15 +539,82 @@ def quokka_square(size=None):
     """
     return quokka(size=size, extract="square")
 
-def quokka_depth_map(size=None, extract=None):
-    img = ndimage.imread(QUOKKA_FP, mode="RGB")
+def quokka_heatmap(size=None, extract=None):
+    """
+    Returns a heatmap (here: depth map) for the standard example quokka image.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints, optional(default=None)
+        See `quokka()`.
+
+    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
+        See `quokka()`.
+
+    Returns
+    -------
+    result : HeatmapsOnImage
+        Depth map as an heatmap object. Values close to 0.0 denote objects that are close to
+        the camera. Values close to 1.0 denote objects that are furthest away (among all shown
+        objects).
+    """
+    img = ndimage.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, mode="RGB")
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
+    if size is None:
+        size = (643, 960)
+
+    shape_resized = _compute_resized_shape(img.shape, size)
+    img = misc.imresize(img, shape_resized[0:2])
+    img_0to1 = img.astype(np.float32) / 255.0
+    img_0to1 = 1 - img_0to1 # depth map was saved as 0 being furthest away
+
+    return HeatmapsOnImage(img_0to1, shape=(643, 960, 3))
+
+def quokka_segmentation_map(size=None, extract=None):
+    """
+    Returns a segmentation map for the standard example quokka image.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints, optional(default=None)
+        See `quokka()`.
+
+    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
+        See `quokka()`.
+
+    Returns
+    -------
+    result : SegmentationMapOnImage
+        Segmentation map object.
+    """
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+
+    xx = []
+    yy = []
+    for kp_dict in json_dict["polygons"][0]["keypoints"]:
+        x = kp_dict["x"]
+        y = kp_dict["y"]
+        xx.append(x)
+        yy.append(y)
+
+    img_seg = np.zeros((643, 960, 1), dtype=np.float32)
+    rr, cc = skimage.draw.polygon(np.array(yy), np.array(xx), shape=img_seg.shape)
+    img_seg[rr, cc] = 1.0
+
+    if extract is not None:
+        bb = _quokka_normalize_extract(extract)
+        img_seg = bb.extract_from_image(img_seg)
+
+    segmap = SegmentationMapOnImage(img_seg, shape=(643, 960, 3))
+
     if size is not None:
-        shape_resized = _compute_resized_shape(img.shape, size)
-        img = misc.imresize(img, shape_resized[0:2])
-    return img
+        shape_resized = _compute_resized_shape(img_seg.shape, size)
+        segmap = segmap.scale(shape_resized[0:2])
+
+    return segmap
 
 def quokka_keypoints(size=None, extract=None):
     """
