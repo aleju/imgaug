@@ -680,6 +680,11 @@ class CropAndPad(Augmenter):
 
                 crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
 
+                pad_top = int(round(height_heatmaps * (pad_top/height_image)))
+                pad_right = int(round(width_heatmaps * (pad_right/width_image)))
+                pad_bottom = int(round(height_heatmaps * (pad_bottom/height_image)))
+                pad_left = int(round(width_heatmaps * (pad_left/width_image)))
+
             arr_cr = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom, crop_left:width_heatmaps-crop_right, :]
 
             if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
