@@ -7,21 +7,114 @@ It converts a set of input images into a new, much larger set of slightly altere
 [![codecov](https://codecov.io/gh/aleju/imgaug/branch/master/graph/badge.svg)](https://codecov.io/gh/aleju/imgaug)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1370ce38e99e40af842d47a8dd721444)](https://www.codacy.com/app/aleju/imgaug?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=aleju/imgaug&amp;utm_campaign=Badge_Grade)
 
+<table cellpadding="1" cellspacing="0">
+<tr>
+<td></th>
+<td>Image (uint8)</td>
+<td>Heatmaps (float32)</td>
+<td>Seg. Maps (int32, bool, float32)</td>
+<td>Keypoints (float coords)</td>
+<td>Bounding Boxes (float coords)</td>
+</tr>
+
+<tr>
+<td>*Original Input*</td>
+<td >![input image](images/small_overview/noop_image.jpg?raw=true "input image")</td>
+<td>![input heatmap](images/small_overview/noop_heatmap.jpg?raw=true "input heatmap")</td>
+<td>![input segmentation map](images/small_overview/noop_segmap.jpg?raw=true "input segmentation map")</td>
+<td>![input keypoints](images/small_overview/noop_kps.jpg?raw=true "input keypoints")</td>
+<td>![input bounding boxes](images/small_overview/noop_bbs.jpg?raw=true "input bounding boxes")</td>
+</tr>
+
+<tr>
+<td>
+Gauss. Noise
++&nbsp;Contrast
++&nbsp;Sharpen
+</td>
+<td>![non geometric image](images/small_overview/non_geometric_image.jpg?raw=true "non geometric image")</td>
+<td>![non geometric heatmap](images/small_overview/non_geometric_heatmap.jpg?raw=true "non geometric heatmap")</td>
+<td>![non geometric segmentation map](images/small_overview/non_geometric_segmap.jpg?raw=true "non geometric segmentation map")</td>
+<td>![non geometric keypoints](images/small_overview/non_geometric_kps.jpg?raw=true "non geometric keypoints")</td>
+<td>![non geometric bounding boxes](images/small_overview/non_geometric_bbs.jpg?raw=true "non geometric bounding boxes")</td>
+</tr>
+
+<tr>
+<td>Affine</td>
+<td>![affine image](images/small_overview/affine_image.jpg?raw=true "affine image")</td>
+<td>![affine heatmap](images/small_overview/affine_heatmap.jpg?raw=true "affine heatmap")</td>
+<td>![affine segmentation map](images/small_overview/affine_segmap.jpg?raw=true "affine segmentation map")</td>
+<td>![affine keypoints](images/small_overview/affine_kps.jpg?raw=true "affine keypoints")</td>
+<td>![affine bounding boxes](images/small_overview/affine_bbs.jpg?raw=true "affine bounding boxes")</td>
+</tr>
+
+<tr>
+<td>CropAndPad</td>
+<td>![cropandpad image](images/small_overview/cropandpad_image.jpg?raw=true "cropandpad image")</td>
+<td>![cropandpad heatmap](images/small_overview/cropandpad_heatmap.jpg?raw=true "cropandpad heatmap")</td>
+<td>![cropandpad segmentation map](images/small_overview/cropandpad_segmap.jpg?raw=true "cropandpad segmentation map")</td>
+<td>![cropandpad keypoints](images/small_overview/cropandpad_kps.jpg?raw=true "cropandpad keypoints")</td>
+<td>![cropandpad bounding boxes](images/small_overview/cropandpad_bbs.jpg?raw=true "cropandpad bounding boxes")</td>
+</tr>
+
+<tr>
+<td>Fliplr +&nbsp;Perspective</td>
+<td>![fliplr perspective image](images/small_overview/fliplr_perspective_image.jpg?raw=true "fliplr perspective image")</td>
+<td>![fliplr perspective heatmap](images/small_overview/fliplr_perspective_heatmap.jpg?raw=true "fliplr perspective heatmap")</td>
+<td>![fliplr perspective segmentation map](images/small_overview/fliplr_perspective_segmap.jpg?raw=true "fliplr perspective segmentation map")</td>
+<td>![fliplr perspective keypoints](images/small_overview/fliplr_perspective_kps.jpg?raw=true "fliplr perspective keypoints")</td>
+<td>![fliplr perspective bounding boxes](images/small_overview/fliplr_perspective_bbs.jpg?raw=true "fliplr perspective bounding boxes")</td>
+</tr>
+
+</table>
+
+**More (strong) example augmentations of one input image:**
+
 ![64 quokkas](examples_grid.jpg?raw=true "64 quokkas")
 
-Features:
-* Most standard augmentation techniques available.
-* Techniques can be applied to both images and keypoints/landmarks on images.
-* Define your augmentation sequence once at the start of the experiment, then apply it many times.
-* Define flexible stochastic ranges for each augmentation, e.g. "rotate each image by a value between -45 and 45 degrees" or "rotate each image by a value sampled from the normal distribution N(0, 5.0)".
-* Easily convert all stochastic ranges to deterministic values in order to augment different batches of images in exactly the same way. (E.g. images and their respective heatmaps. If an image is rotated, you want its heatmap to be rotated by the exactly same amount.)
-* Optionally run the augmentations in background processes, improving performance of experiments.
+## Features of the library
 
-Documentation:
+* Supports many augmentation techniques.
+  * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
+* Supports augmentation of:
+  * Images (uint8)
+  * Heatmaps (float32) *(Beta)*
+  * Segmentation maps (int32, bool, float32) *(Beta)*
+  * Keypoints/Landmarks (int32 or float32 coordinates)
+  * Bounding Boxes (int32 or float32 coordinates)
+  * Can augment all of the above in automatically with the same sampled values. E.g. rotate both images and the segmentation maps on them by the same random value sampled from `uniform(0°, 30°)`.
+* Define flexible stochastic ranges for each augmentation parameter.
+  * E.g. "rotate each image by a value between -45 and 45 degrees".
+  * E.g. "rotate each image by `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the normal distribution and `B(.)` the beta distribution.
+* Offers many helper functions.
+  * E.g. for drawing heatmaps, segmentation maps, keypoints and bounding boxes.
+  * E.g. for scaling segmentation maps, average/max pooling of images/maps or for padding images to desired aspect ratios (e.g. to square them).
+* Define your augmentation sequence once at the start of the experiment, then apply it many times.
+* Supports augmentation on multiple CPU cores.
+
+## Documentation
 * [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code to use the library.
 * [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for each augmentation technique.
 * [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
 * This README contains more examples. See further below.
+
+## Requirements and installation
+
+Required packages:
+* six
+* numpy
+* scipy
+* scikit-image (`pip install -U scikit-image`)
+* OpenCV (i.e. `cv2`)
+
+OpenCV has to be manually installed. The other package should auto-install themselves.
+
+To install, simply use `sudo pip install imgaug`. That version might be outdated though. To always get the newest version directly from github use `sudo pip install git+https://github.com/aleju/imgaug`.
+Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install by using `python setup.py sdist && sudo pip install dist/imgaug-0.2.6.tar.gz`.
+
+To deinstall the library, just execute `sudo pip uninstall imgaug`.
+
+## Overview of most augmenters
 
 The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
 
@@ -77,23 +170,9 @@ The images below show examples for most augmentation techniques (values written 
 ![SimplexNoiseAlpha with EdgeDetect1.0](images/examples_simplexnoisealpha.jpg?raw=true "SimplexNoiseAlpha with EdgeDetect1.0")
 ![FrequencyNoiseAlpha with EdgeDetect1.0](images/examples_frequencynoisealpha.jpg?raw=true "FrequencyNoiseAlpha with EdgeDetect1.0")
 
-## Requirements and installation
 
-Required packages:
-* six
-* numpy
-* scipy
-* scikit-image (`pip install -U scikit-image`)
-* OpenCV (i.e. `cv2`)
 
-OpenCV has to be manually installed. The other package should auto-install themselves.
-
-To install, simply use `sudo pip install imgaug`. That version might be outdated though. To always get the newest version directly from github use `sudo pip install git+https://github.com/aleju/imgaug`.
-Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install by using `python setup.py sdist && sudo pip install dist/imgaug-0.2.6.tar.gz`.
-
-To deinstall the library, just execute `sudo pip uninstall imgaug`.
-
-## Examples
+## Code Examples
 
 A standard machine learning situation.
 Train on batches of images and augment each batch via crop, horizontal flip ("Fliplr") and gaussian blur:
@@ -112,9 +191,9 @@ for batch_idx in range(1000):
     # Grayscale images must have shape (height, width, 1) each.
     # All images must have numpy's dtype uint8. Values are expected to be in
     # range 0-255.
-    images = load_batch(batch_idx)
-    images_aug = seq.augment_images(images)
-    train_on_images(images_aug)
+    images = load_batch(batch_idx)  # you have to implement this function
+    images_aug = seq.augment_images(images)  # done by the library
+    train_on_images(images_aug)  # you have to implement this function
 ```
 
 Apply heavy augmentations to images (used to create the image at the very top of this readme):
