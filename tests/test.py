@@ -2282,26 +2282,25 @@ def test_SegmentationMapOnImage_get_arr_int():
     segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
     observed = segmap.get_arr_int()
     expected = np.int32([
-        [1, 1, 1],
-        [2, 0, 2],
-        [2, 0, 0]
+        [2, 2, 2],
+        [3, 1, 3],
+        [3, 1, 0]
     ])
     assert observed.dtype.type == np.int32
     assert np.array_equal(observed, expected)
 
-    observed = segmap.get_arr_int(background_class_id=2)
-    expected = np.int32([
-        [1, 1, 1],
-        [2, 0, 2],
-        [2, 0, 2]
-    ])
-    assert observed.dtype.type == np.int32
-    assert np.array_equal(observed, expected)
+    got_exception = False
+    try:
+        observed = segmap.get_arr_int(background_class_id=2)
+    except Exception as exc:
+        assert "The background class id may only be changed if " in str(exc)
+        got_exception = True
+    assert got_exception
 
     observed = segmap.get_arr_int(background_threshold=0.21)
     expected = np.int32([
-        [0, 1, 0],
-        [2, 0, 2],
+        [0, 2, 0],
+        [3, 1, 3],
         [0, 0, 0]
     ])
     assert observed.dtype.type == np.int32
@@ -2345,7 +2344,7 @@ def test_SegmentationMapOnImage_draw():
 
     # background_threshold, background_class and foreground mask
     arr_c0 = np.float32([
-        [1.0, 0, 0],
+        [0, 0, 0],
         [1.0, 0, 0],
         [0, 0, 0]
     ])
@@ -2360,17 +2359,18 @@ def test_SegmentationMapOnImage_draw():
     ], axis=2)
     segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
 
-    observed, observed_fg = segmap.draw(background_threshold=0.01, background_class_id=0, return_foreground_mask=True)
+    observed, observed_fg = segmap.draw(background_threshold=0.01, return_foreground_mask=True)
     col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
     col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    col2 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[2]
     expected = np.uint8([
-        [col0, col1, col1],
-        [col0, col1, col1],
-        [col1, col1, col1]
+        [col0, col2, col2],
+        [col1, col2, col2],
+        [col2, col2, col2]
     ])
     expected_fg = np.array([
         [False, True, True],
-        [False, True, True],
+        [True, True, True],
         [True, True, True]
     ], dtype=np.bool)
     assert np.array_equal(observed, expected)
@@ -2378,37 +2378,19 @@ def test_SegmentationMapOnImage_draw():
 
     # background_threshold, background_class and foreground mask
     # here with higher threshold so that bottom left pixel switches to background
-    observed, observed_fg = segmap.draw(background_threshold=0.11, background_class_id=0, return_foreground_mask=True)
+    observed, observed_fg = segmap.draw(background_threshold=0.11, return_foreground_mask=True)
     col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
     col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    col2 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[2]
     expected = np.uint8([
-        [col0, col1, col1],
-        [col0, col1, col1],
-        [col0, col1, col1]
+        [col0, col2, col2],
+        [col1, col2, col2],
+        [col0, col2, col2]
     ])
     expected_fg = np.array([
         [False, True, True],
-        [False, True, True],
+        [True, True, True],
         [False, True, True]
-    ], dtype=np.bool)
-    assert np.array_equal(observed, expected)
-    assert np.array_equal(observed_fg, expected_fg)
-
-    # background_threshold, background_class and foreground mask
-    # here with higher threshold so that bottom left pixel switches to background,
-    # but background_class_id is set to 1, so it stays at class 1
-    observed, observed_fg = segmap.draw(background_threshold=0.11, background_class_id=1, return_foreground_mask=True)
-    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
-    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
-    expected = np.uint8([
-        [col0, col1, col1],
-        [col0, col1, col1],
-        [col1, col1, col1]
-    ])
-    expected_fg = np.array([
-        [True, False, False],
-        [True, False, False],
-        [False, False, False]
     ], dtype=np.bool)
     assert np.array_equal(observed, expected)
     assert np.array_equal(observed_fg, expected_fg)
