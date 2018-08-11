@@ -3658,12 +3658,14 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : SegmentationMapOnImage
+        segmap : SegmentationMapOnImage
             Padded segmentation map of height H'=H+top+bottom and width W'=W+left+right.
 
         """
         arr_padded = pad(self.arr, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
-        return SegmentationMapOnImage(arr_padded, shape=self.shape)
+        segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
+        segmap.input_was = self.input_was
+        return segmap
 
     def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
         """
@@ -3693,7 +3695,7 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : tuple
+        segmap : tuple
             First tuple entry: Padded segmentation map as SegmentationMapOnImage object.
             Second tuple entry: Amounts by which the segmentation map was padded on each side,
             given as a tuple (top, right, bottom, left).
@@ -3702,6 +3704,7 @@ class SegmentationMapOnImage(object):
         """
         arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
         segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
+        segmap.input_was = self.input_was
         if return_pad_amounts:
             return segmap, pad_amounts
         else:
@@ -3724,7 +3727,7 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : SegmentationMapOnImage
+        segmap : SegmentationMapOnImage
             Rescaled segmentation map object.
 
         """
@@ -3734,8 +3737,9 @@ class SegmentationMapOnImage(object):
         # see https://github.com/opencv/opencv/issues/7195
         # TODO area interpolation too?
         arr_rescaled = np.clip(arr_rescaled, 0.0, 1.0)
-
-        return SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+        segmap = SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+        segmap.input_was = self.input_was
+        return segmap
 
     def to_heatmaps(self, only_nonempty=False, not_none_if_no_nonempty=False):
         """
