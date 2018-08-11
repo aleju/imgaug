@@ -85,6 +85,7 @@ def main():
     # test_HeatmapsOnImage_find_global_maxima()
     test_HeatmapsOnImage_draw()
     test_HeatmapsOnImage_draw_on_image()
+    test_HeatmapsOnImage_invert()
     test_HeatmapsOnImage_pad()
     # test_HeatmapsOnImage_pad_to_aspect_ratio()
     test_HeatmapsOnImage_avg_pool()
@@ -2102,6 +2103,27 @@ def test_HeatmapsOnImage_draw_on_image():
     assert heatmaps_drawn.shape == (2, 2, 3)
     assert np.all(heatmaps_drawn[0:2, 0, :] == 0)
     assert np.all(heatmaps_drawn[0:2, 1, :] == 128) or np.all(heatmaps_drawn[0:2, 1, :] == 127)
+
+
+def test_HeatmapsOnImage_invert():
+    heatmaps_arr = np.float32([
+        [0.0, 5.0, 10.0],
+        [-1.0, -2.0, 7.5]
+    ])
+    expected = np.float32([
+        [8.0, 3.0, -2.0],
+        [9.0, 10.0, 0.5]
+    ])
+
+    # (H, W)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 3), min_value=-2.0, max_value=10.0)
+    assert np.allclose(heatmaps.get_arr(), heatmaps_arr)
+    assert np.allclose(heatmaps.invert().get_arr(), expected)
+
+    # (H, W, 1)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr[..., np.newaxis], shape=(2, 3), min_value=-2.0, max_value=10.0)
+    assert np.allclose(heatmaps.get_arr(), heatmaps_arr[..., np.newaxis])
+    assert np.allclose(heatmaps.invert().get_arr(), expected[..., np.newaxis])
 
 
 def test_HeatmapsOnImage_pad():
