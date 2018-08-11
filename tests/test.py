@@ -85,6 +85,7 @@ def main():
     # test_HeatmapsOnImage_find_global_maxima()
     test_HeatmapsOnImage_draw()
     test_HeatmapsOnImage_draw_on_image()
+    test_HeatmapsOnImage_invert()
     test_HeatmapsOnImage_pad()
     # test_HeatmapsOnImage_pad_to_aspect_ratio()
     test_HeatmapsOnImage_avg_pool()
@@ -1624,6 +1625,7 @@ def test_BoundingBox():
     # cut_out_of_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb_cut = bb.cut_out_of_image((100, 100, 3))
+    eps = np.finfo(np.float32).eps
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
@@ -1636,13 +1638,13 @@ def test_BoundingBox():
     bb_cut = bb.cut_out_of_image((20, 100, 3))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
-    assert bb_cut.y2 == 20
+    assert 20 - 2*eps < bb_cut.y2 < 20
     assert bb_cut.x2 == 40
     bb_cut = bb.cut_out_of_image((100, 30, 3))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
-    assert bb_cut.x2 == 30
+    assert 30 - 2*eps < bb_cut.x2 < 30
 
     # shift
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -1954,6 +1956,7 @@ def test_BoundingBoxesOnImage():
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
     bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    eps = np.finfo(np.float32).eps
     bbsoi_cut = bbsoi.cut_out_of_image()
     assert len(bbsoi_cut.bounding_boxes) == 2
     assert bbsoi_cut.bounding_boxes[0].y1 == 10
@@ -1963,7 +1966,7 @@ def test_BoundingBoxesOnImage():
     assert bbsoi_cut.bounding_boxes[1].y1 == 15
     assert bbsoi_cut.bounding_boxes[1].x1 == 25
     assert bbsoi_cut.bounding_boxes[1].y2 == 35
-    assert bbsoi_cut.bounding_boxes[1].x2 == 50
+    assert 50 - 2*eps < bbsoi_cut.bounding_boxes[1].x2 < 50
 
     # shift()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -2104,6 +2107,27 @@ def test_HeatmapsOnImage_draw_on_image():
     assert heatmaps_drawn.shape == (2, 2, 3)
     assert np.all(heatmaps_drawn[0:2, 0, :] == 0)
     assert np.all(heatmaps_drawn[0:2, 1, :] == 128) or np.all(heatmaps_drawn[0:2, 1, :] == 127)
+
+
+def test_HeatmapsOnImage_invert():
+    heatmaps_arr = np.float32([
+        [0.0, 5.0, 10.0],
+        [-1.0, -2.0, 7.5]
+    ])
+    expected = np.float32([
+        [8.0, 3.0, -2.0],
+        [9.0, 10.0, 0.5]
+    ])
+
+    # (H, W)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 3), min_value=-2.0, max_value=10.0)
+    assert np.allclose(heatmaps.get_arr(), heatmaps_arr)
+    assert np.allclose(heatmaps.invert().get_arr(), expected)
+
+    # (H, W, 1)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr[..., np.newaxis], shape=(2, 3), min_value=-2.0, max_value=10.0)
+    assert np.allclose(heatmaps.get_arr(), heatmaps_arr[..., np.newaxis])
+    assert np.allclose(heatmaps.invert().get_arr(), expected[..., np.newaxis])
 
 
 def test_HeatmapsOnImage_pad():
@@ -2262,26 +2286,25 @@ def test_SegmentationMapOnImage_get_arr_int():
     segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
     observed = segmap.get_arr_int()
     expected = np.int32([
-        [1, 1, 1],
-        [2, 0, 2],
-        [2, 0, 0]
+        [2, 2, 2],
+        [3, 1, 3],
+        [3, 1, 0]
     ])
     assert observed.dtype.type == np.int32
     assert np.array_equal(observed, expected)
 
-    observed = segmap.get_arr_int(background_class_id=2)
-    expected = np.int32([
-        [1, 1, 1],
-        [2, 0, 2],
-        [2, 0, 2]
-    ])
-    assert observed.dtype.type == np.int32
-    assert np.array_equal(observed, expected)
+    got_exception = False
+    try:
+        observed = segmap.get_arr_int(background_class_id=2)
+    except Exception as exc:
+        assert "The background class id may only be changed if " in str(exc)
+        got_exception = True
+    assert got_exception
 
     observed = segmap.get_arr_int(background_threshold=0.21)
     expected = np.int32([
-        [0, 1, 0],
-        [2, 0, 2],
+        [0, 2, 0],
+        [3, 1, 3],
         [0, 0, 0]
     ])
     assert observed.dtype.type == np.int32
@@ -2325,7 +2348,7 @@ def test_SegmentationMapOnImage_draw():
 
     # background_threshold, background_class and foreground mask
     arr_c0 = np.float32([
-        [1.0, 0, 0],
+        [0, 0, 0],
         [1.0, 0, 0],
         [0, 0, 0]
     ])
@@ -2340,17 +2363,18 @@ def test_SegmentationMapOnImage_draw():
     ], axis=2)
     segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
 
-    observed, observed_fg = segmap.draw(background_threshold=0.01, background_class_id=0, return_foreground_mask=True)
+    observed, observed_fg = segmap.draw(background_threshold=0.01, return_foreground_mask=True)
     col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
     col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    col2 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[2]
     expected = np.uint8([
-        [col0, col1, col1],
-        [col0, col1, col1],
-        [col1, col1, col1]
+        [col0, col2, col2],
+        [col1, col2, col2],
+        [col2, col2, col2]
     ])
     expected_fg = np.array([
         [False, True, True],
-        [False, True, True],
+        [True, True, True],
         [True, True, True]
     ], dtype=np.bool)
     assert np.array_equal(observed, expected)
@@ -2358,37 +2382,19 @@ def test_SegmentationMapOnImage_draw():
 
     # background_threshold, background_class and foreground mask
     # here with higher threshold so that bottom left pixel switches to background
-    observed, observed_fg = segmap.draw(background_threshold=0.11, background_class_id=0, return_foreground_mask=True)
+    observed, observed_fg = segmap.draw(background_threshold=0.11, return_foreground_mask=True)
     col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
     col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    col2 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[2]
     expected = np.uint8([
-        [col0, col1, col1],
-        [col0, col1, col1],
-        [col0, col1, col1]
+        [col0, col2, col2],
+        [col1, col2, col2],
+        [col0, col2, col2]
     ])
     expected_fg = np.array([
         [False, True, True],
-        [False, True, True],
+        [True, True, True],
         [False, True, True]
-    ], dtype=np.bool)
-    assert np.array_equal(observed, expected)
-    assert np.array_equal(observed_fg, expected_fg)
-
-    # background_threshold, background_class and foreground mask
-    # here with higher threshold so that bottom left pixel switches to background,
-    # but background_class_id is set to 1, so it stays at class 1
-    observed, observed_fg = segmap.draw(background_threshold=0.11, background_class_id=1, return_foreground_mask=True)
-    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
-    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
-    expected = np.uint8([
-        [col0, col1, col1],
-        [col0, col1, col1],
-        [col1, col1, col1]
-    ])
-    expected_fg = np.array([
-        [True, False, False],
-        [True, False, False],
-        [False, False, False]
     ], dtype=np.bool)
     assert np.array_equal(observed, expected)
     assert np.array_equal(observed_fg, expected_fg)

@@ -21,8 +21,52 @@ ia.seed(44)
 IMAGES_DIR = "images"
 
 def main():
+    draw_small_overview()
     draw_single_sequential_images()
     draw_per_augmenter_images()
+
+def draw_small_overview():
+    ia.seed(42)
+    image = ia.quokka(size=0.2)
+    heatmap = ia.quokka_heatmap(size=0.4)
+    segmap = ia.quokka_segmentation_map(size=0.2)
+    kps = ia.quokka_keypoints(size=0.2)
+    bbs = ia.quokka_bounding_boxes(size=0.2)
+    batch = ia.Batch(
+        images=[image],
+        heatmaps=[heatmap.invert()],
+        segmentation_maps=[segmap],
+        keypoints=[kps],
+        bounding_boxes=[bbs]
+    )
+
+    augs = []
+    augs.append(("noop", iaa.Noop()))
+    augs.append(("non_geometric", iaa.Sequential([
+        iaa.AdditiveGaussianNoise(scale=(0, 20)),
+        iaa.ContrastNormalization(1.2),
+        iaa.Sharpen(alpha=1.0, lightness=1.5)
+    ])))
+    augs.append(("affine", iaa.Affine(rotate=0, translate_percent={"x": 0.1}, scale=1.3, mode="constant", cval=25)))
+    augs.append(("cropandpad", iaa.CropAndPad(percent=(-0.05, 0.2, -0.05, -0.2), pad_mode="maximum")))
+    augs.append(("fliplr_perspective", iaa.Sequential([
+        iaa.Fliplr(1.0),
+        iaa.PerspectiveTransform(scale=0.15)
+    ])))
+
+    for name, aug in augs:
+        result = list(aug.augment_batches([batch]))[0]
+        image_aug = result.images_aug[0]
+        image_aug_heatmap = result.heatmaps_aug[0].draw(cmap=None)[0]
+        image_aug_segmap = result.segmentation_maps_aug[0].draw_on_image(image_aug, alpha=0.8)
+        image_aug_kps = result.keypoints_aug[0].draw_on_image(image_aug, color=[0, 255, 0], size=7)
+        image_aug_bbs = result.bounding_boxes_aug[0].cut_out_of_image().draw_on_image(image_aug, thickness=3)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_image.jpg" % (name,)), image_aug)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.jpg" % (name,)), image_aug_heatmap)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.jpg" % (name,)), image_aug_segmap)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.jpg" % (name,)), image_aug_kps)
+        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.jpg" % (name,)), image_aug_bbs)
+
 
 def draw_single_sequential_images():
     ia.seed(44)

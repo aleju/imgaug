@@ -202,6 +202,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         """
         Augment multiple batches of images.
 
+        In contrast to other augment functions, this function _yields_ batches instead of just
+        returning a full list. This is more suited for most training loops. It also supports
+        augmentation on multiple cpu cores, activated via the `background` flag.
+
         Parameters
         ----------
         batches : list
@@ -211,7 +215,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
                 * ia.Batch
                 * []
+                * list of ia.HeatmapsOnImage
+                * list of ia.SegmentationMapOnImage
                 * list of ia.KeypointsOnImage
+                * list of ia.BoundingBoxesOnImage
                 * list of (H,W,C) ndarray
                 * list of (H,W) ndarray
                 * (N,H,W,C) ndarray
@@ -231,9 +238,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         Yields
         -------
-        augmented_batch : ia.Batch or list of ia.KeypointsOnImage or list of (H,W,C) ndarray or list of (H,W) ndarray or (N,H,W,C) ndarray or (N,H,W) ndarray
-            Augmented images/keypoints.
-            Datatype usually matches the input datatypes per list element.
+        augmented_batch : ia.Batch or list of ia.HeatmapsOnImage or list of ia.SegmentationMapOnImage or list of ia.KeypointsOnImage or list of ia.BoundingBoxesOnImage or list of (H,W,C) ndarray or list of (H,W) ndarray or (N,H,W,C) ndarray or (N,H,W) ndarray
+            Augmented objects.
 
         """
         ia.do_assert(isinstance(batches, list))
@@ -259,13 +265,22 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 elif ia.is_np_array(batch[0]):
                     batches_normalized.append(ia.Batch(images=batch, data=i))
                     batches_original_dts.append("list_of_numpy_arrays")
+                elif isinstance(batch[0], ia.HeatmapsOnImage):
+                    batches_normalized.append(ia.Batch(heatmaps=batch, data=i))
+                    batches_original_dts.append("list_of_imgaug.HeatmapsOnImage")
+                elif isinstance(batch[0], ia.SegmentationMapOnImage):
+                    batches_normalized.append(ia.Batch(segmentation_maps=batch, data=i))
+                    batches_original_dts.append("list_of_imgaug.SegmentationMapOnImage")
                 elif isinstance(batch[0], ia.KeypointsOnImage):
                     batches_normalized.append(ia.Batch(keypoints=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.KeypointsOnImage")
+                elif isinstance(batch[0], ia.BoundingBoxesOnImage):
+                    batches_normalized.append(ia.Batch(bounding_boxes=batch, data=i))
+                    batches_original_dts.append("list_of_imgaug.BoundingBoxesOnImage")
                 else:
-                    raise Exception("Unknown datatype in batch[0]. Expected numpy array or imgaug.KeypointsOnImage, got %s." % (type(batch[0]),))
+                    raise Exception("Unknown datatype in batch[0]. Expected numpy array or imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage, got %s." % (type(batch[0]),))
             else:
-                raise Exception("Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of numpy arrays/imgaug.KeypointsOnImage. Got %s." % (type(batch),))
+                raise Exception("Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of (numpy array or imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage). Got %s." % (type(batch),))
 
         def unnormalize_batch(batch_aug):
             #if batch_aug.data is None:
@@ -286,25 +301,45 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batch_unnormalized = []
             elif dt_orig == "list_of_numpy_arrays":
                 batch_unnormalized = batch_aug.images_aug
-            else:
-                ia.do_assert(dt_orig == "list_of_imgaug.KeypointsOnImage")  # only option left
+            elif dt_orig == "list_of_imgaug.HeatmapsOnImage":
+                batch_unnormalized = batch_aug.heatmaps_aug
+            elif dt_orig == "list_of_imgaug.SegmentationMapOnImage":
+                batch_unnormalized = batch_aug.segmentation_maps_aug
+            elif dt_orig == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
+            else: # only option left
+                ia.do_assert(dt_orig == "list_of_imgaug.BoundingBoxesOnImage")
+                batch_unnormalized = batch_aug.bounding_boxes_aug
             return batch_unnormalized
 
         if not background:
             for batch_normalized in batches_normalized:
                 batch_augment_images = batch_normalized.images is not None
+                batch_augment_heatmaps = batch_normalized.heatmaps is not None
+                batch_augment_segmaps = batch_normalized.segmentation_maps is not None
                 batch_augment_keypoints = batch_normalized.keypoints is not None
+                batch_augment_bounding_boxes = batch_normalized.bounding_boxes is not None
 
-                if batch_augment_images and batch_augment_keypoints:
-                    augseq_det = self.to_deterministic() if not self.deterministic else self
-                    batch_normalized.images_aug = augseq_det.augment_images(batch_normalized.images, hooks=hooks)
-                    batch_normalized.keypoints_aug = augseq_det.augment_keypoints(batch_normalized.keypoints, hooks=hooks)
-                elif batch_augment_images:
-                    batch_normalized.images_aug = self.augment_images(batch_normalized.images, hooks=hooks)
-                elif batch_augment_keypoints:
-                    batch_normalized.keypoints_aug = self.augment_keypoints(batch_normalized.keypoints, hooks=hooks)
+                nb_to_aug = sum([1 if to_aug else 0 for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps, batch_augment_keypoints, batch_augment_bounding_boxes]])
+
+                if nb_to_aug > 1:
+                    augseq = self.to_deterministic() if not self.deterministic else self
+                else:
+                    augseq = self
+
+                if batch_augment_images:
+                    batch_normalized.images_aug = augseq.augment_images(batch_normalized.images, hooks=hooks)
+                if batch_augment_heatmaps:
+                    batch_normalized.heatmaps_aug = augseq.augment_heatmaps(batch_normalized.heatmaps, hooks=hooks)
+                if batch_augment_segmaps:
+                    batch_normalized.segmentation_maps_aug = augseq.augment_segmentation_maps(batch_normalized.segmentation_maps, hooks=hooks)
+                if batch_augment_keypoints:
+                    batch_normalized.keypoints_aug = augseq.augment_keypoints(batch_normalized.keypoints, hooks=hooks)
+                if batch_augment_bounding_boxes:
+                    batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(batch_normalized.bounding_boxes, hooks=hooks)
+
                 batch_unnormalized = unnormalize_batch(batch_normalized)
+
                 yield batch_unnormalized
         else:
             def load_batches():

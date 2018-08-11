@@ -118,6 +118,21 @@ def main():
         ])
     )
 
+    print("CopAndPad mode=constant + percent...")
+    aug = iaa.CropAndPad(percent=(-0.05, 0.05, 0.1, -0.1), pad_mode="constant", pad_cval=128)
+    aug_det = aug.to_deterministic()
+    quokka_aug = aug_det.augment_image(quokka)
+    heatmaps_aug = aug_det.augment_heatmaps([heatmaps])[0]
+    heatmaps_drawn = heatmaps.draw_on_image(quokka)
+    heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
+
+    misc.imshow(
+        np.hstack([
+            heatmaps_drawn[0],
+            heatmaps_aug_drawn[0]
+        ])
+    )
+
     print("CropAndPad mode=edge...")
     aug = iaa.CropAndPad(px=(-10, 10, 15, -15), pad_mode="edge")
     aug_det = aug.to_deterministic()

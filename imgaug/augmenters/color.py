@@ -335,6 +335,21 @@ class ChangeColorspace(Augmenter):
                 # but at least for conversion to grayscale that results in errors,
                 # ie uint8 is expected
 
+                if image.ndim != 3:
+                    warnings.warn(
+                        "Received an image with %d dimensions in "
+                        "ChangeColorspace._augment_image(), but expected 3 dimensions, i.e. shape "
+                        "(height, width, channels)." % (image.ndim,)
+                    )
+                elif image.shape[2] != 3:
+                    warnings.warn(
+                        "Received an image with shape (H, W, C) and C=%d in "
+                        "ChangeColorspace._augment_image(). Expected C to usually be 3 -- any "
+                        "other value will likely result in errors. (Note that this function is "
+                        "e.g. called during grayscale conversion and hue/saturation "
+                        "changes.)" % (image.shape[2],)
+                    )
+
                 if self.from_colorspace in [ChangeColorspace.RGB, ChangeColorspace.BGR]:
                     from_to_var_name = "%s2%s" % (self.from_colorspace, to_colorspace)
                     from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]

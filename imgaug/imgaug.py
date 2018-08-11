@@ -17,6 +17,7 @@ import skimage.draw
 import skimage.measure
 import collections
 import time
+import json
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -28,11 +29,12 @@ elif sys.version_info[0] == 3:
 
 ALL = "ALL"
 
-# filepath to the quokka image
-QUOKKA_FP = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "quokka.jpg"
-)
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# filepath to the quokka image, its annotations and depth map
+QUOKKA_FP = os.path.join(FILE_DIR, "quokka.jpg")
+QUOKKA_ANNOTATIONS_FP = os.path.join(FILE_DIR, "quokka_annotations.json")
+QUOKKA_DEPTH_MAP_HALFRES_FP = os.path.join(FILE_DIR, "quokka_depth_map_halfres.png")
 
 DEFAULT_FONT_FP = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -384,7 +386,103 @@ def forward_random_state(random_state):
 # def from_json(json_str):
 #    pass
 
-def quokka(size=None):
+def _quokka_normalize_extract(extract):
+    """
+    Generate a normalized rectangle to be extract from the standard quokka image.
+
+    Parameters
+    ----------
+    extract : "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+        Unnormalized representation of the image subarea to be extracted.
+
+            * If string "square", then a squared area (x: 0-643, y: 0-643) will be extracted from
+              the image.
+            * If a tuple, then expected to contain four numbers denoting x1, y1, x2 and y2.
+            * If a BoundingBox, then that bounding box's area will be extracted from the image.
+            * If a BoundingBoxesOnImage, then expected to contain exactly one bounding box
+              and a shape matching the full image dimensions (i.e. (643, 960, *)). Then the
+              one bounding box will be used similar to BoundingBox.
+
+    Returns
+    -------
+    bb : BoundingBox
+        Normalized representation of the area to extract from the standard quokka image.
+
+    """
+    if extract == "square":
+        bb = BoundingBox(x1=0, y1=0, x2=643, y2=643)
+    elif isinstance(extract, tuple) and len(extract) == 4:
+        bb = BoundingBox(x1=extract[0], y1=extract[1], x2=extract[2], y2=extract[3])
+    elif isinstance(extract, BoundingBox):
+        bb = extract
+    elif isinstance(extract, BoundingBoxesOnImage):
+        assert len(BoundingBoxesOnImage.bounding_boxes) == 1
+        assert extract.shape[0:2] == (643, 960)
+        bb = extract.bounding_boxes[0]
+    else:
+        raise Exception(
+            "Expected None or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
+            "for parameter 'extract', got %s." % (type(extract),)
+        )
+    return bb
+
+def _compute_resized_shape(from_shape, to_shape):
+    """
+    Computes the intended new shape of an image-like array after resizing.
+
+    Parameters
+    ----------
+    from_shape : tuple or ndarray
+        Old shape of the array. Usually expected to be a tuple of form (H, W) or (H, W, C) or
+        alternatively an array with two or three dimensions.
+
+    to_shape : None or tuple of ints or tuple of floats or int or float
+        New shape of the array.
+
+            * If None, then `from_shape` will be used as the new shape.
+            * If an int V, then the new shape will be (V, V, [C]), where C will be added if it
+              is part of from_shape.
+            * If a float V, then the new shape will be (H*V, W*V, [C]), where H and W are the old
+              height/width.
+            * If a tuple (H', W', [C']) of ints, then H' and W' will be used as the new height
+              and width.
+            * If a tuple (H', W', [C']) of floats (except C), then H' and W' will be used as the new height
+              and width.
+
+    Returns
+    -------
+    to_shape_computed : tuple of int
+        New shape.
+    """
+    if is_np_array(from_shape):
+        from_shape = from_shape.shape
+    if is_np_array(to_shape):
+        to_shape = to_shape.shape
+
+    to_shape_computed = list(from_shape)
+
+    if to_shape is None:
+        pass
+    elif isinstance(to_shape, tuple):
+        if len(from_shape) == 3 and len(to_shape) == 3:
+            assert from_shape[2] == to_shape[2]
+        elif len(to_shape) == 3:
+            to_shape_computed.append(to_shape[2])
+
+        if all([is_single_integer(v) for v in to_shape[0:2]]):
+            to_shape_computed[0] = to_shape[0]
+            to_shape_computed[1] = to_shape[1]
+        elif all([is_single_float(v) for v in to_shape[0:2]]):
+            to_shape_computed[0] = int(round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
+            to_shape_computed[1] = int(round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
+    elif is_single_integer(to_shape) or is_single_float(to_shape):
+        to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
+    else:
+        raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int or single float, got %s." % (type(to_shape),))
+
+    return to_shape_computed
+
+def quokka(size=None, extract=None):
     """
     Returns an image of a quokka as a numpy array.
 
@@ -395,6 +493,18 @@ def quokka(size=None):
         Usually expected to be a tuple (H, W), where H is the desired height
         and W is the width. If None, then the image will not be resized.
 
+    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
+        Subarea of the quokka image to extract::
+
+            * If None, then the whole image will be used.
+            * If string "square", then a squared area (x: 0-643, y: 0-643) will be extracted from
+              the image.
+            * If a tuple, then expected to contain four numbers denoting x1, y1, x2 and y2.
+            * If a BoundingBox, then that bounding box's area will be extracted from the image.
+            * If a BoundingBoxesOnImage, then expected to contain exactly one bounding box
+              and a shape matching the full image dimensions (i.e. (643, 960, *)). Then the
+              one bounding box will be used similar to BoundingBox.
+
     Returns
     -------
     img : (H,W,3) ndarray
@@ -402,8 +512,12 @@ def quokka(size=None):
 
     """
     img = ndimage.imread(QUOKKA_FP, mode="RGB")
+    if extract is not None:
+        bb = _quokka_normalize_extract(extract)
+        img = bb.extract_from_image(img)
     if size is not None:
-        img = misc.imresize(img, size)
+        shape_resized = _compute_resized_shape(img.shape, size)
+        img = misc.imresize(img, shape_resized[0:2])
     return img
 
 def quokka_square(size=None):
@@ -423,11 +537,173 @@ def quokka_square(size=None):
         The image array of dtype uint8.
 
     """
-    img = ndimage.imread(QUOKKA_FP, mode="RGB")
-    img = img[0:643, 0:643]
+    return quokka(size=size, extract="square")
+
+def quokka_heatmap(size=None, extract=None):
+    """
+    Returns a heatmap (here: depth map) for the standard example quokka image.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints, optional(default=None)
+        See `quokka()`.
+
+    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
+        See `quokka()`.
+
+    Returns
+    -------
+    result : HeatmapsOnImage
+        Depth map as an heatmap object. Values close to 0.0 denote objects that are close to
+        the camera. Values close to 1.0 denote objects that are furthest away (among all shown
+        objects).
+    """
+    img = ndimage.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, mode="RGB")
+    if extract is not None:
+        bb = _quokka_normalize_extract(extract)
+        img = bb.extract_from_image(img)
+    if size is None:
+        size = (643, 960)
+
+    shape_resized = _compute_resized_shape(img.shape, size)
+    img = misc.imresize(img, shape_resized[0:2])
+    img_0to1 = img.astype(np.float32) / 255.0
+    img_0to1 = 1 - img_0to1 # depth map was saved as 0 being furthest away
+
+    return HeatmapsOnImage(img_0to1, shape=(643, 960, 3))
+
+def quokka_segmentation_map(size=None, extract=None):
+    """
+    Returns a segmentation map for the standard example quokka image.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints, optional(default=None)
+        See `quokka()`.
+
+    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
+        See `quokka()`.
+
+    Returns
+    -------
+    result : SegmentationMapOnImage
+        Segmentation map object.
+    """
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+
+    xx = []
+    yy = []
+    for kp_dict in json_dict["polygons"][0]["keypoints"]:
+        x = kp_dict["x"]
+        y = kp_dict["y"]
+        xx.append(x)
+        yy.append(y)
+
+    img_seg = np.zeros((643, 960, 1), dtype=np.float32)
+    rr, cc = skimage.draw.polygon(np.array(yy), np.array(xx), shape=img_seg.shape)
+    img_seg[rr, cc] = 1.0
+
+    if extract is not None:
+        bb = _quokka_normalize_extract(extract)
+        img_seg = bb.extract_from_image(img_seg)
+
+    segmap = SegmentationMapOnImage(img_seg, shape=(643, 960, 3))
+
     if size is not None:
-        img = misc.imresize(img, size)
-    return img
+        shape_resized = _compute_resized_shape(img_seg.shape, size)
+        segmap = segmap.scale(shape_resized[0:2])
+
+    return segmap
+
+def quokka_keypoints(size=None, extract=None):
+    """
+    Returns example keypoints on the standard example quokke image.
+
+    The keypoints cover the eyes, ears, nose and paws.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints or tuple of two floats, optional(default=None)
+        Size of the output image on which the keypoints are placed. If None, then the keypoints
+        are not projected to any new size (positions on the original image are used).
+        Floats lead to relative size changes, ints to absolute sizes in pixels.
+
+    extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+        Subarea to extract from the image. See `quokka()`.
+
+    Returns
+    -------
+    kpsoi : KeypointsOnImage
+        Example keypoints on the quokka image.
+    """
+    left, top = 0, 0
+    if extract is not None:
+        bb_extract = _quokka_normalize_extract(extract)
+        left = bb_extract.x1
+        top = bb_extract.y1
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+    keypoints = []
+    for kp_dict in json_dict["keypoints"]:
+        keypoints.append(Keypoint(x=kp_dict["x"] - left, y=kp_dict["y"] - top))
+    if extract is not None:
+        shape = (bb_extract.height, bb_extract.width, 3)
+    else:
+        shape = (643, 960, 3)
+    kpsoi = KeypointsOnImage(keypoints, shape=shape)
+    if size is not None:
+        shape_resized = _compute_resized_shape(shape, size)
+        kpsoi = kpsoi.on(shape_resized)
+    return kpsoi
+
+def quokka_bounding_boxes(size=None, extract=None):
+    """
+    Returns example bounding boxes on the standard example quokke image.
+
+    Currently only a single bounding box is returned that covers the quokka.
+
+    Parameters
+    ----------
+    size : None or float or tuple of two ints or tuple of two floats, optional(default=None)
+        Size of the output image on which the BBs are placed. If None, then the BBs
+        are not projected to any new size (positions on the original image are used).
+        Floats lead to relative size changes, ints to absolute sizes in pixels.
+
+    extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+        Subarea to extract from the image. See `quokka()`.
+
+    Returns
+    -------
+    bbsoi : BoundingBoxesOnImage
+        Example BBs on the quokka image.
+    """
+    left, top = 0, 0
+    if extract is not None:
+        bb_extract = _quokka_normalize_extract(extract)
+        left = bb_extract.x1
+        top = bb_extract.y1
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+    bbs = []
+    for bb_dict in json_dict["bounding_boxes"]:
+        bbs.append(
+            BoundingBox(
+                x1=bb_dict["x1"] - left,
+                y1=bb_dict["y1"] - top,
+                x2=bb_dict["x2"] - left,
+                y2=bb_dict["y2"] - top
+            )
+        )
+    if extract is not None:
+        shape = (bb_extract.height, bb_extract.width, 3)
+    else:
+        shape = (643, 960, 3)
+    bbsoi = BoundingBoxesOnImage(bbs, shape=shape)
+    if size is not None:
+        shape_resized = _compute_resized_shape(shape, size)
+        bbsoi = bbsoi.on(shape_resized)
+    return bbsoi
 
 def angle_between_vectors(v1, v2):
     """
@@ -1661,7 +1937,10 @@ class BoundingBox(object):
     Class representing bounding boxes.
 
     Each bounding box is parameterized by its top left and bottom right corners. Both are given
-    as x and y-coordinates.
+    as x and y-coordinates. The corners are intended to lie inside the bounding box area.
+    As a result, a bounding box that lies completely inside the image but has maximum extensions
+    would have coordinates `(0.0, 0.0)` and `(W - epsilon, H - epsilon)`. Note that coordinates
+    are saved internally as floats.
 
     Parameters
     ----------
@@ -1676,6 +1955,9 @@ class BoundingBox(object):
 
     y2 : number
         Y-coordinate of the bottom right of the bounding box.
+
+    label : None or string, optional(default=None)
+        Label of the bounding box, e.g. a string representing the class.
 
     """
 
@@ -1988,7 +2270,7 @@ class BoundingBox(object):
         else:
             shape = image.shape
         height, width = shape[0:2]
-        return self.x1 >= 0 and self.x2 <= width and self.y1 >= 0 and self.y2 <= height
+        return self.x1 >= 0 and self.x2 < width and self.y1 >= 0 and self.y2 < height
 
     def is_partly_within_image(self, image):
         """
@@ -2012,7 +2294,8 @@ class BoundingBox(object):
         else:
             shape = image.shape
         height, width = shape[0:2]
-        img_bb = BoundingBox(x1=0, x2=width, y1=0, y2=height)
+        eps = np.finfo(np.float32).eps
+        img_bb = BoundingBox(x1=0, x2=width-eps, y1=0, y2=height-eps)
         return self.intersection(img_bb) is not None
 
     def is_out_of_image(self, image, fully=True, partly=False):
@@ -2071,10 +2354,11 @@ class BoundingBox(object):
         do_assert(height > 0)
         do_assert(width > 0)
 
-        x1 = np.clip(self.x1, 0, width)
-        x2 = np.clip(self.x2, 0, width)
-        y1 = np.clip(self.y1, 0, height)
-        y2 = np.clip(self.y2, 0, height)
+        eps = np.finfo(np.float32).eps
+        x1 = np.clip(self.x1, 0, width - eps)
+        x2 = np.clip(self.x2, 0, width - eps)
+        y1 = np.clip(self.y1, 0, height - eps)
+        y2 = np.clip(self.y2, 0, height - eps)
 
         return self.copy(
             x1=x1,
@@ -2163,8 +2447,21 @@ class BoundingBox(object):
             color = np.uint8(color)
 
         for i in range(thickness):
-            y = [self.y1_int-i, self.y1_int-i, self.y2_int+i, self.y2_int+i]
-            x = [self.x1_int-i, self.x2_int+i, self.x2_int+i, self.x1_int-i]
+            y1, y2, x1, x2 = self.y1_int, self.y2_int, self.x1_int, self.x2_int
+
+            # When y values get into the range (H-0.5, H), the *_int functions round them to H.
+            # That is technically sensible, but in the case of drawing means that the border lies
+            # just barely outside of the image, making the border disappear, even though the BB
+            # is fully inside the image. Here we correct for that because of beauty reasons.
+            # Same is the case for x coordinates.
+            if self.is_fully_within_image(image):
+                y1 = np.clip(y1, 0, image.shape[0]-1)
+                y2 = np.clip(y2, 0, image.shape[0]-1)
+                x1 = np.clip(x1, 0, image.shape[1]-1)
+                x2 = np.clip(x2, 0, image.shape[1]-1)
+
+            y = [y1-i, y1-i, y2+i, y2+i]
+            x = [x1-i, x2+i, x2+i, x1-i]
             rr, cc = skimage.draw.polygon_perimeter(y, x, shape=result.shape)
             if alpha >= 0.99:
                 result[rr, cc, :] = color
@@ -2206,6 +2503,17 @@ class BoundingBox(object):
 
         height, width = image.shape[0], image.shape[1]
         x1, x2, y1, y2 = self.x1_int, self.x2_int, self.y1_int, self.y2_int
+
+        # When y values get into the range (H-0.5, H), the *_int functions round them to H.
+        # That is technically sensible, but in the case of extraction leads to a black border,
+        # which is both ugly and unexpected after calling cut_out_of_image(). Here we correct for
+        # that because of beauty reasons.
+        # Same is the case for x coordinates.
+        if self.is_fully_within_image(image):
+            y1 = np.clip(y1, 0, image.shape[0]-1)
+            y2 = np.clip(y2, 0, image.shape[0]-1)
+            x1 = np.clip(x1, 0, image.shape[1]-1)
+            x2 = np.clip(x2, 0, image.shape[1]-1)
 
         # if the bb is outside of the image area, the following pads the image
         # first with black pixels until the bb is inside the image
@@ -2726,6 +3034,36 @@ class HeatmapsOnImage(object):
 
         return mix
 
+    def invert(self):
+        """
+        Inverts each value in the heatmap, shifting low towards high values and vice versa.
+
+        This changes each value to::
+
+            v' = max - (v - min)
+
+        where `v` is the value at some spatial location, `min` is the minimum value in the heatmap
+        and `max` is the maximum value.
+        As the heatmap uses internally a 0.0 to 1.0 representation, this simply
+        becomes `v' = 1.0 - v`.
+
+        Note that the attributes `min_value` and `max_value` are not switched. They both keep their
+        values.
+
+        This function can be useful e.g. when working with depth maps, where algorithms might have
+        an easier time representing the furthest away points with zeros, requiring an inverted
+        depth map.
+
+        Returns
+        -------
+        result : HeatmapsOnImage
+            Inverted heatmap.
+
+        """
+        arr_inv = HeatmapsOnImage.from_0to1(1 - self.arr_0to1, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        arr_inv.arr_was_2d = self.arr_was_2d
+        return arr_inv
+
     def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0.0):
         """
         Pad the heatmaps on their top/right/bottom/left side.
@@ -3075,7 +3413,7 @@ class SegmentationMapOnImage(object):
     nb_classes : int or None
         Total number of unique classes that may appear in an segmentation map, i.e. the max
         class index. This may be None if the input array is of type bool or float. The number
-        of class however must be provided if the input array is of type int, as then the
+        of classes however must be provided if the input array is of type int, as then the
         number of classes cannot be guessed.
 
     """
@@ -3162,7 +3500,7 @@ class SegmentationMapOnImage(object):
     #def nb_classes(self):
     #    return self.arr.shape[2]
 
-    def get_arr_int(self, background_threshold=0.01, background_class_id=0):
+    def get_arr_int(self, background_threshold=0.01, background_class_id=None):
         """
         Get the segmentation map array as an integer array of shape (H, W).
 
@@ -3170,6 +3508,8 @@ class SegmentationMapOnImage(object):
         If multiple classes overlap, the one with the highest local float value is picked.
         If that highest local value is below `background_threshold`, the method instead uses
         the background class id as the pixel's class value.
+        By default, class id 0 is the background class. This may only be changed if the original
+        input to the segmentation map object was an integer map.
 
         Parameters
         ----------
@@ -3178,28 +3518,47 @@ class SegmentationMapOnImage(object):
             class-heatmaps has a value above this threshold, the method uses the background class
             id instead.
 
-        background_class_id : int, optional(default=0)
+        background_class_id : None or int, optional(default=None)
             Class id to fall back to if no class-heatmap passes the threshold at a spatial
-            location.
+            location. May only be provided if the original input was an integer mask and in these
+            cases defaults to 0. If the input were float or boolean masks, the background class id
+            may not be set as it is assumed that the background is implicitly defined
+            as 'any spatial location that has zero-like values in all masks'.
 
         Returns
         -------
         result : (H,W) ndarray(int)
             Segmentation map array.
+            If the original input consisted of boolean or float masks, then the highest possible
+            class id is `1+C`, where `C` is the number of provided float/boolean masks. The value
+            `0` in the integer mask then denotes the background class.
 
         """
+        if self.input_was[0] in ["bool", "float"]:
+            do_assert(background_class_id is None, "The background class id may only be changed if the original input to SegmentationMapOnImage was an *integer* based segmentation map.")
+
+        if background_class_id is None:
+            background_class_id = 0
+
         channelwise_max_idx = np.argmax(self.arr, axis=2)
-        result = channelwise_max_idx
+        # for bool and float input masks, we assume that the background is implicitly given,
+        # i.e. anything where all masks/channels have zero-like values
+        # for int, we assume that the background class is explicitly given and has the index 0
+        if self.input_was[0] in ["bool", "float"]:
+            result = 1 + channelwise_max_idx
+        else: # integer mask was provided
+            result = channelwise_max_idx
         if background_threshold is not None and background_threshold > 0:
             probs = np.amax(self.arr, axis=2)
             result[probs < background_threshold] = background_class_id
+
         return result.astype(np.int32)
 
     #def get_arr_bool(self, allow_overlapping=False, threshold=0.5, background_threshold=0.01, background_class_id=0):
     #    # TODO
     #    raise NotImplementedError()
 
-    def draw(self, size=None, background_threshold=0.01, background_class_id=0, colors=None, return_foreground_mask=False):
+    def draw(self, size=None, background_threshold=0.01, background_class_id=None, colors=None, return_foreground_mask=False):
         """
         Render the segmentation map as an RGB image.
 
@@ -3212,13 +3571,10 @@ class SegmentationMapOnImage(object):
             used.
 
         background_threshold : float, optional(default=0.01)
-            At each pixel, each class-heatmap has a value between 0.0 and 1.0. If none of the
-            class-heatmaps has a value above this threshold, the method uses the background class
-            id instead.
+            See `SegmentationMapOnImage.get_arr_int()`.
 
-        background_class_id : int, optional(default=0)
-            Class id to fall back to if no class-heatmap passes the threshold at a spatial
-            location.
+        background_class_id : None or int, optional(default=None)
+            See `SegmentationMapOnImage.get_arr_int()`.
 
         colors : None or list of tuple of int, optional(default=None)
             Colors to use. One for each class to draw. If None, then default colors will be used.
@@ -3238,19 +3594,20 @@ class SegmentationMapOnImage(object):
 
         """
         arr = self.get_arr_int(background_threshold=background_threshold, background_class_id=background_class_id)
-        nb_classes = self.nb_classes
+        nb_classes = 1 + np.max(arr)
         segmap_drawn = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
         if colors is None:
             colors = SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS
         assert nb_classes <= len(colors), "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (nb_classes, len(colors),)
 
         ids_in_map = np.unique(arr)
-        for c, color in zip(sm.xrange(1+nb_classes), colors):
+        for c, color in zip(sm.xrange(nb_classes), colors):
             if c in ids_in_map:
                 class_mask = (arr == c)
                 segmap_drawn[class_mask] = color
 
         if return_foreground_mask:
+            background_class_id = 0 if background_class_id is None else background_class_id
             foreground_mask = (arr != background_class_id)
         else:
             foreground_mask = None
@@ -3264,7 +3621,7 @@ class SegmentationMapOnImage(object):
             return segmap_drawn, foreground_mask
         return segmap_drawn
 
-    def draw_on_image(self, image, alpha=0.5, resize="segmentation_map", background_threshold=0.01, background_class_id=0, colors=None, draw_background=False):
+    def draw_on_image(self, image, alpha=0.5, resize="segmentation_map", background_threshold=0.01, background_class_id=None, colors=None, draw_background=False):
         """
         Draw the segmentation map as an overlay over an image.
 
@@ -3284,13 +3641,10 @@ class SegmentationMapOnImage(object):
             resized to the other's size.
 
         background_threshold : float, optional(default=0.01)
-            At each pixel, each class-heatmap has a value between 0.0 and 1.0. If none of the
-            class-heatmaps has a value above this threshold, the method uses the background class
-            id instead.
+            See `SegmentationMapOnImage.get_arr_int()`.
 
-        background_class_id : int, optional(default=0)
-            Class id to fall back to if no class-heatmap passes the threshold at a spatial
-            location.
+        background_class_id : None or int, optional(default=None)
+            See `SegmentationMapOnImage.get_arr_int()`.
 
         colors : None or list of tuple of int, optional(default=None)
             Colors to use. One for each class to draw. If None, then default colors will be used.
@@ -3373,12 +3727,14 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : SegmentationMapOnImage
+        segmap : SegmentationMapOnImage
             Padded segmentation map of height H'=H+top+bottom and width W'=W+left+right.
 
         """
         arr_padded = pad(self.arr, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
-        return SegmentationMapOnImage(arr_padded, shape=self.shape)
+        segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
+        segmap.input_was = self.input_was
+        return segmap
 
     def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
         """
@@ -3408,7 +3764,7 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : tuple
+        segmap : tuple
             First tuple entry: Padded segmentation map as SegmentationMapOnImage object.
             Second tuple entry: Amounts by which the segmentation map was padded on each side,
             given as a tuple (top, right, bottom, left).
@@ -3417,6 +3773,7 @@ class SegmentationMapOnImage(object):
         """
         arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
         segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
+        segmap.input_was = self.input_was
         if return_pad_amounts:
             return segmap, pad_amounts
         else:
@@ -3439,7 +3796,7 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : SegmentationMapOnImage
+        segmap : SegmentationMapOnImage
             Rescaled segmentation map object.
 
         """
@@ -3449,8 +3806,9 @@ class SegmentationMapOnImage(object):
         # see https://github.com/opencv/opencv/issues/7195
         # TODO area interpolation too?
         arr_rescaled = np.clip(arr_rescaled, 0.0, 1.0)
-
-        return SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+        segmap = SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+        segmap.input_was = self.input_was
+        return segmap
 
     def to_heatmaps(self, only_nonempty=False, not_none_if_no_nonempty=False):
         """
@@ -3580,8 +3938,20 @@ class Batch(object):
         The images to
         augment.
 
+    heatmaps : None or list of HeatmapsOnImage
+        The heatmaps to
+        augment.
+
+    segmentation_maps : None or list of SegmentationMapOnImage
+        The segmentation maps to
+        augment.
+
     keypoints : None or list of KeypointOnImage
         The keypoints to
+        augment.
+
+    bounding_boxes : None or list of BoundingBoxesOnImage
+        The bounding boxes to
         augment.
 
     data : anything
@@ -3592,11 +3962,17 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
-    def __init__(self, images=None, keypoints=None, data=None):
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None, data=None):
         self.images = images
         self.images_aug = None
+        self.heatmaps = heatmaps
+        self.heatmaps_aug = None
+        self.segmentation_maps = segmentation_maps
+        self.segmentation_maps_aug = None
         self.keypoints = keypoints
         self.keypoints_aug = None
+        self.bounding_boxes = bounding_boxes
+        self.bounding_boxes_aug = None
         self.data = data
 
 class BatchLoader(object):
@@ -3815,6 +4191,8 @@ class BackgroundAugmenter(object):
             try:
                 batch_str = queue_source.get(timeout=0.1)
                 batch = pickle.loads(batch_str)
+
+                """
                 # augment the batch
                 batch_augment_images = batch.images is not None and self.augment_images
                 batch_augment_keypoints = batch.keypoints is not None and self.augment_keypoints
@@ -3827,6 +4205,8 @@ class BackgroundAugmenter(object):
                     batch.images_aug = augseq.augment_images(batch.images)
                 elif batch_augment_keypoints:
                     batch.keypoints_aug = augseq.augment_keypoints(batch.keypoints)
+                """
+                batch_aug = list(augseq.augment_batches([batch], background=False))[0]
 
                 # send augmented batch to output queue
                 batch_str = pickle.dumps(batch, protocol=-1)
