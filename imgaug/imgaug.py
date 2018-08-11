@@ -3895,7 +3895,7 @@ class Batch(object):
         self.heatmaps = heatmaps
         self.heatmaps_aug = None
         self.segmentation_maps = segmentation_maps
-        self.segmentation_maps = None
+        self.segmentation_maps_aug = None
         self.keypoints = keypoints
         self.keypoints_aug = None
         self.bounding_boxes = bounding_boxes
