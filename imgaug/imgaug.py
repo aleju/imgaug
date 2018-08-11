@@ -474,11 +474,8 @@ def _compute_resized_shape(from_shape, to_shape):
         elif all([is_single_float(v) for v in to_shape[0:2]]):
             to_shape_computed[0] = int(round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
             to_shape_computed[1] = int(round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
-    elif ia.is_single_int(to_shape) or ia.is_single_float(to_shape):
-        if len(to_shape) == 2:
-            to_shape_computed = _compute_resized_shape(from_shape, (to_shape[0], to_shape[1]))
-        else:
-            to_shape_computed = _compute_resized_shape(from_shape, (to_shape[0], to_shape[1], to_shape[2]))
+    elif is_single_integer(to_shape) or is_single_float(to_shape):
+        to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
     else:
         raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int or single float, got %s." % (type(to_shape),))
 
