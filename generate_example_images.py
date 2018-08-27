@@ -62,11 +62,11 @@ def draw_small_overview():
         image_aug_segmap = result.segmentation_maps_aug[0].draw_on_image(image_aug, alpha=0.8)
         image_aug_kps = result.keypoints_aug[0].draw_on_image(image_aug, color=[0, 255, 0], size=7)
         image_aug_bbs = result.bounding_boxes_aug[0].cut_out_of_image().draw_on_image(image_aug, thickness=3)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_image.jpg" % (name,)), image_aug)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.jpg" % (name,)), image_aug_heatmap)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.jpg" % (name,)), image_aug_segmap)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.jpg" % (name,)), image_aug_kps)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.jpg" % (name,)), image_aug_bbs)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_image.jpg" % (name,)), image_aug)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.jpg" % (name,)), image_aug_heatmap)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.jpg" % (name,)), image_aug_segmap)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.jpg" % (name,)), image_aug_kps)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.jpg" % (name,)), image_aug_bbs)
 
 
 def draw_single_sequential_images():
@@ -145,7 +145,7 @@ def draw_single_sequential_images():
     )
 
     grid = seq.draw_grid(image, cols=8, rows=8)
-    misc.imsave("examples_grid.jpg", grid)
+    imageio.imwrite("examples_grid.jpg", grid)
 
 def draw_per_augmenter_images():
     print("[draw_per_augmenter_images] Loading image...")
@@ -296,7 +296,7 @@ def draw_per_augmenter_images():
         for image, keypoints in zip(row_images, row_keypoints):
             row_images_kps.append(keypoints.draw_on_image(image, size=5))
         output_image.add_row(row_name, row_images_kps, row_titles)
-    misc.imsave("examples.jpg", output_image.draw())
+    imageio.imwrite("examples.jpg", output_image.draw())
     """
 
     # routine to draw many single files
@@ -317,7 +317,7 @@ def draw_per_augmenter_images():
         if seen[row_name_clean] > 0:
             row_name_clean = "%s_%d" % (row_name_clean, seen[row_name_clean] + 1)
         fp = os.path.join(IMAGES_DIR, "examples_%s.jpg" % (row_name_clean,))
-        #misc.imsave(fp, output_image.draw())
+        #imageio.imwrite(fp, output_image.draw())
         save(fp, output_image.draw())
         seen[row_name_clean] += 1
 

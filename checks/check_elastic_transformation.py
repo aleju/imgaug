@@ -2,6 +2,7 @@ from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
 from scipy import misc
+import imageio
 import numpy as np
 from skimage import data
 
@@ -59,7 +60,7 @@ def main():
         images.append(np.hstack(images_row))
 
     misc.imshow(np.vstack(images))
-    misc.imsave("elastic_transformations.jpg", np.vstack(images))
+    imageio.imwrite("elastic_transformations.jpg", np.vstack(images))
 
 if __name__ == "__main__":
     main()
