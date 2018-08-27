@@ -1774,7 +1774,14 @@ class JpegCompression(Augmenter):
         else:
             raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(compression),))
 
+        # The value range 1 to 95 is suggested by PIL's save() documentation
+        # Values above 95 seem to not make sense (no improvement in visual quality, but large file size)
+        # A value of 100 would mostly deactivate jpeg compression
+        # A value of 0 would lead to no compression (instead of maximum compression)
+        # We use range 1 to 100 here, because this augmenter is about generating images for training
+        # and not for saving, hence we do not care about large file sizes
         self.maximum_quality = 100
+        self.minimum_quality = 1
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -1791,7 +1798,13 @@ class JpegCompression(Augmenter):
             ia.do_assert(100 >= sample >= 0)
             img = Image.fromarray(image.astype(np.uint8))
             with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as f:
-                img.save(f, quality=self.maximum_quality - sample)
+                # Map from compression to quality used by PIL
+                # We have valid compressions from 0 to 100, i.e. 101 possible values
+                quality = int(np.clip(np.round(
+                    self.minimum_quality + (self.maximum_quality - self.minimum_quality) * (1.0 - (sample / 101))
+                ), self.minimum_quality, self.maximum_quality))
+
+                img.save(f, quality=quality)
                 if nb_channels == 1:
                     image = misc.imread(f.name, mode="L")
                 else:
