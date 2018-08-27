@@ -1787,7 +1787,7 @@ class JpegCompression(Augmenter):
             is_single_channel = (nb_channels == 1)
             if is_single_channel:
                 image = image[..., 0]
-            sample = int(samples[-1])
+            sample = int(samples[i])
             ia.do_assert(100 >= sample >= 0)
             img = Image.fromarray(image.astype(np.uint8))
             with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as f:
