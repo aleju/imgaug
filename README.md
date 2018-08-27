@@ -54,6 +54,7 @@ Required packages:
 * scipy
 * scikit-image (`pip install -U scikit-image`)
 * OpenCV (i.e. `cv2`)
+* imageio (`pip install imageio`)
 
 OpenCV has to be manually installed. The other package should auto-install themselves.
 

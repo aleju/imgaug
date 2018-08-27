@@ -2,7 +2,8 @@ from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
-from scipy import ndimage, misc
+from scipy import misc
+import imageio
 from skimage import data
 import matplotlib.pyplot as plt
 import six.moves as sm
@@ -71,7 +72,7 @@ def draw_small_overview():
 def draw_single_sequential_images():
     ia.seed(44)
 
-    #image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
+    #image = misc.imresize(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
@@ -148,7 +149,7 @@ def draw_single_sequential_images():
 
 def draw_per_augmenter_images():
     print("[draw_per_augmenter_images] Loading image...")
-    #image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
+    #image = misc.imresize(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
     keypoints = [ia.Keypoint(x=34, y=15), ia.Keypoint(x=85, y=13), ia.Keypoint(x=63, y=73)] # left ear, right ear, mouth
@@ -381,7 +382,7 @@ def compress_to_jpg(image, quality=75):
 def decompress_jpg(image_compressed):
     img_compressed_buffer = BytesIO()
     img_compressed_buffer.write(image_compressed)
-    img = ndimage.imread(img_compressed_buffer, mode="RGB")
+    img = imageio.imread(img_compressed_buffer, pilmode="RGB")
     img_compressed_buffer.close()
     return img
 
@@ -402,7 +403,7 @@ def save(fp, image, quality=75):
     # image (1) has never been compressed while image (2) was compressed and
     # then decompressed.
     if os.path.isfile(fp):
-        image_saved = ndimage.imread(fp, mode="RGB")
+        image_saved = imageio.imread(fp, pilmode="RGB")
         #print("arrdiff", arrdiff(image_jpg_decompressed, image_saved))
         same_shape = (image_jpg_decompressed.shape == image_saved.shape)
         d_avg = arrdiff(image_jpg_decompressed, image_saved) if same_shape else -1

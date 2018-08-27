@@ -5,7 +5,8 @@ import copy
 import numbers
 import cv2
 import math
-from scipy import misc, ndimage
+from scipy import misc
+import imageio
 import multiprocessing
 import threading
 import traceback
@@ -511,7 +512,7 @@ def quokka(size=None, extract=None):
         The image array of dtype uint8.
 
     """
-    img = ndimage.imread(QUOKKA_FP, mode="RGB")
+    img = imageio.imread(QUOKKA_FP, pilmode="RGB")
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
@@ -558,7 +559,7 @@ def quokka_heatmap(size=None, extract=None):
         the camera. Values close to 1.0 denote objects that are furthest away (among all shown
         objects).
     """
-    img = ndimage.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, mode="RGB")
+    img = imageio.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, pilmode="RGB")
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)

@@ -28,7 +28,7 @@ from .. import imgaug as ia
 from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform, FromLowerResolution
 from .. import parameters as iap
 from PIL import Image
-from scipy import misc
+import imageio
 import tempfile
 import numpy as np
 import six.moves as sm
@@ -1806,9 +1806,9 @@ class JpegCompression(Augmenter):
 
                 img.save(f, quality=quality)
                 if nb_channels == 1:
-                    image = misc.imread(f.name, mode="L")
+                    image = imageio.imread(f.name, pilmode="L")
                 else:
-                    image = misc.imread(f.name, mode="RGB")
+                    image = imageio.imread(f.name, pilmode="RGB")
             if is_single_channel:
                 image = image[..., np.newaxis]
             result[i] = image
