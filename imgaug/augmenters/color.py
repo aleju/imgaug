@@ -282,6 +282,9 @@ class ChangeColorspace(Augmenter):
         # HSV
         "HSV2RGB": cv2.COLOR_HSV2RGB,
         "HSV2BGR": cv2.COLOR_HSV2BGR,
+        # HLS
+        "HLS2RGB": cv2.COLOR_HLS2RGB,
+        "HLS2BGR": cv2.COLOR_HLS2BGR,
     }
 
     def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False, random_state=None):
