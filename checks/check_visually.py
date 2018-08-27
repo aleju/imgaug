@@ -19,7 +19,7 @@ def main():
 
     images = [
         ia.quokka_square(size=(128, 128)),
-        misc.imresize(data.astronaut(), (128, 128))
+        ia.imresize_single_image(data.astronaut(), (128, 128))
     ]
 
     keypoints = [

@@ -12771,7 +12771,7 @@ def test_determinism():
     images = [
         ia.quokka(size=(128, 128)),
         ia.quokka(size=(64, 64)),
-        misc.imresize(data.astronaut(), (128, 256))
+        ia.imresize_single_image(data.astronaut(), (128, 256))
     ]
     keypoints = [
         ia.KeypointsOnImage([

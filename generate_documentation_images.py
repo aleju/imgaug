@@ -133,7 +133,7 @@ def grid(images, rows, cols, border=1, border_color=255):
 def checkerboard(size):
     img = data.checkerboard()
     img3d = np.tile(img[..., np.newaxis], (1, 1, 3))
-    return misc.imresize(img3d, size)
+    return ia.imresize_single_image(img3d, size)
 
 ###############################
 # Examples: Basics

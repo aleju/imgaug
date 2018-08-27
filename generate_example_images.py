@@ -72,7 +72,7 @@ def draw_small_overview():
 def draw_single_sequential_images():
     ia.seed(44)
 
-    #image = misc.imresize(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
+    #image = ia.imresize_single_image(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
@@ -149,7 +149,7 @@ def draw_single_sequential_images():
 
 def draw_per_augmenter_images():
     print("[draw_per_augmenter_images] Loading image...")
-    #image = misc.imresize(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
+    #image = ia.imresize_single_image(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
     keypoints = [ia.Keypoint(x=34, y=15), ia.Keypoint(x=85, y=13), ia.Keypoint(x=63, y=73)] # left ear, right ear, mouth

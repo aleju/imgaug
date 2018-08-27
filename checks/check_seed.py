@@ -7,7 +7,7 @@ from skimage import data
 
 def main():
     img = data.astronaut()
-    img = misc.imresize(img, (64, 64))
+    img = ia.imresize_single_image(img, (64, 64))
     aug = iaa.Fliplr(0.5)
     unseeded1 = aug.draw_grid(img, cols=8, rows=1)
     unseeded2 = aug.draw_grid(img, cols=8, rows=1)

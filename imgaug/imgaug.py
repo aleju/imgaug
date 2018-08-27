@@ -518,7 +518,7 @@ def quokka(size=None, extract=None):
         img = bb.extract_from_image(img)
     if size is not None:
         shape_resized = _compute_resized_shape(img.shape, size)
-        img = misc.imresize(img, shape_resized[0:2])
+        img = imresize_single_image(img, shape_resized[0:2])
     return img
 
 def quokka_square(size=None):
@@ -567,7 +567,7 @@ def quokka_heatmap(size=None, extract=None):
         size = (643, 960)
 
     shape_resized = _compute_resized_shape(img.shape, size)
-    img = misc.imresize(img, shape_resized[0:2])
+    img = imresize_single_image(img, shape_resized[0:2])
     img_0to1 = img.astype(np.float32) / 255.0
     img_0to1 = 1 - img_0to1 # depth map was saved as 0 being furthest away
 
