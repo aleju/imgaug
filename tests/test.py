@@ -10100,6 +10100,10 @@ def test_ElasticTransformation():
     mask = img > 0
     heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
 
+    img_nonsquare = np.zeros((50, 100), dtype=np.uint8) + 255
+    img_nonsquare = np.pad(img_nonsquare, ((100, 100), (100, 100)), mode="constant", constant_values=0)
+    mask_nonsquare = img_nonsquare > 0
+
     # test basic funtionality
     aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
     observed = aug.augment_image(img)
@@ -10107,6 +10111,12 @@ def test_ElasticTransformation():
     assert np.sum(observed[mask]) < np.sum(img[mask])
     # assume that some black/0 pixels have been moved away from the outer area and replaced by white/255 pixels
     assert np.sum(observed[~mask]) > np.sum(img[~mask])
+
+    # test basic funtionality with non-square images
+    aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+    observed = aug.augment_image(img_nonsquare)
+    assert np.sum(observed[mask_nonsquare]) < np.sum(img_nonsquare[mask_nonsquare])
+    assert np.sum(observed[~mask_nonsquare]) > np.sum(img_nonsquare[~mask_nonsquare])
 
     # test basic funtionality, heatmaps
     aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
@@ -10326,12 +10336,68 @@ def test_ElasticTransformation():
     assert got_exception
 
     # keypoints
-    # currently shouldnt change
-    kps = [ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4)]
-    kpsoi = ia.KeypointsOnImage(kps, shape=(10, 10))
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0)
-    observed = aug.augment_keypoints([kpsoi])
-    assert keypoints_equal([kpsoi], observed)
+    # for small alpha, should not move if below threshold
+    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 1.0
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
+    kps = [ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25), ia.Keypoint(x=5, y=5),
+           ia.Keypoint(x=7, y=4), ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
+           ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8), ia.Keypoint(x=12, y=21),
+           ia.Keypoint(x=3, y=45), ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
+    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    d = kpsoi.get_coords_array() - observed.get_coords_array()
+    d[:, 0] = d[:, 0] ** 2
+    d[:, 1] = d[:, 1] ** 2
+    d = np.sum(d, axis=1)
+    d = np.average(d, axis=0)
+    assert d < 1e-8
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+
+    # for small sigma, should not move if below threshold
+    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0.0
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 1.0
+    kps = [ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25), ia.Keypoint(x=5, y=5),
+           ia.Keypoint(x=7, y=4), ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
+           ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8), ia.Keypoint(x=12, y=21),
+           ia.Keypoint(x=3, y=45), ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
+    aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    d = kpsoi.get_coords_array() - observed.get_coords_array()
+    d[:, 0] = d[:, 0] ** 2
+    d[:, 1] = d[:, 1] ** 2
+    d = np.sum(d, axis=1)
+    d = np.average(d, axis=0)
+    assert d < 1e-8
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+
+    # for small alpha (at sigma 1.0), should barely move
+    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
+    kps = [ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25), ia.Keypoint(x=5, y=5),
+           ia.Keypoint(x=7, y=4), ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
+           ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8), ia.Keypoint(x=12, y=21),
+           ia.Keypoint(x=3, y=45), ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
+    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+    observed = aug.augment_keypoints([kpsoi])[0]
+    d = kpsoi.get_coords_array() - observed.get_coords_array()
+    d[:, 0] = d[:, 0] ** 2
+    d[:, 1] = d[:, 1] ** 2
+    d = np.sum(d, axis=1)
+    d = np.average(d, axis=0)
+    assert d < 0.5
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
 
     # get_parameters()
     aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")

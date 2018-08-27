@@ -1830,8 +1830,17 @@ class PerspectiveTransform(Augmenter):
 # https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 class ElasticTransformation(Augmenter):
     """
-    Augmenter to transform images by moving pixels locally around using
-    displacement fields.
+    Augmenter to transform images by moving pixels locally around using displacement fields.
+
+    The augmenter has the parameters `alpha` and `sigma`. `alpha` controls the strength of the
+    displacement: higher values mean that pixels are moved further. `sigma` controls the
+    smoothness of the displacement: higher values lead to smoother patterns -- as if the
+    image was below water -- while low values will cause indivdual pixels to be moved very
+    differently from their neighbours, leading to noisy and pixelated images.
+
+    A relation of 10:1 seems to be good for `alpha` and `sigma`, e.g. `alpha=10` and `sigma=1` or
+    `alpha=50`, `sigma=5`. For 128x128 a setting of `alpha=(0, 70.0)`, `sigma=(4.0, 6.0)` may be a
+    good choice and will lead to a water-like effect.
 
     See ::
 
@@ -1846,8 +1855,9 @@ class ElasticTransformation(Augmenter):
     Parameters
     ----------
     alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
-        Strength of the distortion field. Higher values mean more "movement" of
-        pixels.
+        Strength of the distortion field. Higher values mean that pixels are moved further
+        with respect to the distortion field's direction. Set this to around 10 times the
+        value of `sigma` for visible effects.
 
             * If number, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
@@ -1859,7 +1869,9 @@ class ElasticTransformation(Augmenter):
 
     sigma : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the gaussian kernel used to smooth the distortion
-        fields.
+        fields. Higher values (for 128x128 images around 5.0) lead to more water-like effects,
+        while lower values (for 128x128 images around 1.0 and lower) lead to more noisy, pixelated
+        images. Set this to around 1/10th of `alpha` for visible effects.
 
             * If number, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
@@ -1928,19 +1940,26 @@ class ElasticTransformation(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+    >>> aug = iaa.ElasticTransformation(alpha=50.0, sigma=5.0)
 
-    apply elastic transformations with a strength/alpha of 0.5 and
-    smoothness of 0.25 to all images.
+    apply elastic transformations with a strength/alpha of 50.0 and
+    smoothness of 5.0 to all images.
 
 
-    >>> aug = iaa.ElasticTransformation(alpha=(0.25, 3.0), sigma=0.25)
+    >>> aug = iaa.ElasticTransformation(alpha=(0.0, 70.0), sigma=5.0)
 
     apply elastic transformations with a strength/alpha that comes
-    from the range 0.25 <= x <= 3.0 (randomly picked per image) and
-    smoothness of 0.25.
+    from the range 0.0 <= x <= 70.0 (randomly picked per image) and
+    with a smoothness of 5.0.
 
     """
+
+    NB_NEIGHBOURING_KEYPOINTS = 3
+    NEIGHBOURING_KEYPOINTS_DISTANCE = 1.0
+    KEYPOINT_AUG_ALPHA_THRESH = 0.05
+    # even at high alphas we don't augment keypoints if the sigma is too low, because then
+    # the pixel movements are mostly gaussian noise anyways
+    KEYPOINT_AUG_SIGMA_THRESH = 1.0
 
     def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
                  name=None, deterministic=False, random_state=None):
@@ -1971,23 +1990,31 @@ class ElasticTransformation(Augmenter):
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
+    def _draw_samples(self, nb_images, random_state):
         seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
         alphas = self.alpha.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10000))
         sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10100))
         orders = self.order.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10200))
         cvals = self.cval.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10300))
         modes = self.mode.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]+10400))
+        return seeds[0:-1], alphas, sigmas, orders, cvals, modes
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        result = images
+        nb_images = len(images)
+        seeds, alphas, sigmas, orders, cvals, modes = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
-            image_first_channel = np.squeeze(image[..., 0])  # TODO why this weird formulation instead of image.shape[0:2] ?
-            indices_x, indices_y = ElasticTransformation.generate_indices(image_first_channel.shape, alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+            (source_indices_x, source_indices_y), (_dx, _dy) = ElasticTransformation.generate_indices(
+                image.shape[0:2],
+                alpha=alphas[i],
+                sigma=sigmas[i],
+                random_state=ia.new_random_state(seeds[i])
+            )
             result[i] = ElasticTransformation.map_coordinates(
                 images[i],
-                indices_x,
-                indices_y,
+                source_indices_x,
+                source_indices_y,
                 order=orders[i],
                 cval=cvals[i],
                 mode=modes[i]
@@ -1996,35 +2023,42 @@ class ElasticTransformation(Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_heatmaps = len(heatmaps)
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_heatmaps+1,))
-        alphas = self.alpha.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10000))
-        sigmas = self.sigma.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10100))
-        orders = self.order.draw_samples((nb_heatmaps,), random_state=ia.new_random_state(seeds[-1]+10200))
+        seeds, alphas, sigmas, orders, _cvals, _modes = self._draw_samples(nb_heatmaps, random_state)
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
             if heatmaps_i.arr_0to1.shape[0:2] == heatmaps_i.shape[0:2]:
-                indices_x, indices_y = ElasticTransformation.generate_indices(heatmaps_i.arr_0to1.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+                (source_indices_x, source_indices_y), (_dx, _dy) = ElasticTransformation.generate_indices(
+                    heatmaps_i.arr_0to1.shape[0:2],
+                    alpha=alphas[i],
+                    sigma=sigmas[i],
+                    random_state=ia.new_random_state(seeds[i])
+                )
                 heatmaps_i.arr_0to1 = ElasticTransformation.map_coordinates(
                     heatmaps_i.arr_0to1,
-                    indices_x,
-                    indices_y,
+                    source_indices_x,
+                    source_indices_y,
                     order=orders[i],
                     cval=0,
                     mode="constant"
                 )
             else:
-                # heatmaps do not have the same size as augmented images
-                # this may result in indices of moved pixels being different
-                # to prevent this, we use the same image size as for the base images, but that
-                # requires resizing the heatmaps temporarily to the image sizes
+                # Heatmaps do not have the same size as augmented images.
+                # This may result in indices of moved pixels being different.
+                # To prevent this, we use the same image size as for the base images, but that
+                # requires resizing the heatmaps temporarily to the image sizes.
                 height_orig, width_orig = heatmaps_i.arr_0to1
                 heatmaps_i = heatmaps_i.scale(heatmaps_i.shape[0:2])
                 arr_0to1 = heatmaps_i.arr_0to1
-                indices_x, indices_y = ElasticTransformation.generate_indices(arr_0to1.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
+                (source_indices_x, source_indices_y), (_dx, _dy) = ElasticTransformation.generate_indices(
+                    arr_0to1.shape[0:2],
+                    alpha=alphas[i],
+                    sigma=sigmas[i],
+                    random_state=ia.new_random_state(seeds[i])
+                )
                 arr_0to1_warped = ElasticTransformation.map_coordinates(
                     arr_0to1,
-                    indices_x,
-                    indices_y,
+                    source_indices_x,
+                    source_indices_y,
                     order=orders[i],
                     cval=0,
                     mode="constant"
@@ -2035,54 +2069,113 @@ class ElasticTransformation(Augmenter):
 
         return heatmaps
 
-    """
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        # TODO do keypoints even have to be augmented for elastic transformations?
-        # TODO this transforms keypoints to images, augments the images, then transforms
-        # back to keypoints - inefficient and keypoints that get outside of the images
-        # cannot be recovered
-        result = []
+        result = keypoints_on_images
         nb_images = len(keypoints_on_images)
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
-        alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        sigmas = self.sigma.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        for i, keypoints_on_image in enumerate(keypoints_on_images):
-            indices_x, indices_y = ElasticTransformation.generate_indices(keypoints_on_image.shape[0:2], alpha=alphas[i], sigma=sigmas[i], random_state=ia.new_random_state(seeds[i]))
-            keypoint_image = keypoints_on_image.to_keypoint_image()
-            keypoint_image_aug = ElasticTransformation.map_coordinates(keypoint_image, indices_x, indices_y)
-            keypoints_aug = ia.KeypointsOnImage.from_keypoint_image(keypoint_image_aug)
-            result.append(keypoints_aug)
-        return result
-    """
+        seeds, alphas, sigmas, orders, _cvals, _modes = self._draw_samples(nb_images, random_state)
+        for i in sm.xrange(nb_images):
+            kpsoi = keypoints_on_images[i]
+            h, w = kpsoi.shape[0:2]
+            (_source_indices_x, _source_indices_y), (dx, dy) = ElasticTransformation.generate_indices(
+                kpsoi.shape[0:2],
+                alpha=alphas[i],
+                sigma=sigmas[i],
+                random_state=ia.new_random_state(seeds[i]),
+                reshape=False
+            )
 
-    # no transformation of keypoints for this currently,
-    # it seems like this is the more appropriate choice overall for this augmentation
-    # technique
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
+            kps_aug = []
+            for kp in kpsoi.keypoints:
+                # dont augment keypoints if alpha/sigma are too low or if the keypoint is outside
+                # of the image plane
+                params_above_thresh = (alphas[i] > ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+                                       and sigmas[i] > ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH)
+                within_image_plane = (0 <= kp.x < w and 0 <= kp.y < h)
+                if not params_above_thresh or not within_image_plane:
+                    kps_aug.append(kp)
+                else:
+                    kp_neighborhood = kp.generate_similar_points_manhattan(
+                        ElasticTransformation.NB_NEIGHBOURING_KEYPOINTS,
+                        ElasticTransformation.NEIGHBOURING_KEYPOINTS_DISTANCE,
+                        return_array=True
+                    )
+
+                    # We can clip here, because we made sure above that the keypoint is inside the
+                    # image plane. Keypoints at the bottom row or right columns might be rounded
+                    # outside the image plane, which we prevent here.
+                    # We reduce neighbours to only those within the image plane as only for such
+                    # points we know where to move them.
+                    xx = np.round(kp_neighborhood[:, 0]).astype(np.int32)
+                    yy = np.round(kp_neighborhood[:, 1]).astype(np.int32)
+                    inside_image_mask = np.logical_and(
+                        np.logical_and(0 <= xx, xx < w),
+                        np.logical_and(0 <= yy, yy < h)
+                    )
+                    xx = xx[inside_image_mask]
+                    yy = yy[inside_image_mask]
+
+                    xxyy = np.concatenate([xx[:, np.newaxis], yy[:, np.newaxis]], axis=1)
+
+                    xxyy_aug = np.copy(xxyy).astype(np.float32)
+                    xxyy_aug[:, 0] += dx[yy, xx]
+                    xxyy_aug[:, 1] += dy[yy, xx]
+
+                    med = ia.compute_geometric_median(xxyy_aug)
+                    #med = np.average(xxyy_aug, 0)  # uncomment to use average instead of median
+                    kps_aug.append(ia.Keypoint(x=med[0], y=med[1]))
+
+            result[i] = ia.KeypointsOnImage(kps_aug, shape=kpsoi.shape)
+
+        return result
 
     def get_parameters(self):
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
     @staticmethod
-    def generate_indices(shape, alpha, sigma, random_state):
+    def generate_indices(shape, alpha, sigma, random_state, reshape=True):
         ia.do_assert(len(shape) == 2)
 
-        dx = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
-        dy = ndimage.gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
+        padding = 100 + int(round(sigma)) * 2
+        h, w = shape[0:2]
+        h_pad = h + 2*padding
+        w_pad = w + 2*padding
 
-        x, y = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), indexing='ij')
-        return np.reshape(x+dx, (-1, 1)), np.reshape(y+dy, (-1, 1))
+        dx = ndimage.gaussian_filter((random_state.rand(h_pad, w_pad) * 2 - 1), sigma, mode="mirror") * alpha
+        dy = ndimage.gaussian_filter((random_state.rand(h_pad, w_pad) * 2 - 1), sigma, mode="mirror") * alpha
+
+        if padding > 0:
+            dx = dx[padding:-padding, padding:-padding]
+            dy = dy[padding:-padding, padding:-padding]
+
+        y, x = np.meshgrid(np.arange(h), np.arange(w), indexing='ij')
+
+        x_shifted = x + (-1) * dx
+        y_shifted = y + (-1) * dy
+
+        if reshape:
+            return (
+                np.reshape(x_shifted, (-1, 1)),
+                np.reshape(y_shifted, (-1, 1))
+            ), (
+                np.reshape(dx, (-1, 1)),
+                np.reshape(dy, (-1, 1))
+            )
+        else:
+            return (x_shifted, y_shifted), (dx, dy)
+
 
     @staticmethod
     def map_coordinates(image, indices_x, indices_y, order=1, cval=0, mode="constant"):
+        # assuming 128x128 image with 0 shift in x/y:
+        # indices_y: 0, 0, ..., 1, 1, ..., 2, ...
+        # indices_x: 0, 1, ..., 128, 0, 1, ..., 127, ...
         ia.do_assert(len(image.shape) == 3)
         result = np.copy(image)
         height, width = image.shape[0:2]
         for c in sm.xrange(image.shape[2]):
             remapped_flat = ndimage.interpolation.map_coordinates(
                 image[..., c],
-                (indices_x, indices_y),
+                (indices_y[:, 0], indices_x[:, 0]),
                 order=order,
                 cval=cval,
                 mode=mode
