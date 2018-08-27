@@ -1764,52 +1764,46 @@ class JpegCompression(Augmenter):
     def __init__(self, compression=50, name=None, deterministic=False, random_state=None):
         super(JpegCompression, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         if ia.is_single_number(compression):
-            assert 100 >= compression >= 0 and type(
-                compression) == int, "Expected compression to have range [0, 100], got value %.4f." % (compression,)
+            ia.do_assert(100 >= compression >= 0 and ia.is_single_integer(compression), "Expected compression to have range [0, 100], got value %.4f." % (compression,))
             self.compression = Deterministic(compression)
         elif ia.is_iterable(compression):
-            assert len(compression) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(compression),)
+            ia.do_assert(len(compression) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(compression),))
             self.compression = Uniform(compression[0], compression[1])
         elif isinstance(compression, StochasticParameter):
             self.compression = compression
         else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (
-                type(compression),))
+            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(compression),))
 
         self.maximum_quality = 100
 
     def _augment_images(self, images, random_state, parents, hooks):
-        channels = images[0].shape[-1]
-        reset_last_dim = len(images[0].shape) == 3 and channels == 1
         result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10 ** 6, (nb_images + 1,))
-
-        samples = self.compression.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]))
+        samples = self.compression.draw_samples((nb_images,), random_state=random_state)
 
         for i in sm.xrange(nb_images):
             image = images[i].astype(np.float32)
-            if reset_last_dim:
+            nb_channels = image.shape[-1]
+            is_single_channel = (nb_channels == 1)
+            if is_single_channel:
                 image = image[..., 0]
             sample = int(samples[-1])
-            assert 100 >= sample >= 0
+            ia.do_assert(100 >= sample >= 0)
             img = Image.fromarray(image.astype(np.uint8))
-            with tempfile.NamedTemporaryFile(mode='wb', suffix='.jpg') as f:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as f:
                 img.save(f, quality=self.maximum_quality - sample)
-                if channels == 1:
-                    image = misc.imread(f.name, mode='L')
+                if nb_channels == 1:
+                    image = misc.imread(f.name, mode="L")
                 else:
-                    image = misc.imread(f.name, mode='RGB')
-            if reset_last_dim:
+                    image = misc.imread(f.name, mode="RGB")
+            if is_single_channel:
                 image = image[..., np.newaxis]
             result[i] = image
-        if channels == 1:
-            result = result[..., np.newaxis]
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
-      
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 
