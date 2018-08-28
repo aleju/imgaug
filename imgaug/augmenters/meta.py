@@ -34,7 +34,6 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import copy as copy_module
 import re
-from scipy import misc
 import itertools
 import six
 import six.moves as sm
@@ -1064,7 +1063,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         """
         grid = self.draw_grid(images, rows, cols)
-        misc.imshow(grid)
+        ia.imshow(grid)
 
     def to_deterministic(self, n=None):
         """

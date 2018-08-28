@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import numpy as np
 from skimage import data
 
@@ -25,7 +24,7 @@ def main():
     reseeded4 = aug.draw_grid(img, cols=8, rows=1)
 
     all_rows = np.vstack([unseeded1, unseeded2, seeded1, seeded2, reseeded1, reseeded2, reseeded3, reseeded4])
-    misc.imshow(all_rows)
+    ia.imshow(all_rows)
 
 if __name__ == "__main__":
     main()

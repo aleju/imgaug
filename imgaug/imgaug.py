@@ -5,7 +5,6 @@ import copy
 import numbers
 import cv2
 import math
-from scipy import misc
 import imageio
 import multiprocessing
 import threading
@@ -19,6 +18,7 @@ import skimage.measure
 import collections
 import time
 import json
+import matplotlib.pyplot as plt
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -490,7 +490,7 @@ def quokka(size=None, extract=None):
     Parameters
     ----------
     size : None or float or tuple of two ints, optional(default=None)
-        Size of the output image. Input into scipy.misc.imresize.
+        Size of the output image. Input into `imgaug.imresize_single_image()`.
         Usually expected to be a tuple (H, W), where H is the desired height
         and W is the width. If None, then the image will not be resized.
 
@@ -528,7 +528,7 @@ def quokka_square(size=None):
     Parameters
     ----------
     size : None or float or tuple of two ints, optional(default=None)
-        Size of the output image. Input into scipy.misc.imresize.
+        Size of the output image. Input into `imgaug.imresize_single_image()`.
         Usually expected to be a tuple (H, W), where H is the desired height
         and W is the width. If None, then the image will not be resized.
 
@@ -1276,10 +1276,6 @@ def show_grid(images, rows=None, cols=None):
     """
     Converts the input images to a grid image and shows it in a new window.
 
-    This function wraps around scipy.misc.imshow(), which requires the
-    `see <image>` command to work. On Windows systems, this tends to not be
-    the case.
-
     Parameters
     ----------
     images : (N,H,W,3) ndarray or iterable of (H,W,3) array
@@ -1293,7 +1289,19 @@ def show_grid(images, rows=None, cols=None):
 
     """
     grid = draw_grid(images, rows=rows, cols=cols)
-    misc.imshow(grid)
+    imshow(grid)
+
+def imshow(image):
+    """
+    Shows an image in a window.
+
+    Parameters
+    ----------
+    image : (H,W,3) ndarray
+        Image to show.
+    """
+    plt.imshow(image)
+    plt.show()
 
 def do_assert(condition, message="Assertion failed."):
     """

@@ -3,7 +3,6 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
 from skimage import data
-from scipy import misc
 import imageio
 
 NB_ROWS = 10
@@ -47,7 +46,7 @@ def main():
     image_after = kps_aug.draw_on_image(image_after)
     image_after = bbs_aug.draw_on_image(image_after)
 
-    misc.imshow(np.hstack([image_before, image_after]))
+    ia.imshow(np.hstack([image_before, image_after]))
     imageio.imwrite("bb_aug.jpg", np.hstack([image_before, image_after]))
 
 if __name__ == "__main__":

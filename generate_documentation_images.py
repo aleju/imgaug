@@ -3,7 +3,6 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import numpy as np
-from scipy import misc
 import imageio
 #from skimage import data
 #import matplotlib.pyplot as plt

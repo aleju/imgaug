@@ -8,7 +8,6 @@ from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
-from scipy import misc
 from skimage import data
 import argparse
 
@@ -198,7 +197,7 @@ def main():
                 imgs_aug_drawn = [kps_aug_one.draw_on_image(img_aug) for img_aug, kps_aug_one in zip(imgs_aug, kps_aug)]
                 imgs_aug_drawn = [bbs_aug_one.draw_on_image(img_aug) for img_aug, bbs_aug_one in zip(imgs_aug_drawn, bbs_aug)]
                 grid.append(np.hstack(imgs_aug_drawn))
-            misc.imshow(np.vstack(grid))
+            ia.imshow(np.vstack(grid))
 
 if __name__ == "__main__":
     main()

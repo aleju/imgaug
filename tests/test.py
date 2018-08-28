@@ -22,7 +22,6 @@ import numpy as np
 import random
 import six
 import six.moves as sm
-from scipy import misc
 import skimage
 from skimage import data, color
 import cv2
@@ -9939,8 +9938,7 @@ def test_PerspectiveTransform():
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     """
-    from scipy import misc
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             observed,
             expected,
@@ -11319,7 +11317,7 @@ def test_Augmenter_copy_random_state():
     source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
     images_aug_source = source_alt.augment_images(images)
     images_aug_target = target_cprs.augment_images(images)
-    #misc.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
+    #ia.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
     assert np.array_equal(images_aug_source, images_aug_target)
 
     source[0].deterministic = True
@@ -13657,8 +13655,7 @@ def test_parameters_draw_distribution_grid():
     )
 
     diff = np.abs(grid_expected.astype(np.int32) - grid_observed.astype(np.int32))
-    #from scipy import misc
-    #misc.imshow(np.vstack([grid_expected, grid_observed, diff]))
+    #ia.imshow(np.vstack([grid_expected, grid_observed, diff]))
     #print(diff.flatten()[0:100])
     assert np.average(diff) < 10
 

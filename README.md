@@ -52,6 +52,7 @@ Required packages:
 * six
 * numpy
 * scipy
+* matplotlib
 * scikit-image (`pip install -U scikit-image`)
 * OpenCV (i.e. `cv2`)
 * imageio (`pip install imageio`)
@@ -272,7 +273,6 @@ Augment images *and* **landmarks/keypoints** on these images:
 ```python
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import random
 import numpy as np
 images = np.random.randint(0, 50, (4, 128, 128, 3), dtype=np.uint8)
@@ -300,7 +300,7 @@ keypoints_aug = seq_det.augment_keypoints(keypoints_on_images)
 for img_idx, (image_before, image_after, keypoints_before, keypoints_after) in enumerate(zip(images, images_aug, keypoints_on_images, keypoints_aug)):
     image_before = keypoints_before.draw_on_image(image_before)
     image_after = keypoints_after.draw_on_image(image_after)
-    misc.imshow(np.concatenate((image_before, image_after), axis=1)) # before and after
+    ia.imshow(np.concatenate((image_before, image_after), axis=1)) # before and after
     for kp_idx, keypoint in enumerate(keypoints_after.keypoints):
         keypoint_old = keypoints_on_images[img_idx].keypoints[kp_idx]
         x_old, y_old = keypoint_old.x, keypoint_old.y
@@ -459,7 +459,7 @@ for _ in range(nb_batches):
 # Show the augmented images.
 # Note that augment_batches() returns a generator.
 for images_aug in augseq.augment_batches(batches, background=True):
-    misc.imshow(ia.draw_grid(images_aug, cols=8))
+    ia.imshow(ia.draw_grid(images_aug, cols=8))
 ```
 
 Images can also be augmented in background processes using the classes `imgaug.BatchLoader` and `imgaug.BackgroundAugmenter`,
@@ -534,7 +534,7 @@ while True:
 
     print("Image IDs: ", batch.data)
 
-    misc.imshow(np.hstack(list(images_aug)))
+    ia.imshow(np.hstack(list(images_aug)))
 
 batch_loader.terminate()
 bg_augmenter.terminate()

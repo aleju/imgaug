@@ -3,7 +3,6 @@ from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
-from scipy import misc
 
 def main():
     augs = [
@@ -25,7 +24,7 @@ def main():
     for i, (name, aug) in enumerate(augs):
         print(i, name)
         images_aug = aug.augment_images(images)
-        misc.imshow(ia.draw_grid(images_aug, cols=5, rows=5))
+        ia.imshow(ia.draw_grid(images_aug, cols=5, rows=5))
 
 if __name__ == "__main__":
     main()

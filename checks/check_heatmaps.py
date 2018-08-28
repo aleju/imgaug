@@ -1,7 +1,6 @@
 from __future__ import print_function
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import numpy as np
 
 def main():
@@ -22,7 +21,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -36,7 +35,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -51,7 +50,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -66,7 +65,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -81,7 +80,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -96,7 +95,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -111,7 +110,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -126,7 +125,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -141,7 +140,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]
@@ -156,7 +155,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(ia.draw_grid([heatmaps_drawn[0], heatmaps_aug_drawn[0]], cols=2))
+    ia.imshow(ia.draw_grid([heatmaps_drawn[0], heatmaps_aug_drawn[0]], cols=2))
 
     print("Alpha...")
     aug = iaa.Alpha(0.7, iaa.Affine(rotate=20))
@@ -166,7 +165,7 @@ def main():
     heatmaps_drawn = heatmaps.draw_on_image(quokka)
     heatmaps_aug_drawn = heatmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             heatmaps_drawn[0],
             heatmaps_aug_drawn[0]

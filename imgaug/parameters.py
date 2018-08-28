@@ -9,7 +9,6 @@ import six.moves as sm
 import scipy
 import numbers
 from collections import defaultdict
-from scipy import misc
 
 NP_FLOAT_TYPES = set(np.sctypes["float"])
 
@@ -151,7 +150,7 @@ def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350)
     return grid
 
 def show_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
-    misc.imshow(
+    ia.imshow(
         draw_distributions_grid(
             params,
             graph_sizes=graph_sizes,
@@ -810,7 +809,7 @@ class Weibull(StochasticParameter):
     a : number or tuple of two number or list of number or StochasticParameter
         Shape parameter of the
         distribution.
-        
+
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -2196,8 +2195,7 @@ class SimplexNoise(StochasticParameter):
             # to more 0.0s
             result = 1 / (1 + np.exp(-(result * 20 - 10 - sigmoid_thresh)))
 
-        #from scipy import misc
-        #misc.imshow((result * 255).astype(np.uint8))
+        #ia.imshow((result * 255).astype(np.uint8))
 
         return result
 
@@ -2229,9 +2227,8 @@ class SimplexNoise(StochasticParameter):
             noise_0to1 = ia.imresize_single_image(noise_0to1_3d, (h, w), interpolation=upscale_method)
             noise_0to1 = (noise_0to1[..., 0] / 255.0).astype(np.float32)
 
-        #from scipy import misc
         #print(noise_0to1.shape, h_small, w_small, self.size_percent, self.size_px_max, maxlen)
-        #misc.imshow((noise_0to1 * 255).astype(np.uint8))
+        #ia.imshow((noise_0to1 * 255).astype(np.uint8))
 
         return noise_0to1
 
@@ -2365,9 +2362,8 @@ class SimplexNoise(StochasticParameter):
             noise_0to1 = ia.imresize_single_image(noise_0to1_3d, (h, w), interpolation=upscale_method)
             noise_0to1 = (noise_0to1[..., 0] / 255.0).astype(np.float32)
 
-        #from scipy import misc
         #print(noise_0to1.shape, h_small, w_small, self.size_percent, self.size_px_max, maxlen)
-        #misc.imshow((noise_0to1 * 255).astype(np.uint8))
+        #ia.imshow((noise_0to1 * 255).astype(np.uint8))
 
         return noise_0to1
 

@@ -2,7 +2,6 @@ from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
-from scipy import misc
 import imageio
 from skimage import data
 import matplotlib.pyplot as plt
