@@ -248,24 +248,27 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 
     Parameters
     ----------
-    loc : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
+    loc : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
         Mean of the normal distribution that generates the
         noise.
 
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    scale : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
+    scale : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the normal distribution that generates the
-        noise. If this value gets too close to zero, the image will not be
-        changed.
+        noise.  Must be >= 0. If 0 then only `loc` will be used.
 
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
@@ -308,25 +311,8 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
     per pixel for all channels and sometimes different (other 50 percent).
 
     """
-    if ia.is_single_number(loc):
-        loc2 = Deterministic(loc)
-    elif ia.is_iterable(loc):
-        ia.do_assert(len(loc) == 2, "Expected tuple/list with 2 entries for argument 'loc', got %d entries." % (len(loc),))
-        loc2 = Uniform(loc[0], loc[1])
-    elif isinstance(loc, StochasticParameter):
-        loc2 = loc
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'loc'. Got %s." % (type(loc),))
-
-    if ia.is_single_number(scale):
-        scale2 = Deterministic(scale)
-    elif ia.is_iterable(scale):
-        ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
-        scale2 = Uniform(scale[0], scale[1])
-    elif isinstance(scale, StochasticParameter):
-        scale2 = scale
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
+    loc2 = iap.handle_continuous_param(loc, "loc", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+    scale2 = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
