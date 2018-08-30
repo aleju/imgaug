@@ -39,18 +39,22 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
         check_value_range(param)
         return Deterministic(param)
     elif tuple_to_uniform and isinstance(param, tuple):
-        ia.do_assert(len(param) == 2)
+        ia.do_assert(len(param) == 2, "Expected parameter '%s' with type tuple to have exactly two entries, but got %d." % (name, len(param)))
+        ia.do_assert(all([ia.is_single_number(v) for v in param]), "Expected parameter '%s' with type tuple to only contain numbers, got %s." % (name, [type(v) for v in param],))
         check_value_range(param[0])
         check_value_range(param[1])
         return Uniform(param[0], param[1])
     elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
+        ia.do_assert(all([ia.is_single_number(v) for v in param]), "Expected iterable parameter '%s' to only contain numbers, got %s." % (name, [type(v) for v in param],))
         for param_i in param:
             check_value_range(param_i)
         return Choice(param)
     elif isinstance(param, StochasticParameter):
         return param
     else:
-        raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
+        allowed_type = "number"
+        list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
+        raise Exception("Expected %s, tuple of two %s%s or StochasticParameter for %s, got %s." % (allowed_type, allowed_type, list_str, name, type(param),))
 
 def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True):
     def check_value_range(v):
@@ -80,26 +84,26 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         return Deterministic(int(param))
     elif tuple_to_uniform and isinstance(param, tuple):
         ia.do_assert(len(param) == 2)
-        if allow_floats:
-            ia.do_assert(ia.is_single_number(param[0]), "Expected number, got %s." % (type(param[0]),))
-            ia.do_assert(ia.is_single_number(param[1]), "Expected number, got %s." % (type(param[1]),))
-        else:
-            ia.do_assert(ia.is_single_integer(param[0]), "Expected integer, got %s." % (type(param[0]),))
-            ia.do_assert(ia.is_single_integer(param[1]), "Expected integer, got %s." % (type(param[1]),))
+        ia.do_assert(all([
+            ia.is_single_number(v) if allow_floats else ia.is_single_integer(v) for v in param
+        ]), "Expected parameter '%s' of type tuple to only contain %s, got %s." % (name, "number" if allow_floats else "integer", [type(v) for v in param],))
         check_value_range(param[0])
         check_value_range(param[1])
         return DiscreteUniform(int(param[0]), int(param[1]))
     elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
+        ia.do_assert(all([
+            ia.is_single_number(v) if allow_floats else ia.is_single_integer(v) for v in param
+        ]), "Expected iterable parameter '%s' to only contain %s, got %s." % (name, "number" if allow_floats else "integer", [type(v) for v in param],))
+
         for param_i in param:
             check_value_range(param_i)
         return Choice([int(param_i) for param_i in param])
     elif isinstance(param, StochasticParameter):
         return param
     else:
-        if allow_floats:
-            raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
-        else:
-            raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
+        allowed_type = "number" if allow_floats else "int"
+        list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
+        raise Exception("Expected %s, tuple of two %s%s or StochasticParameter for %s, got %s." % (allowed_type, allowed_type, list_str, name, type(param),))
 
 def handle_probability_param(param, name):
     eps = 1e-6
