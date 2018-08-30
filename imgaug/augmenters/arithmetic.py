@@ -150,13 +150,15 @@ class AddElementwise(Augmenter):
 
     Parameters
     ----------
-    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+    value : int or tuple of two int or list of int or StochasticParameter, optional(default=0)
         Value to add to the
         pixels.
 
             * If an int, then that value will be used for all images.
             * If a tuple (a, b), then values from the discrete range [a .. b]
               will be sampled.
+            * If a list of integers, a random value will be sampled from the list
+              per image.
             * If a StochasticParameter, then values will be sampled per pixel
               (and possibly channel) from that parameter.
 
@@ -202,24 +204,8 @@ class AddElementwise(Augmenter):
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_integer(value):
-            ia.do_assert(-255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,))
-            self.value = Deterministic(value)
-        elif ia.is_iterable(value):
-            ia.do_assert(len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),))
-            self.value = DiscreteUniform(value[0], value[1])
-        elif isinstance(value, StochasticParameter):
-            self.value = value
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
