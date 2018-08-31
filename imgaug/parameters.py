@@ -105,7 +105,7 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
         raise Exception("Expected %s, tuple of two %s%s or StochasticParameter for %s, got %s." % (allowed_type, allowed_type, list_str, name, type(param),))
 
-def handle_probability_param(param, name):
+def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice=False):
     eps = 1e-6
     if param in [True, False, 0, 1]:
         return Deterministic(int(param))
@@ -115,6 +115,20 @@ def handle_probability_param(param, name):
             return Deterministic(int(round(param)))
         else:
             return Binomial(param)
+    elif tuple_to_uniform and isinstance(param, tuple):
+        ia.do_assert(all([
+            ia.is_single_number(v) for v in param
+        ]), "Expected parameter '%s' of type tuple to only contain number, got %s." % (name, [type(v) for v in param],))
+        ia.do_assert(len(param) == 2)
+        ia.do_assert(0 <= param[0] <= 1.0)
+        ia.do_assert(0 <= param[1] <= 1.0)
+        return Binomial(Uniform(param[0], param[1]))
+    elif list_to_choice and ia.is_iterable(param):
+        ia.do_assert(all([
+            ia.is_single_number(v) for v in param
+        ]), "Expected iterable parameter '%s' to only contain number, got %s." % (name, [type(v) for v in param],))
+        ia.do_assert(all([0 <= p_i <= 1.0 for p_i in param]))
+        return Binomial(Choice(param))
     elif isinstance(param, StochasticParameter):
         return param
     else:
