@@ -6963,13 +6963,13 @@ def test_ReplaceElementwise():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.ReplaceElementwise(mask=1, replacement=2, per_channel=False)
+    aug = iaa.ReplaceElementwise(mask=0.5, replacement=2, per_channel=False)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
     assert isinstance(params[2], iap.Deterministic)
-    assert params[0].p.value >= 1 - 1e-8
+    assert 0.5 - 1e-6 < params[0].p.value < 0.5 + 1e-6
     assert params[1].value == 2
     assert params[2].value == 0
 

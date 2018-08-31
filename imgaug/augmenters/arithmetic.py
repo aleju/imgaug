@@ -802,30 +802,9 @@ class ReplaceElementwise(Augmenter):
     def __init__(self, mask, replacement, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ReplaceElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(mask):
-            self.mask = Binomial(mask)
-        elif isinstance(mask, tuple):
-            ia.do_assert(len(mask) == 2)
-            ia.do_assert(0 <= mask[0] <= 1.0)
-            ia.do_assert(0 <= mask[1] <= 1.0)
-            self.mask = Binomial(Uniform(mask[0], mask[1]))
-        elif ia.is_iterable(mask):
-            ia.do_assert(all([0 <= pi <= 1.0 for pi in mask]))
-            self.mask = iap.Binomial(iap.Choice(mask))
-        elif isinstance(mask, StochasticParameter):
-            self.mask = mask
-        else:
-            raise Exception("Expected mask to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(mask),))
-        #self.mask = iap.handle_continuous_param(mask, "mask", minval=0.0, maxval=1.0)
+        self.mask = iap.handle_probability_param(mask, "mask", tuple_to_uniform=True, list_to_choice=True)
         self.replacement = iap.handle_continuous_param(replacement, "replacement")
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
