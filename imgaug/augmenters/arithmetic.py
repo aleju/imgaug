@@ -1484,6 +1484,8 @@ class ContrastNormalization(Augmenter):
             * If a float, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from
               the range a <= x <= b and be used as the alpha value.
+            * If a list, then a random value will be sampled per image from
+              that list.
             * If a StochasticParameter, then this parameter will be used to
               sample the alpha value per image.
 
@@ -1522,24 +1524,8 @@ class ContrastNormalization(Augmenter):
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(alpha):
-            ia.do_assert(alpha >= 0.0, "Expected alpha to have range (0, inf), got value %.4f." % (alpha,))
-            self.alpha = Deterministic(alpha)
-        elif ia.is_iterable(alpha):
-            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
-            self.alpha = Uniform(alpha[0], alpha[1])
-        elif isinstance(alpha, StochasticParameter):
-            self.alpha = alpha
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
