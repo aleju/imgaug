@@ -252,7 +252,7 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
         Mean of the normal distribution that generates the
         noise.
 
-            * If an int or float, exactly that value will be used.
+            * If a number, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
             * If a list, then a random value will be sampled from that list per
@@ -336,11 +336,11 @@ class Multiply(Augmenter):
 
     Parameters
     ----------
-    mul : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+    mul : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
         The value with which to multiply the pixel values in each
         image.
 
-            * If a float, then that value will always be used.
+            * If a number, then that value will always be used.
             * If a tuple (a, b), then a value from the range a <= x <= b will
               be sampled per image and used for all pixels.
             * If a list, then a random value will be sampled from that list per
@@ -433,11 +433,11 @@ class MultiplyElementwise(Augmenter):
 
     Parameters
     ----------
-    mul : float or iterable of two floats or StochasticParameter, optional(default=1.0)
+    mul : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
         The value by which to multiply the pixel values in the
         image.
 
-            * If a float, then that value will always be used.
+            * If a number, then that value will always be used.
             * If a tuple (a, b), then a value from the range a <= x <= b will
               be sampled per image and pixel.
             * If a list, then a random value will be sampled from that list
@@ -533,7 +533,7 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or StochasticParameter, optional(default=0)
         The probability of any pixel being dropped (i.e. set to
         zero).
 
@@ -625,7 +625,7 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or StochasticParameter, optional(default=0)
         The probability of any pixel being dropped (i.e. set to
         zero).
 
@@ -751,15 +751,17 @@ class ReplaceElementwise(Augmenter):
 
     Parameters
     ----------
-    mask : number or tuple of two number or StochasticParameter, optional(default=0)
+    mask : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Mask that indicates the pixels that are supposed to be replaced.
         The mask will be thresholded with 0.5. A value of 1 then indicates a
         pixel that is supposed to be replaced.
 
-            * If this is a number, then that value will be used as the
+            * If this is a float, then that value will be used as the
               probability of being a 1 per pixel.
             * If a tuple (a, b), then the probability will be sampled per image
               from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used to
               sample a mask.
 
@@ -864,14 +866,16 @@ def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt/pepper
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt/pepper is to be added
@@ -920,14 +924,16 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt/pepper
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt/pepper is to be added
@@ -1021,14 +1027,16 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt is to be added
@@ -1085,14 +1093,16 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt is to be added
@@ -1193,7 +1203,7 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to pepper
         noise.
 
@@ -1201,6 +1211,8 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
               from the range a <= x <= b..
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that pepper is to be added
@@ -1257,7 +1269,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to pepper
         noise.
 
@@ -1265,6 +1277,8 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
               from the range a <= x <= b..
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that pepper is to be added
@@ -1477,11 +1491,11 @@ class ContrastNormalization(Augmenter):
 
     Parameters
     ----------
-    alpha : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+    alpha : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
         Strength of the contrast normalization. Higher values than 1.0
         lead to higher contrast, lower values decrease the contrast.
 
-            * If a float, then that value will be used for all images.
+            * If a number, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from
               the range a <= x <= b and be used as the alpha value.
             * If a list, then a random value will be sampled per image from
