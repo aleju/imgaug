@@ -7717,12 +7717,12 @@ def test_Invert():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Invert(p=1, per_channel=False, min_value=10, max_value=20)
+    aug = iaa.Invert(p=0.5, per_channel=False, min_value=10, max_value=20)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
     assert params[1].value == 0
     assert params[2] == 10
     assert params[3] == 20

@@ -1423,21 +1423,8 @@ class Invert(Augmenter):
                  deterministic=False, random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(p):
-            self.p = Binomial(p)
-        elif isinstance(p, StochasticParameter):
-            self.p = p
-        else:
-            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
-
+        self.p = iap.handle_probability_param(p, "p")
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
         self.min_value = min_value
         self.max_value = max_value
 
