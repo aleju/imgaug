@@ -1329,21 +1329,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
     to the input image size, leading to large rectangular areas being replaced.
 
     """
-
-    if ia.is_single_number(p):
-        mask = Binomial(p)
-    elif isinstance(p, tuple):
-        ia.do_assert(len(p) == 2)
-        ia.do_assert(0 <= p[0] <= 1.0)
-        ia.do_assert(0 <= p[1] <= 1.0)
-        mask = Binomial(Uniform(p[0], p[1]))
-    elif ia.is_iterable(p):
-        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = Binomial(iap.Choice(p))
-    elif isinstance(p, StochasticParameter):
-        mask = p
-    else:
-        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+    mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
         mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
