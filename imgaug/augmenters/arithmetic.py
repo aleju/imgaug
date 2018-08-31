@@ -1573,14 +1573,17 @@ class JpegCompression(Augmenter):
 
     Parameters
     ----------
-    compression : int or tuple of two ints or StochasticParameter
+    compression : number or tuple of two number or list of number or StochasticParameter
         Degree of compression using saving to `jpeg` format in range [0, 100]
         High values for compression cause more artifacts. Standard value for image processing software is default value
         set to between 50 and 80. At 100 image is unreadable and at 0 no compression is used and the image occupies much
         more memory.
-            * If a single int, then that value will be used for the compression degree.
-            * If a tuple of two ints (a, b), then the compression will be a
+
+            * If a single number, then that value will be used for the compression degree.
+            * If a tuple of two number (a, b), then the compression will be a
               value sampled from the interval [a..b].
+            * If a list, then a random value will be sampled and used as the
+              compression per image.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the compression
               for the nth image. Expected to be discrete.
@@ -1602,16 +1605,9 @@ class JpegCompression(Augmenter):
     """
     def __init__(self, compression=50, name=None, deterministic=False, random_state=None):
         super(JpegCompression, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-        if ia.is_single_number(compression):
-            ia.do_assert(100 >= compression >= 0 and ia.is_single_integer(compression), "Expected compression to have range [0, 100], got value %.4f." % (compression,))
-            self.compression = Deterministic(compression)
-        elif ia.is_iterable(compression):
-            ia.do_assert(len(compression) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(compression),))
-            self.compression = Uniform(compression[0], compression[1])
-        elif isinstance(compression, StochasticParameter):
-            self.compression = compression
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(compression),))
+
+        # will be converted to int during augmentation, which is why we allow floats here
+        self.compression = iap.handle_continuous_param(compression, "compression", value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
 
         # The value range 1 to 95 is suggested by PIL's save() documentation
         # Values above 95 seem to not make sense (no improvement in visual quality, but large file size)
