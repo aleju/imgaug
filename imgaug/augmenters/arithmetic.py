@@ -440,6 +440,8 @@ class MultiplyElementwise(Augmenter):
             * If a float, then that value will always be used.
             * If a tuple (a, b), then a value from the range a <= x <= b will
               be sampled per image and pixel.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image and pixel.
 
@@ -486,24 +488,8 @@ class MultiplyElementwise(Augmenter):
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(mul):
-            ia.do_assert(mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,))
-            self.mul = Deterministic(mul)
-        elif ia.is_iterable(mul):
-            ia.do_assert(len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),))
-            self.mul = Uniform(mul[0], mul[1])
-        elif isinstance(mul, StochasticParameter):
-            self.mul = mul
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
