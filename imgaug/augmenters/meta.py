@@ -2412,9 +2412,11 @@ class WithChannels(Augmenter):
 
     Parameters
     ----------
-    channels : integer or list of integers or None, optional(default=None)
-        Sets the channels to extract from each image.
-        If None, all channels will be used.
+    channels : None or int or list of int, optional(default=None)
+        Sets the channels to be extracted from each image.
+        If None, all channels will be used. Note that this is not
+        stochastic - the extracted channels are always the same
+        ones.
 
     children : Augmenter or list of Augmenters or None, optional(default=None)
         One or more augmenters to apply to images, after the channels
@@ -2441,6 +2443,7 @@ class WithChannels(Augmenter):
     def __init__(self, channels=None, children=None, name=None, deterministic=False, random_state=None):
         super(WithChannels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
+        # TODO change this to a stochastic parameter
         if channels is None:
             self.channels = None
         elif ia.is_single_integer(channels):
