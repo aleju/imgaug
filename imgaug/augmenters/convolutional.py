@@ -395,17 +395,19 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
     Parameters
     ----------
-    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    direction : int or float or tuple of two ints/floats or StochasticParameter, optional(default=(0.0, 1.0))
+    direction : number or tuple of number or list of number or StochasticParameter, optional(default=(0.0, 1.0))
         Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
         represents 360 degrees (both clockwise, starting at the top).
         Default value is (0.0, 1.0), i.e. pick a random angle per image.
@@ -413,6 +415,8 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
@@ -451,25 +455,8 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     (e.g. for 0.3 then `0.7*old_image + 0.3*edge_image`).
 
     """
-    if ia.is_single_number(alpha):
-        alpha_param = Deterministic(alpha)
-    elif ia.is_iterable(alpha):
-        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
-        alpha_param = Uniform(alpha[0], alpha[1])
-    elif isinstance(alpha, StochasticParameter):
-        alpha_param = alpha
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
-
-    if ia.is_single_number(direction):
-        direction_param = Deterministic(direction)
-    elif ia.is_iterable(direction):
-        ia.do_assert(len(direction) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(direction),))
-        direction_param = Uniform(direction[0], direction[1])
-    elif isinstance(direction, StochasticParameter):
-        direction_param = direction
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(direction),))
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+    direction_param = iap.handle_continuous_param(direction, "direction", value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
