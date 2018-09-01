@@ -5251,11 +5251,11 @@ def test_Flipud():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Flipud(p=1)
+    aug = iaa.Flipud(p=0.5)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
 
 
 def test_GaussianBlur():

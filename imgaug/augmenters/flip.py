@@ -103,7 +103,7 @@ class Flipud(Augmenter): # pylint: disable=locally-disabled, unused-variable, li
 
     Parameters
     ----------
-    p : int or float or StochasticParameter, optional(default=0)
+    p : number or StochasticParameter, optional(default=0)
         Probability of each image to get flipped.
 
     name : string, optional(default=None)
@@ -129,13 +129,7 @@ class Flipud(Augmenter): # pylint: disable=locally-disabled, unused-variable, li
 
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
         super(Flipud, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-
-        if ia.is_single_number(p):
-            self.p = Binomial(p)
-        elif isinstance(p, StochasticParameter):
-            self.p = p
-        else:
-            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
+        self.p = iap.handle_probability_param(p, "p")
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
