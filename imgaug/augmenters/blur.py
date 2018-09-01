@@ -317,38 +317,46 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
 
     Parameters
     ----------
-    d : int or tuple of two ints or StochasticParameter
-        Diameter of each pixel neighborhood.
+    d : int or tuple of two int or list of int or StochasticParameter, optional(default=1)
+        Diameter of each pixel neighborhood with value range [1 .. inf).
         High values for d lead to significantly worse performance. Values
-        equal or less than 10 seem to be good.
+        equal or less than 10 seem to be good. Use <5 for real-time
+        applications.
 
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
               value sampled from the interval [a..b].
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the diameter
               for the nth image. Expected to be discrete.
 
-    sigma_color : int or tuple of two ints or StochasticParameter
-        Filter sigma in the color space. A larger value of the parameter means
-        that farther colors within the pixel neighborhood (see sigmaSpace )
-        will be mixed together, resulting in larger areas of semi-equal color.
+    sigma_color : number or tuple of two number or list of number or StochasticParameter, optional(default=(10, 250))
+        Filter sigma in the color space with value range [1, inf). A larger value
+        of the parameter means that farther colors within the pixel neighborhood
+        (see sigma_space) will be mixed together, resulting in larger areas of
+        semi-equal color.
 
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
-              value sampled from the interval [a..b].
+              value sampled from the interval [a, b].
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the diameter
               for the nth image. Expected to be discrete.
 
-    sigma_space :
-        Filter sigma in the coordinate space. A larger value of the parameter
-        means that farther pixels will influence each other as long as their
-        colors are close enough (see sigma_color).
+    sigma_space : number or tuple of two number or list of number or StochasticParameter, optional(default=(10, 250))
+        Filter sigma in the coordinate space with value range [1, inf). A larger value
+        of the parameter means that farther pixels will influence each other as long as
+        their colors are close enough (see sigma_color).
 
             * If a single int, then that value will be used for the diameter.
             * If a tuple of two ints (a, b), then the diameter will be a
-              value sampled from the interval [a..b].
+              value sampled from the interval [a, b].
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the diameter
               for the nth image. Expected to be discrete.
@@ -374,21 +382,9 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
     def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250), name=None, deterministic=False, random_state=None):
         super(BilateralBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        def val(var):
-            if ia.is_single_number(var):
-                return Deterministic(int(var))
-            elif ia.is_iterable(var):
-                ia.do_assert(len(var) == 2)
-                ia.do_assert(all([ia.is_single_number(var_i) for var_i in var]))
-                return DiscreteUniform(int(var[0]), int(var[1]))
-            elif isinstance(d, StochasticParameter):
-                return var
-            else:
-                raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(var),))
-
-        self.d = val(d)
-        self.sigma_color = val(sigma_color)
-        self.sigma_space = val(sigma_space)
+        self.d = iap.handle_discrete_param(d, "d", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.sigma_color = iap.handle_continuous_param(sigma_color, "sigma_color", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True)
+        self.sigma_space = iap.handle_continuous_param(sigma_space, "sigma_space", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
