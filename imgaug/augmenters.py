@@ -5574,7 +5574,7 @@ class Affine(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, fit_output_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width
@@ -5597,6 +5597,7 @@ class Affine(Augmenter):
             #cval = cval_samples[i]
             #mode = mode_samples[i]
             #order = order_samples[i]
+            #fit_output = fit_output_samples[i]
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
                 matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
