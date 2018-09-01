@@ -1572,15 +1572,15 @@ class PerspectiveTransform(Augmenter):
 
     Parameters
     ----------
-    scale : float or tuple of two floats or StochasticParameter, optional(default=0)
+    scale : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the normal distributions. These are used to sample
         the random distances of the subimage's corners from the full image's
         corners. The sampled values reflect percentage values (with respect
         to image height/width). Recommended values are in the range 0.0 to 0.1.
 
-            * If a single float, then that value will always be used as the
+            * If a single number, then that value will always be used as the
               scale.
-            * If a tuple (a, b) of floats, then a random value will be picked
+            * If a tuple (a, b) of numbers, then a random value will be picked
               from the interval (a, b) (per image).
             * If a list of values, a random one of the values will be picked
               per image.
@@ -1616,20 +1616,8 @@ class PerspectiveTransform(Augmenter):
     def __init__(self, scale=0, keep_size=True, name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(scale):
-            self.scale = Deterministic(scale)
-        elif isinstance(scale, tuple):
-            ia.do_assert(len(scale) == 2, "Expected tuple with 2 entries for argument 'scale', got %d entries." % (len(scale),))
-            self.scale = Uniform(scale[0], scale[1])
-        elif ia.is_iterable(scale):
-            self.scale = Choice(scale)
-        elif isinstance(scale, StochasticParameter):
-            self.scale = scale
-        else:
-            raise Exception("Expected number, tuple of number, list of number or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
-
+        self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
         self.jitter = Normal(loc=0, scale=self.scale)
-
         self.keep_size = keep_size
 
     def _augment_images(self, images, random_state, parents, hooks):
