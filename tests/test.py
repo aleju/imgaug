@@ -3894,12 +3894,12 @@ def test_Superpixels():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Superpixels(p_replace=1, n_segments=2, max_size=100, interpolation="nearest")
+    aug = iaa.Superpixels(p_replace=0.5, n_segments=2, max_size=100, interpolation="nearest")
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
     assert params[1].value == 2
     assert params[2] == 100
     assert params[3] == "nearest"
