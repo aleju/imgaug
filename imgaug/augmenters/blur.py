@@ -232,7 +232,7 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
 
     Parameters
     ----------
-    k : int or tuple of two ints or StochasticParameter
+    k : int or tuple of two int or list of int or StochasticParameter, optional(default=1)
         Kernel
         size.
 
@@ -241,6 +241,8 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
             * If a tuple of two ints (a, b), then the kernel size will be an
               odd value sampled from the interval [a..b]. a and b must both
               be odd values.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the kernel
               size for the nth image. Expected to be discrete. If a sampled
@@ -271,19 +273,11 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(k):
+        self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        if ia.is_single_integer(k):
             ia.do_assert(k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),))
-            self.k = Deterministic(int(k))
         elif ia.is_iterable(k):
-            ia.do_assert(len(k) == 2)
-            ia.do_assert(all([ia.is_single_number(ki) for ki in k]))
-            ia.do_assert(k[0] % 2 != 0, "Expected k[0] to be odd, got %d. Add or subtract 1." % (int(k[0]),))
-            ia.do_assert(k[1] % 2 != 0, "Expected k[1] to be odd, got %d. Add or subtract 1." % (int(k[1]),))
-            self.k = DiscreteUniform(int(k[0]), int(k[1]))
-        elif isinstance(k, StochasticParameter):
-            self.k = k
-        else:
-            raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
+            ia.do_assert(all([ki % 2 != 0 for ki in k]), "Expected all values in iterable k to be odd, but at least one was not. Add or subtract 1 to/from that value.")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
