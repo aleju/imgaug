@@ -25,6 +25,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, DiscreteUniform, Uniform
+from .. import parameters as iap
 import numpy as np
 from scipy import ndimage
 import cv2
@@ -38,7 +39,7 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
 
     Parameters
     ----------
-    sigma : float or tuple of two floats or StochasticParameter
+    sigma : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the gaussian kernel.
         Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
 
@@ -46,6 +47,8 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
               deviation.
             * If a tuple (a, b), then a random value from the range a <= x <= b
               will be picked per image.
+            * If a list, then a random value will be sampled per image from
+              that list.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images.
 
@@ -74,16 +77,7 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(sigma):
-            self.sigma = Deterministic(sigma)
-        elif ia.is_iterable(sigma):
-            ia.do_assert(len(sigma) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(sigma),))
-            self.sigma = Uniform(sigma[0], sigma[1])
-        elif isinstance(sigma, StochasticParameter):
-            self.sigma = sigma
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(sigma),))
-
+        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
         self.eps = 0.001 # epsilon value to estimate whether sigma is above 0
 
     def _augment_images(self, images, random_state, parents, hooks):
