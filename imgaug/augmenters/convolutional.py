@@ -26,6 +26,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Uniform
+from .. import parameters as iap
 import numpy as np
 import cv2
 import six.moves as sm
@@ -171,17 +172,19 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
 
     Parameters
     ----------
-    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    lightness : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1)
+    lightness : number or tuple of number or list of number or StochasticParameter, optional(default=1)
         Parameter that controls the lightness/brightness of the sharped image.
         Sane values are somewhere in the range (0.5, 2).
         The value 0 results in an edge map. Values higher than 1 create bright
@@ -190,6 +193,8 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
@@ -215,25 +220,8 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     0.75 <= x <= 2.0 and with a variable alpha.
 
     """
-    if ia.is_single_number(alpha):
-        alpha_param = Deterministic(alpha)
-    elif ia.is_iterable(alpha):
-        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
-        alpha_param = Uniform(alpha[0], alpha[1])
-    elif isinstance(alpha, StochasticParameter):
-        alpha_param = alpha
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
-
-    if ia.is_single_number(lightness):
-        lightness_param = Deterministic(lightness)
-    elif ia.is_iterable(lightness):
-        ia.do_assert(len(lightness) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(lightness),))
-        lightness_param = Uniform(lightness[0], lightness[1])
-    elif isinstance(lightness, StochasticParameter):
-        lightness_param = lightness
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(lightness),))
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+    lightness_param = iap.handle_continuous_param(lightness, "lightness", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
