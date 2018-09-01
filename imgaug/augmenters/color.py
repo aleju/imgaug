@@ -26,6 +26,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Choice, Uniform
+from .. import parameters as iap
 import numpy as np
 import cv2
 import six.moves as sm
@@ -150,7 +151,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
 
     Parameters
     ----------
-    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+    value : int or tuple of int or list of int or StochasticParameter, optional(default=0)
         See `Add.__init__()`
 
     per_channel : bool or float, optional(default=False)
