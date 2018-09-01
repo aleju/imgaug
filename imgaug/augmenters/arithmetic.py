@@ -16,10 +16,19 @@ List of augmenters:
     * AddElementwise
     * AdditiveGaussianNoise
     * Multiply
+    * MultiplyElementwise
     * Dropout
     * CoarseDropout
+    * ReplaceElementwise
+    * SaltAndPepper
+    * CoarseSaltAndPepper
+    * Salt
+    * CoarseSalt
+    * Pepper
+    * CoarsePepper
     * Invert
     * ContrastNormalization
+    * JpegCompression
 
 """
 from __future__ import print_function, division, absolute_import
