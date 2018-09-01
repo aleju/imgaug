@@ -30,6 +30,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Binomial, DiscreteUniform
+from .. import parameters as iap
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import copy as copy_module
@@ -2257,13 +2258,7 @@ class Sometimes(Augmenter):
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
         super(Sometimes, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_float(p) or ia.is_single_integer(p):
-            ia.do_assert(0 <= p <= 1)
-            self.p = Binomial(p)
-        elif isinstance(p, StochasticParameter):
-            self.p = p
-        else:
-            raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
+        self.p = iap.handle_probability_param(p, "p")
 
         self.then_list = handle_children_list(then_list, self.name, "then")
         self.else_list = handle_children_list(else_list, self.name, "else")

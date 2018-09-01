@@ -12244,7 +12244,7 @@ def test_Sometimes():
     # bad datatype for p
     got_exception = False
     try:
-        aug = iaa.Sometimes(p=False)
+        aug = iaa.Sometimes(p="foo")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
