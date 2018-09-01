@@ -4504,7 +4504,7 @@ def test_Pad():
     try:
         aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval="test", keep_size=False)
     except Exception as exc:
-        assert "Expected pad_cval " in str(exc)
+        assert "Expected " in str(exc)
         got_exception = True
     assert got_exception
 
