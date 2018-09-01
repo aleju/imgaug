@@ -1817,11 +1817,11 @@ class ElasticTransformation(Augmenter):
 
     Parameters
     ----------
-    alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Strength of the distortion field. Higher values mean more "movement" of
         pixels.
 
-            * If float, then that value will be used for all images.
+            * If number, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
             * If a list, then for each image a random value will be sampled
@@ -1829,11 +1829,11 @@ class ElasticTransformation(Augmenter):
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
-    sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
+    sigma : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the gaussian kernel used to smooth the distortion
         fields.
 
-            * If float, then that value will be used for all images.
+            * If number, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
             * If a list, then for each image a random value will be sampled
@@ -1855,7 +1855,7 @@ class ElasticTransformation(Augmenter):
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
         The constant intensity value used to fill in new pixels.
         This value is only used if `mode` is set to "constant".
         For standard uint8 images (value range 0-255), this value may also
@@ -1918,69 +1918,18 @@ class ElasticTransformation(Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(alpha):
-            ia.do_assert(alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,))
-            self.alpha = Deterministic(alpha)
-        elif isinstance(alpha, tuple):
-            ia.do_assert(len(alpha) == 2, "Expected tuple with 2 entries, got %d entries." % (len(alpha),))
-            ia.do_assert(all([alpha_i >= 0.0 for alpha_i in alpha]))
-            self.alpha = Uniform(alpha[0], alpha[1])
-        elif ia.is_iterable(alpha):
-            ia.do_assert(all([alpha_i >= 0.0 for alpha_i in alpha]))
-            self.alpha = Choice(alpha)
-        elif isinstance(alpha, StochasticParameter):
-            self.alpha = alpha
-        else:
-            raise Exception("Expected number, tuple of number, list of number or StochasticParameter. Got %s." % (type(alpha),))
-
-        if ia.is_single_number(sigma):
-            ia.do_assert(sigma >= 0.0, "Expected sigma to have range [0, inf), got value %.4f." % (sigma,))
-            self.sigma = Deterministic(sigma)
-        elif isinstance(sigma, tuple):
-            ia.do_assert(len(sigma) == 2, "Expected tuple with 2 entries, got %d entries." % (len(sigma),))
-            ia.do_assert(all([sigma_i >= 0.0 for sigma_i in sigma]))
-            self.sigma = Uniform(sigma[0], sigma[1])
-        elif ia.is_iterable(sigma):
-            ia.do_assert(all([sigma_i >= 0.0 for sigma_i in sigma]))
-            self.sigma = Choice(sigma)
-        elif isinstance(sigma, StochasticParameter):
-            self.sigma = sigma
-        else:
-            raise Exception("Expected number, tuple of number, list of number or StochasticParameter. Got %s." % (type(sigma),))
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
         if order == ia.ALL:
             self.order = Choice([0, 1, 2, 3, 4, 5])
-        elif ia.is_single_integer(order):
-            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
-            self.order = Deterministic(order)
-        elif isinstance(order, tuple):
-            ia.do_assert(len(order) == 2, "Expected tuple with 2 entries, got %d entries." % (len(order),))
-            ia.do_assert(all([order_i in [0, 1, 2, 3, 4, 5] for order_i in order]))
-            self.order = DiscreteUniform(order[0], order[1])
-        elif ia.is_iterable(order):
-            ia.do_assert(all([ia.is_single_integer(order_i) for order_i in order]), "Expected order list to only contain integers, got types %s." % (str([type(order_i) for order_i in order]),))
-            ia.do_assert(all([order_i in [0, 1, 2, 3, 4, 5] for order_i in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
-            self.order = Choice(order)
-        elif isinstance(order, StochasticParameter):
-            self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int, tuple of int, list of int or StochasticParameter, got %s." % (type(order),))
+            self.order = iap.handle_discrete_param(order, "order", value_range=(0, 5), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
         if cval == ia.ALL:
             self.cval = DiscreteUniform(0, 255)
-        elif ia.is_single_number(cval):
-            self.cval = Deterministic(cval)
-        elif isinstance(cval, tuple):
-            ia.do_assert(len(cval) == 2, "Expected tuple with 2 entries, got %d entries." % (len(cval),))
-            ia.do_assert(all([0 <= cval_i <= 255 for cval_i in cval]))
-            self.cval = DiscreteUniform(cval[0], cval[1])
-        elif ia.is_iterable(cval):
-            ia.do_assert(all([0 <= cval_i <= 255 for cval_i in cval]))
-            self.cval = Choice(cval)
-        elif isinstance(cval, StochasticParameter):
-            self.cval = cval
         else:
-            raise Exception("Expected cval to be imgaug.ALL, number, tuple of number, list of number or StochasticParameter, got %s." % (type(cval),))
+            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         if mode == ia.ALL:
             self.mode = Choice(["constant", "nearest", "reflect", "wrap"])
