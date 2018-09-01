@@ -256,17 +256,19 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
 
     Parameters
     ----------
-    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    strength : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1)
+    strength : number or tuple of number or list of number or StochasticParameter, optional(default=1)
         Parameter that controls the strength of the embossing.
         Sane values are somewhere in the range (0, 2) with 1 being the standard
         embossing effect. Default value is 1.
@@ -274,6 +276,8 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
@@ -295,26 +299,8 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     over the old image.
 
     """
-
-    if ia.is_single_number(alpha):
-        alpha_param = Deterministic(alpha)
-    elif ia.is_iterable(alpha):
-        ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
-        alpha_param = Uniform(alpha[0], alpha[1])
-    elif isinstance(alpha, StochasticParameter):
-        alpha_param = alpha
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
-
-    if ia.is_single_number(strength):
-        strength_param = Deterministic(strength)
-    elif ia.is_iterable(strength):
-        ia.do_assert(len(strength) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(strength),))
-        strength_param = Uniform(strength[0], strength[1])
-    elif isinstance(strength, StochasticParameter):
-        strength_param = strength
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(strength),))
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+    strength_param = iap.handle_continuous_param(strength, "strength", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
