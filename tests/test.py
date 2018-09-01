@@ -9805,7 +9805,7 @@ def test_PiecewiseAffine():
 
     # cval as tuple
     aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=(0, 10))
-    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval, iap.Uniform)
     assert isinstance(aug.cval.a, iap.Deterministic)
     assert isinstance(aug.cval.b, iap.Deterministic)
     assert aug.cval.a.value == 0
@@ -9821,7 +9821,7 @@ def test_PiecewiseAffine():
 
     # ALL as cval
     aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=ia.ALL)
-    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval, iap.Uniform)
     assert isinstance(aug.cval.a, iap.Deterministic)
     assert isinstance(aug.cval.b, iap.Deterministic)
     assert aug.cval.a.value == 0

@@ -1279,54 +1279,10 @@ class PiecewiseAffine(Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(scale):
-            self.scale = Deterministic(scale)
-        elif isinstance(scale, tuple):
-            ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
-            self.scale = Uniform(scale[0], scale[1])
-        elif ia.is_iterable(scale):
-            ia.do_assert(len(scale) > 0)
-            self.scale = Choice(scale)
-        elif isinstance(scale, StochasticParameter):
-            self.scale = scale
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
-
+        self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
         self.jitter = Normal(loc=0, scale=self.scale)
-
-        if ia.is_single_number(nb_rows):
-            ia.do_assert(nb_rows >= 2)
-            self.nb_rows = Deterministic(int(nb_rows))
-        elif isinstance(nb_rows, tuple):
-            ia.do_assert(len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),))
-            ia.do_assert(nb_rows[0] >= 2)
-            ia.do_assert(nb_rows[1] >= 2)
-            self.nb_rows = DiscreteUniform(nb_rows[0], nb_rows[1])
-        elif ia.is_iterable(nb_rows):
-            ia.do_assert(len(nb_rows) > 0)
-            ia.do_assert(all([val >= 2 for val in nb_rows]))
-            self.nb_rows = Choice(nb_rows)
-        elif isinstance(nb_rows, StochasticParameter):
-            self.nb_rows = nb_rows
-        else:
-            raise Exception("Expected int, tuple of two ints or StochasticParameter as nb_rows, got %s." % (type(nb_rows),))
-
-        if ia.is_single_number(nb_cols):
-            ia.do_assert(nb_cols >= 2)
-            self.nb_cols = Deterministic(int(nb_cols))
-        elif isinstance(nb_cols, tuple):
-            ia.do_assert(len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),))
-            ia.do_assert(nb_cols[0] >= 2)
-            ia.do_assert(nb_cols[1] >= 2)
-            self.nb_cols = DiscreteUniform(nb_cols[0], nb_cols[1])
-        elif ia.is_iterable(nb_cols):
-            ia.do_assert(len(nb_cols) > 0)
-            ia.do_assert(all([val >= 2 for val in nb_cols]))
-            self.nb_cols = Choice(nb_cols)
-        elif isinstance(nb_cols, StochasticParameter):
-            self.nb_cols = nb_cols
-        else:
-            raise Exception("Expected int, tuple of two ints or StochasticParameter as nb_cols, got %s." % (type(nb_cols),))
+        self.nb_rows = iap.handle_discrete_param(nb_rows, "nb_rows", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.nb_cols = iap.handle_discrete_param(nb_cols, "nb_cols", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
         # --------------
         # order, mode, cval
@@ -1358,22 +1314,9 @@ class PiecewiseAffine(Augmenter):
             raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = DiscreteUniform(0, 255)
-        elif ia.is_single_number(cval):
-            self.cval = Deterministic(cval)
-        elif isinstance(cval, tuple):
-            ia.do_assert(len(cval) == 2)
-            ia.do_assert(0 <= cval[0] <= 255)
-            ia.do_assert(0 <= cval[1] <= 255)
-            self.cval = DiscreteUniform(cval[0], cval[1])
-        elif ia.is_iterable(cval):
-            ia.do_assert(len(cval) > 0)
-            ia.do_assert([0 <= val <= 255 for val in cval])
-            self.cval = Choice(cval)
-        elif isinstance(cval, StochasticParameter):
-            self.cval = cval
+            self.cval = Uniform(0, 255)
         else:
-            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+            self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         if mode == ia.ALL:
