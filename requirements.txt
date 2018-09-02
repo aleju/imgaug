@@ -3,3 +3,4 @@ scipy
 Pillow
 opencv-python
 scikit-image
+imageio
