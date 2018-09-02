@@ -4198,7 +4198,7 @@ class BackgroundAugmenter(object):
                 batch_aug = list(augseq.augment_batches([batch], background=False))[0]
 
                 # send augmented batch to output queue
-                batch_str = pickle.dumps(batch, protocol=-1)
+                batch_str = pickle.dumps(batch_aug, protocol=-1)
                 queue_result.put(batch_str)
             except QueueEmpty:
                 if all([signal.is_set() for signal in source_finished_signals]):
