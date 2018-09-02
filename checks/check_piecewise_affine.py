@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import numpy as np
 
 ia.seed(3)
@@ -44,7 +43,7 @@ def main():
     ]
 
     #print("original", image.shape)
-    misc.imshow(kps[0].draw_on_image(image))
+    ia.imshow(kps[0].draw_on_image(image))
 
     print("-----------------")
     print("Random aug per image")
@@ -60,9 +59,9 @@ def main():
             img_aug_kps = np.pad(img_aug_kps, ((1, 1), (1, 1), (0, 0)), mode="constant", constant_values=255)
             #print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
             images_aug.append(img_aug_kps)
-            #misc.imshow(img_aug_kps)
+            #ia.imshow(img_aug_kps)
         print(aug.name)
-        misc.imshow(ia.draw_grid(images_aug))
+        ia.imshow(ia.draw_grid(images_aug))
 
 def keypoints_draw_on_image(kps, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False, border=50):
     if copy:

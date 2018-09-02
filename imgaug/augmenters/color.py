@@ -26,6 +26,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Choice, Uniform
+from .. import parameters as iap
 import numpy as np
 import cv2
 import six.moves as sm
@@ -150,7 +151,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
 
     Parameters
     ----------
-    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+    value : int or tuple of int or list of int or StochasticParameter, optional(default=0)
         See `Add.__init__()`
 
     per_channel : bool or float, optional(default=False)
@@ -220,12 +221,19 @@ class ChangeColorspace(Augmenter):
         The source colorspace (of the input images).
         Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
 
-    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=1.0)
+    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=1.0)
         The alpha value of the new colorspace when overlayed over the
         old one. A value close to 1.0 means that mostly the new
         colorspace is visible. A value close to 0.0 means, that mostly the
-        old image is visible. Use a tuple (a, b) to use a random value
-        `x` with `a <= x <= b` as the alpha value per image.
+        old image is visible.
+
+            * If an int or float, exactly that value will be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     name : string, optional(default=None)
         See `Augmenter.__init__()`
@@ -290,15 +298,8 @@ class ChangeColorspace(Augmenter):
     def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False, random_state=None):
         super(ChangeColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(alpha):
-            self.alpha = Deterministic(alpha)
-        elif ia.is_iterable(alpha):
-            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
-            self.alpha = Uniform(alpha[0], alpha[1])
-        elif isinstance(alpha, StochasticParameter):
-            self.alpha = alpha
-        else:
-            raise Exception("Expected alpha to be int or float or tuple/list of ints/floats or StochasticParameter, got %s." % (type(alpha),))
+        # TODO somehow merge this with Alpha augmenter?
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
 
         if ia.is_string(to_colorspace):
             ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
@@ -411,12 +412,19 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
 
     Parameters
     ----------
-    alpha : int or float or tuple of two ints/floats or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list fo number or StochasticParameter, optional(default=0)
         The alpha value of the grayscale image when overlayed over the
         old image. A value close to 1.0 means, that mostly the new grayscale
         image is visible. A value close to 0.0 means, that mostly the
-        old image is visible. Use a tuple (a, b) to sample per image a
-        random value x with a <= x <= b as the alpha value.
+        old image is visible.
+
+            * If a number, exactly that value will always be used.
+            * If a tuple (a, b), a random value from the range a <= x <= b will
+              be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, a value will be sampled from the
+              parameter per image.
 
     from_colorspace : string, optional(default="RGB")
         The source colorspace (of the input images).

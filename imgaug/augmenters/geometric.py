@@ -24,6 +24,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Choice, DiscreteUniform, Normal, Uniform
+from .. import parameters as iap
 import numpy as np
 import math
 from scipy import ndimage
@@ -60,14 +61,16 @@ class Affine(Augmenter):
 
     Parameters
     ----------
-    scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+    scale : number or tuple of two number or list of number or StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional(default=1.0)
         Scaling factor to use, where 1.0 represents no change and 0.5 is
         zoomed out to 50 percent of the original size.
 
-            * If a single float, then that value will be used for all images.
+            * If a single number, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That value will be used identically for
               both x- and y-axis.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then from that parameter a value will
               be sampled per image (again, used for both x- and y-axis).
             * If a dictionary, then it is expected to have the keys "x" and/or "y".
@@ -76,16 +79,18 @@ class Affine(Augmenter):
               set different values for the axis. If they are set to the same
               ranges, different values may still be sampled per axis.
 
-    translate_percent : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+    translate_percent : number or tuple of two number or list of number or StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional(default=1.0)
         Translation in percent relative to the image
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
         height/width.
 
-            * If a single float, then that value will be used for all images.
+            * If a single number, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That percent value will be used identically
               for both x- and y-axis.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then from that parameter a value will
               be sampled per image (again, used for both x- and y-axis).
             * If a dictionary, then it is expected to have the keys "x" and/or "y".
@@ -95,7 +100,7 @@ class Affine(Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
+    translate_px : int or tuple of two int or list of int or StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional(default=1.0)
         Translation in
         pixels.
 
@@ -103,6 +108,8 @@ class Affine(Augmenter):
             * If a tuple (a, b), then a value will be sampled from the discrete
               range [a .. b] per image. That number will be used identically
               for both x- and y-axis.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then from that parameter a value will
               be sampled per image (again, used for both x- and y-axis).
             * If a dictionary, then it is expected to have the keys "x" and/or "y".
@@ -112,23 +119,29 @@ class Affine(Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
-        Rotation in degrees (NOT radians), i.e. expected value range is
-        0 to 360 for positive rotations (may also be negative).
+    rotate : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+        Rotation in degrees (_NOT_ radians), i.e. expected value range is
+        0 to 360 for positive rotations (may also be negative). Rotation
+        happens around the _center_ of the image, not the top left corner
+        as in some other frameworks.
 
-            * If a float/int, then that value will be used for all images.
+            * If a number, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the rotation value per image.
 
-    shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
-        Shear in degrees (NOT radians), i.e. expected value range is
+    shear : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+        Shear in degrees (_NOT_ radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
 
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the shear value per image.
 
@@ -164,20 +177,20 @@ class Affine(Augmenter):
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
         The constant value used for skimage's transform function.
         This is the value used to fill up pixels in the result image that
         didn't exist in the input image (e.g. when translating to the left,
         some new pixels are created at the right). Such a fill-up with a
         constant value only happens, when `mode` is "constant".
-        For standard uint8 images (value range 0-255), this value may also
-        come from the range 0-255. It may be a float value, even for
-        integer image dtypes.
+        The expected value range is [0, 255]. It may be a float value.
 
-            * If this is a single int or float, then that value will be used
+            * If this is a single number, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
               is picked per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If ia.ALL, a value from the discrete range [0 .. 255] will be
               sampled per image.
             * If a StochasticParameter, a new value will be sampled from the
@@ -352,17 +365,8 @@ class Affine(Augmenter):
 
         if cval == ia.ALL:
             self.cval = Uniform(0, 255) # skimage transform expects float
-        elif ia.is_single_number(cval):
-            self.cval = Deterministic(cval)
-        elif ia.is_iterable(cval):
-            ia.do_assert(len(cval) == 2)
-            ia.do_assert(0 <= cval[0] <= 255)
-            ia.do_assert(0 <= cval[1] <= 255)
-            self.cval = Uniform(cval[0], cval[1]) # skimage transform expects float
-        elif isinstance(cval, StochasticParameter):
-            self.cval = cval
         else:
-            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+            self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         # skimage   | cv2
@@ -391,29 +395,16 @@ class Affine(Augmenter):
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
 
         # scale
-        # float | (float, float) | [float, float] | StochasticParameter
-        def scale_handle_param(param, allow_dict):
-            if isinstance(param, StochasticParameter):
-                return param
-            elif ia.is_single_number(param):
-                ia.do_assert(param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,))
-                return Deterministic(param)
-            elif ia.is_iterable(param) and not isinstance(param, dict):
-                ia.do_assert(len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),))
-                ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1]))
-                return Uniform(param[0], param[1])
-            elif allow_dict and isinstance(param, dict):
-                ia.do_assert("x" in param or "y" in param)
-                x = param.get("x")
-                y = param.get("y")
-
-                x = x if x is not None else 1.0
-                y = y if y is not None else 1.0
-
-                return (scale_handle_param(x, False), scale_handle_param(y, False))
-            else:
-                raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
-        self.scale = scale_handle_param(scale, True)
+        if isinstance(scale, dict):
+            ia.do_assert("x" in scale or "y" in scale)
+            x = scale.get("x", 1.0)
+            y = scale.get("y", 1.0)
+            self.scale = (
+                iap.handle_continuous_param(x, "scale['x']", value_range=(0+1e-4, None), tuple_to_uniform=True, list_to_choice=True),
+                iap.handle_continuous_param(y, "scale['y']", value_range=(0+1e-4, None), tuple_to_uniform=True, list_to_choice=True)
+            )
+        else:
+            self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0+1e-4, None), tuple_to_uniform=True, list_to_choice=True)
 
         # translate
         if translate_percent is None and translate_px is None:
@@ -423,79 +414,31 @@ class Affine(Augmenter):
 
         if translate_percent is not None:
             # translate by percent
-            def translate_handle_param(param, allow_dict):
-                if ia.is_single_number(param):
-                    return Deterministic(float(param))
-                elif ia.is_iterable(param) and not isinstance(param, dict):
-                    ia.do_assert(len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),))
-                    all_numbers = all([ia.is_single_number(p) for p in param])
-                    ia.do_assert(all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),))
-                    #ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1]))
-                    return Uniform(param[0], param[1])
-                elif allow_dict and isinstance(param, dict):
-                    ia.do_assert("x" in param or "y" in param)
-                    x = param.get("x")
-                    y = param.get("y")
-
-                    x = x if x is not None else 0
-                    y = y if y is not None else 0
-
-                    return (translate_handle_param(x, False), translate_handle_param(y, False))
-                elif isinstance(param, StochasticParameter):
-                    return param
-                else:
-                    raise Exception("Expected float, int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
-            self.translate = translate_handle_param(translate_percent, True)
+            if isinstance(translate_percent, dict):
+                ia.do_assert("x" in translate_percent or "y" in translate_percent)
+                x = translate_percent.get("x", 0)
+                y = translate_percent.get("y", 0)
+                self.translate = (
+                    iap.handle_continuous_param(x, "translate_percent['x']", value_range=None, tuple_to_uniform=True, list_to_choice=True),
+                    iap.handle_continuous_param(y, "translate_percent['y']", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+                )
+            else:
+                self.translate = iap.handle_continuous_param(translate_percent, "translate_percent", value_range=None, tuple_to_uniform=True, list_to_choice=True)
         else:
             # translate by pixels
-            def translate_handle_param(param, allow_dict):
-                if ia.is_single_integer(param):
-                    return Deterministic(param)
-                elif ia.is_iterable(param) and not isinstance(param, dict):
-                    ia.do_assert(len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),))
-                    all_integer = all([ia.is_single_integer(p) for p in param])
-                    ia.do_assert(all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),))
-                    return DiscreteUniform(param[0], param[1])
-                elif allow_dict and isinstance(param, dict):
-                    ia.do_assert("x" in param or "y" in param)
-                    x = param.get("x")
-                    y = param.get("y")
+            if isinstance(translate_px, dict):
+                ia.do_assert("x" in translate_px or "y" in translate_px)
+                x = translate_px.get("x", 0)
+                y = translate_px.get("y", 0)
+                self.translate = (
+                    iap.handle_discrete_param(x, "translate_px['x']", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False),
+                    iap.handle_discrete_param(y, "translate_px['y']", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+                )
+            else:
+                self.translate = iap.handle_discrete_param(translate_px, "translate_px", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
-                    x = x if x is not None else 0
-                    y = y if y is not None else 0
-
-                    return (translate_handle_param(x, False), translate_handle_param(y, False))
-                elif isinstance(param, StochasticParameter):
-                    return param
-                else:
-                    raise Exception("Expected int or tuple/list with 2 ints or StochasticParameter. Got %s." % (type(param),))
-            self.translate = translate_handle_param(translate_px, True)
-
-        # rotate
-        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
-        if isinstance(rotate, StochasticParameter):
-            self.rotate = rotate
-        elif ia.is_single_number(rotate):
-            self.rotate = Deterministic(rotate)
-        elif ia.is_iterable(rotate):
-            ia.do_assert(len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),))
-            ia.do_assert(all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list")
-            self.rotate = Uniform(rotate[0], rotate[1])
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
-
-        # shear
-        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
-        if isinstance(shear, StochasticParameter):
-            self.shear = shear
-        elif ia.is_single_number(shear):
-            self.shear = Deterministic(shear)
-        elif ia.is_iterable(shear):
-            ia.do_assert(len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),))
-            ia.do_assert(all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list.")
-            self.shear = Uniform(shear[0], shear[1])
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
+        self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+        self.shear = iap.handle_continuous_param(shear, "shear", value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
@@ -744,7 +687,7 @@ class AffineCv2(Augmenter):
 
     Parameters
     ----------
-    scale : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+    scale : number or tuple of number or list of number or StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional(default=1.0)
         Scaling factor to use, where 1.0 represents no change and 0.5 is
         zoomed out to 50 percent of the original size.
 
@@ -752,6 +695,8 @@ class AffineCv2(Augmenter):
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That value will be used identically for
               both x- and y-axis.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then from that parameter a value will
               be sampled per image (again, used for both x- and y-axis).
             * If a dictionary, then it is expected to have the keys "x" and/or "y".
@@ -760,7 +705,7 @@ class AffineCv2(Augmenter):
               set different values for the axis. If they are set to the same
               ranges, different values may still be sampled per axis.
 
-    translate_percent : float or tuple of two floats or StochasticParameter or dict {"x": float/tuple/StochasticParameter, "y": float/tuple/StochasticParameter}, optional(default=1.0)
+    translate_percent : number or tuple of two number or list of number or StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional(default=1.0)
         Translation in percent relative to the image
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
@@ -770,6 +715,8 @@ class AffineCv2(Augmenter):
             * If a tuple (a, b), then a value will be sampled from the range
               a <= x <= b per image. That percent value will be used identically
               for both x- and y-axis.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then from that parameter a value will
               be sampled per image (again, used for both x- and y-axis).
             * If a dictionary, then it is expected to have the keys "x" and/or "y".
@@ -779,7 +726,7 @@ class AffineCv2(Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    translate_px : int or tuple of two ints or StochasticParameter or dict {"x": int/tuple/StochasticParameter, "y": int/tuple/StochasticParameter}, optional(default=1.0)
+    translate_px : int or tuple of two int or list of int or StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional(default=1.0)
         Translation in
         pixels.
 
@@ -787,6 +734,8 @@ class AffineCv2(Augmenter):
             * If a tuple (a, b), then a value will be sampled from the discrete
               range [a .. b] per image. That number will be used identically
               for both x- and y-axis.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then from that parameter a value will
               be sampled per image (again, used for both x- and y-axis).
             * If a dictionary, then it is expected to have the keys "x" and/or "y".
@@ -796,23 +745,29 @@ class AffineCv2(Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    rotate : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
-        Rotation in degrees (NOT radians), i.e. expected value range is
-        0 to 360 for positive rotations (may also be negative).
+    rotate : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+        Rotation in degrees (_NOT_ radians), i.e. expected value range is
+        0 to 360 for positive rotations (may also be negative). Rotation
+        happens around the _center_ of the image, not the top left corner
+        as in some other frameworks.
 
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the rotation value per image.
 
-    shear : float or int or tuple of two floats/ints or StochasticParameter, optional(default=0)
+    shear : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Shear in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
 
             * If a float/int, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from the
               range a <= x <= b and be used as the rotation value.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the shear value per image.
 
@@ -844,20 +799,19 @@ class AffineCv2(Augmenter):
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
-        The constant value used for skimage's transform function.
-        This is the value used to fill up pixels in the result image that
+    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
+        The constant value used to fill up pixels in the result image that
         didn't exist in the input image (e.g. when translating to the left,
         some new pixels are created at the right). Such a fill-up with a
         constant value only happens, when `mode` is "constant".
-        For standard uint8 images (value range 0-255), this value may also
-        come from the range 0-255. It may be a float value, even for
-        integer image dtypes.
+        The expected value range is [0, 255]. It may be a float value.
 
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
             * If a tuple (a, b), then a random value from the range a <= x <= b
               is picked per image.
+            * If a list, then a random value will eb sampled from that list
+              per image.
             * If ia.ALL, a value from the discrete range [0 .. 255] will be
               sampled per image.
             * If a StochasticParameter, a new value will be sampled from the
@@ -989,17 +943,8 @@ class AffineCv2(Augmenter):
 
         if cval == ia.ALL:
             self.cval = DiscreteUniform(0, 255)
-        elif ia.is_single_number(cval):
-            self.cval = Deterministic(cval)
-        elif ia.is_iterable(cval):
-            ia.do_assert(len(cval) == 2)
-            ia.do_assert(0 <= cval[0] <= 255)
-            ia.do_assert(0 <= cval[1] <= 255)
-            self.cval = DiscreteUniform(cval[0], cval[1])
-        elif isinstance(cval, StochasticParameter):
-            self.cval = cval
         else:
-            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_REFLECT_101, cv2.BORDER_WRAP, cv2.BORDER_CONSTANT]
         available_modes_str = ["replicate", "reflect", "reflect_101", "wrap", "constant"]
@@ -1021,29 +966,16 @@ class AffineCv2(Augmenter):
             raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or StochasticParameter, got %s." % (type(mode),))
 
         # scale
-        # float | (float, float) | [float, float] | StochasticParameter
-        def scale_handle_param(param, allow_dict):
-            if isinstance(param, StochasticParameter):
-                return param
-            elif ia.is_single_number(param):
-                ia.do_assert(param > 0.0, "Expected scale to have range (0, inf), got value %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param,))
-                return Deterministic(param)
-            elif ia.is_iterable(param) and not isinstance(param, dict):
-                ia.do_assert(len(param) == 2, "Expected scale tuple/list with 2 entries, got %d entries." % (len(param),))
-                ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected scale tuple/list to have values in range (0, inf), got values %.4f and %.4f. Note: The value to _not_ change the scale of images is 1.0, not 0.0." % (param[0], param[1]))
-                return Uniform(param[0], param[1])
-            elif allow_dict and isinstance(param, dict):
-                ia.do_assert("x" in param or "y" in param)
-                x = param.get("x")
-                y = param.get("y")
-
-                x = x if x is not None else 1.0
-                y = y if y is not None else 1.0
-
-                return (scale_handle_param(x, False), scale_handle_param(y, False))
-            else:
-                raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
-        self.scale = scale_handle_param(scale, True)
+        if isinstance(scale, dict):
+            ia.do_assert("x" in scale or "y" in scale)
+            x = scale.get("x", 1.0)
+            y = scale.get("y", 1.0)
+            self.scale = (
+                iap.handle_continuous_param(x, "scale['x']", value_range=(0+1e-4, None), tuple_to_uniform=True, list_to_choice=True),
+                iap.handle_continuous_param(y, "scale['y']", value_range=(0+1e-4, None), tuple_to_uniform=True, list_to_choice=True)
+            )
+        else:
+            self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0+1e-4, None), tuple_to_uniform=True, list_to_choice=True)
 
         # translate
         if translate_percent is None and translate_px is None:
@@ -1053,79 +985,31 @@ class AffineCv2(Augmenter):
 
         if translate_percent is not None:
             # translate by percent
-            def translate_handle_param(param, allow_dict):
-                if ia.is_single_number(param):
-                    return Deterministic(float(param))
-                elif ia.is_iterable(param) and not isinstance(param, dict):
-                    ia.do_assert(len(param) == 2, "Expected translate_percent tuple/list with 2 entries, got %d entries." % (len(param),))
-                    all_numbers = all([ia.is_single_number(p) for p in param])
-                    ia.do_assert(all_numbers, "Expected translate_percent tuple/list to contain only numbers, got types %s." % (str([type(p) for p in param]),))
-                    #ia.do_assert(param[0] > 0.0 and param[1] > 0.0, "Expected translate_percent tuple/list to have values in range (0, inf), got values %.4f and %.4f." % (param[0], param[1]))
-                    return Uniform(param[0], param[1])
-                elif allow_dict and isinstance(param, dict):
-                    ia.do_assert("x" in param or "y" in param)
-                    x = param.get("x")
-                    y = param.get("y")
-
-                    x = x if x is not None else 0
-                    y = y if y is not None else 0
-
-                    return (translate_handle_param(x, False), translate_handle_param(y, False))
-                elif isinstance(param, StochasticParameter):
-                    return param
-                else:
-                    raise Exception("Expected float, int or tuple/list with 2 entries of both floats or ints or StochasticParameter. Got %s." % (type(param),))
-            self.translate = translate_handle_param(translate_percent, True)
+            if isinstance(translate_percent, dict):
+                ia.do_assert("x" in translate_percent or "y" in translate_percent)
+                x = translate_percent.get("x", 0)
+                y = translate_percent.get("y", 0)
+                self.translate = (
+                    iap.handle_continuous_param(x, "translate_percent['x']", value_range=None, tuple_to_uniform=True, list_to_choice=True),
+                    iap.handle_continuous_param(y, "translate_percent['y']", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+                )
+            else:
+                self.translate = iap.handle_continuous_param(translate_percent, "translate_percent", value_range=None, tuple_to_uniform=True, list_to_choice=True)
         else:
             # translate by pixels
-            def translate_handle_param(param, allow_dict):
-                if ia.is_single_integer(param):
-                    return Deterministic(param)
-                elif ia.is_iterable(param) and not isinstance(param, dict):
-                    ia.do_assert(len(param) == 2, "Expected translate_px tuple/list with 2 entries, got %d entries." % (len(param),))
-                    all_integer = all([ia.is_single_integer(p) for p in param])
-                    ia.do_assert(all_integer, "Expected translate_px tuple/list to contain only integers, got types %s." % (str([type(p) for p in param]),))
-                    return DiscreteUniform(param[0], param[1])
-                elif allow_dict and isinstance(param, dict):
-                    ia.do_assert("x" in param or "y" in param)
-                    x = param.get("x")
-                    y = param.get("y")
+            if isinstance(translate_px, dict):
+                ia.do_assert("x" in translate_px or "y" in translate_px)
+                x = translate_px.get("x", 0)
+                y = translate_px.get("y", 0)
+                self.translate = (
+                    iap.handle_discrete_param(x, "translate_px['x']", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False),
+                    iap.handle_discrete_param(y, "translate_px['y']", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+                )
+            else:
+                self.translate = iap.handle_discrete_param(translate_px, "translate_px", value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
-                    x = x if x is not None else 0
-                    y = y if y is not None else 0
-
-                    return (translate_handle_param(x, False), translate_handle_param(y, False))
-                elif isinstance(param, StochasticParameter):
-                    return param
-                else:
-                    raise Exception("Expected int or tuple/list with 2 ints or StochasticParameter. Got %s." % (type(param),))
-            self.translate = translate_handle_param(translate_px, True)
-
-        # rotate
-        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
-        if isinstance(rotate, StochasticParameter):
-            self.rotate = rotate
-        elif ia.is_single_number(rotate):
-            self.rotate = Deterministic(rotate)
-        elif ia.is_iterable(rotate):
-            ia.do_assert(len(rotate) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(rotate),))
-            ia.do_assert(all([ia.is_single_number(val) for val in rotate]), "Expected floats/ints in rotate tuple/list")
-            self.rotate = Uniform(rotate[0], rotate[1])
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(rotate),))
-
-        # shear
-        # StochasticParameter | float | int | (float or int, float or int) | [float or int, float or int]
-        if isinstance(shear, StochasticParameter):
-            self.shear = shear
-        elif ia.is_single_number(shear):
-            self.shear = Deterministic(shear)
-        elif ia.is_iterable(shear):
-            ia.do_assert(len(shear) == 2, "Expected rotate tuple/list with 2 entries, got %d entries." % (len(shear),))
-            ia.do_assert(all([ia.is_single_number(val) for val in shear]), "Expected floats/ints in shear tuple/list.")
-            self.shear = Uniform(shear[0], shear[1])
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(shear),))
+        self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+        self.shear = iap.handle_continuous_param(shear, "shear", value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
@@ -1395,54 +1279,10 @@ class PiecewiseAffine(Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(scale):
-            self.scale = Deterministic(scale)
-        elif isinstance(scale, tuple):
-            ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
-            self.scale = Uniform(scale[0], scale[1])
-        elif ia.is_iterable(scale):
-            ia.do_assert(len(scale) > 0)
-            self.scale = Choice(scale)
-        elif isinstance(scale, StochasticParameter):
-            self.scale = scale
-        else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
-
+        self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
         self.jitter = Normal(loc=0, scale=self.scale)
-
-        if ia.is_single_number(nb_rows):
-            ia.do_assert(nb_rows >= 2)
-            self.nb_rows = Deterministic(int(nb_rows))
-        elif isinstance(nb_rows, tuple):
-            ia.do_assert(len(nb_rows) == 2, "Expected tuple/list with 2 entries for argument 'nb_rows', got %d entries." % (len(nb_rows),))
-            ia.do_assert(nb_rows[0] >= 2)
-            ia.do_assert(nb_rows[1] >= 2)
-            self.nb_rows = DiscreteUniform(nb_rows[0], nb_rows[1])
-        elif ia.is_iterable(nb_rows):
-            ia.do_assert(len(nb_rows) > 0)
-            ia.do_assert(all([val >= 2 for val in nb_rows]))
-            self.nb_rows = Choice(nb_rows)
-        elif isinstance(nb_rows, StochasticParameter):
-            self.nb_rows = nb_rows
-        else:
-            raise Exception("Expected int, tuple of two ints or StochasticParameter as nb_rows, got %s." % (type(nb_rows),))
-
-        if ia.is_single_number(nb_cols):
-            ia.do_assert(nb_cols >= 2)
-            self.nb_cols = Deterministic(int(nb_cols))
-        elif isinstance(nb_cols, tuple):
-            ia.do_assert(len(nb_cols) == 2, "Expected tuple/list with 2 entries for argument 'nb_cols', got %d entries." % (len(nb_cols),))
-            ia.do_assert(nb_cols[0] >= 2)
-            ia.do_assert(nb_cols[1] >= 2)
-            self.nb_cols = DiscreteUniform(nb_cols[0], nb_cols[1])
-        elif ia.is_iterable(nb_cols):
-            ia.do_assert(len(nb_cols) > 0)
-            ia.do_assert(all([val >= 2 for val in nb_cols]))
-            self.nb_cols = Choice(nb_cols)
-        elif isinstance(nb_cols, StochasticParameter):
-            self.nb_cols = nb_cols
-        else:
-            raise Exception("Expected int, tuple of two ints or StochasticParameter as nb_cols, got %s." % (type(nb_cols),))
+        self.nb_rows = iap.handle_discrete_param(nb_rows, "nb_rows", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.nb_cols = iap.handle_discrete_param(nb_cols, "nb_cols", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
         # --------------
         # order, mode, cval
@@ -1474,22 +1314,9 @@ class PiecewiseAffine(Augmenter):
             raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = DiscreteUniform(0, 255)
-        elif ia.is_single_number(cval):
-            self.cval = Deterministic(cval)
-        elif isinstance(cval, tuple):
-            ia.do_assert(len(cval) == 2)
-            ia.do_assert(0 <= cval[0] <= 255)
-            ia.do_assert(0 <= cval[1] <= 255)
-            self.cval = DiscreteUniform(cval[0], cval[1])
-        elif ia.is_iterable(cval):
-            ia.do_assert(len(cval) > 0)
-            ia.do_assert([0 <= val <= 255 for val in cval])
-            self.cval = Choice(cval)
-        elif isinstance(cval, StochasticParameter):
-            self.cval = cval
+            self.cval = Uniform(0, 255)
         else:
-            raise Exception("Expected cval to be imgaug.ALL, int, float or StochasticParameter, got %s." % (type(cval),))
+            self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         if mode == ia.ALL:
@@ -1745,15 +1572,15 @@ class PerspectiveTransform(Augmenter):
 
     Parameters
     ----------
-    scale : float or tuple of two floats or StochasticParameter, optional(default=0)
+    scale : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the normal distributions. These are used to sample
         the random distances of the subimage's corners from the full image's
         corners. The sampled values reflect percentage values (with respect
         to image height/width). Recommended values are in the range 0.0 to 0.1.
 
-            * If a single float, then that value will always be used as the
+            * If a single number, then that value will always be used as the
               scale.
-            * If a tuple (a, b) of floats, then a random value will be picked
+            * If a tuple (a, b) of numbers, then a random value will be picked
               from the interval (a, b) (per image).
             * If a list of values, a random one of the values will be picked
               per image.
@@ -1789,20 +1616,8 @@ class PerspectiveTransform(Augmenter):
     def __init__(self, scale=0, keep_size=True, name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(scale):
-            self.scale = Deterministic(scale)
-        elif isinstance(scale, tuple):
-            ia.do_assert(len(scale) == 2, "Expected tuple with 2 entries for argument 'scale', got %d entries." % (len(scale),))
-            self.scale = Uniform(scale[0], scale[1])
-        elif ia.is_iterable(scale):
-            self.scale = Choice(scale)
-        elif isinstance(scale, StochasticParameter):
-            self.scale = scale
-        else:
-            raise Exception("Expected number, tuple of number, list of number or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
-
+        self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
         self.jitter = Normal(loc=0, scale=self.scale)
-
         self.keep_size = keep_size
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -2002,11 +1817,11 @@ class ElasticTransformation(Augmenter):
 
     Parameters
     ----------
-    alpha : float or tuple of two floats or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Strength of the distortion field. Higher values mean more "movement" of
         pixels.
 
-            * If float, then that value will be used for all images.
+            * If number, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
             * If a list, then for each image a random value will be sampled
@@ -2014,11 +1829,11 @@ class ElasticTransformation(Augmenter):
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
-    sigma : float or tuple of two floats or StochasticParameter, optional(default=0)
+    sigma : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the gaussian kernel used to smooth the distortion
         fields.
 
-            * If float, then that value will be used for all images.
+            * If number, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will be
               sampled per image.
             * If a list, then for each image a random value will be sampled
@@ -2040,7 +1855,7 @@ class ElasticTransformation(Augmenter):
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of two number or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
         The constant intensity value used to fill in new pixels.
         This value is only used if `mode` is set to "constant".
         For standard uint8 images (value range 0-255), this value may also
@@ -2103,69 +1918,18 @@ class ElasticTransformation(Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(alpha):
-            ia.do_assert(alpha >= 0.0, "Expected alpha to have range [0, inf), got value %.4f." % (alpha,))
-            self.alpha = Deterministic(alpha)
-        elif isinstance(alpha, tuple):
-            ia.do_assert(len(alpha) == 2, "Expected tuple with 2 entries, got %d entries." % (len(alpha),))
-            ia.do_assert(all([alpha_i >= 0.0 for alpha_i in alpha]))
-            self.alpha = Uniform(alpha[0], alpha[1])
-        elif ia.is_iterable(alpha):
-            ia.do_assert(all([alpha_i >= 0.0 for alpha_i in alpha]))
-            self.alpha = Choice(alpha)
-        elif isinstance(alpha, StochasticParameter):
-            self.alpha = alpha
-        else:
-            raise Exception("Expected number, tuple of number, list of number or StochasticParameter. Got %s." % (type(alpha),))
-
-        if ia.is_single_number(sigma):
-            ia.do_assert(sigma >= 0.0, "Expected sigma to have range [0, inf), got value %.4f." % (sigma,))
-            self.sigma = Deterministic(sigma)
-        elif isinstance(sigma, tuple):
-            ia.do_assert(len(sigma) == 2, "Expected tuple with 2 entries, got %d entries." % (len(sigma),))
-            ia.do_assert(all([sigma_i >= 0.0 for sigma_i in sigma]))
-            self.sigma = Uniform(sigma[0], sigma[1])
-        elif ia.is_iterable(sigma):
-            ia.do_assert(all([sigma_i >= 0.0 for sigma_i in sigma]))
-            self.sigma = Choice(sigma)
-        elif isinstance(sigma, StochasticParameter):
-            self.sigma = sigma
-        else:
-            raise Exception("Expected number, tuple of number, list of number or StochasticParameter. Got %s." % (type(sigma),))
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
         if order == ia.ALL:
             self.order = Choice([0, 1, 2, 3, 4, 5])
-        elif ia.is_single_integer(order):
-            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
-            self.order = Deterministic(order)
-        elif isinstance(order, tuple):
-            ia.do_assert(len(order) == 2, "Expected tuple with 2 entries, got %d entries." % (len(order),))
-            ia.do_assert(all([order_i in [0, 1, 2, 3, 4, 5] for order_i in order]))
-            self.order = DiscreteUniform(order[0], order[1])
-        elif ia.is_iterable(order):
-            ia.do_assert(all([ia.is_single_integer(order_i) for order_i in order]), "Expected order list to only contain integers, got types %s." % (str([type(order_i) for order_i in order]),))
-            ia.do_assert(all([order_i in [0, 1, 2, 3, 4, 5] for order_i in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
-            self.order = Choice(order)
-        elif isinstance(order, StochasticParameter):
-            self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int, tuple of int, list of int or StochasticParameter, got %s." % (type(order),))
+            self.order = iap.handle_discrete_param(order, "order", value_range=(0, 5), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
         if cval == ia.ALL:
             self.cval = DiscreteUniform(0, 255)
-        elif ia.is_single_number(cval):
-            self.cval = Deterministic(cval)
-        elif isinstance(cval, tuple):
-            ia.do_assert(len(cval) == 2, "Expected tuple with 2 entries, got %d entries." % (len(cval),))
-            ia.do_assert(all([0 <= cval_i <= 255 for cval_i in cval]))
-            self.cval = DiscreteUniform(cval[0], cval[1])
-        elif ia.is_iterable(cval):
-            ia.do_assert(all([0 <= cval_i <= 255 for cval_i in cval]))
-            self.cval = Choice(cval)
-        elif isinstance(cval, StochasticParameter):
-            self.cval = cval
         else:
-            raise Exception("Expected cval to be imgaug.ALL, number, tuple of number, list of number or StochasticParameter, got %s." % (type(cval),))
+            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         if mode == ia.ALL:
             self.mode = Choice(["constant", "nearest", "reflect", "wrap"])

@@ -49,7 +49,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
 
     Parameters
     ----------
-    factor : int or float or iterable of two floats or StochasticParameter, optional(default=0)
+    factor : number or tuple of number or list of numbre or StochasticParameter, optional(default=0)
         Weighting of the results of the first branch. Values close to 0 mean
         that the results from the second branch (see parameter `second`)
         make up most of the final image.
@@ -57,6 +57,8 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be picked from that list per
+              image.
             * If StochasticParameter, then that parameter will be used to
               sample a value per image.
 
@@ -141,29 +143,13 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
                  name=None, deterministic=False, random_state=None):
         super(Alpha, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(factor):
-            ia.do_assert(0.0 <= factor <= 1.0, "Expected factor to have range [0, 1.0], got value %.2f." % (factor,))
-            self.factor = Deterministic(factor)
-        elif ia.is_iterable(factor):
-            ia.do_assert(len(factor) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(factor),))
-            self.factor = Uniform(factor[0], factor[1])
-        elif isinstance(factor, StochasticParameter):
-            self.factor = factor
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(factor),))
+        self.factor = iap.handle_continuous_param(factor, "factor", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
 
         ia.do_assert(first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values.")
-
         self.first = handle_children_list(first, self.name, "first")
         self.second = handle_children_list(second, self.name, "second")
 
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
         self.epsilon = 0.01
 
@@ -365,7 +351,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
 
     Parameters
     ----------
-    factor : float or iterable of two floats or StochasticParameter, optional(default=0)
+    factor : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Weighting of the results of the first branch. Values close to 0 mean
         that the results from the second branch (see parameter `second`)
         make up most of the final image.
@@ -373,6 +359,8 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             * If float, then that value will be used for all images.
             * If tuple (a, b), then a random value from range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be picked from that list per
+              image.
             * If StochasticParameter, then that parameter will be used to
               sample a value per image.
 

@@ -22,7 +22,6 @@ import numpy as np
 import random
 import six
 import six.moves as sm
-from scipy import misc
 import skimage
 from skimage import data, color
 import cv2
@@ -3895,12 +3894,12 @@ def test_Superpixels():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Superpixels(p_replace=1, n_segments=2, max_size=100, interpolation="nearest")
+    aug = iaa.Superpixels(p_replace=0.5, n_segments=2, max_size=100, interpolation="nearest")
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
     assert params[1].value == 2
     assert params[2] == 100
     assert params[3] == "nearest"
@@ -4505,7 +4504,7 @@ def test_Pad():
     try:
         aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval="test", keep_size=False)
     except Exception as exc:
-        assert "Expected pad_cval " in str(exc)
+        assert "Expected " in str(exc)
         got_exception = True
     assert got_exception
 
@@ -5070,11 +5069,11 @@ def test_Fliplr():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Fliplr(p=1)
+    aug = iaa.Fliplr(p=0.5)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
 
 
 def test_Flipud():
@@ -5252,11 +5251,11 @@ def test_Flipud():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Flipud(p=1)
+    aug = iaa.Flipud(p=0.5)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
 
 
 def test_GaussianBlur():
@@ -6964,13 +6963,13 @@ def test_ReplaceElementwise():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.ReplaceElementwise(mask=1, replacement=2, per_channel=False)
+    aug = iaa.ReplaceElementwise(mask=0.5, replacement=2, per_channel=False)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
     assert isinstance(params[2], iap.Deterministic)
-    assert params[0].p.value >= 1 - 1e-8
+    assert 0.5 - 1e-6 < params[0].p.value < 0.5 + 1e-6
     assert params[1].value == 2
     assert params[2].value == 0
 
@@ -7718,12 +7717,12 @@ def test_Invert():
     assert got_exception
 
     # test get_parameters()
-    aug = iaa.Invert(p=1, per_channel=False, min_value=10, max_value=20)
+    aug = iaa.Invert(p=0.5, per_channel=False, min_value=10, max_value=20)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
-    assert params[0].p.value == 1
+    assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
     assert params[1].value == 0
     assert params[2] == 10
     assert params[3] == 20
@@ -9806,7 +9805,7 @@ def test_PiecewiseAffine():
 
     # cval as tuple
     aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=(0, 10))
-    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval, iap.Uniform)
     assert isinstance(aug.cval.a, iap.Deterministic)
     assert isinstance(aug.cval.b, iap.Deterministic)
     assert aug.cval.a.value == 0
@@ -9822,7 +9821,7 @@ def test_PiecewiseAffine():
 
     # ALL as cval
     aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode="constant", cval=ia.ALL)
-    assert isinstance(aug.cval, iap.DiscreteUniform)
+    assert isinstance(aug.cval, iap.Uniform)
     assert isinstance(aug.cval.a, iap.Deterministic)
     assert isinstance(aug.cval.b, iap.Deterministic)
     assert aug.cval.a.value == 0
@@ -9939,8 +9938,7 @@ def test_PerspectiveTransform():
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     """
-    from scipy import misc
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             observed,
             expected,
@@ -11319,7 +11317,7 @@ def test_Augmenter_copy_random_state():
     source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
     images_aug_source = source_alt.augment_images(images)
     images_aug_target = target_cprs.augment_images(images)
-    #misc.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
+    #ia.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
     assert np.array_equal(images_aug_source, images_aug_target)
 
     source[0].deterministic = True
@@ -12246,7 +12244,7 @@ def test_Sometimes():
     # bad datatype for p
     got_exception = False
     try:
-        aug = iaa.Sometimes(p=False)
+        aug = iaa.Sometimes(p="foo")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -12771,7 +12769,7 @@ def test_determinism():
     images = [
         ia.quokka(size=(128, 128)),
         ia.quokka(size=(64, 64)),
-        misc.imresize(data.astronaut(), (128, 256))
+        ia.imresize_single_image(data.astronaut(), (128, 256))
     ]
     keypoints = [
         ia.KeypointsOnImage([
@@ -13657,8 +13655,7 @@ def test_parameters_draw_distribution_grid():
     )
 
     diff = np.abs(grid_expected.astype(np.int32) - grid_observed.astype(np.int32))
-    #from scipy import misc
-    #misc.imshow(np.vstack([grid_expected, grid_observed, diff]))
+    #ia.imshow(np.vstack([grid_expected, grid_observed, diff]))
     #print(diff.flatten()[0:100])
     assert np.average(diff) < 10
 

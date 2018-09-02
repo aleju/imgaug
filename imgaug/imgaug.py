@@ -5,7 +5,7 @@ import copy
 import numbers
 import cv2
 import math
-from scipy import misc, ndimage
+import imageio
 import multiprocessing
 import threading
 import traceback
@@ -18,6 +18,7 @@ import skimage.measure
 import collections
 import time
 import json
+import matplotlib.pyplot as plt
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -489,7 +490,7 @@ def quokka(size=None, extract=None):
     Parameters
     ----------
     size : None or float or tuple of two ints, optional(default=None)
-        Size of the output image. Input into scipy.misc.imresize.
+        Size of the output image. Input into `imgaug.imresize_single_image()`.
         Usually expected to be a tuple (H, W), where H is the desired height
         and W is the width. If None, then the image will not be resized.
 
@@ -511,13 +512,13 @@ def quokka(size=None, extract=None):
         The image array of dtype uint8.
 
     """
-    img = ndimage.imread(QUOKKA_FP, mode="RGB")
+    img = imageio.imread(QUOKKA_FP, pilmode="RGB")
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
     if size is not None:
         shape_resized = _compute_resized_shape(img.shape, size)
-        img = misc.imresize(img, shape_resized[0:2])
+        img = imresize_single_image(img, shape_resized[0:2])
     return img
 
 def quokka_square(size=None):
@@ -527,7 +528,7 @@ def quokka_square(size=None):
     Parameters
     ----------
     size : None or float or tuple of two ints, optional(default=None)
-        Size of the output image. Input into scipy.misc.imresize.
+        Size of the output image. Input into `imgaug.imresize_single_image()`.
         Usually expected to be a tuple (H, W), where H is the desired height
         and W is the width. If None, then the image will not be resized.
 
@@ -558,7 +559,7 @@ def quokka_heatmap(size=None, extract=None):
         the camera. Values close to 1.0 denote objects that are furthest away (among all shown
         objects).
     """
-    img = ndimage.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, mode="RGB")
+    img = imageio.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, pilmode="RGB")
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
@@ -566,7 +567,7 @@ def quokka_heatmap(size=None, extract=None):
         size = (643, 960)
 
     shape_resized = _compute_resized_shape(img.shape, size)
-    img = misc.imresize(img, shape_resized[0:2])
+    img = imresize_single_image(img, shape_resized[0:2])
     img_0to1 = img.astype(np.float32) / 255.0
     img_0to1 = 1 - img_0to1 # depth map was saved as 0 being furthest away
 
@@ -1275,10 +1276,6 @@ def show_grid(images, rows=None, cols=None):
     """
     Converts the input images to a grid image and shows it in a new window.
 
-    This function wraps around scipy.misc.imshow(), which requires the
-    `see <image>` command to work. On Windows systems, this tends to not be
-    the case.
-
     Parameters
     ----------
     images : (N,H,W,3) ndarray or iterable of (H,W,3) array
@@ -1292,7 +1289,19 @@ def show_grid(images, rows=None, cols=None):
 
     """
     grid = draw_grid(images, rows=rows, cols=cols)
-    misc.imshow(grid)
+    imshow(grid)
+
+def imshow(image):
+    """
+    Shows an image in a window.
+
+    Parameters
+    ----------
+    image : (H,W,3) ndarray
+        Image to show.
+    """
+    plt.imshow(image)
+    plt.show()
 
 def do_assert(condition, message="Assertion failed."):
     """

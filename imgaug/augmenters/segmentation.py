@@ -21,6 +21,7 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Uniform
+from .. import parameters as iap
 import numpy as np
 from skimage import segmentation, measure
 import six.moves as sm
@@ -36,25 +37,42 @@ class Superpixels(Augmenter):
 
     Parameters
     ----------
-    p_replace : int or float or tuple/list of ints/floats or StochasticParameter, optional(default=0)
+    p_replace : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         Defines the probability of any superpixel area being replaced by the
-        superpixel, i.e. by the average pixel color within its area.
-        A probability of 0 would mean, that no superpixel area is replaced by
-        its average (image is not changed at all).
-        A probability of 0.5 would mean, that half of all superpixels are
-        replaced by their average color.
-        A probability of 1.0 would mean, that all superpixels are replaced
-        by their average color (resulting in a standard superpixel image).
-        This parameter can be a tuple (a, b), e.g. (0.5, 1.0). In this case,
-        a random probability p with a <= p <= b will be rolled per image.
-        If this parameter is a StochasticParameter, it is expected to return
-        values between 0 and 1. Values >=0.5 will be interpreted as the command
-        to replace a superpixel region with its mean. Recommended to be some
-        form of Binomial(...).
+        superpixel, i.e. by the average pixel color within its area::
 
-    n_segments : int or tuple/list of ints or StochasticParameter, optional(default=100)
+            * A probability of 0 would mean, that no superpixel area is replaced by
+              its average (image is not changed at all).
+            * A probability of 0.5 would mean, that half of all superpixels are
+              replaced by their average color.
+            * A probability of 1.0 would mean, that all superpixels are replaced
+              by their average color (resulting in a standard superpixel image).
+
+        Behaviour based on chosen datatypes for this
+        parameter:
+
+            * If number, then that numbre will always be used.
+            * If tuple (a, b), then a random probability will be sampled from the
+              interval [a, b] per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
+            * If this parameter is a StochasticParameter, it is expected to return
+              values between 0 and 1. Values >=0.5 will be interpreted as the command
+              to replace a superpixel region with its mean. Recommended to be some
+              form of Binomial(...).
+
+    n_segments : int or tuple of int or list of int or StochasticParameter, optional(default=100)
         Target number of superpixels to generate.
         Lower numbers are faster.
+
+            * If a single int, then that value will always be used as the
+              number of segments.
+            * If a tuple (a, b), then a value from the discrete interval [a..b]
+              will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then that parameter will be queried to
+              draw one value per image.
 
     max_size : int or None, optional(default=128)
         Maximum image size at which the superpixels are generated.
@@ -102,29 +120,8 @@ class Superpixels(Augmenter):
     def __init__(self, p_replace=0, n_segments=100, max_size=128, interpolation="linear", name=None, deterministic=False, random_state=None):
         super(Superpixels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(p_replace):
-            self.p_replace = Binomial(p_replace)
-        elif ia.is_iterable(p_replace):
-            ia.do_assert(len(p_replace) == 2)
-            ia.do_assert(p_replace[0] < p_replace[1])
-            ia.do_assert(0 <= p_replace[0] <= 1.0)
-            ia.do_assert(0 <= p_replace[1] <= 1.0)
-            self.p_replace = p_replace = Binomial(Uniform(p_replace[0], p_replace[1]))
-        elif isinstance(p_replace, StochasticParameter):
-            self.p_replace = p_replace
-        else:
-            raise Exception("Expected p_replace to be float, int, list/tuple of floats/ints or StochasticParameter, got %s." % (type(p_replace),))
-
-        if ia.is_single_integer(n_segments):
-            self.n_segments = Deterministic(n_segments)
-        elif ia.is_iterable(n_segments):
-            ia.do_assert(len(n_segments) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(n_segments),))
-            self.n_segments = DiscreteUniform(n_segments[0], n_segments[1])
-        elif isinstance(n_segments, StochasticParameter):
-            self.n_segments = n_segments
-        else:
-            raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(n_segments),))
-
+        self.p_replace = iap.handle_probability_param(p_replace, "p_replace", tuple_to_uniform=True, list_to_choice=True)
+        self.n_segments = iap.handle_discrete_param(n_segments, "n_segments", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
         self.max_size = max_size
         self.interpolation = interpolation
 

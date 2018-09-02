@@ -3,7 +3,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import numpy as np
-from scipy import ndimage, misc
+import imageio
 #from skimage import data
 #import matplotlib.pyplot as plt
 #from matplotlib import gridspec
@@ -53,7 +53,7 @@ def save(chapter_dir, filename, image, quality=None):
     # image (1) has never been compressed while image (2) was compressed and
     # then decompressed.
     if os.path.isfile(file_fp):
-        image_saved = ndimage.imread(file_fp, mode="RGB")
+        image_saved = imageio.imread(file_fp, pilmode="RGB")
         #print("arrdiff", arrdiff(image_jpg_decompressed, image_saved))
         same_shape = (image_jpg_decompressed.shape == image_saved.shape)
         d_avg = arrdiff(image_jpg_decompressed, image_saved) if same_shape else -1
@@ -81,7 +81,7 @@ def compress_to_jpg(image, quality=75):
 def decompress_jpg(image_compressed):
     img_compressed_buffer = BytesIO()
     img_compressed_buffer.write(image_compressed)
-    img = ndimage.imread(img_compressed_buffer, mode="RGB")
+    img = imageio.imread(img_compressed_buffer, pilmode="RGB")
     img_compressed_buffer.close()
     return img
 
@@ -132,7 +132,7 @@ def grid(images, rows, cols, border=1, border_color=255):
 def checkerboard(size):
     img = data.checkerboard()
     img3d = np.tile(img[..., np.newaxis], (1, 1, 3))
-    return misc.imresize(img3d, size)
+    return ia.imresize_single_image(img3d, size)
 
 ###############################
 # Examples: Basics

@@ -16,10 +16,19 @@ List of augmenters:
     * AddElementwise
     * AdditiveGaussianNoise
     * Multiply
+    * MultiplyElementwise
     * Dropout
     * CoarseDropout
+    * ReplaceElementwise
+    * SaltAndPepper
+    * CoarseSaltAndPepper
+    * Salt
+    * CoarseSalt
+    * Pepper
+    * CoarsePepper
     * Invert
     * ContrastNormalization
+    * JpegCompression
 
 """
 from __future__ import print_function, division, absolute_import
@@ -28,7 +37,7 @@ from .. import imgaug as ia
 from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform, FromLowerResolution
 from .. import parameters as iap
 from PIL import Image
-from scipy import misc
+import imageio
 import tempfile
 import numpy as np
 import six.moves as sm
@@ -43,13 +52,14 @@ class Add(Augmenter):
 
     Parameters
     ----------
-    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+    value : int or tuple of two ints or list of ints or StochasticParameter, optional(default=0)
         Value to add to all
         pixels.
 
             * If an int, then that value will be used for all images.
             * If a tuple (a, b), then a value from the discrete range [a .. b]
               will be used.
+            * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image
               from that parameter.
 
@@ -97,24 +107,8 @@ class Add(Augmenter):
                  deterministic=False, random_state=None):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_integer(value):
-            ia.do_assert(-255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,))
-            self.value = Deterministic(value)
-        elif ia.is_iterable(value):
-            ia.do_assert(len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),))
-            self.value = DiscreteUniform(value[0], value[1])
-        elif isinstance(value, StochasticParameter):
-            self.value = value
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0, "Expected bool, or number in range [0, 1.0] for per_channel, got %s." % (type(per_channel),))
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -165,13 +159,15 @@ class AddElementwise(Augmenter):
 
     Parameters
     ----------
-    value : int or iterable of two ints or StochasticParameter, optional(default=0)
+    value : int or tuple of two int or list of int or StochasticParameter, optional(default=0)
         Value to add to the
         pixels.
 
             * If an int, then that value will be used for all images.
             * If a tuple (a, b), then values from the discrete range [a .. b]
               will be sampled.
+            * If a list of integers, a random value will be sampled from the list
+              per image.
             * If a StochasticParameter, then values will be sampled per pixel
               (and possibly channel) from that parameter.
 
@@ -217,24 +213,8 @@ class AddElementwise(Augmenter):
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_integer(value):
-            ia.do_assert(-255 <= value <= 255, "Expected value to have range [-255, 255], got value %d." % (value,))
-            self.value = Deterministic(value)
-        elif ia.is_iterable(value):
-            ia.do_assert(len(value) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(value),))
-            self.value = DiscreteUniform(value[0], value[1])
-        elif isinstance(value, StochasticParameter):
-            self.value = value
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(value),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -277,24 +257,27 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 
     Parameters
     ----------
-    loc : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
+    loc : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
         Mean of the normal distribution that generates the
         noise.
 
-            * If an int or float, exactly that value will be used.
+            * If a number, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    scale : int or float or tupel of two ints/floats or StochasticParameter, optional(default=0)
+    scale : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
         Standard deviation of the normal distribution that generates the
-        noise. If this value gets too close to zero, the image will not be
-        changed.
+        noise.  Must be >= 0. If 0 then only `loc` will be used.
 
             * If an int or float, exactly that value will be used.
             * If a tuple (a, b), a random value from the range a <= x <= b will
               be sampled per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
@@ -337,25 +320,8 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
     per pixel for all channels and sometimes different (other 50 percent).
 
     """
-    if ia.is_single_number(loc):
-        loc2 = Deterministic(loc)
-    elif ia.is_iterable(loc):
-        ia.do_assert(len(loc) == 2, "Expected tuple/list with 2 entries for argument 'loc', got %d entries." % (len(loc),))
-        loc2 = Uniform(loc[0], loc[1])
-    elif isinstance(loc, StochasticParameter):
-        loc2 = loc
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'loc'. Got %s." % (type(loc),))
-
-    if ia.is_single_number(scale):
-        scale2 = Deterministic(scale)
-    elif ia.is_iterable(scale):
-        ia.do_assert(len(scale) == 2, "Expected tuple/list with 2 entries for argument 'scale', got %d entries." % (len(scale),))
-        scale2 = Uniform(scale[0], scale[1])
-    elif isinstance(scale, StochasticParameter):
-        scale2 = scale
-    else:
-        raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter for argument 'scale'. Got %s." % (type(scale),))
+    loc2 = iap.handle_continuous_param(loc, "loc", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+    scale2 = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
@@ -379,13 +345,15 @@ class Multiply(Augmenter):
 
     Parameters
     ----------
-    mul : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+    mul : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
         The value with which to multiply the pixel values in each
         image.
 
-            * If a float, then that value will always be used.
+            * If a number, then that value will always be used.
             * If a tuple (a, b), then a value from the range a <= x <= b will
               be sampled per image and used for all pixels.
+            * If a list, then a random value will be sampled from that list per
+              image.
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image.
 
@@ -422,24 +390,8 @@ class Multiply(Augmenter):
                  deterministic=False, random_state=None):
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(mul):
-            ia.do_assert(mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,))
-            self.mul = Deterministic(mul)
-        elif ia.is_iterable(mul):
-            ia.do_assert(len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),))
-            self.mul = Uniform(mul[0], mul[1])
-        elif isinstance(mul, StochasticParameter):
-            self.mul = mul
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -490,13 +442,15 @@ class MultiplyElementwise(Augmenter):
 
     Parameters
     ----------
-    mul : float or iterable of two floats or StochasticParameter, optional(default=1.0)
+    mul : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
         The value by which to multiply the pixel values in the
         image.
 
-            * If a float, then that value will always be used.
+            * If a number, then that value will always be used.
             * If a tuple (a, b), then a value from the range a <= x <= b will
               be sampled per image and pixel.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image and pixel.
 
@@ -543,24 +497,8 @@ class MultiplyElementwise(Augmenter):
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(mul):
-            ia.do_assert(mul >= 0.0, "Expected multiplier to have range [0, inf), got value %.4f." % (mul,))
-            self.mul = Deterministic(mul)
-        elif ia.is_iterable(mul):
-            ia.do_assert(len(mul) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(mul),))
-            self.mul = Uniform(mul[0], mul[1])
-        elif isinstance(mul, StochasticParameter):
-            self.mul = mul
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(mul),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -604,7 +542,7 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or StochasticParameter, optional(default=0)
         The probability of any pixel being dropped (i.e. set to
         zero).
 
@@ -696,7 +634,7 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or StochasticParameter, optional(default=0)
         The probability of any pixel being dropped (i.e. set to
         zero).
 
@@ -822,15 +760,17 @@ class ReplaceElementwise(Augmenter):
 
     Parameters
     ----------
-    mask : number or tuple of two number or StochasticParameter, optional(default=0)
+    mask : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Mask that indicates the pixels that are supposed to be replaced.
         The mask will be thresholded with 0.5. A value of 1 then indicates a
         pixel that is supposed to be replaced.
 
-            * If this is a number, then that value will be used as the
+            * If this is a float, then that value will be used as the
               probability of being a 1 per pixel.
             * If a tuple (a, b), then the probability will be sampled per image
               from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used to
               sample a mask.
 
@@ -873,30 +813,9 @@ class ReplaceElementwise(Augmenter):
     def __init__(self, mask, replacement, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ReplaceElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(mask):
-            self.mask = Binomial(mask)
-        elif isinstance(mask, tuple):
-            ia.do_assert(len(mask) == 2)
-            ia.do_assert(0 <= mask[0] <= 1.0)
-            ia.do_assert(0 <= mask[1] <= 1.0)
-            self.mask = Binomial(Uniform(mask[0], mask[1]))
-        elif ia.is_iterable(mask):
-            ia.do_assert(all([0 <= pi <= 1.0 for pi in mask]))
-            self.mask = iap.Binomial(iap.Choice(mask))
-        elif isinstance(mask, StochasticParameter):
-            self.mask = mask
-        else:
-            raise Exception("Expected mask to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(mask),))
-        #self.mask = iap.handle_continuous_param(mask, "mask", minval=0.0, maxval=1.0)
+        self.mask = iap.handle_probability_param(mask, "mask", tuple_to_uniform=True, list_to_choice=True)
         self.replacement = iap.handle_continuous_param(replacement, "replacement")
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -956,14 +875,16 @@ def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt/pepper
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt/pepper is to be added
@@ -1012,14 +933,16 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt/pepper
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt/pepper is to be added
@@ -1084,21 +1007,7 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     to the input image size, leading to large rectangular areas being replaced.
 
     """
-
-    if ia.is_single_number(p):
-        mask = Binomial(p)
-    elif isinstance(p, tuple):
-        ia.do_assert(len(p) == 2)
-        ia.do_assert(0 <= p[0] <= 1.0)
-        ia.do_assert(0 <= p[1] <= 1.0)
-        mask = Binomial(Uniform(p[0], p[1]))
-    elif ia.is_iterable(p):
-        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = Binomial(iap.Choice(p))
-    elif isinstance(p, StochasticParameter):
-        mask = p
-    else:
-        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+    mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
         mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
@@ -1127,14 +1036,16 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt is to be added
@@ -1191,14 +1102,16 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to salt
         noise.
 
             * If a float, then that value will be used for all images as the
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+              from the range a <= x <= b.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that salt is to be added
@@ -1263,21 +1176,7 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
     to the input image size, leading to large rectangular areas being replaced.
 
     """
-
-    if ia.is_single_number(p):
-        mask = Binomial(p)
-    elif isinstance(p, tuple):
-        ia.do_assert(len(p) == 2)
-        ia.do_assert(0 <= p[0] <= 1.0)
-        ia.do_assert(0 <= p[1] <= 1.0)
-        mask = Binomial(Uniform(p[0], p[1]))
-    elif ia.is_iterable(p):
-        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = Binomial(iap.Choice(p))
-    elif isinstance(p, StochasticParameter):
-        mask = p
-    else:
-        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+    mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
         mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
@@ -1313,7 +1212,7 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to pepper
         noise.
 
@@ -1321,6 +1220,8 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
               from the range a <= x <= b..
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that pepper is to be added
@@ -1377,7 +1278,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two floats or StochasticParameter, optional(default=0)
+    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
         Probability of changing a pixel to pepper
         noise.
 
@@ -1385,6 +1286,8 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
               probability.
             * If a tuple (a, b), then a probability will be sampled per image
               from the range a <= x <= b..
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, then this parameter will be used as
               the *mask*, i.e. it is expected to contain values between
               0.0 and 1.0, where 1.0 means that pepper is to be added
@@ -1449,21 +1352,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
     to the input image size, leading to large rectangular areas being replaced.
 
     """
-
-    if ia.is_single_number(p):
-        mask = Binomial(p)
-    elif isinstance(p, tuple):
-        ia.do_assert(len(p) == 2)
-        ia.do_assert(0 <= p[0] <= 1.0)
-        ia.do_assert(0 <= p[1] <= 1.0)
-        mask = Binomial(Uniform(p[0], p[1]))
-    elif ia.is_iterable(p):
-        ia.do_assert(all([0 <= pi <= 1.0 for pi in p]))
-        mask = Binomial(iap.Choice(p))
-    elif isinstance(p, StochasticParameter):
-        mask = p
-    else:
-        raise Exception("Expected p to be number or tuple of two number or list of number or StochasticParameter, got %s." % (type(p),))
+    mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
         mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
@@ -1557,21 +1446,8 @@ class Invert(Augmenter):
                  deterministic=False, random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(p):
-            self.p = Binomial(p)
-        elif isinstance(p, StochasticParameter):
-            self.p = p
-        else:
-            raise Exception("Expected p to be int or float or StochasticParameter, got %s." % (type(p),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
-
+        self.p = iap.handle_probability_param(p, "p")
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
         self.min_value = min_value
         self.max_value = max_value
 
@@ -1624,13 +1500,15 @@ class ContrastNormalization(Augmenter):
 
     Parameters
     ----------
-    alpha : float or tuple of two floats or StochasticParameter, optional(default=1.0)
+    alpha : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
         Strength of the contrast normalization. Higher values than 1.0
         lead to higher contrast, lower values decrease the contrast.
 
-            * If a float, then that value will be used for all images.
+            * If a number, then that value will be used for all images.
             * If a tuple (a, b), then a value will be sampled per image from
               the range a <= x <= b and be used as the alpha value.
+            * If a list, then a random value will be sampled per image from
+              that list.
             * If a StochasticParameter, then this parameter will be used to
               sample the alpha value per image.
 
@@ -1669,24 +1547,8 @@ class ContrastNormalization(Augmenter):
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_number(alpha):
-            ia.do_assert(alpha >= 0.0, "Expected alpha to have range (0, inf), got value %.4f." % (alpha,))
-            self.alpha = Deterministic(alpha)
-        elif ia.is_iterable(alpha):
-            ia.do_assert(len(alpha) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(alpha),))
-            self.alpha = Uniform(alpha[0], alpha[1])
-        elif isinstance(alpha, StochasticParameter):
-            self.alpha = alpha
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(alpha),))
-
-        if per_channel in [True, False, 0, 1, 0.0, 1.0]:
-            self.per_channel = Deterministic(int(per_channel))
-        elif ia.is_single_number(per_channel):
-            ia.do_assert(0 <= per_channel <= 1.0)
-            self.per_channel = Binomial(per_channel)
-        else:
-            raise Exception("Expected per_channel to be boolean or number or StochasticParameter")
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -1734,14 +1596,17 @@ class JpegCompression(Augmenter):
 
     Parameters
     ----------
-    compression : int or tuple of two ints or StochasticParameter
+    compression : number or tuple of two number or list of number or StochasticParameter
         Degree of compression using saving to `jpeg` format in range [0, 100]
         High values for compression cause more artifacts. Standard value for image processing software is default value
         set to between 50 and 80. At 100 image is unreadable and at 0 no compression is used and the image occupies much
         more memory.
-            * If a single int, then that value will be used for the compression degree.
-            * If a tuple of two ints (a, b), then the compression will be a
+
+            * If a single number, then that value will be used for the compression degree.
+            * If a tuple of two number (a, b), then the compression will be a
               value sampled from the interval [a..b].
+            * If a list, then a random value will be sampled and used as the
+              compression per image.
             * If a StochasticParameter, then N samples will be drawn from
               that parameter per N input images, each representing the compression
               for the nth image. Expected to be discrete.
@@ -1763,53 +1628,53 @@ class JpegCompression(Augmenter):
     """
     def __init__(self, compression=50, name=None, deterministic=False, random_state=None):
         super(JpegCompression, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-        if ia.is_single_number(compression):
-            assert 100 >= compression >= 0 and type(
-                compression) == int, "Expected compression to have range [0, 100], got value %.4f." % (compression,)
-            self.compression = Deterministic(compression)
-        elif ia.is_iterable(compression):
-            assert len(compression) == 2, "Expected tuple/list with 2 entries, got %d entries." % (len(compression),)
-            self.compression = Uniform(compression[0], compression[1])
-        elif isinstance(compression, StochasticParameter):
-            self.compression = compression
-        else:
-            raise Exception("Expected float or int, tuple/list with 2 entries or StochasticParameter. Got %s." % (
-                type(compression),))
 
+        # will be converted to int during augmentation, which is why we allow floats here
+        self.compression = iap.handle_continuous_param(compression, "compression", value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
+
+        # The value range 1 to 95 is suggested by PIL's save() documentation
+        # Values above 95 seem to not make sense (no improvement in visual quality, but large file size)
+        # A value of 100 would mostly deactivate jpeg compression
+        # A value of 0 would lead to no compression (instead of maximum compression)
+        # We use range 1 to 100 here, because this augmenter is about generating images for training
+        # and not for saving, hence we do not care about large file sizes
         self.maximum_quality = 100
+        self.minimum_quality = 1
 
     def _augment_images(self, images, random_state, parents, hooks):
-        channels = images[0].shape[-1]
-        reset_last_dim = len(images[0].shape) == 3 and channels == 1
         result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10 ** 6, (nb_images + 1,))
-
-        samples = self.compression.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[-1]))
+        samples = self.compression.draw_samples((nb_images,), random_state=random_state)
 
         for i in sm.xrange(nb_images):
             image = images[i].astype(np.float32)
-            if reset_last_dim:
+            nb_channels = image.shape[-1]
+            is_single_channel = (nb_channels == 1)
+            if is_single_channel:
                 image = image[..., 0]
-            sample = int(samples[-1])
-            assert 100 >= sample >= 0
+            sample = int(samples[i])
+            ia.do_assert(100 >= sample >= 0)
             img = Image.fromarray(image.astype(np.uint8))
-            with tempfile.NamedTemporaryFile(mode='wb', suffix='.jpg') as f:
-                img.save(f, quality=self.maximum_quality - sample)
-                if channels == 1:
-                    image = misc.imread(f.name, mode='L')
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as f:
+                # Map from compression to quality used by PIL
+                # We have valid compressions from 0 to 100, i.e. 101 possible values
+                quality = int(np.clip(np.round(
+                    self.minimum_quality + (self.maximum_quality - self.minimum_quality) * (1.0 - (sample / 101))
+                ), self.minimum_quality, self.maximum_quality))
+
+                img.save(f, quality=quality)
+                if nb_channels == 1:
+                    image = imageio.imread(f.name, pilmode="L")
                 else:
-                    image = misc.imread(f.name, mode='RGB')
-            if reset_last_dim:
+                    image = imageio.imread(f.name, pilmode="RGB")
+            if is_single_channel:
                 image = image[..., np.newaxis]
             result[i] = image
-        if channels == 1:
-            result = result[..., np.newaxis]
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
-      
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images
 

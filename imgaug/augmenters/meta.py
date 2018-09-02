@@ -30,11 +30,11 @@ from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
 # TODO replace these imports with iap.XYZ
 from ..parameters import StochasticParameter, Binomial, DiscreteUniform
+from .. import parameters as iap
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import copy as copy_module
 import re
-from scipy import misc
 import itertools
 import six
 import six.moves as sm
@@ -1064,7 +1064,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         """
         grid = self.draw_grid(images, rows, cols)
-        misc.imshow(grid)
+        ia.imshow(grid)
 
     def to_deterministic(self, n=None):
         """
@@ -2258,13 +2258,7 @@ class Sometimes(Augmenter):
     def __init__(self, p=0.5, then_list=None, else_list=None, name=None, deterministic=False, random_state=None):
         super(Sometimes, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        if ia.is_single_float(p) or ia.is_single_integer(p):
-            ia.do_assert(0 <= p <= 1)
-            self.p = Binomial(p)
-        elif isinstance(p, StochasticParameter):
-            self.p = p
-        else:
-            raise Exception("Expected float/int in range [0, 1] or StochasticParameter as p, got %s." % (type(p),))
+        self.p = iap.handle_probability_param(p, "p")
 
         self.then_list = handle_children_list(then_list, self.name, "then")
         self.else_list = handle_children_list(else_list, self.name, "else")
@@ -2418,9 +2412,11 @@ class WithChannels(Augmenter):
 
     Parameters
     ----------
-    channels : integer or list of integers or None, optional(default=None)
-        Sets the channels to extract from each image.
-        If None, all channels will be used.
+    channels : None or int or list of int, optional(default=None)
+        Sets the channels to be extracted from each image.
+        If None, all channels will be used. Note that this is not
+        stochastic - the extracted channels are always the same
+        ones.
 
     children : Augmenter or list of Augmenters or None, optional(default=None)
         One or more augmenters to apply to images, after the channels
@@ -2447,6 +2443,7 @@ class WithChannels(Augmenter):
     def __init__(self, channels=None, children=None, name=None, deterministic=False, random_state=None):
         super(WithChannels, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
+        # TODO change this to a stochastic parameter
         if channels is None:
             self.channels = None
         elif ia.is_single_integer(channels):

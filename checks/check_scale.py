@@ -1,19 +1,18 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import numpy as np
 from skimage import data
 import cv2
 
 def main():
     # test 2d image
-    misc.imshow(iaa.Scale(64).augment_image(data.camera()))
+    ia.imshow(iaa.Scale(64).augment_image(data.camera()))
 
     # test many images
     images = [ia.quokka(size=0.5), ia.quokka(size=0.5)]
     images_aug = iaa.Scale(64).augment_images(images)
-    misc.imshow(np.hstack(images_aug))
+    ia.imshow(np.hstack(images_aug))
 
     image = ia.quokka(size=0.5)
     kps = [ia.KeypointsOnImage(
@@ -47,7 +46,7 @@ def main():
     ]
 
     print("original", image.shape)
-    misc.imshow(kps[0].draw_on_image(image))
+    ia.imshow(kps[0].draw_on_image(image))
 
     print("-----------------")
     print("Same size per image")
@@ -57,7 +56,7 @@ def main():
         kps_aug = aug.augment_keypoints(kps)[0]
         img_aug_kps = kps_aug.draw_on_image(img_aug)
         print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
-        misc.imshow(img_aug_kps)
+        ia.imshow(img_aug_kps)
 
     print("-----------------")
     print("Random per image")
@@ -72,10 +71,10 @@ def main():
             #print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
             images_aug.append(img_aug_kps)
         print(aug.name)
-        misc.imshow(ia.draw_grid(images_aug))
+        ia.imshow(ia.draw_grid(images_aug))
 
     print("nearest/cv2.INTER_NEAREST/cubic")
-    misc.imshow(np.hstack([
+    ia.imshow(np.hstack([
         iaa.Scale(64, interpolation="nearest").augment_image(image),
         iaa.Scale(64, interpolation=cv2.INTER_NEAREST).augment_image(image),
         iaa.Scale(64, interpolation="cubic").augment_image(image)

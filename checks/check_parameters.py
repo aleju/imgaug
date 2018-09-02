@@ -7,7 +7,6 @@ from imgaug.parameters import (
     Divide, Power, Absolute, RandomSign, Positive, Negative,
     SimplexNoise, FrequencyNoise, Sigmoid
 )
-from scipy import misc
 import numpy as np
 
 def main():
@@ -76,9 +75,9 @@ def main():
     images_arithmetic = [param.draw_distribution_graph() for (title, param) in params_arithmetic]
     images_noise = [param.draw_distribution_graph(size=(1000, 10, 10)) for (title, param) in params_noise]
 
-    misc.imshow(np.vstack(images_params))
-    misc.imshow(np.vstack(images_arithmetic))
-    misc.imshow(np.vstack(images_noise))
+    ia.imshow(np.vstack(images_params))
+    ia.imshow(np.vstack(images_arithmetic))
+    ia.imshow(np.vstack(images_noise))
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
+import imageio
 import numpy as np
 from skimage import data
 
@@ -99,8 +99,8 @@ def main():
 
         pairs.append(np.hstack((image_before_skimage, image_after_skimage, image_after_cv2)))
 
-    misc.imshow(np.vstack(pairs))
-    misc.imsave("affine.jpg", np.vstack(pairs))
+    ia.imshow(np.vstack(pairs))
+    imageio.imwrite("affine.jpg", np.vstack(pairs))
 
 if __name__ == "__main__":
     main()

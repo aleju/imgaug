@@ -1,7 +1,6 @@
 from __future__ import print_function
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import numpy as np
 
 def main():
@@ -23,7 +22,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -37,7 +36,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -52,7 +51,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -67,7 +66,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -82,7 +81,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -97,7 +96,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -112,7 +111,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -127,7 +126,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn
@@ -142,7 +141,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(ia.draw_grid([segmaps_drawn, segmaps_aug_drawn], cols=2))
+    ia.imshow(ia.draw_grid([segmaps_drawn, segmaps_aug_drawn], cols=2))
 
     print("Alpha...")
     aug = iaa.Alpha(0.7, iaa.Affine(rotate=20))
@@ -152,7 +151,7 @@ def main():
     segmaps_drawn = segmap.draw_on_image(quokka)
     segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)
 
-    misc.imshow(
+    ia.imshow(
         np.hstack([
             segmaps_drawn,
             segmaps_aug_drawn

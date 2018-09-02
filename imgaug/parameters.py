@@ -9,7 +9,6 @@ import six.moves as sm
 import scipy
 import numbers
 from collections import defaultdict
-from scipy import misc
 
 NP_FLOAT_TYPES = set(np.sctypes["float"])
 
@@ -40,18 +39,22 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
         check_value_range(param)
         return Deterministic(param)
     elif tuple_to_uniform and isinstance(param, tuple):
-        ia.do_assert(len(param) == 2)
+        ia.do_assert(len(param) == 2, "Expected parameter '%s' with type tuple to have exactly two entries, but got %d." % (name, len(param)))
+        ia.do_assert(all([ia.is_single_number(v) for v in param]), "Expected parameter '%s' with type tuple to only contain numbers, got %s." % (name, [type(v) for v in param],))
         check_value_range(param[0])
         check_value_range(param[1])
         return Uniform(param[0], param[1])
     elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
+        ia.do_assert(all([ia.is_single_number(v) for v in param]), "Expected iterable parameter '%s' to only contain numbers, got %s." % (name, [type(v) for v in param],))
         for param_i in param:
             check_value_range(param_i)
         return Choice(param)
     elif isinstance(param, StochasticParameter):
         return param
     else:
-        raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
+        allowed_type = "number"
+        list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
+        raise Exception("Expected %s, tuple of two %s%s or StochasticParameter for %s, got %s." % (allowed_type, allowed_type, list_str, name, type(param),))
 
 def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True):
     def check_value_range(v):
@@ -81,28 +84,28 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         return Deterministic(int(param))
     elif tuple_to_uniform and isinstance(param, tuple):
         ia.do_assert(len(param) == 2)
-        if allow_floats:
-            ia.do_assert(ia.is_single_number(param[0]), "Expected number, got %s." % (type(param[0]),))
-            ia.do_assert(ia.is_single_number(param[1]), "Expected number, got %s." % (type(param[1]),))
-        else:
-            ia.do_assert(ia.is_single_integer(param[0]), "Expected integer, got %s." % (type(param[0]),))
-            ia.do_assert(ia.is_single_integer(param[1]), "Expected integer, got %s." % (type(param[1]),))
+        ia.do_assert(all([
+            ia.is_single_number(v) if allow_floats else ia.is_single_integer(v) for v in param
+        ]), "Expected parameter '%s' of type tuple to only contain %s, got %s." % (name, "number" if allow_floats else "integer", [type(v) for v in param],))
         check_value_range(param[0])
         check_value_range(param[1])
         return DiscreteUniform(int(param[0]), int(param[1]))
     elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
+        ia.do_assert(all([
+            ia.is_single_number(v) if allow_floats else ia.is_single_integer(v) for v in param
+        ]), "Expected iterable parameter '%s' to only contain %s, got %s." % (name, "number" if allow_floats else "integer", [type(v) for v in param],))
+
         for param_i in param:
             check_value_range(param_i)
         return Choice([int(param_i) for param_i in param])
     elif isinstance(param, StochasticParameter):
         return param
     else:
-        if allow_floats:
-            raise Exception("Expected number, tuple of two number, list of number or StochasticParameter for %s, got %s." % (name, type(param),))
-        else:
-            raise Exception("Expected int, tuple of two int, list of int or StochasticParameter for %s, got %s." % (name, type(param),))
+        allowed_type = "number" if allow_floats else "int"
+        list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
+        raise Exception("Expected %s, tuple of two %s%s or StochasticParameter for %s, got %s." % (allowed_type, allowed_type, list_str, name, type(param),))
 
-def handle_probability_param(param, name):
+def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice=False):
     eps = 1e-6
     if param in [True, False, 0, 1]:
         return Deterministic(int(param))
@@ -112,6 +115,20 @@ def handle_probability_param(param, name):
             return Deterministic(int(round(param)))
         else:
             return Binomial(param)
+    elif tuple_to_uniform and isinstance(param, tuple):
+        ia.do_assert(all([
+            ia.is_single_number(v) for v in param
+        ]), "Expected parameter '%s' of type tuple to only contain number, got %s." % (name, [type(v) for v in param],))
+        ia.do_assert(len(param) == 2)
+        ia.do_assert(0 <= param[0] <= 1.0)
+        ia.do_assert(0 <= param[1] <= 1.0)
+        return Binomial(Uniform(param[0], param[1]))
+    elif list_to_choice and ia.is_iterable(param):
+        ia.do_assert(all([
+            ia.is_single_number(v) for v in param
+        ]), "Expected iterable parameter '%s' to only contain number, got %s." % (name, [type(v) for v in param],))
+        ia.do_assert(all([0 <= p_i <= 1.0 for p_i in param]))
+        return Binomial(Choice(param))
     elif isinstance(param, StochasticParameter):
         return param
     else:
@@ -151,7 +168,7 @@ def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350)
     return grid
 
 def show_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
-    misc.imshow(
+    ia.imshow(
         draw_distributions_grid(
             params,
             graph_sizes=graph_sizes,
@@ -810,7 +827,7 @@ class Weibull(StochasticParameter):
     a : number or tuple of two number or list of number or StochasticParameter
         Shape parameter of the
         distribution.
-        
+
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
               once per call to `_draw_samples()` from the continuous
@@ -2196,8 +2213,7 @@ class SimplexNoise(StochasticParameter):
             # to more 0.0s
             result = 1 / (1 + np.exp(-(result * 20 - 10 - sigmoid_thresh)))
 
-        #from scipy import misc
-        #misc.imshow((result * 255).astype(np.uint8))
+        #ia.imshow((result * 255).astype(np.uint8))
 
         return result
 
@@ -2229,9 +2245,8 @@ class SimplexNoise(StochasticParameter):
             noise_0to1 = ia.imresize_single_image(noise_0to1_3d, (h, w), interpolation=upscale_method)
             noise_0to1 = (noise_0to1[..., 0] / 255.0).astype(np.float32)
 
-        #from scipy import misc
         #print(noise_0to1.shape, h_small, w_small, self.size_percent, self.size_px_max, maxlen)
-        #misc.imshow((noise_0to1 * 255).astype(np.uint8))
+        #ia.imshow((noise_0to1 * 255).astype(np.uint8))
 
         return noise_0to1
 
@@ -2365,9 +2380,8 @@ class SimplexNoise(StochasticParameter):
             noise_0to1 = ia.imresize_single_image(noise_0to1_3d, (h, w), interpolation=upscale_method)
             noise_0to1 = (noise_0to1[..., 0] / 255.0).astype(np.float32)
 
-        #from scipy import misc
         #print(noise_0to1.shape, h_small, w_small, self.size_percent, self.size_px_max, maxlen)
-        #misc.imshow((noise_0to1 * 255).astype(np.uint8))
+        #ia.imshow((noise_0to1 * 255).astype(np.uint8))
 
         return noise_0to1
 

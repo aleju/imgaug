@@ -2,7 +2,7 @@ from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
 import numpy as np
-from scipy import ndimage, misc
+import imageio
 from skimage import data
 import matplotlib.pyplot as plt
 import six.moves as sm
@@ -61,17 +61,17 @@ def draw_small_overview():
         image_aug_segmap = result.segmentation_maps_aug[0].draw_on_image(image_aug, alpha=0.8)
         image_aug_kps = result.keypoints_aug[0].draw_on_image(image_aug, color=[0, 255, 0], size=7)
         image_aug_bbs = result.bounding_boxes_aug[0].cut_out_of_image().draw_on_image(image_aug, thickness=3)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_image.jpg" % (name,)), image_aug)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.jpg" % (name,)), image_aug_heatmap)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.jpg" % (name,)), image_aug_segmap)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.jpg" % (name,)), image_aug_kps)
-        misc.imsave(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.jpg" % (name,)), image_aug_bbs)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_image.jpg" % (name,)), image_aug)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_heatmap.jpg" % (name,)), image_aug_heatmap)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_segmap.jpg" % (name,)), image_aug_segmap)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_kps.jpg" % (name,)), image_aug_kps)
+        imageio.imwrite(os.path.join(IMAGES_DIR, "small_overview", "%s_bbs.jpg" % (name,)), image_aug_bbs)
 
 
 def draw_single_sequential_images():
     ia.seed(44)
 
-    #image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
+    #image = ia.imresize_single_image(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
@@ -144,11 +144,11 @@ def draw_single_sequential_images():
     )
 
     grid = seq.draw_grid(image, cols=8, rows=8)
-    misc.imsave("examples_grid.jpg", grid)
+    imageio.imwrite("examples_grid.jpg", grid)
 
 def draw_per_augmenter_images():
     print("[draw_per_augmenter_images] Loading image...")
-    #image = misc.imresize(ndimage.imread("quokka.jpg")[0:643, 0:643], (128, 128))
+    #image = ia.imresize_single_image(imageio.imread("quokka.jpg", pilmode="RGB")[0:643, 0:643], (128, 128))
     image = ia.quokka_square(size=(128, 128))
 
     keypoints = [ia.Keypoint(x=34, y=15), ia.Keypoint(x=85, y=13), ia.Keypoint(x=63, y=73)] # left ear, right ear, mouth
@@ -295,7 +295,7 @@ def draw_per_augmenter_images():
         for image, keypoints in zip(row_images, row_keypoints):
             row_images_kps.append(keypoints.draw_on_image(image, size=5))
         output_image.add_row(row_name, row_images_kps, row_titles)
-    misc.imsave("examples.jpg", output_image.draw())
+    imageio.imwrite("examples.jpg", output_image.draw())
     """
 
     # routine to draw many single files
@@ -316,7 +316,7 @@ def draw_per_augmenter_images():
         if seen[row_name_clean] > 0:
             row_name_clean = "%s_%d" % (row_name_clean, seen[row_name_clean] + 1)
         fp = os.path.join(IMAGES_DIR, "examples_%s.jpg" % (row_name_clean,))
-        #misc.imsave(fp, output_image.draw())
+        #imageio.imwrite(fp, output_image.draw())
         save(fp, output_image.draw())
         seen[row_name_clean] += 1
 
@@ -381,7 +381,7 @@ def compress_to_jpg(image, quality=75):
 def decompress_jpg(image_compressed):
     img_compressed_buffer = BytesIO()
     img_compressed_buffer.write(image_compressed)
-    img = ndimage.imread(img_compressed_buffer, mode="RGB")
+    img = imageio.imread(img_compressed_buffer, pilmode="RGB")
     img_compressed_buffer.close()
     return img
 
@@ -402,7 +402,7 @@ def save(fp, image, quality=75):
     # image (1) has never been compressed while image (2) was compressed and
     # then decompressed.
     if os.path.isfile(fp):
-        image_saved = ndimage.imread(fp, mode="RGB")
+        image_saved = imageio.imread(fp, pilmode="RGB")
         #print("arrdiff", arrdiff(image_jpg_decompressed, image_saved))
         same_shape = (image_jpg_decompressed.shape == image_saved.shape)
         d_avg = arrdiff(image_jpg_decompressed, image_saved) if same_shape else -1

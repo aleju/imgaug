@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 import imgaug as ia
 from imgaug import augmenters as iaa
-from scipy import misc
 import numpy as np
 from skimage import data
 
@@ -21,7 +20,7 @@ def main():
     for batch_aug in batches_aug:
         images_aug.append(batch_aug.images_aug)
         keypoints_aug.append(batch_aug.keypoints_aug)
-    misc.imshow(draw_grid(images_aug, keypoints_aug))
+    ia.imshow(draw_grid(images_aug, keypoints_aug))
 
     print("------------------")
     print("augseq.augment_batches(batches, background=True) -> only images")
@@ -33,7 +32,7 @@ def main():
     keypoints_aug = None
     for batch_aug in batches_aug:
         images_aug.append(batch_aug)
-    misc.imshow(draw_grid(images_aug, keypoints_aug))
+    ia.imshow(draw_grid(images_aug, keypoints_aug))
 
     print("------------------")
     print("BackgroundAugmenter")
@@ -50,7 +49,7 @@ def main():
             break
         images_aug.append(batch.images_aug)
         keypoints_aug.append(batch.keypoints_aug)
-    misc.imshow(draw_grid(images_aug, keypoints_aug))
+    ia.imshow(draw_grid(images_aug, keypoints_aug))
 
 def load_images():
     batch_size = 4

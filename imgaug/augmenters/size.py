@@ -395,18 +395,16 @@ class CropAndPad(Augmenter):
             * If StochasticParameter, a random mode will be sampled from this
               parameter per image.
 
-    pad_cval : float or int or tuple of two ints/floats or list of ints/floats or StochasticParameter, optional(default=0)
+    pad_cval : number or tuple of number or list of number or StochasticParameter, optional(default=0)
         The constant value to use (for numpy's pad function) if the pad
         mode is "constant" or the end value to use if the mode
         is `linear_ramp`.
 
-            * If float/int, then that value will be used.
-            * If a tuple of two numbers and at least one of them is a float,
-              then a random number will be sampled from the continuous range
-              a<=x<=b and used as the value. If both numbers are integers,
-              the range is discrete.
-            * If a list of ints/floats, then a random value will be chosen from
-              the elements of the list and used as the value.
+            * If number, then that value will be used.
+            * If a tuple of two numbers (a, b), a random value will be sampled
+              from the discrete range [a..b].
+            * If a list of numbers, then a random value will be sampled
+              from the list per image and used as the value.
             * If StochasticParameter, a random value will be sampled from that
               parameter per image.
 
@@ -602,21 +600,7 @@ class CropAndPad(Augmenter):
         else:
             raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
 
-        if ia.is_single_number(pad_cval):
-            self.pad_cval = Deterministic(pad_cval)
-        elif isinstance(pad_cval, tuple):
-            ia.do_assert(len(pad_cval) == 2)
-            if ia.is_single_float(pad_cval[0]) or ia.is_single_float(pad_cval[1]):
-                self.pad_cval = Uniform(pad_cval[0], pad_cval[1])
-            else:
-                self.pad_cval = DiscreteUniform(pad_cval[0], pad_cval[1])
-        elif isinstance(pad_cval, list):
-            ia.do_assert(all([ia.is_single_number(v) for v in pad_cval]))
-            self.pad_cval = Choice(pad_cval)
-        elif isinstance(pad_cval, StochasticParameter):
-            self.pad_cval = pad_cval
-        else:
-            raise Exception("Expected pad_cval to be int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter, got %s." % (type(pad_cval),))
+        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         self.keep_size = keep_size
         self.sample_independently = sample_independently
@@ -770,6 +754,7 @@ class CropAndPad(Augmenter):
 
         pad_mode = self.pad_mode.draw_sample(random_state=random_state)
         pad_cval = self.pad_cval.draw_sample(random_state=random_state)
+        pad_cval = np.clip(np.round(pad_cval), 0, 255).astype(np.uint8)
 
         crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left)
 
