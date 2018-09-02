@@ -29,7 +29,6 @@ install:
 #  - virtualenv venv
 #  - . venv/bin/activate
   - pip install -r requirements.txt
-  - pip install matplotlib # required to run some tests
   - pip install coverage codecov pytest>=3.0.5 pytest-cov codacy-coverage # nose>=1.3.7
   - pip install .
 

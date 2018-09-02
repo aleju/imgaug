@@ -4,3 +4,4 @@ Pillow
 opencv-python
 scikit-image
 imageio
+matplotlib
