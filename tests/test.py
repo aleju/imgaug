@@ -12612,9 +12612,33 @@ def test_Augmenter_augment_batches():
         y=keypoint.y
     )
 
-    seq = iaa.Fliplr(0.5)
+    # basic functionality test (images as list)
+    for bg in [True, False]:
+        seq = iaa.Fliplr(1.0)
+        batches = [ia.Batch(images=[np.copy(image)], keypoints=keypoints)]
+        batches_aug = list(seq.augment_batches(batches, background=bg))
+        assert np.array_equal(batches_aug[0].images_aug[0], image_flipped)
+        assert batches_aug[0].keypoints_aug[0].keypoints[0].x == kp_flipped.x
+        assert batches_aug[0].keypoints_aug[0].keypoints[0].y == kp_flipped.y
+        assert np.array_equal(batches_aug[0].images[0], image)
+        assert batches_aug[0].keypoints[0].keypoints[0].x == keypoint.x
+        assert batches_aug[0].keypoints[0].keypoints[0].y == keypoint.y
+
+    # basic functionality test (images as array)
+    for bg in [True, False]:
+        seq = iaa.Fliplr(1.0)
+        batches = [ia.Batch(images=np.uint8([np.copy(image)]), keypoints=keypoints)]
+        batches_aug = list(seq.augment_batches(batches, background=bg))
+        assert np.array_equal(batches_aug[0].images_aug, np.uint8([image_flipped]))
+        assert batches_aug[0].keypoints_aug[0].keypoints[0].x == kp_flipped.x
+        assert batches_aug[0].keypoints_aug[0].keypoints[0].y == kp_flipped.y
+        assert np.array_equal(batches_aug[0].images, np.uint8([image]))
+        assert batches_aug[0].keypoints[0].keypoints[0].x == keypoint.x
+        assert batches_aug[0].keypoints[0].keypoints[0].y == keypoint.y
+
 
     """
+    seq = iaa.Fliplr(0.5)
     # with images as list, background=False
     nb_flipped_images = 0
     nb_flipped_keypoints = 0
@@ -12636,6 +12660,7 @@ def test_Augmenter_augment_batches():
     assert nb_flipped_images == nb_flipped_keypoints
     """
 
+    seq = iaa.Fliplr(0.5)
     for bg in [False, True]:
         # with images as list
         nb_flipped_images = 0
