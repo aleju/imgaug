@@ -4195,20 +4195,6 @@ class BackgroundAugmenter(object):
                 batch_str = queue_source.get(timeout=0.1)
                 batch = pickle.loads(batch_str)
 
-                """
-                # augment the batch
-                batch_augment_images = batch.images is not None and self.augment_images
-                batch_augment_keypoints = batch.keypoints is not None and self.augment_keypoints
-
-                if batch_augment_images and batch_augment_keypoints:
-                    augseq_det = augseq.to_deterministic() if not augseq.deterministic else augseq
-                    batch.images_aug = augseq_det.augment_images(batch.images)
-                    batch.keypoints_aug = augseq_det.augment_keypoints(batch.keypoints)
-                elif batch_augment_images:
-                    batch.images_aug = augseq.augment_images(batch.images)
-                elif batch_augment_keypoints:
-                    batch.keypoints_aug = augseq.augment_keypoints(batch.keypoints)
-                """
                 batch_aug = list(augseq.augment_batches([batch], background=False))[0]
 
                 # send augmented batch to output queue
