@@ -3978,6 +3978,43 @@ class Batch(object):
         self.bounding_boxes_aug = None
         self.data = data
 
+    def deepcopy(self):
+        def _copy_images(images):
+            if images is None:
+                images_copy = None
+            elif is_np_array(images):
+                images_copy = np.copy(images)
+            else:
+                assert is_iterable(images)
+                assert all([is_np_array(image) for image in images])
+                images_copy = list([np.copy(image) for image in images])
+            return images_copy
+
+        def _copy_augmentable_objects(augmentables, clazz):
+            if augmentables is None:
+                augmentables_copy = None
+            else:
+                assert is_iterable(augmentables)
+                assert all([isinstance(augmentable, clazz) for augmentable in augmentables])
+                augmentables_copy = [augmentable.deepcopy() for augmentable in augmentables]
+            return augmentables_copy
+
+        batch = Batch(
+            images=_copy_images(self.images),
+            heatmaps=_copy_augmentable_objects(self.heatmaps, HeatmapsOnImage),
+            segmentation_maps=_copy_augmentable_objects(self.segmentation_maps, SegmentationMapOnImage),
+            keypoints=_copy_augmentable_objects(self.keypoints, KeypointsOnImage),
+            bounding_boxes=_copy_augmentable_objects(self.bounding_boxes, BoundingBoxesOnImage),
+            data=copy.deepcopy(self.data)
+        )
+        batch.images_aug = _copy_images(self.images_aug)
+        heatmaps_aug = _copy_augmentable_objects(self.heatmaps_aug, HeatmapsOnImage)
+        segmentation_maps_aug = _copy_augmentable_objects(self.segmentation_maps_aug, SegmentationMapOnImage)
+        keypoints_aug = _copy_augmentable_objects(self.keypoints_aug, KeypointsOnImage)
+        bounding_boxes_aug = _copy_augmentable_objects(self.bounding_boxes_aug, BoundingBoxesOnImage)
+
+        return batch
+
 class BatchLoader(object):
     """
     Class to load batches in the background.

@@ -249,8 +249,9 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         batches_original_dts = []
         for i, batch in enumerate(batches):
             if isinstance(batch, ia.Batch):
-                batch.data = (i, batch.data)
-                batches_normalized.append(batch)
+                batch_copy = batch.deepcopy()
+                batch_copy.data = (i, batch_copy.data)
+                batches_normalized.append(batch_copy)
                 batches_original_dts.append("imgaug.Batch")
             elif ia.is_np_array(batch):
                 ia.do_assert(batch.ndim in (3, 4), "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,))
