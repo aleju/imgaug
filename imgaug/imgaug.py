@@ -4053,7 +4053,7 @@ class BatchLoader(object):
                         pass
                 if join_signal.is_set():
                     break
-        except Exception as exc:
+        except Exception:
             traceback.print_exc()
         finally:
             finished_signal.set()
