@@ -23,8 +23,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
-# TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, DiscreteUniform, Uniform
 from .. import parameters as iap
 import numpy as np
 from scipy import ndimage
@@ -158,33 +156,33 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
 
         self.mode = "single"
         if ia.is_single_number(k):
-            self.k = Deterministic(int(k))
+            self.k = iap.Deterministic(int(k))
         elif ia.is_iterable(k):
             ia.do_assert(len(k) == 2)
             if all([ia.is_single_number(ki) for ki in k]):
-                self.k = DiscreteUniform(int(k[0]), int(k[1]))
-            elif all([isinstance(ki, StochasticParameter) for ki in k]):
+                self.k = iap.DiscreteUniform(int(k[0]), int(k[1]))
+            elif all([isinstance(ki, iap.StochasticParameter) for ki in k]):
                 self.mode = "two"
                 self.k = (k[0], k[1])
             else:
                 k_tuple = [None, None]
                 if ia.is_single_number(k[0]):
-                    k_tuple[0] = Deterministic(int(k[0]))
+                    k_tuple[0] = iap.Deterministic(int(k[0]))
                 elif ia.is_iterable(k[0]) and all([ia.is_single_number(ki) for ki in k[0]]):
-                    k_tuple[0] = DiscreteUniform(int(k[0][0]), int(k[0][1]))
+                    k_tuple[0] = iap.DiscreteUniform(int(k[0][0]), int(k[0][1]))
                 else:
                     raise Exception("k[0] expected to be int or tuple of two ints, got %s" % (type(k[0]),))
 
                 if ia.is_single_number(k[1]):
-                    k_tuple[1] = Deterministic(int(k[1]))
+                    k_tuple[1] = iap.Deterministic(int(k[1]))
                 elif ia.is_iterable(k[1]) and all([ia.is_single_number(ki) for ki in k[1]]):
-                    k_tuple[1] = DiscreteUniform(int(k[1][0]), int(k[1][1]))
+                    k_tuple[1] = iap.DiscreteUniform(int(k[1][0]), int(k[1][1]))
                 else:
                     raise Exception("k[1] expected to be int or tuple of two ints, got %s" % (type(k[1]),))
 
                 self.mode = "two"
                 self.k = k_tuple
-        elif isinstance(k, StochasticParameter):
+        elif isinstance(k, iap.StochasticParameter):
             self.k = k
         else:
             raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))

@@ -22,8 +22,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
-# TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Choice, DiscreteUniform, Normal, Uniform
 from .. import parameters as iap
 import numpy as np
 import math
@@ -344,27 +342,27 @@ class Affine(Augmenter):
         # size)
         if order == ia.ALL:
             if backend == "auto" or backend == "cv2":
-                self.order = Choice([0, 1, 3])
+                self.order = iap.Choice([0, 1, 3])
             else:
-                self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
+                self.order = iap.Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
             ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             if backend == "cv2":
                 ia.do_assert(order in [0, 1, 3])
-            self.order = Deterministic(order)
+            self.order = iap.Deterministic(order)
         elif isinstance(order, list):
             ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
             ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
             if backend == "cv2":
                 ia.do_assert(all([val in [0, 1, 3] for val in order]))
-            self.order = Choice(order)
-        elif isinstance(order, StochasticParameter):
+            self.order = iap.Choice(order)
+        elif isinstance(order, iap.StochasticParameter):
             self.order = order
         else:
             raise Exception("Expected order to be imgaug.ALL, int, list of int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = Uniform(0, 255) # skimage transform expects float
+            self.cval = iap.Uniform(0, 255) # skimage transform expects float
         else:
             self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True)
 
@@ -383,13 +381,13 @@ class Affine(Augmenter):
             "wrap": cv2.BORDER_WRAP
         }
         if mode == ia.ALL:
-            self.mode = Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
+            self.mode = iap.Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
         elif ia.is_string(mode):
-            self.mode = Deterministic(mode)
+            self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
             ia.do_assert(all([ia.is_string(val) for val in mode]))
-            self.mode = Choice(mode)
-        elif isinstance(mode, StochasticParameter):
+            self.mode = iap.Choice(mode)
+        elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
@@ -925,42 +923,42 @@ class AffineCv2(Augmenter):
         available_orders_str = ["nearest", "linear", "cubic", "lanczos4"]
 
         if order == ia.ALL:
-            self.order = Choice(available_orders)
+            self.order = iap.Choice(available_orders)
         elif ia.is_single_integer(order):
             ia.do_assert(order in available_orders, "Expected order's integer value to be in %s, got %d." % (str(available_orders), order))
-            self.order = Deterministic(order)
+            self.order = iap.Deterministic(order)
         elif ia.is_string(order):
             ia.do_assert(order in available_orders_str, "Expected order to be in %s, got %s." % (str(available_orders_str), order))
-            self.order = Deterministic(order)
+            self.order = iap.Deterministic(order)
         elif isinstance(order, list):
             ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in order]), "Expected order list to only contain integers/strings, got types %s." % (str([type(val) for val in order]),))
             ia.do_assert(all([val in available_orders + available_orders_str for val in order]), "Expected all order values to be in %s, got %s." % (available_orders + available_orders_str, str(order),))
-            self.order = Choice(order)
-        elif isinstance(order, StochasticParameter):
+            self.order = iap.Choice(order)
+        elif isinstance(order, iap.StochasticParameter):
             self.order = order
         else:
             raise Exception("Expected order to be imgaug.ALL, int, string, a list of int/string or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = DiscreteUniform(0, 255)
+            self.cval = iap.DiscreteUniform(0, 255)
         else:
             self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_REFLECT_101, cv2.BORDER_WRAP, cv2.BORDER_CONSTANT]
         available_modes_str = ["replicate", "reflect", "reflect_101", "wrap", "constant"]
         if mode == ia.ALL:
-            self.mode = Choice(available_modes)
+            self.mode = iap.Choice(available_modes)
         elif ia.is_single_integer(mode):
             ia.do_assert(mode in available_modes, "Expected mode to be in %s, got %d." % (str(available_modes), mode))
-            self.mode = Deterministic(mode)
+            self.mode = iap.Deterministic(mode)
         elif ia.is_string(mode):
             ia.do_assert(mode in available_modes_str, "Expected mode to be in %s, got %s." % (str(available_modes_str), mode))
-            self.mode = Deterministic(mode)
+            self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
             ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), "Expected mode list to only contain integers/strings, got types %s." % (str([type(val) for val in mode]),))
             ia.do_assert(all([val in available_modes + available_modes_str for val in mode]), "Expected all mode values to be in %s, got %s." % (str(available_modes + available_modes_str), str(mode)))
-            self.mode = Choice(mode)
-        elif isinstance(mode, StochasticParameter):
+            self.mode = iap.Choice(mode)
+        elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
             raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or StochasticParameter, got %s." % (type(mode),))
@@ -1280,7 +1278,7 @@ class PiecewiseAffine(Augmenter):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
-        self.jitter = Normal(loc=0, scale=self.scale)
+        self.jitter = iap.Normal(loc=0, scale=self.scale)
         self.nb_rows = iap.handle_discrete_param(nb_rows, "nb_rows", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
         self.nb_cols = iap.handle_discrete_param(nb_cols, "nb_cols", value_range=(2, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
@@ -1300,33 +1298,33 @@ class PiecewiseAffine(Augmenter):
         # size)
         if order == ia.ALL:
             # self.order = DiscreteUniform(0, 5)
-            self.order = Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
+            self.order = iap.Choice([0, 1, 3, 4, 5]) # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws a warning)
         elif ia.is_single_integer(order):
             ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
-            self.order = Deterministic(order)
+            self.order = iap.Deterministic(order)
         elif isinstance(order, list):
             ia.do_assert(all([ia.is_single_integer(val) for val in order]), "Expected order list to only contain integers, got types %s." % (str([type(val) for val in order]),))
             ia.do_assert(all([0 <= val <= 5 for val in order]), "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
-            self.order = Choice(order)
-        elif isinstance(order, StochasticParameter):
+            self.order = iap.Choice(order)
+        elif isinstance(order, iap.StochasticParameter):
             self.order = order
         else:
             raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            self.cval = Uniform(0, 255)
+            self.cval = iap.Uniform(0, 255)
         else:
             self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         if mode == ia.ALL:
-            self.mode = Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
+            self.mode = iap.Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
         elif ia.is_string(mode):
-            self.mode = Deterministic(mode)
+            self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
             ia.do_assert(all([ia.is_string(val) for val in mode]))
-            self.mode = Choice(mode)
-        elif isinstance(mode, StochasticParameter):
+            self.mode = iap.Choice(mode)
+        elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))
@@ -1617,7 +1615,7 @@ class PerspectiveTransform(Augmenter):
         super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
-        self.jitter = Normal(loc=0, scale=self.scale)
+        self.jitter = iap.Normal(loc=0, scale=self.scale)
         self.keep_size = keep_size
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1922,23 +1920,23 @@ class ElasticTransformation(Augmenter):
         self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
         if order == ia.ALL:
-            self.order = Choice([0, 1, 2, 3, 4, 5])
+            self.order = iap.Choice([0, 1, 2, 3, 4, 5])
         else:
             self.order = iap.handle_discrete_param(order, "order", value_range=(0, 5), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
 
         if cval == ia.ALL:
-            self.cval = DiscreteUniform(0, 255)
+            self.cval = iap.DiscreteUniform(0, 255)
         else:
             self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         if mode == ia.ALL:
-            self.mode = Choice(["constant", "nearest", "reflect", "wrap"])
+            self.mode = iap.Choice(["constant", "nearest", "reflect", "wrap"])
         elif ia.is_string(mode):
-            self.mode = Deterministic(mode)
+            self.mode = iap.Deterministic(mode)
         elif ia.is_iterable(mode):
             ia.do_assert(all([ia.is_string(val) for val in mode]))
-            self.mode = Choice(mode)
-        elif isinstance(mode, StochasticParameter):
+            self.mode = iap.Choice(mode)
+        elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, got %s." % (type(mode),))

@@ -23,8 +23,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
-# TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Choice, DiscreteUniform, Uniform
 from .. import parameters as iap
 import numpy as np
 import six.moves as sm
@@ -154,16 +152,16 @@ class Scale(Augmenter):
 
         def handle(val, allow_dict):
             if val == "keep":
-                return Deterministic("keep")
+                return iap.Deterministic("keep")
             elif ia.is_single_integer(val):
                 ia.do_assert(val > 0)
-                return Deterministic(val)
+                return iap.Deterministic(val)
             elif ia.is_single_float(val):
                 ia.do_assert(val > 0)
-                return Deterministic(val)
+                return iap.Deterministic(val)
             elif allow_dict and isinstance(val, dict):
                 if len(val.keys()) == 0:
-                    return Deterministic("keep")
+                    return iap.Deterministic("keep")
                 else:
                     ia.do_assert(all([key in ["height", "width"] for key in val.keys()]))
                     if "height" in val and "width" in val:
@@ -173,30 +171,30 @@ class Scale(Augmenter):
                     for k in ["height", "width"]:
                         if k in val:
                             if val[k] == "keep-aspect-ratio" or val[k] == "keep":
-                                entry = Deterministic(val[k])
+                                entry = iap.Deterministic(val[k])
                             else:
                                 entry = handle(val[k], False)
                         else:
-                            entry = Deterministic("keep")
+                            entry = iap.Deterministic("keep")
                         size_tuple.append(entry)
                     return tuple(size_tuple)
             elif isinstance(val, tuple):
                 ia.do_assert(len(val) == 2)
                 ia.do_assert(val[0] > 0 and val[1] > 0)
                 if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
-                    return Uniform(val[0], val[1])
+                    return iap.Uniform(val[0], val[1])
                 else:
-                    return DiscreteUniform(val[0], val[1])
+                    return iap.DiscreteUniform(val[0], val[1])
             elif isinstance(val, list):
                 if len(val) == 0:
-                    return Deterministic("keep")
+                    return iap.Deterministic("keep")
                 else:
                     all_int = all([ia.is_single_integer(v) for v in val])
                     all_float = all([ia.is_single_float(v) for v in val])
                     ia.do_assert(all_int or all_float)
                     ia.do_assert(all([v > 0 for v in val]))
-                    return Choice(val)
-            elif isinstance(val, StochasticParameter):
+                    return iap.Choice(val)
+            elif isinstance(val, iap.StochasticParameter):
                 return val
             else:
                 raise Exception(
@@ -208,14 +206,14 @@ class Scale(Augmenter):
         self.size = handle(size, True)
 
         if interpolation == ia.ALL:
-            self.interpolation = Choice(["nearest", "linear", "area", "cubic"])
+            self.interpolation = iap.Choice(["nearest", "linear", "area", "cubic"])
         elif ia.is_single_integer(interpolation):
-            self.interpolation = Deterministic(interpolation)
+            self.interpolation = iap.Deterministic(interpolation)
         elif ia.is_string(interpolation):
-            self.interpolation = Deterministic(interpolation)
+            self.interpolation = iap.Deterministic(interpolation)
         elif ia.is_iterable(interpolation):
-            self.interpolation = Choice(interpolation)
-        elif isinstance(interpolation, StochasticParameter):
+            self.interpolation = iap.Choice(interpolation)
+        elif isinstance(interpolation, iap.StochasticParameter):
             self.interpolation = interpolation
         else:
             raise Exception("Expected int or string or iterable or StochasticParameter, got %s." % (type(interpolation),))
@@ -513,22 +511,22 @@ class CropAndPad(Augmenter):
         elif px is not None:
             self.mode = "px"
             if ia.is_single_integer(px):
-                self.all_sides = Deterministic(px)
+                self.all_sides = iap.Deterministic(px)
             elif isinstance(px, tuple):
                 ia.do_assert(len(px) in [2, 4])
                 def handle_param(p):
                     if ia.is_single_integer(p):
-                        return Deterministic(p)
+                        return iap.Deterministic(p)
                     elif isinstance(p, tuple):
                         ia.do_assert(len(p) == 2)
                         ia.do_assert(ia.is_single_integer(p[0]))
                         ia.do_assert(ia.is_single_integer(p[1]))
-                        return DiscreteUniform(p[0], p[1])
+                        return iap.DiscreteUniform(p[0], p[1])
                     elif isinstance(p, list):
                         ia.do_assert(len(p) > 0)
                         ia.do_assert(all([ia.is_single_integer(val) for val in p]))
-                        return Choice(p)
-                    elif isinstance(p, StochasticParameter):
+                        return iap.Choice(p)
+                    elif isinstance(p, iap.StochasticParameter):
                         return p
                     else:
                         raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, got type %s." % (type(p),))
@@ -541,7 +539,7 @@ class CropAndPad(Augmenter):
                     self.right = handle_param(px[1])
                     self.bottom = handle_param(px[2])
                     self.left = handle_param(px[3])
-            elif isinstance(px, StochasticParameter):
+            elif isinstance(px, iap.StochasticParameter):
                 self.top = self.right = self.bottom = self.left = px
             else:
                 raise Exception("Expected int, tuple of 4 ints/tuples/lists/StochasticParameters or StochasticParameter, got type %s." % (type(px),))
@@ -550,25 +548,25 @@ class CropAndPad(Augmenter):
             if ia.is_single_number(percent):
                 ia.do_assert(-1.0 < percent)
                 #self.top = self.right = self.bottom = self.left = Deterministic(percent)
-                self.all_sides = Deterministic(percent)
+                self.all_sides = iap.Deterministic(percent)
             elif isinstance(percent, tuple):
                 ia.do_assert(len(percent) in [2, 4])
                 def handle_param(p):
                     if ia.is_single_number(p):
-                        return Deterministic(p)
+                        return iap.Deterministic(p)
                     elif isinstance(p, tuple):
                         ia.do_assert(len(p) == 2)
                         ia.do_assert(ia.is_single_number(p[0]))
                         ia.do_assert(ia.is_single_number(p[1]))
                         ia.do_assert(-1.0 < p[0])
                         ia.do_assert(-1.0 < p[1])
-                        return Uniform(p[0], p[1])
+                        return iap.Uniform(p[0], p[1])
                     elif isinstance(p, list):
                         ia.do_assert(len(p) > 0)
                         ia.do_assert(all([ia.is_single_number(val) for val in p]))
                         ia.do_assert(all([-1.0 < val for val in p]))
-                        return Choice(p)
-                    elif isinstance(p, StochasticParameter):
+                        return iap.Choice(p)
+                    elif isinstance(p, iap.StochasticParameter):
                         return p
                     else:
                         raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, got type %s." % (type(p),))
@@ -581,21 +579,21 @@ class CropAndPad(Augmenter):
                     self.right = handle_param(percent[1])
                     self.bottom = handle_param(percent[2])
                     self.left = handle_param(percent[3])
-            elif isinstance(percent, StochasticParameter):
+            elif isinstance(percent, iap.StochasticParameter):
                 self.top = self.right = self.bottom = self.left = percent
             else:
                 raise Exception("Expected number, tuple of 4 numbers/tuples/lists/StochasticParameters or StochasticParameter, got type %s." % (type(percent),))
 
         pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
         if pad_mode == ia.ALL:
-            self.pad_mode = Choice(list(pad_modes_available))
+            self.pad_mode = iap.Choice(list(pad_modes_available))
         elif ia.is_string(pad_mode):
             ia.do_assert(pad_mode in pad_modes_available)
-            self.pad_mode = Deterministic(pad_mode)
+            self.pad_mode = iap.Deterministic(pad_mode)
         elif isinstance(pad_mode, list):
             ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
-            self.pad_mode = Choice(pad_mode)
-        elif isinstance(pad_mode, StochasticParameter):
+            self.pad_mode = iap.Choice(pad_mode)
+        elif isinstance(pad_mode, iap.StochasticParameter):
             self.pad_mode = pad_mode
         else:
             raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
@@ -984,7 +982,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         elif ia.is_single_number(v):
             ia.do_assert(v >= 0)
             return v
-        elif isinstance(v, StochasticParameter):
+        elif isinstance(v, iap.StochasticParameter):
             return v
         elif isinstance(v, tuple):
             return tuple([recursive_validate(v_) for v_ in v])
@@ -1127,7 +1125,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
         elif ia.is_single_number(v):
             ia.do_assert(v >= 0)
             return -v
-        elif isinstance(v, StochasticParameter):
+        elif isinstance(v, iap.StochasticParameter):
             return iap.Multiply(v, -1)
         elif isinstance(v, tuple):
             return tuple([recursive_negate(v_) for v_ in v])

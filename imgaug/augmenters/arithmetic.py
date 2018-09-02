@@ -33,8 +33,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
-# TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Binomial, DiscreteUniform, Normal, Uniform, FromLowerResolution
 from .. import parameters as iap
 from PIL import Image
 import imageio
@@ -326,7 +324,7 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return AddElementwise(Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
+    return AddElementwise(iap.Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
 
 # TODO
 #class MultiplicativeGaussianNoise(Augmenter):
@@ -599,14 +597,14 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
 
     """
     if ia.is_single_number(p):
-        p2 = Binomial(1 - p)
+        p2 = iap.Binomial(1 - p)
     elif ia.is_iterable(p):
         ia.do_assert(len(p) == 2)
         ia.do_assert(p[0] < p[1])
         ia.do_assert(0 <= p[0] <= 1.0)
         ia.do_assert(0 <= p[1] <= 1.0)
-        p2 = Binomial(Uniform(1 - p[1], 1 - p[0]))
-    elif isinstance(p, StochasticParameter):
+        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+    elif isinstance(p, iap.StochasticParameter):
         p2 = p
     else:
         raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
@@ -730,22 +728,22 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
 
     """
     if ia.is_single_number(p):
-        p2 = Binomial(1 - p)
+        p2 = iap.Binomial(1 - p)
     elif ia.is_iterable(p):
         ia.do_assert(len(p) == 2)
         ia.do_assert(p[0] < p[1])
         ia.do_assert(0 <= p[0] <= 1.0)
         ia.do_assert(0 <= p[1] <= 1.0)
-        p2 = Binomial(Uniform(1 - p[1], 1 - p[0]))
-    elif isinstance(p, StochasticParameter):
+        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+    elif isinstance(p, iap.StochasticParameter):
         p2 = p
     else:
         raise Exception("Expected p to be float or int or StochasticParameter, got %s." % (type(p),))
 
     if size_px is not None:
-        p3 = FromLowerResolution(other_param=p2, size_px=size_px, min_size=min_size)
+        p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px, min_size=min_size)
     elif size_percent is not None:
-        p3 = FromLowerResolution(other_param=p2, size_percent=size_percent, min_size=min_size)
+        p3 = iap.FromLowerResolution(other_param=p2, size_percent=size_percent, min_size=min_size)
     else:
         raise Exception("Either size_px or size_percent must be set.")
 
@@ -1010,9 +1008,9 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
-        mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
+        mask_low = iap.FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
     elif size_percent is not None:
-        mask_low = FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
+        mask_low = iap.FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
     else:
         raise Exception("Either size_px or size_percent must be set.")
 
@@ -1179,9 +1177,9 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
     mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
-        mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
+        mask_low = iap.FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
     elif size_percent is not None:
-        mask_low = FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
+        mask_low = iap.FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
     else:
         raise Exception("Either size_px or size_percent must be set.")
 
@@ -1355,9 +1353,9 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
     mask = iap.handle_probability_param(p, "p", tuple_to_uniform=True, list_to_choice=True)
 
     if size_px is not None:
-        mask_low = FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
+        mask_low = iap.FromLowerResolution(other_param=mask, size_px=size_px, min_size=min_size)
     elif size_percent is not None:
-        mask_low = FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
+        mask_low = iap.FromLowerResolution(other_param=mask, size_percent=size_percent, min_size=min_size)
     else:
         raise Exception("Either size_px or size_percent must be set.")
 

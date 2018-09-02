@@ -24,8 +24,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
-# TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Deterministic, Choice, Uniform
 from .. import parameters as iap
 import numpy as np
 import cv2
@@ -303,12 +301,12 @@ class ChangeColorspace(Augmenter):
 
         if ia.is_string(to_colorspace):
             ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
-            self.to_colorspace = Deterministic(to_colorspace)
+            self.to_colorspace = iap.Deterministic(to_colorspace)
         elif ia.is_iterable(to_colorspace):
             ia.do_assert(all([ia.is_string(colorspace) for colorspace in to_colorspace]))
             ia.do_assert(all([(colorspace in ChangeColorspace.COLORSPACES) for colorspace in to_colorspace]))
-            self.to_colorspace = Choice(to_colorspace)
-        elif isinstance(to_colorspace, StochasticParameter):
+            self.to_colorspace = iap.Choice(to_colorspace)
+        elif isinstance(to_colorspace, iap.StochasticParameter):
             self.to_colorspace = to_colorspace
         else:
             raise Exception("Expected to_colorspace to be string, list of strings or StochasticParameter, got %s." % (type(to_colorspace),))

@@ -28,8 +28,6 @@ Note that WithColorspace is in `color.py`.
 """
 from __future__ import print_function, division, absolute_import
 from .. import imgaug as ia
-# TODO replace these imports with iap.XYZ
-from ..parameters import StochasticParameter, Binomial, DiscreteUniform
 from .. import parameters as iap
 from abc import ABCMeta, abstractmethod
 import numpy as np
@@ -1934,11 +1932,11 @@ class SomeOf(Augmenter, list):
                 self.n = (int(n[0]), None)
                 self.n_mode = "(int,None)"
             elif ia.is_single_number(n[0]) and ia.is_single_number(n[1]):
-                self.n = DiscreteUniform(int(n[0]), int(n[1]))
+                self.n = iap.DiscreteUniform(int(n[0]), int(n[1]))
                 self.n_mode = "stochastic"
             else:
                 raise Exception("Expected tuple of (int, None) or (int, int), got %s" % ([type(el) for el in n],))
-        elif isinstance(n, StochasticParameter):
+        elif isinstance(n, iap.StochasticParameter):
             self.n = n
             self.n_mode = "stochastic"
         else:
@@ -1952,7 +1950,7 @@ class SomeOf(Augmenter, list):
         elif self.n_mode == "None":
             return [len(self)] * nb_images
         elif self.n_mode == "(int,None)":
-            param = DiscreteUniform(self.n[0], len(self))
+            param = iap.DiscreteUniform(self.n[0], len(self))
             return param.draw_samples((nb_images,), random_state=random_state)
         elif self.n_mode == "stochastic":
             return self.n.draw_samples((nb_images,), random_state=random_state)
