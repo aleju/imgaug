@@ -2975,8 +2975,6 @@ class HeatmapsOnImage(object):
             heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
 
             if cmap is not None:
-                import matplotlib.pyplot as plt
-
                 cmap_func = plt.get_cmap(cmap)
                 heatmap_cmapped = cmap_func(heatmap_c_rs)
                 heatmap_cmapped = np.delete(heatmap_cmapped, 3, 2)
