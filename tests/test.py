@@ -177,6 +177,7 @@ def main():
     test_reduce_to_nonempty()
     test_invert_reduce_to_nonempty()
     test_Augmenter()
+    test_Augmenter_augment_keypoints()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_find()
     test_Augmenter_remove()
@@ -10929,6 +10930,31 @@ def test_Augmenter():
     assert aug.__repr__() == aug.__str__() == "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=False)"
     aug = DummyAugmenterRepr(name="Example", deterministic=True)
     assert aug.__repr__() == aug.__str__() == "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=True)"
+
+
+def test_Augmenter_augment_keypoints():
+    # most stuff was already tested in other tests, so not tested here again
+    reseed()
+
+    # test empty KeypointsOnImage objects
+    kpsoi1 = ia.KeypointsOnImage([], shape=(32, 32, 3))
+    kpsoi2 = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(32, 32, 3))
+
+    aug = iaa.Affine(translate_px={"x": 1})
+    kpsoi_aug = aug.augment_keypoints([kpsoi1, kpsoi2])
+    assert len(kpsoi_aug) == 2
+    assert len(kpsoi_aug[0].keypoints) == 0
+    assert len(kpsoi_aug[1].keypoints) == 1
+    assert kpsoi_aug[1].keypoints[0].x == 11
+
+    kpsoi1 = ia.KeypointsOnImage([], shape=(32, 32, 3))
+    kpsoi2 = ia.KeypointsOnImage([], shape=(32, 32, 3))
+
+    aug = iaa.Affine(translate_px={"x": 1})
+    kpsoi_aug = aug.augment_keypoints([kpsoi1, kpsoi2])
+    assert len(kpsoi_aug) == 2
+    assert len(kpsoi_aug[0].keypoints) == 0
+    assert len(kpsoi_aug[1].keypoints) == 0
 
 
 def test_Augmenter_augment_segmentation_maps():
