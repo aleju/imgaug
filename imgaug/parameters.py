@@ -7,7 +7,6 @@ import copy as copy_module
 import six
 import six.moves as sm
 import scipy
-import numbers
 from collections import defaultdict
 
 NP_FLOAT_TYPES = set(np.sctypes["float"])
