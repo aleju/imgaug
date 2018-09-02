@@ -102,12 +102,12 @@ def handle_children_list(lst, augmenter_name, lst_name):
         return Sequential([], name="%s-%s" % (augmenter_name, lst_name))
     elif isinstance(lst, Augmenter):
         if ia.is_iterable(lst):
-            assert all([isinstance(child, Augmenter) for child in lst])
+            ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
             return lst
         else:
             return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     elif ia.is_iterable(lst):
-        assert all([isinstance(child, Augmenter) for child in lst])
+        ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
         return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     else:
         raise Exception("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, got %s." % (lst_name, augmenter_name, type(lst),))
@@ -1739,7 +1739,7 @@ class Sequential(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
-            assert all([isinstance(child, Augmenter) for child in children])
+            ia.do_assert(all([isinstance(child, Augmenter) for child in children]))
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
@@ -1917,7 +1917,7 @@ class SomeOf(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
-            assert all([isinstance(child, Augmenter) for child in children])
+            ia.do_assert(all([isinstance(child, Augmenter) for child in children]))
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))

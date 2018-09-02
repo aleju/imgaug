@@ -417,8 +417,8 @@ def _quokka_normalize_extract(extract):
     elif isinstance(extract, BoundingBox):
         bb = extract
     elif isinstance(extract, BoundingBoxesOnImage):
-        assert len(BoundingBoxesOnImage.bounding_boxes) == 1
-        assert extract.shape[0:2] == (643, 960)
+        do_assert(len(BoundingBoxesOnImage.bounding_boxes) == 1)
+        do_assert(extract.shape[0:2] == (643, 960))
         bb = extract.bounding_boxes[0]
     else:
         raise Exception(
@@ -466,7 +466,7 @@ def _compute_resized_shape(from_shape, to_shape):
         pass
     elif isinstance(to_shape, tuple):
         if len(from_shape) == 3 and len(to_shape) == 3:
-            assert from_shape[2] == to_shape[2]
+            do_assert(from_shape[2] == to_shape[2])
         elif len(to_shape) == 3:
             to_shape_computed.append(to_shape[2])
 
@@ -970,11 +970,11 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         Padded array with height H'=H+top+bottom and width W'=W+left+right.
 
     """
-    assert arr.ndim in [2, 3]
-    assert top >= 0
-    assert right >= 0
-    assert bottom >= 0
-    assert left >= 0
+    do_assert(arr.ndim in [2, 3])
+    do_assert(top >= 0)
+    do_assert(right >= 0)
+    do_assert(bottom >= 0)
+    do_assert(left >= 0)
     if top > 0 or right > 0 or bottom > 0 or left > 0:
         paddings_np = [(top, bottom), (left, right)]  # paddings for 2d case
         if arr.ndim == 3:
@@ -1023,10 +1023,10 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         of the form (top, right, bottom, left).
 
     """
-    assert arr.ndim in [2, 3]
-    assert aspect_ratio > 0
+    do_assert(arr.ndim in [2, 3])
+    do_assert(aspect_ratio > 0)
     height, width = arr.shape[0:2]
-    assert height > 0
+    do_assert(height > 0)
     aspect_ratio_current = width / height
 
     pad_top = 0
@@ -1140,10 +1140,10 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
         Array after pooling.
 
     """
-    assert arr.ndim in [2, 3]
+    do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] and [is_single_integer(val) and val >= 1 for val in block_size]
-    assert is_valid_int or is_valid_tuple
+    do_assert(is_valid_int or is_valid_tuple)
 
     if is_single_integer(block_size):
         block_size = [block_size, block_size]
@@ -1508,10 +1508,6 @@ class Keypoint(object):
     """
 
     def __init__(self, x, y):
-        # these checks are currently removed because they are very slow for some
-        # reason
-        #assert is_single_integer(x), type(x)
-        #assert is_single_integer(y), type(y)
         self.x = x
         self.y = y
 
@@ -2886,12 +2882,12 @@ class HeatmapsOnImage(object):
 
     def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
         """Construct a new HeatmapsOnImage object."""
-        assert arr.dtype.type in [np.float32]
-        assert arr.ndim in [2, 3]
-        assert len(shape) in [2, 3]
-        assert min_value < max_value
-        assert np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps
-        assert np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps
+        do_assert(arr.dtype.type in [np.float32])
+        do_assert(arr.ndim in [2, 3])
+        do_assert(len(shape) in [2, 3])
+        do_assert(min_value < max_value)
+        do_assert(np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps)
+        do_assert(np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps)
 
         if arr.ndim == 2:
             arr = arr[..., np.newaxis]
@@ -3020,12 +3016,12 @@ class HeatmapsOnImage(object):
 
         """
         # assert RGB image
-        assert image.ndim == 3
-        assert image.shape[2] == 3
-        assert image.dtype.type == np.uint8
+        do_assert(image.ndim == 3)
+        do_assert(image.shape[2] == 3)
+        do_assert(image.dtype.type == np.uint8)
 
-        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8
-        assert resize in ["heatmaps", "image"]
+        do_assert(0 - 1e-8 <= alpha <= 1.0 + 1e-8)
+        do_assert(resize in ["heatmaps", "image"])
 
         if resize == "image":
             image = imresize_single_image(image, self.arr_0to1.shape[0:2], interpolation="cubic")
@@ -3326,21 +3322,21 @@ class HeatmapsOnImage(object):
             Input array, with value range projected to the desired target value range.
 
         """
-        assert is_np_array(arr)
+        do_assert(is_np_array(arr))
 
         if isinstance(source, HeatmapsOnImage):
             source = (source.min_value, source.max_value)
         else:
-            assert isinstance(source, tuple)
-            assert len(source) == 2
-            assert source[0] < source[1]
+            do_assert(isinstance(source, tuple))
+            do_assert(len(source) == 2)
+            do_assert(source[0] < source[1])
 
         if isinstance(target, HeatmapsOnImage):
             target = (target.min_value, target.max_value)
         else:
-            assert isinstance(target, tuple)
-            assert len(target) == 2
-            assert target[0] < target[1]
+            do_assert(isinstance(target, tuple))
+            do_assert(len(target) == 2)
+            do_assert(target[0] < target[1])
 
         # Check if source and target are the same (with a tiny bit of tolerance)
         # if so, evade compuation and just copy the array instead.
@@ -3475,32 +3471,32 @@ class SegmentationMapOnImage(object):
 
     def __init__(self, arr, shape, nb_classes=None):
         if arr.dtype.type == np.bool:
-            assert arr.ndim in [2, 3]
+            do_assert(arr.ndim in [2, 3])
             self.input_was = ("bool", arr.ndim)
             if arr.ndim == 2:
                 arr = arr[..., np.newaxis]
             arr = arr.astype(np.float32)
         elif arr.dtype.type in [np.uint8, np.uint32, np.int8, np.int16, np.int32]:
-            assert arr.ndim == 2 or (arr.ndim == 3 and arr.shape[2] == 1)
-            assert nb_classes is not None
-            assert nb_classes > 0
-            assert np.min(arr.flat[0:100]) >= 0
-            assert np.max(arr.flat[0:100]) <= nb_classes
+            do_assert(arr.ndim == 2 or (arr.ndim == 3 and arr.shape[2] == 1))
+            do_assert(nb_classes is not None)
+            do_assert(nb_classes > 0)
+            do_assert(np.min(arr.flat[0:100]) >= 0)
+            do_assert(np.max(arr.flat[0:100]) <= nb_classes)
             self.input_was = ("int", arr.dtype.type, arr.ndim)
             if arr.ndim == 3:
                 arr = arr[..., 0]
             arr = np.eye(nb_classes)[arr]  # from class indices to one hot
             arr = arr.astype(np.float32)
         elif arr.dtype.type in [np.float16, np.float32]:
-            assert arr.ndim == 3
+            do_assert(arr.ndim == 3)
             self.input_was = ("float", arr.dtype.type, arr.ndim)
             arr = arr.astype(np.float32)
         else:
             dt = str(arr.dtype) if is_np_array(arr) else "<no ndarray>"
             raise Exception("Input was expected to be an ndarray of dtype bool, uint8, uint32 "
                             "int8, int16, int32 or float32. Got type %s with dtype %s." % (type(arr), dt))
-        assert arr.ndim == 3
-        assert arr.dtype.type == np.float32
+        do_assert(arr.ndim == 3)
+        do_assert(arr.dtype.type == np.float32)
         self.arr = arr
         self.shape = shape
         self.nb_classes = nb_classes if nb_classes is not None else arr.shape[2]
@@ -3607,7 +3603,7 @@ class SegmentationMapOnImage(object):
         segmap_drawn = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
         if colors is None:
             colors = SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS
-        assert nb_classes <= len(colors), "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (nb_classes, len(colors),)
+        do_assert(nb_classes <= len(colors), "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (nb_classes, len(colors),))
 
         ids_in_map = np.unique(arr)
         for c, color in zip(sm.xrange(nb_classes), colors):
@@ -3671,12 +3667,12 @@ class SegmentationMapOnImage(object):
 
         """
         # assert RGB image
-        assert image.ndim == 3
-        assert image.shape[2] == 3
-        assert image.dtype.type == np.uint8
+        do_assert(image.ndim == 3)
+        do_assert(image.shape[2] == 3)
+        do_assert(image.dtype.type == np.uint8)
 
-        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8
-        assert resize in ["segmentation_map", "image"]
+        do_assert(0 - 1e-8 <= alpha <= 1.0 + 1e-8)
+        do_assert(resize in ["segmentation_map", "image"])
 
         if resize == "image":
             image = imresize_single_image(image, self.arr.shape[0:2], interpolation="cubic")
@@ -3891,10 +3887,10 @@ class SegmentationMapOnImage(object):
         if class_indices is None:
             return SegmentationMapOnImage(heatmaps.arr_0to1, shape=heatmaps.shape)
         else:
-            assert nb_classes is not None
-            assert min(class_indices) >= 0
-            assert max(class_indices) < nb_classes
-            assert len(class_indices) == heatmaps.arr_0to1.shape[2]
+            do_assert(nb_classes is not None)
+            do_assert(min(class_indices) >= 0)
+            do_assert(max(class_indices) < nb_classes)
+            do_assert(len(class_indices) == heatmaps.arr_0to1.shape[2])
             arr_0to1 = heatmaps.arr_0to1
             arr_0to1_full = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1], nb_classes), dtype=np.float32)
             #empty_channel = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1]), dtype=np.float32)
