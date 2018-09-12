@@ -4726,6 +4726,7 @@ class MultiplyElementwise(Augmenter):
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
         for i in sm.xrange(nb_images):
+            dtype = images[i].dtype
             seed = seeds[i]
             image = images[i].astype(np.float32)
             height, width, nb_channels = image.shape
@@ -4737,8 +4738,9 @@ class MultiplyElementwise(Augmenter):
                 samples = self.mul.draw_samples((height, width, 1), random_state=rs_image)
                 samples = np.tile(samples, (1, 1, nb_channels))
             after_multiply = image * samples
-            np.clip(after_multiply, 0, 255, out=after_multiply)
-            result[i] = after_multiply.astype(np.uint8)
+            if dtype == np.uint8:
+                np.clip(after_multiply, 0, 255, out=after_multiply)
+            result[i] = after_multiply.astype(dtype)
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
