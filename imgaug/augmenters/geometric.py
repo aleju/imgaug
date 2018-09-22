@@ -1464,20 +1464,31 @@ class PiecewiseAffine(Augmenter):
                 # (visual) location of the keypoints.
                 # Much slower than directly augmenting the coordinates, but
                 # here the only method that reliably works.
-                kp_image = kpsoi.to_keypoint_image(size=3) # size=1 sometimes leads to dropped/lost keypoints
-                kp_image_warped = tf.warp(
-                    kp_image,
+                #kp_image = kpsoi.to_keypoint_image(size=3) # size=1 sometimes leads to dropped/lost keypoints
+                dist_maps = kpsoi.to_distance_maps(inverted=True)
+                #kp_image_warped = tf.warp(
+                dist_maps_warped = tf.warp(
+                    #kp_image,
+                    dist_maps,
                     transformer,
                     order=1,
                     preserve_range=True,
                     output_shape=(kpsoi.shape[0], kpsoi.shape[1], len(kpsoi.keypoints))
                 )
 
-                kps_aug = ia.KeypointsOnImage.from_keypoint_image(
-                    kp_image_warped,
+                #kps_aug = ia.KeypointsOnImage.from_keypoint_image(
+                #    kp_image_warped,
+                #    if_not_found_coords={"x": -1, "y": -1},
+                #    nb_channels=None if len(kpsoi.shape) < 3 else kpsoi.shape[2]
+                #)
+                kps_aug = ia.KeypointsOnImage.from_distance_maps(
+                    dist_maps_warped,
+                    inverted=True,
+                    threshold=0.01,
                     if_not_found_coords={"x": -1, "y": -1},
                     nb_channels=None if len(kpsoi.shape) < 3 else kpsoi.shape[2]
                 )
+
                 # TODO is this still necessary after nb_channels was added to
                 # from_keypoint_image() ?
                 if len(kpsoi.shape) > 2:
