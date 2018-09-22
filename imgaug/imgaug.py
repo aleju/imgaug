@@ -4112,8 +4112,8 @@ class Batch(object):
             elif is_np_array(images):
                 images_copy = np.copy(images)
             else:
-                assert is_iterable(images)
-                assert all([is_np_array(image) for image in images])
+                do_assert(is_iterable(images))
+                do_assert(all([is_np_array(image) for image in images]))
                 images_copy = list([np.copy(image) for image in images])
             return images_copy
 
@@ -4121,8 +4121,8 @@ class Batch(object):
             if augmentables is None:
                 augmentables_copy = None
             else:
-                assert is_iterable(augmentables)
-                assert all([isinstance(augmentable, clazz) for augmentable in augmentables])
+                do_assert(is_iterable(augmentables))
+                do_assert(all([isinstance(augmentable, clazz) for augmentable in augmentables]))
                 augmentables_copy = [augmentable.deepcopy() for augmentable in augmentables]
             return augmentables_copy
 
