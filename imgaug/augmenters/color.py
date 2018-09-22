@@ -30,7 +30,7 @@ import cv2
 import six.moves as sm
 import warnings
 
-from .meta import Augmenter, Sequential, WithChannels, handle_children_list
+from .meta import Augmenter, WithChannels, handle_children_list
 from .arithmetic import Add
 
 # legacy support

@@ -4135,10 +4135,10 @@ class Batch(object):
             data=copy.deepcopy(self.data)
         )
         batch.images_aug = _copy_images(self.images_aug)
-        heatmaps_aug = _copy_augmentable_objects(self.heatmaps_aug, HeatmapsOnImage)
-        segmentation_maps_aug = _copy_augmentable_objects(self.segmentation_maps_aug, SegmentationMapOnImage)
-        keypoints_aug = _copy_augmentable_objects(self.keypoints_aug, KeypointsOnImage)
-        bounding_boxes_aug = _copy_augmentable_objects(self.bounding_boxes_aug, BoundingBoxesOnImage)
+        batch.heatmaps_aug = _copy_augmentable_objects(self.heatmaps_aug, HeatmapsOnImage)
+        batch.segmentation_maps_aug = _copy_augmentable_objects(self.segmentation_maps_aug, SegmentationMapOnImage)
+        batch.keypoints_aug = _copy_augmentable_objects(self.keypoints_aug, KeypointsOnImage)
+        batch.bounding_boxes_aug = _copy_augmentable_objects(self.bounding_boxes_aug, BoundingBoxesOnImage)
 
         return batch
 

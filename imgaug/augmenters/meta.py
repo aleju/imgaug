@@ -2518,7 +2518,7 @@ class WithChannels(Augmenter):
                     hooks=hooks
                 )
 
-                for idx_orig, heatmaps_i_aug in zip(indices, heatmaps_to_aug):
+                for idx_orig, heatmaps_i_aug in zip(indices, heatmaps_aug):
                     result[idx_orig] = heatmaps_i_aug
 
         return result

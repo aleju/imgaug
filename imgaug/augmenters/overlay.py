@@ -26,7 +26,7 @@ from .. import parameters as iap
 import numpy as np
 import six.moves as sm
 
-from .meta import Augmenter, Sequential, handle_children_list
+from .meta import Augmenter, handle_children_list
 
 # TODO tests
 class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
