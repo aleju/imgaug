@@ -1642,6 +1642,9 @@ class PerspectiveTransform(Augmenter):
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             # cv2.warpPerspective only supports <=4 channels
             nb_channels = images[i].shape[2]
+            dtype = images[i].dtype
+            if dtype not in [np.float32, np.float64, np.uint8]:
+                images[i] = images[i].astype(np.float64)  # e.g. np.int32
             if nb_channels <= 4:
                 warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
                 if warped.ndim == 2 and images[i].ndim == 3:
@@ -1656,6 +1659,9 @@ class PerspectiveTransform(Augmenter):
             if self.keep_size:
                 h, w = images[i].shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w), interpolation="cubic")
+
+            if warped.dtype != dtype:
+                warped = warped.astype(dtype)
             result[i] = warped
 
         return result
