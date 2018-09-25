@@ -8572,6 +8572,12 @@ def test_Affine():
     assert len(aug.mode.a) == 2 and "constant" in aug.mode.a and "edge" in aug.mode.a
 
     # ------------
+    # fit_output
+    # ------------
+    aug = iaa.Affine(scale=1.0, translate_px=100, fit_output=True)
+    assert aug.fit_output is True
+
+    # ------------
     # exceptions for bad inputs
     # ------------
     # scale
@@ -8649,7 +8655,7 @@ def test_Affine():
     # ----------
     # get_parameters
     # ----------
-    aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4, order=1, cval=0, mode="constant", backend="cv2")
+    aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4, order=1, cval=0, mode="constant", backend="cv2", fit_output=True)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Deterministic)  # scale
     assert isinstance(params[1], iap.Deterministic)  # translate
@@ -8663,6 +8669,7 @@ def test_Affine():
     assert params[5].value == 0  # cval
     assert params[6].value == "constant"  # mode
     assert params[7] == "cv2"  # backend
+    assert params[8] is True  # fit_output
 
 
 def test_AffineCv2():
