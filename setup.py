@@ -22,7 +22,7 @@ setup(
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
     download_url="https://github.com/aleju/imgaug/archive/0.2.6.tar.gz",
-    install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six"],
+    install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six", "imageio"],
     packages=find_packages(),
     include_package_data=True,
     license="MIT",
