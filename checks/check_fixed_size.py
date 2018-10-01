@@ -15,22 +15,52 @@ def main():
     print("image shape:", image.shape)
     
     augs_many = [
-        iaa.CropFixedSize(200,200, name="width200-height200"),
-        iaa.CropFixedSize(200,322, name="width200-height322"),
-        iaa.CropFixedSize(480,200, name="width480-height200"),
-        iaa.CropFixedSize(480,322, name="width480-height322"),
+        iaa.PadToFixedSize(200,200, name="pad-width200-height200"),
+        iaa.PadToFixedSize(200,322, name="pad-width200-height322"),
+        iaa.PadToFixedSize(200,400, name="pad-width200-height400"),
+        iaa.PadToFixedSize(480,200, name="pad-width480-height200"),
+        iaa.PadToFixedSize(480,322, name="pad-width480-height322"),  # input size == output size
+        iaa.PadToFixedSize(480,400, name="pad-width480-height400"),
+        iaa.PadToFixedSize(600,200, name="pad-width600-height200"),
+        iaa.PadToFixedSize(600,322, name="pad-width600-height322"),
+        iaa.PadToFixedSize(600,400, name="pad-width600-height400"),
+
+        iaa.CropToFixedSize(200,200, name="crop-width200-height200"),
+        iaa.CropToFixedSize(200,322, name="crop-width200-height322"),
+        iaa.CropToFixedSize(200,400, name="crop-width200-height400"),
+        iaa.CropToFixedSize(480,200, name="crop-width480-height200"),
+        iaa.CropToFixedSize(480,322, name="crop-width480-height322"),  # input size == output size
+        iaa.CropToFixedSize(480,400, name="crop-width480-height400"),
+        iaa.CropToFixedSize(600,200, name="crop-width600-height200"),
+        iaa.CropToFixedSize(600,322, name="crop-width600-height322"),
+        iaa.CropToFixedSize(600,400, name="crop-width600-height400"),
+
         iaa.Sequential([
-            iaa.PadUptoFixedSize(480,400),
-            iaa.CropFixedSize(480,400)
-        ], name="width480-height400"),
+            iaa.PadToFixedSize(200,200),
+            iaa.CropToFixedSize(200,200)
+        ], name="pad-crop-width200-height200"),
         iaa.Sequential([
-            iaa.PadUptoFixedSize(600,322),
-            iaa.CropFixedSize(600,322)
-        ], name="width600-height322"),
+            iaa.PadToFixedSize(400,400),
+            iaa.CropToFixedSize(400,400)
+        ], name="pad-crop-width400-height400"),
         iaa.Sequential([
-            iaa.PadUptoFixedSize(600,400),
-            iaa.CropFixedSize(600,400)
-        ], name="width600-height400"),
+            iaa.PadToFixedSize(600,600),
+            iaa.CropToFixedSize(600,600)
+        ], name="pad-crop-width600-height600"),
+
+        iaa.Sequential([
+            iaa.CropToFixedSize(200,200),
+            iaa.PadToFixedSize(200,200)
+        ], name="crop-pad-width200-height200"),
+        iaa.Sequential([
+            iaa.CropToFixedSize(400,400),
+            iaa.PadToFixedSize(400,400)
+        ], name="crop-pad-width400-height400"),
+        iaa.Sequential([
+            iaa.CropToFixedSize(600,600),
+            iaa.PadToFixedSize(600,600)
+        ], name="crop-pad-width600-height600"),
+
     ]
 
     print("original", image.shape)

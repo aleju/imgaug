@@ -19,8 +19,8 @@ List of augmenters:
     * CropAndPad
     * Crop
     * Pad
-    * PadUptoFixedSize
-    * CropFixedSize
+    * PadToFixedSize
+    * CropToFixedSize
 
 """
 from __future__ import print_function, division, absolute_import
@@ -1149,10 +1149,11 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
     )
     return aug
 
-class PadUptoFixedSize(Augmenter):
+
+class PadToFixedSize(Augmenter):
 
     """
-    Augmenter that pads the images upto specified width/height only if specified width/height exceed the width/height of input images.
+    Augmenter that pads the images to specified width/height only if specified width/height is greater than the width/height of input images.
     The offset varies randomly within valid region (i.e. each input image is fully included in its output image).
 
     Parameters
@@ -1160,7 +1161,7 @@ class PadUptoFixedSize(Augmenter):
     width : int
         Minimum width of new images.
 
-    height : int 
+    height : int
         Minimum height of new images.
 
     pad_mode : ia.ALL or string or list of strings or StochasticParameter, optional(default="constant")
@@ -1180,16 +1181,24 @@ class PadUptoFixedSize(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.PadUptoFixedSize(width=100, height=100)
+    >>> aug = iaa.PadToFixedSize(width=100, height=100)
 
-    for edges smaller than 100 pixels, pads up to 100 pixels, does nothing for the other edges.
+    for edges smaller than 100 pixels, pads to 100 pixels, does nothing for the other edges.
+
+    >>> aug = iaa.Sequential([
+            iaa.PadToFixedSize(width=100, height=100),
+            iaa.CropToFixedSize(width=100, height=100)
+        ])
+
+    pads to 100x100 pixel for smaller images, and crops to 100x100 pixel for larger images.
+    The output images have fixed size, 100x100 pixel.
 
     """
 
     def __init__(self, width, height, pad_mode="constant", pad_cval=0, name=None, deterministic=False, random_state=None):
-        super(PadUptoFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(PadToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
-        self.position = ( iap.Uniform(0.0,1.0), iap.Uniform(0.0,1.0) )
+        self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
 
         pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
         if pad_mode == ia.ALL:
@@ -1214,19 +1223,19 @@ class PadUptoFixedSize(Augmenter):
         pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ia.do_assert(image.dtype == np.uint8, "PadUptoFixedSize() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
+            ia.do_assert(image.dtype == np.uint8, "PadToFixedSize() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             ih, iw = image.shape[:2]
-            
-            if iw<w or ih<h:
-                if iw<w:
+
+            if iw < w or ih < h:
+                if iw < w:
                     pad_x0 = int(pad_xs[i]*(w-iw+1))
                     pad_x1 = w-iw-pad_x0
                 else:
                     pad_x0 = 0
                     pad_x1 = 0
-                
-                if ih<h:
-                    pad_y0 = int(pad_ys[i]*(h-ih+1)) if ih<h else 0
+
+                if ih < h:
+                    pad_y0 = int(pad_ys[i]*(h-ih+1))
                     pad_y1 = h-ih-pad_y0
                 else:
                     pad_y0 = 0
@@ -1235,7 +1244,7 @@ class PadUptoFixedSize(Augmenter):
                 if image.ndim == 2:
                     pad_vals = ((pad_y0, pad_y1), (pad_x0, pad_x1))
                 else:
-                    pad_vals = ((pad_y0, pad_y1), (pad_x0, pad_x1), (0,0))
+                    pad_vals = ((pad_y0, pad_y1), (pad_x0, pad_x1), (0, 0))
 
                 pad_mode = pad_modes[i]
                 if pad_mode == "constant":
@@ -1253,16 +1262,16 @@ class PadUptoFixedSize(Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
         w, h = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images, random_state)
+        pad_xs, pad_ys, _, _ = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
             ih, iw = keypoints_on_image.shape[:2]
 
-            pad_x = int(pad_xs[i]*(w-iw+1)) if iw<w else 0
-            pad_y = int(pad_ys[i]*(h-ih+1)) if ih<h else 0
+            pad_x = int(pad_xs[i]*(w-iw+1)) if iw < w else 0
+            pad_y = int(pad_ys[i]*(h-ih+1)) if ih < h else 0
 
             keypoints_padded = keypoints_on_image.shift(x=pad_x, y=pad_y)
-            keypoints_padded.shape = (max(ih,h),max(iw,w))
+            keypoints_padded.shape = (max(ih, h), max(iw, w)) + keypoints_padded.shape[2:]
 
             result.append(keypoints_padded)
 
@@ -1276,29 +1285,29 @@ class PadUptoFixedSize(Augmenter):
 
         pad_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
         pad_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
-        
+
         pad_modes = self.pad_mode.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
         pad_cvals = self.pad_cval.draw_samples(nb_images, random_state=ia.new_random_state(seed + 3))
         pad_cvals = np.clip(np.round(pad_cvals), 0, 255).astype(np.uint8)
-        
+
         return pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
         return [self.position, self.pad_mode, self.pad_cval]
 
-class CropFixedSize(Augmenter):
+
+class CropToFixedSize(Augmenter):
 
     """
-    Augmenter that crops the images to specified width/height.
-    Width/Height of input images is supposed to be larger than specified width/height.
+    Augmenter that crops the images to specified width/height only if specified width/height is less than the width/height of input images.
     The offset varies randomly within valid region (i.e. each output image is fully included in its input image).
-    
+
     Parameters
     ----------
     width : int
         Fixed width of new images.
 
-    height : int 
+    height : int
         Fixed height of new images.
 
     name : string, optional(default=None)
@@ -1312,23 +1321,24 @@ class CropFixedSize(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.CropFixedSize(width=100, height=100)
+    >>> aug = iaa.CropToFixedSize(width=100, height=100)
 
-    crops 100x100 image from the input image at random position.
+    for edges larger than 100 pixels, crops to 100 pixels, does nothing for the other edges.
 
     >>> aug = iaa.Sequential([
-            iaa.PadUptoFixedSize(width=100, height=100),
-            iaa.CropFixedSize(width=100, height=100)
+            iaa.PadToFixedSize(width=100, height=100),
+            iaa.CropToFixedSize(width=100, height=100)
         ])
 
-    pads upto 100x100 pixel for treating some smaller images than 100x100 pixels, then crop 100x100 image.
+    pads to 100x100 pixel for smaller images, and crops to 100x100 pixel for larger images.
+    The output images have fixed size, 100x100 pixel.
 
     """
 
-    def __init__(self, width, height, pad_mode="constant", pad_cval=0, name=None, deterministic=False, random_state=None):
-        super(CropFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, width, height, name=None, deterministic=False, random_state=None):
+        super(CropToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
-        self.position = ( iap.Uniform(0.0,1.0), iap.Uniform(0.0,1.0) )
+        self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
@@ -1337,15 +1347,18 @@ class CropFixedSize(Augmenter):
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
+            ia.do_assert(image.dtype == np.uint8, "CropToFixedSize() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             ih, iw = image.shape[:2]
-            ia.do_assert(image.dtype == np.uint8, "CropFixedSize() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
-            ia.do_assert(w<=iw and h<=ih, "CropFixedSize() can currently only process images larger than target size (both width and height).")
-            
-            offset_x, offset_y = offset_xs[i]*(iw-w+1), offset_ys[i]*(ih-h+1) # relative position to pixel.
-            offset_x, offset_y = int(offset_x), int(offset_y)
 
-            image_cropped = image[offset_y:offset_y+h, offset_x:offset_x+w, :]
-            result.append(image_cropped)
+            if ih > h:
+                offset_y = int(offset_ys[i]*(ih-h+1))
+                image = image[offset_y:offset_y+h, :, :]
+
+            if iw > w:
+                offset_x = int(offset_xs[i]*(iw-w+1))
+                image = image[:, offset_x:offset_x+w, :]
+
+            result.append(image)
 
         result = np.array(result, dtype=np.uint8)
 
@@ -1359,10 +1372,12 @@ class CropFixedSize(Augmenter):
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
             ih, iw = keypoints_on_image.shape[:2]
-            offset_x, offset_y = offset_xs[i]*(iw-w+1), offset_ys[i]*(ih-h+1) # relative position to pixel.
+
+            offset_x = int(offset_xs[i]*(iw-w+1)) if iw > w else 0
+            offset_y = int(offset_ys[i]*(ih-h+1)) if ih > h else 0
 
             keypoints_cropped = keypoints_on_image.shift(x=-offset_x, y=-offset_y)
-            keypoints_cropped.shape = (h,w)
+            keypoints_cropped.shape = (min(ih, h), min(iw, w)) + keypoints_cropped.shape[2:]
 
             result.append(keypoints_cropped)
 
@@ -1375,7 +1390,7 @@ class CropFixedSize(Augmenter):
         seed = random_state.randint(0, 10**6, 1)[0]
         offset_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
         offset_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
-        
+
         return offset_xs, offset_ys
 
     def get_parameters(self):
