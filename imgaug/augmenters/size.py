@@ -245,7 +245,9 @@ class Scale(Augmenter):
             heatmaps_i = heatmaps[i]
             sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
             h, w = self._compute_height_width(heatmaps_i.arr_0to1.shape, sample_h, sample_w)
-            result.append(heatmaps_i.scale((h, w), interpolation=sample_ip))
+            heatmaps_i_scaled = heatmaps_i.scale((h, w), interpolation=sample_ip)
+            heatmaps_i_scaled.shape = (sample_h, sample_w) + heatmaps_i.shape[2:]
+            result.append(heatmaps_i_scaled)
 
         return result
 
@@ -257,10 +259,8 @@ class Scale(Augmenter):
             keypoints_on_image = keypoints_on_images[i]
             sample_h, sample_w = samples_h[i], samples_w[i]
             h, w = self._compute_height_width(keypoints_on_image.shape, sample_h, sample_w)
-            new_shape = list(keypoints_on_image.shape)
-            new_shape[0] = h
-            new_shape[1] = w
-            keypoints_on_image_rs = keypoints_on_image.on(tuple(new_shape))
+            new_shape = (h, w) + keypoints_on_image.shape[2:]
+            keypoints_on_image_rs = keypoints_on_image.on(new_shape)
 
             result.append(keypoints_on_image_rs)
 
@@ -652,7 +652,11 @@ class CropAndPad(Augmenter):
             seed = seeds[i]
             height_image, width_image = heatmaps[i].shape[0:2]
             height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
-            crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, _pad_mode, _pad_cval = self._draw_samples_image(seed, height_image, width_image)
+
+            vals = self._draw_samples_image(seed, height_image, width_image)
+            crop_image_top, crop_image_right, crop_image_bottom, crop_image_left, \
+                pad_image_top, pad_image_right, pad_image_bottom, pad_image_left, \
+                _pad_mode, _pad_cval = vals
 
             if (height_image, width_image) != (height_heatmaps, width_heatmaps):
                 crop_top = int(round(height_heatmaps * (crop_top/height_image)))
@@ -666,6 +670,16 @@ class CropAndPad(Augmenter):
                 pad_right = int(round(width_heatmaps * (pad_right/width_image)))
                 pad_bottom = int(round(height_heatmaps * (pad_bottom/height_image)))
                 pad_left = int(round(width_heatmaps * (pad_left/width_image)))
+            else:
+                crop_top = crop_image_top
+                crop_right = crop_image_right
+                crop_bottom = crop_image_bottom
+                crop_left = crop_image_left
+
+                pad_top = pad_image_top
+                pad_right = pad_image_right
+                pad_bottom = pad_image_bottom
+                pad_left = pad_image_left
 
             arr_cr = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom, crop_left:width_heatmaps-crop_right, :]
 
@@ -683,6 +697,11 @@ class CropAndPad(Augmenter):
 
             if self.keep_size:
                 heatmaps[i] = heatmaps[i].scale((height_heatmaps, width_heatmaps))
+            else:
+                heatmaps[i].shape = (
+                    heatmaps[i].shape[0] - crop_top - crop_bottom + pad_top + pad_bottom,
+                    heatmaps[i].shape[1] - crop_left - crop_right + pad_left + pad_right
+                ) + heatmaps[i].shape[2:]
 
             result.append(heatmaps[i])
 

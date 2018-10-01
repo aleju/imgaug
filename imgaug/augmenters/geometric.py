@@ -1665,8 +1665,19 @@ class PerspectiveTransform(Augmenter):
 
         matrices, max_heights, max_widths = self._create_matrices(
             [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
-            random_state
+            ia.copy_random_state(random_state)
         )
+
+        # estimate max_heights/max_widths for the underlying images
+        # this is only necessary if keep_size is False as then the underlying image sizes
+        # change and we need to update them here
+        if self.keep_size:
+            max_heights_imgs, max_widths_imgs = max_heights, max_widths
+        else:
+            _, max_heights_imgs, max_widths_imgs = self._create_matrices(
+                [heatmaps_i.shape for heatmaps_i in heatmaps],
+                ia.copy_random_state(random_state)
+            )
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             heatmaps_i = heatmaps[i]
@@ -1684,6 +1695,8 @@ class PerspectiveTransform(Augmenter):
             if self.keep_size:
                 h, w = arr.shape[0:2]
                 heatmaps_i_aug = heatmaps_i_aug.scale((h, w))
+            else:
+                heatmaps_i_aug.shape[0:2] = (max_heights_imgs[i], max_widths_imgs[i])
 
             result[i] = heatmaps_i_aug
 
