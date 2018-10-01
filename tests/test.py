@@ -208,8 +208,8 @@ def main():
     # TODO test_CropAndPad()
     test_Pad()
     test_Crop()
-    # TODO test_PadToFixedSize()
-    # TODO test_CropToFixedSize()
+    # TODO test_PadUptoFixedSize()
+    # TODO test_CropFixedSize()
 
 
     # these functions use various augmenters, so test them last
