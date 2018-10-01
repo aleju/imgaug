@@ -15,21 +15,21 @@ def main():
     print("image shape:", image.shape)
     
     augs_many = [
-        iaa.CropFixedSize(200,200, name="width200-height200"),
-        iaa.CropFixedSize(200,322, name="width200-height322"),
-        iaa.CropFixedSize(480,200, name="width480-height200"),
-        iaa.CropFixedSize(480,322, name="width480-height322"),
+        iaa.CropToFixedSize(200,200, name="width200-height200"),
+        iaa.CropToFixedSize(200,322, name="width200-height322"),
+        iaa.CropToFixedSize(480,200, name="width480-height200"),
+        iaa.CropToFixedSize(480,322, name="width480-height322"),
         iaa.Sequential([
-            iaa.PadUptoFixedSize(480,400),
-            iaa.CropFixedSize(480,400)
+            iaa.PadToFixedSize(480,400),
+            iaa.CropToFixedSize(480,400)
         ], name="width480-height400"),
         iaa.Sequential([
-            iaa.PadUptoFixedSize(600,322),
-            iaa.CropFixedSize(600,322)
+            iaa.PadToFixedSize(600,322),
+            iaa.CropToFixedSize(600,322)
         ], name="width600-height322"),
         iaa.Sequential([
-            iaa.PadUptoFixedSize(600,400),
-            iaa.CropFixedSize(600,400)
+            iaa.PadToFixedSize(600,400),
+            iaa.CropToFixedSize(600,400)
         ], name="width600-height400"),
     ]
 
