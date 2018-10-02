@@ -645,6 +645,7 @@ class CropAndPad(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        # TODO add test
         result = []
         nb_heatmaps = len(heatmaps)
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
@@ -659,17 +660,17 @@ class CropAndPad(Augmenter):
                 _pad_mode, _pad_cval = vals
 
             if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                crop_top = int(round(height_heatmaps * (crop_top/height_image)))
-                crop_right = int(round(width_heatmaps * (crop_right/width_image)))
-                crop_bottom = int(round(height_heatmaps * (crop_bottom/height_image)))
-                crop_left = int(round(width_heatmaps * (crop_left/width_image)))
+                crop_top = int(round(height_heatmaps * (crop_image_top/height_image)))
+                crop_right = int(round(width_heatmaps * (crop_image_right/width_image)))
+                crop_bottom = int(round(height_heatmaps * (crop_image_bottom/height_image)))
+                crop_left = int(round(width_heatmaps * (crop_image_left/width_image)))
 
                 crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
 
-                pad_top = int(round(height_heatmaps * (pad_top/height_image)))
-                pad_right = int(round(width_heatmaps * (pad_right/width_image)))
-                pad_bottom = int(round(height_heatmaps * (pad_bottom/height_image)))
-                pad_left = int(round(width_heatmaps * (pad_left/width_image)))
+                pad_top = int(round(height_heatmaps * (pad_image_top/height_image)))
+                pad_right = int(round(width_heatmaps * (pad_image_right/width_image)))
+                pad_bottom = int(round(height_heatmaps * (pad_image_bottom/height_image)))
+                pad_left = int(round(width_heatmaps * (pad_image_left/width_image)))
             else:
                 crop_top = crop_image_top
                 crop_right = crop_image_right
