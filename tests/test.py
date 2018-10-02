@@ -96,6 +96,7 @@ def main():
     # test_HeatmapsOnImage_change_normalization()
     # test_HeatmapsOnImage_copy()
     # test_HeatmapsOnImage_deepcopy()
+    test_SegmentationMapOnImage_bool()
     test_SegmentationMapOnImage_get_arr_int()
     #test_SegmentationMapOnImage_get_arr_bool()
     test_SegmentationMapOnImage_draw()
@@ -2250,6 +2251,31 @@ def test_HeatmapsOnImage_scale():
             [0.0, 0.0, 1.0, 1.0]
         ])
     )
+
+
+def test_SegmentationMapOnImage_bool():
+    # Test for #189 (boolean mask inputs into SegmentationMapOnImage not working)
+    arr = np.array([
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ], dtype=bool)
+    assert arr.dtype.type == np.bool_
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
+    observed = segmap.get_arr_int()
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(arr, observed)
+
+    arr = np.array([
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ], dtype=np.bool)
+    assert arr.dtype.type == np.bool_
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
+    observed = segmap.get_arr_int()
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(arr, observed)
 
 
 def test_SegmentationMapOnImage_get_arr_int():

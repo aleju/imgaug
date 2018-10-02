@@ -3595,7 +3595,7 @@ class SegmentationMapOnImage(object):
     ]
 
     def __init__(self, arr, shape, nb_classes=None):
-        if arr.dtype.type == np.bool:
+        if arr.dtype.type == np.bool_:
             do_assert(arr.ndim in [2, 3])
             self.input_was = ("bool", arr.ndim)
             if arr.ndim == 2:
