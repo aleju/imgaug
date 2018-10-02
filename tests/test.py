@@ -3962,7 +3962,7 @@ def test_Scale():
     aug = iaa.Scale({"height": 8, "width": 12})
     heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
     heatmaps_aug = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img3d.shape)])[0]
-    assert heatmaps_aug.shape == base_img3d.shape
+    assert heatmaps_aug.shape == (8, 12, 3)
     assert 0 - 1e-6 < heatmaps_aug.min_value < 0 + 1e-6
     assert 1 - 1e-6 < heatmaps_aug.max_value < 1 + 1e-6
     assert np.average(heatmaps_aug.get_arr()[0, :]) < 0.05
@@ -4335,7 +4335,7 @@ def test_Pad():
                                      mode="constant",
                                      constant_values=0)
         observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img.shape)])[0]
-        assert observed.shape == base_img.shape
+        assert observed.shape == base_img_padded.shape
         assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
         assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
         assert np.array_equal(observed.get_arr(), heatmaps_arr_padded)
@@ -4709,6 +4709,7 @@ def test_Crop():
         aug = iaa.Crop(px=crop, keep_size=False)
         heatmaps_arr_cropped = heatmaps_arr[top:height-bottom, left:width-right]
         observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img.shape)])[0]
+        assert observed.shape == base_img_cropped.shape
         assert np.array_equal(observed.get_arr(), heatmaps_arr_cropped)
 
     # test crop by range of pixels
