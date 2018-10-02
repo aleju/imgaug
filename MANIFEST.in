@@ -1,1 +1,3 @@
-recursive-include imgaug *.py *.jpg *.ttf
+include imgaug LICENSE
+recursive-include imgaug *.py *.jpg *.ttf *.png *.json *.md *.txt
+recursive-include tests *.py
