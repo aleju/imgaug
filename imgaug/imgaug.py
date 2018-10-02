@@ -1301,8 +1301,15 @@ def imshow(image):
     image : (H,W,3) ndarray
         Image to show.
     """
-    plt.imshow(image)
-    plt.show()
+    image_bgr = image
+    if image.ndim == 3 and image.shape[2] in [3, 4]:
+        image_bgr = image[..., 0:3][..., ::-1]
+
+    win_name = "imgaug-default-window"
+    cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+    cv2.imshow(win_name, image_bgr)
+    cv2.waitKey(0)
+    cv2.destroyWindow(win_name)
 
 def do_assert(condition, message="Assertion failed."):
     """
