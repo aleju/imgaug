@@ -26,32 +26,32 @@ def main():
     print("alpha=vary, sigma=0.25")
     augs = [iaa.ElasticTransformation(alpha=alpha, sigma=0.25) for alpha in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
-    misc.imshow(ia.draw_grid(images_aug, cols=10))
+    ia.imshow(ia.draw_grid(images_aug, cols=10))
 
     print("alpha=vary, sigma=1.0")
     augs = [iaa.ElasticTransformation(alpha=alpha, sigma=1.0) for alpha in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
-    misc.imshow(ia.draw_grid(images_aug, cols=10))
+    ia.imshow(ia.draw_grid(images_aug, cols=10))
 
     print("alpha=vary, sigma=3.0")
     augs = [iaa.ElasticTransformation(alpha=alpha, sigma=3.0) for alpha in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
-    misc.imshow(ia.draw_grid(images_aug, cols=10))
+    ia.imshow(ia.draw_grid(images_aug, cols=10))
 
     print("alpha=vary, sigma=5.0")
     augs = [iaa.ElasticTransformation(alpha=alpha, sigma=5.0) for alpha in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
-    misc.imshow(ia.draw_grid(images_aug, cols=10))
+    ia.imshow(ia.draw_grid(images_aug, cols=10))
 
     print("alpha=1.0, sigma=vary")
     augs = [iaa.ElasticTransformation(alpha=1.0, sigma=sigma) for sigma in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
-    misc.imshow(ia.draw_grid(images_aug, cols=10))
+    ia.imshow(ia.draw_grid(images_aug, cols=10))
 
     print("alpha=10.0, sigma=vary")
     augs = [iaa.ElasticTransformation(alpha=10.0, sigma=sigma) for sigma in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
-    misc.imshow(ia.draw_grid(images_aug, cols=10))
+    ia.imshow(ia.draw_grid(images_aug, cols=10))
 
     kps = ia.KeypointsOnImage(
         [ia.Keypoint(x=1, y=1),
