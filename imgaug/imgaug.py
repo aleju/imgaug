@@ -1678,6 +1678,7 @@ class Keypoint(object):
             The center keypoint (the one on which this function was called) is always included.
 
         """
+        # TODO add test
         # Points generates in manhattan style with S steps have a shape similar to a 45deg rotated
         # square. The center line with the origin point has S+1+S = 1+2*S points (S to the left,
         # S to the right). The lines above contain (S+1+S)-2 + (S+1+S)-2-2 + ... + 1 points. E.g.
@@ -1707,8 +1708,7 @@ class Keypoint(object):
 
         if return_array:
             return points
-        else:
-            return [Keypoint(x=line[i, 0], y=line[i, 1]) for i in sm.xrange(points.shape[0])]
+        return [Keypoint(x=points[i, 0], y=points[i, 1]) for i in sm.xrange(points.shape[0])]
 
     def __repr__(self):
         return self.__str__()
