@@ -1,3 +1,7 @@
-include imgaug LICENSE
-recursive-include imgaug *.py *.jpg *.ttf *.png *.json *.md *.txt
+include setup.py
+include LICENSE
+include MANIFEST.in
+include *.md
+include *.txt
+recursive-include imgaug *.py *.jpg *.ttf *.png *.json
 recursive-include tests *.py
