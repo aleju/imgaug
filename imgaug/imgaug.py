@@ -3731,6 +3731,8 @@ class SegmentationMapOnImage(object):
             self.input_was = ("int", arr.dtype.type, arr.ndim)
             if arr.ndim == 3:
                 arr = arr[..., 0]
+            # TODO improve efficiency here by building only sub-heatmaps for classes actually
+            # present in the image. This would also get rid of nb_classes.
             arr = np.eye(nb_classes)[arr]  # from class indices to one hot
             arr = arr.astype(np.float32)
         elif arr.dtype.type in [np.float16, np.float32]:
@@ -3872,7 +3874,7 @@ class SegmentationMapOnImage(object):
             return segmap_drawn, foreground_mask
         return segmap_drawn
 
-    def draw_on_image(self, image, alpha=0.5, resize="segmentation_map", background_threshold=0.01, background_class_id=None, colors=None, draw_background=False):
+    def draw_on_image(self, image, alpha=0.75, resize="segmentation_map", background_threshold=0.01, background_class_id=None, colors=None, draw_background=False):
         """
         Draw the segmentation map as an overlay over an image.
 
