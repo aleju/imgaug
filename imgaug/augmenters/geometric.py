@@ -2033,7 +2033,8 @@ class ElasticTransformation(Augmenter):
                     sigma=sigmas[i],
                     random_state=ia.new_random_state(seeds[i])
                 )
-                heatmaps_i.arr_0to1 = ElasticTransformation.map_coordinates(
+
+                arr_0to1_warped = ElasticTransformation.map_coordinates(
                     heatmaps_i.arr_0to1,
                     source_indices_x,
                     source_indices_y,
@@ -2041,6 +2042,12 @@ class ElasticTransformation(Augmenter):
                     cval=0,
                     mode="constant"
                 )
+
+                # interpolation in map_coordinates() can cause some values to be below/above 1.0,
+                # so we clip here
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+
+                heatmaps_i.arr_0to1 = arr_0to1_warped
             else:
                 # Heatmaps do not have the same size as augmented images.
                 # This may result in indices of moved pixels being different.
@@ -2064,8 +2071,8 @@ class ElasticTransformation(Augmenter):
                     mode="constant"
                 )
 
-                # interpolation in map_coordinates() can cause some values to be slightly
-                # below/above 1.0, so we clip here
+                # interpolation in map_coordinates() can cause some values to be below/above 1.0,
+                # so we clip here
                 arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
 
                 heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(arr_0to1_warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
