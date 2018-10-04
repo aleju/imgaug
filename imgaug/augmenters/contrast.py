@@ -83,7 +83,6 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
     gain : number or tuple of number or list of number or StochasticParameter, optional(default=1)
         Multiplier for the sigmoid function's output.
         Higher values lead to quicker changes from dark to light pixels.
-        Values around
 
             * If a number, then that value will be used for all images.
             * If a tuple (a, b), then a value from the range [a, b] will be used per image.
@@ -242,11 +241,13 @@ class _ContrastFuncWrapper(Augmenter):
             nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
             samples_i = [param.draw_samples((nb_channels,), random_state=rs) for param in self.params1d]
             if per_channel_i > 0.5:
+                input_dtype = image.dtype
                 image_aug = image.astype(np.float64)
                 for c in sm.xrange(nb_channels):
                     samples_i_c = [sample_i[c] for sample_i in samples_i]
                     args = tuple([image[..., c]] + samples_i_c)
                     image_aug[..., c] = self.func(*args)
+                image_aug = image_aug.astype(input_dtype)
             else:
                 args = tuple([image] + samples_i)
                 image_aug = self.func(*args)
