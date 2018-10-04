@@ -147,6 +147,13 @@ def main():
     # TODO ChangeColorspace
     test_Grayscale()
 
+    # contrast
+    # TODO GammaContrast
+    test_GammaContrast()
+    # TODO SigmoidContrast
+    # TODO LogContrast
+    # TODO LinearContrast
+
     # convolutional
     test_Convolve()
     test_Sharpen()
@@ -5747,6 +5754,70 @@ def test_Grayscale():
     for nb_samples in hist:
         density = nb_samples / nb_iterations
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
+
+
+def test_GammaContrast():
+    reseed()
+
+    img = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+    img = np.uint8(img)
+    img3d = np.tile(img[:, :, np.newaxis], (1, 1, 3))
+
+    # check basic functionality with gamma=1 or 2 (deterministic) and per_chanenl on/off (makes
+    # no difference due to deterministic gamma)
+    for per_channel in [False, 0, 0.0, True, 1, 1.0]:
+        for gamma in [1, 2]:
+            aug = iaa.GammaContrast(gamma=iap.Deterministic(gamma), per_channel=per_channel)
+            img_aug = aug.augment_image(img)
+            img3d_aug = aug.augment_image(img3d)
+            sk = skimage.exposure.adjust_gamma(img, gamma=gamma)
+            assert img_aug.dtype.type == np.uint8
+            assert img3d_aug.dtype.type == np.uint8
+            assert np.array_equal(img_aug, skimage.exposure.adjust_gamma(img, gamma=gamma))
+            assert np.array_equal(img3d_aug, skimage.exposure.adjust_gamma(img3d, gamma=gamma))
+
+    # check that tuple to uniform works
+    aug = iaa.GammaContrast((1, 2))
+    assert isinstance(aug.params1d[0], iap.Uniform)
+    assert isinstance(aug.params1d[0].a, iap.Deterministic)
+    assert isinstance(aug.params1d[0].b, iap.Deterministic)
+    assert aug.params1d[0].a.value == 1
+    assert aug.params1d[0].b.value == 2
+
+    # check that list to choice works
+    aug = iaa.GammaContrast([1, 2])
+    assert isinstance(aug.params1d[0], iap.Choice)
+    assert all([val in aug.params1d[0].a for val in [1, 2]])
+
+    # check that per_channel at 50% prob works
+    aug = iaa.GammaContrast((0.5, 2.0), per_channel=0.5)
+    seen = [False, False]
+    img1000d = np.zeros((1, 1, 1000), dtype=np.uint8) + 128
+    for _ in sm.xrange(100):
+        img_aug = aug.augment_image(img1000d)
+        assert img_aug.dtype.type == np.uint8
+        l = len(set(img_aug.flatten().tolist()))
+        if l == 1:
+            seen[0] = True
+        else:
+            seen[1] = True
+        if all(seen):
+            break
+    assert all(seen)
+
+    # check that keypoints are not changed
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
+    kpsoi_aug = iaa.GammaContrast(gamma=2).augment_keypoints([kpsoi])
+    assert keypoints_equal([kpsoi], kpsoi_aug)
+
+    # check that heatmaps are not changed
+    heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
+    heatmaps_aug = iaa.GammaContrast(gamma=2).augment_heatmaps([heatmaps])[0]
+    assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
 
 def test_Convolve():
