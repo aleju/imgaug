@@ -39,8 +39,11 @@ class Mock(MagicMock):
         else:
             return MagicMock()
 
-MOCK_MODULES = ['argparse', 'numpy', 'pandas', 'scipy', 'cv2', 'skimage', 'skimage.draw',
-                'skimage.measure', 'matplotlib', 'matplotlib.pyplot', 'imageio']
+# 'scipy.spatial', 'scipy.spatial.distance'
+"""'numpy', 'pandas', 'scipy',
+   'cv2', 'skimage', 'skimage.draw', 'skimage.measure', 'matplotlib',
+   'matplotlib.pyplot', 'imageio'"""
+MOCK_MODULES = ['argparse', 'cv2']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------

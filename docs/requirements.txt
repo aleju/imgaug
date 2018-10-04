@@ -4,3 +4,5 @@ scipy==0.18.0
 six==1.10.0
 numpydoc==0.7.0
 sphinx-rtd-theme==0.2.4
+imageio==2.3.0
+matplotlib==1.5.1

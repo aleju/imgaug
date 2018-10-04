@@ -20,6 +20,8 @@ processes for improved performance.
    source/examples_basics
    source/examples_keypoints
    source/examples_bounding_boxes
+   source/examples_heatmaps
+   source/examples_segmentation_maps
    source/parameters
    source/alpha
    source/augmenters

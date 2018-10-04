@@ -2033,7 +2033,8 @@ class ElasticTransformation(Augmenter):
                     sigma=sigmas[i],
                     random_state=ia.new_random_state(seeds[i])
                 )
-                heatmaps_i.arr_0to1 = ElasticTransformation.map_coordinates(
+
+                arr_0to1_warped = ElasticTransformation.map_coordinates(
                     heatmaps_i.arr_0to1,
                     source_indices_x,
                     source_indices_y,
@@ -2041,12 +2042,18 @@ class ElasticTransformation(Augmenter):
                     cval=0,
                     mode="constant"
                 )
+
+                # interpolation in map_coordinates() can cause some values to be below/above 1.0,
+                # so we clip here
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+
+                heatmaps_i.arr_0to1 = arr_0to1_warped
             else:
                 # Heatmaps do not have the same size as augmented images.
                 # This may result in indices of moved pixels being different.
                 # To prevent this, we use the same image size as for the base images, but that
                 # requires resizing the heatmaps temporarily to the image sizes.
-                height_orig, width_orig = heatmaps_i.arr_0to1
+                height_orig, width_orig = heatmaps_i.arr_0to1.shape[0:2]
                 heatmaps_i = heatmaps_i.scale(heatmaps_i.shape[0:2])
                 arr_0to1 = heatmaps_i.arr_0to1
                 (source_indices_x, source_indices_y), (_dx, _dy) = ElasticTransformation.generate_indices(
@@ -2063,6 +2070,11 @@ class ElasticTransformation(Augmenter):
                     cval=0,
                     mode="constant"
                 )
+
+                # interpolation in map_coordinates() can cause some values to be below/above 1.0,
+                # so we clip here
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+
                 heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(arr_0to1_warped, shape=heatmaps_i.shape, min_value=heatmaps_i.min_value, max_value=heatmaps_i.max_value)
                 heatmaps_i_warped = heatmaps_i_warped.scale((height_orig, width_orig))
                 heatmaps[i] = heatmaps_i_warped
