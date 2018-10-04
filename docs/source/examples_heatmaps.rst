@@ -7,17 +7,17 @@ keypoint/landmark localization maps. Heatmaps can be augmented correspondingly t
 e.g. if an image is rotated by 45°, the corresponding heatmap for that image will also be
 rotated by 45°.
 
-_Note_:
+**Note**:
 
-  * Heatmap support is currently in a Beta phase. Unittests are not yet finished.
+  * Heatmap support is currently in a **Beta** phase. Unittests are not yet finished.
   * Heatmaps have to be bounded within value ranges, e.g. `0.0` to `1.0` for keypoint localization
     maps or something like `0.0` to `200.0` (meters) for depth maps. Choosing arbitrarily low/high
     min/max values for unbounded heatmaps is not recommended as it could lead to numerical
     inaccuracies.
   * All augmentation functions for heatmaps are implemented under the assumption of
-    augmenting *ground truth* data. As such, heatmaps will be affected by augmentations that change
-    the geometry of images (e.g. affine transformations, cropping, resizing), but not by other
-    augmentations (e.g. gaussian noise, saturation changes, grayscaling, dropout, ...).
+    augmenting **ground truth** data. As such, heatmaps will be affected by augmentations that
+    change the geometry of images (e.g. affine transformations, cropping, resizing), but not by
+    other augmentations (e.g. gaussian noise, saturation changes, grayscaling, dropout, ...).
 
 Features of the library's heatmap support:
 
