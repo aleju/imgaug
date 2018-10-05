@@ -36,15 +36,15 @@ from .meta import Augmenter
 def _handle_pad_mode_param(pad_mode):
     pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
     if pad_mode == ia.ALL:
-        return pad_mode = iap.Choice(list(pad_modes_available))
+        return iap.Choice(list(pad_modes_available))
     elif ia.is_string(pad_mode):
         ia.do_assert(pad_mode in pad_modes_available)
-        return pad_mode = iap.Deterministic(pad_mode)
+        return iap.Deterministic(pad_mode)
     elif isinstance(pad_mode, list):
         ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
-        return pad_mode = iap.Choice(pad_mode)
+        return iap.Choice(pad_mode)
     elif isinstance(pad_mode, iap.StochasticParameter):
-        return pad_mode = pad_mode
+        return pad_mode
     raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
 
 
@@ -1237,19 +1237,15 @@ class PadToFixedSize(Augmenter):
             ih, iw = image.shape[:2]
 
             if iw < w or ih < h:
+                pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
+
                 if iw < w:
-                    pad_x0 = int(pad_xs[i]*(w-iw+1))
-                    pad_x1 = w-iw-pad_x0
-                else:
-                    pad_x0 = 0
-                    pad_x1 = 0
+                    pad_x1 = int(pad_xs[i] * (w - iw))
+                    pad_x0 = w - iw - pad_x1
 
                 if ih < h:
-                    pad_y0 = int(pad_ys[i]*(h-ih+1))
-                    pad_y1 = h-ih-pad_y0
-                else:
-                    pad_y0 = 0
-                    pad_y1 = 0
+                    pad_y1 = int(pad_ys[i] * (h - ih))
+                    pad_y0 = h - ih - pad_y1
 
                 if image.ndim == 2:
                     pad_vals = ((pad_y0, pad_y1), (pad_x0, pad_x1))
@@ -1277,10 +1273,17 @@ class PadToFixedSize(Augmenter):
             keypoints_on_image = keypoints_on_images[i]
             ih, iw = keypoints_on_image.shape[:2]
 
-            pad_x = int(pad_xs[i]*(w-iw+1)) if iw < w else 0
-            pad_y = int(pad_ys[i]*(h-ih+1)) if ih < h else 0
+            pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
 
-            keypoints_padded = keypoints_on_image.shift(x=pad_x, y=pad_y)
+            if iw < w:
+                pad_x1 = int(pad_xs[i] * (w - iw))
+                pad_x0 = w - iw - pad_x1
+
+            if ih < h:
+                pad_y1 = int(pad_ys[i] * (h - ih))
+                pad_y0 = h - ih - pad_y1
+
+            keypoints_padded = keypoints_on_image.shift(x=pad_x0, y=pad_y0)
             keypoints_padded.shape = (max(ih, h), max(iw, w)) + keypoints_padded.shape[2:]
 
             result.append(keypoints_padded)
