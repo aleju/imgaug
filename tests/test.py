@@ -680,6 +680,25 @@ def test_pad():
         assert arr_pad[0, 1] == 200
         assert arr_pad[0, 2] == 128
 
+        arr = np.zeros((3, 3), dtype=dtype)
+        arr_pad = ia.pad(arr, top=1, mode="constant", cval=123)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad[0, 0] == 123
+        assert arr_pad[0, 1] == 123
+        assert arr_pad[0, 2] == 123
+        assert arr_pad[1, 0] == 0
+
+        arr = np.zeros((1, 1), dtype=dtype) + 100
+        arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=200)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad[0, 0] == 200
+        assert arr_pad[1, 0] == 175
+        assert arr_pad[2, 0] == 150
+        assert arr_pad[3, 0] == 125
+        assert arr_pad[4, 0] == 100
+
     # -------
     # float32, float64
     # -------
@@ -740,6 +759,25 @@ def test_pad():
         assert 0.50 - 1e-6 < arr_pad[0, 0] < 0.50 + 1e-6
         assert 0.75 - 1e-6 < arr_pad[0, 1] < 0.75 + 1e-6
         assert 0.50 - 1e-6 < arr_pad[0, 2] < 0.50 + 1e-6
+
+        arr = np.zeros((3, 3), dtype=dtype)
+        arr_pad = ia.pad(arr, top=1, mode="constant", cval=0.4)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert 0.4 - 1e-6 < arr_pad[0, 0] < 0.4 + 1e-6
+        assert 0.4 - 1e-6 < arr_pad[0, 1] < 0.4 + 1e-6
+        assert 0.4 - 1e-6 < arr_pad[0, 2] < 0.4 + 1e-6
+        assert 0.0 - 1e-6 < arr_pad[1, 0] < 0.0 + 1e-6
+
+        arr = np.zeros((1, 1), dtype=dtype) + 0.6
+        arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=1.0)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype.type == dtype
+        assert 1.0 - 1e-6 < arr_pad[0, 0] < 1.0 + 1e-6
+        assert 0.9 - 1e-6 < arr_pad[1, 0] < 0.9 + 1e-6
+        assert 0.8 - 1e-6 < arr_pad[2, 0] < 0.8 + 1e-6
+        assert 0.7 - 1e-6 < arr_pad[3, 0] < 0.7 + 1e-6
+        assert 0.6 - 1e-6 < arr_pad[4, 0] < 0.6 + 1e-6
 
 
 def test_compute_paddings_for_aspect_ratio():

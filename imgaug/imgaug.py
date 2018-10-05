@@ -961,6 +961,10 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 
     mode : string, optional(default="constant")
         Padding mode to use. See `numpy.pad()` for details.
+        In case of mode "constant", the parameter `cval` will be used as the `constant_values`
+        parameter to `numpy.pad()`.
+        In case of mode "linear_ramp", the parameter `cval` will be used as the `end_values`
+        parameter to `numpy.pad()`.
 
     cval : number, optional(default=0)
         Value to use for padding if mode="constant". See `numpy.pad()` for details.
@@ -982,21 +986,13 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
             paddings_np.append((0, 0))  # add paddings for 3d case
 
         if mode == "constant":
-            arr_pad = np.pad(
-                arr,
-                paddings_np,
-                mode=mode,
-                constant_values=cval
-            )
+            arr_pad = np.pad(arr, paddings_np, mode=mode, constant_values=cval)
+        elif mode == "linear_ramp":
+            arr_pad = np.pad(arr, paddings_np, mode=mode, end_values=cval)
         else:
-            arr_pad = np.pad(
-                arr,
-                paddings_np,
-                mode=mode
-            )
+            arr_pad = np.pad(arr, paddings_np, mode=mode)
         return arr_pad
-    else:
-        return np.copy(arr)
+    return np.copy(arr)
 
 
 def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
