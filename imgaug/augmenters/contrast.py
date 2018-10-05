@@ -73,6 +73,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
         random_state=random_state
     )
 
+
 def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, deterministic=False, random_state=None):
     """Adjust contrast by scaling each pixel value to `1/(1 + exp(gain*(cutoff - I_ij/255.0)))`.
 
@@ -132,6 +133,7 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
         random_state=random_state
     )
 
+
 def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """Adjust contrast by scaling each pixel value to `gain * log(1 + I_ij)`.
 
@@ -176,6 +178,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
         deterministic=deterministic,
         random_state=random_state
     )
+
 
 def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """Adjust contrast by scaling each pixel value to `128 + alpha*(I_ij-128)`.
@@ -223,6 +226,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
         random_state=random_state
     )
 
+
 class _ContrastFuncWrapper(Augmenter):
     def __init__(self, func, params1d, per_channel, name=None, deterministic=False, random_state=None):
         super(_ContrastFuncWrapper, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
@@ -263,6 +267,7 @@ class _ContrastFuncWrapper(Augmenter):
     def get_parameters(self):
         return self.params1d
 
+
 class _PreserveDtype(object):
     def __init__(self, func, adjust_value_range=False):
         self.func = func
@@ -279,6 +284,7 @@ class _PreserveDtype(object):
         image_aug = meta.restore_augmented_image_dtype_(image_aug, input_dtype)
 
         return image_aug
+
 
 def _adjust_linear(image, alpha, per_channel):
     input_dtype = image.dtype
