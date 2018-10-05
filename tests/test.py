@@ -209,7 +209,7 @@ def main():
     # TODO test_CropAndPad()
     test_Pad()
     test_Crop()
-    # TODO test_PadToFixedSize()
+    test_PadToFixedSize()
     # TODO test_CropToFixedSize()
 
     # these functions use various augmenters, so test them last
@@ -4922,6 +4922,137 @@ def test_Crop():
     assert seen[2] == 0
     assert seen[3] == 0
     assert 250 - 50 < seen[4] < 250 + 50
+
+
+def test_PadToFixedSize():
+    reseed()
+
+    img = np.uint8([[255]])
+    img3d = img[:, :, np.newaxis]
+    img3d_rgb = np.tile(img3d, (1, 1, 3))
+
+    # basic functionality
+    aug = iaa.PadToFixedSize(height=5, width=5)
+    observed = aug.augment_image(img)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5)
+
+    observed = aug.augment_image(img3d)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5, 1)
+
+    observed = aug.augment_image(img3d_rgb)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5, 3)
+
+    # change only one side when other side has already desired size
+    aug = iaa.PadToFixedSize(height=5, width=5)
+    observed = aug.augment_image(np.zeros((1, 5, 3), dtype=np.uint8))
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5, 3)
+
+    aug = iaa.PadToFixedSize(height=5, width=5)
+    observed = aug.augment_image(np.zeros((5, 1, 3), dtype=np.uint8))
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5, 3)
+
+    # change no side when all sides have exactly desired size
+    img5x5 = np.zeros((5, 5, 3), dtype=np.uint8)
+    img5x5[2, 2, :] = 255
+    aug = iaa.PadToFixedSize(height=5, width=5)
+    observed = aug.augment_image(img5x5)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5, 3)
+    assert np.array_equal(observed, img5x5)
+
+    # change no side when all sides have larger than desired size
+    img6x6 = np.zeros((6, 6, 3), dtype=np.uint8)
+    img6x6[3, 3, :] = 255
+    aug = iaa.PadToFixedSize(height=5, width=5)
+    observed = aug.augment_image(img6x6)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (6, 6, 3)
+    assert np.array_equal(observed, img6x6)
+
+    # make sure that pad mode is recognized
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    img2x2 = np.uint8([
+        [50, 100],
+        [150, 200]
+    ])
+    expected = np.uint8([
+        [50, 50, 100, 100],
+        [50, 50, 100, 100],
+        [150, 150, 200, 200],
+        [150, 150, 200, 200]
+    ])
+    observed = aug.augment_image(img2x2)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (4, 4)
+    assert np.array_equal(observed, expected)
+
+    # explicit non-center position test
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128)
+    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    img1x1 = np.uint8([[255]])
+    observed = aug.augment_image(img1x1)
+    expected = np.uint8([
+        [128, 128, 128],
+        [128, 128, 128],
+        [128, 128, 255]
+    ])
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 3)
+    assert np.array_equal(observed, expected)
+
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128)
+    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    img1x1 = np.uint8([[255]])
+    observed = aug.augment_image(img1x1)
+    expected = np.uint8([
+        [255, 128, 128],
+        [128, 128, 128],
+        [128, 128, 128]
+    ])
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 3)
+    assert np.array_equal(observed, expected)
+
+    # basic keypoint test
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    # keypoint test with shape not being changed
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="edge")
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    # keypoint test with explicit non-center position
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
+    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
+    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(4, 4))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
 
 
 def test_Fliplr():
