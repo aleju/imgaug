@@ -211,12 +211,11 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     Returns
     -------
     result : _ContrastFuncWrapper
-        Augmenter to preform center distance contrast adjustment.
+        Augmenter to perform contrast adjustment by linearly scaling the distance to 128.
 
     """
     params1d = [
-        iap.handle_continuous_param(alpha, "alpha", value_range=None, tuple_to_uniform=True, list_to_choice=True),
-        iap.handle_probability_param(per_channel, "per_channel")
+        iap.handle_continuous_param(alpha, "alpha", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     ]
     func = _adjust_linear
     return _ContrastFuncWrapper(
@@ -286,9 +285,9 @@ class _PreserveDtype(object):
         return image_aug
 
 
-def _adjust_linear(image, alpha, per_channel):
+def _adjust_linear(image, alpha):
     input_dtype = image.dtype
-    image_aug = 128 + alpha * (image.astype(np.float32)-128)
+    image_aug = 128 + alpha * (image.astype(np.float64)-128)
     if input_dtype.type == np.uint8:
         image_aug = meta.clip_augmented_image_(image_aug, 0, 255)
     if input_dtype.type != image_aug.dtype.type:
