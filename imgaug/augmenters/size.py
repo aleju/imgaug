@@ -1235,29 +1235,20 @@ class PadToFixedSize(Augmenter):
             image = images[i]
             ih, iw = image.shape[:2]
 
-            if iw < w or ih < h:
-                pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
+            pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
 
-                if iw < w:
-                    pad_x1 = int(pad_xs[i] * (w - iw))
-                    pad_x0 = w - iw - pad_x1
+            if iw < w:
+                pad_x1 = int(pad_xs[i] * (w - iw))
+                pad_x0 = w - iw - pad_x1
 
-                if ih < h:
-                    pad_y1 = int(pad_ys[i] * (h - ih))
-                    pad_y0 = h - ih - pad_y1
+            if ih < h:
+                pad_y1 = int(pad_ys[i] * (h - ih))
+                pad_y0 = h - ih - pad_y1
 
-                if image.ndim == 2:
-                    pad_vals = ((pad_y0, pad_y1), (pad_x0, pad_x1))
-                else:
-                    pad_vals = ((pad_y0, pad_y1), (pad_x0, pad_x1), (0, 0))
-
-                pad_mode = pad_modes[i]
-                if pad_mode == "constant":
-                    image = np.pad(image, pad_vals, mode=pad_mode, constant_values=pad_cvals[i])
-                elif pad_mode == "linear_ramp":
-                    image = np.pad(image, pad_vals, mode=pad_mode, end_values=pad_cvals[i])
-                else:
-                    image = np.pad(image, pad_vals, mode=pad_mode)
+            image = ia.pad(
+                image, top=pad_y0, right=pad_x1, bottom=pad_y1, left=pad_x0,
+                mode=pad_modes[i], cval=pad_cvals[i]
+            )
 
             result.append(image)
 
