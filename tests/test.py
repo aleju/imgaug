@@ -5099,6 +5099,31 @@ def test_PadToFixedSize():
     assert observed[0].shape == expected.shape
     assert keypoints_equal(observed, [expected])
 
+    # basic heatmaps test
+    heatmaps = ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32) + 1.0, shape=(1, 1, 3))
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="edge")  # pad_mode should be ignored for heatmaps
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = np.float32([
+        [0, 0, 0],
+        [0, 1.0, 0],
+        [0, 0, 0]
+    ])
+    expected = expected[..., np.newaxis]
+    assert observed.shape == (3, 3, 3)
+    assert np.allclose(observed.arr_0to1, expected)
+
+    # heatmaps with size unequal to image
+    heatmaps = ia.HeatmapsOnImage(np.zeros((15, 15, 1), dtype=np.float32) + 1.0, shape=(30, 30, 3))
+    aug = iaa.PadToFixedSize(height=32, width=32, pad_mode="edge")  # pad_mode should be ignored for heatmaps
+    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
+    expected[:, 0, 0] = 0.0
+    expected[0, :, 0] = 0.0
+    assert observed.shape == (32, 32, 3)
+    assert np.allclose(observed.arr_0to1, expected)
+
 
 def test_Fliplr():
     reseed()

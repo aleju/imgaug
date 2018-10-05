@@ -1234,17 +1234,7 @@ class PadToFixedSize(Augmenter):
         for i in sm.xrange(nb_images):
             image = images[i]
             ih, iw = image.shape[:2]
-
-            pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
-
-            if iw < w:
-                pad_x1 = int(pad_xs[i] * (w - iw))
-                pad_x0 = w - iw - pad_x1
-
-            if ih < h:
-                pad_y1 = int(pad_ys[i] * (h - ih))
-                pad_y0 = h - ih - pad_y1
-
+            pad_x0, pad_x1, pad_y0, pad_y1 = self._calculate_paddings(h, w, ih, iw, pad_xs[i], pad_ys[i])
             image = ia.pad(
                 image, top=pad_y0, right=pad_x1, bottom=pad_y1, left=pad_x0,
                 mode=pad_modes[i], cval=pad_cvals[i]
@@ -1252,6 +1242,9 @@ class PadToFixedSize(Augmenter):
 
             result.append(image)
 
+        # TODO result is always a list. Should this be converted to an array if possible
+        # (not guaranteed that all images have same size, some might have been larger than desired
+        # height/width)
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -1262,17 +1255,7 @@ class PadToFixedSize(Augmenter):
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
             ih, iw = keypoints_on_image.shape[:2]
-
-            pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
-
-            if iw < w:
-                pad_x1 = int(pad_xs[i] * (w - iw))
-                pad_x0 = w - iw - pad_x1
-
-            if ih < h:
-                pad_y1 = int(pad_ys[i] * (h - ih))
-                pad_y0 = h - ih - pad_y1
-
+            pad_x0, pad_x1, pad_y0, pad_y1 = self._calculate_paddings(h, w, ih, iw, pad_xs[i], pad_ys[i])
             keypoints_padded = keypoints_on_image.shift(x=pad_x0, y=pad_y0)
             keypoints_padded.shape = (max(ih, h), max(iw, w)) + keypoints_padded.shape[2:]
 
@@ -1281,7 +1264,41 @@ class PadToFixedSize(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        raise NotImplementedError()
+        nb_images = len(heatmaps)
+        w, h = self.size
+        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(nb_images, random_state)
+        for i in sm.xrange(nb_images):
+            height_image, width_image = heatmaps[i].shape[:2]
+            pad_image_left, pad_image_right, pad_image_top, pad_image_bottom = self._calculate_paddings(h, w, height_image, width_image, pad_xs[i], pad_ys[i])
+            height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
+
+            # TODO for 30x30 padded to 32x32 with 15x15 this results in paddings of 1 on each side
+            # (assuming position=(0.5, 0.5)) giving 17x17 heatmaps when they should be 16x16.
+            # Error due to each side getting projected 0.5 padding which is rounded to 1.
+            # This doesn't seem right.
+            if (height_image, width_image) != (height_heatmaps, width_heatmaps):
+                pad_top = int(round(height_heatmaps * (pad_image_top/height_image)))
+                pad_right = int(round(width_heatmaps * (pad_image_right/width_image)))
+                pad_bottom = int(round(height_heatmaps * (pad_image_bottom/height_image)))
+                pad_left = int(round(width_heatmaps * (pad_image_left/width_image)))
+            else:
+                pad_top = pad_image_top
+                pad_right = pad_image_right
+                pad_bottom = pad_image_bottom
+                pad_left = pad_image_left
+
+            heatmaps[i].arr_0to1 = ia.pad(
+                heatmaps[i].arr_0to1,
+                top=pad_top, right=pad_right, bottom=pad_bottom, left=pad_left,
+                mode="constant", cval=0
+            )
+            heatmaps[i].shape = (
+                height_image + pad_image_top + pad_image_bottom,
+                width_image + pad_image_left + pad_image_right
+            ) + heatmaps[i].shape[2:]
+
+
+        return heatmaps
 
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -1294,6 +1311,19 @@ class PadToFixedSize(Augmenter):
         pad_cvals = np.clip(np.round(pad_cvals), 0, 255).astype(np.uint8)
 
         return pad_xs, pad_ys, pad_modes, pad_cvals
+
+    def _calculate_paddings(self, h, w, ih, iw, pad_xs_i, pad_ys_i):
+        pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
+
+        if iw < w:
+            pad_x1 = int(pad_xs_i * (w - iw))
+            pad_x0 = w - iw - pad_x1
+
+        if ih < h:
+            pad_y1 = int(pad_ys_i * (h - ih))
+            pad_y0 = h - ih - pad_y1
+
+        return pad_x0, pad_x1, pad_y0, pad_y1
 
     def get_parameters(self):
         return [self.position, self.pad_mode, self.pad_cval]
