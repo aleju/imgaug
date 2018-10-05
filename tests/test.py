@@ -18,6 +18,7 @@ matplotlib.use('Agg')
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug.augmenters import contrast as contrast_lib
 import numpy as np
 import random
 import six
@@ -151,8 +152,8 @@ def main():
     # contrast
     test_GammaContrast()
     test_SigmoidContrast()
-    # TODO LogContrast
-    # TODO LinearContrast
+    test_LogContrast()
+    test_LinearContrast()
 
     # convolutional
     test_Convolve()
@@ -5890,6 +5891,134 @@ def test_SigmoidContrast():
     # check that heatmaps are not changed
     heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
     heatmaps_aug = iaa.SigmoidContrast(gain=10, cutoff=0.5).augment_heatmaps([heatmaps])[0]
+    assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+
+def test_LogContrast():
+    reseed()
+
+    img = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+    img = np.uint8(img)
+    img3d = np.tile(img[:, :, np.newaxis], (1, 1, 3))
+
+    # check basic functionality with gain=1 or 2 (deterministic) and per_chanenl on/off (makes
+    # no difference due to deterministic gain)
+    for per_channel in [False, 0, 0.0, True, 1, 1.0]:
+        for gain in [1, 2]:
+            aug = iaa.LogContrast(gain=iap.Deterministic(gain), per_channel=per_channel)
+            img_aug = aug.augment_image(img)
+            img3d_aug = aug.augment_image(img3d)
+            assert img_aug.dtype.type == np.uint8
+            assert img3d_aug.dtype.type == np.uint8
+            assert np.array_equal(img_aug, skimage.exposure.adjust_log(img, gain=gain))
+            assert np.array_equal(img3d_aug, skimage.exposure.adjust_log(img3d, gain=gain))
+
+    # check that tuple to uniform works
+    aug = iaa.LogContrast((1, 2))
+    assert isinstance(aug.params1d[0], iap.Uniform)
+    assert isinstance(aug.params1d[0].a, iap.Deterministic)
+    assert isinstance(aug.params1d[0].b, iap.Deterministic)
+    assert aug.params1d[0].a.value == 1
+    assert aug.params1d[0].b.value == 2
+
+    # check that list to choice works
+    aug = iaa.LogContrast([1, 2])
+    assert isinstance(aug.params1d[0], iap.Choice)
+    assert all([val in aug.params1d[0].a for val in [1, 2]])
+
+    # check that per_channel at 50% prob works
+    aug = iaa.LogContrast((0.5, 2.0), per_channel=0.5)
+    seen = [False, False]
+    img1000d = np.zeros((1, 1, 1000), dtype=np.uint8) + 128
+    for _ in sm.xrange(100):
+        img_aug = aug.augment_image(img1000d)
+        assert img_aug.dtype.type == np.uint8
+        l = len(set(img_aug.flatten().tolist()))
+        if l == 1:
+            seen[0] = True
+        else:
+            seen[1] = True
+        if all(seen):
+            break
+    assert all(seen)
+
+    # check that keypoints are not changed
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
+    kpsoi_aug = iaa.LogContrast(gain=2).augment_keypoints([kpsoi])
+    assert keypoints_equal([kpsoi], kpsoi_aug)
+
+    # check that heatmaps are not changed
+    heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
+    heatmaps_aug = iaa.LogContrast(gain=2).augment_heatmaps([heatmaps])[0]
+    assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+
+def test_LinearContrast():
+    reseed()
+
+    img = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+    img = np.uint8(img)
+    img3d = np.tile(img[:, :, np.newaxis], (1, 1, 3))
+
+    # check basic functionality with alpha=1 or 2 (deterministic) and per_chanenl on/off (makes
+    # no difference due to deterministic alpha)
+    for per_channel in [False, 0, 0.0, True, 1, 1.0]:
+        for alpha in [1, 2]:
+            aug = iaa.LinearContrast(alpha=iap.Deterministic(alpha), per_channel=per_channel)
+            img_aug = aug.augment_image(img)
+            img3d_aug = aug.augment_image(img3d)
+            assert img_aug.dtype.type == np.uint8
+            assert img3d_aug.dtype.type == np.uint8
+            assert np.array_equal(img_aug, contrast_lib._adjust_linear(img, alpha=alpha))
+            assert np.array_equal(img3d_aug, contrast_lib._adjust_linear(img3d, alpha=alpha))
+
+    # check that tuple to uniform works
+    aug = iaa.LinearContrast((1, 2))
+    assert isinstance(aug.params1d[0], iap.Uniform)
+    assert isinstance(aug.params1d[0].a, iap.Deterministic)
+    assert isinstance(aug.params1d[0].b, iap.Deterministic)
+    assert aug.params1d[0].a.value == 1
+    assert aug.params1d[0].b.value == 2
+
+    # check that list to choice works
+    aug = iaa.LinearContrast([1, 2])
+    assert isinstance(aug.params1d[0], iap.Choice)
+    assert all([val in aug.params1d[0].a for val in [1, 2]])
+
+    # check that per_channel at 50% prob works
+    aug = iaa.LinearContrast((0.5, 2.0), per_channel=0.5)
+    seen = [False, False]
+    # must not use just value 128 here, otherwise nothing will change as all values would have
+    # distance 0 to 128
+    img1000d = np.zeros((1, 1, 1000), dtype=np.uint8) + 128 + 20
+    for _ in sm.xrange(100):
+        img_aug = aug.augment_image(img1000d)
+        assert img_aug.dtype.type == np.uint8
+        l = len(set(img_aug.flatten().tolist()))
+        if l == 1:
+            seen[0] = True
+        else:
+            seen[1] = True
+        if all(seen):
+            break
+    assert all(seen)
+
+    # check that keypoints are not changed
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
+    kpsoi_aug = iaa.LinearContrast(alpha=2).augment_keypoints([kpsoi])
+    assert keypoints_equal([kpsoi], kpsoi_aug)
+
+    # check that heatmaps are not changed
+    heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
+    heatmaps_aug = iaa.LinearContrast(alpha=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
 
