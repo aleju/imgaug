@@ -154,6 +154,7 @@ def main():
     test_SigmoidContrast()
     test_LogContrast()
     test_LinearContrast()
+    test_contrast_adjust_linear()
 
     # convolutional
     test_Convolve()
@@ -6020,6 +6021,33 @@ def test_LinearContrast():
     heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
     heatmaps_aug = iaa.LinearContrast(alpha=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+
+def test_contrast_adjust_linear():
+    img = [
+        [124, 125, 126],
+        [127, 128, 129],
+        [130, 131, 132]
+    ]
+    img = np.uint8(img)
+
+    # alpha = 1
+    observed = contrast_lib._adjust_linear(img, alpha=1)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == img.shape
+    assert np.array_equal(observed, img)
+
+    # alpha = 2
+    expected = [
+        [120, 122, 124],
+        [126, 128, 130],
+        [132, 134, 136]
+    ]
+    expected = np.uint8(expected)
+    observed = contrast_lib._adjust_linear(img, alpha=2)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == img.shape
+    assert np.array_equal(observed, expected)
 
 
 def test_Convolve():
