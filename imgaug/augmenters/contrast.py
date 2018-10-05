@@ -64,7 +64,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
         Augmenter to perform gamma contrast adjustment.
 
     """
-    params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)]
+    params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_gamma)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
@@ -121,8 +121,8 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
     """
     # TODO add inv parameter?
     params1d = [
-        iap.handle_continuous_param(cutoff, "cutoff", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True),
-        iap.handle_continuous_param(gain, "gain", value_range=(0+1e-6, None), tuple_to_uniform=True, list_to_choice=True)
+        iap.handle_continuous_param(cutoff, "cutoff", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True),
+        iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
     ]
     func = _PreserveDtype(ski_exposure.adjust_sigmoid)
     return _ContrastFuncWrapper(
@@ -168,7 +168,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
     """
     # TODO add inv parameter?
-    params1d = [iap.handle_continuous_param(gain, "gain", value_range=None, tuple_to_uniform=True, list_to_choice=True)]
+    params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_log)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
