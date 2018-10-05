@@ -32,6 +32,22 @@ import six.moves as sm
 from . import meta
 from .meta import Augmenter
 
+
+def _handle_pad_mode_param(pad_mode):
+    pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
+    if pad_mode == ia.ALL:
+        return pad_mode = iap.Choice(list(pad_modes_available))
+    elif ia.is_string(pad_mode):
+        ia.do_assert(pad_mode in pad_modes_available)
+        return pad_mode = iap.Deterministic(pad_mode)
+    elif isinstance(pad_mode, list):
+        ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
+        return pad_mode = iap.Choice(pad_mode)
+    elif isinstance(pad_mode, iap.StochasticParameter):
+        return pad_mode = pad_mode
+    raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
+
+
 # TODO rename to Resize to avoid confusion with Affine's scale
 class Scale(Augmenter):
     """
@@ -586,20 +602,7 @@ class CropAndPad(Augmenter):
             else:
                 raise Exception("Expected number, tuple of 4 numbers/tuples/lists/StochasticParameters or StochasticParameter, got type %s." % (type(percent),))
 
-        pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
-        if pad_mode == ia.ALL:
-            self.pad_mode = iap.Choice(list(pad_modes_available))
-        elif ia.is_string(pad_mode):
-            ia.do_assert(pad_mode in pad_modes_available)
-            self.pad_mode = iap.Deterministic(pad_mode)
-        elif isinstance(pad_mode, list):
-            ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
-            self.pad_mode = iap.Choice(pad_mode)
-        elif isinstance(pad_mode, iap.StochasticParameter):
-            self.pad_mode = pad_mode
-        else:
-            raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
-
+        self.pad_mode = _handle_pad_mode_param(pad_mode)
         self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
         self.keep_size = keep_size
@@ -1220,20 +1223,7 @@ class PadToFixedSize(Augmenter):
         self.size = width, height
         self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
 
-        pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
-        if pad_mode == ia.ALL:
-            self.pad_mode = iap.Choice(list(pad_modes_available))
-        elif ia.is_string(pad_mode):
-            ia.do_assert(pad_mode in pad_modes_available)
-            self.pad_mode = iap.Deterministic(pad_mode)
-        elif isinstance(pad_mode, list):
-            ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
-            self.pad_mode = iap.Choice(pad_mode)
-        elif isinstance(pad_mode, iap.StochasticParameter):
-            self.pad_mode = pad_mode
-        else:
-            raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
-
+        self.pad_mode = _handle_pad_mode_param(pad_mode)
         self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
