@@ -1233,7 +1233,6 @@ class PadToFixedSize(Augmenter):
         pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ia.do_assert(image.dtype == np.uint8, "PadToFixedSize() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             ih, iw = image.shape[:2]
 
             if iw < w or ih < h:

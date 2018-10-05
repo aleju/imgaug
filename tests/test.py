@@ -4945,6 +4945,13 @@ def test_PadToFixedSize():
     assert observed.dtype.type == np.uint8
     assert observed.shape == (5, 5, 3)
 
+    # test float32, float64, int32
+    for dtype in [np.float32, np.float64, np.int32]:
+        aug = iaa.PadToFixedSize(height=5, width=5)
+        observed = aug.augment_image(img.astype(dtype))
+        assert observed.dtype.type == dtype
+        assert observed.shape == (5, 5)
+
     # change only one side when other side has already desired size
     aug = iaa.PadToFixedSize(height=5, width=5)
     observed = aug.augment_image(np.zeros((1, 5, 3), dtype=np.uint8))
