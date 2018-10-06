@@ -210,7 +210,7 @@ def main():
     test_Pad()
     test_Crop()
     test_PadToFixedSize()
-    # TODO test_CropToFixedSize()
+    test_CropToFixedSize()
 
     # these functions use various augmenters, so test them last
     test_2d_inputs()
@@ -5121,6 +5121,140 @@ def test_PadToFixedSize():
     expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
     expected[:, 0, 0] = 0.0
     expected[0, :, 0] = 0.0
+    assert observed.shape == (32, 32, 3)
+    assert np.allclose(observed.arr_0to1, expected)
+
+
+def test_CropToFixedSize():
+    reseed()
+
+    img = np.uint8([
+        [128, 129, 130],
+        [131, 132, 133],
+        [134, 135, 136]
+    ])
+    img3d = img[:, :, np.newaxis]
+    img3d_rgb = np.tile(img3d, (1, 1, 3))
+
+    # basic functionality
+    aug = iaa.CropToFixedSize(height=1, width=1)
+    observed = aug.augment_image(img)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (1, 1)
+
+    observed = aug.augment_image(img3d)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (1, 1, 1)
+
+    observed = aug.augment_image(img3d_rgb)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (1, 1, 3)
+
+    # test float32, float64, int32
+    for dtype in [np.float32, np.float64, np.int32]:
+        aug = iaa.CropToFixedSize(height=1, width=1)
+        observed = aug.augment_image(img.astype(dtype))
+        assert observed.dtype.type == dtype
+        assert observed.shape == (1, 1)
+
+    # change only one side when other side has already desired size
+    aug = iaa.CropToFixedSize(height=3, width=5)
+    observed = aug.augment_image(np.zeros((3, 5, 3), dtype=np.uint8))
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 5, 3)
+
+    aug = iaa.CropToFixedSize(height=5, width=3)
+    observed = aug.augment_image(np.zeros((5, 3, 3), dtype=np.uint8))
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 3, 3)
+
+    # change no side when all sides have exactly desired size
+    img5x5 = np.zeros((5, 5, 3), dtype=np.uint8)
+    img5x5[2, 2, :] = 255
+    aug = iaa.CropToFixedSize(height=5, width=5)
+    observed = aug.augment_image(img5x5)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (5, 5, 3)
+    assert np.array_equal(observed, img5x5)
+
+    # change no side when all sides have smaller than desired size
+    img4x4 = np.zeros((4, 4, 3), dtype=np.uint8)
+    img4x4[2, 2, :] = 255
+    aug = iaa.CropToFixedSize(height=5, width=5)
+    observed = aug.augment_image(img4x4)
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (4, 4, 3)
+    assert np.array_equal(observed, img4x4)
+
+    # explicit non-center position test
+    aug = iaa.CropToFixedSize(height=3, width=3)
+    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    img5x5 = np.arange(25, dtype=np.uint8).reshape((5, 5))
+    observed = aug.augment_image(img5x5)
+    expected = img5x5[2:, 2:]
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 3)
+    assert np.array_equal(observed, expected)
+
+    aug = iaa.CropToFixedSize(height=3, width=3)
+    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    img5x5 = np.arange(25, dtype=np.uint8).reshape((5, 5))
+    observed = aug.augment_image(img5x5)
+    expected = img5x5[:3, :3]
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 3)
+    assert np.array_equal(observed, expected)
+
+    # basic keypoint test
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    aug = iaa.CropToFixedSize(height=1, width=1)
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 1))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    # keypoint test with shape not being changed
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    aug = iaa.CropToFixedSize(height=3, width=3)
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    # keypoint test with explicit non-center position
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(5, 5))
+    aug = iaa.CropToFixedSize(height=3, width=3)
+    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(3, 3))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(5, 5))
+    aug = iaa.CropToFixedSize(height=3, width=3)
+    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    observed = aug.augment_keypoints([kpsoi])
+    expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(3, 3))
+    assert observed[0].shape == expected.shape
+    assert keypoints_equal(observed, [expected])
+
+    # basic heatmaps test
+    heatmaps = ia.HeatmapsOnImage(np.zeros((5, 5, 1), dtype=np.float32) + 1.0, shape=(5, 5, 3))
+    aug = iaa.CropToFixedSize(height=3, width=3)
+    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = np.zeros((3, 3, 1), dtype=np.float32) + 1.0
+    assert observed.shape == (3, 3, 3)
+    assert np.allclose(observed.arr_0to1, expected)
+
+    # heatmaps with size unequal to image
+    heatmaps = ia.HeatmapsOnImage(np.zeros((17, 17, 1), dtype=np.float32) + 1.0, shape=(34, 34, 3))
+    aug = iaa.CropToFixedSize(height=32, width=32)
+    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
     assert observed.shape == (32, 32, 3)
     assert np.allclose(observed.arr_0to1, expected)
 
