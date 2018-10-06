@@ -1450,7 +1450,45 @@ class CropToFixedSize(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        raise NotImplementedError()
+        nb_images = len(heatmaps)
+        w, h = self.size
+        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
+        for i in sm.xrange(nb_images):
+            ih, iw = heatmaps[i].shape[:2]
+
+            height_image, width_image = heatmaps[i].shape[0:2]
+            height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
+
+            crop_image_top, crop_image_bottom = 0, 0
+            crop_image_left, crop_image_right = 0, 0
+
+            if ih > h:
+                crop_image_top = int(offset_ys[i] * (height_image - h))
+                crop_image_bottom = height_image - h - crop_image_top
+
+            if iw > w:
+                crop_image_left = int(offset_xs[i] * (width_image - w))
+                crop_image_right = width_image - w - crop_image_left
+
+            if (height_image, width_image) != (height_heatmaps, width_heatmaps):
+                crop_top = int(round(height_heatmaps * (crop_image_top/height_image)))
+                crop_right = int(round(width_heatmaps * (crop_image_right/width_image)))
+                crop_bottom = int(round(height_heatmaps * (crop_image_bottom/height_image)))
+                crop_left = int(round(width_heatmaps * (crop_image_left/width_image)))
+            else:
+                crop_top = crop_image_top
+                crop_right = crop_image_right
+                crop_bottom = crop_image_bottom
+                crop_left = crop_image_left
+
+            heatmaps[i].arr_0to1 = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom, crop_left:width_heatmaps-crop_right, :]
+
+            heatmaps[i].shape = (
+                heatmaps[i].shape[0] - crop_image_top - crop_image_bottom,
+                heatmaps[i].shape[1] - crop_image_left - crop_image_right
+            ) + heatmaps[i].shape[2:]
+
+        return heatmaps
 
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
