@@ -1419,11 +1419,11 @@ class CropToFixedSize(Augmenter):
             ih, iw = image.shape[:2]
 
             if ih > h:
-                offset_y = int(offset_ys[i]*(ih-h+1))
+                offset_y = int(offset_ys[i] * (ih - h))
                 image = image[offset_y:offset_y+h, :, :]
 
             if iw > w:
-                offset_x = int(offset_xs[i]*(iw-w+1))
+                offset_x = int(offset_xs[i] * (iw - w))
                 image = image[:, offset_x:offset_x+w, :]
 
             result.append(image)
