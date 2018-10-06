@@ -1416,7 +1416,6 @@ class CropToFixedSize(Augmenter):
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ia.do_assert(image.dtype == np.uint8, "CropToFixedSize() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             ih, iw = image.shape[:2]
 
             if ih > h:
