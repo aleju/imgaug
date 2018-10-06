@@ -1428,8 +1428,6 @@ class CropToFixedSize(Augmenter):
 
             result.append(image)
 
-        result = np.array(result, dtype=np.uint8)
-
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
