@@ -48,6 +48,56 @@ def _handle_pad_mode_param(pad_mode):
     raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
 
 
+def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left):
+    remaining_height = height - (crop_top + crop_bottom)
+    remaining_width = width - (crop_left + crop_right)
+    if remaining_height < 1:
+        regain = abs(remaining_height) + 1
+        regain_top = regain // 2
+        regain_bottom = regain // 2
+        if regain_top + regain_bottom < regain:
+            regain_top += 1
+
+        if regain_top > crop_top:
+            diff = regain_top - crop_top
+            regain_top = crop_top
+            regain_bottom += diff
+        elif regain_bottom > crop_bottom:
+            diff = regain_bottom - crop_bottom
+            regain_bottom = crop_bottom
+            regain_top += diff
+
+        ia.do_assert(regain_top <= crop_top)
+        ia.do_assert(regain_bottom <= crop_bottom)
+
+        crop_top = crop_top - regain_top
+        crop_bottom = crop_bottom - regain_bottom
+
+    if remaining_width < 1:
+        regain = abs(remaining_width) + 1
+        regain_right = regain // 2
+        regain_left = regain // 2
+        if regain_right + regain_left < regain:
+            regain_right += 1
+
+        if regain_right > crop_right:
+            diff = regain_right - crop_right
+            regain_right = crop_right
+            regain_left += diff
+        elif regain_left > crop_left:
+            diff = regain_left - crop_left
+            regain_left = crop_left
+            regain_right += diff
+
+        ia.do_assert(regain_right <= crop_right)
+        ia.do_assert(regain_left <= crop_left)
+
+        crop_right = crop_right - regain_right
+        crop_left = crop_left - regain_left
+
+    return crop_top, crop_right, crop_bottom, crop_left
+
+
 # TODO rename to Resize to avoid confusion with Affine's scale
 class Scale(Augmenter):
     """
@@ -670,7 +720,7 @@ class CropAndPad(Augmenter):
                 crop_bottom = int(round(height_heatmaps * (crop_image_bottom/height_image)))
                 crop_left = int(round(width_heatmaps * (crop_image_left/width_image)))
 
-                crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
+                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
 
                 pad_top = int(round(height_heatmaps * (pad_image_top/height_image)))
                 pad_right = int(round(width_heatmaps * (pad_image_right/width_image)))
@@ -779,7 +829,7 @@ class CropAndPad(Augmenter):
         pad_cval = self.pad_cval.draw_sample(random_state=random_state)
         pad_cval = np.clip(np.round(pad_cval), 0, 255).astype(np.uint8)
 
-        crop_top, crop_right, crop_bottom, crop_left = self._prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left)
+        crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left)
 
         ia.do_assert(crop_top >= 0 and crop_right >= 0 and crop_bottom >= 0 and crop_left >= 0)
         ia.do_assert(crop_top + crop_bottom < height)
@@ -787,54 +837,7 @@ class CropAndPad(Augmenter):
 
         return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
 
-    def _prevent_zero_size(self, height, width, crop_top, crop_right, crop_bottom, crop_left):
-        remaining_height = height - (crop_top + crop_bottom)
-        remaining_width = width - (crop_left + crop_right)
-        if remaining_height < 1:
-            regain = abs(remaining_height) + 1
-            regain_top = regain // 2
-            regain_bottom = regain // 2
-            if regain_top + regain_bottom < regain:
-                regain_top += 1
 
-            if regain_top > crop_top:
-                diff = regain_top - crop_top
-                regain_top = crop_top
-                regain_bottom += diff
-            elif regain_bottom > crop_bottom:
-                diff = regain_bottom - crop_bottom
-                regain_bottom = crop_bottom
-                regain_top += diff
-
-            ia.do_assert(regain_top <= crop_top)
-            ia.do_assert(regain_bottom <= crop_bottom)
-
-            crop_top = crop_top - regain_top
-            crop_bottom = crop_bottom - regain_bottom
-
-        if remaining_width < 1:
-            regain = abs(remaining_width) + 1
-            regain_right = regain // 2
-            regain_left = regain // 2
-            if regain_right + regain_left < regain:
-                regain_right += 1
-
-            if regain_right > crop_right:
-                diff = regain_right - crop_right
-                regain_right = crop_right
-                regain_left += diff
-            elif regain_left > crop_left:
-                diff = regain_left - crop_left
-                regain_left = crop_left
-                regain_right += diff
-
-            ia.do_assert(regain_right <= crop_right)
-            ia.do_assert(regain_left <= crop_left)
-
-            crop_right = crop_right - regain_right
-            crop_left = crop_left - regain_left
-
-        return crop_top, crop_right, crop_bottom, crop_left
 
     def get_parameters(self):
         return [self.all_sides, self.top, self.right, self.bottom, self.left, self.pad_mode, self.pad_cval]
@@ -1475,6 +1478,9 @@ class CropToFixedSize(Augmenter):
                 crop_right = int(round(width_heatmaps * (crop_image_right/width_image)))
                 crop_bottom = int(round(height_heatmaps * (crop_image_bottom/height_image)))
                 crop_left = int(round(width_heatmaps * (crop_image_left/width_image)))
+
+                # TODO add test for zero-size prevention
+                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
             else:
                 crop_top = crop_image_top
                 crop_right = crop_image_right
