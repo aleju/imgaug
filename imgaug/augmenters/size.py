@@ -705,8 +705,8 @@ class CropAndPad(Augmenter):
                 heatmaps[i] = heatmaps[i].scale((height_heatmaps, width_heatmaps))
             else:
                 heatmaps[i].shape = (
-                    heatmaps[i].shape[0] - crop_top - crop_bottom + pad_top + pad_bottom,
-                    heatmaps[i].shape[1] - crop_left - crop_right + pad_left + pad_right
+                    heatmaps[i].shape[0] - crop_image_top - crop_image_bottom + pad_image_top + pad_image_bottom,
+                    heatmaps[i].shape[1] - crop_image_left - crop_image_right + pad_image_left + pad_image_right
                 ) + heatmaps[i].shape[2:]
 
             result.append(heatmaps[i])
