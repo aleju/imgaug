@@ -1454,8 +1454,8 @@ class CropToFixedSize(Augmenter):
 
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
-        offset_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-        offset_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        offset_xs = 1.0 - self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+        offset_ys = 1.0 - self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
 
         return offset_xs, offset_ys
 
