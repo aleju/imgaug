@@ -1439,8 +1439,8 @@ class CropToFixedSize(Augmenter):
             keypoints_on_image = keypoints_on_images[i]
             ih, iw = keypoints_on_image.shape[:2]
 
-            offset_x = int(offset_xs[i]*(iw-w+1)) if iw > w else 0
-            offset_y = int(offset_ys[i]*(ih-h+1)) if ih > h else 0
+            offset_y = int(offset_ys[i] * (ih - h)) if ih > h else 0
+            offset_x = int(offset_xs[i] * (iw - w)) if iw > w else 0
 
             keypoints_cropped = keypoints_on_image.shift(x=-offset_x, y=-offset_y)
             keypoints_cropped.shape = (min(ih, h), min(iw, w)) + keypoints_cropped.shape[2:]
