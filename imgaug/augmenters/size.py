@@ -1173,11 +1173,20 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
     return aug
 
 
+# TODO maybe rename this to PadToMinimumSize?
 class PadToFixedSize(Augmenter):
-
     """
-    Augmenter that pads the images to specified width/height only if specified width/height is greater than the width/height of input images.
-    The offset varies randomly within valid region (i.e. each input image is fully included in its output image).
+    Pad images to minimum width/height.
+
+    If images are already at the minimum width/height or are larger, they will not be padded.
+    Note: This also means that images will not be cropped if they exceed the required width/height.
+
+    The augmenter randomly decides per image how to distribute the required padding amounts
+    over the image axis. E.g. if 2px have to be padded on the left or right to reach the
+    required width, the augmenter will sometimes add 2px to the left and 0px to the right,
+    sometimes add 2px to the right and 0px to the left and sometimes add 1px to both sides.
+    Set the attribute `position` to `(iap.Deterministic(0.5), iap.Deterministic(0.5))` in order
+    to always pad equally on both axis.
 
     Parameters
     ----------
@@ -1221,6 +1230,13 @@ class PadToFixedSize(Augmenter):
     def __init__(self, width, height, pad_mode="constant", pad_cval=0, name=None, deterministic=False, random_state=None):
         super(PadToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
+
+        # Position of where to pad. The further to the top left this is, the larger the share of
+        # pixels that will be added to the top and left sides. I.e. set to
+        # (Deterministic(0.0), Deterministic(0.0)) to only add at the top and left,
+        # (Deterministic(1.0), Deterministic(1.0)) to only add at the bottom right.
+        # Analogously (0.5, 0.5) pads equally on both axis, (0.0, 1.0) pads left and bottom,
+        # (1.0, 0.0) pads right and top.
         self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
@@ -1272,9 +1288,9 @@ class PadToFixedSize(Augmenter):
             pad_image_left, pad_image_right, pad_image_top, pad_image_bottom = self._calculate_paddings(h, w, height_image, width_image, pad_xs[i], pad_ys[i])
             height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
 
-            # TODO for 30x30 padded to 32x32 with 15x15 this results in paddings of 1 on each side
-            # (assuming position=(0.5, 0.5)) giving 17x17 heatmaps when they should be 16x16.
-            # Error due to each side getting projected 0.5 padding which is rounded to 1.
+            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results in paddings of 1 on
+            # each side (assuming position=(0.5, 0.5)) giving 17x17 heatmaps when they should be
+            # 16x16. Error is due to each side getting projected 0.5 padding which is rounded to 1.
             # This doesn't seem right.
             if (height_image, width_image) != (height_heatmaps, width_heatmaps):
                 pad_top = int(round(height_heatmaps * (pad_image_top/height_image)))
@@ -1329,11 +1345,24 @@ class PadToFixedSize(Augmenter):
         return [self.position, self.pad_mode, self.pad_cval]
 
 
+# TODO maybe rename this to CropToMaximumSize ?
 class CropToFixedSize(Augmenter):
-
     """
     Augmenter that crops the images to specified width/height only if specified width/height is less than the width/height of input images.
     The offset varies randomly within valid region (i.e. each output image is fully included in its input image).
+
+    Crop images to maximum width/height.
+
+    If images are already at the maximum width/height or are smaller, they will not be cropped.
+    Note: This also means that images will not be padded if they are below the required
+    width/height.
+
+    The augmenter randomly decides per image how to distribute the required cropping amounts
+    over the image axis. E.g. if 2px have to be cropped on the left or right to reach the
+    required width, the augmenter will sometimes remove 2px from the left and 0px from the right,
+    sometimes remove 2px from the right and 0px from the left and sometimes remove 1px from both
+    sides. Set the attribute `position` to `(iap.Deterministic(0.5), iap.Deterministic(0.5))` in
+    order to always crop equally on both axis.
 
     Parameters
     ----------
@@ -1371,6 +1400,13 @@ class CropToFixedSize(Augmenter):
     def __init__(self, width, height, name=None, deterministic=False, random_state=None):
         super(CropToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
+
+        # Position of where to crop. The further to the top left this is, the larger the share of
+        # pixels that will be cropped from the top and left sides. I.e. set to
+        # (Deterministic(0.0), Deterministic(0.0)) to only crop at the top and left,
+        # (Deterministic(1.0), Deterministic(1.0)) to only crop at the bottom right.
+        # Analogously (0.5, 0.5) crops equally on both axis, (0.0, 1.0) crops left and bottom,
+        # (1.0, 0.0) crops right and top.
         self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
 
     def _augment_images(self, images, random_state, parents, hooks):
