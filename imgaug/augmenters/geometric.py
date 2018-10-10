@@ -450,9 +450,11 @@ class Affine(Augmenter):
         result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
         return result
 
-    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples):
+    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, return_matrices=False):
         nb_images = len(images)
         result = images
+        if return_matrices:
+            matrices = [None] * nb_images
         for i in sm.xrange(nb_images):
             image = images[i]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
@@ -489,6 +491,7 @@ class Affine(Augmenter):
                         cval,
                         mode, order,
                         self.fit_output,
+                        return_matrix=return_matrices,
                     )
                 else:
                     ia.do_assert(not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,))
@@ -501,11 +504,18 @@ class Affine(Augmenter):
                         self.mode_map_skimage_cv2[mode],
                         self.order_map_skimage_cv2[order],
                         self.fit_output,
+                        return_matrix=return_matrices,
                     )
+                if return_matrices:
+                    image_warped, matrix = image_warped
+                    matrices[i] = matrix
 
                 result[i] = image_warped
             else:
                 result[i] = images[i]
+
+        if return_matrices:
+            result = (result, matrices)
 
         return result
 
@@ -517,10 +527,12 @@ class Affine(Augmenter):
 
         #arrs = [ia.Heatmaps.change_normalization(heatmaps_i.arr, source=heatmaps_i, target=(0.0, 1.0)) for heatmaps_i in heatmaps]
         arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
-        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
-        for heatmaps_i, arr_aug in zip(heatmaps, arrs_aug):
+        arrs_aug, matrices = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, return_matrices=True)
+        for heatmaps_i, arr_aug, matrix in zip(heatmaps, arrs_aug, matrices):
             #heatmaps_i.arr = ia.Heatmaps.change_normalization(arr_aug, source=(0.0, 1.0), target=heatmaps_i)
             heatmaps_i.arr_0to1 = arr_aug
+            _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
+            heatmaps_i.shape = output_shape_i
         return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -559,6 +571,10 @@ class Affine(Augmenter):
                 )
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+                if self.fit_output:
+                    matrix, output_shape = self._tf_to_fit_output(keypoints_on_image.shape, matrix)
+                else:
+                    output_shape = keypoints_on_image.shape
 
                 coords = keypoints_on_image.get_coords_array()
                 #print("coords", coords)
@@ -636,7 +652,7 @@ class Affine(Augmenter):
         matrix = matrix + matrix_to_fit
         return matrix, output_shape
 
-    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order, fit_output):
+    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order, fit_output, return_matrix=False):
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
@@ -667,9 +683,12 @@ class Affine(Augmenter):
         # warp changes uint8 to float64, making this necessary
         if image_warped.dtype != image.dtype:
             image_warped = image_warped.astype(image.dtype, copy=False)
+
+        if return_matrix:
+            return image_warped, matrix
         return image_warped
 
-    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order, fit_output):
+    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order, fit_output, return_matrix=False):
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
@@ -703,6 +722,8 @@ class Affine(Augmenter):
         if image_warped.ndim == 2:
             image_warped = image_warped[..., np.newaxis]
 
+        if return_matrix:
+            return image_warped, matrix
         return image_warped
 
 class AffineCv2(Augmenter):
