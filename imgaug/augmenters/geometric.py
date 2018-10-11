@@ -645,6 +645,7 @@ class Affine(Augmenter):
                                     input_shape[2]))
         else:
             output_shape = np.ceil((out_height, out_width))
+        output_shape = tuple(output_shape.tolist())
         # fit output image in new shape
         translation = (- minc, - minr)
         matrix_to_fit = tf.SimilarityTransform(translation=translation)
