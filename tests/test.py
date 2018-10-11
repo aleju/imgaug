@@ -8576,6 +8576,15 @@ def test_Affine():
     # ------------
     aug = iaa.Affine(scale=1.0, translate_px=100, fit_output=True)
     assert aug.fit_output is True
+    observed = aug.augment_images(images)
+    expected = images
+    assert np.array_equal(observed, expected)
+    observed = aug.augment_keypoints(keypoints)
+    expected = keypoints
+    assert keypoints_equal(observed, expected)
+    observed = aug.augment_heatmaps([heatmaps])[0]
+    expected = heatmaps
+    assert np.array_equal(observed.get_arr(), expected.get_arr())
 
     # ------------
     # exceptions for bad inputs
