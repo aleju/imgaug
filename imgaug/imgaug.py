@@ -20,6 +20,9 @@ import collections
 import time
 import json
 import matplotlib.pyplot as plt
+import shapely
+import shapely.geometry
+import shapely.ops
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -739,6 +742,28 @@ def angle_between_vectors(v1, v2):
     v1_u = v1 / np.linalg.norm(v1)
     v2_u = v2 / np.linalg.norm(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+
+def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
+    def _make_line(p1, p2):
+        A = (p1[1] - p2[1])
+        B = (p2[0] - p1[0])
+        C = (p1[0]*p2[1] - p2[0]*p1[1])
+        return A, B, -C
+
+    L1 = _make_line((x1, y1), (x2, y2))
+    L2 = _make_line((x3, y3), (x4, y4))
+
+    D  = L1[0] * L2[1] - L1[1] * L2[0]
+    Dx = L1[2] * L2[1] - L1[1] * L2[2]
+    Dy = L1[0] * L2[2] - L1[2] * L2[0]
+    if D != 0:
+        x = Dx / D
+        y = Dy / D
+        return x,y
+    else:
+        return False
+
 
 def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
     """
@@ -2181,7 +2206,7 @@ class KeypointsOnImage(object):
     def __str__(self):
         return "KeypointsOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
-# TODO functions: square(), to_aspect_ratio(), extend()/add_border(), contains_point()
+# TODO functions: square(), to_aspect_ratio(), contains_point()
 class BoundingBox(object):
     """
     Class representing bounding boxes.
@@ -2342,6 +2367,24 @@ class BoundingBox(object):
 
         """
         return self.height * self.width
+
+    def contains(self, other):
+        """
+        Estimate whether the bounding box contains a point.
+
+        Parameters
+        ----------
+        other : Keypoint
+            Point to check for.
+
+        Returns
+        -------
+        result : bool
+            True if the point is contained in the bounding box, False otherwise.
+
+        """
+        x, y = other.x, other.y
+        return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
 
     def project(self, from_shape, to_shape):
         """
@@ -2847,11 +2890,28 @@ class BoundingBox(object):
 
     def deepcopy(self, x1=None, y1=None, x2=None, y2=None, label=None):
         """
-        Create a deep copy of the BoundingBoxesOnImage object.
+        Create a deep copy of the BoundingBox object.
+
+        Parameters
+        ----------
+        x1 : None or number
+            If not None, then the x1 coordinate of the copied object will be set to this value.
+
+        y1 : None or number
+            If not None, then the y1 coordinate of the copied object will be set to this value.
+
+        x2 : None or number
+            If not None, then the x2 coordinate of the copied object will be set to this value.
+
+        y2 : None or number
+            If not None, then the y2 coordinate of the copied object will be set to this value.
+
+        label : None or string
+            If not None, then the label of the copied object will be set to this value.
 
         Returns
         -------
-        out : KeypointsOnImage
+        out : BoundingBox
             Deep copy.
 
         """
@@ -2892,6 +2952,7 @@ class BoundingBoxesOnImage(object):
             do_assert(isinstance(shape, (tuple, list)))
             self.shape = tuple(shape)
 
+    # TODO remove this? here it is image height at BoundingBox it is bounding box height
     @property
     def height(self):
         """
@@ -2905,6 +2966,7 @@ class BoundingBoxesOnImage(object):
         """
         return self.shape[0]
 
+    # TODO remove this? here it is image width at BoundingBox it is bounding box width
     @property
     def width(self):
         """
@@ -2942,7 +3004,7 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        keypoints : BoundingBoxesOnImage
+        bounding_boxes : BoundingBoxesOnImage
             Object containing all projected bounding boxes.
 
         """
@@ -3052,6 +3114,7 @@ class BoundingBoxesOnImage(object):
             Image with drawn bounding boxes.
 
         """
+        # TODO improve efficiency here by copying only once
         for bb in self.bounding_boxes:
             image = bb.draw_on_image(
                 image,
@@ -3144,7 +3207,7 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        out : KeypointsOnImage
+        out : BoundingBoxesOnImage
             Deep copy.
 
         """
@@ -3158,6 +3221,934 @@ class BoundingBoxesOnImage(object):
 
     def __str__(self):
         return "BoundingBoxesOnImage(%s, shape=%s)" % (str(self.bounding_boxes), self.shape)
+
+
+# TODO somehow merge with BoundingBox
+# TODO add functions: simplify() (eg via shapely.ops.simplify()),
+# extend(all_sides=0, top=0, right=0, bottom=0, left=0),
+# intersection(other, default=None), union(other), iou(other), to_heatmap, to_mask
+class Polygon(object):
+    """
+    Class representing polygons.
+
+    Each polygon is parameterized by its corner points, given as absolute x- and y-coordinates
+    with sub-pixel accuracy.
+
+    Parameters
+    ----------
+    exterior : list of Keypoint or list of tuple of floats or (N,2) ndarray
+        List of points defining the polygon. May be either a list of Keypoint objects or a list of tuples in xy-form
+        or a numpy array of shape (N,2) for N points in xy-form.
+        All coordinates are expected to be the absolute coordinates in the image, given as floats, e.g. x=10.7
+        and y=3.4 for a point at coordinates (10.7, 3.4). Their order is expected to be clock-wise. They are expected
+        to not be closed (i.e. first and last coordinate differ).
+
+    label : None or string, optional(default=None)
+        Label of the polygon, e.g. a string representing the class.
+
+    """
+
+    def __init__(self, exterior, label=None):
+        """Create a new Polygon instance."""
+        if isinstance(exterior, list):
+            if not exterior:
+                # for empty lists, make sure that the shape is (0, 2) and not (0,) as that is also expected when the
+                # input is a numpy array
+                self.exterior = np.zeros((0, 2), dtype=np.float32)
+            elif isinstance(exterior[0], Keypoint):
+                # list of Keypoint
+                self.exterior = np.float32([[point.x, point.y] for point in exterior])
+            else:
+                # list of tuples (x, y)
+                self.exterior = np.float32([[point[0], point[1]] for point in exterior])
+        else:
+            assert is_np_array(exterior)
+            assert exterior.ndim == 2
+            assert exterior.shape[1] == 2
+            self.exterior = np.float32(exterior)
+
+        # Remove last point if it is essentially the same as the first point (polygons are always assumed to be
+        # closed anyways). This also prevents problems with shapely, which seems to add the last point automatically.
+        if len(self.exterior) >= 2 and np.allclose(self.exterior[0, :], self.exterior[-1, :]):
+            self.exterior = self.exterior[:-1]
+
+        self.label = label
+
+    @property
+    def xx(self):
+        """
+        Return the x-coordinates of all points in the exterior.
+
+        Returns
+        -------
+        result : (N,2) float32 ndarray
+            X-coordinates of all points in the exterior.
+
+        """
+        return self.exterior[:, 0]
+
+    @property
+    def yy(self):
+        """
+        Return the y-coordinates of all points in the exterior.
+
+        Returns
+        -------
+        result : (N,2) float32 ndarray
+            Y-coordinates of all points in the exterior.
+
+        """
+        return self.exterior[:, 1]
+
+    @property
+    def xx_int(self):
+        """
+        Return the x-coordinates of all points in the exterior, rounded to the closest integer value.
+
+        Returns
+        -------
+        result : (N,2) int32 ndarray
+            X-coordinates of all points in the exterior, rounded to the closest integer value.
+
+        """
+        return np.int32(np.round(self.xx))
+
+    @property
+    def yy_int(self):
+        """
+        Return the y-coordinates of all points in the exterior, rounded to the closest integer value.
+
+        Returns
+        -------
+        result : (N,2) int32 ndarray
+            Y-coordinates of all points in the exterior, rounded to the closest integer value.
+
+        """
+        return np.int32(np.round(self.yy))
+
+    @property
+    def is_valid(self):
+        """
+        Estimate whether the polygon has a valid shape.
+
+        To to be considered valid, the polygons must be made up of at least 3 points and have concave shape.
+        Multiple consecutive points are allowed to have the same coordinates.
+
+        Returns
+        -------
+        result : True if polygon has at least 3 points and is concave, otherwise False.
+
+        """
+        if len(self.exterior) < 3:
+            return False
+        return self.to_shapely_polygon().is_valid
+
+    @property
+    def area(self):
+        """
+        Estimate the area of the polygon.
+
+        Returns
+        -------
+        result : number
+            Area of the polygon.
+
+        """
+        if len(self.exterior) < 3:
+            raise Exception("Cannot compute the polygon's area because it contains less than three points.")
+        poly = self.to_shapely_polygon()
+        return poly.area
+
+    def project(self, from_shape, to_shape):
+        """
+        Project the polygon onto an image with different shape.
+
+        The relative coordinates of all points remain the same.
+        E.g. a point at (x=20, y=20) on an image (width=100, height=200) will be
+        projected on a new image (width=200, height=100) to (x=40, y=10).
+
+        This is intended for cases where the original image is resized.
+        It cannot be used for more complex changes (e.g. padding, cropping).
+
+        Parameters
+        ----------
+        from_shape : tuple
+            Shape of the original image. (Before resize.)
+
+        to_shape : tuple
+            Shape of the new image. (After resize.)
+
+        Returns
+        -------
+        out : Polygon
+            Polygon object with new coordinates.
+
+        """
+        if from_shape[0:2] == to_shape[0:2]:
+            return self.copy()
+        exterior = [Keypoint(x=x, y=y).project(from_shape, to_shape) for x, y in self.exterior]
+        return self.copy(exterior=exterior)
+
+    def find_closest_point_index(self, x, y, return_distance=False):
+        """
+        Find the index of the point within the exterior that is closest to the given coordinates.
+
+        "Closeness" is here defined based on euclidean distance.
+        This method will raise an AssertionError if the exterior contains no points.
+
+        Parameters
+        ----------
+        x : number
+            X-coordinate around which to search for close points.
+
+        y : number
+            Y-coordinate around which to search for close points.
+
+        return_distance : bool, optional(default=False)
+            Whether to also return the distance of the closest point.
+
+        Returns
+        -------
+        result : int or tuple(int, number)
+            Either the index of the closest point (return_distance=False) or a tuple of that index and also the
+            distance to the closest point (return_distance=True).
+
+        """
+        assert len(self.exterior) > 0
+        distances = []
+        for x2, y2 in self.exterior:
+            d = (x2 - x) ** 2 + (y2 - y) ** 2
+            distances.append(d)
+        distances = np.sqrt(distances)
+        closest_idx = np.argmin(distances)
+        if return_distance:
+            return closest_idx, distances[closest_idx]
+        return closest_idx
+
+    def _compute_inside_image_point_mask(self, image):
+        if isinstance(image, tuple):
+            shape = image
+        else:
+            shape = image.shape
+        h, w = shape[0:2]
+        return np.logical_and(
+            np.logical_and(0 <= self.exterior[:, 0], self.exterior[:, 0] < w),
+            np.logical_and(0 <= self.exterior[:, 1], self.exterior[:, 1] < h)
+        )
+
+    # TODO keep this method? it is almost an alias for is_out_of_image()
+    def is_fully_within_image(self, image):
+        """
+        Estimate whether the polygon is fully inside the image area.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
+            assumed to represent the image shape.
+
+        Returns
+        -------
+        result : bool
+            True if the polygon is fully inside the image area.
+            False otherwise.
+
+        """
+        return not self.is_out_of_image(image, fully=True, partly=True)
+
+    # TODO keep this method? it is almost an alias for is_out_of_image()
+    def is_partly_within_image(self, image):
+        """
+        Estimate whether the polygon is at least partially inside the image area.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
+            assumed to represent the image shape.
+
+        Returns
+        -------
+        result : bool
+            True if the polygon is at least partially inside the image area.
+            False otherwise.
+
+        """
+        return not self.is_out_of_image(image, fully=True, partly=False)
+
+    def is_out_of_image(self, image, fully=True, partly=False):
+        """
+        Estimate whether the polygon is partially or fully outside of the image area.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of ints
+            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
+            assumed to represent the image shape and must contain at least two integers.
+
+        fully : bool, optional(default=True)
+            Whether to return True if the polygon is fully outside fo the image area.
+
+        partly : bool, optional(default=False)
+            Whether to return True if the polygon is at least partially outside fo the
+            image area.
+
+        Returns
+        -------
+        result : bool
+            True if the polygon is partially/fully outside of the image area, depending
+            on defined parameters. False otherwise.
+
+        """
+        if len(self.exterior) == 0:
+            raise Exception("Cannot determine whether the polygon is inside the image, because it contains no points.")
+        inside = self._compute_inside_image_point_mask(image)
+        nb_inside = sum(inside)
+        if nb_inside == len(inside):
+            return False
+        elif nb_inside > 0:
+            return partly
+        else:
+            return fully
+
+    # TODO mark as deprecated
+    # TODO rename cut_* to clip_* in BoundingBox
+    def cut_out_of_image(self, image):
+        return self.clip_out_of_image(image)
+
+    def clip_out_of_image(self, image):
+        """
+        Cut off all parts of the polygon that are outside of the image.
+
+        This operation may lead to new points being created.
+        As a single polygon may be split into multiple new polygons, the result is a MultiPolygon.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of at least two ints
+            Image dimensions to use for the clipping of the polygon. If an ndarray, its
+            shape will be used. If a tuple, it is assumed to represent the image shape.
+
+        Returns
+        -------
+        result : MultiPolygon
+            Polygon, clipped to fall within the image dimensions.
+            Returned as MultiPolygon, because the clipping can split the polygon into multiple parts.
+
+        """
+        # if fully out of image, clip everything away, nothing remaining
+        if self.is_out_of_image(image, fully=True, partly=False):
+            return MultiPolygon([])
+
+        h, w = image.shape[0:2]
+        poly_shapely = self.to_shapely_polygon()
+        poly_image = shapely.geometry.Polygon([(0, 0), (w, 0), (w, h), (0, h)])
+        multipoly_inter_shapely = poly_shapely.intersection(poly_image)
+        if not isinstance(multipoly_inter_shapely, shapely.geometry.MultiPolygon):
+            assert isinstance(multipoly_inter_shapely, shapely.geometry.Polygon)
+            multipoly_inter_shapely = shapely.geometry.MultiPolygon([multipoly_inter_shapely])
+
+        polygons = []
+        for poly_inter_shapely in multipoly_inter_shapely.geoms:
+            polygons.append(Polygon.from_shapely(poly_inter_shapely, label=self.label))
+
+        # shapely changes the order of points, we try here to preserve it as good as possible
+        polygons_reordered = []
+        for polygon in polygons:
+            found = False
+            for x, y in self.exterior:
+                closest_idx, dist = polygon.find_closest_point_index(x=x, y=y, return_distance=True)
+                if dist < 1e-6:
+                    polygon_reordered = polygon.change_first_point_by_index(closest_idx)
+                    polygons_reordered.append(polygon_reordered)
+                    found = True
+                    break
+            assert found  # could only not find closest points if new polys are empty
+
+        return MultiPolygon(polygons_reordered)
+
+    def shift(self, top=None, right=None, bottom=None, left=None):
+        """
+        Shift the polygon from one or more image sides, i.e. move it on the x/y-axis.
+
+        Parameters
+        ----------
+        top : None or int, optional(default=None)
+            Amount of pixels by which to shift the polygon from the top.
+
+        right : None or int, optional(default=None)
+            Amount of pixels by which to shift the polygon from the right.
+
+        bottom : None or int, optional(default=None)
+            Amount of pixels by which to shift the polygon from the bottom.
+
+        left : None or int, optional(default=None)
+            Amount of pixels by which to shift the polygon from the left.
+
+        Returns
+        -------
+        result : Polygon
+            Shifted polygon.
+
+        """
+        top = top if top is not None else 0
+        right = right if right is not None else 0
+        bottom = bottom if bottom is not None else 0
+        left = left if left is not None else 0
+        exterior = np.copy(self.exterior)
+        exterior[:, 0] += (left - right)
+        exterior[:, 1] += (top - bottom)
+        return self.deepcopy(exterior=exterior)
+
+    # TODO add boundary thickness
+    def draw_on_image(self,
+                      image,
+                      color=(0, 255, 0), color_perimeter=(0, 128, 0),
+                      alpha=0.5, alpha_perimeter=1.0,
+                      raise_if_out_of_image=False):
+        """
+        Draw the polygon on an image.
+
+        Parameters
+        ----------
+        image : (H,W,C) ndarray
+            The image onto which to draw the polygon. Usually expected to be of dtype uint8, though other dtypes
+            are also handled.
+
+        color : iterable of int, optional(default=[0,255,0])
+            The color to use for the polygon (excluding perimeter). Must correspond to the channel layout of the
+            image. Usually RGB.
+
+        color_perimeter : iterable of int, optional(default=[0,128,0])
+            The color to use for the perimeter/border of the polygon. Must correspond to the channel layout of the
+            image. Usually RGB.
+
+        alpha : float, optional(default=0.5)
+            The transparency of the polygon (excluding the perimeter), where 1.0 denotes no transparency and 0.0 is
+            invisible.
+
+        alpha_perimeter : float, optional(default=1.0)
+            The transparency of the polygon's perimeter/border, where 1.0 denotes no transparency and 0.0 is
+            invisible.
+
+        raise_if_out_of_image : bool, optional(default=False)
+            Whether to raise an error if the polygon is partially/fully outside of the
+            image. If set to False, no error will be raised and only the parts inside the image
+            will be drawn.
+
+        Returns
+        -------
+        result : (H,W,C) ndarray
+            Image with polygon drawn on it. Result dtype is the same as the input dtype.
+
+        """
+        # TODO separate this into draw_face_on_image() and draw_border_on_image()
+
+        if raise_if_out_of_image and self.is_out_of_image(image):
+            raise Exception("Cannot draw polygon %s on image with shape %s." % (
+                str(self), image.shape
+            ))
+
+        xx = self.xx_int
+        yy = self.yy_int
+
+        # TODO np.clip to image plane if is_fully_within_image(), similar to how it is done for bounding boxes
+
+        # TODO improve efficiency by only drawing in rectangle that covers poly instead of drawing in the whole image
+        # TODO for a rectangular polygon, the face coordinates include the top/left boundary but not the right/bottom
+        # boundary. This may be unintuitive when not drawing the boundary. Maybe somehow remove the boundary
+        # coordinates from the face coordinates after generating both?
+        rr, cc = skimage.draw.polygon(yy, xx, shape=image.shape)
+        rr_perimeter, cc_perimeter = skimage.draw.polygon_perimeter(yy, xx, shape=image.shape)
+
+        params = (rr, cc, color, alpha)
+        params_perimeter = (rr_perimeter, cc_perimeter, color_perimeter, alpha_perimeter)
+
+        input_dtype = image.dtype
+        result = image.astype(np.float32)
+
+        for rr, cc, color, alpha in [params, params_perimeter]:
+            color = np.float32(color)
+
+            if alpha >= 0.99:
+                result[rr, cc, :] = color
+            elif alpha < 1e-4:
+                pass  # invisible, do nothing
+            else:
+                result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
+
+        if input_dtype.type == np.uint8:
+            result = np.clip(result, 0, 255).astype(input_dtype)  # TODO make clipping more flexible
+        else:
+            result = result.astype(input_dtype)
+
+        return result
+
+    def extract_from_image(self, image):
+        """
+        Extract the image pixels within the polygon.
+
+        This function will zero-pad the image if the polygon is partially/fully outside of
+        the image.
+
+        Parameters
+        ----------
+        image : (H,W) or (H,W,C) ndarray
+            The image from which to extract the pixels within the polygon.
+
+        Returns
+        -------
+        result : (H',W') or (H',W',C) ndarray
+            Pixels within the polygon. Zero-padded if the polygon is partially/fully
+            outside of the image.
+
+        """
+        assert image.ndim in [2, 3]
+        if len(self.exterior) <= 2:
+            raise Exception("Polygon must be made up of at least 3 points to extract its area from an image.")
+
+        bb = self.to_bounding_box()
+        bb_area = bb.extract_from_image(image)
+        if self.is_out_of_image(image, fully=True, partly=False):
+            return bb_area
+
+        xx = self.xx_int
+        yy = self.yy_int
+        xx_mask = xx - np.min(xx)
+        yy_mask = yy - np.min(yy)
+        height_mask = np.max(yy_mask)
+        width_mask = np.max(xx_mask)
+
+        rr_face, cc_face = skimage.draw.polygon(yy_mask, xx_mask, shape=(height_mask, width_mask))
+
+        mask = np.zeros((height_mask, width_mask), dtype=np.bool)
+        mask[rr_face, cc_face] = True
+
+        if image.ndim == 3:
+            mask = np.tile(mask[:, :, np.newaxis], (1, 1, image.shape[2]))
+
+        return bb_area * mask
+
+    def change_first_point_by_coords(self, x, y, max_distance=1e-4):
+        """
+        Set the first point of the exterior to the given point based on its coordinates.
+
+        If multiple points are found, the closest one will be picked.
+        If no matching points are found, an exception is raised.
+
+        Note: This method does *not* work in-place.
+
+        Parameters
+        ----------
+        x : number
+            X-coordinate of the point.
+
+        y : number
+            Y-coordinate of the point.
+
+        max_distance : number
+            Maximum distance past which possible matches are ignored.
+
+        Returns
+        -------
+        result : Polygon
+            Copy of this polygon with the new point order.
+
+        """
+        if len(self.exterior) == 0:
+            raise Exception("Cannot reorder polygon points, because it contains no points.")
+
+        closest_idx, closest_dist = self.find_closest_point_index(x=x, y=y, return_distance=True)
+        if max_distance is not None and closest_dist > max_distance:
+            closest_point = self.exterior[closest_idx, :]
+            raise Exception(
+                "Closest found point (%.9f, %.9f) exceeds max_distance of %.9f exceeded" % (
+                    closest_point[0], closest_point[1], closest_dist)
+            )
+        return self.change_first_point_by_index(closest_idx)
+
+    def change_first_point_by_index(self, point_idx):
+        """
+        Set the first point of the exterior to the given point based on its index.
+
+        Note: This method does *not* work in-place.
+
+        Parameters
+        ----------
+        point_idx : int
+            Index of the desired starting point.
+
+        Returns
+        -------
+        result : Polygon
+            Copy of this polygon with the new point order.
+
+        """
+        assert 0 <= point_idx < len(self.exterior)
+        if point_idx == 0:
+            return self.deepcopy()
+        exterior = np.concatenate(
+            (self.exterior[point_idx:, :], self.exterior[:point_idx, :]),
+            axis=0
+        )
+        return self.deepcopy(exterior=exterior)
+
+    def to_shapely_polygon(self):
+        """
+        Convert this polygon to a Shapely polygon.
+
+        Returns
+        -------
+        result : shapely.geometry.Polygon
+            The Shapely polygon matching this polygon's exterior.
+
+        """
+        return shapely.geometry.Polygon([(point[0], point[1]) for point in self.exterior])
+
+    def to_shapely_line_string(self, closed=False, interpolate=0):
+        """
+        Convert this polygon to a Shapely LineString object.
+
+        Parameters
+        ----------
+        closed : bool, optional(default=False)
+            Whether to return the line string with the last point being identical to the first point.
+
+        interpolate : int, optional(default=0)
+            Number of points to interpolate between any pair of two consecutive points. These points are added
+            to the final line string.
+
+        Returns
+        -------
+        result : shapely.geometry.LineString
+            The Shapely LineString matching the polygon's exterior.
+
+        """
+        return _convert_points_to_shapely_line_string(self.exterior, closed=closed, interpolate=interpolate)
+
+    def to_bounding_box(self):
+        """
+        Convert this polygon to a bounding box tightly containing the whole polygon.
+
+        Returns
+        -------
+        result : BoundingBox
+            The bounding box tightly containing the polygon.
+
+        """
+        xx = self.xx
+        yy = self.yy
+        return BoundingBox(x1=min(xx), x2=max(xx), y1=min(yy), y2=max(yy), label=self.label)
+
+    @staticmethod
+    def from_shapely(polygon_shapely, label=None):
+        """
+        Create a polygon from a Shapely polygon.
+
+        Note: This will remove any holes in the Shapely polygon.
+
+        Parameters
+        ----------
+        polygon_shapely : shapely.geometry.Polygon
+             The shapely polygon.
+
+        label : None or str, optional(default=None)
+            The label of the new polygon.
+
+        Returns
+        -------
+        result : Polygon
+            A polygon with the same exterior as the Shapely polygon.
+
+        """
+        assert isinstance(polygon_shapely, shapely.geometry.Polygon)
+        if len(polygon_shapely.exterior.coords) == 0:
+            return Polygon([], label=label)
+        exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
+
+        if len(exterior) == 0:
+            return Polygon([], label=label)
+
+        return Polygon(exterior, label=label)
+
+    def exterior_almost_equals(self, other_polygon, max_distance=1e-6, interpolate=8):
+        """
+        Estimate whether the geometry of the exterior of this polygon and another polygon are comparable.
+
+        The two exteriors can have different numbers of points, but any point randomly sampled on the exterior
+        of one polygon should be close to the closest point on the exterior of the other polygon.
+
+        Note that this method works approximately. One can come up with polygons with fairly different shapes that
+        will still be estimated as equal by this method. In practice however this should be unlikely to be the case.
+        The probability for something like that goes down as the interpolation parameter is increased.
+
+        Parameters
+        ----------
+        other_polygon : Polygon or (N,2) float32 ndarray
+            The other polygon with which to compare the exterior.
+            If this is an array, it is assumed to represent an exterior. It must then have shape (N,2) with the
+            second dimension denoting xy-coordinates.
+
+        max_distance : number
+            The maximum euclidean distance between a point on one polygon and the closest point on the other polygon.
+            If the distance is exceeded for any such pair, the two exteriors are not viewed as equal.
+            The points are other the points contained in the polygon's exterior ndarray or interpolated points
+            between these.
+
+        interpolate : int
+            How many points to interpolate between the points of the polygon's exteriors.
+            If this is set to zero, then only the points given by the polygon's exterior ndarrays will be used.
+            Higher values make it less likely that unequal polygons are evaluated as equal.
+
+        Returns
+        -------
+        result : bool
+            Whether the two polygon's exteriors can be viewed as equal (approximate test).
+
+        """
+        atol = max_distance
+
+        ext_a = self.exterior
+        ext_b = other_polygon.exterior if not is_np_array(other_polygon) else other_polygon
+        len_a = len(ext_a)
+        len_b = len(ext_b)
+
+        if len_a == 0 and len_b == 0:
+            return True
+        elif len_a == 0 and len_b > 0:
+            return False
+        elif len_a > 0 and len_b == 0:
+            return False
+
+        # neither A nor B is zero-sized at this point
+
+        # if A or B only contain points identical to the first point, merge them to one point
+        if len_a > 1:
+            if all([np.allclose(ext_a[0, :], ext_a[1 + i, :], rtol=0, atol=atol) for i in sm.xrange(len_a - 1)]):
+                ext_a = ext_a[0:1, :]
+                len_a = 1
+        if len_b > 1:
+            if all([np.allclose(ext_b[0, :], ext_b[1 + i, :], rtol=0, atol=atol) for i in sm.xrange(len_b - 1)]):
+                ext_b = ext_b[0:1, :]
+                len_b = 1
+
+        # handle polygons that contain a single point
+        if len_a == 1 and len_b == 1:
+            return np.allclose(ext_a[0, :], ext_b[0, :], rtol=0, atol=atol)
+        elif len_a == 1:
+            return all([np.allclose(ext_a[0, :], ext_b[i, :], rtol=0, atol=atol) for i in sm.xrange(len_b)])
+        elif len_b == 1:
+            return all([np.allclose(ext_b[0, :], ext_a[i, :], rtol=0, atol=atol) for i in sm.xrange(len_a)])
+
+        # After this point, both polygons have at least 2 points, i.e. LineStrings can be used.
+        # We can also safely go back to the original exteriors (before close points were merged).
+        ls_a = self.to_shapely_line_string(closed=True, interpolate=interpolate)
+        ls_b = other_polygon.to_shapely_line_string(closed=True, interpolate=interpolate) \
+            if not is_np_array(other_polygon) \
+            else _convert_points_to_shapely_line_string(other_polygon, closed=True, interpolate=interpolate)
+
+        # Measure the distance from each point in A to LineString B and vice versa.
+        # Make sure that no point violates the tolerance.
+        # Note that we can't just use LineString.almost_equals(LineString) -- that seems to expect the same number
+        # and order of points in both LineStrings (failed with duplicated points).
+        for x, y in ls_a.coords:
+            point = shapely.geometry.Point(x, y)
+            if not ls_b.distance(point) <= max_distance:
+                return False
+
+        for x, y in ls_b.coords:
+            point = shapely.geometry.Point(x, y)
+            if not ls_a.distance(point) <= max_distance:
+                return False
+
+        return True
+
+    def almost_equals(self, other, max_distance=1e-6, interpolate=8):
+        """
+        Compare this polygon with another one and estimate whether they can be viewed as equal.
+
+        This is the same as `Polygon.exterior_almost_equals()` but additionally compares the labels.
+
+        Parameters
+        ----------
+        other : object
+            The object to compare against. If not a Polygon, then False will be returned.
+
+        max_distance : float
+            See `Polygon.exterior_almost_equals()`.
+
+        interpolate : int
+            See `Polygon.exterior_almost_equals()`.
+
+        Returns
+        -------
+        result : bool
+            Whether the two polygons can be viewed as equal. In the case of the exteriors this is an approximate test.
+
+        """
+        if not isinstance(other, Polygon):
+            return False
+        if self.label is not None or other.label is not None:
+            if self.label is None:
+                return False
+            if other.label is None:
+                return False
+            if self.label != other.label:
+                return False
+        return self.exterior_almost_equals(other, max_distance=max_distance, interpolate=interpolate)
+
+    def copy(self, exterior=None, label=None):
+        """
+        Create a shallow copy of the Polygon object.
+
+        Parameters
+        ----------
+        exterior : list of Keypoint or list of tuple of floats or (N,2) ndarray
+            List of points defining the polygon. See `Polygon.__init__()` for details.
+
+        label : None or string
+            If not None, then the label of the copied object will be set to this value.
+
+        Returns
+        -------
+        result : Polygon
+            Shallow copy.
+
+        """
+        return self.deepcopy(exterior=exterior, label=label)
+
+    def deepcopy(self, exterior=None, label=None):
+        """
+        Create a deep copy of the Polygon object.
+
+        Parameters
+        ----------
+        exterior : list of Keypoint or list of tuple of floats or (N,2) ndarray
+            List of points defining the polygon. See `Polygon.__init__()` for details.
+
+        label : None or string
+            If not None, then the label of the copied object will be set to this value.
+
+        Returns
+        -------
+        out : Polygon
+            Deep copy.
+
+        """
+        return Polygon(
+            exterior=np.copy(self.exterior) if exterior is None else exterior,
+            label=self.label if label is None else label
+        )
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        points_str = ", ".join(["(x=%.3f, y=%.3f)" % (point[0], point[1]) for point in self.exterior])
+        return "Polygon([%s] (%d points), label=%s)" % (points_str, len(self.exterior), self.label)
+
+
+def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
+    if len(points) <= 1:
+        raise Exception("Conversion to shapely line string requires at least two points, but points input contains "
+                        "only %d points." % (
+            len(points),))
+
+    points_tuples = [(point[0], point[1]) for point in points]
+
+    # interpolate points between each consecutive pair of points
+    if interpolate > 0:
+        points_tuples = _interpolate_points(points_tuples, interpolate)
+
+    # close if requested and not yet closed
+    if closed and len(points) > 1:  # here intentionally used points instead of points_tuples
+        points_tuples.append(points_tuples[0])
+
+    return shapely.geometry.LineString(points_tuples)
+
+
+def _interpolate_point_pair(point_a, point_b, nb_steps):
+    if nb_steps < 1:
+        return []
+    x1, y1 = point_a
+    x2, y2 = point_b
+    vec = np.float32([x2 - x1, y2 - y1])
+    step_size = vec / (1 + nb_steps)
+    return [(x1 + (i + 1) * step_size[0], y1 + (i + 1) * step_size[1]) for i in sm.xrange(nb_steps)]
+
+
+def _interpolate_points(points, nb_steps, closed=True):
+    if len(points) <= 1:
+        return points
+    if closed:
+        points = list(points) + [points[0]]
+    points_interp = []
+    for point_a, point_b in zip(points[:-1], points[1:]):
+        points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
+    # close does not have to be reverted here, as last point in not included in the extend()
+    return points_interp
+
+
+def _interpolate_points_by_max_distance(points, max_distance, closed=True):
+    if len(points) <= 1:
+        return points
+    if closed:
+        points = list(points) + [points[0]]
+    points_interp = []
+    for point_a, point_b in zip(points[:-1], points[1:]):
+        dist = np.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2)
+        nb_steps = int((dist / max_distance) - 1)
+        points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
+    return points_interp
+
+
+class MultiPolygon(object):
+    """
+    Class that represents several polygons.
+
+    Parameters
+    ----------
+    geoms : list of Polygon
+        List of the polygons.
+
+    """
+    def __init__(self, geoms):
+        """Create a new MultiPolygon instance."""
+        assert len(geoms) == 0 or all([isinstance(el, Polygon) for el in geoms])
+        self.geoms = geoms
+
+    @staticmethod
+    def from_shapely(geometry, label=None):
+        """
+        Create a MultiPolygon from a Shapely MultiPolygon, a Shapely Polygon or a Shapely GeometryCollection.
+
+        This also creates all necessary Polygons contained by this MultiPolygon.
+
+        Parameters
+        ----------
+        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon or shapely.geometry.collection.GeometryCollection
+            The object to convert to a MultiPolygon.
+
+        label : None or str, optional(default=None)
+            A label assigned to all Polygons within the MultiPolygon.
+
+        Returns
+        -------
+        result : MultiPolygon
+            The derived MultiPolygon.
+
+        """
+        if isinstance(geometry, shapely.geometry.MultiPolygon):
+            return MultiPolygon([Polygon.from_shapely(poly, label=label) for poly in geometry.geoms])
+        elif isinstance(geometry, shapely.geometry.Polygon):
+            return MultiPolygon([Polygon.from_shapely(geometry, label=label)])
+        elif isinstance(geometry, shapely.geometry.collection.GeometryCollection):
+            assert all([isinstance(poly, shapely.geometry.Polygon) for poly in geometry.geoms])
+            return MultiPolygon([Polygon.from_shapely(poly, label=label) for poly in geometry.geoms])
+        else:
+            raise Exception("Unknown datatype '%s'. Expected shapely.geometry.Polygon or "
+                            "shapely.geometry.MultiPolygon or "
+                            "shapely.geometry.collections.GeometryCollection." % (type(geometry),))
 
 
 class HeatmapsOnImage(object):
