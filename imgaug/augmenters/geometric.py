@@ -194,6 +194,10 @@ class Affine(Augmenter):
             * If a StochasticParameter, a new value will be sampled from the
               parameter per image.
 
+    fit_output : bool, optional(default=False)
+        Determine whether the shape of the output image will be automatically
+        calculated, so the complete rotated image exactly fits.
+
     mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
         Parameter that defines the handling of newly created pixels.
         Same meaning as in skimage (and numpy.pad):
@@ -311,6 +315,7 @@ class Affine(Augmenter):
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
+                 fit_output=False,
                  backend="auto",
                  name=None, deterministic=False, random_state=None):
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
@@ -437,6 +442,7 @@ class Affine(Augmenter):
 
         self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True, list_to_choice=True)
         self.shear = iap.handle_continuous_param(shear, "shear", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+        self.fit_output = fit_output
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
@@ -444,9 +450,11 @@ class Affine(Augmenter):
         result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
         return result
 
-    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples):
+    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, return_matrices=False):
         nb_images = len(images)
         result = images
+        if return_matrices:
+            matrices = [None] * nb_images
         for i in sm.xrange(nb_images):
             image = images[i]
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
@@ -481,7 +489,9 @@ class Affine(Augmenter):
                         translate_x_px, translate_y_px,
                         rotate, shear,
                         cval,
-                        mode, order
+                        mode, order,
+                        self.fit_output,
+                        return_matrix=return_matrices,
                     )
                 else:
                     ia.do_assert(not cv2_bad_dtype, "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (image.dtype,))
@@ -492,12 +502,20 @@ class Affine(Augmenter):
                         rotate, shear,
                         tuple([int(v) for v in cval]),
                         self.mode_map_skimage_cv2[mode],
-                        self.order_map_skimage_cv2[order]
+                        self.order_map_skimage_cv2[order],
+                        self.fit_output,
+                        return_matrix=return_matrices,
                     )
+                if return_matrices:
+                    image_warped, matrix = image_warped
+                    matrices[i] = matrix
 
                 result[i] = image_warped
             else:
                 result[i] = images[i]
+
+        if return_matrices:
+            result = (result, matrices)
 
         return result
 
@@ -509,10 +527,12 @@ class Affine(Augmenter):
 
         #arrs = [ia.Heatmaps.change_normalization(heatmaps_i.arr, source=heatmaps_i, target=(0.0, 1.0)) for heatmaps_i in heatmaps]
         arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
-        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples)
-        for heatmaps_i, arr_aug in zip(heatmaps, arrs_aug):
+        arrs_aug, matrices = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples, return_matrices=True)
+        for heatmaps_i, arr_aug, matrix in zip(heatmaps, arrs_aug, matrices):
             #heatmaps_i.arr = ia.Heatmaps.change_normalization(arr_aug, source=(0.0, 1.0), target=heatmaps_i)
             heatmaps_i.arr_0to1 = arr_aug
+            _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
+            heatmaps_i.shape = output_shape_i
         return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
@@ -551,6 +571,10 @@ class Affine(Augmenter):
                 )
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+                if self.fit_output:
+                    matrix, output_shape = self._tf_to_fit_output(keypoints_on_image.shape, matrix)
+                else:
+                    output_shape = keypoints_on_image.shape
 
                 coords = keypoints_on_image.get_coords_array()
                 #print("coords", coords)
@@ -564,7 +588,7 @@ class Affine(Augmenter):
         return result
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode, self.backend]
+        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode, self.backend, self.fit_output]
 
     def _draw_samples(self, nb_samples, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -599,7 +623,37 @@ class Affine(Augmenter):
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, order_samples
 
-    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order):
+    @staticmethod
+    def _tf_to_fit_output(input_shape, matrix):
+        height, width = input_shape[:2]
+        # determine shape of output image
+        corners = np.array([
+            [0, 0],
+            [0, height - 1],
+            [width - 1, height - 1],
+            [width - 1, 0]
+        ])
+        corners = matrix(corners)
+        minc = corners[:, 0].min()
+        minr = corners[:, 1].min()
+        maxc = corners[:, 0].max()
+        maxr = corners[:, 1].max()
+        out_height = maxr - minr + 1
+        out_width = maxc - minc + 1
+        if len(input_shape) == 3:
+            output_shape = np.ceil((out_height, out_width,
+                                    input_shape[2]))
+        else:
+            output_shape = np.ceil((out_height, out_width))
+        output_shape = tuple(output_shape.tolist())
+        # fit output image in new shape
+        translation = (- minc, - minr)
+        matrix_to_fit = tf.SimilarityTransform(translation=translation)
+        # matrix = matrix_to_fit + matrix
+        matrix = matrix + matrix_to_fit
+        return matrix, output_shape
+
+    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order, fit_output, return_matrix=False):
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
@@ -613,20 +667,29 @@ class Affine(Augmenter):
         )
         matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
         matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+
+        output_shape = None
+        if fit_output:
+            matrix, output_shape = self._tf_to_fit_output(image.shape, matrix)
+
         image_warped = tf.warp(
             image,
             matrix.inverse,
             order=order,
             mode=mode,
             cval=cval,
-            preserve_range=True
+            preserve_range=True,
+            output_shape=output_shape,
         )
         # warp changes uint8 to float64, making this necessary
         if image_warped.dtype != image.dtype:
             image_warped = image_warped.astype(image.dtype, copy=False)
+
+        if return_matrix:
+            return image_warped, matrix
         return image_warped
 
-    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order):
+    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order, fit_output, return_matrix=False):
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
@@ -641,11 +704,16 @@ class Affine(Augmenter):
         matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
         matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
 
+        dsize = (width, height)
+        if fit_output:
+            matrix, output_shape = self._tf_to_fit_output(image.shape, matrix)
+            dsize = (int(round(output_shape[1])), int(round(output_shape[0])))
+
         image_warped = cv2.warpAffine(
             image,
             matrix.params[:2],
             #np.zeros((2, 3)),
-            dsize=(width, height),
+            dsize=dsize,
             flags=order,
             borderMode=mode,
             borderValue=cval
@@ -655,6 +723,8 @@ class Affine(Augmenter):
         if image_warped.ndim == 2:
             image_warped = image_warped[..., np.newaxis]
 
+        if return_matrix:
+            return image_warped, matrix
         return image_warped
 
 class AffineCv2(Augmenter):
