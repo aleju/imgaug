@@ -46,23 +46,29 @@ It converts a set of input images into a new, much larger set of slightly altere
 * [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
 * This README contains more examples. See further below.
 
-## Requirements and installation
+## Installation
 
-Required packages:
-* six
-* numpy
-* scipy
-* matplotlib
-* scikit-image (`pip install -U scikit-image`)
-* OpenCV (i.e. `cv2`)
-* imageio (`pip install imageio`)
+The library supports python 2.7 and 3.4+.
 
-OpenCV has to be manually installed. The other package should auto-install themselves.
+To install the library, first install all requirements:
+```bash
+pip install six numpy scipy matplotlib scikit-image opencv-python imageio
+```
 
-To install, simply use `sudo pip install imgaug`. That version might be outdated though. To always get the newest version directly from github use `sudo pip install git+https://github.com/aleju/imgaug`.
-Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install by using `python setup.py sdist && sudo pip install dist/imgaug-0.2.6.tar.gz`.
+Then install imgaug either via pypi (can lag behind the github version):
+```bash
+pip install imgaug
+```
 
-To deinstall the library, just execute `sudo pip uninstall imgaug`.
+or install the latest version directly from github:
+```bash
+pip install git+https://github.com/aleju/imgaug
+```
+
+Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install manually
+via `cd imgaug && python setup.py install`.
+
+To deinstall the library, just execute `pip uninstall imgaug`.
 
 ## Overview of most augmenters
 
