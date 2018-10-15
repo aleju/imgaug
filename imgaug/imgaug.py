@@ -4316,7 +4316,9 @@ class BatchLoader(object):
             True if all workers have finished. Else False.
 
         """
-        return all([event.is_set() for event in self.finished_signals])
+        # we don't base this on the finished_signals as that led to plenty of deadlocks when signal.set() and
+        # signal.is_set() would overlap
+        return all([not worker.is_alive() for worker in self.workers])
 
     def _load_batches(self, load_batch_func, queue, finished_signal, join_signal, seedval):
         if seedval is not None:
@@ -4339,16 +4341,19 @@ class BatchLoader(object):
         except Exception:
             traceback.print_exc()
         finally:
-            finished_signal.set()
+            time.sleep(0.01)
+            if not finished_signal.is_set():
+                finished_signal.set()
 
     def terminate(self):
         """
         Stop all workers.
 
         """
-        self.join_signal.set()
+        if not self.join_signal.is_set():
+            self.join_signal.set()
         # give minimal time to put generated batches in queue and gracefully shut down
-        time.sleep(0.002)
+        time.sleep(0.01)
 
         # clean the queue, this reportedly prevents hanging threads
         while True:
@@ -4367,14 +4372,24 @@ class BatchLoader(object):
                 worker.terminate()
                 worker.join()
 
-            # wait here a tiny bit to really make sure that everything is killed before setting
-            # the finished_signals. calling set() and is_set() (via a subprocess) on them at the
-            # same time apparently results in a deadlock (at least in python 2).
-            #time.sleep(0.02)
+            # wait until all workers are fully terminated
+            while not self.all_finished():
+                time.sleep(0.01)
+            time.sleep(0.05)
+
+            # set finished signals (used e.g. in BackgroundAugmenter)
+            # this is done after making sure that all workers are fully terminated, because overlapping
+            # calls to set() result in deadlocks
             for finished_signal in self.finished_signals:
-                finished_signal.set()
+                # Calling directly signal.set() here works in python 3.7, but always deadlocks in python 2.7.
+                # Wrapping the set() statement in an `if signal.is_set(): ...` removes the deadlock from 2.7, but
+                # then python 3.7 deadlocks at the is_set() condition. Using a wait() avoids the deadlock in 3.7
+                # and still works in 2.7.
+                if not finished_signal.wait(timeout=0.01):
+                    finished_signal.set()
 
         self.queue.close()
+
 
 class BackgroundAugmenter(object):
     """

@@ -2906,50 +2906,40 @@ def test_BatchLoader():
         for _ in sm.xrange(20):
             yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
 
-    # TODO these loops somehow require a `or len(loaded) < 20*nb_workers` on Travis, but not
-    # locally. (On Travis, usually one batch is missing, i.e. probably still in the queue.)
-    # That shouldn't be neccessary due to loader.all_finished(), but something breaks here.
-    # queue.close() works on Tavis py2, but not py3 as it raises an `OSError: handle is closed`.
     for nb_workers in [1, 2]:
         # repeat these tests many times to catch rarer race conditions
         for _ in sm.xrange(50):
             loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
             loaded = []
             counter = 0
-            while (not loader.all_finished() or not loader.queue.empty() or len(loaded) < 20*nb_workers) and counter < 1000:
+            while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
                 try:
                     batch = loader.queue.get(timeout=0.001)
                     loaded.append(batch)
                 except:
                     pass
                 counter += 1
-            #loader.queue.close()
-            #while not loader.queue.empty():
-            #    loaded.append(loader.queue.get())
             assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
 
             loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
             loader.terminate()
-            assert loader.all_finished
+            assert loader.all_finished()
 
             loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=False)
             loaded = []
             counter = 0
-            while (not loader.all_finished() or not loader.queue.empty() or len(loaded) < 20*nb_workers) and counter < 1000:
+            while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
                 try:
                     batch = loader.queue.get(timeout=0.001)
                     loaded.append(batch)
                 except:
                     pass
                 counter += 1
-            #loader.queue.close()
-            #while not loader.queue.empty():
-            #    loaded.append(loader.queue.get())
             assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
 
             loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
             loader.terminate()
-            assert loader.all_finished
+            assert loader.all_finished()
 
 
 def test_Noop():
