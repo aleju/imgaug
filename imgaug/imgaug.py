@@ -1307,6 +1307,7 @@ def imshow(image):
     cv2.waitKey(0)
     cv2.destroyWindow(win_name)
 
+
 def do_assert(condition, message="Assertion failed."):
     """
     Function that behaves equally to an `assert` statement, but raises an
@@ -2955,6 +2956,67 @@ class BoundingBoxesOnImage(object):
         else:
             bounding_boxes = [bb.project(self.shape, shape) for bb in self.bounding_boxes]
             return BoundingBoxesOnImage(bounding_boxes, shape)
+
+    @classmethod
+    def from_xyxy_array(cls, bounding_box_matrix, shape):
+        """
+        Makes the Bounding Box construction a one-liner.
+        It wraps the bounding box numpy array with BoundingBoxes and BoundingBoxesOnImage objects
+        Box format is: (x1, y1, x2, y2)
+
+        Parameters
+        ----------
+        bounding_box_matrix: Numpy array which contains the bounding boxes
+                            has a shape like: [N_Boxes, (x1, y1, x2, y2)]
+        shape: Shape of the image: (Height, Width, Channels) OR (Height, Width)
+
+        Returns
+        -------
+        result: BoundingBoxesOnImage
+        """
+
+        nb_boxes, nb_coordinates = bounding_box_matrix.shape
+
+        if nb_boxes < 1:
+            raise ValueError("No bounding boxes found inside the box-matrix")
+
+        if nb_coordinates != 4:
+            raise ValueError("Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
+                bounding_box_matrix.shape))
+
+        boxes = []
+        for box in bounding_box_matrix:
+            x1, y1, x2, y2 = box
+            tmp_box = BoundingBox(x1, y1, x2, y2)
+            boxes.append(tmp_box)
+
+        return cls(boxes, shape)
+
+    def to_xyxy_array(self, dtype=np.float32):
+        """
+        Unwraps BoundingBoxes inside the BoundingBoxesOnImage object to a simple Numpy array
+
+        Parameters
+        ----------
+        dtype: Numpy data type of the returned array
+
+        Returns
+        -------
+        result: Numpy array with a shape like: [N_Boxes, (x1, y1, x2, y2)]
+                Box format is: (x1, y1, x2, y2)
+        """
+
+        bounding_box_matrix = np.zeros((len(self.bounding_boxes), 4), dtype=np.float32)
+
+        for i, box in enumerate(self.bounding_boxes):
+            x1 = box.x1
+            y1 = box.y1
+            x2 = box.x2
+            y2 = box.y2
+
+            bounding_box_matrix[i] = [x1, y1, x2, y2]
+
+        return bounding_box_matrix.astype(dtype)
 
     def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         """
