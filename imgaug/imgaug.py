@@ -161,6 +161,24 @@ def is_string(val):
     """
     return isinstance(val, six.string_types)
 
+def is_single_bool(val):
+    """
+    Checks whether a variable is a boolean.
+
+    Parameters
+    ----------
+    val : anything
+        The variable to
+        check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a boolean. Otherwise False.
+
+    """
+    return type(val) == type(True)
+
 def is_integer_array(val):
     """
     Checks whether a variable is a numpy integer array.
@@ -4447,6 +4465,7 @@ class BatchLoader(object):
                 # Wrapping the set() statement in an `if signal.is_set(): ...` removes the deadlock from 2.7, but
                 # then python 3.7 deadlocks at the is_set() condition. Using a wait() avoids the deadlock in 3.7
                 # and still works in 2.7.
+                # FIXME on 3.7 there was at least one deadlock at the if condition (under heavy CPU load)
                 if not finished_signal.wait(timeout=0.01):
                     finished_signal.set()
 

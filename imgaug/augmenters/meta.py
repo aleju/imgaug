@@ -177,11 +177,13 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         """
         super(Augmenter, self).__init__()
 
+        ia.do_assert(name is None or ia.is_string(name), "Expected name to be None or string-like, got %s." % (type(name),))
         if name is None:
             self.name = "Unnamed%s" % (self.__class__.__name__,)
         else:
             self.name = name
 
+        ia.do_assert(ia.is_single_bool(deterministic), "Expected deterministic to be a boolean, got %s." % (type(deterministic),))
         self.deterministic = deterministic
 
         if random_state is None:
@@ -1745,6 +1747,8 @@ class Sequential(Augmenter, list):
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
+
+        ia.do_assert(ia.is_single_bool(random_order), "Expected random_order to be boolean, got %s." % (type(random_order),))
         self.random_order = random_order
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1946,6 +1950,7 @@ class SomeOf(Augmenter, list):
         else:
             raise Exception("Expected int, (int, None), (int, int) or StochasticParameter, got %s" % (type(n),))
 
+        ia.do_assert(ia.is_single_bool(random_order), "Expected random_order to be boolean, got %s." % (type(random_order),))
         self.random_order = random_order
 
     def _get_n(self, nb_images, random_state):

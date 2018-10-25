@@ -47,6 +47,7 @@ def main():
     test_is_single_number()
     test_is_iterable()
     test_is_string()
+    test_is_single_bool()
     test_is_integer_array()
     test_is_float_array()
     test_is_callable()
@@ -363,6 +364,18 @@ def test_is_string():
         assert ia.is_string(value) == True
     for value in values_false:
         assert ia.is_string(value) == False
+
+
+def test_is_single_bool():
+    class _Dummy(object):
+        pass
+    values_true = [False, True]
+    values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, (1.0, 2.0), [1.0, 2.0], _Dummy(),
+                    np.zeros((1, 2), dtype=np.uint8), np.zeros((1,), dtype=bool)]
+    for value in values_true:
+        assert ia.is_single_bool(value) == True
+    for value in values_false:
+        assert ia.is_single_bool(value) == False
 
 
 def test_is_integer_array():
@@ -13799,7 +13812,7 @@ def test_unusual_channel_numbers():
                                   name="ElasticTransformation"),
         iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
         iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
-        iaa.OneOf(iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))),
+        iaa.OneOf([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]),
         iaa.Sometimes(0.5, iaa.Add((-5, 5)), name="Sometimes"),
         # WithChannels
         iaa.Noop(name="Noop"),
@@ -13896,7 +13909,7 @@ def test_dtype_preservation():
         (iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"), [dt for dt in default_dtypes if dt not in [np.float16]]),
         (iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
         (iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
-        (iaa.OneOf(iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))), default_dtypes),
+        (iaa.OneOf([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
         (iaa.Sometimes(0.5, iaa.Add((-5, 5)), name="Sometimes"), default_dtypes),
         # WithChannels
         (iaa.Noop(name="Noop"), default_dtypes),
