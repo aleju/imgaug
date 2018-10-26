@@ -2240,10 +2240,10 @@ class BoundingBox(object):
         """Create a new BoundingBox instance."""
         if x1 > x2:
             x2, x1 = x1, x2
-        do_assert(x2 > x1)
+        do_assert(x2 >= x1)
         if y1 > y2:
             y2, y1 = y1, y2
-        do_assert(y2 > y1)
+        do_assert(y2 >= y1)
 
         self.x1 = x1
         self.y1 = y1
@@ -2471,10 +2471,16 @@ class BoundingBox(object):
         """
         Compute the intersection bounding box of this bounding box and another one.
 
+        Note that in extreme cases, the intersection can be a single point, meaning that the intersection bounding box
+        will exist, but then also has a height and width of zero.
+
         Parameters
         ----------
         other : BoundingBox
             Other bounding box with which to generate the intersection.
+
+        default : any, optional(default=None)
+            Default value to return if there is no intersection.
 
         Returns
         -------
@@ -2486,7 +2492,7 @@ class BoundingBox(object):
         y1_i = max(self.y1, other.y1)
         x2_i = min(self.x2, other.x2)
         y2_i = min(self.y2, other.y2)
-        if x1_i >= x2_i or y1_i >= y2_i:
+        if x1_i > x2_i or y1_i > y2_i:
             return default
         else:
             return BoundingBox(x1=x1_i, y1=y1_i, x2=x2_i, y2=y2_i)
@@ -2537,9 +2543,10 @@ class BoundingBox(object):
         """
         inters = self.intersection(other)
         if inters is None:
-            return 0
+            return 0.0
         else:
-            return inters.area / (self.area + other.area - inters.area)
+            area_union = self.area + other.area - inters.area
+            return inters.area / area_union if area_union > 0 else 0.0
 
     def is_fully_within_image(self, image):
         """
@@ -2696,7 +2703,8 @@ class BoundingBox(object):
             y2=self.y2+top-bottom
         )
 
-    def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+    # TODO add explicit test for zero-sized BBs (worked when tested by hand)
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         """
         Draw the bounding box on an image.
 
@@ -2770,7 +2778,7 @@ class BoundingBox(object):
 
         return result
 
-    def extract_from_image(self, image):
+    def extract_from_image(self, image, prevent_zero_size=True):
         """
         Extract the image pixels within the bounding box.
 
@@ -2782,11 +2790,18 @@ class BoundingBox(object):
         image : (H,W) or (H,W,C) ndarray
             The image from which to extract the pixels within the bounding box.
 
+        prevent_zero_size : bool, optional(default=True)
+            Whether to prevent height or width of the extracted image from becoming zero.
+            If this is set to True and height or width of the bounding box is below 1, the height/width will
+            be increased to 1. This can be useful to prevent problems, e.g. with image saving or plotting.
+            If it is set to False, images will be returned as (H', W') or (H', W', 3) with H or W potentially being 0.
+
         Returns
         -------
         result : (H',W') or (H',W',C) ndarray
             Pixels within the bounding box. Zero-padded if the bounding box is partially/fully
-            outside of the image.
+            outside of the image. If prevent_zero_size is activated, it is guarantueed that H'>0 and W'>0,
+            otherwise only H'>=0 and W'>=0.
 
         """
         pad_top = 0
@@ -2807,6 +2822,13 @@ class BoundingBox(object):
             y2 = np.clip(y2, 0, image.shape[0]-1)
             x1 = np.clip(x1, 0, image.shape[1]-1)
             x2 = np.clip(x2, 0, image.shape[1]-1)
+
+        # TODO add test
+        if prevent_zero_size:
+            if abs(x2 - x1) < 1:
+                x2 = x1 + 1
+            if abs(y2 - y1) < 1:
+                y2 = y1 + 1
 
         # if the bb is outside of the image area, the following pads the image
         # first with black pixels until the bb is inside the image
