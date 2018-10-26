@@ -1,8 +1,9 @@
+six
 numpy
 scipy
 Pillow
-opencv-python
-scikit-image
-imageio
 matplotlib
-six
+scikit-image
+opencv-python
+imageio
+Shapely

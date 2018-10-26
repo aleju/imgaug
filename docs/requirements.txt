@@ -1,8 +1,9 @@
-numpy==1.14.0
-scikit-image==0.12.3
-scipy==0.18.0
-six==1.10.0
-numpydoc==0.7.0
-sphinx-rtd-theme==0.2.4
-imageio==2.3.0
-matplotlib==1.5.1
+six==1.11.0
+numpy==1.15.2
+scipy==1.1.0
+Pillow==5.3.0
+matplotlib==3.0.0
+scikit-image==0.14.1
+opencv-python==3.4.3.18
+imageio==2.4.1
+Shapely==1.6.4.post2

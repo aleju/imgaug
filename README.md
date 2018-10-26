@@ -52,7 +52,7 @@ The library supports python 2.7 and 3.4+.
 
 To install the library, first install all requirements:
 ```bash
-pip install six numpy scipy matplotlib scikit-image opencv-python imageio
+pip install six numpy scipy Pillow matplotlib scikit-image opencv-python imageio Shapely
 ```
 
 Then install imgaug either via pypi (can lag behind the github version):

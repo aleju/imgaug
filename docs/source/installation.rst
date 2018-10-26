@@ -9,7 +9,7 @@ Install Requirements
 
 To install all requirements, use ::
 
-    pip install six numpy scipy matplotlib scikit-image opencv-python imageio
+    pip install six numpy scipy Pillow matplotlib scikit-image opencv-python imageio Shapely
 
 This should work in both pip and anaconda.
 Note that if you already have OpenCV, you might not need ``opencv-python``.
