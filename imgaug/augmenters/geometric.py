@@ -460,11 +460,11 @@ class Affine(Augmenter):
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
             if ia.is_single_float(translate_y):
-                translate_y_px = int(round(translate_y * images[i].shape[0]))
+                translate_y_px = int(np.round(translate_y * images[i].shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(round(translate_x * images[i].shape[1]))
+                translate_x_px = int(np.round(translate_x * images[i].shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
@@ -549,11 +549,11 @@ class Affine(Augmenter):
             #ia.do_assert(isinstance(translate_x, (float, int)))
             #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
-                translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
+                translate_y_px = int(np.round(translate_y * keypoints_on_image.shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(round(translate_x * keypoints_on_image.shape[1]))
+                translate_x_px = int(np.round(translate_x * keypoints_on_image.shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
@@ -707,7 +707,7 @@ class Affine(Augmenter):
         dsize = (width, height)
         if fit_output:
             matrix, output_shape = self._tf_to_fit_output(image.shape, matrix)
-            dsize = (int(round(output_shape[1])), int(round(output_shape[0])))
+            dsize = (int(np.round(output_shape[1])), int(np.round(output_shape[0])))
 
         image_warped = cv2.warpAffine(
             image,
@@ -1112,11 +1112,11 @@ class AffineCv2(Augmenter):
             #ia.do_assert(isinstance(translate_x, (float, int)))
             #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
-                translate_y_px = int(round(translate_y * images[i].shape[0]))
+                translate_y_px = int(np.round(translate_y * images[i].shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(round(translate_x * images[i].shape[1]))
+                translate_x_px = int(np.round(translate_x * images[i].shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
@@ -1189,11 +1189,11 @@ class AffineCv2(Augmenter):
             #ia.do_assert(isinstance(translate_x, (float, int)))
             #ia.do_assert(isinstance(translate_y, (float, int)))
             if ia.is_single_float(translate_y):
-                translate_y_px = int(round(translate_y * keypoints_on_image.shape[0]))
+                translate_y_px = int(np.round(translate_y * keypoints_on_image.shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(round(translate_x * keypoints_on_image.shape[1]))
+                translate_x_px = int(np.round(translate_x * keypoints_on_image.shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
@@ -2217,7 +2217,7 @@ class ElasticTransformation(Augmenter):
     def generate_indices(shape, alpha, sigma, random_state, reshape=True):
         ia.do_assert(len(shape) == 2)
 
-        padding = 100 + int(round(sigma)) * 2
+        padding = 100 + int(np.round(sigma)) * 2
         h, w = shape[0:2]
         h_pad = h + 2*padding
         w_pad = w + 2*padding

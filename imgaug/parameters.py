@@ -111,7 +111,7 @@ def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice
     elif ia.is_single_number(param):
         ia.do_assert(0.0 <= param <= 1.0)
         if (0.0-eps < param < 0.0+eps or 1.0-eps < param < 1.0+eps):
-            return Deterministic(int(round(param)))
+            return Deterministic(int(np.round(param)))
         else:
             return Binomial(param)
     elif tuple_to_uniform and isinstance(param, tuple):

@@ -715,17 +715,17 @@ class CropAndPad(Augmenter):
                 _pad_mode, _pad_cval = vals
 
             if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                crop_top = int(round(height_heatmaps * (crop_image_top/height_image)))
-                crop_right = int(round(width_heatmaps * (crop_image_right/width_image)))
-                crop_bottom = int(round(height_heatmaps * (crop_image_bottom/height_image)))
-                crop_left = int(round(width_heatmaps * (crop_image_left/width_image)))
+                crop_top = int(np.round(height_heatmaps * (crop_image_top/height_image)))
+                crop_right = int(np.round(width_heatmaps * (crop_image_right/width_image)))
+                crop_bottom = int(np.round(height_heatmaps * (crop_image_bottom/height_image)))
+                crop_left = int(np.round(width_heatmaps * (crop_image_left/width_image)))
 
                 crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
 
-                pad_top = int(round(height_heatmaps * (pad_image_top/height_image)))
-                pad_right = int(round(width_heatmaps * (pad_image_right/width_image)))
-                pad_bottom = int(round(height_heatmaps * (pad_image_bottom/height_image)))
-                pad_left = int(round(width_heatmaps * (pad_image_left/width_image)))
+                pad_top = int(np.round(height_heatmaps * (pad_image_top/height_image)))
+                pad_right = int(np.round(width_heatmaps * (pad_image_right/width_image)))
+                pad_bottom = int(np.round(height_heatmaps * (pad_image_bottom/height_image)))
+                pad_left = int(np.round(width_heatmaps * (pad_image_left/width_image)))
             else:
                 crop_top = crop_image_top
                 crop_right = crop_image_right
@@ -808,10 +808,10 @@ class CropAndPad(Augmenter):
                 pass
             elif self.mode == "percent":
                 # percentage values have to be transformed to pixel values
-                top = int(round(height * top))
-                right = int(round(width * right))
-                bottom = int(round(height * bottom))
-                left = int(round(width * left))
+                top = int(np.round(height * top))
+                right = int(np.round(width * right))
+                bottom = int(np.round(height * bottom))
+                left = int(np.round(width * left))
             else:
                 raise Exception("Invalid mode")
 
@@ -1296,10 +1296,10 @@ class PadToFixedSize(Augmenter):
             # 16x16. Error is due to each side getting projected 0.5 padding which is rounded to 1.
             # This doesn't seem right.
             if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                pad_top = int(round(height_heatmaps * (pad_image_top/height_image)))
-                pad_right = int(round(width_heatmaps * (pad_image_right/width_image)))
-                pad_bottom = int(round(height_heatmaps * (pad_image_bottom/height_image)))
-                pad_left = int(round(width_heatmaps * (pad_image_left/width_image)))
+                pad_top = int(np.round(height_heatmaps * (pad_image_top/height_image)))
+                pad_right = int(np.round(width_heatmaps * (pad_image_right/width_image)))
+                pad_bottom = int(np.round(height_heatmaps * (pad_image_bottom/height_image)))
+                pad_left = int(np.round(width_heatmaps * (pad_image_left/width_image)))
             else:
                 pad_top = pad_image_top
                 pad_right = pad_image_right
@@ -1474,10 +1474,10 @@ class CropToFixedSize(Augmenter):
                 crop_image_right = width_image - w - crop_image_left
 
             if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                crop_top = int(round(height_heatmaps * (crop_image_top/height_image)))
-                crop_right = int(round(width_heatmaps * (crop_image_right/width_image)))
-                crop_bottom = int(round(height_heatmaps * (crop_image_bottom/height_image)))
-                crop_left = int(round(width_heatmaps * (crop_image_left/width_image)))
+                crop_top = int(np.round(height_heatmaps * (crop_image_top/height_image)))
+                crop_right = int(np.round(width_heatmaps * (crop_image_right/width_image)))
+                crop_bottom = int(np.round(height_heatmaps * (crop_image_bottom/height_image)))
+                crop_left = int(np.round(width_heatmaps * (crop_image_left/width_image)))
 
                 # TODO add test for zero-size prevention
                 crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)

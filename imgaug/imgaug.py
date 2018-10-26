@@ -496,8 +496,8 @@ def _compute_resized_shape(from_shape, to_shape):
             to_shape_computed[0] = to_shape[0]
             to_shape_computed[1] = to_shape[1]
         elif all([is_single_float(v) for v in to_shape[0:2]]):
-            to_shape_computed[0] = int(round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
-            to_shape_computed[1] = int(round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
+            to_shape_computed[0] = int(np.round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
+            to_shape_computed[1] = int(np.round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
     elif is_single_integer(to_shape) or is_single_float(to_shape):
         to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
     else:
@@ -903,8 +903,8 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     nb_channels = shape[3]
     if is_single_float(sizes):
         do_assert(sizes > 0.0)
-        height = int(round(im_height * sizes))
-        width = int(round(im_width * sizes))
+        height = int(np.round(im_height * sizes))
+        width = int(np.round(im_width * sizes))
     else:
         do_assert(len(sizes) == 2)
         all_int = all([is_single_integer(size) for size in sizes])
@@ -913,8 +913,8 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         if all_int:
             height, width = sizes[0], sizes[1]
         else:
-            height = int(round(im_height * sizes[0]))
-            width = int(round(im_width * sizes[1]))
+            height = int(np.round(im_height * sizes[0]))
+            width = int(np.round(im_width * sizes[1]))
 
     if height == im_height and width == im_width:
         return np.copy(images)
@@ -1617,7 +1617,7 @@ class Keypoint(object):
         result : int
             Keypoint's x-coordinate, rounded to the closest integer.
         """
-        return int(round(self.x))
+        return int(np.round(self.x))
 
     @property
     def y_int(self):
@@ -1629,7 +1629,7 @@ class Keypoint(object):
         result : int
             Keypoint's y-coordinate, rounded to the closest integer.
         """
-        return int(round(self.y))
+        return int(np.round(self.y))
 
     def project(self, from_shape, to_shape):
         """
@@ -2280,7 +2280,7 @@ class BoundingBox(object):
             X-coordinate of the top left corner, rounded to the closest integer.
 
         """
-        return int(round(self.x1))
+        return int(np.round(self.x1))  # use numpy's round to have consistent behaviour between python versions
 
     @property
     def y1_int(self):
@@ -2293,7 +2293,7 @@ class BoundingBox(object):
             Y-coordinate of the top left corner, rounded to the closest integer.
 
         """
-        return int(round(self.y1))
+        return int(np.round(self.y1))  # use numpy's round to have consistent behaviour between python versions
 
     @property
     def x2_int(self):
@@ -2306,7 +2306,7 @@ class BoundingBox(object):
             X-coordinate of the bottom left corner, rounded to the closest integer.
 
         """
-        return int(round(self.x2))
+        return int(np.round(self.x2))  # use numpy's round to have consistent behaviour between python versions
 
     @property
     def y2_int(self):
@@ -2319,7 +2319,7 @@ class BoundingBox(object):
             Y-coordinate of the bottom left corner, rounded to the closest integer.
 
         """
-        return int(round(self.y2))
+        return int(np.round(self.y2))  # use numpy's round to have consistent behaviour between python versions
 
     @property
     def height(self):
