@@ -1,24 +1,26 @@
 from __future__ import print_function, division, absolute_import
+
 import random
-import numpy as np
+import math
 import copy
 import numbers
-import cv2
-import math
-import imageio
-import scipy.spatial.distance
 import multiprocessing
 import threading
 import traceback
 import sys
+import os
+import time
+import json
+
+import numpy as np
+import cv2
+import imageio
+import scipy.spatial.distance
 import six
 import six.moves as sm
-import os
 import skimage.draw
 import skimage.measure
 import collections
-import time
-import json
 import matplotlib.pyplot as plt
 import shapely
 import shapely.geometry
@@ -52,6 +54,7 @@ DEFAULT_FONT_FP = os.path.join(
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
+
 def is_np_array(val):
     """
     Checks whether a variable is a numpy array.
@@ -68,10 +71,10 @@ def is_np_array(val):
         True if the variable is a numpy array. Otherwise False.
 
     """
-    # using np.generic here seems to also fire for scalar numpy values even
-    # though those are not arrays
-    #return isinstance(val, (np.ndarray, np.generic))
+    # using np.generic here via isinstance(val, (np.ndarray, np.generic)) seems to also fire for scalar numpy values
+    # even though those are not arrays
     return isinstance(val, np.ndarray)
+
 
 def is_single_integer(val):
     """
@@ -91,6 +94,7 @@ def is_single_integer(val):
     """
     return isinstance(val, numbers.Integral) and not isinstance(val, bool)
 
+
 def is_single_float(val):
     """
     Checks whether a variable is a float.
@@ -108,6 +112,7 @@ def is_single_float(val):
 
     """
     return isinstance(val, numbers.Real) and not is_single_integer(val) and not isinstance(val, bool)
+
 
 def is_single_number(val):
     """
@@ -127,6 +132,7 @@ def is_single_number(val):
     """
     return is_single_integer(val) or is_single_float(val)
 
+
 def is_iterable(val):
     """
     Checks whether a variable is iterable.
@@ -144,6 +150,7 @@ def is_iterable(val):
 
     """
     return isinstance(val, collections.Iterable)
+
 
 # TODO convert to is_single_string() or rename is_single_integer/float/number()
 def is_string(val):
@@ -164,6 +171,7 @@ def is_string(val):
     """
     return isinstance(val, six.string_types)
 
+
 def is_single_bool(val):
     """
     Checks whether a variable is a boolean.
@@ -181,6 +189,7 @@ def is_single_bool(val):
 
     """
     return type(val) == type(True)
+
 
 def is_integer_array(val):
     """
@@ -200,6 +209,7 @@ def is_integer_array(val):
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.integer)
 
+
 def is_float_array(val):
     """
     Checks whether a variable is a numpy float array.
@@ -217,6 +227,7 @@ def is_float_array(val):
 
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.floating)
+
 
 def is_callable(val):
     """
@@ -240,6 +251,7 @@ def is_callable(val):
     else:
         return callable(val)
 
+
 def caller_name():
     """
     Returns the name of the caller, e.g. a function.
@@ -251,6 +263,7 @@ def caller_name():
 
     """
     return sys._getframe(1).f_code.co_name
+
 
 def seed(seedval):
     """
@@ -267,8 +280,10 @@ def seed(seedval):
     seedval : int
         The seed to
         use.
+
     """
     CURRENT_RANDOM_STATE.seed(seedval)
+
 
 def current_random_state():
     """
@@ -281,6 +296,7 @@ def current_random_state():
 
     """
     return CURRENT_RANDOM_STATE
+
 
 def new_random_state(seed=None, fully_random=False):
     """
@@ -311,6 +327,7 @@ def new_random_state(seed=None, fully_random=False):
             seed = CURRENT_RANDOM_STATE.randint(0, 10**6, 1)[0]
     return np.random.RandomState(seed)
 
+
 def dummy_random_state():
     """
     Returns a dummy random state that is always based on a seed of 1.
@@ -322,6 +339,7 @@ def dummy_random_state():
 
     """
     return np.random.RandomState(1)
+
 
 def copy_random_state(random_state, force_copy=False):
     """
@@ -352,6 +370,7 @@ def copy_random_state(random_state, force_copy=False):
         rs_copy.set_state(orig_state)
         return rs_copy
 
+
 def derive_random_state(random_state):
     """
     Create a new random states based on an existing random state or seed.
@@ -368,6 +387,7 @@ def derive_random_state(random_state):
 
     """
     return derive_random_states(random_state, n=1)[0]
+
 
 # TODO use this everywhere instead of manual seed + create
 def derive_random_states(random_state, n=1):
@@ -388,8 +408,9 @@ def derive_random_states(random_state, n=1):
         Derived random states.
 
     """
-    seed = random_state.randint(0, 10**6, 1)[0]
-    return [new_random_state(seed+i) for i in sm.xrange(n)]
+    seed_ = random_state.randint(0, 10**6, 1)[0]
+    return [new_random_state(seed_+i) for i in sm.xrange(n)]
+
 
 def forward_random_state(random_state):
     """
@@ -405,9 +426,6 @@ def forward_random_state(random_state):
     """
     random_state.uniform()
 
-# TODO
-# def from_json(json_str):
-#    pass
 
 def _quokka_normalize_extract(extract):
     """
@@ -439,15 +457,16 @@ def _quokka_normalize_extract(extract):
     elif isinstance(extract, BoundingBox):
         bb = extract
     elif isinstance(extract, BoundingBoxesOnImage):
-        do_assert(len(BoundingBoxesOnImage.bounding_boxes) == 1)
+        do_assert(len(extract.bounding_boxes) == 1)
         do_assert(extract.shape[0:2] == (643, 960))
         bb = extract.bounding_boxes[0]
     else:
         raise Exception(
             "Expected None or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
-            "for parameter 'extract', got %s." % (type(extract),)
+            + "for parameter 'extract', got %s." % (type(extract),)
         )
     return bb
+
 
 def _compute_resized_shape(from_shape, to_shape):
     """
@@ -476,6 +495,7 @@ def _compute_resized_shape(from_shape, to_shape):
     -------
     to_shape_computed : tuple of int
         New shape.
+
     """
     if is_np_array(from_shape):
         from_shape = from_shape.shape
@@ -501,9 +521,11 @@ def _compute_resized_shape(from_shape, to_shape):
     elif is_single_integer(to_shape) or is_single_float(to_shape):
         to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
     else:
-        raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int or single float, got %s." % (type(to_shape),))
+        raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int "
+                        + "or single float, got %s." % (type(to_shape),))
 
     return to_shape_computed
+
 
 def quokka(size=None, extract=None):
     """
@@ -543,6 +565,7 @@ def quokka(size=None, extract=None):
         img = imresize_single_image(img, shape_resized[0:2])
     return img
 
+
 def quokka_square(size=None):
     """
     Returns an (square) image of a quokka as a numpy array.
@@ -562,6 +585,7 @@ def quokka_square(size=None):
     """
     return quokka(size=size, extract="square")
 
+
 def quokka_heatmap(size=None, extract=None):
     """
     Returns a heatmap (here: depth map) for the standard example quokka image.
@@ -580,6 +604,7 @@ def quokka_heatmap(size=None, extract=None):
         Depth map as an heatmap object. Values close to 0.0 denote objects that are close to
         the camera. Values close to 1.0 denote objects that are furthest away (among all shown
         objects).
+
     """
     img = imageio.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, pilmode="RGB")
     if extract is not None:
@@ -591,9 +616,10 @@ def quokka_heatmap(size=None, extract=None):
     shape_resized = _compute_resized_shape(img.shape, size)
     img = imresize_single_image(img, shape_resized[0:2])
     img_0to1 = img.astype(np.float32) / 255.0
-    img_0to1 = 1 - img_0to1 # depth map was saved as 0 being furthest away
+    img_0to1 = 1 - img_0to1  # depth map was saved as 0 being furthest away
 
     return HeatmapsOnImage(img_0to1, shape=(643, 960, 3))
+
 
 def quokka_segmentation_map(size=None, extract=None):
     """
@@ -611,6 +637,7 @@ def quokka_segmentation_map(size=None, extract=None):
     -------
     result : SegmentationMapOnImage
         Segmentation map object.
+
     """
     with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
         json_dict = json.load(f)
@@ -639,6 +666,7 @@ def quokka_segmentation_map(size=None, extract=None):
 
     return segmap
 
+
 def quokka_keypoints(size=None, extract=None):
     """
     Returns example keypoints on the standard example quokke image.
@@ -659,6 +687,7 @@ def quokka_keypoints(size=None, extract=None):
     -------
     kpsoi : KeypointsOnImage
         Example keypoints on the quokka image.
+
     """
     left, top = 0, 0
     if extract is not None:
@@ -679,6 +708,7 @@ def quokka_keypoints(size=None, extract=None):
         shape_resized = _compute_resized_shape(shape, size)
         kpsoi = kpsoi.on(shape_resized)
     return kpsoi
+
 
 def quokka_bounding_boxes(size=None, extract=None):
     """
@@ -727,6 +757,7 @@ def quokka_bounding_boxes(size=None, extract=None):
         shape_resized = _compute_resized_shape(shape, size)
         bbsoi = bbsoi.on(shape_resized)
     return bbsoi
+
 
 def angle_between_vectors(v1, v2):
     """
@@ -783,7 +814,7 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
         return False
 
 
-def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     """
     Draw text on an image.
 
@@ -796,11 +827,18 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=lo
         The image array to draw text on.
         Expected to be of dtype uint8 or float32 (value range 0.0 to 255.0).
 
-    {y, x} : int
-        x- and y- coordinate of the top left corner of the
+    y : int
+        x-coordinate of the top left corner of the
         text.
 
-    color : iterable of 3 ints, optional(default=[0, 255, 0])
+    x : int
+        y- coordinate of the top left corner of the
+        text.
+
+    text : str
+        The text to draw.
+
+    color : iterable of 3 ints, optional(default=(0, 255, 0))
         Color of the text to draw. For RGB-images this is expected to be
         an RGB color.
 
@@ -1085,7 +1123,7 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         pad_top = int(np.ceil(diff / 2))
         pad_bottom = int(np.floor(diff / 2))
 
-    return (pad_top, pad_right, pad_bottom, pad_left)
+    return pad_top, pad_right, pad_bottom, pad_left
 
 
 def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
@@ -1182,7 +1220,8 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     """
     do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1
-    is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] and [is_single_integer(val) and val >= 1 for val in block_size]
+    is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
+        and [is_single_integer(val) and val >= 1 for val in block_size]
     do_assert(is_valid_int or is_valid_tuple)
 
     if is_single_integer(block_size):
@@ -1285,7 +1324,11 @@ def draw_grid(images, rows=None, cols=None):
     cell_height = max([image.shape[0] for image in images])
     cell_width = max([image.shape[1] for image in images])
     channels = set([image.shape[2] for image in images])
-    do_assert(len(channels) == 1, "All images are expected to have the same number of channels, but got channel set %s with length %d instead." % (str(channels), len(channels)))
+    do_assert(
+        len(channels) == 1,
+        "All images are expected to have the same number of channels, "
+        + "but got channel set %s with length %d instead." % (str(channels), len(channels))
+    )
     nb_channels = list(channels)[0]
     if rows is None and cols is None:
         rows = cols = int(math.ceil(math.sqrt(nb_images)))
@@ -1312,6 +1355,7 @@ def draw_grid(images, rows=None, cols=None):
 
     return grid
 
+
 def show_grid(images, rows=None, cols=None):
     """
     Converts the input images to a grid image and shows it in a new window.
@@ -1331,6 +1375,7 @@ def show_grid(images, rows=None, cols=None):
     grid = draw_grid(images, rows=rows, cols=cols)
     imshow(grid)
 
+
 def imshow(image):
     """
     Shows an image in a window.
@@ -1339,6 +1384,7 @@ def imshow(image):
     ----------
     image : (H,W,3) ndarray
         Image to show.
+
     """
     image_bgr = image
     if image.ndim == 3 and image.shape[2] in [3, 4]:
@@ -1371,6 +1417,7 @@ def do_assert(condition, message="Assertion failed."):
     """
     if not condition:
         raise AssertionError(str(message))
+
 
 class HooksImages(object):
     """
@@ -1433,13 +1480,11 @@ class HooksImages(object):
 
     """
 
-    #def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None, propagation_method=None):
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
         self.propagator = propagator
         self.preprocessor = preprocessor
         self.postprocessor = postprocessor
-        #self.propagation_method = propagation_method
 
     def is_activated(self, images, augmenter, parents, default):
         """
@@ -1457,8 +1502,6 @@ class HooksImages(object):
         else:
             return self.activator(images, augmenter, parents, default)
 
-    # TODO is a propagating hook necessary? seems to be covered by activated
-    # hook already
     def is_propagating(self, images, augmenter, parents, default):
         """
         Returns whether an augmenter may call its children to augment an
@@ -1477,12 +1520,6 @@ class HooksImages(object):
             return default
         else:
             return self.propagator(images, augmenter, parents, default)
-
-    #def get_propagation_method(self, images, augmenter, parents, child, default):
-    #    if self.propagation_method is None:
-    #        return default
-    #    else:
-    #        return self.propagation_method(images, augmenter, parents, child, default)
 
     def preprocess(self, images, augmenter, parents):
         """
@@ -1516,6 +1553,7 @@ class HooksImages(object):
         else:
             return self.postprocessor(images, augmenter, parents)
 
+
 class HooksHeatmaps(HooksImages):
     """
     Class to intervene with heatmap augmentation runs.
@@ -1527,6 +1565,7 @@ class HooksHeatmaps(HooksImages):
 
     """
     pass
+
 
 class HooksKeypoints(HooksImages):
     """
@@ -1616,6 +1655,7 @@ class Keypoint(object):
         -------
         result : int
             Keypoint's x-coordinate, rounded to the closest integer.
+
         """
         return int(np.round(self.x))
 
@@ -1628,6 +1668,7 @@ class Keypoint(object):
         -------
         result : int
             Keypoint's y-coordinate, rounded to the closest integer.
+
         """
         return int(np.round(self.y))
 
@@ -1776,7 +1817,6 @@ class KeypointsOnImage(object):
 
     """
     def __init__(self, keypoints, shape):
-        #assert len(shape) == 3, "KeypointsOnImage requires shape tuples of form (H, W, C) but got %s. Use C=1 for 2-dimensional images." % (str(shape),)
         self.keypoints = keypoints
         if is_np_array(shape):
             self.shape = shape.shape
@@ -1801,6 +1841,7 @@ class KeypointsOnImage(object):
         -------
         result : bool
             True if this object contains zero keypoints.
+
         """
         return len(self.keypoints) == 0
 
@@ -1831,10 +1872,9 @@ class KeypointsOnImage(object):
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
             return KeypointsOnImage(keypoints, shape)
 
-    def draw_on_image(self, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+    def draw_on_image(self, image, color=(0, 255, 0), size=3, copy=True, raise_if_out_of_image=False):
         """
-        Draw all keypoints onto a given image. Each keypoint is marked by a
-        square of a chosen color and size.
+        Draw all keypoints onto a given image. Each keypoint is marked by a square of a chosen color and size.
 
         Parameters
         ----------
@@ -1843,7 +1883,7 @@ class KeypointsOnImage(object):
             This image should usually have the same shape as
             set in KeypointsOnImage.shape.
 
-        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=[0, 255, 0])
+        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=(0, 255, 0))
             The RGB color of all keypoints. If a single int `C`, then that is
             equivalent to (C,C,C).
 
@@ -1906,8 +1946,7 @@ class KeypointsOnImage(object):
 
     def get_coords_array(self):
         """
-        Convert the coordinates of all keypoints in this object to
-        an array of shape (N,2).
+        Convert the coordinates of all keypoints in this object to an array of shape (N,2).
 
         Returns
         -------
@@ -1925,8 +1964,7 @@ class KeypointsOnImage(object):
     @staticmethod
     def from_coords_array(coords, shape):
         """
-        Convert an array (N,2) with a given image shape to a KeypointsOnImage
-        object.
+        Convert an array (N,2) with a given image shape to a KeypointsOnImage object.
 
         Parameters
         ----------
@@ -1949,12 +1987,11 @@ class KeypointsOnImage(object):
 
     def to_keypoint_image(self, size=1):
         """
-        Draws a new black image of shape (H,W,N) in which all keypoint coordinates
-        are set to 255.
+        Draws a new black image of shape (H,W,N) in which all keypoint coordinates are set to 255.
         (H=shape height, W=shape width, N=number of keypoints)
 
-        This function can be used as a helper when augmenting keypoints with
-        a method that only supports the augmentation of images.
+        This function can be used as a helper when augmenting keypoints with a method that only supports the
+        augmentation of images.
 
         Parameters
         -------
@@ -1984,8 +2021,6 @@ class KeypointsOnImage(object):
             y1 = np.clip(y - sizeh, 0, height-1)
             y2 = np.clip(y + sizeh + 1, 0, height)
 
-            #if 0 <= y < height and 0 <= x < width:
-            #    image[y, x, i] = 255
             if x1 < x2 and y1 < y2:
                 image[y1:y2, x1:x2, i] = 128
             if 0 <= y < height and 0 <= x < width:
@@ -2044,7 +2079,8 @@ class KeypointsOnImage(object):
             if_not_found_x = if_not_found_coords["x"]
             if_not_found_y = if_not_found_coords["y"]
         else:
-            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (type(if_not_found_coords),))
+            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (
+                type(if_not_found_coords),))
 
         keypoints = []
         for i in sm.xrange(nb_keypoints):
@@ -2055,7 +2091,7 @@ class KeypointsOnImage(object):
                 keypoints.append(Keypoint(x=maxidx_ndim[1], y=maxidx_ndim[0]))
             else:
                 if drop_if_not_found:
-                    pass # dont add the keypoint to the result list, i.e. drop it
+                    pass  # dont add the keypoint to the result list, i.e. drop it
                 else:
                     keypoints.append(Keypoint(x=if_not_found_x, y=if_not_found_y))
 
@@ -2108,7 +2144,8 @@ class KeypointsOnImage(object):
 
     # TODO add option to if_not_found_coords to reuse old keypoint coords
     @staticmethod
-    def from_distance_maps(distance_maps, inverted=False, if_not_found_coords={"x": -1, "y": -1}, threshold=None, nb_channels=None): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+    def from_distance_maps(distance_maps, inverted=False, if_not_found_coords={"x": -1, "y": -1}, threshold=None, # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+                           nb_channels=None):
         """
         Converts an maps generated by `to_distance_maps()` back to a KeypointsOnImage object.
 
@@ -2162,7 +2199,8 @@ class KeypointsOnImage(object):
             if_not_found_x = if_not_found_coords["x"]
             if_not_found_y = if_not_found_coords["y"]
         else:
-            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (type(if_not_found_coords),))
+            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (
+                type(if_not_found_coords),))
 
         keypoints = []
         for i in sm.xrange(nb_keypoints):
@@ -2182,7 +2220,7 @@ class KeypointsOnImage(object):
                 keypoints.append(Keypoint(x=hitidx_ndim[1], y=hitidx_ndim[0]))
             else:
                 if drop_if_not_found:
-                    pass # dont add the keypoint to the result list, i.e. drop it
+                    pass  # dont add the keypoint to the result list, i.e. drop it
                 else:
                     keypoints.append(Keypoint(x=if_not_found_x, y=if_not_found_y))
 
@@ -2214,7 +2252,6 @@ class KeypointsOnImage(object):
 
         """
         # for some reason deepcopy is way slower here than manual copy
-        #return copy.deepcopy(self)
         kps = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
         return KeypointsOnImage(kps, tuple(self.shape))
 
@@ -2223,6 +2260,7 @@ class KeypointsOnImage(object):
 
     def __str__(self):
         return "KeypointsOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
+
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
 class BoundingBox(object):
@@ -2758,7 +2796,8 @@ class BoundingBox(object):
 
         """
         if raise_if_out_of_image and self.is_out_of_image(image):
-            raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
+            raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (
+                self.x1, self.y1, self.x2, self.y2, image.shape))
 
         result = np.copy(image) if copy else image
 
@@ -2885,6 +2924,7 @@ class BoundingBox(object):
         -------
         result : list of Keypoint
             Corners of the bounding box as keypoints.
+
         """
         return [
             Keypoint(x=self.x1, y=self.y1),
@@ -2961,7 +3001,9 @@ class BoundingBox(object):
         return self.__str__()
 
     def __str__(self):
-        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f, label=%s)" % (self.x1, self.y1, self.x2, self.y2, self.label)
+        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f, label=%s)" % (
+            self.x1, self.y1, self.x2, self.y2, self.label)
+
 
 class BoundingBoxesOnImage(object):
     """
@@ -3083,8 +3125,10 @@ class BoundingBoxesOnImage(object):
             raise ValueError("No bounding boxes found inside the box-matrix")
 
         if nb_coordinates != 4:
-            raise ValueError("Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
-                bounding_box_matrix.shape))
+            raise ValueError(
+                "Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
+                    bounding_box_matrix.shape)
+            )
 
         boxes = []
         for box in bounding_box_matrix:
@@ -3120,7 +3164,7 @@ class BoundingBoxesOnImage(object):
 
         return bounding_box_matrix.astype(dtype)
 
-    def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         """
         Draw all bounding boxes onto a given image.
 
@@ -3131,11 +3175,11 @@ class BoundingBoxesOnImage(object):
             This image should usually have the same shape as
             set in BoundingBoxesOnImage.shape.
 
-        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=[0, 255, 0])
+        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=(0, 255, 0))
             The RGB color of all bounding boxes. If a single int `C`, then that is
             equivalent to (C,C,C).
 
-        size : float, optional(default=1.0)
+        alpha : float, optional(default=1.0)
             Alpha/transparency of the bounding box.
 
         thickness : int, optional(default=1)
@@ -3186,7 +3230,8 @@ class BoundingBoxesOnImage(object):
             the image removed.
 
         """
-        bbs_clean = [bb for bb in self.bounding_boxes if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
+        bbs_clean = [bb for bb in self.bounding_boxes
+                     if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
     def cut_out_of_image(self):
@@ -3199,7 +3244,8 @@ class BoundingBoxesOnImage(object):
             Bounding boxes, clipped to fall within the image dimensions.
 
         """
-        bbs_cut = [bb.cut_out_of_image(self.shape) for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
+        bbs_cut = [bb.cut_out_of_image(self.shape)
+                   for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
         return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
@@ -4166,7 +4212,8 @@ class MultiPolygon(object):
 
         Parameters
         ----------
-        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon or shapely.geometry.collection.GeometryCollection
+        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon
+                   or shapely.geometry.collection.GeometryCollection
             The object to convert to a MultiPolygon.
 
         label : None or str, optional(default=None)
@@ -4272,7 +4319,7 @@ class HeatmapsOnImage(object):
             return self.min_value + diff * arr
 
     # TODO
-    #def find_global_maxima(self):
+    # def find_global_maxima(self):
     #    raise NotImplementedError()
 
     def draw(self, size=None, cmap="jet"):
@@ -4305,8 +4352,7 @@ class HeatmapsOnImage(object):
             heatmap_c = heatmaps_uint8[..., c:c+1]
 
             if size is not None:
-                heatmap_c_rs = imresize_single_image(heatmap_c, size,
-                                                     interpolation="nearest")
+                heatmap_c_rs = imresize_single_image(heatmap_c, size, interpolation="nearest")
             else:
                 heatmap_c_rs = heatmap_c
             heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
@@ -4400,7 +4446,8 @@ class HeatmapsOnImage(object):
             Inverted heatmap.
 
         """
-        arr_inv = HeatmapsOnImage.from_0to1(1 - self.arr_0to1, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        arr_inv = HeatmapsOnImage.from_0to1(1 - self.arr_0to1, shape=self.shape, min_value=self.min_value,
+                                            max_value=self.max_value)
         arr_inv.arr_was_2d = self.arr_was_2d
         return arr_inv
 
@@ -4472,8 +4519,10 @@ class HeatmapsOnImage(object):
             If return_pad_amounts is False, then only the heatmaps object is returned.
 
         """
-        arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
-        heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode,
+                                                           cval=cval, return_pad_amounts=True)
+        heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value,
+                                             max_value=self.max_value)
         if return_pad_amounts:
             return heatmaps, pad_amounts
         else:
@@ -4495,7 +4544,8 @@ class HeatmapsOnImage(object):
 
         """
         arr_0to1_reduced = avg_pool(self.arr_0to1, block_size, cval=0.0)
-        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def max_pool(self, block_size):
         """
@@ -4513,7 +4563,8 @@ class HeatmapsOnImage(object):
 
         """
         arr_0to1_reduced = max_pool(self.arr_0to1, block_size)
-        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def scale(self, sizes, interpolation="cubic"):
         """
@@ -4540,7 +4591,8 @@ class HeatmapsOnImage(object):
         # TODO area interpolation too?
         arr_0to1_rescaled = np.clip(arr_0to1_rescaled, 0.0, 1.0)
 
-        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def to_uint8(self):
         """
@@ -4838,10 +4890,6 @@ class SegmentationMapOnImage(object):
         self.shape = shape
         self.nb_classes = nb_classes if nb_classes is not None else arr.shape[2]
 
-    #@property
-    #def nb_classes(self):
-    #    return self.arr.shape[2]
-
     def get_arr_int(self, background_threshold=0.01, background_class_id=None):
         """
         Get the segmentation map array as an integer array of shape (H, W).
@@ -4877,7 +4925,9 @@ class SegmentationMapOnImage(object):
 
         """
         if self.input_was[0] in ["bool", "float"]:
-            do_assert(background_class_id is None, "The background class id may only be changed if the original input to SegmentationMapOnImage was an *integer* based segmentation map.")
+            do_assert(background_class_id is None,
+                      "The background class id may only be changed if the original input to SegmentationMapOnImage "
+                      + "was an *integer* based segmentation map.")
 
         if background_class_id is None:
             background_class_id = 0
@@ -4896,11 +4946,12 @@ class SegmentationMapOnImage(object):
 
         return result.astype(np.int32)
 
-    #def get_arr_bool(self, allow_overlapping=False, threshold=0.5, background_threshold=0.01, background_class_id=0):
-    #    # TODO
+    # TODO
+    # def get_arr_bool(self, allow_overlapping=False, threshold=0.5, background_threshold=0.01, background_class_id=0):
     #    raise NotImplementedError()
 
-    def draw(self, size=None, background_threshold=0.01, background_class_id=None, colors=None, return_foreground_mask=False):
+    def draw(self, size=None, background_threshold=0.01, background_class_id=None, colors=None,
+             return_foreground_mask=False):
         """
         Render the segmentation map as an RGB image.
 
@@ -4940,7 +4991,9 @@ class SegmentationMapOnImage(object):
         segmap_drawn = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
         if colors is None:
             colors = SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS
-        do_assert(nb_classes <= len(colors), "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (nb_classes, len(colors),))
+        do_assert(nb_classes <= len(colors),
+                  "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (
+                      nb_classes, len(colors),))
 
         ids_in_map = np.unique(arr)
         for c, color in zip(sm.xrange(nb_classes), colors):
@@ -4957,13 +5010,15 @@ class SegmentationMapOnImage(object):
         if size is not None:
             segmap_drawn = imresize_single_image(segmap_drawn, size, interpolation="nearest")
             if foreground_mask is not None:
-                foreground_mask = imresize_single_image(foreground_mask.astype(np.uint8), size, interpolation="nearest") > 0
+                foreground_mask = imresize_single_image(
+                    foreground_mask.astype(np.uint8), size, interpolation="nearest") > 0
 
         if foreground_mask is not None:
             return segmap_drawn, foreground_mask
         return segmap_drawn
 
-    def draw_on_image(self, image, alpha=0.75, resize="segmentation_map", background_threshold=0.01, background_class_id=None, colors=None, draw_background=False):
+    def draw_on_image(self, image, alpha=0.75, resize="segmentation_map", background_threshold=0.01,
+                      background_class_id=None, colors=None, draw_background=False):
         """
         Draw the segmentation map as an overlay over an image.
 
@@ -5113,7 +5168,8 @@ class SegmentationMapOnImage(object):
             If return_pad_amounts is False, then only the segmentation map object is returned.
 
         """
-        arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
+        arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval,
+                                                      return_pad_amounts=True)
         segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
         segmap.input_was = self.input_was
         if return_pad_amounts:
@@ -5230,7 +5286,6 @@ class SegmentationMapOnImage(object):
             do_assert(len(class_indices) == heatmaps.arr_0to1.shape[2])
             arr_0to1 = heatmaps.arr_0to1
             arr_0to1_full = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1], nb_classes), dtype=np.float32)
-            #empty_channel = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1]), dtype=np.float32)
             class_indices_set = set(class_indices)
             heatmap_channel = 0
             for c in sm.xrange(nb_classes):
@@ -5304,7 +5359,8 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
-    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None, data=None):
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None,
+                 data=None):
         self.images = images
         self.images_aug = None
         self.heatmaps = heatmaps
@@ -5354,6 +5410,7 @@ class Batch(object):
 
         return batch
 
+
 class BatchLoader(object):
     """
     Class to load batches in the background.
@@ -5392,9 +5449,15 @@ class BatchLoader(object):
             finished_signal = multiprocessing.Event()
             self.finished_signals.append(finished_signal)
             if threaded:
-                worker = threading.Thread(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal, self.join_signal, None))
+                worker = threading.Thread(
+                    target=self._load_batches,
+                    args=(load_batch_func, self.queue, finished_signal, self.join_signal, None)
+                )
             else:
-                worker = multiprocessing.Process(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal, self.join_signal, seeds[i]))
+                worker = multiprocessing.Process(
+                    target=self._load_batches,
+                    args=(load_batch_func, self.queue, finished_signal, self.join_signal, seeds[i])
+                )
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
@@ -5421,7 +5484,9 @@ class BatchLoader(object):
 
         try:
             for batch in load_batch_func():
-                do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
+                do_assert(isinstance(batch, Batch),
+                          "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (
+                              type(batch),))
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
                     try:
@@ -5439,10 +5504,7 @@ class BatchLoader(object):
                 finished_signal.set()
 
     def terminate(self):
-        """
-        Stop all workers.
-
-        """
+        """Stop all workers."""
         if not self.join_signal.is_set():
             self.join_signal.set()
         # give minimal time to put generated batches in queue and gracefully shut down
@@ -5529,7 +5591,6 @@ class BackgroundAugmenter(object):
             nb_workers = max(1, nb_workers - 1)
         else:
             do_assert(nb_workers >= 1)
-        #print("Starting %d background processes" % (nb_workers,))
 
         self.nb_workers = nb_workers
         self.workers = []
@@ -5540,7 +5601,10 @@ class BackgroundAugmenter(object):
 
         seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
         for i in range(nb_workers):
-            worker = multiprocessing.Process(target=self._augment_images_worker, args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i]))
+            worker = multiprocessing.Process(
+                target=self._augment_images_worker,
+                args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i])
+            )
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
