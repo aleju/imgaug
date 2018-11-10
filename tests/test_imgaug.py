@@ -1,0 +1,3912 @@
+from __future__ import print_function, division, absolute_import
+
+import time
+
+import matplotlib
+matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
+import numpy as np
+import six.moves as sm
+import cv2
+import shapely
+import shapely.geometry
+
+import imgaug as ia
+from utils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
+
+
+def main():
+    time_start = time.time()
+
+    test_is_np_array()
+    test_is_single_integer()
+    test_is_single_float()
+    test_is_single_number()
+    test_is_iterable()
+    test_is_string()
+    test_is_single_bool()
+    test_is_integer_array()
+    test_is_float_array()
+    test_is_callable()
+    test_caller_name()
+    test_seed()
+    test_current_random_state()
+    test_new_random_state()
+    test_dummy_random_state()
+    test_copy_random_state()
+    test_derive_random_state()
+    test_derive_random_states()
+    test_forward_random_state()
+    # test_quokka()
+    # test_quokka_square()
+    # test_angle_between_vectors()
+    # test_draw_text()
+    test_imresize_many_images()
+    test_imresize_single_image()
+    test_pad()
+    test_compute_paddings_for_aspect_ratio()
+    test_pad_to_aspect_ratio()
+    test_pool()
+    test_avg_pool()
+    test_max_pool()
+    test_draw_grid()
+    # test_show_grid()
+    # test_do_assert()
+    # test_HooksImages_is_activated()
+    # test_HooksImages_is_propagating()
+    # test_HooksImages_preprocess()
+    # test_HooksImages_postprocess()
+    test_Keypoint()
+    test_KeypointsOnImage()
+    test_BoundingBox()
+    test_BoundingBoxesOnImage()
+    # test_HeatmapsOnImage_get_arr()
+    # test_HeatmapsOnImage_find_global_maxima()
+    test_HeatmapsOnImage_draw()
+    test_HeatmapsOnImage_draw_on_image()
+    test_HeatmapsOnImage_invert()
+    test_HeatmapsOnImage_pad()
+    # test_HeatmapsOnImage_pad_to_aspect_ratio()
+    test_HeatmapsOnImage_avg_pool()
+    test_HeatmapsOnImage_max_pool()
+    test_HeatmapsOnImage_scale()
+    # test_HeatmapsOnImage_to_uint8()
+    # test_HeatmapsOnImage_from_uint8()
+    # test_HeatmapsOnImage_from_0to1()
+    # test_HeatmapsOnImage_change_normalization()
+    # test_HeatmapsOnImage_copy()
+    # test_HeatmapsOnImage_deepcopy()
+    test_SegmentationMapOnImage_bool()
+    test_SegmentationMapOnImage_get_arr_int()
+    # test_SegmentationMapOnImage_get_arr_bool()
+    test_SegmentationMapOnImage_draw()
+    test_SegmentationMapOnImage_draw_on_image()
+    test_SegmentationMapOnImage_pad()
+    test_SegmentationMapOnImage_pad_to_aspect_ratio()
+    test_SegmentationMapOnImage_scale()
+    test_SegmentationMapOnImage_to_heatmaps()
+    test_SegmentationMapOnImage_from_heatmaps()
+    test_SegmentationMapOnImage_copy()
+    test_SegmentationMapOnImage_deepcopy()
+    test_Polygon___init__()
+    test_Polygon_xx()
+    test_Polygon_yy()
+    test_Polygon_xx_int()
+    test_Polygon_yy_int()
+    test_Polygon_is_valid()
+    test_Polygon_area()
+    test_Polygon_project()
+    test_Polygon__compute_inside_image_point_mask()
+    test_Polygon_is_fully_within_image()
+    test_Polygon_is_partly_within_image()
+    test_Polygon_is_out_of_image()
+    test_Polygon_cut_out_of_image()
+    test_Polygon_clip_out_of_image()
+    test_Polygon_shift()
+    test_Polygon_draw_on_image()
+    test_Polygon_extract_from_image()
+    test_Polygon_to_shapely_polygon()
+    test_Polygon_to_bounding_box()
+    test_Polygon_from_shapely()
+    test_Polygon_copy()
+    test_Polygon_deepcopy()
+    test_Polygon___repr__()
+    test_Polygon___str__()
+    # test_Batch()
+    test_BatchLoader()
+    # test_BackgroundAugmenter.get_batch()
+    # test_BackgroundAugmenter._augment_images_worker()
+    # test_BackgroundAugmenter.terminate()
+
+    time_end = time.time()
+    print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+
+
+def test_is_np_array():
+    class _Dummy(object):
+        pass
+    values_true = [
+        np.zeros((1, 2), dtype=np.uint8),
+        np.zeros((64, 64, 3), dtype=np.uint8),
+        np.zeros((1, 2), dtype=np.float32),
+        np.zeros((100,), dtype=np.float64)
+    ]
+    values_false = [
+        "A", "BC", "1", True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(),
+        -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4
+    ]
+    for value in values_true:
+        assert ia.is_np_array(value) == True
+    for value in values_false:
+        assert ia.is_np_array(value) == False
+
+
+def test_is_single_integer():
+    assert ia.is_single_integer("A") == False
+    assert ia.is_single_integer(None) == False
+    assert ia.is_single_integer(1.2) == False
+    assert ia.is_single_integer(1.0) == False
+    assert ia.is_single_integer(np.ones((1,), dtype=np.float32)[0]) == False
+    assert ia.is_single_integer(1) == True
+    assert ia.is_single_integer(1234) == True
+    assert ia.is_single_integer(np.ones((1,), dtype=np.uint8)[0]) == True
+    assert ia.is_single_integer(np.ones((1,), dtype=np.int32)[0]) == True
+
+
+def test_is_single_float():
+    assert ia.is_single_float("A") == False
+    assert ia.is_single_float(None) == False
+    assert ia.is_single_float(1.2) == True
+    assert ia.is_single_float(1.0) == True
+    assert ia.is_single_float(np.ones((1,), dtype=np.float32)[0]) == True
+    assert ia.is_single_float(1) == False
+    assert ia.is_single_float(1234) == False
+    assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
+    assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
+
+
+def test_caller_name():
+    assert ia.caller_name() == 'test_caller_name'
+
+
+def test_is_single_number():
+    class _Dummy(object):
+        pass
+    values_true = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4]
+    values_false = ["A", "BC", "1", True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
+    for value in values_true:
+        assert ia.is_single_number(value) == True
+    for value in values_false:
+        assert ia.is_single_number(value) == False
+
+
+def test_is_iterable():
+    class _Dummy(object):
+        pass
+    values_true = [
+        [0, 1, 2],
+        ["A", "X"],
+        [[123], [456, 789]],
+        [],
+        (1, 2, 3),
+        (1,),
+        tuple(),
+        "A",
+        "ABC",
+        "",
+        np.zeros((100,), dtype=np.uint8)
+    ]
+    values_false = [1, 100, 0, -100, -1, 1.2, -1.2, True, False, _Dummy()]
+    for value in values_true:
+        assert ia.is_iterable(value) == True, value
+    for value in values_false:
+        assert ia.is_iterable(value) == False
+
+
+def test_is_string():
+    class _Dummy(object):
+        pass
+    values_true = ["A", "BC", "1", ""]
+    values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
+    for value in values_true:
+        assert ia.is_string(value) == True
+    for value in values_false:
+        assert ia.is_string(value) == False
+
+
+def test_is_single_bool():
+    class _Dummy(object):
+        pass
+    values_true = [False, True]
+    values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, (1.0, 2.0), [1.0, 2.0], _Dummy(),
+                    np.zeros((1, 2), dtype=np.uint8), np.zeros((1,), dtype=bool)]
+    for value in values_true:
+        assert ia.is_single_bool(value) == True
+    for value in values_false:
+        assert ia.is_single_bool(value) == False
+
+
+def test_is_integer_array():
+    class _Dummy(object):
+        pass
+    values_true = [
+        np.zeros((1, 2), dtype=np.uint8),
+        np.zeros((100,), dtype=np.uint8),
+        np.zeros((1, 2), dtype=np.uint16),
+        np.zeros((1, 2), dtype=np.int32),
+        np.zeros((1, 2), dtype=np.int64)
+    ]
+    values_false = [
+        "A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False,
+        (1.0, 2.0), [1.0, 2.0], _Dummy(),
+        np.zeros((1, 2), dtype=np.float16),
+        np.zeros((100,), dtype=np.float32),
+        np.zeros((1, 2), dtype=np.float64),
+        np.zeros((1, 2), dtype=np.bool)
+    ]
+    for value in values_true:
+        assert ia.is_integer_array(value) == True
+    for value in values_false:
+        assert ia.is_integer_array(value) == False
+
+
+def test_is_float_array():
+    class _Dummy(object):
+        pass
+    values_true = [
+        np.zeros((1, 2), dtype=np.float16),
+        np.zeros((100,), dtype=np.float32),
+        np.zeros((1, 2), dtype=np.float64)
+    ]
+    values_false = [
+        "A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False,
+        (1.0, 2.0), [1.0, 2.0], _Dummy(),
+        np.zeros((1, 2), dtype=np.uint8),
+        np.zeros((100,), dtype=np.uint8),
+        np.zeros((1, 2), dtype=np.uint16),
+        np.zeros((1, 2), dtype=np.int32),
+        np.zeros((1, 2), dtype=np.int64),
+        np.zeros((1, 2), dtype=np.bool)
+    ]
+    for value in values_true:
+        assert ia.is_float_array(value) == True
+    for value in values_false:
+        assert ia.is_float_array(value) == False
+
+
+def test_is_callable():
+    def _dummy_func():
+        pass
+    _dummy_func2 = lambda x: x
+    class _Dummy1(object):
+        pass
+    class _Dummy2(object):
+        def __call__(self):
+            pass
+    values_true = [_dummy_func, _dummy_func2, _Dummy2()]
+    values_false = ["A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy1(), np.zeros((1, 2), dtype=np.uint8)]
+    for value in values_true:
+        assert ia.is_callable(value) == True
+    for value in values_false:
+        assert ia.is_callable(value) == False
+
+
+def test_seed():
+    ia.seed(10017)
+    rs = np.random.RandomState(10017)
+    assert ia.CURRENT_RANDOM_STATE.randint(0, 1000*1000) == rs.randint(0, 1000*1000)
+    reseed()
+
+
+def test_current_random_state():
+    assert ia.current_random_state() == ia.CURRENT_RANDOM_STATE
+
+
+def test_new_random_state():
+    seed = 1000
+    ia.seed(seed)
+
+    rs_observed = ia.new_random_state(seed=None, fully_random=False)
+    rs_expected = np.random.RandomState(np.random.RandomState(seed).randint(0, 10**6, 1)[0])
+    assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+    rs_observed1 = ia.new_random_state(seed=None, fully_random=False)
+    rs_observed2 = ia.new_random_state(seed=None, fully_random=False)
+    assert rs_observed1.randint(0, 10**6) != rs_observed2.randint(0, 10**6)
+
+    ia.seed(seed)
+    np.random.seed(seed)
+    rs_observed = ia.new_random_state(seed=None, fully_random=True)
+    rs_not_expected = np.random.RandomState(np.random.RandomState(seed).randint(0, 10**6, 1)[0])
+    assert rs_observed.randint(0, 10**6) != rs_not_expected.randint(0, 10**6)
+
+    rs_observed1 = ia.new_random_state(seed=None, fully_random=True)
+    rs_observed2 = ia.new_random_state(seed=None, fully_random=True)
+    assert rs_observed1.randint(0, 10**6) != rs_observed2.randint(0, 10**6)
+
+    rs_observed1 = ia.new_random_state(seed=1234)
+    rs_observed2 = ia.new_random_state(seed=1234)
+    rs_expected = np.random.RandomState(1234)
+    assert rs_observed1.randint(0, 10**6) == rs_observed2.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+
+
+def test_dummy_random_state():
+    assert ia.dummy_random_state().randint(0, 10**6) == np.random.RandomState(1).randint(0, 10**6)
+
+
+def test_copy_random_state():
+    rs = np.random.RandomState(1017)
+    rs_copy = ia.copy_random_state(rs)
+    assert rs != rs_copy
+    assert rs.randint(0, 10**6) == rs_copy.randint(0, 10**6)
+
+    assert ia.copy_random_state(np.random) == np.random
+    assert ia.copy_random_state(np.random, force_copy=True) != np.random
+
+
+def test_derive_random_state():
+    rs = np.random.RandomState(1017)
+    rs_observed = ia.derive_random_state(np.random.RandomState(1017))
+    rs_expected = np.random.RandomState(np.random.RandomState(1017).randint(0, 10**6))
+    assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+
+
+def test_derive_random_states():
+    rs = np.random.RandomState(1017)
+    rs_observed1, rs_observed2 = ia.derive_random_states(np.random.RandomState(1017), n=2)
+    seed = np.random.RandomState(1017).randint(0, 10**6)
+    rs_expected1 = np.random.RandomState(seed+0)
+    rs_expected2 = np.random.RandomState(seed+1)
+    assert rs_observed1.randint(0, 10**6) == rs_expected1.randint(0, 10**6)
+    assert rs_observed2.randint(0, 10**6) == rs_expected2.randint(0, 10**6)
+
+
+def test_forward_random_state():
+    rs1 = np.random.RandomState(1017)
+    rs2 = np.random.RandomState(1017)
+    ia.forward_random_state(rs1)
+    rs2.uniform()
+    assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
+
+
+def test_imresize_many_images():
+    for c in [1, 3]:
+        image1 = np.zeros((16, 16, c), dtype=np.uint8) + 255
+        image2 = np.zeros((16, 16, c), dtype=np.uint8)
+        image3 = np.pad(
+            np.zeros((8, 8, c), dtype=np.uint8) + 255,
+            ((4, 4), (4, 4), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        image1_small = np.zeros((8, 8, c), dtype=np.uint8) + 255
+        image2_small = np.zeros((8, 8, c), dtype=np.uint8)
+        image3_small = np.pad(
+            np.zeros((4, 4, c), dtype=np.uint8) + 255,
+            ((2, 2), (2, 2), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        image1_large = np.zeros((32, 32, c), dtype=np.uint8) + 255
+        image2_large = np.zeros((32, 32, c), dtype=np.uint8)
+        image3_large = np.pad(
+            np.zeros((16, 16, c), dtype=np.uint8) + 255,
+            ((8, 8), (8, 8), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        images = np.uint8([image1, image2, image3])
+        images_small = np.uint8([image1_small, image2_small, image3_small])
+        images_large = np.uint8([image1_large, image2_large, image3_large])
+        interpolations = [None,
+                          "nearest", "linear", "area", "cubic",
+                          cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
+        for interpolation in interpolations:
+            images_same_observed = ia.imresize_many_images(images, (16, 16), interpolation=interpolation)
+            for image_expected, image_observed in zip(images, images_same_observed):
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                assert np.sum(diff) == 0
+
+        for interpolation in interpolations:
+            images_small_observed = ia.imresize_many_images(images, (8, 8), interpolation=interpolation)
+            for image_expected, image_observed in zip(images_small, images_small_observed):
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                assert diff_fraction < 0.5
+
+        for interpolation in interpolations:
+            images_large_observed = ia.imresize_many_images(images, (32, 32), interpolation=interpolation)
+            for image_expected, image_observed in zip(images_large, images_large_observed):
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                assert diff_fraction < 0.5
+
+
+def test_imresize_single_image():
+    for c in [-1, 1, 3]:
+        image1 = np.zeros((16, 16, abs(c)), dtype=np.uint8) + 255
+        image2 = np.zeros((16, 16, abs(c)), dtype=np.uint8)
+        image3 = np.pad(
+            np.zeros((8, 8, abs(c)), dtype=np.uint8) + 255,
+            ((4, 4), (4, 4), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        image1_small = np.zeros((8, 8, abs(c)), dtype=np.uint8) + 255
+        image2_small = np.zeros((8, 8, abs(c)), dtype=np.uint8)
+        image3_small = np.pad(
+            np.zeros((4, 4, abs(c)), dtype=np.uint8) + 255,
+            ((2, 2), (2, 2), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        image1_large = np.zeros((32, 32, abs(c)), dtype=np.uint8) + 255
+        image2_large = np.zeros((32, 32, abs(c)), dtype=np.uint8)
+        image3_large = np.pad(
+            np.zeros((16, 16, abs(c)), dtype=np.uint8) + 255,
+            ((8, 8), (8, 8), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+
+        images = np.uint8([image1, image2, image3])
+        images_small = np.uint8([image1_small, image2_small, image3_small])
+        images_large = np.uint8([image1_large, image2_large, image3_large])
+
+        if c == -1:
+            images = images[:, :, 0]
+            images_small = images_small[:, :, 0]
+            images_large = images_large[:, :, 0]
+
+        interpolations = [None,
+                          "nearest", "linear", "area", "cubic",
+                          cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
+        for interpolation in interpolations:
+            for image in images:
+                image_observed = ia.imresize_single_image(image, (16, 16), interpolation=interpolation)
+                diff = np.abs(image.astype(np.int32) - image_observed.astype(np.int32))
+                assert np.sum(diff) == 0
+
+        for interpolation in interpolations:
+            for image, image_expected in zip(images, images_small):
+                image_observed = ia.imresize_single_image(image, (8, 8), interpolation=interpolation)
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                assert diff_fraction < 0.5
+
+        for interpolation in interpolations:
+            for image, image_expected in zip(images, images_large):
+                image_observed = ia.imresize_single_image(image, (32, 32), interpolation=interpolation)
+                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                assert diff_fraction < 0.5
+
+
+def test_pad():
+    # -------
+    # uint8, int32
+    # -------
+    for dtype in [np.uint8, np.int32]:
+        arr = np.zeros((3, 3), dtype=dtype) + 255
+
+        arr_pad = ia.pad(arr)
+        assert arr_pad.shape == (3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.array_equal(arr_pad, arr)
+
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :] == 0)
+
+        arr_pad = ia.pad(arr, right=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[:, -1] == 0)
+
+        arr_pad = ia.pad(arr, bottom=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[-1, :] == 0)
+
+        arr_pad = ia.pad(arr, left=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[:, 0] == 0)
+
+        arr_pad = ia.pad(arr, top=1, right=2, bottom=3, left=4)
+        assert arr_pad.shape == (3+(1+3), 3+(2+4))
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :] == 0)
+        assert np.all(arr_pad[:, -2:] == 0)
+        assert np.all(arr_pad[-3:, :] == 0)
+        assert np.all(arr_pad[:, :4] == 0)
+
+        arr_pad = ia.pad(arr, top=1, cval=10)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :] == 10)
+
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 128
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.all(arr_pad[0, :, 0] == 0)
+        assert np.all(arr_pad[0, :, 1] == 0)
+        assert np.all(arr_pad[0, :, 2] == 0)
+
+        arr = np.zeros((3, 3), dtype=dtype) + 128
+        arr[1, 1] = 200
+        arr_pad = ia.pad(arr, top=1, mode="maximum")
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad[0, 0] == 128
+        assert arr_pad[0, 1] == 200
+        assert arr_pad[0, 2] == 128
+
+        arr = np.zeros((3, 3), dtype=dtype)
+        arr_pad = ia.pad(arr, top=1, mode="constant", cval=123)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad[0, 0] == 123
+        assert arr_pad[0, 1] == 123
+        assert arr_pad[0, 2] == 123
+        assert arr_pad[1, 0] == 0
+
+        arr = np.zeros((1, 1), dtype=dtype) + 100
+        arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=200)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad[0, 0] == 200
+        assert arr_pad[1, 0] == 175
+        assert arr_pad[2, 0] == 150
+        assert arr_pad[3, 0] == 125
+        assert arr_pad[4, 0] == 100
+
+    # -------
+    # float32, float64
+    # -------
+    for dtype in [np.float32, np.float64]:
+        arr = np.zeros((3, 3), dtype=dtype) + 1.0
+
+        arr_pad = ia.pad(arr)
+        assert arr_pad.shape == (3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad, arr)
+
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[0, :], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, right=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[:, -1], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, bottom=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[-1, :], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, left=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[:, 0], dtype([0, 0, 0]))
+
+        arr_pad = ia.pad(arr, top=1, right=2, bottom=3, left=4)
+        assert arr_pad.shape == (3+(1+3), 3+(2+4))
+        assert arr_pad.dtype.type == dtype
+        assert 0 - 1e-6 < np.max(arr_pad[0, :]) < 0 + 1e-6
+        assert 0 - 1e-6 < np.max(arr_pad[:, -2:]) < 0 + 1e-6
+        assert 0 - 1e-6 < np.max(arr_pad[-3, :]) < 0 + 1e-6
+        assert 0 - 1e-6 < np.max(arr_pad[:, :4]) < 0 + 1e-6
+
+        arr_pad = ia.pad(arr, top=1, cval=0.2)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[0, :], dtype([0.2, 0.2, 0.2]))
+
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 0.5
+        arr_pad = ia.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3, 3)
+        assert arr_pad.dtype.type == dtype
+        assert np.allclose(arr_pad[0, :, 0], dtype([0, 0, 0]))
+        assert np.allclose(arr_pad[0, :, 1], dtype([0, 0, 0]))
+        assert np.allclose(arr_pad[0, :, 2], dtype([0, 0, 0]))
+
+        arr = np.zeros((3, 3), dtype=dtype) + 0.5
+        arr[1, 1] = 0.75
+        arr_pad = ia.pad(arr, top=1, mode="maximum")
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert 0.50 - 1e-6 < arr_pad[0, 0] < 0.50 + 1e-6
+        assert 0.75 - 1e-6 < arr_pad[0, 1] < 0.75 + 1e-6
+        assert 0.50 - 1e-6 < arr_pad[0, 2] < 0.50 + 1e-6
+
+        arr = np.zeros((3, 3), dtype=dtype)
+        arr_pad = ia.pad(arr, top=1, mode="constant", cval=0.4)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype.type == dtype
+        assert 0.4 - 1e-6 < arr_pad[0, 0] < 0.4 + 1e-6
+        assert 0.4 - 1e-6 < arr_pad[0, 1] < 0.4 + 1e-6
+        assert 0.4 - 1e-6 < arr_pad[0, 2] < 0.4 + 1e-6
+        assert 0.0 - 1e-6 < arr_pad[1, 0] < 0.0 + 1e-6
+
+        arr = np.zeros((1, 1), dtype=dtype) + 0.6
+        arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=1.0)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype.type == dtype
+        assert 1.0 - 1e-6 < arr_pad[0, 0] < 1.0 + 1e-6
+        assert 0.9 - 1e-6 < arr_pad[1, 0] < 0.9 + 1e-6
+        assert 0.8 - 1e-6 < arr_pad[2, 0] < 0.8 + 1e-6
+        assert 0.7 - 1e-6 < arr_pad[3, 0] < 0.7 + 1e-6
+        assert 0.6 - 1e-6 < arr_pad[4, 0] < 0.6 + 1e-6
+
+
+def test_compute_paddings_for_aspect_ratio():
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 0
+    assert bottom == 0
+    assert left == 0
+
+    arr = np.zeros((1, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 2
+    assert right == 0
+    assert bottom == 1
+    assert left == 0
+
+    arr = np.zeros((4, 1), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 2
+    assert bottom == 0
+    assert left == 1
+
+    arr = np.zeros((2, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 1
+    assert right == 0
+    assert bottom == 1
+    assert left == 0
+
+    arr = np.zeros((4, 2), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 1
+    assert bottom == 0
+    assert left == 1
+
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 0.5)
+    assert top == 2
+    assert right == 0
+    assert bottom == 2
+    assert left == 0
+
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 2.0)
+    assert top == 0
+    assert right == 2
+    assert bottom == 0
+    assert left == 2
+
+
+def test_pad_to_aspect_ratio():
+    for dtype in [np.uint8, np.int32, np.float32]:
+        # aspect_ratio = 1.0
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((1, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((4, 1), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((2, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((4, 2), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        # aspect_ratio != 1.0
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 2.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 8
+
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 0.5)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 8
+        assert arr_pad.shape[1] == 4
+
+        # 3d arr
+        arr = np.zeros((4, 2, 3), dtype=dtype)
+        arr_pad = ia.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+        assert arr_pad.shape[2] == 3
+
+    # cval
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[:, 0:2]) == 0
+    assert np.max(arr_pad[:, -2:]) == 0
+    assert np.max(arr_pad[:, 2:-2]) == 128
+
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, cval=10)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[:, 0:2]) == 10
+    assert np.max(arr_pad[:, -2:]) == 10
+    assert np.max(arr_pad[:, 2:-2]) == 128
+
+    arr = np.zeros((4, 4), dtype=np.float32) + 0.5
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, cval=0.0)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert 0 - 1e-6 <= np.max(arr_pad[:, 0:2]) <= 0 + 1e-6
+    assert 0 - 1e-6 <= np.max(arr_pad[:, -2:]) <= 0 + 1e-6
+    assert 0.5 - 1e-6 <= np.max(arr_pad[:, 2:-2]) <= 0.5 + 1e-6
+
+    arr = np.zeros((4, 4), dtype=np.float32) + 0.5
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, cval=0.1)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert 0.1 - 1e-6 <= np.max(arr_pad[:, 0:2]) <= 0.1 + 1e-6
+    assert 0.1 - 1e-6 <= np.max(arr_pad[:, -2:]) <= 0.1 + 1e-6
+    assert 0.5 - 1e-6 <= np.max(arr_pad[:, 2:-2]) <= 0.5 + 1e-6
+
+    # mode
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr[1:3, 1:3] = 200
+    arr_pad = ia.pad_to_aspect_ratio(arr, 2.0, mode="maximum")
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[0:1, 0:2]) == 128
+    assert np.max(arr_pad[1:3, 0:2]) == 200
+    assert np.max(arr_pad[3:, 0:2]) == 128
+    assert np.max(arr_pad[0:1, -2:]) == 128
+    assert np.max(arr_pad[1:3, -2:]) == 200
+    assert np.max(arr_pad[3:, -2:]) == 128
+
+
+def test_pool():
+    # basic functionality with uint8, int32, float32
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+    arr = np.int32([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+    arr = np.float32([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert np.allclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
+    assert np.allclose(arr_pooled[0, 1], np.average([2, 3, 6, 7]))
+    assert np.allclose(arr_pooled[1, 0], np.average([8, 9, 12, 13]))
+    assert np.allclose(arr_pooled[1, 1], np.average([10, 11, 14, 15]))
+
+    # preserve_dtype off
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, preserve_dtype=False)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == np.float64
+    assert np.allclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
+    assert np.allclose(arr_pooled[0, 1], np.average([2, 3, 6, 7]))
+    assert np.allclose(arr_pooled[1, 0], np.average([8, 9, 12, 13]))
+    assert np.allclose(arr_pooled[1, 1], np.average([10, 11, 14, 15]))
+
+    # maximum function
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.max)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.max([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.max([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.max([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
+
+    # 3d array
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr = np.tile(arr[..., np.newaxis], (1, 1, 3))
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2, 3)
+    assert np.array_equal(arr_pooled[..., 0], arr_pooled[..., 1])
+    assert np.array_equal(arr_pooled[..., 1], arr_pooled[..., 2])
+    arr_pooled = arr_pooled[..., 0]
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+    # block_size per axis
+    arr = np.float32([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.pool(arr, (2, 1), np.average)
+    assert arr_pooled.shape == (2, 4)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert np.allclose(arr_pooled[0, 0], np.average([0, 4]))
+    assert np.allclose(arr_pooled[0, 1], np.average([1, 5]))
+    assert np.allclose(arr_pooled[0, 2], np.average([2, 6]))
+    assert np.allclose(arr_pooled[0, 3], np.average([3, 7]))
+    assert np.allclose(arr_pooled[1, 0], np.average([8, 12]))
+    assert np.allclose(arr_pooled[1, 1], np.average([9, 13]))
+    assert np.allclose(arr_pooled[1, 2], np.average([10, 14]))
+    assert np.allclose(arr_pooled[1, 3], np.average([11, 15]))
+
+    # cval
+    arr = np.uint8([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 0, 6, 0]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 0, 0]))
+    assert arr_pooled[1, 1] == int(np.average([10, 0, 0, 0]))
+
+    arr = np.uint8([
+        [0, 1],
+        [4, 5]
+    ])
+    arr_pooled = ia.pool(arr, (4, 1), np.average)
+    assert arr_pooled.shape == (1, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 4, 0, 0]))
+    assert arr_pooled[0, 1] == int(np.average([1, 5, 0, 0]))
+
+    arr = np.uint8([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, cval=22)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 22, 6, 22]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 22, 22]))
+    assert arr_pooled[1, 1] == int(np.average([10, 22, 22, 22]))
+
+
+def test_avg_pool():
+    # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.avg_pool(arr, 2)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+
+
+def test_max_pool():
+    # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+    arr_pooled = ia.max_pool(arr, 2)
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.max([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.max([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.max([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
+
+
+def test_draw_grid():
+    image = np.zeros((2, 2, 3), dtype=np.uint8)
+    image[0, 0] = 64
+    image[0, 1] = 128
+    image[1, 0] = 192
+    image[1, 1] = 256
+
+    grid = ia.draw_grid([image], rows=1, cols=1)
+    assert np.array_equal(grid, image)
+
+    grid = ia.draw_grid(np.uint8([image]), rows=1, cols=1)
+    assert np.array_equal(grid, image)
+
+    grid = ia.draw_grid([image, image, image, image], rows=2, cols=2)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image], rows=1, cols=2)
+    expected = np.hstack([image, image])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image, image, image], rows=2, cols=None)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image, image, image], rows=None, cols=2)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+    grid = ia.draw_grid([image, image, image, image], rows=None, cols=None)
+    expected = np.vstack([
+        np.hstack([image, image]),
+        np.hstack([image, image])
+    ])
+    assert np.array_equal(grid, expected)
+
+
+def test_Keypoint():
+    eps = 1e-8
+
+    # x/y/x_int/y_int
+    kp = ia.Keypoint(y=1, x=2)
+    assert kp.y == 1
+    assert kp.x == 2
+    assert kp.y_int == 1
+    assert kp.x_int == 2
+    kp = ia.Keypoint(y=1.1, x=2.7)
+    assert 1.1 - eps < kp.y < 1.1 + eps
+    assert 2.7 - eps < kp.x < 2.7 + eps
+    assert kp.y_int == 1
+    assert kp.x_int == 3
+
+    # project
+    kp = ia.Keypoint(y=1, x=2)
+    kp2 = kp.project((10, 10), (10, 10))
+    assert kp2.y == 1
+    assert kp2.x == 2
+    kp2 = kp.project((10, 10), (20, 10))
+    assert kp2.y == 2
+    assert kp2.x == 2
+    kp2 = kp.project((10, 10), (10, 20))
+    assert kp2.y == 1
+    assert kp2.x == 4
+    kp2 = kp.project((10, 10), (20, 20))
+    assert kp2.y == 2
+    assert kp2.x == 4
+
+    # shift
+    kp = ia.Keypoint(y=1, x=2)
+    kp2 = kp.shift(y=1)
+    assert kp2.y == 2
+    assert kp2.x == 2
+    kp2 = kp.shift(y=-1)
+    assert kp2.y == 0
+    assert kp2.x == 2
+    kp2 = kp.shift(x=1)
+    assert kp2.y == 1
+    assert kp2.x == 3
+    kp2 = kp.shift(x=-1)
+    assert kp2.y == 1
+    assert kp2.x == 1
+    kp2 = kp.shift(y=1, x=2)
+    assert kp2.y == 2
+    assert kp2.x == 4
+
+    # __repr__ / __str_
+    kp = ia.Keypoint(y=1, x=2)
+    assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.00000000, y=1.00000000)"
+    kp = ia.Keypoint(y=1.2, x=2.7)
+    assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.70000000, y=1.20000000)"
+
+
+def test_KeypointsOnImage():
+    eps = 1e-8
+
+    kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+
+    # height/width
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
+    assert kpi.height == 10
+    assert kpi.width == 20
+
+    # image instead of shape
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=np.zeros((10, 20, 3), dtype=np.uint8))
+    assert kpi.shape == (10, 20, 3)
+
+    # on()
+    kpi2 = kpi.on((10, 20, 3))
+    assert all([kp_i.x == kp_j.x and kp_i.y == kp_j.y for kp_i, kp_j in zip(kpi.keypoints, kpi2.keypoints)])
+
+    kpi2 = kpi.on((20, 40, 3))
+    assert kpi2.keypoints[0].x == 2
+    assert kpi2.keypoints[0].y == 4
+    assert kpi2.keypoints[1].x == 6
+    assert kpi2.keypoints[1].y == 8
+
+    kpi2 = kpi.on(np.zeros((20, 40, 3), dtype=np.uint8))
+    assert kpi2.keypoints[0].x == 2
+    assert kpi2.keypoints[0].y == 4
+    assert kpi2.keypoints[1].x == 6
+    assert kpi2.keypoints[1].y == 8
+
+    # draw_on_image
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    kps_mask[2, 1] = 1
+    kps_mask[4, 3] = 1
+    image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [0, 255, 0])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
+    image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False)
+    kps_mask_size3 = np.copy(kps_mask)
+    kps_mask_size3[2-1:2+1+1, 1-1:1+1+1] = 1
+    kps_mask_size3[4-1:4+1+1, 3-1:3+1+1] = 1
+    assert np.all(image_kps[kps_mask_size3] == [0, 255, 0])
+    assert np.all(image_kps[~kps_mask_size3] == [10, 10, 10])
+
+    image_kps = kpi.draw_on_image(image, color=[0, 0, 255], size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [0, 0, 255])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
+    image_kps = kpi.draw_on_image(image, color=255, size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [255, 255, 255])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
+    image2 = np.copy(image)
+    image_kps = kpi.draw_on_image(image2, color=[0, 255, 0], size=1, copy=False, raise_if_out_of_image=False)
+    assert np.all(image2 == image_kps)
+    assert np.all(image_kps[kps_mask] == [0, 255, 0])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+    assert np.all(image2[kps_mask] == [0, 255, 0])
+    assert np.all(image2[~kps_mask] == [10, 10, 10])
+
+    kpi = ia.KeypointsOnImage(keypoints=kps + [ia.Keypoint(x=100, y=100)], shape=(5, 5, 3))
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    kps_mask[2, 1] = 1
+    kps_mask[4, 3] = 1
+    image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [0, 255, 0])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
+    kpi = ia.KeypointsOnImage(keypoints=kps + [ia.Keypoint(x=100, y=100)], shape=(5, 5, 3))
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    got_exception = False
+    try:
+        image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=True)
+        assert np.all(image_kps[kps_mask] == [0, 255, 0])
+        assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+    except Exception as e:
+        got_exception = True
+    assert got_exception
+
+    kpi = ia.KeypointsOnImage(keypoints=kps + [ia.Keypoint(x=5, y=5)], shape=(5, 5, 3))
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    kps_mask[2, 1] = 1
+    kps_mask[4, 3] = 1
+    image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [0, 255, 0])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
+    got_exception = False
+    try:
+        image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=True)
+        assert np.all(image_kps[kps_mask] == [0, 255, 0])
+        assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+    except Exception as e:
+        got_exception = True
+    assert got_exception
+
+    # shift
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    kpi2 = kpi.shift(x=0, y=0)
+    assert kpi2.keypoints[0].x == kpi.keypoints[0].x
+    assert kpi2.keypoints[0].y == kpi.keypoints[0].y
+    assert kpi2.keypoints[1].x == kpi.keypoints[1].x
+    assert kpi2.keypoints[1].y == kpi.keypoints[1].y
+
+    kpi2 = kpi.shift(x=1)
+    assert kpi2.keypoints[0].x == kpi.keypoints[0].x + 1
+    assert kpi2.keypoints[0].y == kpi.keypoints[0].y
+    assert kpi2.keypoints[1].x == kpi.keypoints[1].x + 1
+    assert kpi2.keypoints[1].y == kpi.keypoints[1].y
+
+    kpi2 = kpi.shift(x=-1)
+    assert kpi2.keypoints[0].x == kpi.keypoints[0].x - 1
+    assert kpi2.keypoints[0].y == kpi.keypoints[0].y
+    assert kpi2.keypoints[1].x == kpi.keypoints[1].x - 1
+    assert kpi2.keypoints[1].y == kpi.keypoints[1].y
+
+    kpi2 = kpi.shift(y=1)
+    assert kpi2.keypoints[0].x == kpi.keypoints[0].x
+    assert kpi2.keypoints[0].y == kpi.keypoints[0].y + 1
+    assert kpi2.keypoints[1].x == kpi.keypoints[1].x
+    assert kpi2.keypoints[1].y == kpi.keypoints[1].y + 1
+
+    kpi2 = kpi.shift(y=-1)
+    assert kpi2.keypoints[0].x == kpi.keypoints[0].x
+    assert kpi2.keypoints[0].y == kpi.keypoints[0].y - 1
+    assert kpi2.keypoints[1].x == kpi.keypoints[1].x
+    assert kpi2.keypoints[1].y == kpi.keypoints[1].y - 1
+
+    kpi2 = kpi.shift(x=1, y=2)
+    assert kpi2.keypoints[0].x == kpi.keypoints[0].x + 1
+    assert kpi2.keypoints[0].y == kpi.keypoints[0].y + 2
+    assert kpi2.keypoints[1].x == kpi.keypoints[1].x + 1
+    assert kpi2.keypoints[1].y == kpi.keypoints[1].y + 2
+
+    # get_coords_array
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    observed = kpi.get_coords_array()
+    expected = np.float32([
+        [1, 2],
+        [3, 4]
+    ])
+    assert np.allclose(observed, expected)
+
+    # from_coords_array
+    arr = np.float32([
+        [1, 2],
+        [3, 4]
+    ])
+    kpi = ia.KeypointsOnImage.from_coords_array(arr, shape=(5, 5, 3))
+    assert 1 - eps < kpi.keypoints[0].x < 1 + eps
+    assert 2 - eps < kpi.keypoints[0].y < 2 + eps
+    assert 3 - eps < kpi.keypoints[1].x < 3 + eps
+    assert 4 - eps < kpi.keypoints[1].y < 4 + eps
+
+    # to_keypoint_image
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    image = kpi.to_keypoint_image(size=1)
+    image_size3 = kpi.to_keypoint_image(size=3)
+    kps_mask = np.zeros((5, 5, 2), dtype=np.bool)
+    kps_mask[2, 1, 0] = 1
+    kps_mask[4, 3, 1] = 1
+    kps_mask_size3 = np.zeros_like(kps_mask)
+    kps_mask_size3[2-1:2+1+1, 1-1:1+1+1, 0] = 1
+    kps_mask_size3[4-1:4+1+1, 3-1:3+1+1, 1] = 1
+    assert np.all(image[kps_mask] == 255)
+    assert np.all(image[~kps_mask] == 0)
+    assert np.all(image_size3[kps_mask] == 255)
+    assert np.all(image_size3[kps_mask_size3] >= 128)
+    assert np.all(image_size3[~kps_mask_size3] == 0)
+
+    # from_keypoint_image()
+    kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
+    kps_image[2, 1, 0] = 255
+    kps_image[4, 3, 1] = 255
+    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, nb_channels=3)
+    assert kpi2.shape == (5, 5, 3)
+    assert len(kpi2.keypoints) == 2
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[0].x == 1
+    assert kpi2.keypoints[1].y == 4
+    assert kpi2.keypoints[1].x == 3
+
+    kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
+    kps_image[2, 1, 0] = 255
+    kps_image[4, 3, 1] = 10
+    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords={"x": -1, "y": -2}, threshold=20, nb_channels=3)
+    assert kpi2.shape == (5, 5, 3)
+    assert len(kpi2.keypoints) == 2
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[0].x == 1
+    assert kpi2.keypoints[1].y == -2
+    assert kpi2.keypoints[1].x == -1
+
+    kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
+    kps_image[2, 1, 0] = 255
+    kps_image[4, 3, 1] = 10
+    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords=(-1, -2), threshold=20, nb_channels=3)
+    assert kpi2.shape == (5, 5, 3)
+    assert len(kpi2.keypoints) == 2
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[0].x == 1
+    assert kpi2.keypoints[1].y == -2
+    assert kpi2.keypoints[1].x == -1
+
+    kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
+    kps_image[2, 1, 0] = 255
+    kps_image[4, 3, 1] = 10
+    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords=None, threshold=20, nb_channels=3)
+    assert kpi2.shape == (5, 5, 3)
+    assert len(kpi2.keypoints) == 1
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[0].x == 1
+
+    got_exception = False
+    try:
+        kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
+        kps_image[2, 1, 0] = 255
+        kps_image[4, 3, 1] = 10
+        kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords="exception-please", threshold=20, nb_channels=3)
+    except Exception as exc:
+        assert "Expected if_not_found_coords to be" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # copy()
+    kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    kpi2 = kpi.copy()
+    assert kpi2.keypoints[0].x == 1
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[1].x == 3
+    assert kpi2.keypoints[1].y == 4
+    kps[0].x = 100
+    assert kpi2.keypoints[0].x == 100
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[1].x == 3
+    assert kpi2.keypoints[1].y == 4
+
+    # deepcopy()
+    kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    kpi2 = kpi.deepcopy()
+    assert kpi2.keypoints[0].x == 1
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[1].x == 3
+    assert kpi2.keypoints[1].y == 4
+    kps[0].x = 100
+    assert kpi2.keypoints[0].x == 1
+    assert kpi2.keypoints[0].y == 2
+    assert kpi2.keypoints[1].x == 3
+    assert kpi2.keypoints[1].y == 4
+
+    # repr/str
+    kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+    kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+    expected = "KeypointsOnImage([Keypoint(x=1.00000000, y=2.00000000), Keypoint(x=3.00000000, y=4.00000000)], shape=(5, 5, 3))"
+    assert kpi.__repr__() == kpi.__str__() == expected
+
+
+def test_BoundingBox():
+    eps = 1e-8
+
+    # properties with ints
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.y1_int == 10
+    assert bb.x1_int == 20
+    assert bb.y2_int == 30
+    assert bb.x2_int == 40
+    assert bb.width == 40 - 20
+    assert bb.height == 30 - 10
+    center_x = bb.x1 + (bb.x2 - bb.x1)/2
+    center_y = bb.y1 + (bb.y2 - bb.y1)/2
+    assert center_x - eps < bb.center_x < center_x + eps
+    assert center_y - eps < bb.center_y < center_y + eps
+
+    # wrong order of y1/y2, x1/x2
+    bb = ia.BoundingBox(y1=30, x1=40, y2=10, x2=20, label=None)
+    assert bb.y1_int == 10
+    assert bb.x1_int == 20
+    assert bb.y2_int == 30
+    assert bb.x2_int == 40
+
+    # properties with floats
+    bb = ia.BoundingBox(y1=10.1, x1=20.1, y2=30.9, x2=40.9, label=None)
+    assert bb.y1_int == 10
+    assert bb.x1_int == 20
+    assert bb.y2_int == 31
+    assert bb.x2_int == 41
+    assert bb.width == 40.9 - 20.1
+    assert bb.height == 30.9 - 10.1
+    center_x = bb.x1 + (bb.x2 - bb.x1)/2
+    center_y = bb.y1 + (bb.y2 - bb.y1)/2
+    assert center_x - eps < bb.center_x < center_x + eps
+    assert center_y - eps < bb.center_y < center_y + eps
+
+    # area
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.area == (30-10) * (40-20)
+
+    # project
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = bb.project((10, 10), (10, 10))
+    assert 10 - eps < bb2.y1 < 10 + eps
+    assert 20 - eps < bb2.x1 < 20 + eps
+    assert 30 - eps < bb2.y2 < 30 + eps
+    assert 40 - eps < bb2.x2 < 40 + eps
+
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = bb.project((10, 10), (20, 20))
+    assert 10*2 - eps < bb2.y1 < 10*2 + eps
+    assert 20*2 - eps < bb2.x1 < 20*2 + eps
+    assert 30*2 - eps < bb2.y2 < 30*2 + eps
+    assert 40*2 - eps < bb2.x2 < 40*2 + eps
+
+    bb2 = bb.project((10, 10), (5, 5))
+    assert 10*0.5 - eps < bb2.y1 < 10*0.5 + eps
+    assert 20*0.5 - eps < bb2.x1 < 20*0.5 + eps
+    assert 30*0.5 - eps < bb2.y2 < 30*0.5 + eps
+    assert 40*0.5 - eps < bb2.x2 < 40*0.5 + eps
+
+    bb2 = bb.project((10, 10), (10, 20))
+    assert 10*1 - eps < bb2.y1 < 10*1 + eps
+    assert 20*2 - eps < bb2.x1 < 20*2 + eps
+    assert 30*1 - eps < bb2.y2 < 30*1 + eps
+    assert 40*2 - eps < bb2.x2 < 40*2 + eps
+
+    bb2 = bb.project((10, 10), (20, 10))
+    assert 10*2 - eps < bb2.y1 < 10*2 + eps
+    assert 20*1 - eps < bb2.x1 < 20*1 + eps
+    assert 30*2 - eps < bb2.y2 < 30*2 + eps
+    assert 40*1 - eps < bb2.x2 < 40*1 + eps
+
+    # extend
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = bb.extend(all_sides=1)
+    assert bb2.y1 == 10-1
+    assert bb2.y2 == 30+1
+    assert bb2.x1 == 20-1
+    assert bb2.x2 == 40+1
+
+    bb2 = bb.extend(all_sides=-1)
+    assert bb2.y1 == 10-(-1)
+    assert bb2.y2 == 30+(-1)
+    assert bb2.x1 == 20-(-1)
+    assert bb2.x2 == 40+(-1)
+
+    bb2 = bb.extend(top=1)
+    assert bb2.y1 == 10-1
+    assert bb2.y2 == 30+0
+    assert bb2.x1 == 20-0
+    assert bb2.x2 == 40+0
+
+    bb2 = bb.extend(right=1)
+    assert bb2.y1 == 10-0
+    assert bb2.y2 == 30+0
+    assert bb2.x1 == 20-0
+    assert bb2.x2 == 40+1
+
+    bb2 = bb.extend(bottom=1)
+    assert bb2.y1 == 10-0
+    assert bb2.y2 == 30+1
+    assert bb2.x1 == 20-0
+    assert bb2.x2 == 40+0
+
+    bb2 = bb.extend(left=1)
+    assert bb2.y1 == 10-0
+    assert bb2.y2 == 30+0
+    assert bb2.x1 == 20-1
+    assert bb2.x2 == 40+0
+
+    # intersection
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=39, y2=30, x2=59, label=None)
+    bb_inter = bb1.intersection(bb2)
+    assert bb_inter.x1 == 39
+    assert bb_inter.x2 == 40
+    assert bb_inter.y1 == 10
+    assert bb_inter.y2 == 30
+
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=41, y2=30, x2=61, label=None)
+    bb_inter = bb1.intersection(bb2, default=False)
+    assert bb_inter == False
+
+    # union
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=39, y2=30, x2=59, label=None)
+    bb_union = bb1.union(bb2)
+    assert bb_union.x1 == 20
+    assert bb_union.x2 == 59
+    assert bb_union.y1 == 10
+    assert bb_union.y2 == 30
+
+    # iou
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    iou = bb1.iou(bb2)
+    assert 1.0 - eps < iou < 1.0 + eps
+
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=10, x1=41, y2=30, x2=61, label=None)
+    iou = bb1.iou(bb2)
+    assert 0.0 - eps < iou < 0.0 + eps
+
+    bb1 = ia.BoundingBox(y1=10, x1=10, y2=20, x2=20, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=15, y2=25, x2=25, label=None)
+    iou = bb1.iou(bb2)
+    area_union = 10 * 10 + 10 * 10 - 5 * 5
+    area_intersection = 5 * 5
+    iou_expected = area_intersection / area_union
+    assert iou_expected - eps < iou < iou_expected + eps
+
+    # is_fully_within_image
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.is_fully_within_image((100, 100, 3)) == True
+    assert bb.is_fully_within_image((20, 100, 3)) == False
+    assert bb.is_fully_within_image((100, 30, 3)) == False
+    assert bb.is_fully_within_image((1, 1, 3)) == False
+
+    # is_partly_within_image
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.is_partly_within_image((100, 100, 3)) == True
+    assert bb.is_partly_within_image((20, 100, 3)) == True
+    assert bb.is_partly_within_image((100, 30, 3)) == True
+    assert bb.is_partly_within_image((1, 1, 3)) == False
+
+    # is_out_of_image()
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=True) == False
+    assert bb.is_out_of_image((100, 100, 3), partly=False, fully=True) == False
+    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=False) == False
+    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=True) == True
+    assert bb.is_out_of_image((20, 100, 3), partly=False, fully=True) == False
+    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=False) == True
+    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=True) == True
+    assert bb.is_out_of_image((100, 30, 3), partly=False, fully=True) == False
+    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=False) == True
+    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=True) == True
+    assert bb.is_out_of_image((1, 1, 3), partly=False, fully=True) == True
+    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=False) == False
+
+    # cut_out_of_image
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb_cut = bb.cut_out_of_image((100, 100, 3))
+    eps = np.finfo(np.float32).eps
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 30
+    assert bb_cut.x2 == 40
+    bb_cut = bb.cut_out_of_image(np.zeros((100, 100, 3), dtype=np.uint8))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 30
+    assert bb_cut.x2 == 40
+    bb_cut = bb.cut_out_of_image((20, 100, 3))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert 20 - 2*eps < bb_cut.y2 < 20
+    assert bb_cut.x2 == 40
+    bb_cut = bb.cut_out_of_image((100, 30, 3))
+    assert bb_cut.y1 == 10
+    assert bb_cut.x1 == 20
+    assert bb_cut.y2 == 30
+    assert 30 - 2*eps < bb_cut.x2 < 30
+
+    # shift
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb_top = bb.shift(top=0)
+    bb_right = bb.shift(right=0)
+    bb_bottom = bb.shift(bottom=0)
+    bb_left = bb.shift(left=0)
+    assert bb_top.y1 == 10
+    assert bb_top.x1 == 20
+    assert bb_top.y2 == 30
+    assert bb_top.x2 == 40
+    assert bb_right.y1 == 10
+    assert bb_right.x1 == 20
+    assert bb_right.y2 == 30
+    assert bb_right.x2 == 40
+    assert bb_bottom.y1 == 10
+    assert bb_bottom.x1 == 20
+    assert bb_bottom.y2 == 30
+    assert bb_bottom.x2 == 40
+    assert bb_left.y1 == 10
+    assert bb_left.x1 == 20
+    assert bb_left.y2 == 30
+    assert bb_left.x2 == 40
+    bb_top = bb.shift(top=1)
+    bb_right = bb.shift(right=1)
+    bb_bottom = bb.shift(bottom=1)
+    bb_left = bb.shift(left=1)
+    assert bb_top.y1 == 10+1
+    assert bb_top.x1 == 20
+    assert bb_top.y2 == 30+1
+    assert bb_top.x2 == 40
+    assert bb_right.y1 == 10
+    assert bb_right.x1 == 20-1
+    assert bb_right.y2 == 30
+    assert bb_right.x2 == 40-1
+    assert bb_bottom.y1 == 10-1
+    assert bb_bottom.x1 == 20
+    assert bb_bottom.y2 == 30-1
+    assert bb_bottom.x2 == 40
+    assert bb_left.y1 == 10
+    assert bb_left.x1 == 20+1
+    assert bb_left.y2 == 30
+    assert bb_left.x2 == 40+1
+    bb_top = bb.shift(top=-1)
+    bb_right = bb.shift(right=-1)
+    bb_bottom = bb.shift(bottom=-1)
+    bb_left = bb.shift(left=-1)
+    assert bb_top.y1 == 10-1
+    assert bb_top.x1 == 20
+    assert bb_top.y2 == 30-1
+    assert bb_top.x2 == 40
+    assert bb_right.y1 == 10
+    assert bb_right.x1 == 20+1
+    assert bb_right.y2 == 30
+    assert bb_right.x2 == 40+1
+    assert bb_bottom.y1 == 10+1
+    assert bb_bottom.x1 == 20
+    assert bb_bottom.y2 == 30+1
+    assert bb_bottom.x2 == 40
+    assert bb_left.y1 == 10
+    assert bb_left.x1 == 20-1
+    assert bb_left.y2 == 30
+    assert bb_left.x2 == 40-1
+    bb_mix = bb.shift(top=1, bottom=2, left=3, right=4)
+    assert bb_mix.y1 == 10+1-2
+    assert bb_mix.x1 == 20+3-4
+    assert bb_mix.y2 == 30+3-4
+    assert bb_mix.x2 == 40+1-2
+
+    # draw_on_image()
+    image = np.zeros((10, 10, 3), dtype=np.uint8)
+    bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[1:3+1, 1] = True
+    bb_mask[1:3+1, 3] = True
+    bb_mask[1, 1:3+1] = True
+    bb_mask[3, 1:3+1] = True
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+    assert np.all(image == 0)
+
+    image_bb = bb.draw_on_image(image, color=[255, 0, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 0, 0])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    image_bb = bb.draw_on_image(image, color=128, alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [128, 128, 128])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    image_bb = bb.draw_on_image(image+100, color=[200, 200, 200], alpha=0.5, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [150, 150, 150])
+    assert np.all(image_bb[~bb_mask] == [100, 100, 100])
+
+    image_bb = bb.draw_on_image((image+100).astype(np.float32), color=[200, 200, 200], alpha=0.5, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.sum(np.abs((image_bb - [150, 150, 150])[bb_mask])) < 0.1
+    assert np.sum(np.abs((image_bb - [100, 100, 100])[~bb_mask])) < 0.1
+
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=False, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+    assert np.all(image[bb_mask] == [255, 255, 255])
+    assert np.all(image[~bb_mask] == [0, 0, 0])
+
+    image = np.zeros_like(image)
+    bb = ia.BoundingBox(y1=-1, x1=-1, y2=2, x2=2, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[2, 0:3] = True
+    bb_mask[0:3, 2] = True
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[0:5, 0:5] = True
+    bb_mask[2, 2] = False
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=2, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1, label=None)
+    bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+    bb_mask[0:1+1, 1] = True
+    bb_mask[1, 0:1+1] = True
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_bb[bb_mask] == [255, 255, 255])
+    assert np.all(image_bb[~bb_mask] == [0, 0, 0])
+
+    bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1, label=None)
+    got_exception = False
+    try:
+        image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=True)
+    except Exception as e:
+        got_exception = True
+    assert got_exception == False
+
+    bb = ia.BoundingBox(y1=-5, x1=-5, y2=-1, x2=-1, label=None)
+    got_exception = False
+    try:
+        image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=True)
+    except Exception as e:
+        got_exception = True
+    assert got_exception == True
+
+    # extract_from_image()
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:3, 1:3, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:3, 1:3])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:3, 1:3])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    image_pad = np.pad(image, ((0, 1), (0, 1), (0, 0)), mode="constant", constant_values=0)
+    bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image_pad[8:11, 8:11, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    image_pad = np.pad(image, ((1, 0), (1, 0), (0, 0)), mode="constant", constant_values=0)
+    bb = ia.BoundingBox(y1=-1, y2=3, x1=-1, x2=4, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image_pad[0:4, 0:5, :])
+
+    # to_keypoints()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    kps = bb.to_keypoints()
+    assert kps[0].y == 1
+    assert kps[0].x == 1
+    assert kps[1].y == 1
+    assert kps[1].x == 3
+    assert kps[2].y == 3
+    assert kps[2].x == 3
+    assert kps[3].y == 3
+    assert kps[3].x == 1
+
+    # copy()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label="test")
+    bb2 = bb.copy()
+    assert bb2.y1 == 1
+    assert bb2.y2 == 3
+    assert bb2.x1 == 1
+    assert bb2.x2 == 3
+    assert bb2.label == "test"
+
+    bb2 = bb.copy(y1=10, x1=20, y2=30, x2=40, label="test2")
+    assert bb2.y1 == 10
+    assert bb2.x1 == 20
+    assert bb2.y2 == 30
+    assert bb2.x2 == 40
+    assert bb2.label == "test2"
+
+    # deepcopy()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=["test"])
+    bb2 = bb.deepcopy()
+    assert bb2.y1 == 1
+    assert bb2.y2 == 3
+    assert bb2.x1 == 1
+    assert bb2.x2 == 3
+    assert bb2.label[0] == "test"
+
+    # BoundingBox_repr()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    assert bb.__repr__() == "BoundingBox(x1=1.0000, y1=1.0000, x2=3.0000, y2=3.0000, label=None)"
+
+    # test_BoundingBox_str()
+    bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
+    assert bb.__str__() == "BoundingBox(x1=1.0000, y1=1.0000, x2=3.0000, y2=3.0000, label=None)"
+
+
+def test_BoundingBoxesOnImage():
+    reseed()
+
+    # test height/width
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    assert bbsoi.height == 40
+    assert bbsoi.width == 50
+
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=np.zeros((40, 50, 3), dtype=np.uint8))
+    assert bbsoi.height == 40
+    assert bbsoi.width == 50
+
+    # on()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=np.zeros((40, 50, 3), dtype=np.uint8))
+
+    bbsoi_projected = bbsoi.on((40, 50))
+    assert bbsoi_projected.bounding_boxes[0].y1 == 10
+    assert bbsoi_projected.bounding_boxes[0].x1 == 20
+    assert bbsoi_projected.bounding_boxes[0].y2 == 30
+    assert bbsoi_projected.bounding_boxes[0].x2 == 40
+    assert bbsoi_projected.bounding_boxes[1].y1 == 15
+    assert bbsoi_projected.bounding_boxes[1].x1 == 25
+    assert bbsoi_projected.bounding_boxes[1].y2 == 35
+    assert bbsoi_projected.bounding_boxes[1].x2 == 45
+
+    bbsoi_projected = bbsoi.on((40*2, 50*2, 3))
+    assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
+    assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
+    assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
+    assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
+    assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
+    assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
+    assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
+    assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+
+    bbsoi_projected = bbsoi.on(np.zeros((40*2, 50*2, 3), dtype=np.uint8))
+    assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
+    assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
+    assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
+    assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
+    assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
+    assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
+    assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
+    assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+
+    # draw_on_image()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    image = bbsoi.draw_on_image(np.zeros(bbsoi.shape, dtype=np.uint8), color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image[10-1, 20-1, :] == [0, 0, 0])
+    assert np.all(image[10-1, 20-0, :] == [0, 0, 0])
+    assert np.all(image[10-0, 20-1, :] == [0, 0, 0])
+    assert np.all(image[10-0, 20-0, :] == [0, 255, 0])
+    assert np.all(image[10+1, 20+1, :] == [0, 0, 0])
+
+    assert np.all(image[30-1, 40-1, :] == [0, 0, 0])
+    assert np.all(image[30+1, 40-0, :] == [0, 0, 0])
+    assert np.all(image[30+0, 40+1, :] == [0, 0, 0])
+    assert np.all(image[30+0, 40+0, :] == [0, 255, 0])
+    assert np.all(image[30+1, 40+1, :] == [0, 0, 0])
+
+    assert np.all(image[15-1, 25-1, :] == [0, 0, 0])
+    assert np.all(image[15-1, 25-0, :] == [0, 0, 0])
+    assert np.all(image[15-0, 25-1, :] == [0, 0, 0])
+    assert np.all(image[15-0, 25-0, :] == [0, 255, 0])
+    assert np.all(image[15+1, 25+1, :] == [0, 0, 0])
+
+    assert np.all(image[35-1, 45-1, :] == [0, 0, 0])
+    assert np.all(image[35+1, 45+0, :] == [0, 0, 0])
+    assert np.all(image[35+0, 45+1, :] == [0, 0, 0])
+    assert np.all(image[35+0, 45+0, :] == [0, 255, 0])
+    assert np.all(image[35+1, 45+1, :] == [0, 0, 0])
+
+    # remove_out_of_image()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_slim = bbsoi.remove_out_of_image(fully=True, partly=True)
+    assert len(bbsoi_slim.bounding_boxes) == 1
+    assert bbsoi_slim.bounding_boxes[0] == bb1
+
+    # cut_out_of_image()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    eps = np.finfo(np.float32).eps
+    bbsoi_cut = bbsoi.cut_out_of_image()
+    assert len(bbsoi_cut.bounding_boxes) == 2
+    assert bbsoi_cut.bounding_boxes[0].y1 == 10
+    assert bbsoi_cut.bounding_boxes[0].x1 == 20
+    assert bbsoi_cut.bounding_boxes[0].y2 == 30
+    assert bbsoi_cut.bounding_boxes[0].x2 == 40
+    assert bbsoi_cut.bounding_boxes[1].y1 == 15
+    assert bbsoi_cut.bounding_boxes[1].x1 == 25
+    assert bbsoi_cut.bounding_boxes[1].y2 == 35
+    assert 50 - 2*eps < bbsoi_cut.bounding_boxes[1].x2 < 50
+
+    # shift()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_shifted = bbsoi.shift(right=1)
+    assert len(bbsoi_cut.bounding_boxes) == 2
+    assert bbsoi_shifted.bounding_boxes[0].y1 == 10
+    assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
+    assert bbsoi_shifted.bounding_boxes[0].y2 == 30
+    assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
+    assert bbsoi_shifted.bounding_boxes[1].y1 == 15
+    assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
+    assert bbsoi_shifted.bounding_boxes[1].y2 == 35
+    assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+
+    # copy()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_copy = bbsoi.copy()
+    assert len(bbsoi.bounding_boxes) == 2
+    assert bbsoi_copy.bounding_boxes[0].y1 == 10
+    assert bbsoi_copy.bounding_boxes[0].x1 == 20
+    assert bbsoi_copy.bounding_boxes[0].y2 == 30
+    assert bbsoi_copy.bounding_boxes[0].x2 == 40
+    assert bbsoi_copy.bounding_boxes[1].y1 == 15
+    assert bbsoi_copy.bounding_boxes[1].x1 == 25
+    assert bbsoi_copy.bounding_boxes[1].y2 == 35
+    assert bbsoi_copy.bounding_boxes[1].x2 == 51
+
+    bbsoi.bounding_boxes[0].y1 = 0
+    assert bbsoi_copy.bounding_boxes[0].y1 == 0
+
+    # deepcopy()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bbsoi_copy = bbsoi.deepcopy()
+    assert len(bbsoi.bounding_boxes) == 2
+    assert bbsoi_copy.bounding_boxes[0].y1 == 10
+    assert bbsoi_copy.bounding_boxes[0].x1 == 20
+    assert bbsoi_copy.bounding_boxes[0].y2 == 30
+    assert bbsoi_copy.bounding_boxes[0].x2 == 40
+    assert bbsoi_copy.bounding_boxes[1].y1 == 15
+    assert bbsoi_copy.bounding_boxes[1].x1 == 25
+    assert bbsoi_copy.bounding_boxes[1].y2 == 35
+    assert bbsoi_copy.bounding_boxes[1].x2 == 51
+
+    bbsoi.bounding_boxes[0].y1 = 0
+    assert bbsoi_copy.bounding_boxes[0].y1 == 10
+
+    # repr() / str()
+    bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+    bb1_expected = "BoundingBox(x1=20.0000, y1=10.0000, x2=40.0000, y2=30.0000, label=None)"
+    bb2_expected = "BoundingBox(x1=25.0000, y1=15.0000, x2=51.0000, y2=35.0000, label=None)"
+    expected = "BoundingBoxesOnImage([%s, %s], shape=(40, 50, 3))" % (bb1_expected, bb2_expected)
+    assert bbsoi.__repr__() == bbsoi.__str__() == expected
+
+
+def test_HeatmapsOnImage_draw():
+    heatmaps_arr = np.float32([
+        [0.5, 0.0, 0.0, 0.5],
+        [0.0, 1.0, 1.0, 0.0],
+        [0.0, 1.0, 1.0, 0.0],
+        [0.5, 0.0, 0.0, 0.5],
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_drawn = heatmaps.draw()[0]
+    assert heatmaps_drawn.shape == (4, 4, 3)
+    v1 = heatmaps_drawn[0, 1]
+    v2 = heatmaps_drawn[0, 0]
+    v3 = heatmaps_drawn[1, 1]
+
+    for y, x in [(0, 1), (0, 2), (1, 0), (1, 3), (2, 0), (2, 3), (3, 1), (3, 2)]:
+        assert np.allclose(heatmaps_drawn[y, x], v1)
+
+    for y, x in [(0, 0), (0, 3), (3, 0), (3, 3)]:
+        assert np.allclose(heatmaps_drawn[y, x], v2)
+
+    for y, x in [(1, 1), (1, 2), (2, 1), (2, 2)]:
+        assert np.allclose(heatmaps_drawn[y, x], v3)
+
+    # size differs from heatmap array size
+    heatmaps_arr = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    heatmaps_drawn = heatmaps.draw(size=(4, 4))[0]
+    assert heatmaps_drawn.shape == (4, 4, 3)
+    v1 = heatmaps_drawn[0, 0]
+    v2 = heatmaps_drawn[0, -1]
+
+    for y in range(4):
+        for x in range(2):
+            assert np.allclose(heatmaps_drawn[y, x], v1)
+
+    for y in range(4):
+        for x in range(2, 4):
+            assert np.allclose(heatmaps_drawn[y, x], v2)
+
+
+def test_HeatmapsOnImage_draw_on_image():
+    heatmaps_arr = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    image = np.uint8([
+        [0, 0, 0, 255],
+        [0, 0, 0, 255],
+        [0, 0, 0, 255],
+        [0, 0, 0, 255]
+    ])
+    image = np.tile(image[..., np.newaxis], (1, 1, 3))
+
+    heatmaps_drawn = heatmaps.draw_on_image(image, alpha=0.5, cmap=None)[0]
+    assert heatmaps_drawn.shape == (4, 4, 3)
+    assert np.all(heatmaps_drawn[0:4, 0:2, :] == 0)
+    assert np.all(heatmaps_drawn[0:4, 2:3, :] == 128) or np.all(heatmaps_drawn[0:4, 2:3, :] == 127)
+    assert np.all(heatmaps_drawn[0:4, 3:4, :] == 255) or np.all(heatmaps_drawn[0:4, 3:4, :] == 254)
+
+    image = np.uint8([
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ])
+    image = np.tile(image[..., np.newaxis], (1, 1, 3))
+
+    heatmaps_drawn = heatmaps.draw_on_image(image, alpha=0.5, resize="image", cmap=None)[0]
+    assert heatmaps_drawn.shape == (2, 2, 3)
+    assert np.all(heatmaps_drawn[0:2, 0, :] == 0)
+    assert np.all(heatmaps_drawn[0:2, 1, :] == 128) or np.all(heatmaps_drawn[0:2, 1, :] == 127)
+
+
+def test_HeatmapsOnImage_invert():
+    heatmaps_arr = np.float32([
+        [0.0, 5.0, 10.0],
+        [-1.0, -2.0, 7.5]
+    ])
+    expected = np.float32([
+        [8.0, 3.0, -2.0],
+        [9.0, 10.0, 0.5]
+    ])
+
+    # (H, W)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 3), min_value=-2.0, max_value=10.0)
+    assert np.allclose(heatmaps.get_arr(), heatmaps_arr)
+    assert np.allclose(heatmaps.invert().get_arr(), expected)
+
+    # (H, W, 1)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr[..., np.newaxis], shape=(2, 3), min_value=-2.0, max_value=10.0)
+    assert np.allclose(heatmaps.get_arr(), heatmaps_arr[..., np.newaxis])
+    assert np.allclose(heatmaps.invert().get_arr(), expected[..., np.newaxis])
+
+
+def test_HeatmapsOnImage_pad():
+    heatmaps_arr = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    heatmaps_padded = heatmaps.pad(top=1, right=2, bottom=3, left=4)
+    assert heatmaps_padded.arr_0to1.shape == (2+(1+3), 2+(4+2), 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad(top=1, right=2, bottom=3, left=4, cval=0.5)
+    assert heatmaps_padded.arr_0to1.shape == (2+(1+3), 2+(4+2), 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.0, 1.0, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.0, 1.0, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad(top=1, right=2, bottom=3, left=4, mode="edge")
+    assert heatmaps_padded.arr_0to1.shape == (2+(1+3), 2+(4+2), 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+        ])
+    )
+
+
+def test_HeatmapsOnImage_avg_pool():
+    heatmaps_arr = np.float32([
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_pooled = heatmaps.avg_pool(2)
+    assert heatmaps_pooled.arr_0to1.shape == (2, 2, 1)
+    assert np.allclose(
+        heatmaps_pooled.arr_0to1[:, :, 0],
+        np.float32([[0.0, 0.75],
+                    [0.0, 0.75]])
+    )
+
+
+def test_HeatmapsOnImage_max_pool():
+    heatmaps_arr = np.float32([
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0],
+        [0.0, 0.0, 0.5, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_pooled = heatmaps.max_pool(2)
+    assert heatmaps_pooled.arr_0to1.shape == (2, 2, 1)
+    assert np.allclose(
+        heatmaps_pooled.arr_0to1[:, :, 0],
+        np.float32([[0.0, 1.0],
+                    [0.0, 1.0]])
+    )
+
+
+def test_HeatmapsOnImage_scale():
+    heatmaps_arr = np.float32([
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_scaled = heatmaps.scale((4, 4), interpolation="nearest")
+    assert heatmaps_scaled.arr_0to1.shape == (4, 4, 1)
+    assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
+    assert np.allclose(
+        heatmaps_scaled.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0]
+        ])
+    )
+
+    heatmaps_arr = np.float32([
+        [0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
+
+    heatmaps_scaled = heatmaps.scale(2.0, interpolation="nearest")
+    assert heatmaps_scaled.arr_0to1.shape == (2, 4, 1)
+    assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
+    assert np.allclose(
+        heatmaps_scaled.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0]
+        ])
+    )
+
+
+def test_SegmentationMapOnImage_bool():
+    # Test for #189 (boolean mask inputs into SegmentationMapOnImage not working)
+    arr = np.array([
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ], dtype=bool)
+    assert arr.dtype.type == np.bool_
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
+    observed = segmap.get_arr_int()
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(arr, observed)
+
+    arr = np.array([
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ], dtype=np.bool)
+    assert arr.dtype.type == np.bool_
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
+    observed = segmap.get_arr_int()
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(arr, observed)
+
+
+def test_SegmentationMapOnImage_get_arr_int():
+    arr = np.int32([
+        [0, 0, 1],
+        [0, 2, 1],
+        [1, 3, 1]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3), nb_classes=4)
+    observed = segmap.get_arr_int()
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(arr, observed)
+
+    arr_c0 = np.float32([
+        [0.1, 0.1, 0.1],
+        [0.1, 0.9, 0.1],
+        [0.0, 0.1, 0.0]
+    ])
+    arr_c1 = np.float32([
+        [0.2, 1.0, 0.2],
+        [0.2, 0.8, 0.2],
+        [0.0, 0.0, 0.0]
+    ])
+    arr_c2 = np.float32([
+        [0.0, 0.0, 0.0],
+        [0.3, 0.7, 0.3],
+        [0.1, 0.0, 0.0001]
+    ])
+    arr = np.concatenate([
+        arr_c0[..., np.newaxis],
+        arr_c1[..., np.newaxis],
+        arr_c2[..., np.newaxis]
+    ], axis=2)
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
+    observed = segmap.get_arr_int()
+    expected = np.int32([
+        [2, 2, 2],
+        [3, 1, 3],
+        [3, 1, 0]
+    ])
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(observed, expected)
+
+    got_exception = False
+    try:
+        observed = segmap.get_arr_int(background_class_id=2)
+    except Exception as exc:
+        assert "The background class id may only be changed if " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    observed = segmap.get_arr_int(background_threshold=0.21)
+    expected = np.int32([
+        [0, 2, 0],
+        [3, 1, 3],
+        [0, 0, 0]
+    ])
+    assert observed.dtype.type == np.int32
+    assert np.array_equal(observed, expected)
+
+
+def test_SegmentationMapOnImage_draw():
+    arr = np.int32([
+        [0, 1, 1],
+        [0, 1, 1],
+        [0, 1, 1]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3), nb_classes=2)
+
+    # simple example with 2 classes
+    observed = segmap.draw()
+    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
+    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    expected = np.uint8([
+        [col0, col1, col1],
+        [col0, col1, col1],
+        [col0, col1, col1]
+    ])
+    assert np.array_equal(observed, expected)
+
+    # same example, with resizing to 2x the size
+    observed = segmap.draw(size=(6, 6))
+    expected = ia.imresize_single_image(expected, (6, 6), interpolation="nearest")
+    assert np.array_equal(observed, expected)
+
+    # custom choice of colors
+    col0 = (10, 10, 10)
+    col1 = (50, 51, 52)
+    observed = segmap.draw(colors=[col0, col1])
+    expected = np.uint8([
+        [col0, col1, col1],
+        [col0, col1, col1],
+        [col0, col1, col1]
+    ])
+    assert np.array_equal(observed, expected)
+
+    # background_threshold, background_class and foreground mask
+    arr_c0 = np.float32([
+        [0, 0, 0],
+        [1.0, 0, 0],
+        [0, 0, 0]
+    ])
+    arr_c1 = np.float32([
+        [0, 1, 1],
+        [0, 1, 1],
+        [0.1, 1, 1]
+    ])
+    arr = np.concatenate([
+        arr_c0[..., np.newaxis],
+        arr_c1[..., np.newaxis]
+    ], axis=2)
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3))
+
+    observed, observed_fg = segmap.draw(background_threshold=0.01, return_foreground_mask=True)
+    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
+    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    col2 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[2]
+    expected = np.uint8([
+        [col0, col2, col2],
+        [col1, col2, col2],
+        [col2, col2, col2]
+    ])
+    expected_fg = np.array([
+        [False, True, True],
+        [True, True, True],
+        [True, True, True]
+    ], dtype=np.bool)
+    assert np.array_equal(observed, expected)
+    assert np.array_equal(observed_fg, expected_fg)
+
+    # background_threshold, background_class and foreground mask
+    # here with higher threshold so that bottom left pixel switches to background
+    observed, observed_fg = segmap.draw(background_threshold=0.11, return_foreground_mask=True)
+    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
+    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    col2 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[2]
+    expected = np.uint8([
+        [col0, col2, col2],
+        [col1, col2, col2],
+        [col0, col2, col2]
+    ])
+    expected_fg = np.array([
+        [False, True, True],
+        [True, True, True],
+        [False, True, True]
+    ], dtype=np.bool)
+    assert np.array_equal(observed, expected)
+    assert np.array_equal(observed_fg, expected_fg)
+
+
+def test_SegmentationMapOnImage_draw_on_image():
+    # draw_on_image(self, image, alpha=0.5, resize="segmentation_map", background_threshold=0.01, background_class_id=0, colors=None, draw_background=False):
+    arr = np.int32([
+        [0, 1, 1],
+        [0, 1, 1],
+        [0, 1, 1]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3), nb_classes=2)
+
+    image = np.uint8([
+        [0, 10, 20],
+        [30, 40, 50],
+        [60, 70, 80]
+    ])
+    image = np.tile(image[:, :, np.newaxis], (1, 1, 3))
+
+    # only image visible
+    observed = segmap.draw_on_image(image, alpha=0)
+    assert np.array_equal(observed, image)
+
+    # only segmap visible
+    observed = segmap.draw_on_image(image, alpha=1.0, draw_background=True)
+    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
+    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    expected = np.uint8([
+        [col0, col1, col1],
+        [col0, col1, col1],
+        [col0, col1, col1]
+    ])
+    assert np.array_equal(observed, expected)
+
+    # only segmap visible - in foreground
+    observed = segmap.draw_on_image(image, alpha=1.0, draw_background=False)
+    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
+    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    expected = np.uint8([
+        [image[0,0,:], col1, col1],
+        [image[1,0,:], col1, col1],
+        [image[2,0,:], col1, col1]
+    ])
+    assert np.array_equal(observed, expected)
+
+    # overlay without background drawn
+    a1 = 0.7
+    a0 = 1.0 - a1
+    observed = segmap.draw_on_image(image, alpha=a1, draw_background=False)
+    col0 = np.uint8(ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0])
+    col1 = np.uint8(ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1])
+    expected = np.float32([
+        [image[0,0,:], a0*image[0,1,:] + a1*col1, a0*image[0,2,:] + a1*col1],
+        [image[1,0,:], a0*image[1,1,:] + a1*col1, a0*image[1,2,:] + a1*col1],
+        [image[2,0,:], a0*image[2,1,:] + a1*col1, a0*image[2,2,:] + a1*col1]
+    ])
+    d_max = np.max(np.abs(observed.astype(np.float32) - expected))
+    assert observed.shape == expected.shape
+    assert d_max <= 1.0 + 1e-4
+
+    # overlay with background drawn
+    a1 = 0.7
+    a0 = 1.0 - a1
+    observed = segmap.draw_on_image(image, alpha=a1, draw_background=True)
+    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
+    col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
+    expected = np.uint8([
+        [col0, col1, col1],
+        [col0, col1, col1],
+        [col0, col1, col1]
+    ])
+    expected = a0 * image + a1 * expected
+    d_max = np.max(np.abs(observed.astype(np.float32) - expected.astype(np.float32)))
+    assert observed.shape == expected.shape
+    assert d_max <= 1.0 + 1e-4
+
+    # resizing of segmap to image
+    arr = np.int32([
+        [0, 1, 1]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3), nb_classes=2)
+
+    image = np.uint8([
+        [0, 10, 20],
+        [30, 40, 50],
+        [60, 70, 80]
+    ])
+    image = np.tile(image[:, :, np.newaxis], (1, 1, 3))
+
+    a1 = 0.7
+    a0 = 1.0 - a1
+    observed = segmap.draw_on_image(image, alpha=a1, draw_background=True, resize="segmentation_map")
+    expected = np.uint8([
+        [col0, col1, col1],
+        [col0, col1, col1],
+        [col0, col1, col1]
+    ])
+    expected = a0 * image + a1 * expected
+    d_max = np.max(np.abs(observed.astype(np.float32) - expected.astype(np.float32)))
+    assert observed.shape == expected.shape
+    assert d_max <= 1.0 + 1e-4
+
+    # resizing of image to segmap
+    arr = np.int32([
+        [0, 1, 1],
+        [0, 1, 1],
+        [0, 1, 1]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(1, 3), nb_classes=2)
+
+    image = np.uint8([
+        [0, 10, 20]
+    ])
+    image = np.tile(image[:, :, np.newaxis], (1, 1, 3))
+    image_rs = ia.imresize_single_image(image, arr.shape[0:2], interpolation="cubic")
+
+    a1 = 0.7
+    a0 = 1.0 - a1
+    observed = segmap.draw_on_image(image, alpha=a1, draw_background=True, resize="image")
+    expected = np.uint8([
+        [col0, col1, col1],
+        [col0, col1, col1],
+        [col0, col1, col1]
+    ])
+    expected = a0 * image_rs + a1 * expected
+    d_max = np.max(np.abs(observed.astype(np.float32) - expected.astype(np.float32)))
+    assert observed.shape == expected.shape
+    assert d_max <= 1.0 + 1e-4
+
+
+def test_SegmentationMapOnImage_pad():
+    arr = np.int32([
+        [0, 1, 1],
+        [0, 2, 1],
+        [0, 1, 3]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(3, 3), nb_classes=4)
+
+    segmap_padded = segmap.pad(top=1, right=2, bottom=3, left=4)
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((1, 3), (4, 2), (0, 0)), mode="constant", constant_values=0)
+    assert np.allclose(observed, expected)
+
+    segmap_padded = segmap.pad(top=1, right=2, bottom=3, left=4, cval=1.0)
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((1, 3), (4, 2), (0, 0)), mode="constant", constant_values=1.0)
+    assert np.allclose(observed, expected)
+
+    segmap_padded = segmap.pad(top=1, right=2, bottom=3, left=4, mode="edge")
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((1, 3), (4, 2), (0, 0)), mode="edge")
+    assert np.allclose(observed, expected)
+
+
+def test_SegmentationMapOnImage_pad_to_aspect_ratio():
+    arr = np.int32([
+        [0, 1, 1],
+        [0, 2, 1]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 3), nb_classes=3)
+
+    segmap_padded = segmap.pad_to_aspect_ratio(1.0)
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="constant", constant_values=0)
+    assert np.allclose(observed, expected)
+
+    segmap_padded = segmap.pad_to_aspect_ratio(1.0, cval=1.0)
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="constant", constant_values=1.0)
+    assert np.allclose(observed, expected)
+
+    segmap_padded = segmap.pad_to_aspect_ratio(1.0, mode="edge")
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="edge")
+    assert np.allclose(observed, expected)
+
+    segmap_padded = segmap.pad_to_aspect_ratio(0.5)
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((2, 2), (0, 0), (0, 0)), mode="constant", constant_values=0)
+    assert np.allclose(observed, expected)
+
+    segmap_padded, pad_amounts = segmap.pad_to_aspect_ratio(0.5, return_pad_amounts=True)
+    observed = segmap_padded.arr
+    expected = np.pad(segmap.arr, ((2, 2), (0, 0), (0, 0)), mode="constant", constant_values=0)
+    assert np.allclose(observed, expected)
+    assert pad_amounts == (2, 0, 2, 0)
+
+
+def test_SegmentationMapOnImage_scale():
+    arr = np.int32([
+        [0, 1],
+        [0, 2]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=3)
+
+    segmap_scaled = segmap.scale((4, 4))
+    observed = segmap_scaled.arr
+    expected = np.clip(ia.imresize_single_image(segmap.arr, (4, 4), interpolation="cubic"), 0, 1.0)
+    assert np.allclose(observed, expected)
+    assert np.array_equal(segmap_scaled.get_arr_int(), np.int32([
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+        [0, 0, 2, 2],
+        [0, 0, 2, 2],
+    ]))
+
+    segmap_scaled = segmap.scale((4, 4), interpolation="nearest")
+    observed = segmap_scaled.arr
+    expected = ia.imresize_single_image(segmap.arr, (4, 4), interpolation="nearest")
+    assert np.allclose(observed, expected)
+    assert np.array_equal(segmap_scaled.get_arr_int(), np.int32([
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+        [0, 0, 2, 2],
+        [0, 0, 2, 2],
+    ]))
+
+    segmap_scaled = segmap.scale(2.0)
+    observed = segmap_scaled.arr
+    expected = np.clip(ia.imresize_single_image(segmap.arr, 2.0, interpolation="cubic"), 0, 1.0)
+    assert np.allclose(observed, expected)
+    assert np.array_equal(segmap_scaled.get_arr_int(), np.int32([
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+        [0, 0, 2, 2],
+        [0, 0, 2, 2],
+    ]))
+
+
+def test_SegmentationMapOnImage_to_heatmaps():
+    arr = np.int32([
+        [0, 1],
+        [0, 2]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=3)
+    heatmaps = segmap.to_heatmaps()
+    expected_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    expected_c1 = np.float32([
+        [0.0, 1.0],
+        [0.0, 0.0]
+    ])
+    expected_c2 = np.float32([
+        [0.0, 0.0],
+        [0.0, 1.0]
+    ])
+    expected = np.concatenate([
+        expected_c0[..., np.newaxis],
+        expected_c1[..., np.newaxis],
+        expected_c2[..., np.newaxis]
+    ], axis=2)
+    assert np.allclose(heatmaps.arr_0to1, expected)
+
+    # only_nonempty when all are nonempty
+    heatmaps, class_indices = segmap.to_heatmaps(only_nonempty=True)
+    expected_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    expected_c1 = np.float32([
+        [0.0, 1.0],
+        [0.0, 0.0]
+    ])
+    expected_c2 = np.float32([
+        [0.0, 0.0],
+        [0.0, 1.0]
+    ])
+    expected = np.concatenate([
+        expected_c0[..., np.newaxis],
+        expected_c1[..., np.newaxis],
+        expected_c2[..., np.newaxis]
+    ], axis=2)
+    assert np.allclose(heatmaps.arr_0to1, expected)
+    assert len(class_indices) == 3
+    assert [idx in class_indices for idx in [0, 1, 2]]
+
+    # only_nonempty when one is empty and two are nonempty
+    arr = np.int32([
+        [0, 2],
+        [0, 2]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=3)
+    heatmaps, class_indices = segmap.to_heatmaps(only_nonempty=True)
+    expected_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    expected_c2 = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    expected = np.concatenate([
+        expected_c0[..., np.newaxis],
+        expected_c2[..., np.newaxis]
+    ], axis=2)
+    assert np.allclose(heatmaps.arr_0to1, expected)
+    assert len(class_indices) == 2
+    assert [idx in class_indices for idx in [0, 2]]
+
+    # only_nonempty when all are empty
+    arr_c0 = np.float32([
+        [0.0, 0.0],
+        [0.0, 0.0]
+    ])
+    arr = arr_c0[..., np.newaxis]
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=3)
+    heatmaps, class_indices = segmap.to_heatmaps(only_nonempty=True)
+    assert heatmaps is None
+    assert len(class_indices) == 0
+
+    # only_nonempty when all are empty and not_none_if_no_nonempty is True
+    arr_c0 = np.float32([
+        [0.0, 0.0],
+        [0.0, 0.0]
+    ])
+    arr = arr_c0[..., np.newaxis]
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=3)
+    heatmaps, class_indices = segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True)
+    assert np.allclose(heatmaps.arr_0to1, np.zeros((2, 2), dtype=np.float32))
+    assert len(class_indices) == 1
+    assert [idx in class_indices for idx in [0]]
+
+
+def test_SegmentationMapOnImage_from_heatmaps():
+    arr_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    arr_c1 = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    arr = np.concatenate([arr_c0[..., np.newaxis], arr_c1[..., np.newaxis]], axis=2)
+    heatmaps = ia.HeatmapsOnImage.from_0to1(arr, shape=(2, 2))
+
+    segmap = ia.SegmentationMapOnImage.from_heatmaps(heatmaps)
+    assert np.allclose(segmap.arr, arr)
+
+    # with class_indices
+    arr_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    arr_c2 = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    arr = np.concatenate([arr_c0[..., np.newaxis], arr_c2[..., np.newaxis]], axis=2)
+    heatmaps = ia.HeatmapsOnImage.from_0to1(arr, shape=(2, 2))
+
+    segmap = ia.SegmentationMapOnImage.from_heatmaps(heatmaps, class_indices=[0, 2], nb_classes=4)
+    expected_c0 = np.copy(arr_c0)
+    expected_c1 = np.zeros(arr_c0.shape)
+    expected_c2 = np.copy(arr_c2)
+    expected_c3 = np.zeros(arr_c0.shape)
+    expected = np.concatenate([
+        expected_c0[..., np.newaxis],
+        expected_c1[..., np.newaxis],
+        expected_c2[..., np.newaxis],
+        expected_c3[..., np.newaxis]
+    ], axis=2)
+    assert np.allclose(segmap.arr, expected)
+
+
+def test_SegmentationMapOnImage_copy():
+    arr_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    arr_c1 = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    arr = np.concatenate([arr_c0[..., np.newaxis], arr_c1[..., np.newaxis]], axis=2)
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2))
+    observed = segmap.copy()
+    assert np.allclose(observed.arr, segmap.arr)
+    assert observed.shape == (2, 2)
+    assert observed.nb_classes == segmap.nb_classes
+    assert observed.input_was == segmap.input_was
+
+    arr = np.int32([
+        [0, 1],
+        [2, 3]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=10)
+    observed = segmap.copy()
+    assert np.array_equal(observed.get_arr_int(), arr)
+    assert observed.shape == (2, 2)
+    assert observed.nb_classes == 10
+    assert observed.input_was == segmap.input_was
+
+
+def test_SegmentationMapOnImage_deepcopy():
+    arr_c0 = np.float32([
+        [1.0, 0.0],
+        [1.0, 0.0]
+    ])
+    arr_c1 = np.float32([
+        [0.0, 1.0],
+        [0.0, 1.0]
+    ])
+    arr = np.concatenate([arr_c0[..., np.newaxis], arr_c1[..., np.newaxis]], axis=2)
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2))
+    observed = segmap.deepcopy()
+    assert np.allclose(observed.arr, segmap.arr)
+    assert observed.shape == (2, 2)
+    assert observed.nb_classes == segmap.nb_classes
+    assert observed.input_was == segmap.input_was
+    segmap.arr[0, 0, 0] = 0.0
+    assert not np.allclose(observed.arr, segmap.arr)
+
+    arr = np.int32([
+        [0, 1],
+        [2, 3]
+    ])
+    segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=10)
+    observed = segmap.deepcopy()
+    assert np.array_equal(observed.get_arr_int(), segmap.get_arr_int())
+    assert observed.shape == (2, 2)
+    assert observed.nb_classes == 10
+    assert observed.input_was == segmap.input_was
+    segmap.arr[0, 0, 0] = 0.0
+    segmap.arr[0, 0, 1] = 1.0
+    assert not np.array_equal(observed.get_arr_int(), segmap.get_arr_int())
+
+
+def test_Polygon___init__():
+    # exterior is list of Keypoint or
+    poly = ia.Polygon([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=0.5, y=2.5)])
+    assert poly.exterior.dtype.type == np.float32
+    assert np.allclose(
+        poly.exterior,
+        np.float32([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 2.5]
+        ])
+    )
+
+    # exterior is list of tuple of floats
+    poly = ia.Polygon([(0.0, 0.0), (1.0, 1.0), (0.5, 2.5)])
+    assert poly.exterior.dtype.type == np.float32
+    assert np.allclose(
+        poly.exterior,
+        np.float32([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 2.5]
+        ])
+    )
+
+    # exterior is list of tuple of integer
+    poly = ia.Polygon([(0, 0), (1, 1), (1, 3)])
+    assert poly.exterior.dtype.type == np.float32
+    assert np.allclose(
+        poly.exterior,
+        np.float32([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [1.0, 3.0]
+        ])
+    )
+
+    # exterior is (N,2) ndarray
+    poly = ia.Polygon(
+        np.float32([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 2.5]
+        ])
+    )
+    assert poly.exterior.dtype.type == np.float32
+    assert np.allclose(
+        poly.exterior,
+        np.float32([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 2.5]
+        ])
+    )
+
+    # exterior is (N,2) ndarray in float64
+    poly = ia.Polygon(
+        np.float64([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 2.5]
+        ])
+    )
+    assert poly.exterior.dtype.type == np.float32
+    assert np.allclose(
+        poly.exterior,
+        np.float32([
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 2.5]
+        ])
+    )
+
+    # arrays without points
+    poly = ia.Polygon([])
+    assert poly.exterior.dtype.type == np.float32
+    assert poly.exterior.shape == (0, 2)
+
+    poly = ia.Polygon(np.zeros((0, 2), dtype=np.float32))
+    assert poly.exterior.dtype.type == np.float32
+    assert poly.exterior.shape == (0, 2)
+
+    # bad array shape
+    got_exception = False
+    try:
+        _ = ia.Polygon(np.zeros((8,), dtype=np.float32))
+    except:
+        got_exception = True
+    assert got_exception
+
+    # label
+    poly = ia.Polygon([(0, 0)])
+    assert poly.label is None
+    poly = ia.Polygon([(0, 0)], label="test")
+    assert poly.label == "test"
+
+
+def test_Polygon_xx():
+    poly = ia.Polygon([(0, 0), (1, 0), (1.5, 0), (4.1, 1), (2.9, 2.0)])
+    assert poly.xx.dtype.type == np.float32
+    assert np.allclose(poly.xx, np.float32([0.0, 1.0, 1.5, 4.1, 2.9]))
+
+    poly = ia.Polygon([])
+    assert poly.xx.dtype.type == np.float32
+    assert poly.xx.shape == (0,)
+
+
+def test_Polygon_yy():
+    poly = ia.Polygon([(0, 0), (0, 1), (0, 1.5), (1, 4.1), (2.0, 2.9)])
+    assert poly.yy.dtype.type == np.float32
+    assert np.allclose(poly.yy, np.float32([0.0, 1.0, 1.5, 4.1, 2.9]))
+
+    poly = ia.Polygon([])
+    assert poly.yy.dtype.type == np.float32
+    assert poly.yy.shape == (0,)
+
+
+def test_Polygon_xx_int():
+    poly = ia.Polygon([(0, 0), (1, 0), (1.5, 0), (4.1, 1), (2.9, 2.0)])
+    assert poly.xx_int.dtype.type == np.int32
+    assert np.allclose(poly.xx_int, np.int32([0, 1, 2, 4, 3]))
+
+    poly = ia.Polygon([])
+    assert poly.xx_int.dtype.type == np.int32
+    assert poly.xx_int.shape == (0,)
+
+
+def test_Polygon_yy_int():
+    poly = ia.Polygon([(0, 0), (0, 1), (0, 1.5), (1, 4.1), (2.0, 2.9)])
+    assert poly.yy_int.dtype.type == np.int32
+    assert np.allclose(poly.yy_int, np.int32([0, 1, 2, 4, 3]))
+
+    poly = ia.Polygon([])
+    assert poly.yy_int.dtype.type == np.int32
+    assert poly.yy_int.shape == (0,)
+
+
+def test_Polygon_is_valid():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly.is_valid
+
+    poly = ia.Polygon([])
+    assert not poly.is_valid
+
+    poly = ia.Polygon([(0, 0)])
+    assert not poly.is_valid
+
+    poly = ia.Polygon([(0, 0), (1, 0)])
+    assert not poly.is_valid
+
+    poly = ia.Polygon([(0, 0), (1, 0), (-1, 0.5), (1, 1), (0, 1)])
+    assert not poly.is_valid
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly.is_valid
+
+
+def test_Polygon_area():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly.area == 1
+    assert 1.0 - 1e-8 < poly.area < 1.0 + 1e-8
+
+    poly = ia.Polygon([(0, 0), (2, 0), (2, 1), (0, 1)])
+    assert poly.area == 2
+    assert 2.0 - 1e-8 < poly.area < 2.0 + 1e-8
+
+    poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
+    assert 1/2 - 1e-8 < poly.area < 1/2 + 1e-8
+
+
+
+def test_Polygon_project():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_proj = poly.project((1, 1), (1, 1))
+    assert poly_proj.exterior.dtype.type == np.float32
+    assert poly_proj.exterior.shape == (4, 2)
+    assert np.allclose(
+        poly_proj.exterior,
+        np.float32([
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1]
+        ])
+    )
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_proj = poly.project((1, 1), (2, 2))
+    assert poly_proj.exterior.dtype.type == np.float32
+    assert poly_proj.exterior.shape == (4, 2)
+    assert np.allclose(
+        poly_proj.exterior,
+        np.float32([
+            [0, 0],
+            [2, 0],
+            [2, 2],
+            [0, 2]
+        ])
+    )
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_proj = poly.project((1, 1), (2, 1))
+    assert poly_proj.exterior.dtype.type == np.float32
+    assert poly_proj.exterior.shape == (4, 2)
+    assert np.allclose(
+        poly_proj.exterior,
+        np.float32([
+            [0, 0],
+            [1, 0],
+            [1, 2],
+            [0, 2]
+        ])
+    )
+
+    poly = ia.Polygon([])
+    poly_proj = poly.project((1, 1), (2, 2))
+    assert poly_proj.exterior.dtype.type == np.float32
+    assert poly_proj.exterior.shape == (0, 2)
+
+
+def test_Polygon__compute_inside_image_point_mask():
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    mask = poly._compute_inside_image_point_mask((1, 1, 3))
+    assert np.array_equal(mask, np.array([True, True, True, True], dtype=bool))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    mask = poly._compute_inside_image_point_mask((1, 1, 3))
+    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    mask = poly._compute_inside_image_point_mask((1, 1))
+    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    mask = poly._compute_inside_image_point_mask(np.zeros((1, 1, 3), dtype=np.uint8))
+    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
+
+
+def test_Polygon_is_fully_within_image():
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    assert poly.is_fully_within_image((1, 1, 3))
+
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    assert poly.is_fully_within_image((1, 1))
+
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    assert poly.is_fully_within_image(np.zeros((1, 1, 3), dtype=np.uint8))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert not poly.is_fully_within_image((1, 1, 3))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert not poly.is_fully_within_image((1, 1))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert not poly.is_fully_within_image(np.zeros((1, 1, 3), dtype=np.uint8))
+
+    poly = ia.Polygon([(100, 100), (101, 100), (101, 101), (100, 101)])
+    assert not poly.is_fully_within_image((1, 1, 3))
+
+
+def test_Polygon_is_partly_within_image():
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    assert poly.is_partly_within_image((1, 1, 3))
+
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    assert poly.is_partly_within_image((1, 1))
+
+    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+    assert poly.is_partly_within_image(np.zeros((1, 1, 3), dtype=np.uint8))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly.is_partly_within_image((1, 1, 3))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly.is_partly_within_image((1, 1))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly.is_partly_within_image(np.zeros((1, 1, 3), dtype=np.uint8))
+
+    poly = ia.Polygon([(100, 100), (101, 100), (101, 101), (100, 101)])
+    assert not poly.is_partly_within_image((1, 1, 3))
+
+    poly = ia.Polygon([(100, 100), (101, 100), (101, 101), (100, 101)])
+    assert not poly.is_partly_within_image((1, 1))
+
+    poly = ia.Polygon([(100, 100), (101, 100), (101, 101), (100, 101)])
+    assert not poly.is_partly_within_image(np.zeros((1, 1, 3), dtype=np.uint8))
+
+
+def test_Polygon_is_out_of_image():
+    for shape in [(1, 1, 3), (1, 1), np.zeros((1, 1, 3), dtype=np.uint8)]:
+        poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
+        assert not poly.is_out_of_image(shape, partly=False, fully=False)
+        assert not poly.is_out_of_image(shape, partly=True, fully=False)
+        assert not poly.is_out_of_image(shape, partly=False, fully=True)
+        assert not poly.is_out_of_image(shape, partly=True, fully=True)
+
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        shape = np.zeros((1, 1, 3), dtype=np.uint8)
+        assert not poly.is_out_of_image(shape, partly=False, fully=False)
+        assert poly.is_out_of_image(shape, partly=True, fully=False)
+        assert not poly.is_out_of_image(shape, partly=False, fully=True)
+        assert poly.is_out_of_image(shape, partly=True, fully=True)
+
+        poly = ia.Polygon([(100, 100), (101, 100), (101, 101), (100, 101)])
+        shape = (1, 1, 3)
+        assert not poly.is_out_of_image(shape, partly=False, fully=False)
+        assert not poly.is_out_of_image(shape, partly=True, fully=False)
+        assert poly.is_out_of_image(shape, partly=False, fully=True)
+        assert poly.is_out_of_image(shape, partly=True, fully=True)
+
+
+def test_Polygon_cut_out_of_image():
+    _test_Polygon_cut_clip(lambda poly, image: poly.cut_out_of_image(image))
+
+
+def test_Polygon_clip_out_of_image():
+    _test_Polygon_cut_clip(lambda poly, image: poly.clip_out_of_image(image))
+
+
+def _test_Polygon_cut_clip(func):
+    # poly inside image
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label=None)
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, ia.MultiPolygon)
+    assert len(multipoly_clipped.geoms) == 1
+    assert multipoly_clipped.geoms[0].exterior_almost_equals(poly.exterior)
+    assert multipoly_clipped.geoms[0].label is None
+
+    # square poly shifted by x=0.5, y=0.5 => half out of image
+    poly = ia.Polygon([(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)], label="test")
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, ia.MultiPolygon)
+    assert len(multipoly_clipped.geoms) == 1
+    assert multipoly_clipped.geoms[0].exterior_almost_equals(np.float32([
+        [0.5, 0.5],
+        [1.0, 0.5],
+        [1.0, 1.0],
+        [0.5, 1.0]
+    ]))
+    assert multipoly_clipped.geoms[0].label == "test"
+
+    # non-square poly, with one rectangle on the left side of the image and one on the right side,
+    # both sides are connected by a thin strip below the image
+    # after clipping it should become two rectangles
+    poly = ia.Polygon([(-0.1, 0.0), (0.4, 0.0), (0.4, 1.1), (0.6, 1.1), (0.6, 0.0), (1.1, 0.0),
+                       (1.1, 1.2), (-0.1, 1.2)],
+                      label="test")
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, ia.MultiPolygon)
+    assert len(multipoly_clipped.geoms) == 2
+    assert multipoly_clipped.geoms[0].exterior_almost_equals(np.float32([
+        [0.0, 0.0],
+        [0.4, 0.0],
+        [0.4, 1.0],
+        [0.0, 1.0]
+    ]))
+    assert multipoly_clipped.geoms[0].label == "test"
+    assert multipoly_clipped.geoms[1].exterior_almost_equals(np.float32([
+        [0.6, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.6, 1.0]
+    ]))
+    assert multipoly_clipped.geoms[0].label == "test"
+
+
+def test_Polygon_shift():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
+
+    # make sure that shift does not change poly inplace
+    poly_shifted = poly.shift(top=1)
+    assert np.allclose(poly.exterior, np.float32([
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1]
+    ]))
+    assert np.allclose(poly_shifted.exterior, np.float32([
+        [0, 1],
+        [1, 1],
+        [1, 2],
+        [0, 2]
+    ]))
+
+    for v in [1, 0, -1, 0.5]:
+        # top/bottom
+        poly_shifted = poly.shift(top=v)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0, 0 + v],
+            [1, 0 + v],
+            [1, 1 + v],
+            [0, 1 + v]
+        ]))
+        assert poly_shifted.label == "test"
+
+        poly_shifted = poly.shift(bottom=v)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0, 0 - v],
+            [1, 0 - v],
+            [1, 1 - v],
+            [0, 1 - v]
+        ]))
+        assert poly_shifted.label == "test"
+
+        poly_shifted = poly.shift(top=v, bottom=-v)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0, 0 + 2*v],
+            [1, 0 + 2*v],
+            [1, 1 + 2*v],
+            [0, 1 + 2*v]
+        ]))
+        assert poly_shifted.label == "test"
+
+        # left/right
+        poly_shifted = poly.shift(left=v)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0 + v, 0],
+            [1 + v, 0],
+            [1 + v, 1],
+            [0 + v, 1]
+        ]))
+        assert poly_shifted.label == "test"
+
+        poly_shifted = poly.shift(right=v)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0 - v, 0],
+            [1 - v, 0],
+            [1 - v, 1],
+            [0 - v, 1]
+        ]))
+        assert poly_shifted.label == "test"
+
+        poly_shifted = poly.shift(left=v, right=-v)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0 + 2 * v, 0],
+            [1 + 2 * v, 0],
+            [1 + 2 * v, 1],
+            [0 + 2 * v, 1]
+        ]))
+        assert poly_shifted.label == "test"
+
+
+def test_Polygon_draw_on_image():
+    image = np.tile(np.arange(100).reshape(10, 10, 1), (1, 1, 3)).astype(np.uint8)
+
+    # simple drawing of square
+    poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
+    image_poly = poly.draw_on_image(image,
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=1.0, alpha_perimeter=1.0,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.uint8
+    assert image_poly.shape == (10, 10, 3)
+    assert np.sum(image) == 3 * np.sum(np.arange(100))  # draw did not change original image (copy=True)
+    for c_idx, value in enumerate([0, 255, 0]):
+        assert np.all(image_poly[2:9, 2:3, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # left boundary
+        assert np.all(image_poly[2:9, 8:9, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # right boundary
+        assert np.all(image_poly[2:3, 2:9, c_idx] == np.zeros((1, 7), dtype=np.uint8) + value)  # top boundary
+        assert np.all(image_poly[8:9, 2:9, c_idx] == np.zeros((1, 7), dtype=np.uint8) + value)  # bottom boundary
+    expected = np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1))
+    assert np.all(image_poly[3:8, 3:8, :] == expected)
+
+    # TODO test drawing on float32, float64 image
+
+    # drawing of poly that is half out of image
+    poly = ia.Polygon([(2, 2+5), (8, 2+5), (8, 8+5), (2, 8+5)])
+    image_poly = poly.draw_on_image(image,
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=1.0, alpha_perimeter=1.0,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.uint8
+    assert image_poly.shape == (10, 10, 3)
+    assert np.sum(image) == 3 * np.sum(np.arange(100))  # draw did not change original image (copy=True)
+    for c_idx, value in enumerate([0, 255, 0]):
+        assert np.all(image_poly[2+5:, 2:3, c_idx] == np.zeros((3, 1), dtype=np.uint8) + value)  # left boundary
+        assert np.all(image_poly[2+5:, 8:9, c_idx] == np.zeros((3, 1), dtype=np.uint8) + value)  # right boundary
+        assert np.all(image_poly[2+5:3+5, 2:9, c_idx] == np.zeros((1, 7), dtype=np.uint8) + value)  # top boundary
+    expected = np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (2, 5, 1))
+    assert np.all(image_poly[3+5:, 3:8, :] == expected)
+
+    # drawing of poly that is half out of image, with raise_if_out_of_image=True
+    poly = ia.Polygon([(2, 2+5), (8, 2+5), (8, 8+5), (0, 8+5)])
+    got_exception = False
+    try:
+        _ = poly.draw_on_image(image,
+                               color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                               alpha=1.0, alpha_perimeter=1.0,
+                               raise_if_out_of_image=True)
+    except Exception as exc:
+        assert "Cannot draw polygon" in str(exc)
+        got_exception = True
+    assert not got_exception  # only polygons fully outside of the image plane lead to exceptions
+
+    # drawing of poly that is fully out of image
+    poly = ia.Polygon([(100, 100), (100+10, 100), (100+10, 100+10), (100, 100+10)])
+    image_poly = poly.draw_on_image(image,
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=1.0, alpha_perimeter=1.0,
+                                    raise_if_out_of_image=False)
+    assert np.array_equal(image_poly, image)
+
+    # drawing of poly that is fully out of image, with raise_if_out_of_image=True
+    poly = ia.Polygon([(100, 100), (100+10, 100), (100+10, 100+10), (100, 100+10)])
+    got_exception = False
+    try:
+        _ = poly.draw_on_image(image,
+                               color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                               alpha=1.0, alpha_perimeter=1.0,
+                               raise_if_out_of_image=True)
+    except Exception as exc:
+        assert "Cannot draw polygon" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # face invisible via alpha
+    poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
+    image_poly = poly.draw_on_image(image,
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=0.0, alpha_perimeter=1.0,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.uint8
+    assert image_poly.shape == (10, 10, 3)
+    assert np.sum(image) == 3 * np.sum(np.arange(100))  # draw did not change original image (copy=True)
+    for c_idx, value in enumerate([0, 255, 0]):
+        assert np.all(image_poly[2:9, 2:3, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # left boundary
+    assert np.all(image_poly[3:8, 3:8, :] == image[3:8, 3:8, :])
+
+    # boundary invisible via alpha
+    poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
+    image_poly = poly.draw_on_image(image,
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=1.0, alpha_perimeter=0.0,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.uint8
+    assert image_poly.shape == (10, 10, 3)
+    assert np.sum(image) == 3 * np.sum(np.arange(100))  # draw did not change original image (copy=True)
+    expected = np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (6, 6, 1))
+    assert np.all(image_poly[2:8, 2:8, :] == expected)
+
+    # copy=False
+    # test deactivated as the function currently does not offer a copy argument
+    """
+    image_cp = np.copy(image)
+    poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
+    image_poly = poly.draw_on_image(image_cp,
+                                    color_face=[32, 128, 32], color_boundary=[0, 255, 0],
+                                    alpha_face=1.0, alpha_boundary=1.0,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.uint8
+    assert image_poly.shape == (10, 10, 3)
+    assert np.all(image_cp == image_poly)
+    assert not np.all(image_cp == image)
+    for c_idx, value in enumerate([0, 255, 0]):
+        assert np.all(image_poly[2:9, 2:3, c_idx] == np.zeros((6, 1, 3), dtype=np.uint8) + value)  # left boundary
+        assert np.all(image_cp[2:9, 2:3, c_idx] == np.zeros((6, 1, 3), dtype=np.uint8) + value)  # left boundary
+    expected = np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1))
+    assert np.all(image_poly[3:8, 3:8, :] == expected)
+    assert np.all(image_cp[3:8, 3:8, :] == expected)
+    """
+
+
+def test_Polygon_extract_from_image():
+    image = np.arange(20*20*2).reshape(20, 20, 2).astype(np.int32)
+
+    # inside image and completely covers it
+    poly = ia.Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+    subimage = poly.extract_from_image(image)
+    assert np.array_equal(subimage, image[0:10, 0:10, :])
+
+    # inside image, subpart of it (not all may be extracted)
+    poly = ia.Polygon([(1, 1), (9, 1), (9, 9), (1, 9)])
+    subimage = poly.extract_from_image(image)
+    assert np.array_equal(subimage, image[1:9, 1:9, :])
+
+    # inside image, two image areas that don't belong to the polygon but have to be extracted
+    poly = ia.Polygon([(0, 0), (10, 0), (10, 5), (20, 5),
+                       (20, 20), (10, 20), (10, 5), (0, 5)])
+    subimage = poly.extract_from_image(image)
+    expected = np.copy(image)
+    expected[:5, 10:, :] = 0  # top right block
+    expected[5:, :10, :] = 0  # left bottom block
+    assert np.array_equal(subimage, expected)
+
+    # partially out of image
+    poly = ia.Polygon([(-5, 0), (5, 0), (5, 10), (-5, 10)])
+    subimage = poly.extract_from_image(image)
+    expected = np.zeros((10, 10, 2), dtype=np.int32)
+    expected[0:10, 5:10, :] = image[0:10, 0:5, :]
+    assert np.array_equal(subimage, expected)
+
+    # fully out of image
+    poly = ia.Polygon([(30, 0), (40, 0), (40, 10), (30, 10)])
+    subimage = poly.extract_from_image(image)
+    expected = np.zeros((10, 10, 2), dtype=np.int32)
+    assert np.array_equal(subimage, expected)
+
+    # inside image, subpart of it
+    # float coordinates, rounded so that the whole image will be extracted
+    poly = ia.Polygon([(0.4, 0.4), (9.6, 0.4), (9.6, 9.6), (0.4, 9.6)])
+    subimage = poly.extract_from_image(image)
+    assert np.array_equal(subimage, image[0:10, 0:10, :])
+
+    # inside image, subpart of it
+    # float coordinates, rounded so that x/y 0<=i<9 will be extracted (instead of 0<=i<10)
+    poly = ia.Polygon([(0.5, 0.5), (9.4, 0.5), (9.4, 9.4), (0.5, 9.4)])
+    subimage = poly.extract_from_image(image)
+    assert np.array_equal(subimage, image[0:9, 0:9, :])
+
+    # inside image, subpart of it
+    # float coordinates, rounded so that x/y 1<=i<9 will be extracted (instead of 0<=i<10)
+    poly = ia.Polygon([(0.51, 0.51), (9.4, 0.51), (9.4, 9.4), (0.51, 9.4)])
+    subimage = poly.extract_from_image(image)
+    assert np.array_equal(subimage, image[1:9, 1:9, :])
+
+
+def test_Polygon_change_first_point_by_coords():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_coords(x=0, y=0)
+    assert np.allclose(poly.exterior, poly_reordered.exterior)
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_coords(x=1, y=0)
+    # make sure that it does not reorder inplace
+    assert np.allclose(poly.exterior, np.float32([[0, 0], [1, 0], [1, 1]]))
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 0], [1, 1], [0, 0]]))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_coords(x=1, y=1)
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 1], [0, 0], [1, 0]]))
+
+    # inaccurate point, but close enough
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_coords(x=1.0, y=0.01, max_distance=0.1)
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 0], [1, 1], [0, 0]]))
+
+    # inaccurate point, but close enough (infinite max distance)
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_coords(x=1.0, y=0.01, max_distance=None)
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 0], [1, 1], [0, 0]]))
+
+    # point too far away
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    got_exception = False
+    try:
+        _ = poly.change_first_point_by_coords(x=1.0, y=0.01, max_distance=0.001)
+    except Exception as exc:
+        assert "Closest found point " in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # reorder with two points
+    poly = ia.Polygon([(0, 0), (1, 0)])
+    poly_reordered = poly.change_first_point_by_coords(x=1, y=0)
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 0], [0, 0]]))
+
+    # reorder with one point
+    poly = ia.Polygon([(0, 0)])
+    poly_reordered = poly.change_first_point_by_coords(x=0, y=0)
+    assert np.allclose(poly_reordered.exterior, np.float32([[0, 0]]))
+
+
+def test_Polygon_change_first_point_by_index():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_index(0)
+    assert np.allclose(poly.exterior, poly_reordered.exterior)
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_index(1)
+    # make sure that it does not reorder inplace
+    assert np.allclose(poly.exterior, np.float32([[0, 0], [1, 0], [1, 1]]))
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 0], [1, 1], [0, 0]]))
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    poly_reordered = poly.change_first_point_by_index(2)
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 1], [0, 0], [1, 0]]))
+
+    # reorder with two points
+    poly = ia.Polygon([(0, 0), (1, 0)])
+    poly_reordered = poly.change_first_point_by_index(1)
+    assert np.allclose(poly_reordered.exterior, np.float32([[1, 0], [0, 0]]))
+
+    # reorder with one point
+    poly = ia.Polygon([(0, 0)])
+    poly_reordered = poly.change_first_point_by_index(0)
+    assert np.allclose(poly_reordered.exterior, np.float32([[0, 0]]))
+
+    # idx out of bounds
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    got_exception = False
+    try:
+        _ = poly.change_first_point_by_index(3)
+    except AssertionError:
+        got_exception = True
+    assert got_exception
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    got_exception = False
+    try:
+        _ = poly.change_first_point_by_index(-1)
+    except AssertionError:
+        got_exception = True
+    assert got_exception
+
+    poly = ia.Polygon([(0, 0)])
+    got_exception = False
+    try:
+        _ = poly.change_first_point_by_index(1)
+    except AssertionError:
+        got_exception = True
+    assert got_exception
+
+    poly = ia.Polygon([])
+    got_exception = False
+    try:
+        _ = poly.change_first_point_by_index(0)
+    except AssertionError:
+        got_exception = True
+    assert got_exception
+
+
+def test_Polygon_to_shapely_line_string():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    ls = poly.to_shapely_line_string()
+    assert np.allclose(ls.coords, np.float32([[0, 0], [1, 0], [1, 1]]))
+
+    # two point polygon
+    poly = ia.Polygon([(0, 0), (1, 0)])
+    ls = poly.to_shapely_line_string()
+    assert np.allclose(ls.coords, np.float32([[0, 0], [1, 0]]))
+
+    # one point polygon
+    poly = ia.Polygon([(0, 0)])
+    got_exception = False
+    try:
+        _ = poly.to_shapely_line_string()
+    except Exception as exc:
+        assert "Conversion to shapely line string requires at least two points" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # zero point polygon
+    poly = ia.Polygon([])
+    got_exception = False
+    try:
+        _ = poly.to_shapely_line_string()
+    except Exception as exc:
+        assert "Conversion to shapely line string requires at least two points" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # closed line string
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    ls = poly.to_shapely_line_string(closed=True)
+    assert np.allclose(ls.coords, np.float32([[0, 0], [1, 0], [1, 1], [0, 0]]))
+
+    # interpolation
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    ls = poly.to_shapely_line_string(interpolate=1)
+    assert np.allclose(ls.coords, np.float32([[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 0.5]]))
+
+    # interpolation with 2 steps
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    ls = poly.to_shapely_line_string(interpolate=2)
+    assert np.allclose(ls.coords, np.float32([
+        [0, 0], [1/3, 0], [2/3, 0],
+        [1, 0], [1, 1/3], [1, 2/3],
+        [1, 1], [2/3, 2/3], [1/3, 1/3]
+    ]))
+
+    # interpolation with closed=True
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+    ls = poly.to_shapely_line_string(closed=True, interpolate=1)
+    assert np.allclose(ls.coords, np.float32([[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 0.5], [0, 0]]))
+
+
+def test_Polygon_to_shapely_polygon():
+    exterior = [(0, 0), (1, 0), (1, 1), (0, 1)]
+    poly = ia.Polygon(exterior)
+    poly_shapely = poly.to_shapely_polygon()
+    for (x_exp, y_exp), (x_obs, y_obs) in zip(exterior, poly_shapely.exterior.coords):
+        assert x_exp - 1e-8 < x_obs < x_exp + 1e-8
+        assert y_exp - 1e-8 < y_obs < y_exp + 1e-8
+
+
+def test_Polygon_to_bounding_box():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    bb = poly.to_bounding_box()
+    assert 0 - 1e-8 < bb.x1 < 0 + 1e-8
+    assert 0 - 1e-8 < bb.y1 < 0 + 1e-8
+    assert 1 - 1e-8 < bb.x2 < 1 + 1e-8
+    assert 1 - 1e-8 < bb.y2 < 1 + 1e-8
+
+    poly = ia.Polygon([(0.5, 0), (1, 1), (0, 1)])
+    bb = poly.to_bounding_box()
+    assert 0 - 1e-8 < bb.x1 < 0 + 1e-8
+    assert 0 - 1e-8 < bb.y1 < 0 + 1e-8
+    assert 1 - 1e-8 < bb.x2 < 1 + 1e-8
+    assert 1 - 1e-8 < bb.y2 < 1 + 1e-8
+
+    poly = ia.Polygon([(0.5, 0.5), (2, 0.1), (1, 1)])
+    bb = poly.to_bounding_box()
+    assert 0.5 - 1e-8 < bb.x1 < 0.5 + 1e-8
+    assert 0.1 - 1e-8 < bb.y1 < 0.1 + 1e-8
+    assert 2.0 - 1e-8 < bb.x2 < 2.0 + 1e-8
+    assert 1.0 - 1e-8 < bb.y2 < 1.0 + 1e-8
+
+
+def test_Polygon_from_shapely():
+    exterior = [(0, 0), (1, 0), (1, 1), (0, 1)]
+    poly_shapely = shapely.geometry.Polygon(exterior)
+    poly = ia.Polygon.from_shapely(poly_shapely)
+
+    # shapely messes up the point ordering, so we try to correct it here
+    start_idx = 0
+    for i, (x, y) in enumerate(poly.exterior):
+        dist = np.sqrt((exterior[0][0] - x) ** 2 + (exterior[0][1] - x) ** 2)
+        if dist < 1e-4:
+            start_idx = i
+            break
+    poly = poly.change_first_point_by_index(start_idx)
+
+    for (x_exp, y_exp), (x_obs, y_obs) in zip(exterior, poly.exterior):
+        assert x_exp - 1e-8 < x_obs < x_exp + 1e-8
+        assert y_exp - 1e-8 < y_obs < y_exp + 1e-8
+
+
+def test_Polygon_copy():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
+    poly_cp = poly.copy()
+    assert poly.exterior.dtype.type == poly_cp.exterior.dtype.type
+    assert poly.exterior.shape == poly_cp.exterior.shape
+    assert np.allclose(poly.exterior, poly_cp.exterior)
+    assert poly.label == poly_cp.label
+
+
+def test_Polygon_deepcopy():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
+    poly_cp = poly.deepcopy()
+    assert poly.exterior.dtype.type == poly_cp.exterior.dtype.type
+    assert poly.exterior.shape == poly_cp.exterior.shape
+    assert np.allclose(poly.exterior, poly_cp.exterior)
+    assert poly.label == poly_cp.label
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
+    poly_cp = poly.deepcopy()
+    poly_cp.exterior[0, 0] = 100.0
+    poly_cp.label = "test2"
+    assert poly.exterior.dtype.type == poly_cp.exterior.dtype.type
+    assert poly.exterior.shape == poly_cp.exterior.shape
+    assert not np.allclose(poly.exterior, poly_cp.exterior)
+    assert not poly.label == poly_cp.label
+
+
+def test_Polygon___repr__():
+    _test_Polygon_repr_str(lambda poly: poly.__repr__())
+
+
+def test_Polygon___str__():
+    _test_Polygon_repr_str(lambda poly: poly.__str__())
+
+
+def _test_Polygon_repr_str(func):
+    # ints
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
+    s = func(poly)
+    assert s == "Polygon([(x=0.000, y=0.000), (x=1.000, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] (4 points), label=test)"
+
+    # floats
+    poly = ia.Polygon([(0, 0.5), (1.5, 0), (1, 1), (0, 1)], label="test")
+    s = func(poly)
+    assert s == "Polygon([(x=0.000, y=0.500), (x=1.500, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] (4 points), label=test)"
+
+    # label None
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label=None)
+    s = func(poly)
+    assert s == "Polygon([(x=0.000, y=0.000), (x=1.000, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] (4 points), label=None)"
+
+    # no points
+    poly = ia.Polygon([], label="test")
+    s = func(poly)
+    assert s == "Polygon([] (0 points), label=test)"
+
+
+def test_Polygon_exterior_almost_equals():
+    # exactly same exterior
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    # one point duplicated
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (1, 1), (1, 1), (0, 1)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    # several points added without changing geometry
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0, 0), (0.5, 0), (1, 0), (1, 0.5), (1, 1), (0.5, 1), (0, 1), (0, 0.5)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    # different order
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0, 1), (1, 1), (1, 0), (0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    # tiny shift below tolerance
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0), (1+1e-6, 1), (0+1e-6, 1)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-3)
+
+    # tiny shift above tolerance
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0), (1+1e-6, 1), (0+1e-6, 1)])
+    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-9)
+
+    # shifted polygon towards half overlap
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(0.5, 0), (1.5, 0), (1.5, 1), (0.5, 1)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    # shifted polygon towards no overlap at all
+    poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(100, 0), (101, 0), (101, 1), (100, 1)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    # both polygons without points
+    poly_a = ia.Polygon([])
+    poly_b = ia.Polygon([])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    # both polygons with one point
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(100, 100)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0+1e-6, 0)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-2)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0+1, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-2)
+
+    # both polygons with two points
+    poly_a = ia.Polygon([(0, 0), (1, 0)])
+    poly_b = ia.Polygon([(0, 0), (1, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0)])
+    poly_b = ia.Polygon([(0, 0), (2, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0)])
+    poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-2)
+
+    # both polygons with three points
+    poly_a = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    poly_b = ia.Polygon([(0, 0), (1, -1), (0.5, 1)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    poly_b = ia.Polygon([(0, 0), (1+1e-6, 0), (0.5, 1)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-2)
+
+    # one polygon with zero points, other with one
+    poly_a = ia.Polygon([])
+    poly_b = ia.Polygon([(0, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    # one polygon with one point, other with two
+    poly_a = ia.Polygon([(-10, -20)])
+    poly_b = ia.Polygon([(0, 0), (1, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (1, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (0, 0)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (0+1e-6, 0)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-2)
+
+    poly_a = ia.Polygon([(0, 0), (0+1e-4, 0)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-9)
+
+    # one polygon with one point, other with three
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0, 0), (0, 0)])
+    assert poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0, 0), (1, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (0, 0)])
+    assert not poly_a.exterior_almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0+1e-6, 0), (0, 0+1e-6)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-2)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0+1e-4, 0), (0, 0+1e-4)])
+    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-9)
+
+    # two polygons that are different, but with carefully placed points so that interpolation between polygon
+    # points is necessary to spot the difference
+    poly_a = ia.Polygon([(1, 0), (1, 1), (0, 1)])
+    poly_b = ia.Polygon([(1, 0), (1, 1), (0, 1), (1-1e-6, 1-1e-6)])
+    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-4, interpolate=0)
+    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-4, interpolate=1)
+
+
+def test_Polygon_almost_equals():
+    poly_a = ia.Polygon([])
+    poly_b = ia.Polygon([])
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0)])
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0, 0)])
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0, 0), (0, 0)])
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (0+1e-10, 0)])
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)], label="test")
+    poly_b = ia.Polygon([(0, 0)])
+    assert not poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0)], label="test")
+    assert not poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)], label="test")
+    poly_b = ia.Polygon([(0, 0)], label="test")
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)], label="test")
+    poly_b = ia.Polygon([(1, 0)], label="test")
+    assert not poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)], label="testA")
+    poly_b = ia.Polygon([(0, 0)], label="testB")
+    assert not poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    assert poly_a.almost_equals(poly_b)
+
+    poly_a = ia.Polygon([(0, 0)])
+    poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
+    assert not poly_a.almost_equals(poly_b)
+
+
+def test_BatchLoader():
+    def _load_func():
+        for _ in sm.xrange(20):
+            yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
+
+    for nb_workers in [1, 2]:
+        # repeat these tests many times to catch rarer race conditions
+        for _ in sm.xrange(50):
+            loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
+            loaded = []
+            counter = 0
+            while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
+                try:
+                    batch = loader.queue.get(timeout=0.001)
+                    loaded.append(batch)
+                except:
+                    pass
+                counter += 1
+            assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
+
+            loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
+            loader.terminate()
+            assert loader.all_finished()
+
+            loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=False)
+            loaded = []
+            counter = 0
+            while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
+                try:
+                    batch = loader.queue.get(timeout=0.001)
+                    loaded.append(batch)
+                except:
+                    pass
+                counter += 1
+            assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
+
+            loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
+            loader.terminate()
+            assert loader.all_finished()
+
+
+if __name__ == "__main__":
+    main()
