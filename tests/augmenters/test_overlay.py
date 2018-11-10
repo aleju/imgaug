@@ -49,7 +49,8 @@ def test_Alpha():
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
-        aug = iaa.Alpha(1, iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":-1}), per_channel=per_channel)
+        aug = iaa.Alpha(1, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}),
+                        per_channel=per_channel)
         observed = aug.augment_heatmaps([heatmaps])[0]
         assert observed.shape == heatmaps.shape
         assert 0 - 1e-6 < heatmaps.min_value < 0 + 1e-6
@@ -62,7 +63,8 @@ def test_Alpha():
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
-        aug = iaa.Alpha(0, iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":-1}), per_channel=per_channel)
+        aug = iaa.Alpha(0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}),
+                        per_channel=per_channel)
         observed = aug.augment_heatmaps([heatmaps])[0]
         assert observed.shape == heatmaps.shape
         assert 0 - 1e-6 < heatmaps.min_value < 0 + 1e-6
@@ -104,7 +106,7 @@ def test_Alpha():
     # bad datatype for factor
     got_exception = False
     try:
-        aug = iaa.Alpha(False, iaa.Add(10), None)
+        _ = iaa.Alpha(False, iaa.Add(10), None)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -142,7 +144,7 @@ def test_Alpha():
     # bad datatype for per_channel
     got_exception = False
     try:
-        aug = iaa.Alpha(0.5, iaa.Add(10), None, per_channel="test")
+        _ = iaa.Alpha(0.5, iaa.Add(10), None, per_channel="test")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -150,11 +152,13 @@ def test_Alpha():
 
     # propagating
     aug = iaa.Alpha(0.5, iaa.Add(100), iaa.Add(50), name="AlphaTest")
+
     def propagator(images, augmenter, parents, default):
         if "Alpha" in augmenter.name:
             return False
         else:
             return default
+
     hooks = ia.HooksImages(propagator=propagator)
     image = np.zeros((10, 10, 3), dtype=np.uint8) + 1
     observed = aug.augment_image(image, hooks=hooks)
@@ -214,11 +218,13 @@ def test_Alpha():
 
     # propagating
     aug = iaa.Alpha(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaTest")
+
     def propagator(kpsoi_to_aug, augmenter, parents, default):
         if "Alpha" in augmenter.name:
             return False
         else:
             return default
+
     hooks = ia.HooksKeypoints(propagator=propagator)
     observed = aug.augment_keypoints([kpsoi], hooks=hooks)[0]
     assert keypoints_equal([observed], [kpsoi])
@@ -320,11 +326,13 @@ def test_AlphaElementwise():
 
     # propagating
     aug = iaa.AlphaElementwise(0.5, iaa.Add(100), iaa.Add(50), name="AlphaElementwiseTest")
+
     def propagator(images, augmenter, parents, default):
         if "AlphaElementwise" in augmenter.name:
             return False
         else:
             return default
+
     hooks = ia.HooksImages(propagator=propagator)
     image = np.zeros((10, 10, 3), dtype=np.uint8) + 1
     observed = aug.augment_image(image, hooks=hooks)
@@ -338,6 +346,7 @@ def test_AlphaElementwise():
             super(_DummyMaskParameter, self).__init__()
             self.nb_calls = 0
             self.inverted = inverted
+
         def _draw_samples(self, size, random_state):
             self.nb_calls += 1
             h, w = size
@@ -438,12 +447,15 @@ def test_AlphaElementwise():
     """
 
     # propagating
-    aug = iaa.AlphaElementwise(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaElementwiseTest")
+    aug = iaa.AlphaElementwise(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}),
+                               name="AlphaElementwiseTest")
+
     def propagator(kpsoi_to_aug, augmenter, parents, default):
         if "AlphaElementwise" in augmenter.name:
             return False
         else:
             return default
+
     hooks = ia.HooksKeypoints(propagator=propagator)
     observed = aug.augment_keypoints([kpsoi], hooks=hooks)[0]
     assert keypoints_equal([observed], [kpsoi])

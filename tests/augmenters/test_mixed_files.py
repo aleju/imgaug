@@ -115,7 +115,7 @@ def test_determinism():
 
 
 def test_keypoint_augmentation():
-    ia.seed(1)
+    reseed()
 
     keypoints = []
     for y in range(40//5):
@@ -137,9 +137,9 @@ def test_keypoint_augmentation():
         iaa.GaussianBlur(sigma=(0.95, 1.05), name="GaussianBlur"),
         iaa.AverageBlur((3, 5), name="AverageBlur"),
         iaa.MedianBlur((3, 5), name="MedianBlur"),
-        #iaa.BilateralBlur((3, 5), name="BilateralBlur"),
+        # iaa.BilateralBlur((3, 5), name="BilateralBlur"),
         # WithColorspace ?
-        #iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"),
+        # iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"),
         # ChangeColorspace ?
         # Grayscale cannot be tested, input not RGB
         # Convolve ?
@@ -155,7 +155,7 @@ def test_keypoint_augmentation():
         iaa.Affine(shear=(-20, 20), name="Affine-shear"),
         iaa.Affine(scale=(0.9, 1.1), name="Affine-scale"),
         iaa.PiecewiseAffine(scale=(0.001, 0.005), name="PiecewiseAffine"),
-        #iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"),
+        # iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"),
         iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"),
         # Sequential
         # SomeOf
@@ -179,8 +179,6 @@ def test_keypoint_augmentation():
     ]
 
     for aug in augs:
-        #if aug.name != "PiecewiseAffine":
-        #    continue
         dss = []
         for i in range(10):
             aug_det = aug.to_deterministic()
@@ -206,18 +204,11 @@ def test_keypoint_augmentation():
             for kp_pred, kp_pred_img in zip(kp_aug.keypoints, kp_image_aug_rev.keypoints):
                 kp_pred_lost = (kp_pred.x == -9999 and kp_pred.y == -9999)
                 kp_pred_img_lost = (kp_pred_img.x == -9999 and kp_pred_img.y == -9999)
-                #if kp_pred_lost and not kp_pred_img_lost:
-                #    print("lost kp_pred", kp_pred_img)
-                #elif not kp_pred_lost and kp_pred_img_lost:
-                #    print("lost kp_pred_img", kp_pred)
-                #elif kp_pred_lost and kp_pred_img_lost:
-                #    print("lost both keypoints")
 
                 if not kp_pred_lost and not kp_pred_img_lost:
                     d = np.sqrt((kp_pred.x - kp_pred_img.x) ** 2
                                 + (kp_pred.y - kp_pred_img.y) ** 2)
                     ds.append(d)
-            #print(aug.name, np.average(ds), ds)
             dss.extend(ds)
             if len(ds) == 0:
                 print("[INFO] No valid keypoints found for '%s' "
@@ -228,7 +219,7 @@ def test_keypoint_augmentation():
 
 
 def test_unusual_channel_numbers():
-    ia.seed(1)
+    reseed()
 
     images = [
         (0, create_random_images((4, 16, 16))),
@@ -252,11 +243,11 @@ def test_unusual_channel_numbers():
         iaa.GaussianBlur(sigma=(0.95, 1.05), name="GaussianBlur"),
         iaa.AverageBlur((3, 5), name="AverageBlur"),
         iaa.MedianBlur((3, 5), name="MedianBlur"),
-        #iaa.BilateralBlur((3, 5), name="BilateralBlur"), # works only with 3/RGB channels
+        # iaa.BilateralBlur((3, 5), name="BilateralBlur"), # works only with 3/RGB channels
         # WithColorspace ?
-        #iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"), # works only with 3/RGB channels
+        # iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"), # works only with 3/RGB channels
         # ChangeColorspace ?
-        #iaa.Grayscale((0.0, 0.1), name="Grayscale"), # works only with 3 channels
+        # iaa.Grayscale((0.0, 0.1), name="Grayscale"), # works only with 3 channels
         # Convolve ?
         iaa.Sharpen((0.0, 0.1), lightness=(1.0, 1.2), name="Sharpen"),
         iaa.Emboss(alpha=(0.0, 0.1), strength=(0.5, 1.5), name="Emboss"),
@@ -297,7 +288,6 @@ def test_unusual_channel_numbers():
 
     for aug in augs:
         for (nb_channels, images_c) in images:
-            #print("shape", images_c.shape, aug.name)
             if aug.name != "Scale":
                 images_aug = aug.augment_images(images_c)
                 assert images_aug.shape == images_c.shape
@@ -314,19 +304,18 @@ def test_unusual_channel_numbers():
                     assert image_aug.shape == (4, 4, images_c.shape[3])
 
 
-#@attr("now")
 def test_dtype_preservation():
-    ia.seed(1)
+    reseed()
 
     size = (4, 16, 16, 3)
     images = [
         np.random.uniform(0, 255, size).astype(np.uint8),
         np.random.uniform(0, 65535, size).astype(np.uint16),
-        np.random.uniform(0, 4294967295, size).astype(np.uint32), # not supported by cv2.blur in AverageBlur
+        np.random.uniform(0, 4294967295, size).astype(np.uint32),
         np.random.uniform(-128, 127, size).astype(np.int16),
         np.random.uniform(-32768, 32767, size).astype(np.int32),
         np.random.uniform(0.0, 1.0, size).astype(np.float32),
-        np.random.uniform(-1000.0, 1000.0, size).astype(np.float16), # not supported by scipy.ndimage.filter in GaussianBlur
+        np.random.uniform(-1000.0, 1000.0, size).astype(np.float16),
         np.random.uniform(-1000.0, 1000.0, size).astype(np.float32),
         np.random.uniform(-1000.0, 1000.0, size).astype(np.float64)
     ]
@@ -339,6 +328,10 @@ def test_dtype_preservation():
     # dtypes are here removed via list comprehension instead of
     # `default_dtypes - set([dtype])`, because the latter one simply never
     # removed the dtype(s) for some reason?!
+
+    def _not_dts(dts):
+        return [dt for dt in default_dtypes if dt not in dts]
+
     augs = [
         (iaa.Add((-5, 5), name="Add"), default_dtypes),
         (iaa.AddElementwise((-5, 5), name="AddElementwise"), default_dtypes),
@@ -348,19 +341,24 @@ def test_dtype_preservation():
         (iaa.CoarseDropout(0.01, size_px=6, name="CoarseDropout"), default_dtypes),
         (iaa.Invert(0.01, per_channel=True, name="Invert"), default_dtypes),
         (iaa.ContrastNormalization((0.95, 1.05), name="ContrastNormalization"), default_dtypes),
-        (iaa.GaussianBlur(sigma=(0.95, 1.05), name="GaussianBlur"), [dt for dt in default_dtypes if dt not in [np.float16]]),
-        (iaa.AverageBlur((3, 5), name="AverageBlur"), [dt for dt in default_dtypes if dt not in [np.uint32, np.float16]]),
-        (iaa.MedianBlur((3, 5), name="MedianBlur"), [dt for dt in default_dtypes if dt not in [np.uint32, np.int32, np.float16, np.float64]]),
-        (iaa.BilateralBlur((3, 5), name="BilateralBlur"), [dt for dt in default_dtypes if dt not in [np.uint16, np.uint32, np.int16, np.int32, np.float16, np.float64]]),
+        (iaa.GaussianBlur(sigma=(0.95, 1.05), name="GaussianBlur"), _not_dts([np.float16])),
+        (iaa.AverageBlur((3, 5), name="AverageBlur"), _not_dts([np.uint32, np.float16])),
+        (iaa.MedianBlur((3, 5), name="MedianBlur"), _not_dts([np.uint32, np.int32, np.float16, np.float64])),
+        (iaa.BilateralBlur((3, 5), name="BilateralBlur"),
+         _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float16, np.float64])),
         # WithColorspace ?
-        #iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"), # works only with RGB/uint8
+        # iaa.AddToHueAndSaturation((-5, 5), name="AddToHueAndSaturation"), # works only with RGB/uint8
         # ChangeColorspace ?
-        #iaa.Grayscale((0.0, 0.1), name="Grayscale"), # works only with RGB/uint8
+        # iaa.Grayscale((0.0, 0.1), name="Grayscale"), # works only with RGB/uint8
         # Convolve ?
-        (iaa.Sharpen((0.0, 0.1), lightness=(1.0, 1.2), name="Sharpen"), [dt for dt in default_dtypes if dt not in [np.uint32, np.int32, np.float16, np.uint32]]),
-        (iaa.Emboss(alpha=(0.0, 0.1), strength=(0.5, 1.5), name="Emboss"), [dt for dt in default_dtypes if dt not in [np.uint32, np.int32, np.float16, np.uint32]]),
-        (iaa.EdgeDetect(alpha=(0.0, 0.1), name="EdgeDetect"), [dt for dt in default_dtypes if dt not in [np.uint32, np.int32, np.float16, np.uint32]]),
-        (iaa.DirectedEdgeDetect(alpha=(0.0, 0.1), direction=0, name="DirectedEdgeDetect"), [dt for dt in default_dtypes if dt not in [np.uint32, np.int32, np.float16, np.uint32]]),
+        (iaa.Sharpen((0.0, 0.1), lightness=(1.0, 1.2), name="Sharpen"),
+         _not_dts([np.uint32, np.int32, np.float16, np.uint32])),
+        (iaa.Emboss(alpha=(0.0, 0.1), strength=(0.5, 1.5), name="Emboss"),
+         _not_dts([np.uint32, np.int32, np.float16, np.uint32])),
+        (iaa.EdgeDetect(alpha=(0.0, 0.1), name="EdgeDetect"),
+         _not_dts([np.uint32, np.int32, np.float16, np.uint32])),
+        (iaa.DirectedEdgeDetect(alpha=(0.0, 0.1), direction=0, name="DirectedEdgeDetect"),
+         _not_dts([np.uint32, np.int32, np.float16, np.uint32])),
         (iaa.Fliplr(0.5, name="Fliplr"), default_dtypes),
         (iaa.Flipud(0.5, name="Flipud"), default_dtypes),
         (iaa.Affine(translate_px=(-5, 5), name="Affine-translate-px"), default_dtypes),
@@ -369,8 +367,9 @@ def test_dtype_preservation():
         (iaa.Affine(shear=(-20, 20), name="Affine-shear"), default_dtypes),
         (iaa.Affine(scale=(0.9, 1.1), name="Affine-scale"), default_dtypes),
         (iaa.PiecewiseAffine(scale=(0.001, 0.005), name="PiecewiseAffine"), default_dtypes),
-        #(iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"), [dt for dt in default_dtypes if dt not in [np.uint32]]),
-        (iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"), [dt for dt in default_dtypes if dt not in [np.float16]]),
+        # (iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"), not_dts([np.uint32])),
+        (iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"),
+         _not_dts([np.float16])),
         (iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
         (iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
         (iaa.OneOf([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
@@ -384,24 +383,22 @@ def test_dtype_preservation():
         (iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"), default_dtypes),
         (iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"), default_dtypes),
         (iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"), default_dtypes),
-        (iaa.Superpixels(p_replace=0.01, n_segments=64), [dt for dt in default_dtypes if dt not in [np.float16, np.float32]]),
-        (iaa.Scale({"height": 4, "width": 4}, name="Scale"), [dt for dt in default_dtypes if dt not in [np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64]]),
-        (iaa.CropAndPad(px=(-10, 10), name="CropAndPad"), [dt for dt in default_dtypes if dt not in [np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64]]),
-        (iaa.Pad(px=(0, 10), name="Pad"), [dt for dt in default_dtypes if dt not in [np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64]]),
-        (iaa.Crop(px=(0, 10), name="Crop"), [dt for dt in default_dtypes if dt not in [np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64]])
+        (iaa.Superpixels(p_replace=0.01, n_segments=64), _not_dts([np.float16, np.float32])),
+        (iaa.Scale({"height": 4, "width": 4}, name="Scale"),
+         _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),
+        (iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
+         _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),
+        (iaa.Pad(px=(0, 10), name="Pad"),
+         _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),
+        (iaa.Crop(px=(0, 10), name="Crop"),
+         _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64]))
     ]
 
     for (aug, allowed_dtypes) in augs:
-        #print(aug.name, allowed_dtypes)
         for images_i in images:
             if images_i.dtype in allowed_dtypes:
-                #print("shape", images_i.shape, images_i.dtype, aug.name)
                 images_aug = aug.augment_images(images_i)
-                #assert images_aug.shape == images_i.shape
                 assert images_aug.dtype == images_i.dtype
-            else:
-                #print("Skipped dtype %s for augmenter %s" % (images_i.dtype, aug.name))
-                pass
 
 
 if __name__ == "__main__":

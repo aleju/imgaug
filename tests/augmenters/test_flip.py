@@ -195,7 +195,7 @@ def test_Fliplr():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.Fliplr(p="test")
+        _ = iaa.Fliplr(p="test")
     except Exception:
         got_exception = True
     assert got_exception
@@ -377,7 +377,7 @@ def test_Flipud():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.Flipud(p="test")
+        _ = iaa.Flipud(p="test")
     except Exception:
         got_exception = True
     assert got_exception

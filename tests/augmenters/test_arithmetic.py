@@ -43,11 +43,7 @@ def main():
 def test_AdditiveGaussianNoise():
     reseed()
 
-    #base_img = np.array([[128, 128, 128],
-    #                     [128, 128, 128],
-    #                     [128, 128, 128]], dtype=np.uint8)
     base_img = np.ones((16, 16, 1), dtype=np.uint8) * 128
-    #base_img = base_img[:, :, np.newaxis]
 
     images = np.array([base_img])
     images_list = [base_img]
@@ -57,7 +53,6 @@ def test_AdditiveGaussianNoise():
 
     # no noise, shouldnt change anything
     aug = iaa.AdditiveGaussianNoise(loc=0, scale=0)
-    aug_det = aug.to_deterministic()
 
     observed = aug.augment_images(images)
     expected = images
@@ -87,7 +82,6 @@ def test_AdditiveGaussianNoise():
 
     # std correct?
     aug = iaa.AdditiveGaussianNoise(loc=0, scale=0.2 * 255)
-    aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     nb_iterations = 1000
     values = []
@@ -100,7 +94,6 @@ def test_AdditiveGaussianNoise():
 
     # non-zero loc
     aug = iaa.AdditiveGaussianNoise(loc=0.25 * 255, scale=0.01 * 255)
-    aug_det = aug.to_deterministic()
     images = np.ones((1, 1, 1, 1), dtype=np.uint8) * 128
     nb_iterations = 1000
     values = []
@@ -200,24 +193,17 @@ def test_AdditiveGaussianNoise():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.AdditiveGaussianNoise(loc="test")
+        _ = iaa.AdditiveGaussianNoise(loc="test")
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.AdditiveGaussianNoise(scale="test")
+        _ = iaa.AdditiveGaussianNoise(scale="test")
     except Exception:
         got_exception = True
     assert got_exception
-
-
-#def test_MultiplicativeGaussianNoise():
-#    pass
-
-#def test_ReplacingGaussianNoise():
-#    pass
 
 
 def test_Dropout():
@@ -398,14 +384,14 @@ def test_CoarseDropout():
     # test exception for bad parameters
     got_exception = False
     try:
-        aug = iaa.CoarseDropout(p="test")
+        _ = iaa.CoarseDropout(p="test")
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
+        _ = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -541,14 +527,14 @@ def test_Multiply():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.Multiply(mul="test")
+        _ = iaa.Multiply(mul="test")
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.Multiply(mul=1, per_channel="test")
+        _ = iaa.Multiply(mul=1, per_channel="test")
     except Exception:
         got_exception = True
     assert got_exception
@@ -731,6 +717,7 @@ def test_MultiplyElementwise():
     assert isinstance(params[1], iap.Deterministic)
     assert params[0].value == 1
     assert params[1].value == 0
+
 
 def test_ReplaceElementwise():
     reseed()
@@ -982,14 +969,14 @@ def test_CoarseSaltAndPepper():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.CoarseSaltAndPepper(p="test", size_px=100)
+        _ = iaa.CoarseSaltAndPepper(p="test", size_px=100)
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.CoarseSaltAndPepper(p=0.5, size_px=None, size_percent=None)
+        _ = iaa.CoarseSaltAndPepper(p=0.5, size_px=None, size_percent=None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1003,8 +990,8 @@ def test_Salt():
     observed = aug.augment_image(base_img)
     p = np.mean(observed != 128)
     assert 0.4 < p < 0.6
-    assert np.all(observed >= 127)  # Salt() occasionally replaces with 127,
-                                    # which probably should be the center-point here anyways
+    # Salt() occasionally replaces with 127, which probably should be the center-point here anyways
+    assert np.all(observed >= 127)
 
     aug = iaa.Salt(p=1.0)
     observed = aug.augment_image(base_img)
@@ -1077,14 +1064,14 @@ def test_CoarseSalt():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.CoarseSalt(p="test", size_px=100)
+        _ = iaa.CoarseSalt(p="test", size_px=100)
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.CoarseSalt(p=0.5, size_px=None, size_percent=None)
+        _ = iaa.CoarseSalt(p=0.5, size_px=None, size_percent=None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1171,14 +1158,14 @@ def test_CoarsePepper():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.CoarsePepper(p="test", size_px=100)
+        _ = iaa.CoarsePepper(p="test", size_px=100)
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.CoarsePepper(p=0.5, size_px=None, size_percent=None)
+        _ = iaa.CoarsePepper(p=0.5, size_px=None, size_percent=None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1331,14 +1318,14 @@ def test_Add():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.Add(value="test")
+        _ = iaa.Add(value="test")
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.Add(value=1, per_channel="test")
+        _ = iaa.Add(value=1, per_channel="test")
     except Exception:
         got_exception = True
     assert got_exception
@@ -1350,6 +1337,7 @@ def test_Add():
     assert isinstance(params[1], iap.Deterministic)
     assert params[0].value == 1
     assert params[1].value == 0
+
 
 def test_AddElementwise():
     reseed()
@@ -1594,15 +1582,12 @@ def test_Invert():
     pinv = nb_inverted / nb_iterations
     assert 0.75 <= pinv <= 0.85
 
-    nb_iterations = 1000
-    nb_inverted = 0
     aug = iaa.Invert(p=0.5, per_channel=True)
     img = np.zeros((1, 1, 100), dtype=np.uint8) + 256
     observed = aug.augment_image(img)
     assert len(np.unique(observed)) == 2
 
     nb_iterations = 1000
-    nb_inverted = 0
     aug = iaa.Invert(p=iap.Binomial(0.8), per_channel=0.7)
     img = np.zeros((1, 1, 20), dtype=np.uint8) + 256
     seen = [0, 0]
@@ -1632,14 +1617,14 @@ def test_Invert():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.Invert(p="test")
+        _ = iaa.Invert(p="test")
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.Invert(p=0.5, per_channel="test")
+        _ = iaa.Invert(p=0.5, per_channel="test")
     except Exception:
         got_exception = True
     assert got_exception
@@ -1746,14 +1731,14 @@ def test_ContrastNormalization():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.ContrastNormalization(alpha="test")
+        _ = iaa.ContrastNormalization(alpha="test")
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.ContrastNormalization(alpha=1.5, per_channel="test")
+        _ = iaa.ContrastNormalization(alpha=1.5, per_channel="test")
     except Exception:
         got_exception = True
     assert got_exception

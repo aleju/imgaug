@@ -135,33 +135,33 @@ def test_is_np_array():
         -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4
     ]
     for value in values_true:
-        assert ia.is_np_array(value) == True
+        assert ia.is_np_array(value) is True
     for value in values_false:
-        assert ia.is_np_array(value) == False
+        assert ia.is_np_array(value) is False
 
 
 def test_is_single_integer():
-    assert ia.is_single_integer("A") == False
-    assert ia.is_single_integer(None) == False
-    assert ia.is_single_integer(1.2) == False
-    assert ia.is_single_integer(1.0) == False
-    assert ia.is_single_integer(np.ones((1,), dtype=np.float32)[0]) == False
-    assert ia.is_single_integer(1) == True
-    assert ia.is_single_integer(1234) == True
-    assert ia.is_single_integer(np.ones((1,), dtype=np.uint8)[0]) == True
-    assert ia.is_single_integer(np.ones((1,), dtype=np.int32)[0]) == True
+    assert ia.is_single_integer("A") is False
+    assert ia.is_single_integer(None) is False
+    assert ia.is_single_integer(1.2) is False
+    assert ia.is_single_integer(1.0) is False
+    assert ia.is_single_integer(np.ones((1,), dtype=np.float32)[0]) is False
+    assert ia.is_single_integer(1) is True
+    assert ia.is_single_integer(1234) is True
+    assert ia.is_single_integer(np.ones((1,), dtype=np.uint8)[0]) is True
+    assert ia.is_single_integer(np.ones((1,), dtype=np.int32)[0]) is True
 
 
 def test_is_single_float():
-    assert ia.is_single_float("A") == False
-    assert ia.is_single_float(None) == False
-    assert ia.is_single_float(1.2) == True
-    assert ia.is_single_float(1.0) == True
-    assert ia.is_single_float(np.ones((1,), dtype=np.float32)[0]) == True
-    assert ia.is_single_float(1) == False
-    assert ia.is_single_float(1234) == False
-    assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) == False
-    assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) == False
+    assert ia.is_single_float("A") is False
+    assert ia.is_single_float(None) is False
+    assert ia.is_single_float(1.2) is True
+    assert ia.is_single_float(1.0) is True
+    assert ia.is_single_float(np.ones((1,), dtype=np.float32)[0]) is True
+    assert ia.is_single_float(1) is False
+    assert ia.is_single_float(1234) is False
+    assert ia.is_single_float(np.ones((1,), dtype=np.uint8)[0]) is False
+    assert ia.is_single_float(np.ones((1,), dtype=np.int32)[0]) is False
 
 
 def test_caller_name():
@@ -174,9 +174,9 @@ def test_is_single_number():
     values_true = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4]
     values_false = ["A", "BC", "1", True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
     for value in values_true:
-        assert ia.is_single_number(value) == True
+        assert ia.is_single_number(value) is True
     for value in values_false:
-        assert ia.is_single_number(value) == False
+        assert ia.is_single_number(value) is False
 
 
 def test_is_iterable():
@@ -197,20 +197,21 @@ def test_is_iterable():
     ]
     values_false = [1, 100, 0, -100, -1, 1.2, -1.2, True, False, _Dummy()]
     for value in values_true:
-        assert ia.is_iterable(value) == True, value
+        assert ia.is_iterable(value) is True, value
     for value in values_false:
-        assert ia.is_iterable(value) == False
+        assert ia.is_iterable(value) is False
 
 
 def test_is_string():
     class _Dummy(object):
         pass
     values_true = ["A", "BC", "1", ""]
-    values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
+    values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0],
+                    _Dummy(), np.zeros((1, 2), dtype=np.uint8)]
     for value in values_true:
-        assert ia.is_string(value) == True
+        assert ia.is_string(value) is True
     for value in values_false:
-        assert ia.is_string(value) == False
+        assert ia.is_string(value) is False
 
 
 def test_is_single_bool():
@@ -220,9 +221,9 @@ def test_is_single_bool():
     values_false = [-100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, (1.0, 2.0), [1.0, 2.0], _Dummy(),
                     np.zeros((1, 2), dtype=np.uint8), np.zeros((1,), dtype=bool)]
     for value in values_true:
-        assert ia.is_single_bool(value) == True
+        assert ia.is_single_bool(value) is True
     for value in values_false:
-        assert ia.is_single_bool(value) == False
+        assert ia.is_single_bool(value) is False
 
 
 def test_is_integer_array():
@@ -244,14 +245,15 @@ def test_is_integer_array():
         np.zeros((1, 2), dtype=np.bool)
     ]
     for value in values_true:
-        assert ia.is_integer_array(value) == True
+        assert ia.is_integer_array(value) is True
     for value in values_false:
-        assert ia.is_integer_array(value) == False
+        assert ia.is_integer_array(value) is False
 
 
 def test_is_float_array():
     class _Dummy(object):
         pass
+
     values_true = [
         np.zeros((1, 2), dtype=np.float16),
         np.zeros((100,), dtype=np.float32),
@@ -268,22 +270,27 @@ def test_is_float_array():
         np.zeros((1, 2), dtype=np.bool)
     ]
     for value in values_true:
-        assert ia.is_float_array(value) == True
+        assert ia.is_float_array(value) is True
     for value in values_false:
-        assert ia.is_float_array(value) == False
+        assert ia.is_float_array(value) is False
 
 
 def test_is_callable():
     def _dummy_func():
         pass
+
     _dummy_func2 = lambda x: x
+
     class _Dummy1(object):
         pass
+
     class _Dummy2(object):
         def __call__(self):
             pass
+
     values_true = [_dummy_func, _dummy_func2, _Dummy2()]
-    values_false = ["A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy1(), np.zeros((1, 2), dtype=np.uint8)]
+    values_false = ["A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False,
+                    (1.0, 2.0), [1.0, 2.0], _Dummy1(), np.zeros((1, 2), dtype=np.uint8)]
     for value in values_true:
         assert ia.is_callable(value) == True
     for value in values_false:
@@ -350,7 +357,6 @@ def test_derive_random_state():
 
 
 def test_derive_random_states():
-    rs = np.random.RandomState(1017)
     rs_observed1, rs_observed2 = ia.derive_random_states(np.random.RandomState(1017), n=2)
     seed = np.random.RandomState(1017).randint(0, 10**6)
     rs_expected1 = np.random.RandomState(seed+0)
@@ -800,6 +806,8 @@ def test_pad_to_aspect_ratio():
     assert np.max(arr_pad[1:3, -2:]) == 200
     assert np.max(arr_pad[3:, -2:]) == 128
 
+    # TODO add tests for return_pad_values=True
+
 
 def test_pool():
     # basic functionality with uint8, int32, float32
@@ -1165,7 +1173,7 @@ def test_KeypointsOnImage():
         image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=True)
         assert np.all(image_kps[kps_mask] == [0, 255, 0])
         assert np.all(image_kps[~kps_mask] == [10, 10, 10])
-    except Exception as e:
+    except Exception:
         got_exception = True
     assert got_exception
 
@@ -1183,7 +1191,7 @@ def test_KeypointsOnImage():
         image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=True)
         assert np.all(image_kps[kps_mask] == [0, 255, 0])
         assert np.all(image_kps[~kps_mask] == [10, 10, 10])
-    except Exception as e:
+    except Exception:
         got_exception = True
     assert got_exception
 
@@ -1276,7 +1284,8 @@ def test_KeypointsOnImage():
     kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
     kps_image[2, 1, 0] = 255
     kps_image[4, 3, 1] = 10
-    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords={"x": -1, "y": -2}, threshold=20, nb_channels=3)
+    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords={"x": -1, "y": -2}, threshold=20,
+                                                   nb_channels=3)
     assert kpi2.shape == (5, 5, 3)
     assert len(kpi2.keypoints) == 2
     assert kpi2.keypoints[0].y == 2
@@ -1287,7 +1296,8 @@ def test_KeypointsOnImage():
     kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
     kps_image[2, 1, 0] = 255
     kps_image[4, 3, 1] = 10
-    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords=(-1, -2), threshold=20, nb_channels=3)
+    kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords=(-1, -2), threshold=20,
+                                                   nb_channels=3)
     assert kpi2.shape == (5, 5, 3)
     assert len(kpi2.keypoints) == 2
     assert kpi2.keypoints[0].y == 2
@@ -1309,7 +1319,8 @@ def test_KeypointsOnImage():
         kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
         kps_image[2, 1, 0] = 255
         kps_image[4, 3, 1] = 10
-        kpi2 = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords="exception-please", threshold=20, nb_channels=3)
+        _ = ia.KeypointsOnImage.from_keypoint_image(kps_image, if_not_found_coords="exception-please", threshold=20,
+                                                    nb_channels=3)
     except Exception as exc:
         assert "Expected if_not_found_coords to be" in str(exc)
         got_exception = True
@@ -1346,7 +1357,8 @@ def test_KeypointsOnImage():
     # repr/str
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-    expected = "KeypointsOnImage([Keypoint(x=1.00000000, y=2.00000000), Keypoint(x=3.00000000, y=4.00000000)], shape=(5, 5, 3))"
+    expected = "KeypointsOnImage([Keypoint(x=1.00000000, y=2.00000000), Keypoint(x=3.00000000, y=4.00000000)], " \
+               + "shape=(5, 5, 3))"
     assert kpi.__repr__() == kpi.__str__() == expected
 
 
@@ -1473,7 +1485,7 @@ def test_BoundingBox():
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=10, x1=41, y2=30, x2=61, label=None)
     bb_inter = bb1.intersection(bb2, default=False)
-    assert bb_inter == False
+    assert bb_inter is False
 
     # union
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -1505,32 +1517,32 @@ def test_BoundingBox():
 
     # is_fully_within_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
-    assert bb.is_fully_within_image((100, 100, 3)) == True
-    assert bb.is_fully_within_image((20, 100, 3)) == False
-    assert bb.is_fully_within_image((100, 30, 3)) == False
-    assert bb.is_fully_within_image((1, 1, 3)) == False
+    assert bb.is_fully_within_image((100, 100, 3)) is True
+    assert bb.is_fully_within_image((20, 100, 3)) is False
+    assert bb.is_fully_within_image((100, 30, 3)) is False
+    assert bb.is_fully_within_image((1, 1, 3)) is False
 
     # is_partly_within_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
-    assert bb.is_partly_within_image((100, 100, 3)) == True
-    assert bb.is_partly_within_image((20, 100, 3)) == True
-    assert bb.is_partly_within_image((100, 30, 3)) == True
-    assert bb.is_partly_within_image((1, 1, 3)) == False
+    assert bb.is_partly_within_image((100, 100, 3)) is True
+    assert bb.is_partly_within_image((20, 100, 3)) is True
+    assert bb.is_partly_within_image((100, 30, 3)) is True
+    assert bb.is_partly_within_image((1, 1, 3)) is False
 
     # is_out_of_image()
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
-    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=True) == False
-    assert bb.is_out_of_image((100, 100, 3), partly=False, fully=True) == False
-    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=False) == False
-    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=True) == True
-    assert bb.is_out_of_image((20, 100, 3), partly=False, fully=True) == False
-    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=False) == True
-    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=True) == True
-    assert bb.is_out_of_image((100, 30, 3), partly=False, fully=True) == False
-    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=False) == True
-    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=True) == True
-    assert bb.is_out_of_image((1, 1, 3), partly=False, fully=True) == True
-    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=False) == False
+    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=True) is False
+    assert bb.is_out_of_image((100, 100, 3), partly=False, fully=True) is False
+    assert bb.is_out_of_image((100, 100, 3), partly=True, fully=False) is False
+    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=True) is True
+    assert bb.is_out_of_image((20, 100, 3), partly=False, fully=True) is False
+    assert bb.is_out_of_image((20, 100, 3), partly=True, fully=False) is True
+    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=True) is True
+    assert bb.is_out_of_image((100, 30, 3), partly=False, fully=True) is False
+    assert bb.is_out_of_image((100, 30, 3), partly=True, fully=False) is True
+    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=True) is True
+    assert bb.is_out_of_image((1, 1, 3), partly=False, fully=True) is True
+    assert bb.is_out_of_image((1, 1, 3), partly=True, fully=False) is False
 
     # cut_out_of_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -1632,12 +1644,14 @@ def test_BoundingBox():
     bb_mask[1:3+1, 3] = True
     bb_mask[1, 1:3+1] = True
     bb_mask[3, 1:3+1] = True
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
     assert np.all(image == 0)
 
-    image_bb = bb.draw_on_image(image, color=[255, 0, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=[255, 0, 0], alpha=1.0, thickness=1, copy=True,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 0, 0])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
@@ -1645,15 +1659,18 @@ def test_BoundingBox():
     assert np.all(image_bb[bb_mask] == [128, 128, 128])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    image_bb = bb.draw_on_image(image+100, color=[200, 200, 200], alpha=0.5, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image+100, color=[200, 200, 200], alpha=0.5, thickness=1, copy=True,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [150, 150, 150])
     assert np.all(image_bb[~bb_mask] == [100, 100, 100])
 
-    image_bb = bb.draw_on_image((image+100).astype(np.float32), color=[200, 200, 200], alpha=0.5, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image((image+100).astype(np.float32), color=[200, 200, 200], alpha=0.5, thickness=1,
+                                copy=True, raise_if_out_of_image=False)
     assert np.sum(np.abs((image_bb - [150, 150, 150])[bb_mask])) < 0.1
     assert np.sum(np.abs((image_bb - [100, 100, 100])[~bb_mask])) < 0.1
 
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=False, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=False,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
     assert np.all(image[bb_mask] == [255, 255, 255])
@@ -1664,7 +1681,8 @@ def test_BoundingBox():
     bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
     bb_mask[2, 0:3] = True
     bb_mask[0:3, 2] = True
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
@@ -1672,7 +1690,8 @@ def test_BoundingBox():
     bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
     bb_mask[0:5, 0:5] = True
     bb_mask[2, 2] = False
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=2, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=2, copy=True,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
@@ -1680,25 +1699,28 @@ def test_BoundingBox():
     bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
     bb_mask[0:1+1, 1] = True
     bb_mask[1, 0:1+1] = True
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+                                raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
     bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1, label=None)
     got_exception = False
     try:
-        image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=True)
-    except Exception as e:
+        _ = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+                             raise_if_out_of_image=True)
+    except Exception:
         got_exception = True
-    assert got_exception == False
+    assert got_exception is False
 
     bb = ia.BoundingBox(y1=-5, x1=-5, y2=-1, x2=-1, label=None)
     got_exception = False
     try:
-        image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=True)
-    except Exception as e:
+        _ = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+                             raise_if_out_of_image=True)
+    except Exception:
         got_exception = True
-    assert got_exception == True
+    assert got_exception is True
 
     # extract_from_image()
     image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
@@ -1829,7 +1851,8 @@ def test_BoundingBoxesOnImage():
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
     bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
-    image = bbsoi.draw_on_image(np.zeros(bbsoi.shape, dtype=np.uint8), color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    image = bbsoi.draw_on_image(np.zeros(bbsoi.shape, dtype=np.uint8), color=[0, 255, 0], alpha=1.0, thickness=1,
+                                copy=True, raise_if_out_of_image=False)
     assert np.all(image[10-1, 20-1, :] == [0, 0, 0])
     assert np.all(image[10-1, 20-0, :] == [0, 0, 0])
     assert np.all(image[10-0, 20-1, :] == [0, 0, 0])
@@ -2230,7 +2253,7 @@ def test_SegmentationMapOnImage_get_arr_int():
 
     got_exception = False
     try:
-        observed = segmap.get_arr_int(background_class_id=2)
+        _ = segmap.get_arr_int(background_class_id=2)
     except Exception as exc:
         assert "The background class id may only be changed if " in str(exc)
         got_exception = True
@@ -2336,7 +2359,6 @@ def test_SegmentationMapOnImage_draw():
 
 
 def test_SegmentationMapOnImage_draw_on_image():
-    # draw_on_image(self, image, alpha=0.5, resize="segmentation_map", background_threshold=0.01, background_class_id=0, colors=None, draw_background=False):
     arr = np.int32([
         [0, 1, 1],
         [0, 1, 1],
@@ -2368,12 +2390,11 @@ def test_SegmentationMapOnImage_draw_on_image():
 
     # only segmap visible - in foreground
     observed = segmap.draw_on_image(image, alpha=1.0, draw_background=False)
-    col0 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0]
     col1 = ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1]
     expected = np.uint8([
-        [image[0,0,:], col1, col1],
-        [image[1,0,:], col1, col1],
-        [image[2,0,:], col1, col1]
+        [image[0, 0, :], col1, col1],
+        [image[1, 0, :], col1, col1],
+        [image[2, 0, :], col1, col1]
     ])
     assert np.array_equal(observed, expected)
 
@@ -2381,12 +2402,11 @@ def test_SegmentationMapOnImage_draw_on_image():
     a1 = 0.7
     a0 = 1.0 - a1
     observed = segmap.draw_on_image(image, alpha=a1, draw_background=False)
-    col0 = np.uint8(ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[0])
     col1 = np.uint8(ia.SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS[1])
     expected = np.float32([
-        [image[0,0,:], a0*image[0,1,:] + a1*col1, a0*image[0,2,:] + a1*col1],
-        [image[1,0,:], a0*image[1,1,:] + a1*col1, a0*image[1,2,:] + a1*col1],
-        [image[2,0,:], a0*image[2,1,:] + a1*col1, a0*image[2,2,:] + a1*col1]
+        [image[0, 0, :], a0*image[0, 1, :] + a1*col1, a0*image[0, 2, :] + a1*col1],
+        [image[1, 0, :], a0*image[1, 1, :] + a1*col1, a0*image[1, 2, :] + a1*col1],
+        [image[2, 0, :], a0*image[2, 1, :] + a1*col1, a0*image[2, 2, :] + a1*col1]
     ])
     d_max = np.max(np.abs(observed.astype(np.float32) - expected))
     assert observed.shape == expected.shape
@@ -3631,17 +3651,20 @@ def _test_Polygon_repr_str(func):
     # ints
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
     s = func(poly)
-    assert s == "Polygon([(x=0.000, y=0.000), (x=1.000, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] (4 points), label=test)"
+    assert s == "Polygon([(x=0.000, y=0.000), (x=1.000, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] " \
+                + "(4 points), label=test)"
 
     # floats
     poly = ia.Polygon([(0, 0.5), (1.5, 0), (1, 1), (0, 1)], label="test")
     s = func(poly)
-    assert s == "Polygon([(x=0.000, y=0.500), (x=1.500, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] (4 points), label=test)"
+    assert s == "Polygon([(x=0.000, y=0.500), (x=1.500, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] " \
+                + "(4 points), label=test)"
 
     # label None
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label=None)
     s = func(poly)
-    assert s == "Polygon([(x=0.000, y=0.000), (x=1.000, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] (4 points), label=None)"
+    assert s == "Polygon([(x=0.000, y=0.000), (x=1.000, y=0.000), (x=1.000, y=1.000), (x=0.000, y=1.000)] " \
+                + "(4 points), label=None)"
 
     # no points
     poly = ia.Polygon([], label="test")
@@ -3885,7 +3908,10 @@ def test_BatchLoader():
                 except:
                     pass
                 counter += 1
-            assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
+            assert len(loaded) == 20*nb_workers, \
+                "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (
+                    20*nb_workers, len(loaded), nb_workers, counter
+                )
 
             loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
             loader.terminate()
@@ -3901,7 +3927,10 @@ def test_BatchLoader():
                 except:
                     pass
                 counter += 1
-            assert len(loaded) == 20*nb_workers, "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (20*nb_workers, len(loaded), nb_workers, counter)
+            assert len(loaded) == 20*nb_workers, \
+                "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (
+                    20*nb_workers, len(loaded), nb_workers, counter
+                )
 
             loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
             loader.terminate()

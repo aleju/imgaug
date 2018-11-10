@@ -210,17 +210,16 @@ def test_AssertLambda():
     aug_fails = iaa.AssertLambda(func_images=func_images_fails,
                                  func_heatmaps=func_heatmaps_fails,
                                  func_keypoints=func_keypoints_fails)
-    aug_fails_det = aug_fails.to_deterministic()
 
     # images as numpy array
     observed = aug_succeeds.augment_images(images)
     expected = images
     assert np.array_equal(observed, expected)
 
+    errored = False
     try:
-        observed = aug_fails.augment_images(images)
-        errored = False
-    except AssertionError as e:
+        _ = aug_fails.augment_images(images)
+    except AssertionError:
         errored = True
     assert errored
 
@@ -228,10 +227,10 @@ def test_AssertLambda():
     expected = images
     assert np.array_equal(observed, expected)
 
+    errored = False
     try:
-        observed = aug_fails.augment_images(images)
-        errored = False
-    except AssertionError as e:
+        _ = aug_fails.augment_images(images)
+    except AssertionError:
         errored = True
     assert errored
 
@@ -240,10 +239,10 @@ def test_AssertLambda():
     expected = images_list
     assert array_equal_lists(observed, expected)
 
+    errored = False
     try:
-        observed = aug_fails.augment_images(images_list)
-        errored = False
-    except AssertionError as e:
+        _ = aug_fails.augment_images(images_list)
+    except AssertionError:
         errored = True
     assert errored
 
@@ -251,10 +250,10 @@ def test_AssertLambda():
     expected = images_list
     assert array_equal_lists(observed, expected)
 
+    errored = False
     try:
-        observed = aug_fails.augment_images(images_list)
-        errored = False
-    except AssertionError as e:
+        _ = aug_fails.augment_images(images_list)
+    except AssertionError:
         errored = True
     assert errored
 
@@ -265,10 +264,10 @@ def test_AssertLambda():
     assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
     assert np.allclose(observed.get_arr(), heatmaps.get_arr())
 
+    errored = False
     try:
-        observed = aug_fails.augment_heatmaps([heatmaps])[0]
-        errored = False
-    except AssertionError as e:
+        _ = aug_fails.augment_heatmaps([heatmaps])[0]
+    except AssertionError:
         errored = True
     assert errored
 
@@ -278,9 +277,9 @@ def test_AssertLambda():
     assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
     assert np.allclose(observed.get_arr(), heatmaps.get_arr())
 
+    errored = False
     try:
-        observed = aug_fails.augment_heatmaps([heatmaps])[0]
-        errored = False
+        _ = aug_fails.augment_heatmaps([heatmaps])[0]
     except AssertionError as e:
         errored = True
     assert errored
@@ -290,9 +289,9 @@ def test_AssertLambda():
     expected = keypoints
     assert keypoints_equal(observed, expected)
 
+    errored = False
     try:
-        observed = aug_fails.augment_keypoints(keypoints)
-        errored = False
+        _ = aug_fails.augment_keypoints(keypoints)
     except AssertionError as e:
         errored = True
     assert errored
@@ -301,9 +300,9 @@ def test_AssertLambda():
     expected = keypoints
     assert keypoints_equal(observed, expected)
 
+    errored = False
     try:
-        observed = aug_fails.augment_keypoints(keypoints)
-        errored = False
+        _ = aug_fails.augment_keypoints(keypoints)
     except AssertionError as e:
         errored = True
     assert errored
@@ -381,24 +380,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        errored = False
         try:
-            observed = aug.augment_images(images_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_images(images_h4)
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_heatmaps([heatmaps_h4])[0]
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_heatmaps([heatmaps_h4])[0]
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_keypoints(keypoints_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
             errored = True
         assert errored
 
@@ -434,24 +433,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        errored = False
         try:
-            observed = aug.augment_images(images_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_images(images_h4)
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_heatmaps([heatmaps_h4])[0]
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_heatmaps([heatmaps_h4])[0]
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_keypoints(keypoints_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
             errored = True
         assert errored
 
@@ -487,24 +486,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        errored = False
         try:
-            observed = aug.augment_images(images_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_images(images_h4)
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_heatmaps([heatmaps_h4])[0]
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_heatmaps([heatmaps_h4])[0]
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_keypoints(keypoints_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
             errored = True
         assert errored
 
@@ -540,24 +539,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        errored = False
         try:
-            observed = aug.augment_images(images_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_images(images_h4)
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_heatmaps([heatmaps_h4])[0]
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_heatmaps([heatmaps_h4])[0]
+        except AssertionError:
             errored = True
         assert errored
 
+        errored = False
         try:
-            observed = aug.augment_keypoints(keypoints_h4)
-            errored = False
-        except AssertionError as e:
+            _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
             errored = True
         assert errored
 
@@ -565,7 +564,7 @@ def test_AssertShape():
     got_exception = False
     try:
         aug = iaa.AssertShape((1, False, 4, 1))
-        observed = aug.augment_images(np.zeros((1, 2, 2, 1), dtype=np.uint8))
+        _ = aug.augment_images(np.zeros((1, 2, 2, 1), dtype=np.uint8))
     except Exception as exc:
         assert "Invalid datatype " in str(exc)
         got_exception = True
@@ -770,10 +769,13 @@ def test_Augmenter():
     class DummyAugmenter(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return images
+
         def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
             return heatmaps
+
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return keypoints_on_images
+
         def get_parameters(self):
             return []
 
@@ -818,7 +820,7 @@ def test_Augmenter():
     aug = DummyAugmenter()
     got_exception = False
     try:
-        batches_aug = list(aug.augment_batches(None))
+        _ = list(aug.augment_batches(None))
     except Exception:
         got_exception = True
     assert got_exception
@@ -826,7 +828,7 @@ def test_Augmenter():
     aug = DummyAugmenter()
     got_exception = False
     try:
-        batches_aug = list(aug.augment_batches([None]))
+        _ = list(aug.augment_batches([None]))
     except Exception as exc:
         got_exception = True
         assert "Unknown datatype of batch" in str(exc)
@@ -835,7 +837,7 @@ def test_Augmenter():
     aug = DummyAugmenter()
     got_exception = False
     try:
-        batches_aug = list(aug.augment_batches([[None]]))
+        _ = list(aug.augment_batches([[None]]))
     except Exception as exc:
         got_exception = True
         assert "Unknown datatype in batch[0]" in str(exc)
@@ -850,7 +852,7 @@ def test_Augmenter():
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
         # Trigger a warning.
-        images_aug = aug.augment_images(np.zeros((16, 32, 3), dtype=np.uint8))
+        _ = aug.augment_images(np.zeros((16, 32, 3), dtype=np.uint8))
         # Verify some things
         assert len(caught_warnings) == 1
         assert "indicates that you provided a single image with shape (H, W, C)" in str(caught_warnings[-1].message)
@@ -858,7 +860,7 @@ def test_Augmenter():
     aug = DummyAugmenter()
     got_exception = False
     try:
-        images_aug = aug.augment_images(None)
+        _ = aug.augment_images(None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -936,16 +938,21 @@ def test_Augmenter():
     class DummyAugmenterCallsParent(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return super(DummyAugmenterCallsParent, self)._augment_images(images, random_state, parents, hooks)
+
         def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
             return super(DummyAugmenterCallsParent, self)._augment_heatmaps(heatmaps, random_state, parents, hooks)
+
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-            return super(DummyAugmenterCallsParent, self)._augment_keypoints(keypoints_on_images, random_state, parents, hooks)
+            return super(DummyAugmenterCallsParent, self)\
+                ._augment_keypoints(keypoints_on_images, random_state, parents, hooks)
+
         def get_parameters(self):
             return super(DummyAugmenterCallsParent, self).get_parameters()
+
     aug = DummyAugmenterCallsParent()
     got_exception = False
     try:
-        images_aug = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
+        _ = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
     except NotImplementedError:
         got_exception = True
     assert got_exception
@@ -957,7 +964,7 @@ def test_Augmenter():
     heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32), shape=(3, 3, 3))
     got_exception = False
     try:
-        heatmaps_aug = aug.augment_heatmaps([heatmaps])
+        _ = aug.augment_heatmaps([heatmaps])
     except NotImplementedError:
         got_exception = True
     assert got_exception
@@ -971,7 +978,7 @@ def test_Augmenter():
                                       ia.Keypoint(x=2, y=1)], shape=(4, 4, 3))]
     got_exception = False
     try:
-        keypoints_aug = aug.augment_keypoints(keypoints)
+        _ = aug.augment_keypoints(keypoints)
     except NotImplementedError:
         got_exception = True
     assert got_exception
@@ -982,12 +989,16 @@ def test_Augmenter():
     class DummyAugmenterBBs(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return images
+
         def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
             return heatmaps
+
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return [keypoints_on_images_i.shift(x=1) for keypoints_on_images_i in keypoints_on_images]
+
         def get_parameters(self):
             return []
+
     aug = DummyAugmenterBBs()
     bb = ia.BoundingBox(x1=1, y1=4, x2=2, y2=5)
     bbs = [bb]
@@ -1037,7 +1048,7 @@ def test_Augmenter():
     # list, shape (2,)
     got_exception = False
     try:
-        grid = aug.draw_grid([np.zeros((2,), dtype=np.uint8)], rows=2, cols=2)
+        _ = aug.draw_grid([np.zeros((2,), dtype=np.uint8)], rows=2, cols=2)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1070,7 +1081,7 @@ def test_Augmenter():
     # array, shape (2,)
     got_exception = False
     try:
-        grid = aug.draw_grid(np.zeros((2,), dtype=np.uint8), rows=2, cols=2)
+        _ = aug.draw_grid(np.zeros((2,), dtype=np.uint8), rows=2, cols=2)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1123,7 +1134,8 @@ def test_Augmenter():
     assert not _same_rs(aug0.random_state, aug0_copy.random_state)
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
-    assert aug0_copy.random_state.randint(0, 10**6) == np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
+    expected = np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
+    assert aug0_copy.random_state.randint(0, 10**6) == expected
 
     aug0_copy = aug0.deepcopy()
     assert _same_rs(aug0.random_state, aug0_copy.random_state)
@@ -1133,7 +1145,8 @@ def test_Augmenter():
     assert not _same_rs(aug0.random_state, aug0_copy.random_state)
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
-    assert aug0_copy.random_state.randint(0, 10**6) == np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
+    expected = np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
+    assert aug0_copy.random_state.randint(0, 10**6) == expected
 
     # --------
     # get_parameters
@@ -1171,16 +1184,22 @@ def test_Augmenter():
     class DummyAugmenterRepr(iaa.Augmenter):
         def _augment_images(self, images, random_state, parents, hooks):
             return images
+
         def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
             return heatmaps
+
         def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
             return keypoints_on_images
+
         def get_parameters(self):
             return ["A", "B", "C"]
+
     aug = DummyAugmenterRepr(name="Example")
-    assert aug.__repr__() == aug.__str__() == "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=False)"
+    assert aug.__repr__() == aug.__str__() == \
+        "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=False)"
     aug = DummyAugmenterRepr(name="Example", deterministic=True)
-    assert aug.__repr__() == aug.__str__() == "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=True)"
+    assert aug.__repr__() == aug.__str__() == \
+        "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=True)"
 
 
 def test_Augmenter_augment_keypoints():
@@ -1484,7 +1503,7 @@ def test_Augmenter_remove():
     augs = get_seq()
     got_exception = False
     try:
-        augs = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq", copy=False)
+        _ = augs.remove_augmenters(lambda aug, parents: aug.name == "Seq", copy=False)
     except Exception as exc:
         got_exception = True
         assert "Inplace removal of topmost augmenter requested, which is currently not possible" in str(exc)
@@ -1506,15 +1525,11 @@ def test_Augmenter_hooks():
     image_lr = np.array([[1, 0, 0],
                          [1, 0, 0],
                          [1, 1, 0]], dtype=np.uint8)
-    image_ud = np.array([[0, 1, 1],
-                         [0, 0, 1],
-                         [0, 0, 1]], dtype=np.uint8)
     image_lrud = np.array([[1, 1, 0],
                            [1, 0, 0],
                            [1, 0, 0]], dtype=np.uint8)
     image = image[:, :, np.newaxis]
     image_lr = image_lr[:, :, np.newaxis]
-    image_ud = image_ud[:, :, np.newaxis]
     image_lrud = image_lrud[:, :, np.newaxis]
 
     seq = iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)])
@@ -1563,12 +1578,14 @@ def test_Augmenter_hooks():
 
     # keypoint aug deactivated
     aug = iaa.Affine(translate_px=1)
+
     def activator(keypoints_on_images, augmenter, parents, default):
         return False
+
     hooks = ia.HooksKeypoints(activator=activator)
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
                                       ia.Keypoint(x=2, y=1)], shape=image.shape)]
-    keypoints_aug = seq.augment_keypoints(keypoints, hooks=hooks)
+    keypoints_aug = aug.augment_keypoints(keypoints, hooks=hooks)
     assert keypoints_equal(keypoints_aug, keypoints)
 
 
@@ -1594,7 +1611,6 @@ def test_Augmenter_copy_random_state():
     source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
     images_aug_source = source_alt.augment_images(images)
     images_aug_target = target_cprs.augment_images(images)
-    #ia.imshow(np.hstack([images_aug_source[0], images_aug_source[1], images_aug_target[0], images_aug_target[1]]))
     assert np.array_equal(images_aug_source, images_aug_target)
 
     source[0].deterministic = True
@@ -1631,7 +1647,7 @@ def test_Augmenter_copy_random_state():
     target = iaa.Fliplr(0.5, name="hflip")
     got_exception = False
     try:
-        target_cprs = target.copy_random_state(source, matching="name")
+        _ = target.copy_random_state(source, matching="name")
     except Exception as exc:
         got_exception = True
         assert "localize_random_state" in str(exc)
@@ -1642,7 +1658,7 @@ def test_Augmenter_copy_random_state():
     source.localize_random_state_()
     got_exception = False
     try:
-        target_cprs = target.copy_random_state(source, matching="name", matching_tolerant=False)
+        _ = target.copy_random_state(source, matching="name", matching_tolerant=False)
     except Exception as exc:
         got_exception = True
         assert "not found among source augmenters" in str(exc)
@@ -1652,7 +1668,7 @@ def test_Augmenter_copy_random_state():
     target = iaa.Fliplr(0.5, name="hflip")
     got_exception = False
     try:
-        target_cprs = target.copy_random_state(source, matching="position")
+        _ = target.copy_random_state(source, matching="position")
     except Exception as exc:
         got_exception = True
         assert "localize_random_state" in str(exc)
@@ -1663,7 +1679,7 @@ def test_Augmenter_copy_random_state():
     source.localize_random_state_()
     got_exception = False
     try:
-        target_cprs = target.copy_random_state(source, matching="position", matching_tolerant=False)
+        _ = target.copy_random_state(source, matching="position", matching_tolerant=False)
     except Exception as exc:
         got_exception = True
         assert "different lengths" in str(exc)
@@ -1674,7 +1690,7 @@ def test_Augmenter_copy_random_state():
     source.localize_random_state_()
     got_exception = False
     try:
-        target_cprs = target.copy_random_state(source, matching="test")
+        _ = target.copy_random_state(source, matching="test")
     except Exception as exc:
         got_exception = True
         assert "Unknown matching method" in str(exc)
@@ -1687,7 +1703,7 @@ def test_Augmenter_copy_random_state():
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
         # Trigger a warning.
-        target_cprs = target.copy_random_state(source, matching="name")
+        _ = target.copy_random_state(source, matching="name")
         # Verify some things
         assert len(caught_warnings) == 1
         assert "contains multiple augmenters with the same name" in str(caught_warnings[-1].message)
@@ -1790,15 +1806,16 @@ def test_Sequential():
             last_aug_det = observed_aug_det
 
         assert np.array_equal(observed_aug, images) \
-               or np.array_equal(observed_aug, images_lr) \
-               or np.array_equal(observed_aug, images_ud) \
-               or np.array_equal(observed_aug, images_lr_ud)
+            or np.array_equal(observed_aug, images_lr) \
+            or np.array_equal(observed_aug, images_ud) \
+            or np.array_equal(observed_aug, images_lr_ud)
         assert np.array_equal(observed_aug_det, images) \
-               or np.array_equal(observed_aug_det, images_lr) \
-               or np.array_equal(observed_aug_det, images_ud) \
-               or np.array_equal(observed_aug_det, images_lr_ud)
+            or np.array_equal(observed_aug_det, images_lr) \
+            or np.array_equal(observed_aug_det, images_ud) \
+            or np.array_equal(observed_aug_det, images_lr_ud)
 
-    assert (0.25 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.25 + 0.10) # should be the same in roughly 25% of all cases
+    # should be the same in roughly 25% of all cases
+    assert (0.25 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.25 + 0.10)
     assert nb_changed_aug_det == 0
 
     # random order
@@ -1863,8 +1880,12 @@ def test_Sequential():
 
     last_aug = None
     last_aug_det = None
+    last_aug_random = None
+    last_aug_random_det = None
     nb_changed_aug = 0
     nb_changed_aug_det = 0
+    nb_changed_aug_random = 0
+    nb_changed_aug_random_det = 0
     nb_iterations = 200
 
     nb_images_first_second_unrandom = 0
@@ -1893,15 +1914,23 @@ def test_Sequential():
         keypoints_aug_random = aug_random.augment_keypoints(keypoints)
 
         if i == 0:
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
+            last_aug = observed_aug_unrandom
+            last_aug_det = observed_aug_unrandom_det
+            last_aug_random = observed_aug_random
+            last_aug_random_det = observed_aug_random_det
         else:
-            if not np.array_equal(observed_aug, last_aug):
+            if not np.array_equal(observed_aug_unrandom, last_aug):
                 nb_changed_aug += 1
-            if not np.array_equal(observed_aug_det, last_aug_det):
+            if not np.array_equal(observed_aug_unrandom_det, last_aug_det):
                 nb_changed_aug_det += 1
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
+            if not np.array_equal(observed_aug_random, last_aug_random):
+                nb_changed_aug_random += 1
+            if not np.array_equal(observed_aug_random_det, last_aug_random_det):
+                nb_changed_aug_random_det += 1
+            last_aug = observed_aug_unrandom
+            last_aug_det = observed_aug_unrandom_det
+            last_aug_random = observed_aug_random
+            last_aug_random_det = observed_aug_random_det
 
         if np.array_equal(observed_aug_unrandom, images_first_second):
             nb_images_first_second_unrandom += 1
@@ -1947,6 +1976,8 @@ def test_Sequential():
 
     assert nb_changed_aug == 0
     assert nb_changed_aug_det == 0
+    assert (0.5 - 0.1) * nb_iterations <= nb_changed_aug_random <= (0.5 + 0.1) * nb_iterations
+    assert nb_changed_aug_random_det == 0
     assert nb_images_first_second_unrandom == nb_iterations
     assert nb_images_second_first_unrandom == 0
     assert nb_heatmaps_first_second_unrandom == nb_iterations
@@ -2043,7 +2074,9 @@ def test_Sequential():
     # str/repr
     flip = iaa.Fliplr(1.0)
     aug = iaa.Sequential(flip, random_order=True)
-    expected = "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (aug.name, "True", str(flip), "False")
+    expected = "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (
+        aug.name, "True", str(flip), "False"
+    )
     assert aug.__str__() == aug.__repr__() == expected
 
 
@@ -2051,9 +2084,6 @@ def test_SomeOf():
     reseed()
 
     zeros = np.zeros((3, 3, 1), dtype=np.uint8)
-
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
-                                      ia.Keypoint(x=2, y=1)], shape=zeros.shape)]
 
     # no child augmenters
     observed = iaa.SomeOf(n=0, children=[]).augment_image(zeros)
@@ -2105,7 +2135,9 @@ def test_SomeOf():
     assert all([obs.shape == (3, 3, 3) for obs in [observed0, observed1, observed2, observed3]])
     assert all([0 - 1e-6 < obs.min_value < 0 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
     assert all([1 - 1e-6 < obs.max_value < 1 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
-    for obs, exp in zip([observed0, observed1, observed2, observed3], [heatmaps_arr0, heatmaps_arr1, heatmaps_arr2, heatmaps_arr3]):
+    obs_lst = [observed0, observed1, observed2, observed3]
+    heatmaps_lst = [heatmaps_arr0, heatmaps_arr1, heatmaps_arr2, heatmaps_arr3]
+    for obs, exp in zip(obs_lst, heatmaps_lst):
         assert np.array_equal(obs.get_arr(), exp)
 
     # n as tuple
@@ -2153,7 +2185,7 @@ def test_SomeOf():
     # invalid argument for children
     got_exception = False
     try:
-        aug = iaa.SomeOf(1, children=False)
+        _ = iaa.SomeOf(1, children=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2188,7 +2220,7 @@ def test_SomeOf():
     # n is bad (int, "test")
     got_exception = False
     try:
-        aug = iaa.SomeOf((2, "test"), children=iaa.Fliplr(1.0))
+        _ = iaa.SomeOf((2, "test"), children=iaa.Fliplr(1.0))
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2212,7 +2244,7 @@ def test_SomeOf():
     # bad datatype for n
     got_exception = False
     try:
-        aug = iaa.SomeOf(False, children=iaa.Fliplr(1.0))
+        _ = iaa.SomeOf(False, children=iaa.Fliplr(1.0))
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2296,12 +2328,13 @@ def test_OneOf():
     nb_iterations = 1000
     for _ in sm.xrange(nb_iterations):
         result = aug.augment_image(zeros)
-        s = np.sum(result)
+        s = int(np.sum(result))
         results[s] += 1
     expected = int(nb_iterations / len(augs))
     expected_tolerance = int(nb_iterations * 0.05)
     for key, val in results.items():
         assert expected - expected_tolerance < val < expected + expected_tolerance
+
 
 def test_Sometimes():
     reseed()
@@ -2417,7 +2450,6 @@ def test_Sometimes():
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         keypoints_aug = aug.augment_keypoints(keypoints)
-        keypoints_aug_det = aug.augment_keypoints(keypoints)
         if i == 0:
             last_aug = observed_aug
             last_aug_det = observed_aug_det
@@ -2466,7 +2498,6 @@ def test_Sometimes():
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         keypoints_aug = aug.augment_keypoints(keypoints)
-        keypoints_aug_det = aug.augment_keypoints(keypoints)
         if i == 0:
             last_aug = observed_aug
             last_aug_det = observed_aug_det
@@ -2496,7 +2527,8 @@ def test_Sometimes():
     assert (0.50 - 0.10) <= nb_images_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_keypoints_if_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
-    assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
+    # should be the same in roughly 50% of all cases
+    assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10)
     assert nb_changed_aug_det == 0
 
     # p as stochastic parameter
@@ -2521,7 +2553,7 @@ def test_Sometimes():
     # bad datatype for p
     got_exception = False
     try:
-        aug = iaa.Sometimes(p="foo")
+        _ = iaa.Sometimes(p="foo")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2536,7 +2568,7 @@ def test_Sometimes():
     # then_list bad datatype
     got_exception = False
     try:
-        aug = iaa.Sometimes(p=0.2, then_list=False)
+        _ = iaa.Sometimes(p=0.2, then_list=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2545,7 +2577,7 @@ def test_Sometimes():
     # else_list bad datatype
     got_exception = False
     try:
-        aug = iaa.Sometimes(p=0.2, then_list=None, else_list=False)
+        _ = iaa.Sometimes(p=0.2, then_list=None, else_list=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2555,7 +2587,12 @@ def test_Sometimes():
     image = np.random.randint(0, 255-10, size=(16, 16), dtype=np.uint8)
     aug = iaa.Sometimes(1.0, iaa.Add(10))
     observed1 = aug.augment_image(image)
-    observed2 = aug.augment_image(image, hooks=ia.HooksImages(propagator=lambda images, augmenter, parents, default: False if augmenter == aug else default))
+    observed2 = aug.augment_image(
+        image,
+        hooks=ia.HooksImages(
+            propagator=lambda images, augmenter, parents, default: False if augmenter == aug else default
+        )
+    )
     assert np.array_equal(observed1, image + 10)
     assert np.array_equal(observed2, image)
 
@@ -2573,8 +2610,10 @@ def test_Sometimes():
     expected = "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (
         "Binomial(Deterministic(float 0.50000000))",
         "SometimesTest",
-        "Sequential(name=SometimesTest-then, random_order=False, children=[%s], deterministic=False)" % (str(then_list),),
-        "Sequential(name=SometimesTest-else, random_order=False, children=[%s], deterministic=False)" % (str(else_list),),
+        "Sequential(name=SometimesTest-then, random_order=False, children=[%s], deterministic=False)" % (
+            str(then_list),),
+        "Sequential(name=SometimesTest-else, random_order=False, children=[%s], deterministic=False)" % (
+            str(else_list),),
         "False"
     )
     assert aug.__repr__() == aug.__str__() == expected
@@ -2600,7 +2639,8 @@ def test_Sometimes():
     )
     for _ in sm.xrange(10):
         observed = aug.augment_images(np.uint8([image, image, image, image]))
-        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert isinstance(observed, list) \
+            or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
         assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
@@ -2608,7 +2648,8 @@ def test_Sometimes():
         assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
-        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert isinstance(observed, list) \
+            or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
         assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image])
@@ -2627,7 +2668,8 @@ def test_Sometimes():
     )
     for _ in sm.xrange(10):
         observed = aug.augment_images(np.uint8([image, image, image, image]))
-        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert isinstance(observed, list) \
+            or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
         assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
@@ -2635,7 +2677,8 @@ def test_Sometimes():
         assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
-        assert isinstance(observed, list) or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
+        assert isinstance(observed, list) \
+            or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
         assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_images([image])
@@ -2765,7 +2808,7 @@ def test_WithChannels():
     # invalid datatype for channels
     got_exception = False
     try:
-        aug = iaa.WithChannels(False, iaa.Add(10))
+        _ = iaa.WithChannels(False, iaa.Add(10))
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2774,7 +2817,7 @@ def test_WithChannels():
     # invalid datatype for children
     got_exception = False
     try:
-        aug = iaa.WithChannels(1, False)
+        _ = iaa.WithChannels(1, False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2799,8 +2842,7 @@ def test_WithChannels():
 
 
 def test_2d_inputs():
-    """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work.
-    """
+    """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work."""
     reseed()
 
     base_img1 = np.array([[0, 0, 1, 1],
@@ -2887,7 +2929,6 @@ def test_Augmenter_augment_batches():
         assert batches_aug[0].keypoints[0].keypoints[0].x == keypoint.x
         assert batches_aug[0].keypoints[0].keypoints[0].y == keypoint.y
 
-
     """
     seq = iaa.Fliplr(0.5)
     # with images as list, background=False
@@ -2917,7 +2958,8 @@ def test_Augmenter_augment_batches():
         nb_flipped_images = 0
         nb_flipped_keypoints = 0
         nb_iterations = 1000
-        batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()]) for _ in sm.xrange(nb_iterations)]
+        batches = [ia.Batch(images=[np.copy(image)], keypoints=[keypoints[0].deepcopy()])
+                   for _ in sm.xrange(nb_iterations)]
         batches_aug = list(seq.augment_batches(batches, background=bg))
         for batch_aug in batches_aug:
             image_aug = batch_aug.images_aug[0]
@@ -2927,7 +2969,7 @@ def test_Augmenter_augment_batches():
                 nb_flipped_images += 1
 
             assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
-                   or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
+                or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
             if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
                 nb_flipped_keypoints += 1
         assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
@@ -2935,14 +2977,10 @@ def test_Augmenter_augment_batches():
 
         # with images as array
         nb_flipped_images = 0
-        nb_flipped_keypoints = 0
         nb_iterations = 1000
         batches = [ia.Batch(images=np.array([np.copy(image)], dtype=np.uint8), keypoints=None) for _ in sm.xrange(nb_iterations)]
         batches_aug = list(seq.augment_batches(batches, background=bg))
         for batch_aug in batches_aug:
-            #batch = ia.Batch(images=np.array([image], dtype=np.uint8), keypoints=keypoints)
-            #batches_aug = list(seq.augment_batches([batch], background=True))
-            #batch_aug = batches_aug[0]
             image_aug = batch_aug.images_aug[0]
             assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
             if np.array_equal(image_aug, image_flipped):
@@ -2955,9 +2993,6 @@ def test_Augmenter_augment_batches():
         batches = [np.array([np.copy(image)], dtype=np.uint8) for _ in sm.xrange(nb_iterations)]
         batches_aug = list(seq.augment_batches(batches, background=bg))
         for batch_aug in batches_aug:
-            #batch = np.array([image], dtype=np.uint8)
-            #batches_aug = list(seq.augment_batches([batch], background=True))
-            #image_aug = batches_aug[0][0]
             image_aug = batch_aug[0]
             assert np.array_equal(image_aug, image) or np.array_equal(image_aug, image_flipped)
             if np.array_equal(image_aug, image_flipped):
@@ -2967,14 +3002,9 @@ def test_Augmenter_augment_batches():
         # list of list of KeypointsOnImage as input
         nb_flipped_keypoints = 0
         nb_iterations = 1000
-        #batches = [ia.Batch(images=[np.copy(image)], keypoints=None) for _ in sm.xrange(nb_iterations)]
         batches = [[keypoints[0].deepcopy()] for _ in sm.xrange(nb_iterations)]
         batches_aug = list(seq.augment_batches(batches, background=bg))
         for batch_aug in batches_aug:
-            #batch = [keypoints]
-            #batches_aug = list(seq.augment_batches([batch], background=True))
-            #batch_aug = batches_aug[0]
-            #keypoint_aug = batches_aug[0].keypoints[0].keypoints[0]
             keypoint_aug = batch_aug[0].keypoints[0]
 
             assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \

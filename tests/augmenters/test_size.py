@@ -276,8 +276,10 @@ def test_Scale():
     for _ in sm.xrange(100):
         observed2d = aug.augment_image(base_img2d)
         observed3d = aug.augment_image(base_img3d)
-        assert observed2d.shape in [(base_img2d.shape[0]*2, base_img2d.shape[1]*2), (base_img2d.shape[0]*4, base_img2d.shape[1]*4)]
-        assert observed3d.shape in [(base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3), (base_img3d.shape[0]*4, base_img3d.shape[1]*4, 3)]
+        assert observed2d.shape in [(base_img2d.shape[0]*2, base_img2d.shape[1]*2),
+                                    (base_img2d.shape[0]*4, base_img2d.shape[1]*4)]
+        assert observed3d.shape in [(base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3),
+                                    (base_img3d.shape[0]*4, base_img3d.shape[1]*4, 3)]
         if observed2d.shape == (base_img2d.shape[0]*2, base_img2d.shape[1]*2):
             seen2d[0] = True
         else:
@@ -297,8 +299,10 @@ def test_Scale():
     for _ in sm.xrange(100):
         observed2d = aug.augment_image(base_img2d)
         observed3d = aug.augment_image(base_img3d)
-        assert observed2d.shape in [(base_img2d.shape[0]*2, base_img2d.shape[1]*2), (base_img2d.shape[0]*4, base_img2d.shape[1]*4)]
-        assert observed3d.shape in [(base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3), (base_img3d.shape[0]*4, base_img3d.shape[1]*4, 3)]
+        assert observed2d.shape in [(base_img2d.shape[0]*2, base_img2d.shape[1]*2),
+                                    (base_img2d.shape[0]*4, base_img2d.shape[1]*4)]
+        assert observed3d.shape in [(base_img3d.shape[0]*2, base_img3d.shape[1]*2, 3),
+                                    (base_img3d.shape[0]*4, base_img3d.shape[1]*4, 3)]
         if observed2d.shape == (base_img2d.shape[0]*2, base_img2d.shape[1]*2):
             seen2d[0] = True
         else:
@@ -345,7 +349,6 @@ def test_Scale():
     for hsize in sm.xrange(3, 4+1):
         for wsize in sm.xrange(3, 4+1):
             not_seen2d.add((hsize, wsize))
-    #print(base_img3d.shape[0]//2, base_img3d.shape[1]+1)
     for hsize in sm.xrange(3, 4+1):
         for wsize in sm.xrange(3, 4+1):
             not_seen3d.add((hsize, wsize, 3))
@@ -373,8 +376,6 @@ def test_Scale():
         assert "Expected " in str(exc)
         got_exception = True
     assert got_exception
-
-
 
     aug = iaa.Scale(size=1, interpolation="nearest")
     params = aug.get_parameters()
@@ -411,7 +412,6 @@ def test_Pad():
     ]
     for pad in pads:
         top, right, bottom, left = pad
-        height, width = base_img.shape[0:2]
         aug = iaa.Pad(px=pad, keep_size=False)
         base_img_padded = np.pad(base_img, ((top, bottom), (left, right), (0, 0)),
                                  mode="constant",
@@ -427,7 +427,6 @@ def test_Pad():
         assert keypoints_equal(observed, keypoints_moved)
 
         # heatmaps
-        height, width = heatmaps_arr.shape[0:2]
         aug = iaa.Pad(px=pad, keep_size=False)
         heatmaps_arr_padded = np.pad(heatmaps_arr, ((top, bottom), (left, right)),
                                      mode="constant",
@@ -447,7 +446,6 @@ def test_Pad():
     ]
     for pad in pads:
         top, right, bottom, left = pad
-        height, width = base_img.shape[0:2]
         aug = iaa.Pad(px=pad, keep_size=False)
         aug_det = aug.to_deterministic()
 
@@ -461,7 +459,10 @@ def test_Pad():
             for right_val in sm.xrange(right_range[0], right_range[1]+1):
                 for bottom_val in sm.xrange(bottom_range[0], bottom_range[1]+1):
                     for left_val in sm.xrange(left_range[0], left_range[1]+1):
-                        images_padded.append(np.pad(base_img, ((top_val, bottom_val), (left_val, right_val), (0, 0)), mode="constant", constant_values=0))
+                        images_padded.append(
+                            np.pad(base_img, ((top_val, bottom_val), (left_val, right_val), (0, 0)),
+                                   mode="constant", constant_values=0)
+                        )
                         keypoints_padded.append(keypoints[0].shift(x=left_val, y=top_val))
 
         movements = []
@@ -499,7 +500,6 @@ def test_Pad():
     ]
     for pad in pads:
         top, right, bottom, left = pad
-        height, width = base_img.shape[0:2]
         aug = iaa.Pad(px=pad, keep_size=False)
         aug_det = aug.to_deterministic()
 
@@ -513,7 +513,10 @@ def test_Pad():
             for right_val in right_range:
                 for bottom_val in bottom_range:
                     for left_val in left_range:
-                        images_padded.append(np.pad(base_img, ((top_val, bottom_val), (left_val, right_val), (0, 0)), mode="constant", constant_values=0))
+                        images_padded.append(
+                            np.pad(base_img, ((top_val, bottom_val), (left_val, right_val), (0, 0)), mode="constant",
+                                   constant_values=0)
+                        )
                         keypoints_padded.append(keypoints[0].shift(x=left_val, y=top_val))
 
         movements = []
@@ -573,7 +576,7 @@ def test_Pad():
 
     got_exception = False
     try:
-        aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=False, pad_cval=0, keep_size=False)
+        _aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=False, pad_cval=0, keep_size=False)
     except Exception as exc:
         assert "Expected pad_mode to be " in str(exc)
         got_exception = True
@@ -666,7 +669,7 @@ def test_Pad():
     # pad by invalid value
     got_exception = False
     try:
-        aug = iaa.Pad(percent="test", keep_size=False)
+        _ = iaa.Pad(percent="test", keep_size=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -941,7 +944,7 @@ def test_Crop():
     # crop by invalid value
     got_exception = False
     try:
-        aug = iaa.Crop(percent="test", keep_size=False)
+        _ = iaa.Crop(percent="test", keep_size=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -965,7 +968,8 @@ def test_Crop():
         bottom_px = int(round(bottom * height))
         left_px = int(round(left * width))
         aug = iaa.Crop(percent=crop, keep_size=False)
-        image_cropped = image[top_px:50-bottom_px, left_px:50-right_px] # dont use :-bottom_px and ;-right_px here, because these values can be 0
+        # dont use :-bottom_px and ;-right_px here, because these values can be 0
+        image_cropped = image[top_px:50-bottom_px, left_px:50-right_px]
         observed = aug.augment_image(image)
         assert np.array_equal(observed, image_cropped)
 

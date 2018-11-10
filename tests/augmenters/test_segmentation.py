@@ -91,14 +91,14 @@ def test_Superpixels():
     # test exceptions for wrong parameter types
     got_exception = False
     try:
-        aug = iaa.Superpixels(p_replace="test", n_segments=100)
+        _ = iaa.Superpixels(p_replace="test", n_segments=100)
     except Exception:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        aug = iaa.Superpixels(p_replace=1, n_segments="test")
+        _ = iaa.Superpixels(p_replace=1, n_segments="test")
     except Exception:
         got_exception = True
     assert got_exception

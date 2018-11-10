@@ -61,12 +61,6 @@ def test_GaussianBlur():
     aug = iaa.GaussianBlur(sigma=0.5)
     aug_det = aug.to_deterministic()
 
-    #np.set_printoptions(formatter={'float_kind': lambda x: "%.6f" % x})
-    #from scipy import ndimage
-    #images2 = np.copy(images).astype(np.float32)
-    #images2[0, ...] = ndimage.gaussian_filter(images2[0, ...], 0.4)
-    #print(images2)
-
     # images as numpy array
     observed = aug.augment_images(images)
     assert 100 < observed[0][1, 1] < 255
@@ -134,7 +128,6 @@ def test_AverageBlur():
     base_img[5, 4, 0] = 100
     base_img[5, 6, 0] = 100
 
-    blur3x3 = np.copy(base_img)
     blur3x3 = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -165,7 +158,6 @@ def test_AverageBlur():
     ]
     blur4x4 = np.array(blur4x4, dtype=np.uint8)[..., np.newaxis]
 
-    blur5x5 = np.copy(base_img)
     blur5x5 = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -263,7 +255,6 @@ def test_AverageBlur():
                 possible[key] = cv2.blur(base_img, (kh, kw))[..., np.newaxis]
 
     nb_iterations = 250
-    #nb_seen = [0] * len(possible.keys())
     nb_seen = dict([(key, 0) for key, val in possible.items()])
     for i in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
@@ -316,11 +307,6 @@ def test_MedianBlur():
     blur5x5[6, 7, 0] = 0
     blur5x5[7, 6, 0] = 0
     blur5x5[blur5x5 > 1] = 1
-    #blur5x5 = np.zeros_like(base_img)
-    #blur5x5[2:9, 2:9, 0] = 1
-    #blur5x5[3:8, 3:8, 0] = 1
-    #blur5x5[4:7, 4:7, 0] = 1
-    #blur5x5[5:6, 5:6, 0] = 1
 
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]

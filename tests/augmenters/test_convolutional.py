@@ -176,7 +176,6 @@ def test_Sharpen():
         base_img_sharpened[2, 1] = base_img_sharpened[0, 1]
         base_img_sharpened[1, 1] = (m[1, 1] + lightness)/k * 20 + 8 * (m[0, 1]/k) * 10
 
-        #print("A", base_img_sharpened, "Am", m)
         base_img_sharpened = np.clip(base_img_sharpened, 0, 255).astype(np.uint8)
 
         return base_img_sharpened
@@ -221,7 +220,7 @@ def test_Sharpen():
 
     got_exception = False
     try:
-        aug = iaa.Sharpen(alpha="test", lightness=1)
+        _ = iaa.Sharpen(alpha="test", lightness=1)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -245,7 +244,7 @@ def test_Sharpen():
 
     got_exception = False
     try:
-        aug = iaa.Sharpen(alpha=1.0, lightness="test")
+        _ = iaa.Sharpen(alpha=1.0, lightness="test")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -329,7 +328,6 @@ def test_Emboss():
         ])
         ms = m + strength_matrix
 
-        #print(ms)
         for i in range(base_img_embossed.shape[0]):
             for j in range(base_img_embossed.shape[1]):
                 for u in range(ms.shape[0]):
@@ -337,20 +335,14 @@ def test_Emboss():
                         weight = ms[u, v]
                         inputs_i = abs(i + (u - (ms.shape[0]-1)//2))
                         inputs_j = abs(j + (v - (ms.shape[1]-1)//2))
-                        #print("in1", inputs_i, inputs_j)
-                        #print("A", i, j, u, v, "|", inputs_i, inputs_j, "|", None, weight, "->", None)
                         if inputs_i >= img.shape[0]:
                             diff = inputs_i - (img.shape[0]-1)
                             inputs_i = img.shape[0] - 1 - diff
                         if inputs_j >= img.shape[1]:
                             diff = inputs_j - (img.shape[1]-1)
                             inputs_j = img.shape[1] - 1 - diff
-                        #print("in2", inputs_i, inputs_j)
                         inputs = img[inputs_i, inputs_j]
-                        #print("B", i, j, u, v, "|", inputs_i, inputs_j, "|", inputs, weight, "->", inputs * weight)
                         base_img_embossed[i, j] += inputs * weight
-        #print(ms)
-        #print(base_img_embossed)
 
         return np.clip((1-alpha) * img + alpha * base_img_embossed, 0, 255).astype(np.uint8)
 
@@ -385,7 +377,7 @@ def test_Emboss():
 
     got_exception = False
     try:
-        aug = iaa.Emboss(alpha="test", strength=1)
+        _ = iaa.Emboss(alpha="test", strength=1)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -414,7 +406,7 @@ def test_Emboss():
 
     got_exception = False
     try:
-        aug = iaa.Emboss(alpha=1.0, strength="test")
+        _ = iaa.Emboss(alpha=1.0, strength="test")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True

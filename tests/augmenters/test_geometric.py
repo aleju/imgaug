@@ -274,7 +274,6 @@ def test_Affine():
                       [0, 1, 1, 1, 0],
                       [0, 0, 0, 0, 0]], dtype=np.uint8) * 100
     image = image[:, :, np.newaxis]
-    images_list = [image]
     images = np.array([image])
 
     last_aug = None
@@ -642,8 +641,6 @@ def test_Affine():
             last_aug = observed_aug
             last_aug_det = observed_aug_det
 
-        #assert len(observed_aug[0].nonzero()[0]) == 1
-        #assert len(observed_aug_det[0].nonzero()[0]) == 1
         pixels_sums_aug += (observed_aug[0] > 100)
         pixels_sums_aug_det += (observed_aug_det[0] > 100)
 
@@ -654,7 +651,8 @@ def test_Affine():
     assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
 
     # outer pixels, should sometimes be white
-    # the values here had to be set quite tolerant, the middle pixels at top/left/bottom/right get more activation than expected
+    # the values here had to be set quite tolerant, the middle pixels at top/left/bottom/right get more activation
+    # than expected
     outer_pixels = ([0, 0, 0, 1, 1, 2, 2, 2], [0, 1, 2, 0, 2, 0, 1, 2])
     assert (pixels_sums_aug[outer_pixels] > int(nb_iterations * (2/8 * 0.4))).all()
     assert (pixels_sums_aug[outer_pixels] < int(nb_iterations * (2/8 * 2.0))).all()
@@ -679,7 +677,6 @@ def test_Affine():
     aug_det = aug.to_deterministic()
 
     image = np.ones((3, 3, 1), dtype=np.uint8) * 255
-    image_aug = np.copy(image)
     images = np.array([image])
     images_list = [image]
 
@@ -781,7 +778,7 @@ def test_Affine():
     # scale
     got_exception = False
     try:
-        aug = iaa.Affine(scale=False)
+        _ = iaa.Affine(scale=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -789,7 +786,7 @@ def test_Affine():
     # translate_px
     got_exception = False
     try:
-        aug = iaa.Affine(translate_px=False)
+        _ = iaa.Affine(translate_px=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -797,7 +794,7 @@ def test_Affine():
     # translate_percent
     got_exception = False
     try:
-        aug = iaa.Affine(translate_percent=False)
+        _ = iaa.Affine(translate_percent=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -805,7 +802,7 @@ def test_Affine():
     # rotate
     got_exception = False
     try:
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0, cval=0)
+        _ = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0, cval=0)
     except Exception:
         got_exception = True
     assert got_exception
@@ -813,7 +810,7 @@ def test_Affine():
     # shear
     got_exception = False
     try:
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False, cval=0)
+        _ = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False, cval=0)
     except Exception:
         got_exception = True
     assert got_exception
@@ -821,7 +818,7 @@ def test_Affine():
     # cval
     got_exception = False
     try:
-        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=None)
+        _ = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -829,7 +826,7 @@ def test_Affine():
     # mode
     got_exception = False
     try:
-        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=False)
+        _ = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -837,7 +834,7 @@ def test_Affine():
     # non-existent order in case of backend=cv2
     got_exception = False
     try:
-        aug = iaa.Affine(backend="cv2", order=-1)
+        _ = iaa.Affine(backend="cv2", order=-1)
     except Exception:
         got_exception = True
     assert got_exception
@@ -845,7 +842,7 @@ def test_Affine():
     # bad order datatype in case of backend=cv2
     got_exception = False
     try:
-        aug = iaa.Affine(backend="cv2", order="test")
+        _ = iaa.Affine(backend="cv2", order="test")
     except Exception:
         got_exception = True
     assert got_exception
@@ -853,7 +850,8 @@ def test_Affine():
     # ----------
     # get_parameters
     # ----------
-    aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4, order=1, cval=0, mode="constant", backend="cv2", fit_output=True)
+    aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4, order=1, cval=0, mode="constant", backend="cv2",
+                     fit_output=True)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Deterministic)  # scale
     assert isinstance(params[1], iap.Deterministic)  # translate
@@ -1115,7 +1113,6 @@ def test_AffineCv2():
                       [0, 1, 1, 1, 0],
                       [0, 0, 0, 0, 0]], dtype=np.uint8) * 100
     image = image[:, :, np.newaxis]
-    images_list = [image]
     images = np.array([image])
 
     last_aug = None
@@ -1475,8 +1472,6 @@ def test_AffineCv2():
             last_aug = observed_aug
             last_aug_det = observed_aug_det
 
-        #assert len(observed_aug[0].nonzero()[0]) == 1
-        #assert len(observed_aug_det[0].nonzero()[0]) == 1
         pixels_sums_aug += (observed_aug[0] > 100)
         pixels_sums_aug_det += (observed_aug_det[0] > 100)
 
@@ -1487,7 +1482,8 @@ def test_AffineCv2():
     assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
 
     # outer pixels, should sometimes be white
-    # the values here had to be set quite tolerant, the middle pixels at top/left/bottom/right get more activation than expected
+    # the values here had to be set quite tolerant, the middle pixels at top/left/bottom/right get more activation
+    # than expected
     outer_pixels = ([0, 0, 0, 1, 1, 2, 2, 2], [0, 1, 2, 0, 2, 0, 1, 2])
     assert (pixels_sums_aug[outer_pixels] > int(nb_iterations * (2/8 * 0.4))).all()
     assert (pixels_sums_aug[outer_pixels] < int(nb_iterations * (2/8 * 2.0))).all()
@@ -1589,7 +1585,8 @@ def test_AffineCv2():
     aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=["replicate", "reflect"])
     assert isinstance(aug.mode, iap.Choice)
     assert len(aug.mode.a) == 2 and "replicate" in aug.mode.a and "reflect" in aug.mode.a
-    aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=iap.Choice(["replicate", "reflect"]))
+    aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0,
+                        mode=iap.Choice(["replicate", "reflect"]))
     assert isinstance(aug.mode, iap.Choice)
     assert len(aug.mode.a) == 2 and "replicate" in aug.mode.a and "reflect" in aug.mode.a
 
@@ -1599,7 +1596,7 @@ def test_AffineCv2():
     # scale
     got_exception = False
     try:
-        aug = iaa.AffineCv2(scale=False)
+        _ = iaa.AffineCv2(scale=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1607,7 +1604,7 @@ def test_AffineCv2():
     # translate_px
     got_exception = False
     try:
-        aug = iaa.AffineCv2(translate_px=False)
+        _ = iaa.AffineCv2(translate_px=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1615,7 +1612,7 @@ def test_AffineCv2():
     # translate_percent
     got_exception = False
     try:
-        aug = iaa.AffineCv2(translate_percent=False)
+        _ = iaa.AffineCv2(translate_percent=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1623,7 +1620,7 @@ def test_AffineCv2():
     # rotate
     got_exception = False
     try:
-        aug = iaa.AffineCv2(scale=1.0, translate_px=0, rotate=False, shear=0, cval=0)
+        _ = iaa.AffineCv2(scale=1.0, translate_px=0, rotate=False, shear=0, cval=0)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1631,7 +1628,7 @@ def test_AffineCv2():
     # shear
     got_exception = False
     try:
-        aug = iaa.AffineCv2(scale=1.0, translate_px=0, rotate=0, shear=False, cval=0)
+        _ = iaa.AffineCv2(scale=1.0, translate_px=0, rotate=0, shear=False, cval=0)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1639,7 +1636,7 @@ def test_AffineCv2():
     # cval
     got_exception = False
     try:
-        aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=None)
+        _ = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=None)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1647,7 +1644,7 @@ def test_AffineCv2():
     # mode
     got_exception = False
     try:
-        aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=False)
+        _ = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0, mode=False)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1655,7 +1652,7 @@ def test_AffineCv2():
     # non-existent order
     got_exception = False
     try:
-        aug = iaa.AffineCv2(order=-1)
+        _ = iaa.AffineCv2(order=-1)
     except Exception:
         got_exception = True
     assert got_exception
@@ -1663,7 +1660,7 @@ def test_AffineCv2():
     # bad order datatype
     got_exception = False
     try:
-        aug = iaa.AffineCv2(order="test")
+        _ = iaa.AffineCv2(order="test")
     except Exception:
         got_exception = True
     assert got_exception
@@ -1793,7 +1790,7 @@ def test_PiecewiseAffine():
     # bad datatype for scale
     got_exception = False
     try:
-        aug = iaa.PiecewiseAffine(scale=False, nb_rows=12, nb_cols=4)
+        _ = iaa.PiecewiseAffine(scale=False, nb_rows=12, nb_cols=4)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -1863,7 +1860,7 @@ def test_PiecewiseAffine():
     # bad datatype for rows
     got_exception = False
     try:
-        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=False, nb_cols=4)
+        _ = iaa.PiecewiseAffine(scale=0.05, nb_rows=False, nb_cols=4)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -1966,7 +1963,7 @@ def test_PiecewiseAffine():
     # bad datatype for order
     got_exception = False
     try:
-        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=False)
+        _ = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2036,7 +2033,7 @@ def test_PiecewiseAffine():
     # bas datatype for cval
     got_exception = False
     try:
-        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, cval=False)
+        _ = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, cval=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2068,7 +2065,7 @@ def test_PiecewiseAffine():
     # bad datatype for mode
     got_exception = False
     try:
-        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=False)
+        _ = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2138,21 +2135,11 @@ def test_PerspectiveTransform():
     aug.jitter = iap.Deterministic(0.2)
     observed = aug.augment_image(img)
     expected = img[int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8)]
-    assert all([abs(s1-s2)<=1 for s1, s2 in zip(observed.shape, expected.shape)])
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(observed.shape, expected.shape)])
     if observed.shape != expected.shape:
         observed = ia.imresize_single_image(observed, expected.shape[0:2], interpolation="cubic")
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
-    """
-    ia.imshow(
-        np.hstack([
-            observed,
-            expected,
-            np.abs(observed.astype(np.int32) - expected.astype(np.int32)).astype(np.uint8)
-        ])
-    )
-    print(np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))))
-    """
     assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
 
     # with keep_size
@@ -2165,7 +2152,6 @@ def test_PerspectiveTransform():
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
-    #expected = ia.imresize_single_image(expected, (30, 30))
 
     # with keep_size, heatmaps
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
@@ -2180,7 +2166,6 @@ def test_PerspectiveTransform():
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     assert np.average(np.abs(observed.get_arr() - expected)) < 30.0
-    #expected = ia.imresize_single_image(expected, (30, 30))
 
     # with keep_size, RGB images
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
@@ -2196,7 +2181,6 @@ def test_PerspectiveTransform():
             # differences seem to mainly appear around the border of the inner rectangle, possibly
             # due to interpolation
             assert np.average(np.abs(observed_i.astype(np.int32) - expected.astype(np.int32))) < 30.0
-            #expected = ia.imresize_single_image(expected, (30, 30))
 
     # tuple for scale
     aug = iaa.PerspectiveTransform(scale=(0.1, 0.2))
@@ -2225,7 +2209,7 @@ def test_PerspectiveTransform():
     # bad datatype for scale
     got_exception = False
     try:
-        aug = iaa.PerspectiveTransform(scale=False)
+        _ = iaa.PerspectiveTransform(scale=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2267,7 +2251,7 @@ def test_PerspectiveTransform():
     assert isinstance(params[0], iap.Normal)
     assert isinstance(params[0].scale, iap.Deterministic)
     assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
-    assert params[1] == False
+    assert params[1] is False
 
 
 def test_ElasticTransformation():
@@ -2310,9 +2294,11 @@ def test_ElasticTransformation():
     aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
     observed1 = aug1.augment_image(img)
     observed2 = aug2.augment_image(img)
-    # assume that the inner area has become more black-ish when using high alphas (more white pixels were moved out of the inner area)
+    # assume that the inner area has become more black-ish when using high alphas (more white pixels were moved out of
+    # the inner area)
     assert np.sum(observed1[mask]) > np.sum(observed2[mask])
-    # assume that the outer area has become more white-ish when using high alphas (more black pixels were moved into the inner area)
+    # assume that the outer area has become more white-ish when using high alphas (more black pixels were moved into
+    # the inner area)
     assert np.sum(observed1[~mask]) < np.sum(observed2[~mask])
 
     # test effects of increased alpha strength, heatmaps
@@ -2366,7 +2352,7 @@ def test_ElasticTransformation():
     # test alpha having bad datatype
     got_exception = False
     try:
-        aug = iaa.ElasticTransformation(alpha=False, sigma=0.25)
+        _ = iaa.ElasticTransformation(alpha=False, sigma=0.25)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2400,7 +2386,7 @@ def test_ElasticTransformation():
     # test sigma having bad datatype
     got_exception = False
     try:
-        aug = iaa.ElasticTransformation(alpha=0.25, sigma=False)
+        _ = iaa.ElasticTransformation(alpha=0.25, sigma=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2426,7 +2412,7 @@ def test_ElasticTransformation():
 
     got_exception = False
     try:
-        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=False)
+        _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2472,7 +2458,7 @@ def test_ElasticTransformation():
 
     got_exception = False
     try:
-        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=False)
+        _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2507,7 +2493,7 @@ def test_ElasticTransformation():
 
     got_exception = False
     try:
-        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=False)
+        _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
