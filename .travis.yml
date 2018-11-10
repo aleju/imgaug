@@ -42,9 +42,9 @@ before_script:
   #- flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
 script:
-  - python tests/test.py
-  - coverage run --source imgaug --omit ./imgaug -m pytest tests/test.py --verbose --doctest-modules
-#  - nosetests tests/test.py -v --exe --with-doctest --with-xunit --with-coverage --cover-package=imgaug
+  - python test/test.py
+  - coverage run --source imgaug --omit ./imgaug -m pytest test/test.py --verbose --doctest-modules
+#  - nosetests test/test.py -v --exe --with-doctest --with-xunit --with-coverage --cover-package=imgaug
 
 
 after_success:

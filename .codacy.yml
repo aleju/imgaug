@@ -1,5 +1,5 @@
 exclude_paths:
-  - tests/*
+  - test/*
   - checks/*
   - imgaug/external/*
   - old_version/*
