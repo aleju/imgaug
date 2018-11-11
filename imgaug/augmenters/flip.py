@@ -20,13 +20,15 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import parameters as iap
+
 import numpy as np
 import six.moves as sm
 
-from .meta import Augmenter
+from . import meta
+from .. import parameters as iap
 
-class Fliplr(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images horizontally.
 
@@ -94,7 +96,7 @@ class Fliplr(Augmenter): # pylint: disable=locally-disabled, unused-variable, li
         return [self.p]
 
 
-class Flipud(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
 
