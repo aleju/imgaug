@@ -23,18 +23,19 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
+import types
+
 import numpy as np
 import cv2
 import six.moves as sm
-import types
 
 from . import meta
-from .meta import Augmenter
+from .. import imgaug as ia
+from .. import parameters as iap
 
-# TODO tests
-class Convolve(Augmenter):
+
+class Convolve(meta.Augmenter):
     """
     Apply a Convolution to input images.
 
@@ -95,17 +96,20 @@ class Convolve(Augmenter):
         super(Convolve, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         if matrix is None:
-            self.matrix = None #np.array([[1]], dtype=np.float32)
+            self.matrix = None
             self.matrix_type = "None"
         elif ia.is_np_array(matrix):
-            ia.do_assert(len(matrix.shape) == 2, "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (len(matrix.shape), matrix.shape))
+            ia.do_assert(len(matrix.shape) == 2,
+                         "Expected convolution matrix to have 2 axis, got %d (shape %s)." % (
+                             len(matrix.shape), matrix.shape))
             self.matrix = matrix
             self.matrix_type = "constant"
         elif isinstance(matrix, types.FunctionType):
             self.matrix = matrix
             self.matrix_type = "function"
         else:
-            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(matrix),))
+            raise Exception("Expected float, int, tuple/list with 2 entries or StochasticParameter. Got %s." % (
+                type(matrix),))
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -162,11 +166,10 @@ class Convolve(Augmenter):
     def get_parameters(self):
         return [self.matrix, self.matrix_type]
 
-# TODO tests
+
 def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=None):
     """
-    Augmenter that sharpens images and overlays the result with the original
-    image.
+    Augmenter that sharpens images and overlays the result with the original image.
 
     Parameters
     ----------
@@ -218,8 +221,10 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     0.75 <= x <= 2.0 and with a variable alpha.
 
     """
-    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
-    lightness_param = iap.handle_continuous_param(lightness, "lightness", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
+                                              list_to_choice=True)
+    lightness_param = iap.handle_continuous_param(lightness, "lightness", value_range=(0, None), tuple_to_uniform=True,
+                                                  list_to_choice=True)
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
@@ -243,7 +248,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
 
-# TODO tests
+
 def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=None):
     """
     Augmenter that embosses images and overlays the result with the original
@@ -297,8 +302,10 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     over the old image.
 
     """
-    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
-    strength_param = iap.handle_continuous_param(strength, "strength", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
+                                              list_to_choice=True)
+    strength_param = iap.handle_continuous_param(strength, "strength", value_range=(0, None), tuple_to_uniform=True,
+                                                 list_to_choice=True)
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
@@ -321,6 +328,7 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
         name = "Unnamed%s" % (ia.caller_name(),)
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
 
 # TODO tests
 def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
@@ -360,9 +368,10 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     in the range 0.0 <= a <= 1.0 over the old image.
 
     """
-    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
+                                              list_to_choice=True)
 
-    def create_matrices(image, nb_channels, random_state_func):
+    def create_matrices(_image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         ia.do_assert(0 <= alpha_sample <= 1.0)
         matrix_nochange = np.array([
@@ -382,6 +391,7 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
         name = "Unnamed%s" % (ia.caller_name(),)
 
     return Convolve(create_matrices, name=name, deterministic=deterministic, random_state=random_state)
+
 
 # TODO tests
 # TODO merge EdgeDetect and DirectedEdgeDetect?
@@ -453,10 +463,12 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     (e.g. for 0.3 then `0.7*old_image + 0.3*edge_image`).
 
     """
-    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
-    direction_param = iap.handle_continuous_param(direction, "direction", value_range=None, tuple_to_uniform=True, list_to_choice=True)
+    alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
+                                              list_to_choice=True)
+    direction_param = iap.handle_continuous_param(direction, "direction", value_range=None, tuple_to_uniform=True,
+                                                  list_to_choice=True)
 
-    def create_matrices(image, nb_channels, random_state_func):
+    def create_matrices(_image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
         ia.do_assert(0 <= alpha_sample <= 1.0)
         direction_sample = direction_param.draw_sample(random_state=random_state_func)
@@ -465,13 +477,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
         rad = np.deg2rad(deg)
         x = np.cos(rad - 0.5*np.pi)
         y = np.sin(rad - 0.5*np.pi)
-        #x = (deg % 90) / 90 if 0 <= deg <= 180 else -(deg % 90) / 90
-        #y = (-1) + (deg % 90) / 90 if 90 < deg < 270 else 1 - (deg % 90) / 90
         direction_vector = np.array([x, y])
-
-        #print("direction_vector", direction_vector)
-
-        #vertical_vector = np.array([0, 1])
 
         matrix_effect = np.array([
             [0, 0, 0],
@@ -482,21 +488,13 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
             for y in [-1, 0, 1]:
                 if (x, y) != (0, 0):
                     cell_vector = np.array([x, y])
-                    #deg_cell = angle_between_vectors(vertical_vector, vec_cell)
                     distance_deg = np.rad2deg(ia.angle_between_vectors(cell_vector, direction_vector))
                     distance = distance_deg / 180
                     similarity = (1 - distance)**4
                     matrix_effect[y+1, x+1] = similarity
-                    #print("cell", y, x, "distance_deg", distance_deg, "distance", distance, "similarity", similarity)
         matrix_effect = matrix_effect / np.sum(matrix_effect)
         matrix_effect = matrix_effect * (-1)
         matrix_effect[1, 1] = 1
-        #for y in [0, 1, 2]:
-        #    vals = []
-        #    for x in [0, 1, 2]:
-        #        vals.append("%.2f" % (matrix_effect[y, x],))
-        #    print(" ".join(vals))
-        #print("matrix_effect", matrix_effect)
 
         matrix_nochange = np.array([
             [0, 0, 0],
