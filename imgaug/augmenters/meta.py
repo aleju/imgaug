@@ -27,16 +27,19 @@ List of augmenters:
 Note that WithColorspace is in `color.py`.
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
+import warnings
 from abc import ABCMeta, abstractmethod
-import numpy as np
 import copy as copy_module
 import re
 import itertools
+
+import numpy as np
 import six
 import six.moves as sm
-import warnings
+
+from .. import imgaug as ia
+from .. import parameters as iap
 
 
 def copy_dtypes_for_restore(images, force_list=False):
@@ -108,7 +111,8 @@ def handle_children_list(lst, augmenter_name, lst_name):
         ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
         return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     else:
-        raise Exception("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, got %s." % (lst_name, augmenter_name, type(lst),))
+        raise Exception(("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, "
+                         + "got %s.") % (lst_name, augmenter_name, type(lst),))
 
 
 def reduce_to_nonempty(objs):
@@ -130,7 +134,7 @@ def invert_reduce_to_nonempty(objs, ids, objs_reduced):
 
 
 @six.add_metaclass(ABCMeta)
-class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, line-too-long
+class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Base class for Augmenter objects.
     All augmenters derive from this class.
@@ -177,13 +181,15 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         """
         super(Augmenter, self).__init__()
 
-        ia.do_assert(name is None or ia.is_string(name), "Expected name to be None or string-like, got %s." % (type(name),))
+        ia.do_assert(name is None or ia.is_string(name),
+                     "Expected name to be None or string-like, got %s." % (type(name),))
         if name is None:
             self.name = "Unnamed%s" % (self.__class__.__name__,)
         else:
             self.name = name
 
-        ia.do_assert(ia.is_single_bool(deterministic), "Expected deterministic to be a boolean, got %s." % (type(deterministic),))
+        ia.do_assert(ia.is_single_bool(deterministic),
+                     "Expected deterministic to be a boolean, got %s." % (type(deterministic),))
         self.deterministic = deterministic
 
         if random_state is None:
@@ -238,7 +244,13 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         Yields
         -------
-        augmented_batch : ia.Batch or list of ia.HeatmapsOnImage or list of ia.SegmentationMapOnImage or list of ia.KeypointsOnImage or list of ia.BoundingBoxesOnImage or list of (H,W,C) ndarray or list of (H,W) ndarray or (N,H,W,C) ndarray or (N,H,W) ndarray
+        augmented_batch : ia.Batch
+                          or list of ia.HeatmapsOnImage
+                          or list of ia.SegmentationMapOnImage
+                          or list of ia.KeypointsOnImage
+                          or list of ia.BoundingBoxesOnImage
+                          or list of (H,W,C) ndarray
+                          or list of (H,W) ndarray or (N,H,W,C) ndarray or (N,H,W) ndarray
             Augmented objects.
 
         """
@@ -256,7 +268,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batches_normalized.append(batch_copy)
                 batches_original_dts.append("imgaug.Batch")
             elif ia.is_np_array(batch):
-                ia.do_assert(batch.ndim in (3, 4), "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,))
+                ia.do_assert(batch.ndim in (3, 4),
+                             "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,))
                 batches_normalized.append(ia.Batch(images=batch, data=i))
                 batches_original_dts.append("numpy_array")
             elif isinstance(batch, list):
@@ -279,14 +292,18 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                     batches_normalized.append(ia.Batch(bounding_boxes=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.BoundingBoxesOnImage")
                 else:
-                    raise Exception("Unknown datatype in batch[0]. Expected numpy array or imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage, got %s." % (type(batch[0]),))
+                    raise Exception(
+                        "Unknown datatype in batch[0]. Expected numpy array or imgaug.HeatmapsOnImage or "
+                        + "imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage, "
+                        + "got %s." % (type(batch[0]),))
             else:
-                raise Exception("Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of (numpy array or imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage). Got %s." % (type(batch),))
+                raise Exception(
+                    "Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of (numpy array or "
+                    + "imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or "
+                    + "imgaug.BoundingBoxesOnImage). "
+                    + "Got %s." % (type(batch),))
 
         def unnormalize_batch(batch_aug):
-            #if batch_aug.data is None:
-            #    return batch_aug
-            #else:
             i = batch_aug.data
             # if input was ia.Batch, then .data has content (i, .data)
             if isinstance(i, tuple):
@@ -321,7 +338,9 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 batch_augment_keypoints = batch_normalized.keypoints is not None
                 batch_augment_bounding_boxes = batch_normalized.bounding_boxes is not None
 
-                nb_to_aug = sum([1 if to_aug else 0 for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps, batch_augment_keypoints, batch_augment_bounding_boxes]])
+                nb_to_aug = sum([1 if to_aug else 0
+                                 for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps,
+                                                batch_augment_keypoints, batch_augment_bounding_boxes]])
 
                 if nb_to_aug > 1:
                     augseq = self.to_deterministic() if not self.deterministic else self
@@ -333,11 +352,13 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 if batch_augment_heatmaps:
                     batch_normalized.heatmaps_aug = augseq.augment_heatmaps(batch_normalized.heatmaps, hooks=hooks)
                 if batch_augment_segmaps:
-                    batch_normalized.segmentation_maps_aug = augseq.augment_segmentation_maps(batch_normalized.segmentation_maps, hooks=hooks)
+                    batch_normalized.segmentation_maps_aug = augseq.augment_segmentation_maps(
+                        batch_normalized.segmentation_maps, hooks=hooks)
                 if batch_augment_keypoints:
                     batch_normalized.keypoints_aug = augseq.augment_keypoints(batch_normalized.keypoints, hooks=hooks)
                 if batch_augment_bounding_boxes:
-                    batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(batch_normalized.bounding_boxes, hooks=hooks)
+                    batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
+                        batch_normalized.bounding_boxes, hooks=hooks)
 
                 batch_unnormalized = unnormalize_batch(batch_normalized)
 
@@ -378,7 +399,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             The corresponding augmented image.
 
         """
-        ia.do_assert(image.ndim in [2, 3], "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,))
+        ia.do_assert(image.ndim in [2, 3],
+                     "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,))
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
@@ -424,7 +446,9 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             input_type = "array"
             input_added_axis = False
 
-            ia.do_assert(images.ndim in [3, 4], "Expected 3d/4d array of form (N, height, width) or (N, height, width, channels), got shape %s." % (images.shape,))
+            ia.do_assert(images.ndim in [3, 4],
+                         "Expected 3d/4d array of form (N, height, width) or (N, height, width, channels), "
+                         "got shape %s." % (images.shape,))
 
             # copy the input, we don't want to augment it in-place
             images_copy = np.copy(images)
@@ -450,7 +474,9 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             if len(images) == 0:
                 images_copy = []
             else:
-                ia.do_assert(all(image.ndim in [2, 3] for image in images), "Expected list of images with each image having shape (height, width) or (height, width, channels), got shapes %s." % ([image.shape for image in images],))
+                ia.do_assert(all(image.ndim in [2, 3] for image in images),
+                             "Expected list of images with each image having shape (height, width) or "
+                             + "(height, width, channels), got shapes %s." % ([image.shape for image in images],))
 
                 # copy images and add channel axis for 2D images (see above,
                 # as for list inputs each image can have different shape, it
@@ -466,17 +492,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                         input_added_axis.append(False)
                     images_copy.append(image_copy)
         else:
-            raise Exception("Expected images as one numpy array or list/tuple of numpy arrays, got %s." % (type(images),))
+            raise Exception("Expected images as one numpy array or list/tuple of numpy arrays, got %s." % (
+                type(images),))
 
         images_copy = hooks.preprocess(images_copy, augmenter=self, parents=parents)
-
-        #if ia.is_np_array(images) != ia.is_np_array(images_copy):
-        #    print("[WARNING] images vs images_copy", ia.is_np_array(images), ia.is_np_array(images_copy))
-        #if ia.is_np_array(images):
-            #ia.do_assert(images.shape[0] > 0, images.shape)
-        #    print("images.shape", images.shape)
-        #if ia.is_np_array(images_copy):
-        #    print("images_copy.shape", images_copy.shape)
 
         # the is_activated() call allows to use hooks that selectively
         # deactivate specific augmenters in previously defined augmentation
@@ -502,25 +521,26 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         # remove temporarily added channel axis for 2D input images
         output_type = "list" if isinstance(images_result, list) else "array"
         if input_type == "array":
-            if input_added_axis == True:
+            if input_added_axis is True:
                 if output_type == "array":
                     images_result = np.squeeze(images_result, axis=3)
                 else:
                     images_result = [np.squeeze(image, axis=2) for image in images_result]
         else:  # if input_type == "list":
             # This test was removed for now because hooks can change the type
-            #ia.do_assert(
+            # ia.do_assert(
             #    isinstance(images_result, list),
             #    "INTERNAL ERROR: Input was list, output was expected to be list too "
             #    "but got %s." % (type(images_result),)
-            #)
+            # )
+
             ia.do_assert(
                 len(images_result) == len(images),
                 "INTERNAL ERROR: Expected number of images to be unchanged after augmentation, "
                 "but was changed from %d to %d." % (len(images), len(images_result))
             )
             for i in sm.xrange(len(images_result)):
-                if input_added_axis[i] == True:
+                if input_added_axis[i] is True:
                     images_result[i] = np.squeeze(images_result[i], axis=2)
 
         if self.deterministic:
@@ -603,8 +623,11 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         if hooks is None:
             hooks = ia.HooksHeatmaps()
 
-        ia.do_assert(ia.is_iterable(heatmaps), "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
-        ia.do_assert(all([isinstance(heatmaps_i, ia.HeatmapsOnImage) for heatmaps_i in heatmaps]), "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % ([type(el) for el in heatmaps],))
+        ia.do_assert(ia.is_iterable(heatmaps),
+                     "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
+        ia.do_assert(all([isinstance(heatmaps_i, ia.HeatmapsOnImage) for heatmaps_i in heatmaps]),
+                     "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (
+                         [type(el) for el in heatmaps],))
 
         heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
 
@@ -649,10 +672,6 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         heatmaps : list of ia.HeatmapsOnImage
             Heatmaps to augment. They may be changed in-place.
 
-        random_state : np.random.RandomState
-            The random state to use for all sampling tasks during the
-            augmentation.
-
         parents : list of Augmenter
             See `augment_heatmaps()`.
 
@@ -667,7 +686,7 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         """
         raise NotImplementedError()
 
-    def _augment_heatmaps_as_images(self, heatmaps, random_state, parents, hooks):
+    def _augment_heatmaps_as_images(self, heatmaps, parents, hooks):
         # TODO documentation
         # TODO keep this? it is afaik not used anywhere
         heatmaps_uint8 = [heatmaps_i.to_uint8() for heatmaps_i in heatmaps]
@@ -677,12 +696,11 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             in heatmaps_uint8
         ]
         return [
-            ia.Heatmaps.from_uint8(
+            ia.HeatmapsOnImage.from_uint8(
                 heatmaps_aug,
                 shape=heatmaps_i.shape,
                 min_value=heatmaps_i.min_value,
-                max_value=heatmaps_i.max_value,
-                dtype=heatmaps_i.arr.dtype
+                max_value=heatmaps_i.max_value
             )
             for heatmaps_aug, heatmaps_i
             in zip(heatmaps_uint8_aug, heatmaps)
@@ -712,13 +730,17 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             Corresponding augmented segmentation maps.
 
         """
-        heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True) for segmap in segmaps]
+        heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True)
+                                  for segmap in segmaps]
         heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
-        nonempty_class_indices = [nonempty_class_indices_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
-        heatmaps_aug = self.augment_heatmaps(heatmaps)
+        nonempty_class_indices = [nonempty_class_indices_i
+                                  for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
+        heatmaps_aug = self.augment_heatmaps(heatmaps, parents=parents, hooks=hooks)
         segmaps_aug = []
         for segmap, heatmaps_aug_i, nonempty_class_indices_i in zip(segmaps, heatmaps_aug, nonempty_class_indices):
-            segmap_aug = ia.SegmentationMapOnImage.from_heatmaps(heatmaps_aug_i, class_indices=nonempty_class_indices_i, nb_classes=segmap.nb_classes)
+            segmap_aug = ia.SegmentationMapOnImage.from_heatmaps(heatmaps_aug_i,
+                                                                 class_indices=nonempty_class_indices_i,
+                                                                 nb_classes=segmap.nb_classes)
             segmap_aug.input_was = segmap.input_was
             segmaps_aug.append(segmap_aug)
         return segmaps_aug
@@ -781,7 +803,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             hooks = ia.HooksKeypoints()
 
         ia.do_assert(ia.is_iterable(keypoints_on_images))
-        ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage) for keypoints_on_image in keypoints_on_images]))
+        ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage)
+                          for keypoints_on_image in keypoints_on_images]))
 
         keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
 
@@ -805,7 +828,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 else:
                     keypoints_on_images_result = []
 
-                keypoints_on_images_result = invert_reduce_to_nonempty(keypoints_on_images_copy, nonempty_idx, keypoints_on_images_result)
+                keypoints_on_images_result = invert_reduce_to_nonempty(keypoints_on_images_copy, nonempty_idx,
+                                                                       keypoints_on_images_result)
 
                 ia.forward_random_state(self.random_state)
             else:
@@ -934,11 +958,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         return result
 
     # TODO most of the code of this function could be replaced with ia.draw_grid()
-    # TODO add parameter for handling multiple images ((a) next to each other
-    # in each row or (b) multiply row count by number of images and put each
-    # one in a new row)
-    # TODO "images" parameter deviates from augment_images (3d array is here
-    # treated as one 3d image, in augment_images as (N, H, W))
+    # TODO add parameter for handling multiple images ((a) next to each other in each row or (b) multiply row count
+    # by number of images and put each one in a new row)
+    # TODO "images" parameter deviates from augment_images (3d array is here treated as one 3d image, in
+    # augment_images as (N, H, W))
     def draw_grid(self, images, rows, cols):
         """
         Apply this augmenter to the given images and return a grid
@@ -963,7 +986,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         Parameters
         -------
-        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray or list of (H,W) ndarray
+        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray
+                 or list of (H,W) ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape (H, W) or
             (H, W, 3). If a single array, then it is expected to have
@@ -993,7 +1017,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
             elif len(images.shape) == 2:
                 images = [images[:, :, np.newaxis]]
             else:
-                raise Exception("Unexpected images shape, expected 2-, 3- or 4-dimensional array, got shape %s." % (images.shape,))
+                raise Exception("Unexpected images shape, expected 2-, 3- or 4-dimensional array, "
+                                + "got shape %s." % (images.shape,))
         elif isinstance(images, list):
             for i, image in enumerate(images):
                 if len(image.shape) == 3:
@@ -1001,7 +1026,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                 elif len(image.shape) == 2:
                     images[i] = image[:, :, np.newaxis]
                 else:
-                    raise Exception("Unexpected image shape at index %d, expected 2- or 3-dimensional array, got shape %s." % (i, image.shape,))
+                    raise Exception(("Unexpected image shape at index %d, expected 2- or 3-dimensional array, "
+                                     + "got shape %s.") % (i, image.shape,))
         ia.do_assert(isinstance(images, list))
 
         det = self if self.deterministic else self.to_deterministic()
@@ -1051,7 +1077,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
 
         Parameters
         ----------
-        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray or list of (H,W) ndarray
+        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray
+                 or list of (H,W) ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape (H, W)
             or (H, W, 3).
@@ -1235,7 +1262,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                     child.localize_random_state_(recursive=recursive)
         return self
 
-    def copy_random_state(self, source, recursive=True, matching="position", matching_tolerant=True, copy_determinism=False):
+    def copy_random_state(self, source, recursive=True, matching="position", matching_tolerant=True,
+                          copy_determinism=False):
         """
         Copy the random states from a source augmenter sequence.
 
@@ -1273,7 +1301,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
         )
         return aug
 
-    def copy_random_state_(self, source, recursive=True, matching="position", matching_tolerant=True, copy_determinism=False):
+    def copy_random_state_(self, source, recursive=True, matching="position", matching_tolerant=True,
+                           copy_determinism=False):
         """
         Copy the random states from a source augmenter sequence (inplace).
 
@@ -1636,15 +1665,10 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
                     to_remove.append((i, aug))
 
             for count_removed, (i, aug) in enumerate(to_remove):
-                # self._remove_augmenters_inplace_from_list(lst, aug, i, i - count_removed)
                 del lst[i - count_removed]
 
             for aug in lst:
                 aug.remove_augmenters_inplace(func, subparents)
-
-    # TODO
-    # def to_json(self):
-    #    pass
 
     def copy(self):
         """
@@ -1676,7 +1700,8 @@ class Augmenter(object): # pylint: disable=locally-disabled, unused-variable, li
     def __str__(self):
         params = self.get_parameters()
         params_str = ", ".join([param.__str__() for param in params])
-        return "%s(name=%s, parameters=[%s], deterministic=%s)" % (self.__class__.__name__, self.name, params_str, self.deterministic)
+        return "%s(name=%s, parameters=[%s], deterministic=%s)" % (
+            self.__class__.__name__, self.name, params_str, self.deterministic)
 
 
 class Sequential(Augmenter, list):
@@ -1748,7 +1773,8 @@ class Sequential(Augmenter, list):
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
 
-        ia.do_assert(ia.is_single_bool(random_order), "Expected random_order to be boolean, got %s." % (type(random_order),))
+        ia.do_assert(ia.is_single_bool(random_order),
+                     "Expected random_order to be boolean, got %s." % (type(random_order),))
         self.random_order = random_order
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1831,7 +1857,9 @@ class Sequential(Augmenter, list):
 
     def __str__(self):
         augs_str = ", ".join([aug.__str__() for aug in self])
-        return "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (self.name, self.random_order, augs_str, self.deterministic)
+        return "Sequential(name=%s, random_order=%s, children=[%s], deterministic=%s)" % (
+            self.name, self.random_order, augs_str, self.deterministic)
+
 
 class SomeOf(Augmenter, list):
     """
@@ -1950,7 +1978,8 @@ class SomeOf(Augmenter, list):
         else:
             raise Exception("Expected int, (int, None), (int, int) or StochasticParameter, got %s" % (type(n),))
 
-        ia.do_assert(ia.is_single_bool(random_order), "Expected random_order to be boolean, got %s." % (type(random_order),))
+        ia.do_assert(ia.is_single_bool(random_order),
+                     "Expected random_order to be boolean, got %s." % (type(random_order),))
         self.random_order = random_order
 
     def _get_n(self, nb_images, random_state):
@@ -1975,11 +2004,6 @@ class SomeOf(Augmenter, list):
 
     def _get_augmenter_active(self, nb_rows, random_state):
         nn = self._get_n(nb_rows, random_state)
-        #if not self.replace:
-        #    nn = [min(n, len(self)) for n in nn]
-        #augmenter_indices = [
-        #    random_state.choice(len(self.children), size=(min(n, len(self)),), replace=False]) for n in nn
-        #]
         nn = [min(n, len(self)) for n in nn]
         augmenter_active = np.zeros((nb_rows, len(self)), dtype=np.bool)
         for row_idx, n_true in enumerate(nn):
@@ -2160,9 +2184,10 @@ class SomeOf(Augmenter, list):
         return [self]
 
     def __str__(self):
-        # augs_str = ", ".join([aug.__str__() for aug in self.children])
         augs_str = ", ".join([aug.__str__() for aug in self])
-        return "SomeOf(name=%s, n=%s, random_order=%s, augmenters=[%s], deterministic=%s)" % (self.name, str(self.n), str(self.random_order), augs_str, self.deterministic)
+        return "SomeOf(name=%s, n=%s, random_order=%s, augmenters=[%s], deterministic=%s)" % (
+            self.name, str(self.n), str(self.random_order), augs_str, self.deterministic)
+
 
 def OneOf(children, name=None, deterministic=False, random_state=None):
     """
@@ -2212,7 +2237,9 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
     nothing.
 
     """
-    return SomeOf(n=1, children=children, random_order=False, name=name, deterministic=deterministic, random_state=random_state)
+    return SomeOf(n=1, children=children, random_order=False, name=name, deterministic=deterministic,
+                  random_state=random_state)
+
 
 class Sometimes(Augmenter):
     """
@@ -2280,7 +2307,8 @@ class Sometimes(Augmenter):
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)
-            indices_then_list = np.where(samples == 1)[0] # np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            indices_then_list = np.where(samples == 1)[0]
             indices_else_list = np.where(samples == 0)[0]
             if isinstance(images, list):
                 images_then_list = [images[i] for i in indices_then_list]
@@ -2326,7 +2354,8 @@ class Sometimes(Augmenter):
             samples = self.p.draw_samples((nb_heatmaps,), random_state=random_state)
 
             # create lists of heatmaps for if and else lists (one for each)
-            indices_then_list = np.where(samples == 1)[0] # np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            indices_then_list = np.where(samples == 1)[0]
             indices_else_list = np.where(samples == 0)[0]
             heatmaps_then_list = [heatmaps[i] for i in indices_then_list]
             heatmaps_else_list = [heatmaps[i] for i in indices_else_list]
@@ -2362,7 +2391,8 @@ class Sometimes(Augmenter):
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)
-            indices_then_list = np.where(samples == 1)[0] # np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
+            indices_then_list = np.where(samples == 1)[0]
             indices_else_list = np.where(samples == 0)[0]
             images_then_list = [keypoints_on_images[i] for i in indices_then_list]
             images_else_list = [keypoints_on_images[i] for i in indices_else_list]
@@ -2403,7 +2433,9 @@ class Sometimes(Augmenter):
         return [self.then_list, self.else_list]
 
     def __str__(self):
-        return "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (self.p, self.name, self.then_list, self.else_list, self.deterministic)
+        return "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (
+            self.p, self.name, self.then_list, self.else_list, self.deterministic)
+
 
 class WithChannels(Augmenter):
     """
@@ -2456,7 +2488,8 @@ class WithChannels(Augmenter):
         elif ia.is_single_integer(channels):
             self.channels = [channels]
         elif ia.is_iterable(channels):
-            ia.do_assert(all([ia.is_single_integer(channel) for channel in channels]), "Expected integers as channels, got %s." % ([type(channel) for channel in channels],))
+            ia.do_assert(all([ia.is_single_integer(channel) for channel in channels]),
+                         "Expected integers as channels, got %s." % ([type(channel) for channel in channels],))
             self.channels = channels
         else:
             raise Exception("Expected None, int or list of ints as channels, got %s." % (type(channels),))
@@ -2558,7 +2591,9 @@ class WithChannels(Augmenter):
         return [self.children]
 
     def __str__(self):
-        return "WithChannels(channels=%s, name=%s, children=%s, deterministic=%s)" % (self.channels, self.name, self.children, self.deterministic)
+        return "WithChannels(channels=%s, name=%s, children=%s, deterministic=%s)" % (
+            self.channels, self.name, self.children, self.deterministic)
+
 
 class Noop(Augmenter):
     """
@@ -2582,7 +2617,6 @@ class Noop(Augmenter):
     """
 
     def __init__(self, name=None, deterministic=False, random_state=None):
-        #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Noop, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -2668,25 +2702,32 @@ class Lambda(Augmenter):
     """
 
     def __init__(self, func_images, func_heatmaps, func_keypoints, name=None, deterministic=False, random_state=None):
-        #Augmenter.__init__(self, name=name, deterministic=deterministic, random_state=random_state)
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
         self.func_keypoints = func_keypoints
 
     def _augment_images(self, images, random_state, parents, hooks):
-        return self.func_images(images, random_state, parents=parents, hooks=hooks)
+        return self.func_images(images, random_state, parents, hooks)
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = self.func_heatmaps(heatmaps, random_state, parents=parents, hooks=hooks)
-        ia.do_assert(ia.is_iterable(result), "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, got %s." % (type(result),))
-        ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]), "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, got %s." % ([type(el) for el in result],))
+        result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
+        ia.do_assert(ia.is_iterable(result),
+                     "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
+                     + "got %s." % (type(result),))
+        ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
+                     "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
+                     + "got %s." % ([type(el) for el in result],))
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        result = self.func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks)
-        ia.do_assert(ia.is_iterable(result), "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, got %s." % (type(result),))
-        ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]), "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, got %s." % ([type(el) for el in result],))
+        result = self.func_keypoints(keypoints_on_images, random_state, parents, hooks)
+        ia.do_assert(ia.is_iterable(result),
+                     "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
+                     + "got %s." % (type(result),))
+        ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]),
+                     "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
+                     + "got %s." % ([type(el) for el in result],))
         return result
 
     def get_parameters(self):
@@ -2709,7 +2750,7 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of Augmenter._augment_images().
 
-    func_keypoints : callable,
+    func_heatmaps : callable,
         The function to call for each batch of heatmaps.
         It must follow the form `function(heatmaps, random_state, parents, hooks)`
         and return either True (valid input) or False (invalid input).
@@ -2732,20 +2773,28 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
 
     """
     def func_images_assert(images, random_state, parents, hooks):
-        ia.do_assert(func_images(images, random_state, parents=parents, hooks=hooks), "Input images did not fulfill user-defined assertion in AssertLambda.")
+        ia.do_assert(func_images(images, random_state, parents, hooks),
+                     "Input images did not fulfill user-defined assertion in AssertLambda.")
         return images
+
     def func_heatmaps_assert(heatmaps, random_state, parents, hooks):
-        ia.do_assert(func_heatmaps(heatmaps, random_state, parents=parents, hooks=hooks), "Input heatmaps did not fulfill user-defined assertion in AssertLambda.")
+        ia.do_assert(func_heatmaps(heatmaps, random_state, parents, hooks),
+                     "Input heatmaps did not fulfill user-defined assertion in AssertLambda.")
         return heatmaps
+
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
-        ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents=parents, hooks=hooks), "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
+        ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents, hooks),
+                     "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
         return keypoints_on_images
+
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
-    return Lambda(func_images_assert, func_heatmaps_assert, func_keypoints_assert, name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images_assert, func_heatmaps_assert, func_keypoints_assert,
+                  name=name, deterministic=deterministic, random_state=random_state)
 
 
-def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=True, name=None, deterministic=False, random_state=None):
+def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=True,
+                name=None, deterministic=False, random_state=None):
     """
     Augmenter to make assumptions about the shape of input image(s)
     and keypoints.
@@ -2814,38 +2863,48 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
     def compare(observed, expected, dimension, image_index):
         if expected is not None:
             if ia.is_single_integer(expected):
-                ia.do_assert(observed == expected, "Expected dim %d (entry index: %s) to have value %d, got %d." % (dimension, image_index, expected, observed))
+                ia.do_assert(observed == expected,
+                             "Expected dim %d (entry index: %s) to have value %d, got %d." % (
+                                 dimension, image_index, expected, observed))
             elif isinstance(expected, tuple):
                 ia.do_assert(len(expected) == 2)
-                ia.do_assert(expected[0] <= observed < expected[1], "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (dimension, image_index, expected[0], expected[1], observed))
+                ia.do_assert(expected[0] <= observed < expected[1],
+                             "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (
+                                 dimension, image_index, expected[0], expected[1], observed))
             elif isinstance(expected, list):
-                ia.do_assert(any([observed == val for val in expected]), "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (dimension, image_index, str(expected), observed))
+                ia.do_assert(any([observed == val for val in expected]),
+                             "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (
+                                 dimension, image_index, str(expected), observed))
             else:
-                raise Exception("Invalid datatype for shape entry %d, expected each entry to be an integer, a tuple (with two entries) or a list, got %s." % (dimension, type(expected),))
+                raise Exception(("Invalid datatype for shape entry %d, expected each entry to be an integer, "
+                                + "a tuple (with two entries) or a list, got %s.") % (dimension, type(expected),))
 
-    def func_images(images, random_state, parents, hooks):
+    def func_images(images, _random_state, _parents, _hooks):
         if check_images:
-            #ia.do_assert(is_np_array(images), "AssertShape can currently only handle numpy arrays, got ")
             if isinstance(images, list):
                 if shape[0] is not None:
                     compare(len(images), shape[0], 0, "ALL")
 
                 for i in sm.xrange(len(images)):
                     image = images[i]
-                    ia.do_assert(len(image.shape) == 3, "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (i, len(image.shape), str(image.shape)))
+                    ia.do_assert(len(image.shape) == 3,
+                                 "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (
+                                     i, len(image.shape), str(image.shape)))
                     for j in sm.xrange(len(shape)-1):
                         expected = shape[j+1]
                         observed = image.shape[j]
                         compare(observed, expected, j, i)
             else:
-                ia.do_assert(len(images.shape) == 4, "Expected image's shape to have length 4, got %d (shape: %s)." % (len(images.shape), str(images.shape)))
+                ia.do_assert(len(images.shape) == 4,
+                             "Expected image's shape to have length 4, got %d (shape: %s)." % (
+                                 len(images.shape), str(images.shape)))
                 for i in range(4):
                     expected = shape[i]
                     observed = images.shape[i]
                     compare(observed, expected, i, "ALL")
         return images
 
-    def func_heatmaps(heatmaps, random_state, parents, hooks):
+    def func_heatmaps(heatmaps, _random_state, _parents, _hooks):
         if check_heatmaps:
             if shape[0] is not None:
                 compare(len(heatmaps), shape[0], 0, "ALL")
@@ -2858,9 +2917,8 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
                     compare(observed, expected, j, i)
         return heatmaps
 
-    def func_keypoints(keypoints_on_images, random_state, parents, hooks):
+    def func_keypoints(keypoints_on_images, _random_state, _parents, _hooks):
         if check_keypoints:
-            #ia.do_assert(is_np_array(images), "AssertShape can currently only handle numpy arrays, got ")
             if shape[0] is not None:
                 compare(len(keypoints_on_images), shape[0], 0, "ALL")
 
@@ -2875,4 +2933,5 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return Lambda(func_images, func_heatmaps, func_keypoints, name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images, func_heatmaps, func_keypoints,
+                  name=name, deterministic=deterministic, random_state=random_state)
