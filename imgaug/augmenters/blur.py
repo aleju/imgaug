@@ -22,16 +22,18 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 import numpy as np
 from scipy import ndimage
 import cv2
 import six.moves as sm
 
-from .meta import Augmenter
+from . import meta
+from .. import imgaug as ia
+from .. import parameters as iap
 
-class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to blur images using gaussian kernels.
 
@@ -75,8 +77,9 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
-        self.eps = 0.001 # epsilon value to estimate whether sigma is above 0
+        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True,
+                                                 list_to_choice=True)
+        self.eps = 0.001  # epsilon value to estimate whether sigma is sufficently above 0 to apply the blur
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -103,13 +106,15 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
     def get_parameters(self):
         return [self.sigma]
 
-class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing simple means over neighbourhoods.
 
     Parameters
     ----------
-    k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter, optional
+    k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter
+        or tuple of two StochasticParameter, optional(default=1)
         Kernel size to use.
 
             * If a single int, then that value will be used for the height
@@ -200,7 +205,6 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
             )
         for i in sm.xrange(nb_images):
             kh, kw = samples[0][i], samples[1][i]
-            #print(images.shape, result.shape, result[i].shape)
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
             if not kernel_impossible and not kernel_does_nothing:
@@ -220,8 +224,8 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
     def get_parameters(self):
         return [self.k]
 
-# TODO tests
-class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing median values over neighbourhoods.
 
@@ -271,11 +275,14 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True,
+                                           allow_floats=False)
         if ia.is_single_integer(k):
             ia.do_assert(k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),))
         elif ia.is_iterable(k):
-            ia.do_assert(all([ki % 2 != 0 for ki in k]), "Expected all values in iterable k to be odd, but at least one was not. Add or subtract 1 to/from that value.")
+            ia.do_assert(all([ki % 2 != 0 for ki in k]),
+                         "Expected all values in iterable k to be odd, but at least one was not. "
+                         + "Add or subtract 1 to/from that value.")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -302,8 +309,9 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
     def get_parameters(self):
         return [self.k]
 
+
 # TODO tests
-class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur/Denoise an image using a bilateral filter.
 
@@ -377,12 +385,16 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
 
     """
 
-    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250), name=None, deterministic=False, random_state=None):
+    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250), name=None, deterministic=False,
+                 random_state=None):
         super(BilateralBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.d = iap.handle_discrete_param(d, "d", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
-        self.sigma_color = iap.handle_continuous_param(sigma_color, "sigma_color", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True)
-        self.sigma_space = iap.handle_continuous_param(sigma_space, "sigma_space", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True)
+        self.d = iap.handle_discrete_param(d, "d", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True,
+                                           allow_floats=False)
+        self.sigma_color = iap.handle_continuous_param(sigma_color, "sigma_color", value_range=(1, None),
+                                                       tuple_to_uniform=True, list_to_choice=True)
+        self.sigma_space = iap.handle_continuous_param(sigma_space, "sigma_space", value_range=(1, None),
+                                                       tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -392,7 +404,8 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
         for i in sm.xrange(nb_images):
-            ia.do_assert(images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels.")
+            ia.do_assert(images[i].shape[2] == 3,
+                         "BilateralBlur can currently only be applied to images with 3 channels.")
             di = samples_d[i]
             sigma_color_i = samples_sigma_color[i]
             sigma_space_i = samples_sigma_space[i]
