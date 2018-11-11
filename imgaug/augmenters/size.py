@@ -24,17 +24,18 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 import numpy as np
 import six.moves as sm
 
 from . import meta
-from .meta import Augmenter
+from .. import imgaug as ia
+from .. import parameters as iap
 
 
 def _handle_pad_mode_param(pad_mode):
-    pad_modes_available = set(["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"])
+    pad_modes_available = {"constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric",
+                           "wrap"}
     if pad_mode == ia.ALL:
         return iap.Choice(list(pad_modes_available))
     elif ia.is_string(pad_mode):
@@ -45,7 +46,8 @@ def _handle_pad_mode_param(pad_mode):
         return iap.Choice(pad_mode)
     elif isinstance(pad_mode, iap.StochasticParameter):
         return pad_mode
-    raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (type(pad_mode),))
+    raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (
+        type(pad_mode),))
 
 
 def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left):
@@ -99,13 +101,14 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, cr
 
 
 # TODO rename to Resize to avoid confusion with Affine's scale
-class Scale(Augmenter):
+class Scale(meta.Augmenter):
     """
     Augmenter that scales/resizes images to specified heights and widths.
 
     Parameters
     ----------
-    size : string "keep" or int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter or dictionary
+    size : string "keep" or int or float or tuple of two ints/floats or list of ints/floats or StochasticParameter
+           or dictionary
         The new size of the
         images.
 
@@ -284,7 +287,8 @@ class Scale(Augmenter):
         elif isinstance(interpolation, iap.StochasticParameter):
             self.interpolation = interpolation
         else:
-            raise Exception("Expected int or string or iterable or StochasticParameter, got %s." % (type(interpolation),))
+            raise Exception("Expected int or string or iterable or StochasticParameter, got %s." % (
+                type(interpolation),))
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
@@ -292,7 +296,8 @@ class Scale(Augmenter):
         samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ia.do_assert(image.dtype == np.uint8, "Scale() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
+            ia.do_assert(image.dtype == np.uint8,
+                         "Scale() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
             h, w = self._compute_height_width(image.shape, sample_h, sample_w)
             image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
@@ -348,7 +353,8 @@ class Scale(Augmenter):
             samples_ip = None
         return samples_h, samples_w, samples_ip
 
-    def _compute_height_width(self, image_shape, sample_h, sample_w):
+    @classmethod
+    def _compute_height_width(cls, image_shape, sample_h, sample_w):
         imh, imw = image_shape[0:2]
         h, w = sample_h, sample_w
 
@@ -380,7 +386,8 @@ class Scale(Augmenter):
     def get_parameters(self):
         return [self.size, self.interpolation]
 
-class CropAndPad(Augmenter):
+
+class CropAndPad(meta.Augmenter):
     """
     Augmenter that crops/pads images by defined amounts in pixels or
     percent (relative to input image size).
@@ -564,7 +571,8 @@ class CropAndPad(Augmenter):
 
     """
 
-    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
+    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True,
+                 sample_independently=True, name=None, deterministic=False, random_state=None):
         super(CropAndPad, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.all_sides = None
@@ -582,6 +590,7 @@ class CropAndPad(Augmenter):
                 self.all_sides = iap.Deterministic(px)
             elif isinstance(px, tuple):
                 ia.do_assert(len(px) in [2, 4])
+
                 def handle_param(p):
                     if ia.is_single_integer(p):
                         return iap.Deterministic(p)
@@ -597,10 +606,10 @@ class CropAndPad(Augmenter):
                     elif isinstance(p, iap.StochasticParameter):
                         return p
                     else:
-                        raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, got type %s." % (type(p),))
+                        raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, "
+                                        + "got type %s." % (type(p),))
 
                 if len(px) == 2:
-                    #self.top = self.right = self.bottom = self.left = handle_param(px)
                     self.all_sides = handle_param(px)
                 else: # len == 4
                     self.top = handle_param(px[0])
@@ -610,15 +619,16 @@ class CropAndPad(Augmenter):
             elif isinstance(px, iap.StochasticParameter):
                 self.top = self.right = self.bottom = self.left = px
             else:
-                raise Exception("Expected int, tuple of 4 ints/tuples/lists/StochasticParameters or StochasticParameter, got type %s." % (type(px),))
+                raise Exception("Expected int, tuple of 4 ints/tuples/lists/StochasticParameters or "
+                                + "StochasticParameter, got type %s." % (type(px),))
         else: # = elif percent is not None:
             self.mode = "percent"
             if ia.is_single_number(percent):
                 ia.do_assert(-1.0 < percent)
-                #self.top = self.right = self.bottom = self.left = Deterministic(percent)
                 self.all_sides = iap.Deterministic(percent)
             elif isinstance(percent, tuple):
                 ia.do_assert(len(percent) in [2, 4])
+
                 def handle_param(p):
                     if ia.is_single_number(p):
                         return iap.Deterministic(p)
@@ -637,10 +647,10 @@ class CropAndPad(Augmenter):
                     elif isinstance(p, iap.StochasticParameter):
                         return p
                     else:
-                        raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, got type %s." % (type(p),))
+                        raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, "
+                                        + "got type %s." % (type(p),))
 
                 if len(percent) == 2:
-                    #self.top = self.right = self.bottom = self.left = handle_param(percent)
                     self.all_sides = handle_param(percent)
                 else: # len == 4
                     self.top = handle_param(percent[0])
@@ -650,10 +660,12 @@ class CropAndPad(Augmenter):
             elif isinstance(percent, iap.StochasticParameter):
                 self.top = self.right = self.bottom = self.left = percent
             else:
-                raise Exception("Expected number, tuple of 4 numbers/tuples/lists/StochasticParameters or StochasticParameter, got type %s." % (type(percent),))
+                raise Exception("Expected number, tuple of 4 numbers/tuples/lists/StochasticParameters or "
+                                + "StochasticParameter, got type %s." % (type(percent),))
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
-        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True,
+                                                  list_to_choice=True, allow_floats=True)
 
         self.keep_size = keep_size
         self.sample_independently = sample_independently
@@ -667,7 +679,9 @@ class CropAndPad(Augmenter):
         for i in sm.xrange(nb_images):
             seed = seeds[i]
             height, width = images[i].shape[0:2]
-            crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval = self._draw_samples_image(seed, height, width)
+            crop_top, crop_right, crop_bottom, crop_left, \
+                pad_top, pad_right, pad_bottom, pad_left, pad_mode, \
+                pad_cval = self._draw_samples_image(seed, height, width)
 
             image_cr = images[i][crop_top:height-crop_bottom, crop_left:width-crop_right, :]
 
@@ -694,7 +708,10 @@ class CropAndPad(Augmenter):
         if ia.is_np_array(images):
             if self.keep_size:
                 # this converts the list to an array of original input dtype
-                result = np.array(result) # without this, restore_augmented_images_dtypes_() expects input_dtypes to be a list
+
+                # without this, restore_augmented_images_dtypes_() expects input_dtypes to be a list
+                result = np.array(result)
+
                 meta.restore_augmented_images_dtypes_(result, input_dtypes)
 
         return result
@@ -720,7 +737,9 @@ class CropAndPad(Augmenter):
                 crop_bottom = int(np.round(height_heatmaps * (crop_image_bottom/height_image)))
                 crop_left = int(np.round(width_heatmaps * (crop_image_left/width_image)))
 
-                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
+                crop_top, crop_right, crop_bottom, crop_left = \
+                    _crop_prevent_zero_size(height_heatmaps, width_heatmaps,
+                                            crop_top, crop_right, crop_bottom, crop_left)
 
                 pad_top = int(np.round(height_heatmaps * (pad_image_top/height_image)))
                 pad_right = int(np.round(width_heatmaps * (pad_image_right/width_image)))
@@ -770,8 +789,9 @@ class CropAndPad(Augmenter):
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             seed = seeds[i]
             height, width = keypoints_on_image.shape[0:2]
-            #top, right, bottom, left = self._draw_samples_image(seed, height, width)
-            crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, _pad_mode, _pad_cval = self._draw_samples_image(seed, height, width)
+            crop_top, crop_right, crop_bottom, crop_left, \
+                pad_top, pad_right, pad_bottom, pad_left, _pad_mode, \
+                _pad_cval = self._draw_samples_image(seed, height, width)
             shifted = keypoints_on_image.shift(x=-crop_left+pad_left, y=-crop_top+pad_top)
             shifted.shape = (
                 height - crop_top - crop_bottom + pad_top + pad_bottom,
@@ -837,13 +857,12 @@ class CropAndPad(Augmenter):
 
         return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
 
-
-
     def get_parameters(self):
         return [self.all_sides, self.top, self.right, self.bottom, self.left, self.pad_mode, self.pad_cval]
 
 
-def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
+def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True,
+        name=None, deterministic=False, random_state=None):
     """
     Augmenter that pads images, i.e. adds columns/rows to them.
 
@@ -912,7 +931,8 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
             * If StochasticParameter, a random mode will be sampled from this
               parameter per image.
 
-    pad_cval : float or int or tuple of two ints/floats or list of ints/floats or StochasticParameter, optional(default=0)
+    pad_cval : float or int or tuple of two ints/floats or list of ints/floats or StochasticParameter,
+               optional(default=0)
         The constant value to use (for numpy's pad function) if the pad
         mode is "constant" or the end value to use if the mode
         is `linear_ramp`.
@@ -1017,7 +1037,8 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         elif isinstance(v, list):
             return [recursive_validate(v_) for v_ in v]
         else:
-            raise Exception("Expected None or int or float or StochasticParameter or list or tuple, got %s." % (type(v),))
+            raise Exception("Expected None or int or float or StochasticParameter or list or tuple, got %s." % (
+                type(v),))
 
     px = recursive_validate(px)
     percent = recursive_validate(percent)
@@ -1034,7 +1055,8 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
     return aug
 
 
-def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=None, deterministic=False, random_state=None):
+def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
+         name=None, deterministic=False, random_state=None):
     """
     Augmenter that crops/cuts away pixels at the sides of the image.
 
@@ -1160,7 +1182,8 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
         elif isinstance(v, list):
             return [recursive_negate(v_) for v_ in v]
         else:
-            raise Exception("Expected None or int or float or StochasticParameter or list or tuple, got %s." % (type(v),))
+            raise Exception("Expected None or int or float or StochasticParameter or list or tuple, got %s." % (
+                type(v),))
 
     px = recursive_negate(px)
     percent = recursive_negate(percent)
@@ -1177,7 +1200,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True, name=
 
 
 # TODO maybe rename this to PadToMinimumSize?
-class PadToFixedSize(Augmenter):
+class PadToFixedSize(meta.Augmenter):
     """
     Pad images to minimum width/height.
 
@@ -1230,7 +1253,8 @@ class PadToFixedSize(Augmenter):
 
     """
 
-    def __init__(self, width, height, pad_mode="constant", pad_cval=0, name=None, deterministic=False, random_state=None):
+    def __init__(self, width, height, pad_mode="constant", pad_cval=0,
+                 name=None, deterministic=False, random_state=None):
         super(PadToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
 
@@ -1243,7 +1267,8 @@ class PadToFixedSize(Augmenter):
         self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
-        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True,
+                                                  list_to_choice=True, allow_floats=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
@@ -1288,7 +1313,8 @@ class PadToFixedSize(Augmenter):
         pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             height_image, width_image = heatmaps[i].shape[:2]
-            pad_image_left, pad_image_right, pad_image_top, pad_image_bottom = self._calculate_paddings(h, w, height_image, width_image, pad_xs[i], pad_ys[i])
+            pad_image_left, pad_image_right, pad_image_top, pad_image_bottom = \
+                self._calculate_paddings(h, w, height_image, width_image, pad_xs[i], pad_ys[i])
             height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
 
             # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results in paddings of 1 on
@@ -1316,7 +1342,6 @@ class PadToFixedSize(Augmenter):
                 width_image + pad_image_left + pad_image_right
             ) + heatmaps[i].shape[2:]
 
-
         return heatmaps
 
     def _draw_samples(self, nb_images, random_state):
@@ -1331,7 +1356,8 @@ class PadToFixedSize(Augmenter):
 
         return pad_xs, pad_ys, pad_modes, pad_cvals
 
-    def _calculate_paddings(self, h, w, ih, iw, pad_xs_i, pad_ys_i):
+    @classmethod
+    def _calculate_paddings(cls, h, w, ih, iw, pad_xs_i, pad_ys_i):
         pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
 
         if iw < w:
@@ -1349,16 +1375,12 @@ class PadToFixedSize(Augmenter):
 
 
 # TODO maybe rename this to CropToMaximumSize ?
-class CropToFixedSize(Augmenter):
+class CropToFixedSize(meta.Augmenter):
     """
-    Augmenter that crops the images to specified width/height only if specified width/height is less than the width/height of input images.
-    The offset varies randomly within valid region (i.e. each output image is fully included in its input image).
-
-    Crop images to maximum width/height.
+    Augmenter that crops down to a fixed maximum width/height.
 
     If images are already at the maximum width/height or are smaller, they will not be cropped.
-    Note: This also means that images will not be padded if they are below the required
-    width/height.
+    Note: This also means that images will not be padded if they are below the required width/height.
 
     The augmenter randomly decides per image how to distribute the required cropping amounts
     over the image axis. E.g. if 2px have to be cropped on the left or right to reach the
@@ -1480,14 +1502,17 @@ class CropToFixedSize(Augmenter):
                 crop_left = int(np.round(width_heatmaps * (crop_image_left/width_image)))
 
                 # TODO add test for zero-size prevention
-                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
+                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
+                    height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
             else:
                 crop_top = crop_image_top
                 crop_right = crop_image_right
                 crop_bottom = crop_image_bottom
                 crop_left = crop_image_left
 
-            heatmaps[i].arr_0to1 = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom, crop_left:width_heatmaps-crop_right, :]
+            heatmaps[i].arr_0to1 = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom,
+                                                        crop_left:width_heatmaps-crop_right,
+                                                        :]
 
             heatmaps[i].shape = (
                 heatmaps[i].shape[0] - crop_image_top - crop_image_bottom,
