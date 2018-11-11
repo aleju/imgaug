@@ -21,15 +21,16 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 import numpy as np
 import six.moves as sm
 
-from .meta import Augmenter, handle_children_list
+from . import meta
+from .. import imgaug as ia
+from .. import parameters as iap
 
-# TODO tests
-class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using an
     alpha/transparency value.
@@ -141,11 +142,14 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
                  name=None, deterministic=False, random_state=None):
         super(Alpha, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.factor = iap.handle_continuous_param(factor, "factor", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+        self.factor = iap.handle_continuous_param(factor, "factor", value_range=(0, 1.0), tuple_to_uniform=True,
+                                                  list_to_choice=True)
 
-        ia.do_assert(first is not None or second is not None, "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), but got two None values.")
-        self.first = handle_children_list(first, self.name, "first")
-        self.second = handle_children_list(second, self.name, "second")
+        ia.do_assert(first is not None or second is not None,
+                     "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), "
+                     + "but got two None values.")
+        self.first = meta.handle_children_list(first, self.name, "first")
+        self.second = meta.handle_children_list(second, self.name, "second")
 
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
@@ -336,7 +340,7 @@ class Alpha(Augmenter): # pylint: disable=locally-disabled, unused-variable, lin
         return [self.first, self.second]
 
 
-class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variable, line-too-long
+class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using pixelwise
     alpha values.
@@ -508,7 +512,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps, seed):
             samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
-            ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
+            ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
 
             if (h_images, w_images) != (h_heatmaps, w_heatmaps):
                 samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
@@ -564,7 +568,6 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
                 samples_avg = np.average(samples, axis=2)
                 samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_heatmaps))
             else:
-                #samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
                 samples = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i])
                 samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_heatmaps))
 
@@ -602,19 +605,16 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             kps_ois_first = keypoints_on_images
             kps_ois_second = keypoints_on_images
 
-        # FIXME this is essentially the same behaviour as Alpha, requires inclusion of (x, y)
-        # coordinates to estimate new keypoint coordinates
+        # FIXME this is essentially the same behaviour as Alpha, requires inclusion of (x, y) coordinates to estimate
+        # new keypoint coordinates
         for i in sm.xrange(nb_images):
             kps_oi_first = kps_ois_first[i]
             kps_oi_second = kps_ois_second[i]
-            #rs_image = ia.new_random_state(seeds[i])
             ia.do_assert(
                 len(kps_oi_first.shape) == 3,
-                "Keypoint augmentation in AlphaElementwise requires " \
-                "KeypointsOnImage.shape to have channel information (i.e. " \
-                "tuple with 3 entries), which you did not provide (input " \
-                "shape: %s). The channels must match the corresponding " \
-                "image channels." % (kps_oi_first.shape,)
+                ("Keypoint augmentation in AlphaElementwise requires KeypointsOnImage.shape to have channel "
+                 + "information (i.e. tuple with 3 entries), which you did not provide (input shape: %s). The"
+                   "channels must match the corresponding image channels.") % (kps_oi_first.shape,)
             )
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
@@ -623,7 +623,6 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
             # values properly synchronized with the image augmentation
             per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
             if per_channel == 1:
-                #samples = self.factor.draw_samples((h, w, nb_channels,), random_state=rs_image)
                 samples = np.zeros((h, w, nb_channels), dtype=np.float32)
                 for c in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
@@ -644,6 +643,7 @@ class AlphaElementwise(Alpha): # pylint: disable=locally-disabled, unused-variab
                 result[i] = kps_oi_second
 
         return result
+
 
 def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
                       size_px_max=(2, 16), upscale_method=None,
@@ -816,7 +816,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
             aggregation_method=aggregation_method
         )
 
-    if sigmoid != False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
+    if sigmoid is False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
         noise = iap.Sigmoid.create_for_noise(
             noise,
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
@@ -831,10 +831,11 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         name=name, deterministic=deterministic, random_state=random_state
     )
 
+
 def FrequencyNoiseAlpha(exponent=(-4, 4),
                         first=None, second=None, per_channel=False,
                         size_px_max=(4, 16), upscale_method=None,
-                        iterations=(1, 3), aggregation_method=["avg", "max"], # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+                        iterations=(1, 3), aggregation_method=["avg", "max"],  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
                         sigmoid=0.5, sigmoid_thresh=None,
                         name=None, deterministic=False, random_state=None):
     """
@@ -1026,7 +1027,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4),
             aggregation_method=aggregation_method
         )
 
-    if sigmoid != False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
+    if sigmoid is False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
         noise = iap.Sigmoid.create_for_noise(
             noise,
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
