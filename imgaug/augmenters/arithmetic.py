@@ -32,8 +32,7 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 from PIL import Image
 import imageio
 import tempfile
@@ -41,10 +40,11 @@ import numpy as np
 import six.moves as sm
 
 from . import meta
-from .meta import Augmenter
+from .. import imgaug as ia
+from .. import parameters as iap
 
-# TODO tests
-class Add(Augmenter):
+
+class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
 
@@ -105,7 +105,8 @@ class Add(Augmenter):
                  deterministic=False, random_state=None):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
+                                               list_to_choice=True, allow_floats=False)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -146,11 +147,10 @@ class Add(Augmenter):
     def get_parameters(self):
         return [self.value, self.per_channel]
 
-# TODO tests
-class AddElementwise(Augmenter):
+
+class AddElementwise(meta.Augmenter):
     """
-    Add values to the pixels of images with possibly different values
-    for neighbouring pixels.
+    Add values to the pixels of images with possibly different values for neighbouring pixels.
 
     While the Add Augmenter adds a constant value per image, this one can
     add different values (sampled per pixel).
@@ -211,7 +211,8 @@ class AddElementwise(Augmenter):
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
+                                               list_to_choice=True, allow_floats=False)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -227,7 +228,9 @@ class AddElementwise(Augmenter):
             rs_image = ia.new_random_state(seed)
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel == 1:
-                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image).astype(image.dtype)
+                samples = self.value\
+                    .draw_samples((height, width, nb_channels), random_state=rs_image)\
+                    .astype(image.dtype)
             else:
                 samples = self.value.draw_samples((height, width, 1), random_state=rs_image).astype(image.dtype)
                 samples = np.tile(samples, (1, 1, nb_channels))
@@ -248,6 +251,7 @@ class AddElementwise(Augmenter):
 
     def get_parameters(self):
         return [self.value, self.per_channel]
+
 
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
@@ -319,23 +323,17 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 
     """
     loc2 = iap.handle_continuous_param(loc, "loc", value_range=None, tuple_to_uniform=True, list_to_choice=True)
-    scale2 = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    scale2 = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+                                         list_to_choice=True)
 
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return AddElementwise(iap.Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
-
-# TODO
-#class MultiplicativeGaussianNoise(Augmenter):
-#    pass
-
-# TODO
-#class ReplacingGaussianNoise(Augmenter):
-#    pass
+    return AddElementwise(iap.Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name,
+                          deterministic=deterministic, random_state=random_state)
 
 
-class Multiply(Augmenter):
+class Multiply(meta.Augmenter):
     """
     Multiply all pixels in an image with a specific value.
 
@@ -388,7 +386,8 @@ class Multiply(Augmenter):
                  deterministic=False, random_state=None):
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True,
+                                               list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -430,10 +429,9 @@ class Multiply(Augmenter):
 
 
 # TODO tests
-class MultiplyElementwise(Augmenter):
+class MultiplyElementwise(meta.Augmenter):
     """
-    Multiply values of pixels with possibly different values
-    for neighbouring pixels.
+    Multiply values of pixels with possibly different values for neighbouring pixels.
 
     While the Multiply Augmenter uses a constant multiplier per image,
     this one can use different multipliers per pixel.
@@ -495,7 +493,8 @@ class MultiplyElementwise(Augmenter):
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True,
+                                               list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -533,8 +532,8 @@ class MultiplyElementwise(Augmenter):
     def get_parameters(self):
         return [self.mul, self.per_channel]
 
-def Dropout(p=0, per_channel=False, name=None, deterministic=False,
-            random_state=None):
+
+def Dropout(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Augmenter that sets a certain fraction of pixels in images to zero.
 
@@ -612,10 +611,10 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
+    return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic,
+                               random_state=random_state)
 
-def CoarseDropout(p=0, size_px=None, size_percent=None,
-                  per_channel=False, min_size=4, name=None, deterministic=False,
+def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None, deterministic=False,
                   random_state=None):
     """
     Augmenter that sets rectangular areas within images to zero.
@@ -750,9 +749,11 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return MultiplyElementwise(p3, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
+    return MultiplyElementwise(p3, per_channel=per_channel, name=name, deterministic=deterministic,
+                               random_state=random_state)
 
-class ReplaceElementwise(Augmenter):
+
+class ReplaceElementwise(meta.Augmenter):
     """
     Replace pixels in an image with new values.
 
@@ -866,10 +867,10 @@ class ReplaceElementwise(Augmenter):
     def get_parameters(self):
         return [self.mask, self.replacement, self.per_channel]
 
+
 def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
-    Adds salt and pepper noise to an image, i.e. some white-ish and black-ish
-    pixels.
+    Adds salt and pepper noise to an image, i.e. some white-ish and black-ish pixels.
 
     Parameters
     ----------
@@ -922,12 +923,11 @@ def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random
         random_state=random_state
     )
 
-def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
-                        per_channel=False, min_size=4, name=None,
+
+def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None,
                         deterministic=False, random_state=None):
     """
-    Adds coarse salt and pepper noise to an image, i.e. rectangles that
-    contain noisy white-ish and black-ish pixels.
+    Adds coarse salt and pepper noise to an image, i.e. rectangles that contain noisy white-ish and black-ish pixels.
 
     Parameters
     ----------
@@ -1028,6 +1028,7 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
         random_state=random_state
     )
 
+
 def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adds salt noise to an image, i.e. white-ish pixels.
@@ -1082,21 +1083,14 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ReplaceElementwise(
-        mask=p,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    return ReplaceElementwise(mask=p, replacement=replacement, per_channel=per_channel, name=name,
+                              deterministic=deterministic, random_state=random_state)
 
-def CoarseSalt(p=0, size_px=None, size_percent=None,
-               per_channel=False, min_size=4, name=None,
-               deterministic=False, random_state=None):
+
+def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None, deterministic=False,
+               random_state=None):
     """
-    Adds coarse salt noise to an image, i.e. rectangles containing noisy
-    white-ish pixels.
+    Adds coarse salt noise to an image, i.e. rectangles containing noisy white-ish pixels.
 
     Parameters
     ----------
@@ -1193,14 +1187,9 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    return ReplaceElementwise(mask=mask_low, replacement=replacement, per_channel=per_channel, name=name,
+                              deterministic=deterministic, random_state=random_state)
+
 
 def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
@@ -1267,12 +1256,11 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
         random_state=random_state
     )
 
-def CoarsePepper(p=0, size_px=None, size_percent=None,
-                 per_channel=False, min_size=4, name=None,
-                 deterministic=False, random_state=None):
+
+def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None, deterministic=False,
+                 random_state=None):
     """
-    Adds coarse pepper noise to an image, i.e. rectangles that contain
-    noisy black-ish pixels.
+    Adds coarse pepper noise to an image, i.e. rectangles that contain noisy black-ish pixels.
 
     Parameters
     ----------
@@ -1378,8 +1366,8 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
         random_state=random_state
     )
 
-# TODO tests
-class Invert(Augmenter):
+
+class Invert(meta.Augmenter):
     """
     Augmenter that inverts all values in images.
 
@@ -1440,8 +1428,8 @@ class Invert(Augmenter):
 
     """
 
-    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
-                 deterministic=False, random_state=None):
+    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None, deterministic=False,
+                 random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.p = iap.handle_probability_param(p, "p")
@@ -1491,8 +1479,9 @@ class Invert(Augmenter):
     def get_parameters(self):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
-# TODO tests
-class ContrastNormalization(Augmenter):
+
+# TODO merge with contrast.LinearContrast
+class ContrastNormalization(meta.Augmenter):
     """
     Augmenter that changes the contrast of images.
 
@@ -1545,7 +1534,8 @@ class ContrastNormalization(Augmenter):
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
+                                                 list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1584,21 +1574,24 @@ class ContrastNormalization(Augmenter):
         return [self.alpha, self.per_channel]
 
 
-class JpegCompression(Augmenter):
+class JpegCompression(meta.Augmenter):
     """
-    Noising an image using a jpeg compression.
+    Degrade image quality by applying JPEG compression to it.
 
-    During saving an image to `jpeg` format user can select quality of image to preserve. The lower quality,
-    the higher compression is used. After image loading/decoding, artifacts caused by the compression can be noticed.
-    For more details, see https://en.wikipedia.org/wiki/Compression_artifact.
+    During JPEG compression, high frequency components (e.g. edges) are removed. With low compression (strength)
+    only the highest frequency components are removed, while very high compression (strength) will lead to only the
+    lowest frequency components "surviving". This lowers the image quality. For more details,
+    see https://en.wikipedia.org/wiki/Compression_artifact.
+
+    Note that this augmenter still returns images as numpy arrays (i.e. saves the images with JPEG compression and
+    then reloads them into arrays). It does not return the raw JPEG file content.
 
     Parameters
     ----------
     compression : number or tuple of two number or list of number or StochasticParameter
-        Degree of compression using saving to `jpeg` format in range [0, 100]
-        High values for compression cause more artifacts. Standard value for image processing software is default value
-        set to between 50 and 80. At 100 image is unreadable and at 0 no compression is used and the image occupies much
-        more memory.
+        Degree of compression used during jpeg compression within value range [0, 100]. Higher values denote
+        stronger compression and will cause low-frequency components to disappear. Standard values used when saving
+        images are at around 75 and will usually not degrade image quality very much.
 
             * If a single number, then that value will be used for the compression degree.
             * If a tuple of two number (a, b), then the compression will be a
@@ -1628,7 +1621,8 @@ class JpegCompression(Augmenter):
         super(JpegCompression, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         # will be converted to int during augmentation, which is why we allow floats here
-        self.compression = iap.handle_continuous_param(compression, "compression", value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
+        self.compression = iap.handle_continuous_param(compression, "compression", value_range=(0, 100),
+                                                       tuple_to_uniform=True, list_to_choice=True)
 
         # The value range 1 to 95 is suggested by PIL's save() documentation
         # Values above 95 seem to not make sense (no improvement in visual quality, but large file size)
