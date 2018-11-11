@@ -19,14 +19,14 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 import numpy as np
 import six.moves as sm
 import skimage.exposure as ski_exposure
 
 from . import meta
-from .meta import Augmenter
+from .. import imgaug as ia
+from .. import parameters as iap
 
 
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
@@ -64,7 +64,8 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
         Augmenter to perform gamma contrast adjustment.
 
     """
-    params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)]
+    params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True,
+                                            list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_gamma)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
@@ -170,7 +171,8 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
     """
     # TODO add inv parameter?
-    params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)]
+    params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True,
+                                            list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_log)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
@@ -226,7 +228,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     )
 
 
-class _ContrastFuncWrapper(Augmenter):
+class _ContrastFuncWrapper(meta.Augmenter):
     def __init__(self, func, params1d, per_channel, name=None, deterministic=False, random_state=None):
         super(_ContrastFuncWrapper, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func = func
