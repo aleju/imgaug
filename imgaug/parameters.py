@@ -193,7 +193,7 @@ def both_np_float_if_one_is_float(a, b):
 def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350), sample_sizes=None, titles=None):
     if titles is None:
         titles = [None] * len(params)
-    elif titles == False:
+    elif titles is False:
         titles = [False] * len(params)
 
     if sample_sizes is not None:
@@ -242,13 +242,13 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
 
         Parameters
         ----------
-        random_state : None or np.random.RandomState, optional(default=None)
+        random_state : None or numpy.random.RandomState, optional
             A random state to use during the sampling process.
             If None, the libraries global random state will be used.
 
         Returns
         -------
-        out : anything
+        any
             A single sample value.
 
         """
@@ -261,18 +261,18 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
         Parameters
         ----------
         size : tuple of int or int
-            Number of sample values by
-            dimension.
+            Number of sample values by dimension.
 
-        random_state : None or np.random.RandomState, optional(default=None)
+        random_state : None or np.random.RandomState, optional
             A random state to use during the sampling process.
             If None, the libraries global random state will be used.
 
         Returns
         -------
-        out : (size) iterable
+        samples : iterable
             Sampled values. Usually a numpy ndarray of basically any dtype,
-            though not strictly limited to numpy arrays.
+            though not strictly limited to numpy arrays. Its shape is expected to
+            match `size`.
 
         """
         random_state = random_state if random_state is not None else ia.current_random_state()
@@ -395,7 +395,7 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
 
         Returns
         -------
-        out : StochasticParameter
+        imgaug.parameters.StochasticParameter
             Shallow copy.
 
         """
@@ -407,7 +407,7 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
 
         Returns
         -------
-        out : StochasticParameter
+        imgaug.parameters.StochasticParameter
             Deep copy.
 
         """
@@ -420,18 +420,18 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
 
         Parameters
         ----------
-        title : None or False or string, optional(default=None)
+        title : None or False or str, optional
             Title of the plot. None is automatically replaced by a title
-            derived from `str(param)`. If set to False, no title will be
+            derived from ``str(param)``. If set to False, no title will be
             shown.
 
         size : tuple of int
             Number of points to sample. This is always expected to have at
             least two values. The first defines the number of sampling runs,
             the second (and further) dimensions define the size assigned
-            to each `draw_samples()` call. E.g. `(10, 20, 15)` will lead
-            to `10` calls of `draw_samples(size=(20, 15))`. The results
-            will be merged to a single 1d array.
+            to each :func:`imgaug.parameters.StochasticParameter.draw_samples`
+            call. E.g. ``(10, 20, 15)`` will lead to ``10`` calls of
+            ``draw_samples(size=(20, 15))``. The results will be merged to a single 1d array.
 
         bins : int
             Number of bins in the plot histograms.
@@ -474,10 +474,15 @@ class Binomial(StochasticParameter):
 
     Parameters
     ----------
-    p : number or tuple of two number or list of number or StochasticParameter
+    p : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Probability of the binomial distribution. Expected to be in the
-        range [0, 1]. If this is a StochasticParameter, the value will be
-        sampled once per call to _draw_samples().
+        range [0, 1].
+
+            * If this is a number, then that number will always be used as the probability.
+            * If this is a tuple (a, b), a random value will be sampled from the range a<=x<b per call
+              to :func:`imgaug.parameters.Binomial._draw_samples`.
+            * If this is a list of numbers, a random value will be picked from that list per call.
+            * If this is a StochasticParameter, the value will be sampled once per call.
 
     Examples
     --------
@@ -489,17 +494,6 @@ class Binomial(StochasticParameter):
 
     def __init__(self, p):
         super(Binomial, self).__init__()
-
-        """
-        if isinstance(p, StochasticParameter):
-            self.p = p
-        elif ia.is_single_number(p):
-            ia.do_assert(0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,))
-            self.p = Deterministic(float(p))
-        else:
-            raise Exception("Expected StochasticParameter or float/int value, got %s." % (type(p),))
-        """
-
         self.p = handle_continuous_param(p, "p")
 
     def _draw_samples(self, size, random_state):
@@ -524,11 +518,10 @@ class Choice(StochasticParameter):
         List of allowed values.
         Usually expected to be integers, floats or strings.
 
-    replace : bool, optional(default=True)
-        Whether to perform sampling with or without
-        replacing.
+    replace : bool, optional
+        Whether to perform sampling with or without replacing.
 
-    p : None or iterable, optional(default=None)
+    p : None or iterable of number, optional
         Optional probabilities of each element in `a`.
         Must have the same length as `a` (if provided).
 
@@ -607,22 +600,23 @@ class DiscreteUniform(StochasticParameter):
 
     Parameters
     ----------
-    a : int or StochasticParameter
-        Lower bound of the sampling range. Values will be sampled from a <= x <= b. All sampled values will be
-        discrete. If a is a StochasticParameter, it will be queried once per sampling to estimate the value of a.
-        If a>b, the values will automatically be flipped. If a==b, all generated values will be identical to a.
+    a : int or imgaug.parameters.StochasticParameter
+        Lower bound of the sampling range. Values will be sampled from ``a<=x<=b``. All sampled values will be
+        discrete. If `a` is a StochasticParameter, it will be queried once per sampling to estimate the value
+        of `a`. If ``a>b``, the values will automatically be flipped. If ``a==b``, all generated values will be
+        identical to a.
 
-    b : int or StochasticParameter
-        Upper bound of the sampling range. Values will be sampled from a <= x <= b. All sampled values will be
-        discrete. If b is a StochasticParameter, it will be queried once per sampling to estimate the value of
-        a/b. If a>b, the values will automatically be flipped. If a==b, all generated values will be identical to a.
+    b : int or imgaug.parameters.StochasticParameter
+        Upper bound of the sampling range. Values will be sampled from ``a<=x<=b``. All sampled values will be
+        discrete. If `b` is a StochasticParameter, it will be queried once per sampling to estimate the value
+        of `b`. If ``a>b``, the values will automatically be flipped. If ``a==b``, all generated values will be
+        identical to a.
 
     Examples
     --------
     >>> param = DiscreteUniform(10, Choice([20, 30, 40]))
 
-    Sampled values will be discrete and come from the either [10..20] or
-    [10..30] or [10..40].
+    Sampled values will be discrete and come from the either [10..20] or [10..30] or [10..40].
 
     """
 
@@ -658,23 +652,23 @@ class Poisson(StochasticParameter):
 
     Parameters
     ----------
-    lam : number or tuple of two number or list of number or StochasticParameter
-        Lambda parameter of the poisson
-        distribution.
+    lam : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Lambda parameter of the poisson distribution.
 
             * If a number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
-              once per call to `_draw_samples()` from the range [a, b).
+              from the range ``[a, b)`` once per call
+              to :func:`imgaug.parameters.Poisson._draw_samples`.
             * If a list of numbers, a random value will be picked from the
-              list per call to `_draw_samples()`.
+              list per call.
             * If a StochasticParameter, that parameter will be queried once
-              per call to `_draw_samples()`.
+              per call.
 
     Examples
     --------
     >>> param = Poisson(1)
 
-    Sample from a poisson distribution with lambda=1.
+    Sample from a poisson distribution with ``lambda=1``.
 
     """
 
@@ -704,15 +698,15 @@ class Normal(StochasticParameter):
 
     Parameters
     ----------
-    loc : number or StochasticParameter
+    loc : number or imgaug.parameters.StochasticParameter
         The mean of the normal distribution.
         If StochasticParameter, the mean will be sampled once per call
-        to `_draw_samples()`.
+        to :func:`imgaug.parameters.Normal._draw_samples`.
 
-    scale : number or StochasticParameter
+    scale : number or imgaug.parameters.StochasticParameter
         The standard deviation of the normal distribution.
         If StochasticParameter, the scale will be sampled once per call
-        to `_draw_samples()`.
+        to :func:`imgaug.parameters.Normal._draw_samples`.
 
     Examples
     --------
@@ -748,35 +742,33 @@ class Laplace(StochasticParameter):
     """
     Parameter that resembles a (continuous) laplace distribution.
 
-    This is a wrapper around numpy's random.laplace().
+    This is a wrapper around numpy's :func:`numpy.random.laplace`.
 
     Parameters
     ----------
-    loc : number or tuple of two number or list of number or StochasticParameter
-        The position of the distribution peak, similar to the mean in normal
-        distributions.
+    loc : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        The position of the distribution peak, similar to the mean in normal distributions.
 
             * If a single number, this number will be used as a constant value.
-            * If a tuple of two numbers (a, b), the value will be sampled
-              once per call to `_draw_samples()` from the continuous
-              range [a, b).
+            * If a tuple of two numbers ``(a, b)``, the value will be sampled
+              from the continuous range ``[a, b)`` once per call to
+              :func:`imgaug.parameters.Laplace._draw_samples`
             * If a list of numbers, a random value will be picked from the
-              list per call to `_draw_samples()`.
+              list per call.
             * If a StochasticParameter, that parameter will be queried once
-              per call to `_draw_samples()`.
+              per call.
 
-    scale : number or tuple of two number or list of number or StochasticParameter
-        The exponential decay factor, similar to standard deviation in
-        normal distributions.
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        The exponential decay factor, similar to standard deviation in normal distributions.
 
             * If a single number, this number will be used as a constant value.
-            * If a tuple of two numbers (a, b), the value will be sampled
-              once per call to `_draw_samples()` from the continuous
-              range [a, b).
+            * If a tuple of two numbers ``(a, b)``, the value will be sampled
+              from the continuous range [a, b). once per call
+              to :func:`imgaug.parameters.Laplace._draw_samples`
             * If a list of numbers, a random value will be picked from the
-              list per call to `_draw_samples()`.
+              list per call.
             * If a StochasticParameter, that parameter will be queried once
-              per call to `_draw_samples()`.
+              per call.
 
     Examples
     --------
@@ -811,22 +803,22 @@ class ChiSquare(StochasticParameter):
     """
     Parameter that resembles a (continuous) chi-square distribution.
 
-    This is a wrapper around numpy's random.chisquare().
+    This is a wrapper around numpy's :func:`numpy.random.chisquare`.
 
     Parameters
     ----------
-    df : int or tuple of two int or list of int or StochasticParameter
+    df : int or tuple of two int or list of int or imgaug.parameters.StochasticParameter
         Degrees of freedom (must be 1 or
         higher).
 
             * If a single int, this int will be used as a constant value.
-            * If a tuple of two ints (a, b), the value will be sampled
-              once per call to `_draw_samples()` from the discrete
-              range [a..b].
+            * If a tuple of two ints ``(a, b)``, the value will be sampled
+              from the discrete range ``[a..b]`` once per call
+              to :func:`imgaug.parameters.ChiSquare._draw_samples`
             * If a list of ints, a random value will be picked from the
-              list per call to `_draw_samples()`.
+              list per call.
             * If a StochasticParameter, that parameter will be queried once
-              per call to `_draw_samples()`.
+              per call.
 
     Examples
     --------
@@ -856,22 +848,21 @@ class Weibull(StochasticParameter):
     """
     Parameter that resembles a (continuous) weibull distribution.
 
-    This is a wrapper around numpy's random.weibull().
+    This is a wrapper around numpy's :func:`numpy.random.weibull`.
 
     Parameters
     ----------
-    a : number or tuple of two number or list of number or StochasticParameter
-        Shape parameter of the
-        distribution.
+    a : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Shape parameter of the distribution.
 
             * If a single number, this number will be used as a constant value.
             * If a tuple of two numbers (a, b), the value will be sampled
-              once per call to `_draw_samples()` from the continuous
-              range [a, b).
+              from the continuous range ``[a, b)`` once per call
+              to :func:`imgaug.parameters.Weibull._draw_samples`.
             * If a list of numbers, a random value will be picked from the
-              list per call to `_draw_samples()`.
+              list per call.
             * If a StochasticParameter, that parameter will be queried once
-              per call to `_draw_samples()`.
+              per call.
 
     Examples
     --------
@@ -903,21 +894,23 @@ class Uniform(StochasticParameter):
 
     Parameters
     ----------
-    a : number or tuple of two number or list of number or StochasticParameter
-        Lower bound of the sampling range. Values will be sampled from a <= x < b. All sampled values will be
-        continuous. If a or b is a StochasticParameter, it will be queried once per sampling to estimate the value
-        of a. If a>b, the values will automatically be flipped. If a==b, all generated values will be identical to a.
+    a : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Lower bound of the sampling range. Values will be sampled from ``a<=x<b``. All sampled values will be
+        continuous. If `a` is a StochasticParameter, it will be queried once per sampling to estimate the value
+        of `a`. If ``a>b``, the values will automatically be flipped. If ``a==b``, all generated values will
+        be identical to `a`.
 
-    b : number or tuple of two number or list of number or StochasticParameter
-        Upper bound of the sampling range. Values will be sampled from a <= x < b. All sampled values will be
-        continuous. If b is a StochasticParameter, it will be queried once per sampling to estimate the value of b.
-        If a>b, the values will automatically be flipped. If a==b, all generated values will be identical to a.
+    b : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Upper bound of the sampling range. Values will be sampled from ``a<=x<b``. All sampled values will be
+        continuous. If `b` is a StochasticParameter, it will be queried once per sampling to estimate the value
+        of `b`. If ``a>b``, the values will automatically be flipped. If ``a==b``, all generated values will
+        be identical to `a`.
 
     Examples
     --------
     >>> param = Uniform(0, 10.0)
 
-    Samples random values from the range [0, 10.0).
+    Samples random values from the range ``[0, 10.0)``.
 
     """
     def __init__(self, a, b):
@@ -948,25 +941,25 @@ class Beta(StochasticParameter):
 
     Parameters
     ----------
-    alpha : number or tuple of two number or list of number or StochasticParameter
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         alpha parameter of the beta distribution.
 
             * If number, that number will always be used.
-            * If tuple of two number, a random value will be sampled per
-              call to `_draw_samples()` from the range [a, b).
+            * If tuple of two number, a random value will be sampled
+              from the range ``[a, b)`` once per call
+              to :func:`imgaug.parameters.Beta._draw_samples` .
             * If list of number, a random element from that list will be
-              sampled per call to `_draw_samples()`.
+              sampled per call.
             * If a StochasticParameter, a random value will be sampled
-              from that parameter per call to `_draw_samples()`.
+              from that parameter per call.
 
-        alpha has to be a value above 0. If it ends up <=0 it is automatically clipped to 0+epsilon.
+        alpha has to be a value above 0. If it ends up ``<=0`` it is automatically clipped to ``0+epsilon``.
 
-    beta : number or tuple of two number or list of number or StochasticParameter
+    beta : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Beta parameter of the Beta distribution. Analogous to `alpha`.
 
     epsilon : number
-        Clipping parameter. If alpha or beta end up <=0, they are clipped to
-        0+epsilon.
+        Clipping parameter. If `alpha` or `beta` end up ``<=0``, they are clipped to ``0+epsilon``.
 
     Examples
     --------
@@ -1000,14 +993,14 @@ class Beta(StochasticParameter):
 
 class Deterministic(StochasticParameter):
     """
-    Parameter that resembles a constant value.
+    Parameter that is a constant value.
 
-    If N values are sampled from this parameter, it will return N times V,
-    where V is the constant value.
+    If ``N`` values are sampled from this parameter, it will return ``N`` times
+    ``V``, where ``V`` is the constant value.
 
     Parameters
     ----------
-    value : number or string or StochasticParameter
+    value : number or str or imgaug.parameters.StochasticParameter
         A constant value to use.
         A string may be provided to generate arrays of strings.
         If this is a StochasticParameter, a single value will be sampled
@@ -1047,66 +1040,63 @@ class Deterministic(StochasticParameter):
 
 class FromLowerResolution(StochasticParameter):
     """
-    A meta parameter used to sample other parameter values on a low resolution
-    2d plane (where 2d means of size (H,W,C)).
+    A meta parameter used to sample other parameter values on a low resolution 2d plane.
 
-    This is intended to be used with parameters that would usually sample
-    once value per pixel (or one value per pixel and channel). With this
+    Here, '2d' denotes shapes of (H, W, C).
+
+    This parameter is intended to be used with parameters that would usually sample
+    one value per pixel (or one value per pixel and channel). With this
     parameter, the sampling can be made more coarse, i.e. the result will
     become rectangles instead of single pixels.
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        The other parameter which is to be sampled on a coarser
-        image.
+    other_param : imgaug.parameters.StochasticParameter
+        The other parameter which is to be sampled on a coarser image.
 
-    size_percent : None or number or iterable of two numbers or StochasticParameter, optional(default=None)
+    size_percent : None or number or iterable of number or imgaug.parameters.StochasticParameter, optional
         Size of the 2d sampling plane in percent of the requested size.
-        I.e. this is relative to the size provided in the call to
-        `_draw_samples(size, ...)`. Lower values will result in smaller
-        sampling planes, which are then upsampled to `size`. This means that
-        lower values will result in larger rectangles.
-        The size may be provided as a constant value or a tuple (a, b), which
-        will automatically be converted to the continuous uniform range [a, b)
-        or a StochasticParameter, which will be queried per call to
-        `_draw_samples()`.
+        I.e. this is relative to the size provided in the call to ``draw_samples(size)``.
+        Lower values will result in smaller sampling planes, which are then upsampled to `size`.
+        This means that lower values will result in larger rectangles.
+        The size may be provided as a constant value or a tuple ``(a, b)``, which
+        will automatically be converted to the continuous uniform range ``[a, b)``
+        or a StochasticParameter, which will be queried per call to ``draw_samples()``.
 
-    size_px : None or number or iterable of two numbers or StochasticParameter, optional(default=None)
+    size_px : None or number or iterable of numbers or imgaug.parameters.StochasticParameter, optional
         Size of the 2d sampling plane in pixels.
         Lower values will result in smaller sampling planes, which are then
-        upsampled to the input `size` of `draw_samples(size, ...)`.
+        upsampled to the input `size` of ``draw_samples(size)``.
         This means that lower values will result in larger rectangles.
-        The size may be provided as a constant value or a tuple (a, b), which
-        will automatically be converted to the discrete uniform range [a..b]
+        The size may be provided as a constant value or a tuple ``(a, b)``, which
+        will automatically be converted to the discrete uniform range ``[a..b]``
         or a StochasticParameter, which will be queried per call to
-        `_draw_samples()`.
+        ``draw_samples()``.
 
-    method : string or int or StochasticParameter, optional(default="nearest")
+    method : str or int or imgaug.parameters.StochasticParameter, optional
         Upsampling/interpolation method to use. This is used after the sampling
         is finished and the low resolution plane has to be upsampled to the
-        requested `size` in `_draw_samples(size, ...)`. The method may be
-        the same as in `imgaug.imresize_many_images()`. Usually `nearest`
-        or `linear` are good choices. `nearest` will result in rectangles
-        with sharp edges and `linear` in rectangles with blurry and round
+        requested `size` in ``draw_samples(size, ...)``. The method may be
+        the same as in :func:`imgaug.imresize_many_images`. Usually ``nearest``
+        or ``linear`` are good choices. ``nearest`` will result in rectangles
+        with sharp edges and ``linear`` in rectangles with blurry and round
         edges. The method may be provided as a StochasticParameter, which
-        will be queried per call to `_draw_samples()`.
+        will be queried per call to ``draw_samples()``.
 
-    min_size : int, optional(default=1)
-        Minimum size in pixels of the low resolution sampling
-        plane.
+    min_size : int, optional
+        Minimum size in pixels of the low resolution sampling plane.
 
     Examples
     --------
     >>> param = FromLowerResolution(Binomial(0.05), size_px=(2, 16), method=Choice(["nearest", "linear"]))
 
-    Samples from a binomial distribution with p=0.05. The sampling plane
+    Samples from a binomial distribution with ``p=0.05``. The sampling plane
     will always have a size HxWxC with H and W being independently sampled
-    from [2..16] (i.e. it may range from 2x2xC up to 16x16xC max, but may
-    also be e.g. 4x8xC). The upsampling method will be "nearest" in 50 percent
-    of all cases and "linear" in the other 50 percent. The result will
-    sometimes be rectangular patches of sharp 1s surrounded by 0s and
-    sometimes blurry blobs of 1s, surrounded by values <1.0.
+    from ``[2..16]`` (i.e. it may range from ``2x2xC`` up to ``16x16xC`` max, but may
+    also be e.g. ``4x8xC``). The upsampling method will be ``nearest`` in 50 percent
+    of all cases and ``linear`` in the other 50 percent. The result will
+    sometimes be rectangular patches of sharp ``1``s surrounded by ``0``s and
+    sometimes blurry blobs of ``1``s, surrounded by values ``<1.0``.
 
     """
     def __init__(self, other_param, size_percent=None, size_px=None, method="nearest", min_size=1):
@@ -1208,15 +1198,14 @@ class Clip(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        The other parameter, which's values are to be
-        clipped.
+    other_param : imgaug.parameters.StochasticParameter
+        The other parameter, which's values are to be clipped.
 
-    minval : None or number, optional(default=None)
+    minval : None or number, optional
         The minimum value to use.
         If None, no minimum will be used.
 
-    maxval : None or number, optional(default=None)
+    maxval : None or number, optional
         The maximum value to use.
         If None, no maximum will be used.
 
@@ -1277,9 +1266,8 @@ class Discretize(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        The other parameter, which's values are to be
-        discretized.
+    other_param : imgaug.parameters.StochasticParameter
+        The other parameter, which's values are to be discretized.
 
     Examples
     --------
@@ -1317,20 +1305,19 @@ class Multiply(StochasticParameter):
 
     Parameters
     ----------
-    other_param : number or tuple of two number or list of number or StochasticParameter
-        Other parameter which's sampled values are to be
-        multiplied.
+    other_param : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be multiplied.
 
-    val : number or tuple of two number or list of number or StochasticParameter
+    val : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Multiplier to use. If this is a StochasticParameter, either
         a single or multiple values will be sampled and used as the
         multiplier(s).
 
-    elementwise : bool, optional(default=False)
+    elementwise : bool, optional
         Controls the sampling behaviour when `val` is a StochasticParameter.
         If set to False, a single value will be sampled from val and used as
         the constant multiplier.
-        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        If set to True and ``_draw_samples(size=S)`` is called, ``S`` values will
         be sampled from `val` and multiplied elementwise with the results
         of `other_param`.
 
@@ -1338,7 +1325,7 @@ class Multiply(StochasticParameter):
     --------
     >>> param = Multiply(Uniform(0.0, 1.0), -1)
 
-    Converts a uniform range [0.0, 1.0) to (-1.0, 0.0].
+    Converts a uniform range ``[0.0, 1.0)`` to ``(-1.0, 0.0]``.
 
     """
     def __init__(self, other_param, val, elementwise=False):
@@ -1380,20 +1367,19 @@ class Divide(StochasticParameter):
 
     Parameters
     ----------
-    other_param : number or tuple of two number or list of number or StochasticParameter
-        Other parameter which's sampled values are to be
-        divided.
+    other_param : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be divided.
 
-    val : number or tuple of two number or list of number or StochasticParameter
+    val : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Denominator to use. If this is a StochasticParameter, either
         a single or multiple values will be sampled and used as the
         denominator(s).
 
-    elementwise : bool, optional(default=False)
+    elementwise : bool, optional
         Controls the sampling behaviour when `val` is a StochasticParameter.
         If set to False, a single value will be sampled from val and used as
         the constant denominator.
-        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        If set to True and ``_draw_samples(size=S)`` is called, ``S`` values will
         be sampled from `val` and used as the elementwise denominators for the
         results of `other_param`.
 
@@ -1401,7 +1387,7 @@ class Divide(StochasticParameter):
     --------
     >>> param = Divide(Uniform(0.0, 1.0), 2)
 
-    Converts a uniform range [0.0, 1.0) to [0, 0.5).
+    Converts a uniform range ``[0.0, 1.0)`` to ``[0, 0.5)``.
 
     """
     def __init__(self, other_param, val, elementwise=False):
@@ -1454,27 +1440,26 @@ class Add(StochasticParameter):
 
     Parameters
     ----------
-    other_param : number or tuple of two number or list of number or StochasticParameter
-        Other parameter which's sampled values are to be
-        modified.
+    other_param : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be modified.
 
-    val : number or tuple of two number or list of number or StochasticParameter
+    val : number or tuple of two number or list of number or imgaug.parameters.StochasticParameter
         Value to add to the other parameter's results. If this is a
         StochasticParameter, either a single or multiple values will be
         sampled and added.
 
-    elementwise : bool, optional(default=False)
+    elementwise : bool, optional
         Controls the sampling behaviour when `val` is a StochasticParameter.
         If set to False, a single value will be sampled from val and added
         to all values generated by `other_param`.
-        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        If set to True and ``_draw_samples(size=S)`` is called, ``S`` values will
         be sampled from `val` and added to the results of `other_param`.
 
     Examples
     --------
     >>> param = Add(Uniform(0.0, 1.0), 1.0)
 
-    Converts a uniform range [0.0, 1.0) to [1.0, 2.0).
+    Converts a uniform range ``[0.0, 1.0)`` to ``[1.0, 2.0)``.
 
     """
     def __init__(self, other_param, val, elementwise=False):
@@ -1513,27 +1498,26 @@ class Subtract(StochasticParameter):
 
     Parameters
     ----------
-    other_param : number or tuple of two number or list of number or StochasticParameter
-        Other parameter which's sampled values are to be
-        modified.
+    other_param : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be modified.
 
-    val : number or tuple of two number or list of number or StochasticParameter
+    val : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Value to add to the other parameter's results. If this is a
         StochasticParameter, either a single or multiple values will be
         sampled and subtracted.
 
-    elementwise : bool, optional(default=False)
+    elementwise : bool, optional
         Controls the sampling behaviour when `val` is a StochasticParameter.
         If set to False, a single value will be sampled from val and subtracted
         from all values generated by `other_param`.
-        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        If set to True and ``_draw_samples(size=S)`` is called, ``S`` values will
         be sampled from `val` and subtracted from the results of `other_param`.
 
     Examples
     --------
     >>> param = Add(Uniform(0.0, 1.0), 1.0)
 
-    Converts a uniform range [0.0, 1.0) to [1.0, 2.0).
+    Converts a uniform range ``[0.0, 1.0)`` to ``[1.0, 2.0)``.
 
     """
     def __init__(self, other_param, val, elementwise=False):
@@ -1572,20 +1556,19 @@ class Power(StochasticParameter):
 
     Parameters
     ----------
-    other_param : number or tuple of two number or list of number or StochasticParameter
-        Other parameter which's sampled values are to be
-        modified.
+    other_param : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be modified.
 
-    val : number or tuple of two number or list of number or StochasticParameter
+    val : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Value to use exponentiate the other parameter's results with. If this
         is a StochasticParameter, either a single or multiple values will be
         sampled and used as the exponents.
 
-    elementwise : bool, optional(default=False)
+    elementwise : bool, optional
         Controls the sampling behaviour when `val` is a StochasticParameter.
         If set to False, a single value will be sampled from val and used as
         the exponent for all values generated by `other_param`.
-        If set to True and `_draw_samples(size=S)` is called, `S` values will
+        If set to True and ``_draw_samples(size=S)`` is called, ``S`` values will
         be sampled from `val` and used as the exponents for the results of
         `other_param`.
 
@@ -1593,7 +1576,7 @@ class Power(StochasticParameter):
     --------
     >>> param = Power(Uniform(0.0, 1.0), 2)
 
-    Converts a uniform range [0.0, 1.0) to a distribution that is peaked
+    Converts a uniform range ``[0.0, 1.0)`` to a distribution that is peaked
     towards 1.0.
 
     """
@@ -1642,15 +1625,14 @@ class Absolute(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        Other parameter which's sampled values are to be
-        modified.
+    other_param : imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be modified.
 
     Examples
     --------
     >>> param = Absolute(Uniform(-1.0, 1.0))
 
-    Converts a uniform range [-1.0, 1.0) to [0.0, 1.0].
+    Converts a uniform range ``[-1.0, 1.0)`` to ``[0.0, 1.0]``.
 
     """
     def __init__(self, other_param):
@@ -1679,20 +1661,17 @@ class RandomSign(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        Other parameter which's sampled values are to be
-        modified.
+    other_param : imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be modified.
 
     p_positive : number
-        Fraction of values that are supposed to be turned to positive
-        values.
+        Fraction of values that are supposed to be turned to positive values.
 
     Examples
     --------
     >>> param = RandomSign(Poisson(1))
 
-    Generates a poisson distribution with alpha=1 that is mirrored at the
-    y-axis.
+    Generates a poisson distribution with ``alpha=1`` that is mirrored at the y-axis.
 
     """
     def __init__(self, other_param, p_positive=0.5):
@@ -1734,32 +1713,30 @@ class ForceSign(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        Other parameter which's sampled values are to be
-        modified.
+    other_param : imgaug.parameters.StochasticParameter
+        Other parameter which's sampled values are to be modified.
 
     positive : bool
-        Whether to force all signs to be positive/+ (True) or
-        negative/- (False).
+        Whether to force all signs to be positive/+ (True) or negative/- (False).
 
-    mode : string, optional(default="invert")
-        How to change the signs. Valid values are "invert" and "reroll".
-        "invert" means that wrong signs are simply flipped.
-        "reroll" means that all samples with wrong signs are sampled again,
+    mode : {'invert', 'reroll'}, optional
+        How to change the signs. Valid values are ``invert`` and ``reroll``.
+        ``invert`` means that wrong signs are simply flipped.
+        ``reroll`` means that all samples with wrong signs are sampled again,
         optionally many times, until they randomly end up having the correct
         sign.
 
-    reroll_count_max : int, optional(default=2)
-        If `mode` is set to "reroll", this determines how often values may
+    reroll_count_max : int, optional
+        If `mode` is set to ``reroll``, this determines how often values may
         be rerolled before giving up and simply flipping the sign (as in
-        mode="invert"). This shouldn't be set too high, as rerolling is
+        ``mode="invert"``). This shouldn't be set too high, as rerolling is
         expensive.
 
     Examples
     --------
     >>> param = ForceSign(Poisson(1), positive=False)
 
-    Generates a poisson distribution with alpha=1 that is flipped towards
+    Generates a poisson distribution with ``alpha=1`` that is flipped towards
     negative values.
 
     """
@@ -1836,21 +1813,21 @@ def Positive(other_param, mode="invert", reroll_count_max=2):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : imgaug.parameters.StochasticParameter
         Other parameter which's sampled values are to be
         modified.
 
-    mode : string, optional(default="invert")
-        How to change the signs. Valid values are "invert" and "reroll".
-        "invert" means that wrong signs are simply flipped.
-        "reroll" means that all samples with wrong signs are sampled again,
+    mode : {'invert', 'reroll'}, optional
+        How to change the signs. Valid values are ``invert`` and ``reroll``.
+        ``invert`` means that wrong signs are simply flipped.
+        ``reroll`` means that all samples with wrong signs are sampled again,
         optionally many times, until they randomly end up having the correct
         sign.
 
-    reroll_count_max : int, optional(default=2)
-        If `mode` is set to "reroll", this determines how often values may
+    reroll_count_max : int, optional
+        If `mode` is set to ``reroll``, this determines how often values may
         be rerolled before giving up and simply flipping the sign (as in
-        mode="invert"). This shouldn't be set too high, as rerolling is
+        ``mode="invert"``). This shouldn't be set too high, as rerolling is
         expensive.
 
     Examples
@@ -1874,21 +1851,21 @@ def Negative(other_param, mode="invert", reroll_count_max=2):
 
     Parameters
     ----------
-    other_param : StochasticParameter
+    other_param : imgaug.parameters.StochasticParameter
         Other parameter which's sampled values are to be
         modified.
 
-    mode : string, optional(default="invert")
-        How to change the signs. Valid values are "invert" and "reroll".
-        "invert" means that wrong signs are simply flipped.
-        "reroll" means that all samples with wrong signs are sampled again,
+    mode : {'invert', 'reroll'}, optional
+        How to change the signs. Valid values are ``invert`` and ``reroll``.
+        ``invert`` means that wrong signs are simply flipped.
+        ``reroll`` means that all samples with wrong signs are sampled again,
         optionally many times, until they randomly end up having the correct
         sign.
 
-    reroll_count_max : int, optional(default=2)
-        If `mode` is set to "reroll", this determines how often values may
+    reroll_count_max : int, optional
+        If `mode` is set to ``reroll``, this determines how often values may
         be rerolled before giving up and simply flipping the sign (as in
-        mode="invert"). This shouldn't be set too high, as rerolling is
+        ``mode="invert"``). This shouldn't be set too high, as rerolling is
         expensive.
 
     Examples
@@ -1922,25 +1899,26 @@ class IterativeNoiseAggregator(StochasticParameter):
         The noise parameter to iterate multiple
         times.
 
-    iterations : int or iterable of two ints or list of ints or StochasticParameter, optional(default=(1, 3))
+    iterations : int or iterable of int or list of int or imgaug.parameters.StochasticParameter, optional
         The number of iterations. This may be a single integer or a tuple
-        of integers (a, b), which will result in [a..b] iterations or
-        a list of integers [a, b, c, ...], which will result in a or b or
-        c, ... iterations. It may also be a StochasticParameter, in which case
+        of two integers ``(a, b)``, which will result in ``[a..b]`` iterations or
+        a list of integers ``[a, b, c, ...]``, which will result in ``a`` or ``b``
+        or ``c``, ... iterations. It may also be a StochasticParameter, in which case
         the number of iterations will be sampled once per call
-        to `_draw_samples()`.
+        to :func:`imgaug.parameters.IterativeNoiseAggregator._draw_samples`.
 
-    aggregation_method : ia.ALL or string or list of string or StochasticParameter, optional(default=["max", "avg"])
+    aggregation_method : imgaug.ALL or {'min', 'avg', 'max'} or list of str or\
+                         imgaug.parameters.StochasticParameter, optional
         The method to use to aggregate the results of multiple iterations.
-        If a string, it must have the value "min" or "max" or "avg".
-        If "min" is chosen, the elementwise minimum will be computed over
-        all iterations (pushing the noise towards zeros). "max" will result
-        in the elementwise maximum and "avg" in the average over all
-        iterations. If `ia.ALL` is used, it will be randomly either min or max
-        or avg (per call to `_draw_samples()`). If a list is chosen, it must
-        contain the mentioned strings and a random one will be picked per call
-        to `_draw_samples()`. If a StochasticParameter is used, a value will
-        be sampled from it per call to `_draw_samples()`.
+        If a string, it must have the value ``min`` or ``max`` or ``avg``.
+        If ``min`` is chosen, the elementwise minimum will be computed over
+        all iterations (pushing the noise towards zeros). ``max`` will result
+        in the elementwise maximum and ``avg`` in the average over all
+        iterations. If ``imgaug.ALL`` is used, it will be randomly either min or max
+        or avg (per call to :func:`imgaug.parameters.IterativeNoiseAggregator_draw_samples`).
+        If a list is chosen, it must contain the mentioned strings and a random
+        one will be picked per call. If a StochasticParameter is used, a value will
+        be sampled from it per call.
 
     Examples
     --------
@@ -1970,7 +1948,8 @@ class IterativeNoiseAggregator(StochasticParameter):
         elif isinstance(iterations, StochasticParameter):
             self.iterations = iterations
         else:
-            raise Exception("Expected iterations to be int or tuple of two ints or StochasticParameter, got %s." % (type(iterations),))
+            raise Exception("Expected iterations to be int or tuple of two ints or StochasticParameter, got %s." % (
+                type(iterations),))
 
         if aggregation_method == ia.ALL:
             self.aggregation_method = Choice(["min", "max", "avg"])
@@ -1983,7 +1962,8 @@ class IterativeNoiseAggregator(StochasticParameter):
         elif isinstance(aggregation_method, StochasticParameter):
             self.aggregation_method = aggregation_method
         else:
-            raise Exception("Expected aggregation_method to be string or list of strings or StochasticParameter, got %s." % (type(aggregation_method),))
+            raise Exception("Expected aggregation_method to be string or list of strings or StochasticParameter, "
+                            + "got %s." % (type(aggregation_method),))
 
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6)
@@ -2030,34 +2010,32 @@ class Sigmoid(StochasticParameter):
 
     Parameters
     ----------
-    other_param : StochasticParameter
-        The other parameter to which the sigmoid will be
-        applied.
+    other_param : imgaug.parameters.StochasticParameter
+        The other parameter to which the sigmoid will be applied.
 
-    threshold : number or tuple of two numbers or iterable of numbers or StochasticParameter,
-                optional(default=(-10, 10))
+    threshold : number or tuple of number or iterable of number or imgaug.parameters.StochasticParameter, optional
         Sets the value of the sigmoid's saddle point, i.e. where values
         start to quickly shift from 0.0 to 1.0.
-        This may be set using a single number, a tuple (a, b) (will result in
-        a random threshold a<=x<b per call), a list of numbers (will
+        This may be set using a single number, a tuple ``(a, b)`` (will result in
+        a random threshold ``a<=x<b`` per call), a list of numbers (will
         result in a random threshold drawn from the list per call) or a
         StochasticParameter (will be queried once per call to determine the
         threshold).
 
-    activated : bool or number, optional(default=True)
+    activated : bool or number, optional
         Defines whether the sigmoid is activated. If this is False, the
         results of other_param will not be altered. This may be set to a
-        float value p with 0<=p<=1.0, which will result in `activated` being
-        True in p percent of all calls.
+        float value ``p`` with ``0<=p<=1.0``, which will result in `activated`
+        being True in ``p`` percent of all calls.
 
-    mul : number, optional(default=1)
-        The results of other_param will be multiplied with this value before
-        applying the sigmoid. For noise values (range [0.0, 1.0]) this should
+    mul : number, optional
+        The results of `other_param` will be multiplied with this value before
+        applying the sigmoid. For noise values (range ``[0.0, 1.0]``) this should
         be set to about 20.
 
-    add : number, optional(default=0)
-        This value will be added to the results of other_param before applying
-        the sigmoid. For noise values (range [0.0, 1.0]) this should be set
+    add : number, optional
+        This value will be added to the results of `other_param` before applying
+        the sigmoid. For noise values (range ``[0.0, 1.0]``) this should be set
         to about -10.0, provided `mul` was set to 20.
 
     Examples
@@ -2066,7 +2044,7 @@ class Sigmoid(StochasticParameter):
 
     Applies a sigmoid to simplex noise in 50 percent of all calls. The noise
     results are modified to match the sigmoid's expected value range. The
-    sigmoid's outputs are in the range [0.0, 1.0].
+    sigmoid's outputs are in the range ``[0.0, 1.0]``.
 
     """
     def __init__(self, other_param, threshold=(-10, 10), activated=True, mul=1, add=0):
@@ -2092,19 +2070,19 @@ class Sigmoid(StochasticParameter):
 
         Parameters
         ----------
-        other_param : StochasticParameter
-            See `Sigmoid`.
+        other_param : imgaug.parameters.StochasticParameter
+            See :func:`imgaug.parameters.Sigmoid.__init__`.
 
-        threshold : number or tuple of two numbers or iterable of numbers or StochasticParameter,
-                    optional(default=(-10, 10))
-            See `Sigmoid`.
+        threshold : number or tuple of number or iterable of number or imgaug.parameters.StochasticParameter,\
+                    optional
+            See :func:`imgaug.parameters.Sigmoid.__init__`.
 
-        activated : bool or number, optional(default=True)
-            See `Sigmoid`.
+        activated : bool or number, optional
+            See :func:`imgaug.parameters.Sigmoid.__init__`.
 
         Returns
         -------
-        out : Sigmoid
+        Sigmoid
             A sigmoid adjusted to be used with noise.
 
         """
@@ -2140,8 +2118,8 @@ class SimplexNoise(StochasticParameter):
     A parameter that generates simplex noise of varying resolutions.
 
     This parameter expects to sample noise for 2d planes, i.e. for
-    sizes (H, W) and will return a value in the range [0.0, 1.0] per location
-    in that plane.
+    sizes ``(H, W)`` and will return a value in the range ``[0.0, 1.0]``
+    per location in that plane.
 
     The noise is sampled from low resolution planes and
     upscaled to the requested height and width. The size of the low
@@ -2150,23 +2128,23 @@ class SimplexNoise(StochasticParameter):
 
     Parameters
     ----------
-    size_px_max : int or tuple of two int or list of int or StochasticParameter, optional(default=(2, 16))
+    size_px_max : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
         Size in pixels of the low resolution plane.
         A single int will be used as a constant value. A tuple of two
-        ints (a, b) will result in random values sampled from [a..b].
+        ints ``(a, b)`` will result in random values sampled from ``[a..b]``.
         A list of ints will result in random values being sampled from that
         list. A StochasticParameter will be queried once per call
-        to `_draw_samples()`.
+        to :func:`imgaug.parameters.SimplexNoise._draw_samples`.
 
-    upscale_method : string or int or StochasticParameter, optional(default="nearest")
+    upscale_method : str or int or imgaug.parameters.StochasticParameter, optional
         Upsampling/interpolation method to use. This is used after the sampling
         is finished and the low resolution plane has to be upsampled to the
-        requested `size` in `_draw_samples(size, ...)`. The method may be
-        the same as in `imgaug.imresize_many_images()`. Usually `nearest`
-        or `linear` are good choices. `nearest` will result in rectangles
-        with sharp edges and `linear` in rectangles with blurry and round
+        requested `size` in ``_draw_samples(size, ...)``. The method may be
+        the same as in :func:`imgaug.imresize_many_images`. Usually ``nearest``
+        or ``linear`` are good choices. ``nearest`` will result in rectangles
+        with sharp edges and ``linear`` in rectangles with blurry and round
         edges. The method may be provided as a StochasticParameter, which
-        will be queried per call to `_draw_samples()`.
+        will be queried per call to ``_draw_samples()``.
 
     Examples
     --------
@@ -2270,7 +2248,7 @@ class FrequencyNoise(StochasticParameter):
     Parameter to generate noise of varying frequencies.
 
     This parameter expects to sample noise for 2d planes, i.e. for
-    sizes (H, W) and will return a value in the range [0.0, 1.0] per location
+    sizes ``(H, W)`` and will return a value in the range ``[0.0, 1.0]`` per location
     in that plane.
 
     The exponent controls the frequencies and therefore noise patterns.
@@ -2284,21 +2262,21 @@ class FrequencyNoise(StochasticParameter):
 
     Parameters
     ----------
-    exponent : number or tuple of numbers of list of numbers or StochasticParameter, optional(default=(-4, 4))
+    exponent : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Exponent to use when scaling in the frequency domain.
         Sane values are in the range -4 (large blobs) to 4 (small patterns).
         To generate cloud-like structures, use roughly -2.
 
             * If number, then that number will be used as the exponent for all
               iterations.
-            * If tuple of two numbers (a, b), then a value will be sampled
-              per iteration from the range [a, b].
+            * If tuple of two numbers ``(a, b)``, then a value will be sampled
+              per iteration from the range ``[a, b]``.
             * If a list of numbers, then a value will be picked per iteration
               at random from that list.
             * If a StochasticParameter, then a value will be sampled from
               that parameter per iteration.
 
-    size_px_max : int or tuple of ints or list of ints or StochasticParameter, optional(default=(4, 16))
+    size_px_max : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
         The frequency noise is generated in a low resolution environment.
         This parameter defines the maximum size of that environment (in
         pixels). The environment is initialized at the same size as the input
@@ -2307,21 +2285,22 @@ class FrequencyNoise(StochasticParameter):
 
             * If int, then that number will be used as the size for all
               iterations.
-            * If tuple of two ints (a, b), then a value will be sampled
-              per iteration from the discrete range [a..b].
+            * If tuple of two ints ``(a, b)``, then a value will be sampled
+              per iteration from the discrete range ``[a..b]``.
             * If a list of ints, then a value will be picked per iteration at
               random from that list.
             * If a StochasticParameter, then a value will be sampled from
               that parameter per iteration.
 
-    upscale_method : None or ia.ALL or string or list of string or StochasticParameter, optional(default=None)
+    upscale_method : None or imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
-        the upscaling method.
+        the upscaling method. See also :func:`imgaug.imresize_many_images` for a
+        description of possible values.
 
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
               Most weight is put on linear, followed by cubic.
-            * If ia.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
+            * If imgaug.ALL, then either 'nearest' or 'linear' or 'area' or 'cubic'
               is picked per iteration (all same probability).
             * If string, then that value will be used as the method (must be
               'nearest' or 'linear' or 'area' or 'cubic').

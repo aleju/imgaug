@@ -36,9 +36,9 @@ class Superpixels(meta.Augmenter):
 
     Parameters
     ----------
-    p_replace : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Defines the probability of any superpixel area being replaced by the
-        superpixel, i.e. by the average pixel color within its area::
+        superpixel, i.e. by the average pixel color within its area:
 
             * A probability of 0 would mean, that no superpixel area is replaced by
               its average (image is not changed at all).
@@ -47,33 +47,31 @@ class Superpixels(meta.Augmenter):
             * A probability of 1.0 would mean, that all superpixels are replaced
               by their average color (resulting in a standard superpixel image).
 
-        Behaviour based on chosen datatypes for this
-        parameter:
+        Behaviour based on chosen datatypes for this parameter:
 
             * If number, then that numbre will always be used.
-            * If tuple (a, b), then a random probability will be sampled from the
-              interval [a, b] per image.
+            * If tuple ``(a, b)``, then a random probability will be sampled from the
+              interval ``[a, b]`` per image.
             * If a list, then a random value will be sampled from that list per
               image.
             * If this parameter is a StochasticParameter, it is expected to return
-              values between 0 and 1. Values >=0.5 will be interpreted as the command
+              values between 0 and 1. Values ``>=0.5`` will be interpreted as the command
               to replace a superpixel region with its mean. Recommended to be some
-              form of Binomial(...).
+              form of ``Binomial(...)``.
 
-    n_segments : int or tuple of int or list of int or StochasticParameter, optional(default=100)
-        Target number of superpixels to generate.
-        Lower numbers are faster.
+    n_segments : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Target number of superpixels to generate. Lower numbers are faster.
 
             * If a single int, then that value will always be used as the
               number of segments.
-            * If a tuple (a, b), then a value from the discrete interval [a..b]
+            * If a tuple ``(a, b)``, then a value from the discrete interval ``[a..b]``
               will be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
-    max_size : int or None, optional(default=128)
+    max_size : int or None, optional
         Maximum image size at which the superpixels are generated.
         If the width or height of an image exceeds this value, it will be
         downscaled so that the longest side matches `max_size`.
@@ -82,19 +80,19 @@ class Superpixels(meta.Augmenter):
         This is done to speed up the superpixel algorithm.
         Use None to apply no downscaling.
 
-    interpolation : int or string, optional(default="linear")
+    interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        `ia.imresize_single_image()`.
+        :func:`imgaug.imresize_single_image`.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

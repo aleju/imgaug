@@ -39,11 +39,9 @@ class Affine(meta.Augmenter):
     """
     Augmenter to apply affine transformations to images.
 
-    This is mostly a wrapper around skimage's AffineTransform class and
-    warp function.
+    This is mostly a wrapper around skimage's AffineTransform class and warp function.
 
-    Affine transformations
-    involve:
+    Affine transformations involve:
 
         - Translation ("move" image on the x-/y-axis)
         - Rotation
@@ -62,15 +60,15 @@ class Affine(meta.Augmenter):
 
     Parameters
     ----------
-    scale : number or tuple of two number or list of number or StochasticParameter
-            or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},
-            optional(default=1.0)
-        Scaling factor to use, where 1.0 represents no change and 0.5 is
-        zoomed out to 50 percent of the original size.
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter\
+            or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
+            optional
+        Scaling factor to use,
+        where 1.0 represents no change and 0.5 is zoomed out to 50 percent of the original size.
 
             * If a single number, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled from the range
-              a <= x <= b per image. That value will be used identically for
+            * If a tuple ``(a, b)``, then a value will be sampled from the range
+              ``a <= x <= b`` per image. That value will be used identically for
               both x- and y-axis.
             * If a list, then a random value will eb sampled from that list
               per image.
@@ -82,16 +80,16 @@ class Affine(meta.Augmenter):
               set different values for the axis. If they are set to the same
               ranges, different values may still be sampled per axis.
 
-    translate_percent : None or number or tuple of two number or list of number or StochasticParameter or
-                        dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},
-                        optional(default=None)
+    translate_percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
+                        dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
+                        optional
         Translation in percent relative to the image height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image height/width.
 
             * If None then equivalent to 0 unless translate_px has a non-None value.
             * If a single number, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled from the range
-              a <= x <= b per image. That percent value will be used identically
+            * If a tuple ``(a, b)``, then a value will be sampled from the range
+              ``a <= x <= b`` per image. That percent value will be used identically
               for both x- and y-axis.
             * If a list, then a random value will eb sampled from that list
               per image.
@@ -104,15 +102,15 @@ class Affine(meta.Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    translate_px : None or int or tuple of two int or list of int or StochasticParameter or
-                   dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter},
-                   optional(default=None)
+    translate_px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or\
+                   dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter},\
+                   optional
         Translation in pixels.
 
             * If None then equivalent to 0.0 unless translate_percent has a non-None value.
             * If a single int, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled from the discrete
-              range [a .. b] per image. That number will be used identically
+            * If a tuple ``(a, b)``, then a value will be sampled from the discrete
+              range ``[a..b]`` per image. That number will be used identically
               for both x- and y-axis.
             * If a list, then a random value will eb sampled from that list
               per image.
@@ -125,144 +123,141 @@ class Affine(meta.Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    rotate : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Rotation in degrees (_NOT_ radians), i.e. expected value range is
         0 to 360 for positive rotations (may also be negative). Rotation
         happens around the _center_ of the image, not the top left corner
         as in some other frameworks.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the rotation value.
+            * If a tuple ``(a, b)``, then a value will be sampled per image from the
+              range ``a <= x <= b`` and be used as the rotation value.
             * If a list, then a random value will eb sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the rotation value per image.
 
-    shear : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Shear in degrees (_NOT_ radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
 
             * If a float/int, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the rotation value.
+            * If a tuple ``(a, b)``, then a value will be sampled per image from the
+              range ``a <= x <= b`` and be used as the rotation value.
             * If a list, then a random value will eb sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the shear value per image.
 
-    order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
-        Interpolation order to use. Same meaning as in
-        skimage:
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        Interpolation order to use. Same meaning as in skimage:
 
-            * 0: Nearest-neighbor
-            * 1: Bi-linear (default)
-            * 2: Bi-quadratic (not recommended by skimage)
-            * 3: Bi-cubic
-            * 4: Bi-quartic
-            * 5: Bi-quintic
+            * ``0``: ``Nearest-neighbor``
+            * ``1``: ``Bi-linear`` (default)
+            * ``2``: ``Bi-quadratic`` (not recommended by skimage)
+            * ``3``: ``Bi-cubic``
+            * ``4``: ``Bi-quartic``
+            * ``5``: ``Bi-quintic``
 
         Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very slow.
-        If the backend is `cv2`, the mapping to opencv's interpolation modes
+        If the backend is ``cv2``, the mapping to OpenCV's interpolation modes
         is as follows:
 
-            * 0 -> cv2.INTER_NEAREST
-            * 1 -> cv2.INTER_LINEAR
-            * 2 -> cv2.INTER_CUBIC
-            * 3 -> cv2.INTER_CUBIC
-            * 4 -> cv2.INTER_CUBIC
+            * ``0`` -> ``cv2.INTER_NEAREST``
+            * ``1`` -> ``cv2.INTER_LINEAR``
+            * ``2`` -> ``cv2.INTER_CUBIC``
+            * ``3`` -> ``cv2.INTER_CUBIC``
+            * ``4`` -> ``cv2.INTER_CUBIC``
 
-        As datatypes this parameter
-        accepts:
+        As datatypes this parameter accepts:
 
             * If a single int, then that order will be used for all images.
             * If an iterable, then for each image a random value will be sampled
               from that iterable (i.e. list of allowed order values).
-            * If ia.ALL, then equivalant to list [0, 1, 3, 4, 5].
+            * If imgaug.ALL, then equivalant to list ``[0, 1, 3, 4, 5]`` in case of backend ``skimage``
+              and otherwise ``[0, 1, 3]``.
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         The constant value used for skimage's transform function.
         This is the value used to fill up pixels in the result image that
         didn't exist in the input image (e.g. when translating to the left,
         some new pixels are created at the right). Such a fill-up with a
         constant value only happens, when `mode` is "constant".
-        The expected value range is [0, 255]. It may be a float value.
+        The expected value range is ``[0, 255]``. It may be a float value.
 
             * If this is a single number, then that value will be used
               (e.g. 0 results in black pixels).
-            * If a tuple (a, b), then a random value from the range a <= x <= b
+            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
               is picked per image.
             * If a list, then a random value will be sampled from that list
               per image.
-            * If ia.ALL, a value from the discrete range [0 .. 255] will be
+            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
               sampled per image.
             * If a StochasticParameter, a new value will be sampled from the
               parameter per image.
 
-    fit_output : bool, optional(default=False)
+    fit_output : bool, optional
         Whether the image after affine transformation is completely contained in the output image.
         If False, parts of the image may be outside of the image plane or the image might make up only a small
         part of the image plane. Activating this can be useful e.g. for rotations by 45 degrees to avoid that the
         image corners are outside of the image plane.
         Note that activating this will negate translation.
 
-    mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         Parameter that defines the handling of newly created pixels.
         Same meaning as in skimage (and numpy.pad):
 
-            * "constant": Pads with a constant value
-            * "edge": Pads with the edge values of array
-            * "symmetric": Pads with the reflection of the vector mirrored
+            * ``constant``: Pads with a constant value
+            * ``edge``: Pads with the edge values of array
+            * ``symmetric``: Pads with the reflection of the vector mirrored
               along the edge of the array.
-            * "reflect": Pads with the reflection of the vector mirrored on
+            * ``reflect``: Pads with the reflection of the vector mirrored on
               the first and last values of the vector along each axis.
-            * "wrap": Pads with the wrap of the vector along the axis.
+            * ``wrap``: Pads with the wrap of the vector along the axis.
               The first values are used to pad the end and the end values
               are used to pad the beginning.
 
-        If `cv2` is chosen as the backend the mapping is as
-        follows:
+        If ``cv2`` is chosen as the backend the mapping is as follows:
 
-            * "constant" -> cv2.BORDER_CONSTANT
-            * "edge" -> cv2.BORDER_REPLICATE
-            * "symmetric" -> cv2.BORDER_REFLECT
-            * "reflect" -> cv2.BORDER_REFLECT_101
-            * "wrap" -> cv2.BORDER_WRAP
+            * ``constant`` -> ``cv2.BORDER_CONSTANT``
+            * ``edge`` -> ``cv2.BORDER_REPLICATE``
+            * ``symmetric`` -> ``cv2.BORDER_REFLECT``
+            * ``reflect`` -> ``cv2.BORDER_REFLECT_101``
+            * ``wrap`` -> ``cv2.BORDER_WRAP``
 
-        The datatype of the parameter may
-        be:
+        The datatype of the parameter may be:
 
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.
-            * If ia.ALL, then a random mode from all possible modes will be
+            * If imgaug.ALL, then a random mode from all possible modes will be
               picked.
             * If StochasticParameter, then the mode will be sampled from that
               parameter per image, i.e. it must return only the above mentioned
               strings.
 
-    backend : string, optional(default="auto")
-        Framework to use as a backend. Valid values are `auto`, `skimage`
-        (scikit-image's warp) and `cv2` (opencv's warp).
-        If `auto` is used, the augmenter will automatically try
-        to use cv2 where possible (order must be in [0, 1, 3] and
+    backend : str, optional
+        Framework to use as a backend. Valid values are ``auto``, ``skimage``
+        (scikit-image's warp) and ``cv2`` (OpenCV's warp).
+        If ``auto`` is used, the augmenter will automatically try
+        to use ``cv2`` where possible (order must be in ``[0, 1, 3]`` and
         image's dtype uint8, otherwise skimage is chosen). It will
         silently fall back to skimage if order/dtype is not supported by cv2.
         cv2 is generally faster than skimage. It also supports RGB cvals,
         while skimage will resort to intensity cvals (i.e. 3x the same value
-        as RGB). If `cv2` is chosen and order is 2 or 4, it will automatically
+        as RGB). If ``cv2`` is chosen and order is 2 or 4, it will automatically
         fall back to order 3.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -360,7 +355,8 @@ class Affine(meta.Augmenter):
                 # a warning)
                 self.order = iap.Choice([0, 1, 3, 4, 5])
         elif ia.is_single_integer(order):
-            ia.do_assert(0 <= order <= 5, "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
+            ia.do_assert(0 <= order <= 5,
+                         "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
             if backend == "cv2":
                 ia.do_assert(order in [0, 1, 3])
             self.order = iap.Deterministic(order)
@@ -462,7 +458,8 @@ class Affine(meta.Augmenter):
                 )
             else:
                 self.translate = iap.handle_discrete_param(translate_px, "translate_px", value_range=None,
-                                                           tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+                                                           tuple_to_uniform=True, list_to_choice=True,
+                                                           allow_floats=False)
 
         self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True,
                                                   list_to_choice=True)
@@ -785,15 +782,15 @@ class AffineCv2(meta.Augmenter):
 
     Parameters
     ----------
-    scale : number or tuple of number or list of number or StochasticParameter or
-            dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},
-            optional(default=1.0)
-        Scaling factor to use, where 1.0 represents no change and 0.5 is
-        zoomed out to 50 percent of the original size.
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
+            dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
+            optional
+        Scaling factor to use,
+        where 1.0 represents no change and 0.5 is zoomed out to 50 percent of the original size.
 
             * If a single float, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled from the range
-              a <= x <= b per image. That value will be used identically for
+            * If a tuple ``(a, b)``, then a value will be sampled from the range
+              ``a <= x <= b`` per image. That value will be used identically for
               both x- and y-axis.
             * If a list, then a random value will eb sampled from that list
               per image.
@@ -805,17 +802,17 @@ class AffineCv2(meta.Augmenter):
               set different values for the axis. If they are set to the same
               ranges, different values may still be sampled per axis.
 
-    translate_percent : number or tuple of two number or list of number or StochasticParameter or
-                        dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},
-                        optional(default=1.0)
+    translate_percent : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
+                        dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
+                        optional
         Translation in percent relative to the image
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
         height/width.
 
             * If a single float, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled from the range
-              a <= x <= b per image. That percent value will be used identically
+            * If a tuple ``(a, b)``, then a value will be sampled from the range
+              ``a <= x <= b`` per image. That percent value will be used identically
               for both x- and y-axis.
             * If a list, then a random value will eb sampled from that list
               per image.
@@ -828,15 +825,14 @@ class AffineCv2(meta.Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    translate_px : int or tuple of two int or list of int or StochasticParameter or
-                   dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter},
-                   optional(default=1.0)
-        Translation in
-        pixels.
+    translate_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or\
+                   dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter},\
+                   optional
+        Translation in pixels.
 
             * If a single int, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled from the discrete
-              range [a .. b] per image. That number will be used identically
+            * If a tuple ``(a, b)``, then a value will be sampled from the discrete
+              range ``[a..b]`` per image. That number will be used identically
               for both x- and y-axis.
             * If a list, then a random value will eb sampled from that list
               per image.
@@ -849,43 +845,43 @@ class AffineCv2(meta.Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    rotate : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Rotation in degrees (_NOT_ radians), i.e. expected value range is
         0 to 360 for positive rotations (may also be negative). Rotation
         happens around the _center_ of the image, not the top left corner
         as in some other frameworks.
 
             * If a float/int, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the rotation value.
+            * If a tuple ``(a, b)``, then a value will be sampled per image from the
+              range ``a <= x <= b`` and be used as the rotation value.
             * If a list, then a random value will eb sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the rotation value per image.
 
-    shear : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Shear in degrees (NOT radians), i.e. expected value range is
         0 to 360 for positive shear (may also be negative).
 
             * If a float/int, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled per image from the
-              range a <= x <= b and be used as the rotation value.
+            * If a tuple ``(a, b)``, then a value will be sampled per image from the
+              range ``a <= x <= b`` and be used as the rotation value.
             * If a list, then a random value will eb sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used to
               sample the shear value per image.
 
-    order : int or iterable of int or string or iterable of string or ia.ALL or StochasticParameter, optional(default=1)
+    order : int or list of int or str or list of str or imaug.ALL or imgaug.parameters.StochasticParameter, optional
         Interpolation order to use. Allowed are:
 
-            * cv2.INTER_NEAREST - a nearest-neighbor interpolation
-            * cv2.INTER_LINEAR - a bilinear interpolation (used by default)
-            * cv2.INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood
-            * cv2.INTER_LANCZOS4
-            * "nearest"
-            * "linear"
-            * "cubic",
-            * "lanczos4"
+            * ``cv2.INTER_NEAREST`` - a nearest-neighbor interpolation
+            * ``cv2.INTER_LINEAR`` - a bilinear interpolation (used by default)
+            * ``cv2.INTER_CUBIC`` - a bicubic interpolation over 4x4 pixel neighborhood
+            * ``cv2.INTER_LANCZOS4``
+            * ``nearest``
+            * ``linear``
+            * ``cubic``
+            * ``lanczos4``
 
         The first four are OpenCV constants, the other four are strings that
         are automatically replaced by the OpenCV constants.
@@ -893,74 +889,72 @@ class AffineCv2(meta.Augmenter):
         (linear interpolation) are the fastest.
 
             * If a single int, then that order will be used for all images.
-            * If a string, then it must be one of: "nearest", "linear", "cubic",
-              "lanczos4".
+            * If a string, then it must be one of: ``nearest``, ``linear``, ``cubic``,
+              ``lanczos4``.
             * If an iterable of int/string, then for each image a random value
               will be sampled from that iterable (i.e. list of allowed order
               values).
-            * If ia.ALL, then equivalant to list [cv2.INTER_NEAREST,
-              cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4].
+            * If imgaug.ALL, then equivalant to list ``[cv2.INTER_NEAREST,
+              cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]``.
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of number or list of number or imaug.ALL or imgaug.parameters.StochasticParameter, optional
         The constant value used to fill up pixels in the result image that
         didn't exist in the input image (e.g. when translating to the left,
         some new pixels are created at the right). Such a fill-up with a
         constant value only happens, when `mode` is "constant".
-        The expected value range is [0, 255]. It may be a float value.
+        The expected value range is ``[0, 255]``. It may be a float value.
 
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
-            * If a tuple (a, b), then a random value from the range a <= x <= b
+            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
               is picked per image.
             * If a list, then a random value will eb sampled from that list
               per image.
-            * If ia.ALL, a value from the discrete range [0 .. 255] will be
+            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
               sampled per image.
             * If a StochasticParameter, a new value will be sampled from the
               parameter per image.
 
-    mode : int or string or list of string or list of ints or ia.ALL or StochasticParameter,
-           optional(default="constant")
+    mode : int or str or list of str or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter,
+           optional
         Parameter that defines the handling of newly created pixels.
-        Same meaning as in opencv's border mode. Let `abcdefgh` be an image
-        content and `|` be an image boundary, then:
+        Same meaning as in OpenCV's border mode. Let ``abcdefgh`` be an image's
+        content and ``|`` be an image boundary, then:
 
-            * `cv2.BORDER_REPLICATE`: `aaaaaa|abcdefgh|hhhhhhh`
-            * `cv2.BORDER_REFLECT`: `fedcba|abcdefgh|hgfedcb`
-            * `cv2.BORDER_REFLECT_101`: `gfedcb|abcdefgh|gfedcba`
-            * `cv2.BORDER_WRAP`: `cdefgh|abcdefgh|abcdefg`
-            * `cv2.BORDER_CONSTANT`: `iiiiii|abcdefgh|iiiiiii`, where `i` is
-              the defined cval.
-            * "replicate": Same as cv2.BORDER_REPLICATE.
-            * "reflect": Same as cv2.BORDER_REFLECT.
-            * "reflect_101": Same as cv2.BORDER_REFLECT_101.
-            * "wrap": Same as cv2.BORDER_WRAP.
-            * "constant": Same as cv2.BORDER_CONSTANT.
+            * ``cv2.BORDER_REPLICATE``: ``aaaaaa|abcdefgh|hhhhhhh``
+            * ``cv2.BORDER_REFLECT``: ``fedcba|abcdefgh|hgfedcb``
+            * ``cv2.BORDER_REFLECT_101``: ``gfedcb|abcdefgh|gfedcba``
+            * ``cv2.BORDER_WRAP``: ``cdefgh|abcdefgh|abcdefg``
+            * ``cv2.BORDER_CONSTANT``: ``iiiiii|abcdefgh|iiiiiii``, where ``i`` is the defined cval.
+            * ``replicate``: Same as ``cv2.BORDER_REPLICATE``.
+            * ``reflect``: Same as ``cv2.BORDER_REFLECT``.
+            * ``reflect_101``: Same as ``cv2.BORDER_REFLECT_101``.
+            * ``wrap``: Same as ``cv2.BORDER_WRAP``.
+            * ``constant``: Same as ``cv2.BORDER_CONSTANT``.
 
-        The datatype of the parameter may
-        be:
+        The datatype of the parameter may be:
 
-            * If a single int, then it must be one of `cv2.BORDER_*`.
-            * If a single string, then it must be one of: "replicate",
-              "reflect", "reflect_101", "wrap", "constant".
+            * If a single int, then it must be one of ``cv2.BORDER_*``.
+            * If a single string, then it must be one of: ``replicate``,
+              ``reflect``, ``reflect_101``, ``wrap``, ``constant``.
             * If a list of ints/strings, then per image a random mode will be
               picked from that list.
-            * If ia.ALL, then a random mode from all possible modes will be
+            * If imgaug.ALL, then a random mode from all possible modes will be
               picked.
             * If StochasticParameter, then the mode will be sampled from that
               parameter per image, i.e. it must return only the above mentioned
               strings.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1136,7 +1130,8 @@ class AffineCv2(meta.Augmenter):
                 )
             else:
                 self.translate = iap.handle_discrete_param(translate_px, "translate_px", value_range=None,
-                                                           tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+                                                           tuple_to_uniform=True, list_to_choice=True,
+                                                           allow_floats=False)
 
         self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True,
                                                   list_to_choice=True)
@@ -1151,7 +1146,8 @@ class AffineCv2(meta.Augmenter):
                                                  shear_samples, cval_samples, mode_samples, order_samples)
         return result
 
-    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples,
+    @classmethod
+    def _augment_images_by_samples(cls, images, scale_samples, translate_samples, rotate_samples, shear_samples,
                                    cval_samples, mode_samples, order_samples):
         # TODO change these to class attributes
         order_str_to_int = {
@@ -1193,7 +1189,8 @@ class AffineCv2(meta.Augmenter):
             mode = mode if ia.is_single_integer(mode) else mode_str_to_int[mode]
             order = order if ia.is_single_integer(order) else order_str_to_int[order]
 
-            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 or shear != 0:
+            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
+                    or shear != 0:
                 matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
                     scale=(scale_x, scale_y),
@@ -1259,7 +1256,7 @@ class AffineCv2(meta.Augmenter):
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
             shear = shear_samples[i]
-            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0\
+            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
                     or shear != 0:
                 matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
@@ -1327,26 +1324,26 @@ class PiecewiseAffine(meta.Augmenter):
 
     Parameters
     ----------
-    scale : float or tuple of two floats or StochasticParameter, optional(default=0)
+    scale : float or tuple of float or imgaug.parameters.StochasticParameter, optional
         Each point on the regular grid is moved around via a normal
         distribution. This scale factor is equivalent to the normal
         distribution's sigma. Note that the jitter (how far each point is
         moved in which direction) is multiplied by the height/width of the
-        image if `absolute_scale=False` (default), so this scale can be
+        image if ``absolute_scale=False`` (default), so this scale can be
         the same for different sized images.
         Recommended values are in the range 0.01 to 0.05 (weak to strong
         augmentations).
 
             * If a single float, then that value will always be used as the
               scale.
-            * If a tuple (a, b) of floats, then a random value will be picked
-              from the interval (a, b) (per image).
+            * If a tuple ``(a, b)`` of floats, then a random value will be picked
+              from the interval ``(a, b)`` (per image).
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
-    nb_rows : int or tuple of ints or StochasticParameter, optional(default=4)
+    nb_rows : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         Number of rows of points that the regular grid should have.
         Must be at least 2. For large images, you might want to pick a
         higher value than 4. You might have to then adjust scale to lower
@@ -1354,36 +1351,36 @@ class PiecewiseAffine(meta.Augmenter):
 
             * If a single int, then that value will always be used as the
               number of rows.
-            * If a tuple (a, b), then a value from the discrete interval [a..b]
+            * If a tuple ``(a, b)``, then a value from the discrete interval ``[a..b]``
               will be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
-    nb_cols : int or tuple of ints or StochasticParameter, optional(default=4)
+    nb_cols : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         Number of columns. See `nb_rows`.
 
-    order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
-        See Affine.__init__().
+    order : int or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.geometric.Affine.__init__`.
 
-    cval : int or float or tuple of two floats or ia.ALL or StochasticParameter, optional(default=0)
-        See Affine.__init__().
+    cval : int or float or tuple of float or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.geometric.Affine.__init__`.
 
-    mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
-        See Affine.__init__().
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.geometric.Affine.__init__`.
 
-    absolute_scale : bool, optional(default=False)
+    absolute_scale : bool, optional
         Take `scale` as an absolute value rather than a relative value.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1395,8 +1392,8 @@ class PiecewiseAffine(meta.Augmenter):
 
     >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05), nb_rows=8, nb_cols=8)
 
-    Same as the previous example, but uses a denser grid of 8x8 points (default
-    is 4x4). This can be useful for large images.
+    Same as the previous example, but uses a denser grid of ``8x8`` points (default
+    is ``4x4``). This can be useful for large images.
 
     """
 
@@ -1681,7 +1678,7 @@ class PerspectiveTransform(meta.Augmenter):
 
     Parameters
     ----------
-    scale : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Standard deviation of the normal distributions. These are used to sample
         the random distances of the subimage's corners from the full image's
         corners. The sampled values reflect percentage values (with respect
@@ -1689,27 +1686,27 @@ class PerspectiveTransform(meta.Augmenter):
 
             * If a single number, then that value will always be used as the
               scale.
-            * If a tuple (a, b) of numbers, then a random value will be picked
-              from the interval (a, b) (per image).
+            * If a tuple ``(a, b)`` of numbers, then a random value will be picked
+              from the interval ``(a, b)`` (per image).
             * If a list of values, a random one of the values will be picked
               per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
-    keep_size : bool, optional(default=True)
+    keep_size : bool, optional
         Whether to resize image's back to their original size after applying
         the perspective transform. If set to False, the resulting images
         may end up having different shapes and will always be a list, never
         an array.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1849,14 +1846,14 @@ class PerspectiveTransform(meta.Augmenter):
             points = np.mod(np.abs(points), 1)
 
             # top left
-            points[0, 1] = 1.0 - points[0, 1] # h = 1.0 - jitter
+            points[0, 1] = 1.0 - points[0, 1]  # h = 1.0 - jitter
 
             # top right
-            points[1, 0] = 1.0 - points[1, 0] # w = 1.0 - jitter
-            points[1, 1] = 1.0 - points[1, 1] # h = 1.0 - jitter
+            points[1, 0] = 1.0 - points[1, 0]  # w = 1.0 - jitter
+            points[1, 1] = 1.0 - points[1, 1]  # h = 1.0 - jitter
 
             # bottom right
-            points[2, 0] = 1.0 - points[2, 0] # h = 1.0 - jitter
+            points[2, 0] = 1.0 - points[2, 0]  # h = 1.0 - jitter
 
             # bottom left
             # nothing
@@ -1936,14 +1933,14 @@ class ElasticTransformation(meta.Augmenter):
     """
     Augmenter to transform images by moving pixels locally around using displacement fields.
 
-    The augmenter has the parameters `alpha` and `sigma`. `alpha` controls the strength of the
-    displacement: higher values mean that pixels are moved further. `sigma` controls the
+    The augmenter has the parameters ``alpha`` and ``sigma``. ``alpha`` controls the strength of the
+    displacement: higher values mean that pixels are moved further. ``sigma`` controls the
     smoothness of the displacement: higher values lead to smoother patterns -- as if the
     image was below water -- while low values will cause indivdual pixels to be moved very
     differently from their neighbours, leading to noisy and pixelated images.
 
-    A relation of 10:1 seems to be good for `alpha` and `sigma`, e.g. `alpha=10` and `sigma=1` or
-    `alpha=50`, `sigma=5`. For 128x128 a setting of `alpha=(0, 70.0)`, `sigma=(4.0, 6.0)` may be a
+    A relation of 10:1 seems to be good for ``alpha`` and ``sigma``, e.g. ``alpha=10`` and ``sigma=1`` or
+    ``alpha=50``, ``sigma=5``. For ``128x128`` a setting of ``alpha=(0, 70.0)``, ``sigma=(4.0, 6.0)`` may be a
     good choice and will lead to a water-like effect.
 
     See ::
@@ -1958,48 +1955,48 @@ class ElasticTransformation(meta.Augmenter):
 
     Parameters
     ----------
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Strength of the distortion field. Higher values mean that pixels are moved further
         with respect to the distortion field's direction. Set this to around 10 times the
         value of `sigma` for visible effects.
 
             * If number, then that value will be used for all images.
-            * If tuple (a, b), then a random value from range a <= x <= b will be
+            * If tuple ``(a, b)``, then a random value from range ``a <= x <= b`` will be
               sampled per image.
             * If a list, then for each image a random value will be sampled
               from that list.
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
-    sigma : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    sigma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Standard deviation of the gaussian kernel used to smooth the distortion
-        fields. Higher values (for 128x128 images around 5.0) lead to more water-like effects,
-        while lower values (for 128x128 images around 1.0 and lower) lead to more noisy, pixelated
+        fields. Higher values (for ``128x128`` images around 5.0) lead to more water-like effects,
+        while lower values (for ``128x128`` images around 1.0 and lower) lead to more noisy, pixelated
         images. Set this to around 1/10th of `alpha` for visible effects.
 
             * If number, then that value will be used for all images.
-            * If tuple (a, b), then a random value from range a <= x <= b will be
+            * If tuple ``(a, b)``, then a random value from range ``a <= x <= b`` will be
               sampled per image.
             * If a list, then for each image a random value will be sampled
               from that list.
             * If StochasticParameter, then that parameter will be used to sample
               a value per image.
 
-    order : int or iterable of int or ia.ALL or StochasticParameter, optional(default=1)
+    order : int or list of int or imaug.ALL or imgaug.parameters.StochasticParameter, optional
         Interpolation order to use. Same meaning as in
-        `scipy.ndimage.map_coordinates` and may take any integer value
+        :func:`scipy.ndimage.map_coordinates` and may take any integer value
         in the range 0 to 5, where orders close to 0 are faster.
 
             * If a single int, then that order will be used for all images.
-            * If a tuple (a, b), then a random value from the range a <= x <= b
+            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
               is picked per image.
             * If a list, then for each image a random value will be sampled
               from that list.
-            * If ia.ALL, then equivalant to list [0, 1, 2, 3, 4, 5].
+            * If imgaug.ALL, then equivalant to list ``[0, 1, 2, 3, 4, 5]``.
             * If StochasticParameter, then that parameter is queried per image
               to sample the order value to use.
 
-    cval : number or tuple of number or list of number or ia.ALL or StochasticParameter, optional(default=0)
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         The constant intensity value used to fill in new pixels.
         This value is only used if `mode` is set to "constant".
         For standard uint8 images (value range 0-255), this value may also
@@ -2008,39 +2005,39 @@ class ElasticTransformation(meta.Augmenter):
 
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
-            * If a tuple (a, b), then a random value from the range a <= x <= b
+            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
               is picked per image.
             * If a list, then a random value will be picked from that list per
               image.
-            * If ia.ALL, a value from the discrete range [0 .. 255] will be
+            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
               sampled per image.
             * If a StochasticParameter, a new value will be sampled from the
               parameter per image.
 
-    mode : string or list of string or ia.ALL or StochasticParameter, optional(default="constant")
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         Parameter that defines the handling of newly created pixels.
-        May take the same values as in `scipy.ndimage.map_coordinates`,
-        i.e. "constant", "nearest", "reflect" or "wrap".
+        May take the same values as in :func:`scipy.ndimage.map_coordinates`,
+        i.e. ``constant``, ``nearest``, ``reflect`` or ``wrap``.
         The datatype of the parameter may
         be:
 
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.
-            * If ia.ALL, then a random mode from all possible modes will be
+            * If imgaug.ALL, then a random mode from all possible modes will be
               picked.
             * If StochasticParameter, then the mode will be sampled from that
               parameter per image, i.e. it must return only the above mentioned
               strings.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2053,7 +2050,7 @@ class ElasticTransformation(meta.Augmenter):
     >>> aug = iaa.ElasticTransformation(alpha=(0.0, 70.0), sigma=5.0)
 
     apply elastic transformations with a strength/alpha that comes
-    from the range 0.0 <= x <= 70.0 (randomly picked per image) and
+    from the range ``0.0 <= x <= 70.0`` (randomly picked per image) and
     with a smoothness of 5.0.
 
     """
@@ -2254,8 +2251,8 @@ class ElasticTransformation(meta.Augmenter):
     def get_parameters(self):
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
-    @staticmethod
-    def generate_indices(shape, alpha, sigma, random_state, reshape=True):
+    @classmethod
+    def generate_indices(cls, shape, alpha, sigma, random_state, reshape=True):
         ia.do_assert(len(shape) == 2)
 
         padding = 100 + int(np.round(sigma)) * 2
@@ -2286,9 +2283,8 @@ class ElasticTransformation(meta.Augmenter):
         else:
             return (x_shifted, y_shifted), (dx, dy)
 
-
-    @staticmethod
-    def map_coordinates(image, indices_x, indices_y, order=1, cval=0, mode="constant"):
+    @classmethod
+    def map_coordinates(cls, image, indices_x, indices_y, order=1, cval=0, mode="constant"):
         # assuming 128x128 image with 0 shift in x/y:
         # indices_y: 0, 0, ..., 1, 1, ..., 2, ...
         # indices_x: 0, 1, ..., 128, 0, 1, ..., 127, ...

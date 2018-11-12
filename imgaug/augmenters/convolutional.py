@@ -41,28 +41,27 @@ class Convolve(meta.Augmenter):
 
     Parameters
     ----------
-    matrix : None or (H, W) ndarray or StochasticParameter or callable, optional(default=None)
-        The weight matrix of the convolution kernel to
-        apply.
+    matrix : None or (H, W) ndarray or imgaug.parameters.StochasticParameter or callable, optional
+        The weight matrix of the convolution kernel to apply.
 
             * If None, the input images will not be changed.
             * If a numpy array, that array will be used for all images and
               channels as the kernel.
             * If a callable, the parameter will be called for each image
-              via param(image, C, random_state). The function must either return
-              a list of C matrices (i.e. one per channel) or a 2D numpy array
-              (will be used for all channels) or a 3D HxWxC numpy array.
+              via ``param(image, C, random_state)``. The function must either return
+              a list of ``C`` matrices (i.e. one per channel) or a 2D numpy array
+              (will be used for all channels) or a 3D ``HxWxC`` numpy array.
               If a list is returned, each entry may be None, which will result
               in no changes to the respective channel.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -173,40 +172,40 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
 
     Parameters
     ----------
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    lightness : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    lightness : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Parameter that controls the lightness/brightness of the sharped image.
-        Sane values are somewhere in the range (0.5, 2).
+        Sane values are somewhere in the range ``(0.5, 2)``.
         The value 0 results in an edge map. Values higher than 1 create bright
         images. Default value is 1.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -218,7 +217,7 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     >>> aug = Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0))
 
     sharpens input images with a variable lightness in the range
-    0.75 <= x <= 2.0 and with a variable alpha.
+    ``0.75 <= x <= 2.0`` and with a variable alpha.
 
     """
     alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
@@ -259,46 +258,46 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
 
     Parameters
     ----------
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    strength : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    strength : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Parameter that controls the strength of the embossing.
-        Sane values are somewhere in the range (0, 2) with 1 being the standard
+        Sane values are somewhere in the range ``(0, 2)`` with 1 being the standard
         embossing effect. Default value is 1.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
     >>> aug = Emboss(alpha=(0.0, 1.0), strength=(0.5, 1.5))
 
-    embosses an image with a variable strength in the range 0.5 <= x <= 1.5
-    and overlays the result with a variable alpha in the range 0.0 <= a <= 1.0
+    embosses an image with a variable strength in the range ``0.5 <= x <= 1.5``
+    and overlays the result with a variable alpha in the range ``0.0 <= a <= 1.0``
     over the old image.
 
     """
@@ -339,33 +338,33 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
 
     Parameters
     ----------
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
     >>> aug = EdgeDetect(alpha=(0.0, 1.0))
 
     detects edges in an image  and overlays the result with a variable alpha
-    in the range 0.0 <= a <= 1.0 over the old image.
+    in the range ``0.0 <= a <= 1.0`` over the old image.
 
     """
     alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
@@ -403,39 +402,39 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
     Parameters
     ----------
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Visibility of the sharpened image. At 0, only the original image is
         visible, at 1.0 only its sharpened version is visible.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    direction : number or tuple of number or list of number or StochasticParameter, optional(default=(0.0, 1.0))
+    direction : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Angle of edges to pronounce, where 0 represents 0 degrees and 1.0
         represents 360 degrees (both clockwise, starting at the top).
-        Default value is (0.0, 1.0), i.e. pick a random angle per image.
+        Default value is ``(0.0, 1.0)``, i.e. pick a random angle per image.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -460,7 +459,7 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
 
     generates edge images (edges detected from the top) and overlays them
     with the input images by a variable amount between 0 and 30 percent
-    (e.g. for 0.3 then `0.7*old_image + 0.3*edge_image`).
+    (e.g. for 0.3 then ``0.7*old_image + 0.3*edge_image``).
 
     """
     alpha_param = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
