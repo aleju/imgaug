@@ -1,27 +1,27 @@
 """
 Automatically run tests for this library.
-Simply execute
-    python test.py
+Run tests from imgaug/ via
+    python -m test.test
 
 """
 from __future__ import print_function, division, absolute_import
 
 import time
 
-import test_imgaug
-import test_parameters
-from augmenters import test_arithmetic
-from augmenters import test_blur
-from augmenters import test_color
-from augmenters import test_contrast
-from augmenters import test_convolutional
-from augmenters import test_flip
-from augmenters import test_geometric
-from augmenters import test_meta
-from augmenters import test_mixed_files
-from augmenters import test_overlay
-from augmenters import test_segmentation
-from augmenters import test_size
+from . import test_imgaug
+from . import test_parameters
+from .augmenters import test_arithmetic
+from .augmenters import test_blur
+from .augmenters import test_color
+from .augmenters import test_contrast
+from .augmenters import test_convolutional
+from .augmenters import test_flip
+from .augmenters import test_geometric
+from .augmenters import test_meta
+from .augmenters import test_mixed_files
+from .augmenters import test_overlay
+from .augmenters import test_segmentation
+from .augmenters import test_size
 
 
 def main():

@@ -12,7 +12,7 @@ import scipy
 
 import imgaug as ia
 from imgaug import parameters as iap
-from utils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
+from .utils import reseed
 
 
 def main():

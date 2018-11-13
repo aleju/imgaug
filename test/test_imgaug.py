@@ -11,7 +11,7 @@ import shapely
 import shapely.geometry
 
 import imgaug as ia
-from utils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
+from .utils import reseed
 
 
 def main():
