@@ -2438,8 +2438,6 @@ class Rot90(meta.Augmenter):
                 h_aug, w_aug = (h, w) if (k_i % 2) == 0 else (w, h)
                 for kp in kpsoi_i.keypoints:
                     y, x = kp.y, kp.x
-                    #for _ in range(k_i):
-                    #    y, x = w - x, y
                     y_diff = abs(h - y)
                     x_diff = abs(w - x)
                     if k_i == 1:
@@ -2455,7 +2453,6 @@ class Rot90(meta.Augmenter):
                         x_aug = y_diff
                         y_aug = h_aug - x_diff
                     kps_aug.append(ia.Keypoint(x=x_aug, y=y_aug))
-                    #kps_aug.append(ia.Keypoint(x=x, y=y))
 
                 shape_aug = tuple([h_aug, w_aug] + list(kpsoi_i.shape[2:]))
                 kpsoi_i_aug = ia.KeypointsOnImage(kps_aug, shape=shape_aug)

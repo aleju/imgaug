@@ -10,7 +10,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from utils import keypoints_equal, reseed
+from imgaug.testutils import keypoints_equal, reseed
 
 
 def main():

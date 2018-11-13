@@ -9,7 +9,7 @@ import six.moves as sm
 
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from utils import reseed
+from imgaug.testutils import reseed
 
 
 def main():

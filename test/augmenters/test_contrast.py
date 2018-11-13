@@ -14,7 +14,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug.augmenters import contrast as contrast_lib
-from utils import keypoints_equal, reseed
+from imgaug.testutils import keypoints_equal, reseed
 
 
 def main():

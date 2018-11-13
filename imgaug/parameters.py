@@ -460,9 +460,17 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
             ax.set_title("\n".join(title_fragments))
         fig.tight_layout(pad=0)
         fig.canvas.draw()
-        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
+        # This seems to be an older style to get the image out of matplotlib:
+        # data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        # data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
+        # This seems to be the newer style to do that:
+        data = np.array(fig.canvas.renderer._renderer)
+        data = data[:, :, :3]  # matplotlib returns RGBA, for legacy reasons we remove the A here
+
         plt.close()
+
         return data
 
 

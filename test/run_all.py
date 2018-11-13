@@ -1,7 +1,10 @@
 """
 Automatically run tests for this library.
-Run tests from imgaug/ via
-    python test/test.py
+Run tests via
+    python run_all.py
+
+or alternatively:
+    python -m pytest ./ --verbose --doctest-modules
 
 """
 from __future__ import print_function, division, absolute_import

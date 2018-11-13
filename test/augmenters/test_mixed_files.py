@@ -10,7 +10,7 @@ import skimage.data
 
 import imgaug as ia
 from imgaug import augmenters as iaa
-from utils import create_random_images, array_equal_lists, keypoints_equal, reseed
+from imgaug.testutils import create_random_images, array_equal_lists, keypoints_equal, reseed
 
 
 def main():

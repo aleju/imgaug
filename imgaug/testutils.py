@@ -1,14 +1,10 @@
-from __future__ import print_function, division, absolute_import
+"""
+Some utility functions that are only used for unittests.
+Placing them in test/ directory seems to be agains convention, so they are part of the library.
 
 """
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "imgaug")))
-"""
+from __future__ import print_function, division
 
-# fix execution of tests involving matplotlib on travis
-import matplotlib
-matplotlib.use('Agg')
 import random
 
 import numpy as np
@@ -23,10 +19,10 @@ def create_random_images(size):
 
 def create_random_keypoints(size_images, nb_keypoints_per_img):
     result = []
-    for i in sm.xrange(size_images[0]):
+    for _ in sm.xrange(size_images[0]):
         kps = []
         height, width = size_images[1], size_images[2]
-        for i in sm.xrange(nb_keypoints_per_img):
+        for _ in sm.xrange(nb_keypoints_per_img):
             x = np.random.randint(0, width-1)
             y = np.random.randint(0, height-1)
             kps.append(ia.Keypoint(x=x, y=y))
@@ -35,8 +31,8 @@ def create_random_keypoints(size_images, nb_keypoints_per_img):
 
 
 def array_equal_lists(list1, list2):
-    assert isinstance(list1, list)
-    assert isinstance(list2, list)
+    ia.do_assert(isinstance(list1, list))
+    ia.do_assert(isinstance(list2, list))
 
     if len(list1) != len(list2):
         return False

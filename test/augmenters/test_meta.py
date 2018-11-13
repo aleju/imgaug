@@ -12,7 +12,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from utils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
+from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
 
 
 def main():
