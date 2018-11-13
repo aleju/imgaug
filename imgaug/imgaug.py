@@ -55,6 +55,11 @@ DEFAULT_FONT_FP = os.path.join(
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
 
+NP_FLOAT_TYPES = set(np.sctypes["float"])
+NP_INT_TYPES = set(np.sctypes["int"])
+NP_UINT_TYPES = set(np.sctypes["uint"])
+
+
 def is_np_array(val):
     """
     Checks whether a variable is a numpy array.
@@ -4866,13 +4871,15 @@ class SegmentationMapOnImage(object):
     ]
 
     def __init__(self, arr, shape, nb_classes=None):
+        do_assert(is_np_array(arr), "Expected to get numpy array, got %s." % (type(arr),))
+
         if arr.dtype.type == np.bool_:
             do_assert(arr.ndim in [2, 3])
             self.input_was = ("bool", arr.ndim)
             if arr.ndim == 2:
                 arr = arr[..., np.newaxis]
             arr = arr.astype(np.float32)
-        elif arr.dtype.type in [np.uint8, np.uint32, np.int8, np.int16, np.int32]:
+        elif arr.dtype.type in NP_INT_TYPES.union(NP_UINT_TYPES):
             do_assert(arr.ndim == 2 or (arr.ndim == 3 and arr.shape[2] == 1))
             do_assert(nb_classes is not None)
             do_assert(nb_classes > 0)
@@ -4885,14 +4892,14 @@ class SegmentationMapOnImage(object):
             # present in the image. This would also get rid of nb_classes.
             arr = np.eye(nb_classes)[arr]  # from class indices to one hot
             arr = arr.astype(np.float32)
-        elif arr.dtype.type in [np.float16, np.float32]:
+        elif arr.dtype.type in NP_FLOAT_TYPES:
             do_assert(arr.ndim == 3)
             self.input_was = ("float", arr.dtype.type, arr.ndim)
             arr = arr.astype(np.float32)
         else:
-            dt = str(arr.dtype) if is_np_array(arr) else "<no ndarray>"
-            raise Exception("Input was expected to be an ndarray of dtype bool, uint8, uint32 "
-                            "int8, int16, int32 or float32. Got type %s with dtype %s." % (type(arr), dt))
+            raise Exception(("Input was expected to be an ndarray of dtype bool or any dtype in %s or any dtype in %s. "
+                             "Got dtype %s.") % (
+                                str(NP_INT_TYPES.union(NP_UINT_TYPES)), str(NP_FLOAT_TYPES), str(arr.dtype)))
         do_assert(arr.ndim == 3)
         do_assert(arr.dtype.type == np.float32)
         self.arr = arr

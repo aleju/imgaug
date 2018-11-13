@@ -13,8 +13,6 @@ import matplotlib.pyplot as plt
 from . import imgaug as ia
 from .external.opensimplex import OpenSimplex
 
-NP_FLOAT_TYPES = set(np.sctypes["float"])
-
 
 def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
     def check_value_range(v):
@@ -171,15 +169,15 @@ def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice
 
 
 def force_np_float_dtype(val):
-    if val.dtype.type in NP_FLOAT_TYPES:
+    if val.dtype.type in ia.NP_FLOAT_TYPES:
         return val
     else:
         return val.astype(np.float64)
 
 
 def both_np_float_if_one_is_float(a, b):
-    a_f = a.dtype.type in NP_FLOAT_TYPES
-    b_f = b.dtype.type in NP_FLOAT_TYPES
+    a_f = a.dtype.type in ia.NP_FLOAT_TYPES
+    b_f = b.dtype.type in ia.NP_FLOAT_TYPES
     if a_f and b_f:
         return a, b
     elif a_f:
