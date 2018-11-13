@@ -59,6 +59,8 @@ NP_FLOAT_TYPES = set(np.sctypes["float"])
 NP_INT_TYPES = set(np.sctypes["int"])
 NP_UINT_TYPES = set(np.sctypes["uint"])
 
+IMSHOW_BACKEND_DEFAULT = "matplotlib"
+
 
 def is_np_array(val):
     """
@@ -1370,7 +1372,7 @@ def show_grid(images, rows=None, cols=None):
     imshow(grid)
 
 
-def imshow(image):
+def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
     """
     Shows an image in a window.
 
@@ -1379,16 +1381,27 @@ def imshow(image):
     image : (H,W,3) ndarray
         Image to show.
 
-    """
-    image_bgr = image
-    if image.ndim == 3 and image.shape[2] in [3, 4]:
-        image_bgr = image[..., 0:3][..., ::-1]
+    backend : {'matplotlib', 'cv2'}, optional
+        Library to use to show the image. May be either matplotlib or OpenCV ('cv2').
+        OpenCV tends to be faster, but apparently causes more technical issues.
 
-    win_name = "imgaug-default-window"
-    cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-    cv2.imshow(win_name, image_bgr)
-    cv2.waitKey(0)
-    cv2.destroyWindow(win_name)
+    """
+    do_assert(backend in ["matplotlib", "cv2"], "Expected backend 'matplotlib' or 'cv2', got %s." % (backend,))
+
+    if backend == "cv2":
+        image_bgr = image
+        if image.ndim == 3 and image.shape[2] in [3, 4]:
+            image_bgr = image[..., 0:3][..., ::-1]
+
+        win_name = "imgaug-default-window"
+        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+        cv2.imshow(win_name, image_bgr)
+        cv2.waitKey(0)
+        cv2.destroyWindow(win_name)
+    else:
+        plt.imshow(image)
+        plt.gcf().canvas.set_window_title("imgaug.imshow(%s)" % (image.shape,))
+        plt.show()
 
 
 def do_assert(condition, message="Assertion failed."):
