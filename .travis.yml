@@ -43,8 +43,8 @@ before_script:
 
 script:
   #- python test/test.py
-  - pytest ./test --verbose --doctest-modules
-  - coverage run --source imgaug --omit ./imgaug -m pytest ./test --verbose --doctest-modules
+  - python -m pytest ./test --verbose --doctest-modules --ignore="test/run_all.py"
+  - coverage run --source imgaug --omit ./imgaug -m pytest ./test --verbose --doctest-modules --ignore="test/run_all.py"
   #- nosetests test/test.py -v --exe --with-doctest --with-xunit --with-coverage --cover-package=imgaug
 
 
