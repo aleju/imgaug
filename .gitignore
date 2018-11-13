@@ -4,12 +4,14 @@
 *.bak
 *.lprof
 reinstall.sh
+reinstall_conda.sh
 todo.txt
 pypi-install-guide.txt
 checks/bb_aug.jpg
 checks/elastic_transformations.jpg
 imgaug/parameters-testcode.py
 imgaug/bak/*
+imgaug/quokka_depth_map.xcf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
