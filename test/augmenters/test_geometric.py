@@ -1,8 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import time
 
 import matplotlib
@@ -13,7 +10,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from utils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
+from utils import array_equal_lists, keypoints_equal, reseed
 
 
 def main():

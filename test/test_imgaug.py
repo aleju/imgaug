@@ -11,7 +11,8 @@ import shapely
 import shapely.geometry
 
 import imgaug as ia
-from .utils import reseed
+#from .utils import reseed
+from utils import reseed
 
 
 def main():

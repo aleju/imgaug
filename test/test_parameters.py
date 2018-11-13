@@ -12,7 +12,7 @@ import scipy
 
 import imgaug as ia
 from imgaug import parameters as iap
-from .utils import reseed
+from utils import reseed
 
 
 def main():

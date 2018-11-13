@@ -42,14 +42,13 @@ before_script:
   #- flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
 script:
-  - python -m test.test
-  - coverage run --source imgaug --omit ./imgaug -m pytest test/test.py --verbose --doctest-modules
+  - python test/test.py
+  #- coverage run --source imgaug --omit ./imgaug -m pytest test/test.py --verbose --doctest-modules
 #  - nosetests test/test.py -v --exe --with-doctest --with-xunit --with-coverage --cover-package=imgaug
 
 
-after_success:
-#  - codecov -t 1be5afbb-64c5-40e0-a31d-9661518c0fd4
-  - codecov -t feeff9b2-3750-4246-befb-8cde60dc28aa
-  - coverage xml
-  - python-codacy-coverage -r coverage.xml
-  - coverage report
+#after_success:
+#  - codecov -t feeff9b2-3750-4246-befb-8cde60dc28aa
+#  - coverage xml
+#  - python-codacy-coverage -r coverage.xml
+#  - coverage report

@@ -1,28 +1,20 @@
 from __future__ import print_function, division, absolute_import
 
+"""
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "imgaug")))
+"""
+
 # fix execution of tests involving matplotlib on travis
 import matplotlib
 matplotlib.use('Agg')
+import random
+
+import numpy as np
+import six.moves as sm
 
 import imgaug as ia
-from imgaug import augmenters as iaa
-from imgaug import parameters as iap
-from imgaug.augmenters import contrast as contrast_lib
-import numpy as np
-import random
-import six.moves as sm
-import skimage
-import skimage.data
-import cv2
-import time
-import scipy
-import copy
-import warnings
-import itertools
-import shapely
-import shapely.geometry
-
-#from nose.plugins.attrib import attr
 
 
 def create_random_images(size):
