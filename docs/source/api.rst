@@ -10,6 +10,7 @@ API
    api_augmenters_arithmetic
    api_augmenters_blur
    api_augmenters_color
+   api_augmenters_contrast
    api_augmenters_convolutional
    api_augmenters_flip
    api_augmenters_geometric

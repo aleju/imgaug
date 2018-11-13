@@ -20,29 +20,31 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import parameters as iap
+
 import numpy as np
 import six.moves as sm
 
-from .meta import Augmenter
+from . import meta
+from .. import parameters as iap
 
-class Fliplr(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images horizontally.
 
     Parameters
     ----------
-    p : number or StochasticParameter, optional(default=0)
+    p : number or imgaug.parameters.StochasticParameter, optional
         Probability of each image to get flipped.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -94,23 +96,23 @@ class Fliplr(Augmenter): # pylint: disable=locally-disabled, unused-variable, li
         return [self.p]
 
 
-class Flipud(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
 
     Parameters
     ----------
-    p : number or StochasticParameter, optional(default=0)
+    p : number or imgaug.parameters.StochasticParameter, optional
         Probability of each image to get flipped.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

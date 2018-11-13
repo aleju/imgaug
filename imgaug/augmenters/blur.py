@@ -22,42 +22,44 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 import numpy as np
 from scipy import ndimage
 import cv2
 import six.moves as sm
 
-from .meta import Augmenter
+from . import meta
+from .. import imgaug as ia
+from .. import parameters as iap
 
-class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to blur images using gaussian kernels.
 
     Parameters
     ----------
-    sigma : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
+    sigma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Standard deviation of the gaussian kernel.
-        Values in the range 0.0 (no blur) to 3.0 (strong blur) are common.
+        Values in the range ``0.0`` (no blur) to ``3.0`` (strong blur) are common.
 
             * If a single float, that value will always be used as the standard
               deviation.
-            * If a tuple (a, b), then a random value from the range a <= x <= b
+            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
               will be picked per image.
             * If a list, then a random value will be sampled per image from
               that list.
-            * If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images.
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -68,15 +70,16 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
     >>> aug = iaa.GaussianBlur(sigma=(0.0, 3.0))
 
     blurs images using a gaussian kernel with a random standard deviation
-    from the range 0.0 <= x <= 3.0. The value is sampled per image.
+    from the range ``0.0 <= x <= 3.0``. The value is sampled per image.
 
     """
 
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
-        self.eps = 0.001 # epsilon value to estimate whether sigma is above 0
+        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True,
+                                                 list_to_choice=True)
+        self.eps = 0.001  # epsilon value to estimate whether sigma is sufficently above 0 to apply the blur
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -103,51 +106,56 @@ class GaussianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variab
     def get_parameters(self):
         return [self.sigma]
 
-class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing simple means over neighbourhoods.
 
     Parameters
     ----------
-    k : int or tuple of two ints or tuple of each one/two ints or StochasticParameter or tuple of two StochasticParameter, optional
+    k : int or tuple of int or tuple of tuple of int or imgaug.parameters.StochasticParameter\
+        or tuple of StochasticParameter, optional
         Kernel size to use.
 
             * If a single int, then that value will be used for the height
               and width of the kernel.
-            * If a tuple of two ints `(a, b)`, then the kernel size will be
-              sampled from the interval `[a..b]`.
-            * If a StochasticParameter, then `N` samples will be drawn from
-              that parameter per `N` input images, each representing the kernel
+            * If a tuple of two ints ``(a, b)``, then the kernel size will be
+              sampled from the interval ``[a..b]``.
+            * If a tuple of two tuples of ints ``((a, b), (c, d))``, then per image
+              a random kernel height will be sampled from the interval ``[a..b]``
+              and a random kernel width will be sampled from the interval ``[c..d]``.
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images, each representing the kernel
               size for the nth image.
-            * If a tuple `(a, b)`, where either `a` or `b` is a tuple, then `a`
-              and `b` will be treated according to the rules above. This leads
+            * If a tuple ``(a, b)``, where either ``a`` or ``b`` is a tuple, then ``a``
+              and ``b`` will be treated according to the rules above. This leads
               to different values for height and width of the kernel.
 
-    name : string, optional
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See `Augmenter.__init__()`
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or np.random.RandomState, optional
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
     >>> aug = iaa.AverageBlur(k=5)
 
-    Blurs all images using a kernel size of 5x5.
+    Blurs all images using a kernel size of ``5x5``.
 
     >>> aug = iaa.AverageBlur(k=(2, 5))
 
     Blurs images using a varying kernel size per image, which is sampled
-    from the interval [2..5].
+    from the interval ``[2..5]``.
 
     >>> aug = iaa.AverageBlur(k=((5, 7), (1, 3)))
 
     Blurs images using a varying kernel size per image, which's height
-    is sampled from the interval [5..7] and which's width is sampled
-    from [1..3].
+    is sampled from the interval ``[5..7]`` and which's width is sampled
+    from ``[1..3]``.
 
     """
 
@@ -200,7 +208,6 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
             )
         for i in sm.xrange(nb_images):
             kh, kw = samples[0][i], samples[1][i]
-            #print(images.shape, result.shape, result[i].shape)
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
             if not kernel_impossible and not kernel_does_nothing:
@@ -220,8 +227,8 @@ class AverageBlur(Augmenter): # pylint: disable=locally-disabled, unused-variabl
     def get_parameters(self):
         return [self.k]
 
-# TODO tests
-class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+
+class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing median values over neighbourhoods.
 
@@ -230,52 +237,54 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
 
     Parameters
     ----------
-    k : int or tuple of two int or list of int or StochasticParameter, optional(default=1)
-        Kernel
-        size.
+    k : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Kernel size.
 
             * If a single int, then that value will be used for the height and
               width of the kernel. Must be an odd value.
-            * If a tuple of two ints (a, b), then the kernel size will be an
-              odd value sampled from the interval [a..b]. a and b must both
+            * If a tuple of two ints ``(a, b)``, then the kernel size will be an
+              odd value sampled from the interval ``[a..b]``. ``a`` and ``b`` must both
               be odd values.
             * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images, each representing the kernel
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images, each representing the kernel
               size for the nth image. Expected to be discrete. If a sampled
               value is not odd, then that value will be increased by 1.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
     >>> aug = iaa.MedianBlur(k=5)
 
-    blurs all images using a kernel size of 5x5.
+    blurs all images using a kernel size of ``5x5``.
 
     >>> aug = iaa.MedianBlur(k=(3, 7))
 
     blurs images using a varying kernel size per image, which is
-    and odd value sampled from the interval [3..7], i.e. 3 or 5 or 7.
+    and odd value sampled from the interval ``[3..7]``, i.e. 3 or 5 or 7.
 
     """
 
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True,
+                                           allow_floats=False)
         if ia.is_single_integer(k):
             ia.do_assert(k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),))
         elif ia.is_iterable(k):
-            ia.do_assert(all([ki % 2 != 0 for ki in k]), "Expected all values in iterable k to be odd, but at least one was not. Add or subtract 1 to/from that value.")
+            ia.do_assert(all([ki % 2 != 0 for ki in k]),
+                         "Expected all values in iterable k to be odd, but at least one was not. "
+                         + "Add or subtract 1 to/from that value.")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -302,8 +311,9 @@ class MedianBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable
     def get_parameters(self):
         return [self.k]
 
+
 # TODO tests
-class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-variable, line-too-long
+class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur/Denoise an image using a bilateral filter.
 
@@ -315,58 +325,58 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
 
     Parameters
     ----------
-    d : int or tuple of two int or list of int or StochasticParameter, optional(default=1)
-        Diameter of each pixel neighborhood with value range [1 .. inf).
+    d : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Diameter of each pixel neighborhood with value range ``[1 .. inf)``.
         High values for d lead to significantly worse performance. Values
-        equal or less than 10 seem to be good. Use <5 for real-time
+        equal or less than 10 seem to be good. Use ``<5`` for real-time
         applications.
 
             * If a single int, then that value will be used for the diameter.
-            * If a tuple of two ints (a, b), then the diameter will be a
-              value sampled from the interval [a..b].
+            * If a tuple of two ints ``(a, b)``, then the diameter will be a
+              value sampled from the interval ``[a..b]``.
             * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images, each representing the diameter
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images, each representing the diameter
               for the nth image. Expected to be discrete.
 
-    sigma_color : number or tuple of two number or list of number or StochasticParameter, optional(default=(10, 250))
+    sigma_color : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Filter sigma in the color space with value range [1, inf). A larger value
         of the parameter means that farther colors within the pixel neighborhood
         (see sigma_space) will be mixed together, resulting in larger areas of
         semi-equal color.
 
             * If a single int, then that value will be used for the diameter.
-            * If a tuple of two ints (a, b), then the diameter will be a
-              value sampled from the interval [a, b].
+            * If a tuple of two ints ``(a, b)``, then the diameter will be a
+              value sampled from the interval ``[a, b]``.
             * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images, each representing the diameter
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images, each representing the diameter
               for the nth image. Expected to be discrete.
 
-    sigma_space : number or tuple of two number or list of number or StochasticParameter, optional(default=(10, 250))
-        Filter sigma in the coordinate space with value range [1, inf). A larger value
+    sigma_space : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Filter sigma in the coordinate space with value range ``[1, inf)``. A larger value
         of the parameter means that farther pixels will influence each other as long as
         their colors are close enough (see sigma_color).
 
             * If a single int, then that value will be used for the diameter.
-            * If a tuple of two ints (a, b), then the diameter will be a
-              value sampled from the interval [a, b].
+            * If a tuple of two ints ``(a, b)``, then the diameter will be a
+              value sampled from the interval ``[a, b]``.
             * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images, each representing the diameter
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images, each representing the diameter
               for the nth image. Expected to be discrete.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -377,12 +387,16 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
 
     """
 
-    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250), name=None, deterministic=False, random_state=None):
+    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250), name=None, deterministic=False,
+                 random_state=None):
         super(BilateralBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.d = iap.handle_discrete_param(d, "d", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
-        self.sigma_color = iap.handle_continuous_param(sigma_color, "sigma_color", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True)
-        self.sigma_space = iap.handle_continuous_param(sigma_space, "sigma_space", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True)
+        self.d = iap.handle_discrete_param(d, "d", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True,
+                                           allow_floats=False)
+        self.sigma_color = iap.handle_continuous_param(sigma_color, "sigma_color", value_range=(1, None),
+                                                       tuple_to_uniform=True, list_to_choice=True)
+        self.sigma_space = iap.handle_continuous_param(sigma_space, "sigma_space", value_range=(1, None),
+                                                       tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -392,7 +406,8 @@ class BilateralBlur(Augmenter): # pylint: disable=locally-disabled, unused-varia
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
         for i in sm.xrange(nb_images):
-            ia.do_assert(images[i].shape[2] == 3, "BilateralBlur can currently only be applied to images with 3 channels.")
+            ia.do_assert(images[i].shape[2] == 3,
+                         "BilateralBlur can currently only be applied to images with 3 channels.")
             di = samples_d[i]
             sigma_color_i = samples_sigma_color[i]
             sigma_space_i = samples_sigma_space[i]

@@ -32,8 +32,7 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 from PIL import Image
 import imageio
 import tempfile
@@ -41,40 +40,40 @@ import numpy as np
 import six.moves as sm
 
 from . import meta
-from .meta import Augmenter
+from .. import imgaug as ia
+from .. import parameters as iap
 
-# TODO tests
-class Add(Augmenter):
+
+class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
 
     Parameters
     ----------
-    value : int or tuple of two ints or list of ints or StochasticParameter, optional(default=0)
-        Value to add to all
-        pixels.
+    value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to all pixels.
 
             * If an int, then that value will be used for all images.
-            * If a tuple (a, b), then a value from the discrete range [a .. b]
+            * If a tuple ``(a, b)``, then a value from the discrete range ``[a .. b]``
               will be used.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image
               from that parameter.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -84,12 +83,12 @@ class Add(Augmenter):
 
     >>> aug = iaa.Add((-10, 10))
 
-    adds a value from the discrete range [-10 .. 10] to all pixels of
+    adds a value from the discrete range ``[-10 .. 10]`` to all pixels of
     the input images. The exact value is sampled per image.
 
     >>> aug = iaa.Add((-10, 10), per_channel=True)
 
-    adds a value from the discrete range [-10 .. 10] to all pixels of
+    adds a value from the discrete range ``[-10 .. 10]`` to all pixels of
     the input images. The exact value is sampled per image AND channel,
     i.e. to a red-channel it might add 5 while subtracting 7 from the
     blue channel of the same image.
@@ -105,7 +104,8 @@ class Add(Augmenter):
                  deterministic=False, random_state=None):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
+                                               list_to_choice=True, allow_floats=False)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -146,43 +146,41 @@ class Add(Augmenter):
     def get_parameters(self):
         return [self.value, self.per_channel]
 
-# TODO tests
-class AddElementwise(Augmenter):
+
+class AddElementwise(meta.Augmenter):
     """
-    Add values to the pixels of images with possibly different values
-    for neighbouring pixels.
+    Add values to the pixels of images with possibly different values for neighbouring pixels.
 
     While the Add Augmenter adds a constant value per image, this one can
     add different values (sampled per pixel).
 
     Parameters
     ----------
-    value : int or tuple of two int or list of int or StochasticParameter, optional(default=0)
-        Value to add to the
-        pixels.
+    value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to the pixels.
 
             * If an int, then that value will be used for all images.
-            * If a tuple (a, b), then values from the discrete range [a .. b]
+            * If a tuple ``(a, b)``, then values from the discrete range ``[a .. b]``
               will be sampled.
             * If a list of integers, a random value will be sampled from the list
               per image.
             * If a StochasticParameter, then values will be sampled per pixel
               (and possibly channel) from that parameter.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -192,13 +190,13 @@ class AddElementwise(Augmenter):
 
     >>> aug = iaa.AddElementwise((-10, 10))
 
-    samples per pixel a value from the discrete range [-10 .. 10] and
+    samples per pixel a value from the discrete range ``[-10 .. 10]`` and
     adds that value to the pixel.
 
     >>> aug = iaa.AddElementwise((-10, 10), per_channel=True)
 
     samples per pixel *and channel* a value from the discrete
-    range [-10 .. 10] ands adds it to the pixel's value. Therefore,
+    range ``[-10 .. 10]`` ands adds it to the pixel's value. Therefore,
     added values may differ between channels of the same pixel.
 
     >>> aug = iaa.AddElementwise((-10, 10), per_channel=0.5)
@@ -211,7 +209,8 @@ class AddElementwise(Augmenter):
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
+                                               list_to_choice=True, allow_floats=False)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -227,7 +226,9 @@ class AddElementwise(Augmenter):
             rs_image = ia.new_random_state(seed)
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel == 1:
-                samples = self.value.draw_samples((height, width, nb_channels), random_state=rs_image).astype(image.dtype)
+                samples = self.value\
+                    .draw_samples((height, width, nb_channels), random_state=rs_image)\
+                    .astype(image.dtype)
             else:
                 samples = self.value.draw_samples((height, width, 1), random_state=rs_image).astype(image.dtype)
                 samples = np.tile(samples, (1, 1, nb_channels))
@@ -249,93 +250,87 @@ class AddElementwise(Augmenter):
     def get_parameters(self):
         return [self.value, self.per_channel]
 
+
 def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Add gaussian noise (aka white noise) to images.
 
     Parameters
     ----------
-    loc : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
-        Mean of the normal distribution that generates the
-        noise.
+    loc : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Mean of the normal distribution that generates the noise.
 
             * If a number, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list per
               image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    scale : number or tuple of two number or list of number or StochasticParameter, optional(default=0)
-        Standard deviation of the normal distribution that generates the
-        noise.  Must be >= 0. If 0 then only `loc` will be used.
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Standard deviation of the normal distribution that generates the noise.
+        Must be ``>= 0``. If 0 then only `loc` will be used.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list per
               image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same noise value per pixel for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
     >>> aug = iaa.GaussianNoise(scale=0.1*255)
 
-    adds gaussian noise from the distribution N(0, 0.1*255) to images.
+    adds gaussian noise from the distribution ``N(0, 0.1*255)`` to images.
 
     >>> aug = iaa.GaussianNoise(scale=(0, 0.1*255))
 
-    adds gaussian noise from the distribution N(0, s) to images,
-    where s is sampled per image from the range 0 <= s <= 0.1*255.
+    adds gaussian noise from the distribution ``N(0, s)`` to images,
+    where s is sampled per image from the range ``0 <= s <= 0.1*255``.
 
     >>> aug = iaa.GaussianNoise(scale=0.1*255, per_channel=True)
 
-    adds gaussian noise from the distribution N(0, 0.1*255) to images,
+    adds gaussian noise from the distribution ``N(0, 0.1*255)`` to images,
     where the noise value is different per pixel *and* channel (e.g. a
     different one for red, green and blue channels for the same pixel).
 
     >>> aug = iaa.GaussianNoise(scale=0.1*255, per_channel=0.5)
 
-    adds gaussian noise from the distribution N(0, 0.1*255) to images,
+    adds gaussian noise from the distribution ``N(0, 0.1*255)`` to images,
     where the noise value is sometimes (50 percent of all cases) the same
     per pixel for all channels and sometimes different (other 50 percent).
 
     """
     loc2 = iap.handle_continuous_param(loc, "loc", value_range=None, tuple_to_uniform=True, list_to_choice=True)
-    scale2 = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    scale2 = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+                                         list_to_choice=True)
 
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return AddElementwise(iap.Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
-
-# TODO
-#class MultiplicativeGaussianNoise(Augmenter):
-#    pass
-
-# TODO
-#class ReplacingGaussianNoise(Augmenter):
-#    pass
+    return AddElementwise(iap.Normal(loc=loc2, scale=scale2), per_channel=per_channel, name=name,
+                          deterministic=deterministic, random_state=random_state)
 
 
-class Multiply(Augmenter):
+class Multiply(meta.Augmenter):
     """
     Multiply all pixels in an image with a specific value.
 
@@ -343,32 +338,30 @@ class Multiply(Augmenter):
 
     Parameters
     ----------
-    mul : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
-        The value with which to multiply the pixel values in each
-        image.
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        The value with which to multiply the pixel values in each image.
 
             * If a number, then that value will always be used.
-            * If a tuple (a, b), then a value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, then a value from the range ``a <= x <= b`` will
               be sampled per image and used for all pixels.
-            * If a list, then a random value will be sampled from that list per
-              image.
+            * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same multiplier per pixel for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -379,7 +372,7 @@ class Multiply(Augmenter):
 
     >>> aug = iaa.Multiply((0.5, 1.5))
 
-    would multiply images by a random value from the range 0.5 <= x <= 1.5,
+    would multiply images by a random value from the range ``0.5 <= x <= 1.5``,
     making some images darker and others brighter.
 
     """
@@ -388,7 +381,8 @@ class Multiply(Augmenter):
                  deterministic=False, random_state=None):
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True,
+                                               list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -429,43 +423,40 @@ class Multiply(Augmenter):
         return [self.mul, self.per_channel]
 
 
-# TODO tests
-class MultiplyElementwise(Augmenter):
+class MultiplyElementwise(meta.Augmenter):
     """
-    Multiply values of pixels with possibly different values
-    for neighbouring pixels.
+    Multiply values of pixels with possibly different values for neighbouring pixels.
 
     While the Multiply Augmenter uses a constant multiplier per image,
     this one can use different multipliers per pixel.
 
     Parameters
     ----------
-    mul : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
-        The value by which to multiply the pixel values in the
-        image.
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        The value by which to multiply the pixel values in the image.
 
             * If a number, then that value will always be used.
-            * If a tuple (a, b), then a value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, then a value from the range ``a <= x <= b`` will
               be sampled per image and pixel.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then that parameter will be used to
               sample a new value per image and pixel.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -476,13 +467,13 @@ class MultiplyElementwise(Augmenter):
 
     >>> aug = iaa.MultiplyElementwise((0.5, 1.5))
 
-    samples per pixel a value from the range 0.5 <= x <= 1.5 and
+    samples per pixel a value from the range ``0.5 <= x <= 1.5`` and
     multiplies the pixel with that value.
 
     >>> aug = iaa.MultiplyElementwise((0.5, 1.5), per_channel=True)
 
     samples per pixel *and channel* a value from the range
-    0.5 <= x <= 1.5 ands multiplies the pixel by that value. Therefore,
+    ``0.5 <= x <= 1.5`` ands multiplies the pixel by that value. Therefore,
     added multipliers may differ between channels of the same pixel.
 
     >>> aug = iaa.AddElementwise((0.5, 1.5), per_channel=0.5)
@@ -495,7 +486,8 @@ class MultiplyElementwise(Augmenter):
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True,
+                                               list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -533,46 +525,45 @@ class MultiplyElementwise(Augmenter):
     def get_parameters(self):
         return [self.mul, self.per_channel]
 
-def Dropout(p=0, per_channel=False, name=None, deterministic=False,
-            random_state=None):
+
+def Dropout(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Augmenter that sets a certain fraction of pixels in images to zero.
 
     Parameters
     ----------
-    p : float or tuple of two float or StochasticParameter, optional(default=0)
-        The probability of any pixel being dropped (i.e. set to
-        zero).
+    p : float or tuple of float or imgaug.parameters.StochasticParameter, optional
+        The probability of any pixel being dropped (i.e. set to zero).
 
             * If a float, then that value will be used for all images. A value
               of 1.0 would mean that all pixels will be dropped and 0.0 that
               no pixels would be dropped. A value of 0.05 corresponds to 5
               percent of all pixels dropped.
-            * If a tuple (a, b), then a value p will be sampled from the
-              range a <= p <= b per image and be used as the pixel's dropout
+            * If a tuple ``(a, b)``, then a value p will be sampled from the
+              range ``a <= p <= b`` per image and be used as the pixel's dropout
               probability.
             * If a StochasticParameter, then this parameter will be used to
               determine per pixel whether it should be dropped (sampled value
               of 0) or shouldn't (sampled value of 1).
               If you instead want to provide the probability as a stochastic
-              parameter, you can usually do `Binomial(1-p)` to convert parameter
-              `p` to a 0/1 representation.
+              parameter, you can usually do ``imgaug.parameters.Binomial(1-p)``
+              to convert parameter `p` to a 0/1 representation.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
         If this value is a float p, then for p percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -583,7 +574,7 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
     >>> aug = iaa.Dropout((0.0, 0.05))
 
     drops in each image a random fraction of all pixels, where the fraction
-    is in the range 0.0 <= x <= 0.05.
+    is in the range ``0.0 <= x <= 0.05``.
 
     >>> aug = iaa.Dropout(0.02, per_channel=True)
 
@@ -612,10 +603,11 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
+    return MultiplyElementwise(p2, per_channel=per_channel, name=name, deterministic=deterministic,
+                               random_state=random_state)
 
-def CoarseDropout(p=0, size_px=None, size_percent=None,
-                  per_channel=False, min_size=4, name=None, deterministic=False,
+
+def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None, deterministic=False,
                   random_state=None):
     """
     Augmenter that sets rectangular areas within images to zero.
@@ -632,69 +624,68 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
 
     Parameters
     ----------
-    p : float or tuple of two float or StochasticParameter, optional(default=0)
-        The probability of any pixel being dropped (i.e. set to
-        zero).
+    p : float or tuple of float or imgaug.parameters.StochasticParameter, optional
+        The probability of any pixel being dropped (i.e. set to zero).
 
             * If a float, then that value will be used for all pixels. A value
               of 1.0 would mean, that all pixels will be dropped. A value of
               0.0 would lead to no pixels being dropped.
-            * If a tuple (a, b), then a value p will be sampled from the
-              range a <= p <= b per image and be used as the pixel's dropout
+            * If a tuple ``(a, b)``, then a value p will be sampled from the
+              range ``a <= p <= b`` per image and be used as the pixel's dropout
               probability.
             * If a StochasticParameter, then this parameter will be used to
               determine per pixel whether it should be dropped (sampled value
               of 0) or shouldn't (sampled value of 1).
 
-    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+    size_px : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the dropout
         mask in absolute pixel dimensions.
 
             * If an integer, then that size will be used for both height and
-              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
-              upsampled to HxW, where H is the image size and W the image width.
-            * If a tuple (a, b), then two values M, N will be sampled from the
-              range [a..b] and the mask will be generated at size MxN, then
-              upsampled to HxW.
+              width. E.g. a value of 3 would lead to a ``3x3`` mask, which is then
+              upsampled to ``HxW``, where ``H`` is the image size and W the image width.
+            * If a tuple ``(a, b)``, then two values ``M``, ``N`` will be sampled from the
+              range ``[a..b]`` and the mask will be generated at size ``MxN``, then
+              upsampled to ``HxW``.
             * If a StochasticParameter, then this parameter will be used to
               determine the sizes. It is expected to be discrete.
 
-    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+    size_percent : float or tuple of float or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the dropout
         mask *in percent* of the input image.
 
             * If a float, then that value will be used as the percentage of the
               height and width (relative to the original size). E.g. for value
-              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
-              to HxW.
-            * If a tuple (a, b), then two values m, n will be sampled from the
-              interval (a, b) and used as the percentages, i.e the mask size
-              will be (m*H)x(n*W).
+              p, the mask will be sampled from ``(p*H)x(p*W)`` and later upsampled
+              to ``HxW``.
+            * If a tuple ``(a, b)``, then two values ``m``, ``n`` will be sampled from the
+              interval ``(a, b)`` and used as the percentages, i.e the mask size
+              will be ``(m*H)x(n*W)``.
             * If a StochasticParameter, then this parameter will be used to
               sample the percentage values. It is expected to be continuous.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    min_size : int, optional(default=4)
+    min_size : int, optional
         Minimum size of the low resolution mask, both width and height. If
         `size_percent` or `size_px` leads to a lower value than this, `min_size`
         will be used instead. This should never have a value of less than 2,
-        otherwise one may end up with a 1x1 low resolution mask, leading easily
+        otherwise one may end up with a ``1x1`` low resolution mask, leading easily
         to the whole image being dropped.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -750,55 +741,56 @@ def CoarseDropout(p=0, size_px=None, size_percent=None,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return MultiplyElementwise(p3, per_channel=per_channel, name=name, deterministic=deterministic, random_state=random_state)
+    return MultiplyElementwise(p3, per_channel=per_channel, name=name, deterministic=deterministic,
+                               random_state=random_state)
 
-class ReplaceElementwise(Augmenter):
+
+class ReplaceElementwise(meta.Augmenter):
     """
     Replace pixels in an image with new values.
 
     Parameters
     ----------
-    mask : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
+    mask : float or tuple of float or list of float or imgaug.parameters.StochasticParameter
         Mask that indicates the pixels that are supposed to be replaced.
         The mask will be thresholded with 0.5. A value of 1 then indicates a
         pixel that is supposed to be replaced.
 
             * If this is a float, then that value will be used as the
               probability of being a 1 per pixel.
-            * If a tuple (a, b), then the probability will be sampled per image
-              from the range a <= x <= b.
+            * If a tuple ``(a, b)``, then the probability will be sampled per image
+              from the range ``a <= x <= b``.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used to
               sample a mask.
 
-    replacement : number or tuple of two number or list of number or StochasticParameter
-        The replacement to use at all locations that are marked as `1` in
-        the mask.
+    replacement : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        The replacement to use at all locations that are marked as `1` in the mask.
 
             * If this is a number, then that value will always be used as the
               replacement.
-            * If a tuple (a, b), then the replacement will be sampled pixelwise
-              from the range a <= x <= b.
+            * If a tuple ``(a, b)``, then the replacement will be sampled pixelwise
+              from the range ``a <= x <= b``.
             * If a list of number, then a random value will be picked from
               that list as the replacement per pixel.
             * If a StochasticParameter, then this parameter will be used sample
               pixelwise replacement values.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -866,21 +858,20 @@ class ReplaceElementwise(Augmenter):
     def get_parameters(self):
         return [self.mask, self.replacement, self.per_channel]
 
+
 def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
-    Adds salt and pepper noise to an image, i.e. some white-ish and black-ish
-    pixels.
+    Adds salt and pepper noise to an image, i.e. some white-ish and black-ish pixels.
 
     Parameters
     ----------
-    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
-        Probability of changing a pixel to salt/pepper
-        noise.
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of changing a pixel to salt/pepper noise.
 
             * If a float, then that value will be used for all images as the
               probability.
-            * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b.
+            * If a tuple ``(a, b)``, then a probability will be sampled per image
+              from the range ``a <= x <= b``.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used as
@@ -888,20 +879,20 @@ def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random
               0.0 and 1.0, where 1.0 means that salt/pepper is to be added
               at that location.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -922,23 +913,21 @@ def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random
         random_state=random_state
     )
 
-def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
-                        per_channel=False, min_size=4, name=None,
+
+def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None,
                         deterministic=False, random_state=None):
     """
-    Adds coarse salt and pepper noise to an image, i.e. rectangles that
-    contain noisy white-ish and black-ish pixels.
+    Adds coarse salt and pepper noise to an image, i.e. rectangles that contain noisy white-ish and black-ish pixels.
 
     Parameters
     ----------
-    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
-        Probability of changing a pixel to salt/pepper
-        noise.
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of changing a pixel to salt/pepper noise.
 
             * If a float, then that value will be used for all images as the
               probability.
-            * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b.
+            * If a tuple ``(a, b)``, then a probability will be sampled per image
+              from the range ``a <= x <= b``.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used as
@@ -946,55 +935,55 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
               0.0 and 1.0, where 1.0 means that salt/pepper is to be added
               at that location.
 
-    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+    size_px : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the noise
         mask in absolute pixel dimensions.
 
             * If an integer, then that size will be used for both height and
-              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
-              upsampled to HxW, where H is the image size and W the image width.
-            * If a tuple (a, b), then two values M, N will be sampled from the
-              range [a..b] and the mask will be generated at size MxN, then
-              upsampled to HxW.
+              width. E.g. a value of 3 would lead to a ``3x3`` mask, which is then
+              upsampled to ``HxW``, where ``H`` is the image size and ``W`` the image width.
+            * If a tuple ``(a, b)``, then two values ``M``, ``N`` will be sampled from the
+              range ``[a..b]`` and the mask will be generated at size ``MxN``, then
+              upsampled to ``HxW``.
             * If a StochasticParameter, then this parameter will be used to
               determine the sizes. It is expected to be discrete.
 
-    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+    size_percent : float or tuple of float or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the noise
         mask *in percent* of the input image.
 
             * If a float, then that value will be used as the percentage of the
               height and width (relative to the original size). E.g. for value
-              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
-              to HxW.
-            * If a tuple (a, b), then two values m, n will be sampled from the
-              interval (a, b) and used as the percentages, i.e the mask size
-              will be (m*H)x(n*W).
+              p, the mask will be sampled from ``(p*H)x(p*W)`` and later upsampled
+              to ``HxW.``
+            * If a tuple ``(a, b)``, then two values ``m``, ``n`` will be sampled from the
+              interval ``(a, b)`` and used as the percentages, i.e the mask size
+              will be ``(m*H)x(n*W)``.
             * If a StochasticParameter, then this parameter will be used to
               sample the percentage values. It is expected to be continuous.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    min_size : int, optional(default=4)
+    min_size : int, optional
         Minimum size of the low resolution mask, both width and height. If
         `size_percent` or `size_px` leads to a lower value than this, `min_size`
         will be used instead. This should never have a value of less than 2,
         otherwise one may end up with a 1x1 low resolution mask, leading easily
         to the whole image being replaced.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1028,20 +1017,20 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
         random_state=random_state
     )
 
+
 def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adds salt noise to an image, i.e. white-ish pixels.
 
     Parameters
     ----------
-    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
-        Probability of changing a pixel to salt
-        noise.
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of changing a pixel to salt noise.
 
             * If a float, then that value will be used for all images as the
               probability.
-            * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b.
+            * If a tuple ``(a, b)``, then a probability will be sampled per image
+              from the range ``a <= x <= b``.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used as
@@ -1049,20 +1038,20 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
               0.0 and 1.0, where 1.0 means that salt is to be added
               at that location.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1082,32 +1071,24 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ReplaceElementwise(
-        mask=p,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    return ReplaceElementwise(mask=p, replacement=replacement, per_channel=per_channel, name=name,
+                              deterministic=deterministic, random_state=random_state)
 
-def CoarseSalt(p=0, size_px=None, size_percent=None,
-               per_channel=False, min_size=4, name=None,
-               deterministic=False, random_state=None):
+
+def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None, deterministic=False,
+               random_state=None):
     """
-    Adds coarse salt noise to an image, i.e. rectangles containing noisy
-    white-ish pixels.
+    Adds coarse salt noise to an image, i.e. rectangles containing noisy white-ish pixels.
 
     Parameters
     ----------
-    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
-        Probability of changing a pixel to salt
-        noise.
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of changing a pixel to salt noise.
 
             * If a float, then that value will be used for all images as the
               probability.
-            * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b.
+            * If a tuple ``(a, b)``, then a probability will be sampled per image
+              from the range ``a <= x <= b``.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used as
@@ -1115,55 +1096,55 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
               0.0 and 1.0, where 1.0 means that salt is to be added
               at that location.
 
-    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+    size_px : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the noise
         mask in absolute pixel dimensions.
 
             * If an integer, then that size will be used for both height and
-              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
-              upsampled to HxW, where H is the image size and W the image width.
-            * If a tuple (a, b), then two values M, N will be sampled from the
-              range [a..b] and the mask will be generated at size MxN, then
-              upsampled to HxW.
+              width. E.g. a value of 3 would lead to a ``3x3`` mask, which is then
+              upsampled to ``HxW``, where H is the image size and W the image width.
+            * If a tuple ``(a, b)``, then two values M, N will be sampled from the
+              range ``[a..b]`` and the mask will be generated at size ``MxN``, then
+              upsampled to ``HxW``.
             * If a StochasticParameter, then this parameter will be used to
               determine the sizes. It is expected to be discrete.
 
-    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+    size_percent : float or tuple of float or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the noise
         mask *in percent* of the input image.
 
             * If a float, then that value will be used as the percentage of the
               height and width (relative to the original size). E.g. for value
-              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
-              to HxW.
-            * If a tuple (a, b), then two values m, n will be sampled from the
-              interval (a, b) and used as the percentages, i.e the mask size
-              will be (m*H)x(n*W).
+              p, the mask will be sampled from ``(p*H)x(p*W)`` and later upsampled
+              to ``HxW``.
+            * If a tuple ``(a, b)``, then two values ``m``, ``n`` will be sampled from the
+              interval ``(a, b)`` and used as the percentages, i.e the mask size
+              will be ``(m*H)x(n*W)``.
             * If a StochasticParameter, then this parameter will be used to
               sample the percentage values. It is expected to be continuous.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    min_size : int, optional(default=4)
+    min_size : int, optional
         Minimum size of the low resolution mask, both width and height. If
         `size_percent` or `size_px` leads to a lower value than this, `min_size`
         will be used instead. This should never have a value of less than 2,
-        otherwise one may end up with a 1x1 low resolution mask, leading easily
+        otherwise one may end up with a ``1x1`` low resolution mask, leading easily
         to the whole image being replaced.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1193,14 +1174,9 @@ def CoarseSalt(p=0, size_px=None, size_percent=None,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    return ReplaceElementwise(mask=mask_low, replacement=replacement, per_channel=per_channel, name=name,
+                              deterministic=deterministic, random_state=random_state)
+
 
 def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
@@ -1210,14 +1186,13 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
 
     Parameters
     ----------
-    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
-        Probability of changing a pixel to pepper
-        noise.
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of changing a pixel to pepper noise.
 
             * If a float, then that value will be used for all images as the
               probability.
-            * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+            * If a tuple ``(a, b)``, then a probability will be sampled per image
+              from the range ``a <= x <= b``.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used as
@@ -1225,20 +1200,20 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
               0.0 and 1.0, where 1.0 means that pepper is to be added
               at that location.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1267,23 +1242,21 @@ def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=
         random_state=random_state
     )
 
-def CoarsePepper(p=0, size_px=None, size_percent=None,
-                 per_channel=False, min_size=4, name=None,
-                 deterministic=False, random_state=None):
+
+def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False, min_size=4, name=None, deterministic=False,
+                 random_state=None):
     """
-    Adds coarse pepper noise to an image, i.e. rectangles that contain
-    noisy black-ish pixels.
+    Adds coarse pepper noise to an image, i.e. rectangles that contain noisy black-ish pixels.
 
     Parameters
     ----------
-    p : float or tuple of two float or list of float or StochasticParameter, optional(default=0)
-        Probability of changing a pixel to pepper
-        noise.
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of changing a pixel to pepper noise.
 
             * If a float, then that value will be used for all images as the
               probability.
-            * If a tuple (a, b), then a probability will be sampled per image
-              from the range a <= x <= b..
+            * If a tuple ``(a, b)``, then a probability will be sampled per image
+              from the range ``a <= x <= b.``
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, then this parameter will be used as
@@ -1291,55 +1264,55 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
               0.0 and 1.0, where 1.0 means that pepper is to be added
               at that location.
 
-    size_px : int or tuple of two ints or StochasticParameter, optional(default=None)
+    size_px : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the noise
         mask in absolute pixel dimensions.
 
             * If an integer, then that size will be used for both height and
-              width. E.g. a value of 3 would lead to a 3x3 mask, which is then
-              upsampled to HxW, where H is the image size and W the image width.
-            * If a tuple (a, b), then two values M, N will be sampled from the
-              range [a..b] and the mask will be generated at size MxN, then
-              upsampled to HxW.
+              width. E.g. a value of 3 would lead to a ``3x3`` mask, which is then
+              upsampled to ``HxW``, where ``H`` is the image size and W the image width.
+            * If a tuple ``(a, b)``, then two values ``M``, ``N`` will be sampled from the
+              range ``[a..b]`` and the mask will be generated at size ``MxN``, then
+              upsampled to ``HxW``.
             * If a StochasticParameter, then this parameter will be used to
               determine the sizes. It is expected to be discrete.
 
-    size_percent : float or tuple of two floats or StochasticParameter, optional(default=None)
+    size_percent : float or tuple of float or imgaug.parameters.StochasticParameter, optional
         The size of the lower resolution image from which to sample the noise
         mask *in percent* of the input image.
 
             * If a float, then that value will be used as the percentage of the
               height and width (relative to the original size). E.g. for value
-              p, the mask will be sampled from (p*H)x(p*W) and later upsampled
-              to HxW.
-            * If a tuple (a, b), then two values m, n will be sampled from the
-              interval (a, b) and used as the percentages, i.e the mask size
-              will be (m*H)x(n*W).
+              p, the mask will be sampled from ``(p*H)x(p*W)`` and later upsampled
+              to ``HxW``.
+            * If a tuple ``(a, b)``, then two values ``m``, ``n`` will be sampled from the
+              interval ``(a, b)`` and used as the percentages, i.e the mask size
+              will be ``(m*H)x(n*W)``.
             * If a StochasticParameter, then this parameter will be used to
               sample the percentage values. It is expected to be continuous.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value (is dropped / is not dropped)
         for all channels of a pixel (False) or to sample a new value for each
         channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    min_size : int, optional(default=4)
+    min_size : int, optional
         Minimum size of the low resolution mask, both width and height. If
         `size_percent` or `size_px` leads to a lower value than this, `min_size`
         will be used instead. This should never have a value of less than 2,
         otherwise one may end up with a 1x1 low resolution mask, leading easily
         to the whole image being replaced.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1378,52 +1351,51 @@ def CoarsePepper(p=0, size_px=None, size_percent=None,
         random_state=random_state
     )
 
-# TODO tests
-class Invert(Augmenter):
+
+class Invert(meta.Augmenter):
     """
     Augmenter that inverts all values in images.
 
     For the standard value range of 0-255 it converts 0 to 255, 255 to 0
-    and 10 to (255-10)=245.
+    and 10 to ``(255-10)=245``.
 
-    Let M be the maximum value possible, m the minimum value possible,
-    v a value. Then the distance of v to m is d=abs(v-m) and the new value
-    is given by v'=M-d.
+    Let ``M`` be the maximum value possible, ``m`` the minimum value possible,
+    ``v`` a value. Then the distance of ``v`` to ``m`` is ``d=abs(v-m)`` and the new value
+    is given by ``v'=M-d``.
 
     Parameters
     ----------
-    p : float or StochasticParameter, optional(default=0)
-        The probability of an image to be
-        inverted.
+    p : float or imgaug.parameters.StochasticParameter, optional
+        The probability of an image to be inverted.
 
             * If a float, then that probability will be used for all images.
             * If a StochasticParameter, then that parameter will queried per
-              image and is expected to return values in the range [0.0, 1.0],
-              where values >0.5 mean that the image/channel is supposed to be
-              inverted. Recommended to be some form of Binomial(...).
+              image and is expected to return values in the range ``[0.0, 1.0]``,
+              where values ``>0.5`` mean that the image/channel is supposed to be
+              inverted. Recommended to be some form of ``imgaug.parameters.Binomial``.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    min_value : int or float, optional(default=0)
-        Minimum of the range of possible pixel values. For uint8 (0-255)
-        images, this should be 0.
+    min_value : int or float, optional
+        Minimum of the range of possible pixel values.
+        For uint8 (0-255) images, this should be 0.
 
-    max_value : int or float, optional(default=255)
-        Maximum of the range of possible pixel values. For uint8 (0-255)
-        images, this should be 255.
+    max_value : int or float, optional
+        Maximum of the range of possible pixel values.
+        For uint8 (0-255) images, this should be 255.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1440,8 +1412,8 @@ class Invert(Augmenter):
 
     """
 
-    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None,
-                 deterministic=False, random_state=None):
+    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None, deterministic=False,
+                 random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.p = iap.handle_probability_param(p, "p")
@@ -1491,39 +1463,40 @@ class Invert(Augmenter):
     def get_parameters(self):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
-# TODO tests
-class ContrastNormalization(Augmenter):
+
+# TODO merge with contrast.LinearContrast
+class ContrastNormalization(meta.Augmenter):
     """
     Augmenter that changes the contrast of images.
 
     Parameters
     ----------
-    alpha : number or tuple of two number or list of number or StochasticParameter, optional(default=1.0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Strength of the contrast normalization. Higher values than 1.0
         lead to higher contrast, lower values decrease the contrast.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value will be sampled per image from
-              the range a <= x <= b and be used as the alpha value.
+            * If a tuple ``(a, b)``, then a value will be sampled per image from
+              the range ``a <= x <= b`` and be used as the alpha value.
             * If a list, then a random value will be sampled per image from
               that list.
             * If a StochasticParameter, then this parameter will be used to
               sample the alpha value per image.
 
-    per_channel : bool or float, optional(default=False)
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (False)
         or to sample a new value for each channel (True).
-        If this value is a float p, then for p percent of all images
+        If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1545,7 +1518,8 @@ class ContrastNormalization(Augmenter):
     def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
+                                                 list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1584,51 +1558,57 @@ class ContrastNormalization(Augmenter):
         return [self.alpha, self.per_channel]
 
 
-class JpegCompression(Augmenter):
+class JpegCompression(meta.Augmenter):
     """
-    Noising an image using a jpeg compression.
+    Degrade image quality by applying JPEG compression to it.
 
-    During saving an image to `jpeg` format user can select quality of image to preserve. The lower quality,
-    the higher compression is used. After image loading/decoding, artifacts caused by the compression can be noticed.
-    For more details, see https://en.wikipedia.org/wiki/Compression_artifact.
+    During JPEG compression, high frequency components (e.g. edges) are removed. With low compression (strength)
+    only the highest frequency components are removed, while very high compression (strength) will lead to only the
+    lowest frequency components "surviving". This lowers the image quality. For more details,
+    see https://en.wikipedia.org/wiki/Compression_artifact.
+
+    Note that this augmenter still returns images as numpy arrays (i.e. saves the images with JPEG compression and
+    then reloads them into arrays). It does not return the raw JPEG file content.
 
     Parameters
     ----------
-    compression : number or tuple of two number or list of number or StochasticParameter
-        Degree of compression using saving to `jpeg` format in range [0, 100]
-        High values for compression cause more artifacts. Standard value for image processing software is default value
-        set to between 50 and 80. At 100 image is unreadable and at 0 no compression is used and the image occupies much
-        more memory.
+    compression : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Degree of compression used during jpeg compression within value range ``[0, 100]``. Higher values denote
+        stronger compression and will cause low-frequency components to disappear. Standard values used when saving
+        images are at around 75 and will usually not degrade image quality very much.
 
             * If a single number, then that value will be used for the compression degree.
-            * If a tuple of two number (a, b), then the compression will be a
-              value sampled from the interval [a..b].
+            * If a tuple of two number ``(a, b)``, then the compression will be a
+              value sampled from the interval ``[a..b]``.
             * If a list, then a random value will be sampled and used as the
               compression per image.
-            * If a StochasticParameter, then N samples will be drawn from
-              that parameter per N input images, each representing the compression
+            * If a StochasticParameter, then ``N`` samples will be drawn from
+              that parameter per ``N`` input images, each representing the compression
               for the nth image. Expected to be discrete.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
     >>> aug = iaa.JpegCompression(compression=(80, 95))
 
-    noises all images using a jpeg compression algorithm with max compression 80 to 95
+    Removes high frquency components in images based on JPEG compression with a compression strength between
+    80 and 95 (randomly sampled per image).
+
     """
     def __init__(self, compression=50, name=None, deterministic=False, random_state=None):
         super(JpegCompression, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         # will be converted to int during augmentation, which is why we allow floats here
-        self.compression = iap.handle_continuous_param(compression, "compression", value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
+        self.compression = iap.handle_continuous_param(compression, "compression", value_range=(0, 100),
+                                                       tuple_to_uniform=True, list_to_choice=True)
 
         # The value range 1 to 95 is suggested by PIL's save() documentation
         # Values above 95 seem to not make sense (no improvement in visual quality, but large file size)

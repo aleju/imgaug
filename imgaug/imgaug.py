@@ -1,24 +1,26 @@
 from __future__ import print_function, division, absolute_import
+
 import random
-import numpy as np
+import math
 import copy
 import numbers
-import cv2
-import math
-import imageio
-import scipy.spatial.distance
 import multiprocessing
 import threading
 import traceback
 import sys
+import os
+import time
+import json
+
+import numpy as np
+import cv2
+import imageio
+import scipy.spatial.distance
 import six
 import six.moves as sm
-import os
 import skimage.draw
 import skimage.measure
 import collections
-import time
-import json
 import matplotlib.pyplot as plt
 import shapely
 import shapely.geometry
@@ -52,15 +54,15 @@ DEFAULT_FONT_FP = os.path.join(
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 
+
 def is_np_array(val):
     """
     Checks whether a variable is a numpy array.
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
@@ -68,10 +70,10 @@ def is_np_array(val):
         True if the variable is a numpy array. Otherwise False.
 
     """
-    # using np.generic here seems to also fire for scalar numpy values even
-    # though those are not arrays
-    #return isinstance(val, (np.ndarray, np.generic))
+    # using np.generic here via isinstance(val, (np.ndarray, np.generic)) seems to also fire for scalar numpy values
+    # even though those are not arrays
     return isinstance(val, np.ndarray)
+
 
 def is_single_integer(val):
     """
@@ -79,17 +81,17 @@ def is_single_integer(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is an integer. Otherwise False.
 
     """
     return isinstance(val, numbers.Integral) and not isinstance(val, bool)
+
 
 def is_single_float(val):
     """
@@ -97,17 +99,17 @@ def is_single_float(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a float. Otherwise False.
 
     """
     return isinstance(val, numbers.Real) and not is_single_integer(val) and not isinstance(val, bool)
+
 
 def is_single_number(val):
     """
@@ -115,17 +117,17 @@ def is_single_number(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a number. Otherwise False.
 
     """
     return is_single_integer(val) or is_single_float(val)
+
 
 def is_iterable(val):
     """
@@ -133,17 +135,17 @@ def is_iterable(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is an iterable. Otherwise False.
 
     """
     return isinstance(val, collections.Iterable)
+
 
 # TODO convert to is_single_string() or rename is_single_integer/float/number()
 def is_string(val):
@@ -152,17 +154,17 @@ def is_string(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a string. Otherwise False.
 
     """
     return isinstance(val, six.string_types)
+
 
 def is_single_bool(val):
     """
@@ -170,17 +172,17 @@ def is_single_bool(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a boolean. Otherwise False.
 
     """
     return type(val) == type(True)
+
 
 def is_integer_array(val):
     """
@@ -188,17 +190,17 @@ def is_integer_array(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a numpy integer array. Otherwise False.
 
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.integer)
+
 
 def is_float_array(val):
     """
@@ -206,17 +208,17 @@ def is_float_array(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a numpy float array. Otherwise False.
 
     """
     return is_np_array(val) and issubclass(val.dtype.type, np.floating)
+
 
 def is_callable(val):
     """
@@ -224,13 +226,12 @@ def is_callable(val):
 
     Parameters
     ----------
-    val : anything
-        The variable to
-        check.
+    val
+        The variable to check.
 
     Returns
     -------
-    out : bool
+    bool
         True if the variable is a callable. Otherwise False.
 
     """
@@ -240,17 +241,19 @@ def is_callable(val):
     else:
         return callable(val)
 
+
 def caller_name():
     """
     Returns the name of the caller, e.g. a function.
 
     Returns
     -------
-    name : str
+    str
         The name of the caller as a string
 
     """
     return sys._getframe(1).f_code.co_name
+
 
 def seed(seedval):
     """
@@ -265,10 +268,11 @@ def seed(seedval):
     Parameters
     ----------
     seedval : int
-        The seed to
-        use.
+        The seed to use.
+
     """
     CURRENT_RANDOM_STATE.seed(seedval)
+
 
 def current_random_state():
     """
@@ -276,11 +280,12 @@ def current_random_state():
 
     Returns
     ----------
-    out : np.random.RandomState
+    numpy.random.RandomState
         The current/global random state.
 
     """
     return CURRENT_RANDOM_STATE
+
 
 def new_random_state(seed=None, fully_random=False):
     """
@@ -288,18 +293,18 @@ def new_random_state(seed=None, fully_random=False):
 
     Parameters
     ----------
-    seed : None or int, optional(default=None)
+    seed : None or int, optional
         Optional seed value to use.
-        The same datatypes are allowed as for np.random.RandomState(seed).
+        The same datatypes are allowed as for ``numpy.random.RandomState(seed)``.
 
-    fully_random : bool, optional(default=False)
+    fully_random : bool, optional
         Whether to use numpy's random initialization for the
         RandomState (used if set to True). If False, a seed is sampled from
         the global random state, which is a bit faster and hence the default.
 
     Returns
     -------
-    out : np.random.RandomState
+    numpy.random.RandomState
         The new random state.
 
     """
@@ -311,17 +316,19 @@ def new_random_state(seed=None, fully_random=False):
             seed = CURRENT_RANDOM_STATE.randint(0, 10**6, 1)[0]
     return np.random.RandomState(seed)
 
+
 def dummy_random_state():
     """
     Returns a dummy random state that is always based on a seed of 1.
 
     Returns
     -------
-    out : np.random.RandomState
+    numpy.random.RandomState
         The new random state.
 
     """
     return np.random.RandomState(1)
+
 
 def copy_random_state(random_state, force_copy=False):
     """
@@ -329,18 +336,17 @@ def copy_random_state(random_state, force_copy=False):
 
     Parameters
     ----------
-    random_state : np.random.RandomState
-        The random state to
-        copy.
+    random_state : numpy.random.RandomState
+        The random state to copy.
 
-    force_copy : bool, optional(default=False)
+    force_copy : bool, optional
         If True, this function will always create a copy of every random
         state. If False, it will not copy numpy's default random state,
         but all other random states.
 
     Returns
     -------
-    rs_copy : np.random.RandomState
+    rs_copy : numpy.random.RandomState
         The copied random state.
 
     """
@@ -352,22 +358,24 @@ def copy_random_state(random_state, force_copy=False):
         rs_copy.set_state(orig_state)
         return rs_copy
 
+
 def derive_random_state(random_state):
     """
     Create a new random states based on an existing random state or seed.
 
     Parameters
     ----------
-    random_state : np.random.RandomState
+    random_state : numpy.random.RandomState
         Random state or seed from which to derive the new random state.
 
     Returns
     -------
-    result : np.random.RandomState
+    numpy.random.RandomState
         Derived random state.
 
     """
     return derive_random_states(random_state, n=1)[0]
+
 
 # TODO use this everywhere instead of manual seed + create
 def derive_random_states(random_state, n=1):
@@ -376,20 +384,21 @@ def derive_random_states(random_state, n=1):
 
     Parameters
     ----------
-    random_state : np.random.RandomState
+    random_state : numpy.random.RandomState
         Random state or seed from which to derive new random states.
 
-    n : int, optional(default=1)
+    n : int, optional
         Number of random states to derive.
 
     Returns
     -------
-    result : list of np.random.RandomState
+    list of numpy.random.RandomState
         Derived random states.
 
     """
-    seed = random_state.randint(0, 10**6, 1)[0]
-    return [new_random_state(seed+i) for i in sm.xrange(n)]
+    seed_ = random_state.randint(0, 10**6, 1)[0]
+    return [new_random_state(seed_+i) for i in sm.xrange(n)]
+
 
 def forward_random_state(random_state):
     """
@@ -399,15 +408,12 @@ def forward_random_state(random_state):
 
     Parameters
     ----------
-    random_state : np.random.RandomState
+    random_state : numpy.random.RandomState
         Random state to forward.
 
     """
     random_state.uniform()
 
-# TODO
-# def from_json(json_str):
-#    pass
 
 def _quokka_normalize_extract(extract):
     """
@@ -415,12 +421,13 @@ def _quokka_normalize_extract(extract):
 
     Parameters
     ----------
-    extract : "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
+    extract : 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
         Unnormalized representation of the image subarea to be extracted.
 
-            * If string "square", then a squared area (x: 0-643, y: 0-643) will be extracted from
-              the image.
-            * If a tuple, then expected to contain four numbers denoting x1, y1, x2 and y2.
+            * If string ``square``, then a squared area ``(x: 0 to max 643, y: 0 to max 643)``
+              will be extracted from the image.
+            * If a tuple, then expected to contain four numbers denoting ``x1``, ``y1``, ``x2``
+              and ``y2``.
             * If a BoundingBox, then that bounding box's area will be extracted from the image.
             * If a BoundingBoxesOnImage, then expected to contain exactly one bounding box
               and a shape matching the full image dimensions (i.e. (643, 960, *)). Then the
@@ -428,7 +435,7 @@ def _quokka_normalize_extract(extract):
 
     Returns
     -------
-    bb : BoundingBox
+    bb : imgaug.BoundingBox
         Normalized representation of the area to extract from the standard quokka image.
 
     """
@@ -439,15 +446,16 @@ def _quokka_normalize_extract(extract):
     elif isinstance(extract, BoundingBox):
         bb = extract
     elif isinstance(extract, BoundingBoxesOnImage):
-        do_assert(len(BoundingBoxesOnImage.bounding_boxes) == 1)
+        do_assert(len(extract.bounding_boxes) == 1)
         do_assert(extract.shape[0:2] == (643, 960))
         bb = extract.bounding_boxes[0]
     else:
         raise Exception(
             "Expected None or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
-            "for parameter 'extract', got %s." % (type(extract),)
+            + "for parameter 'extract', got %s." % (type(extract),)
         )
     return bb
+
 
 def _compute_resized_shape(from_shape, to_shape):
     """
@@ -456,26 +464,27 @@ def _compute_resized_shape(from_shape, to_shape):
     Parameters
     ----------
     from_shape : tuple or ndarray
-        Old shape of the array. Usually expected to be a tuple of form (H, W) or (H, W, C) or
+        Old shape of the array. Usually expected to be a tuple of form ``(H, W)`` or ``(H, W, C)`` or
         alternatively an array with two or three dimensions.
 
     to_shape : None or tuple of ints or tuple of floats or int or float
         New shape of the array.
 
             * If None, then `from_shape` will be used as the new shape.
-            * If an int V, then the new shape will be (V, V, [C]), where C will be added if it
-              is part of from_shape.
-            * If a float V, then the new shape will be (H*V, W*V, [C]), where H and W are the old
+            * If an int ``V``, then the new shape will be ``(V, V, [C])``, where ``C`` will be added if it
+              is part of `from_shape`.
+            * If a float ``V``, then the new shape will be ``(H*V, W*V, [C])``, where ``H`` and ``W`` are the old
               height/width.
-            * If a tuple (H', W', [C']) of ints, then H' and W' will be used as the new height
+            * If a tuple ``(H', W', [C'])`` of ints, then ``H'`` and ``W'`` will be used as the new height
               and width.
-            * If a tuple (H', W', [C']) of floats (except C), then H' and W' will be used as the new height
-              and width.
+            * If a tuple ``(H', W', [C'])`` of floats (except ``C``), then ``H'`` and ``W'`` will
+              be used as the new height and width.
 
     Returns
     -------
     to_shape_computed : tuple of int
         New shape.
+
     """
     if is_np_array(from_shape):
         from_shape = from_shape.shape
@@ -501,9 +510,11 @@ def _compute_resized_shape(from_shape, to_shape):
     elif is_single_integer(to_shape) or is_single_float(to_shape):
         to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
     else:
-        raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int or single float, got %s." % (type(to_shape),))
+        raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int "
+                        + "or single float, got %s." % (type(to_shape),))
 
     return to_shape_computed
+
 
 def quokka(size=None, extract=None):
     """
@@ -511,21 +522,22 @@ def quokka(size=None, extract=None):
 
     Parameters
     ----------
-    size : None or float or tuple of two ints, optional(default=None)
-        Size of the output image. Input into `imgaug.imresize_single_image()`.
-        Usually expected to be a tuple (H, W), where H is the desired height
-        and W is the width. If None, then the image will not be resized.
+    size : None or float or tuple of int, optional
+        Size of the output image. Input into :func:`imgaug.imresize_single_image`.
+        Usually expected to be a tuple ``(H, W)``, where ``H`` is the desired height
+        and ``W`` is the width. If None, then the image will not be resized.
 
-    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
-        Subarea of the quokka image to extract::
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
+        Subarea of the quokka image to extract:
 
             * If None, then the whole image will be used.
-            * If string "square", then a squared area (x: 0-643, y: 0-643) will be extracted from
-              the image.
-            * If a tuple, then expected to contain four numbers denoting x1, y1, x2 and y2.
+            * If string ``square``, then a squared area ``(x: 0 to max 643, y: 0 to max 643)`` will
+              be extracted from the image.
+            * If a tuple, then expected to contain four numbers denoting ``x1``, ``y1``, ``x2``
+              and ``y2``.
             * If a BoundingBox, then that bounding box's area will be extracted from the image.
             * If a BoundingBoxesOnImage, then expected to contain exactly one bounding box
-              and a shape matching the full image dimensions (i.e. (643, 960, *)). Then the
+              and a shape matching the full image dimensions (i.e. ``(643, 960, *)``). Then the
               one bounding box will be used similar to BoundingBox.
 
     Returns
@@ -543,16 +555,17 @@ def quokka(size=None, extract=None):
         img = imresize_single_image(img, shape_resized[0:2])
     return img
 
+
 def quokka_square(size=None):
     """
     Returns an (square) image of a quokka as a numpy array.
 
     Parameters
     ----------
-    size : None or float or tuple of two ints, optional(default=None)
-        Size of the output image. Input into `imgaug.imresize_single_image()`.
-        Usually expected to be a tuple (H, W), where H is the desired height
-        and W is the width. If None, then the image will not be resized.
+    size : None or float or tuple of int, optional
+        Size of the output image. Input into :func:`imgaug.imresize_single_image`.
+        Usually expected to be a tuple ``(H, W)``, where ``H`` is the desired height
+        and ``W`` is the width. If None, then the image will not be resized.
 
     Returns
     -------
@@ -562,24 +575,26 @@ def quokka_square(size=None):
     """
     return quokka(size=size, extract="square")
 
+
 def quokka_heatmap(size=None, extract=None):
     """
     Returns a heatmap (here: depth map) for the standard example quokka image.
 
     Parameters
     ----------
-    size : None or float or tuple of two ints, optional(default=None)
-        See `quokka()`.
+    size : None or float or tuple of int, optional
+        See :func:`imgaug.quokka`.
 
-    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
-        See `quokka()`.
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
+        See :func:`imgaug.quokka`.
 
     Returns
     -------
-    result : HeatmapsOnImage
+    result : imgaug.HeatmapsOnImage
         Depth map as an heatmap object. Values close to 0.0 denote objects that are close to
         the camera. Values close to 1.0 denote objects that are furthest away (among all shown
         objects).
+
     """
     img = imageio.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, pilmode="RGB")
     if extract is not None:
@@ -591,9 +606,10 @@ def quokka_heatmap(size=None, extract=None):
     shape_resized = _compute_resized_shape(img.shape, size)
     img = imresize_single_image(img, shape_resized[0:2])
     img_0to1 = img.astype(np.float32) / 255.0
-    img_0to1 = 1 - img_0to1 # depth map was saved as 0 being furthest away
+    img_0to1 = 1 - img_0to1  # depth map was saved as 0 being furthest away
 
     return HeatmapsOnImage(img_0to1, shape=(643, 960, 3))
+
 
 def quokka_segmentation_map(size=None, extract=None):
     """
@@ -601,16 +617,17 @@ def quokka_segmentation_map(size=None, extract=None):
 
     Parameters
     ----------
-    size : None or float or tuple of two ints, optional(default=None)
-        See `quokka()`.
+    size : None or float or tuple of int, optional
+        See :func:`imgaug.quokka`.
 
-    extract : None or "square" or tuple of four numbers or BoundingBox or BoundingBoxesOnImage
-        See `quokka()`.
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
+        See :func:`imgaug.quokka`.
 
     Returns
     -------
-    result : SegmentationMapOnImage
+    result : imgaug.SegmentationMapOnImage
         Segmentation map object.
+
     """
     with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
         json_dict = json.load(f)
@@ -639,6 +656,7 @@ def quokka_segmentation_map(size=None, extract=None):
 
     return segmap
 
+
 def quokka_keypoints(size=None, extract=None):
     """
     Returns example keypoints on the standard example quokke image.
@@ -647,18 +665,19 @@ def quokka_keypoints(size=None, extract=None):
 
     Parameters
     ----------
-    size : None or float or tuple of two ints or tuple of two floats, optional(default=None)
+    size : None or float or tuple of int or tuple of float, optional
         Size of the output image on which the keypoints are placed. If None, then the keypoints
         are not projected to any new size (positions on the original image are used).
         Floats lead to relative size changes, ints to absolute sizes in pixels.
 
-    extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
-        Subarea to extract from the image. See `quokka()`.
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
+        Subarea to extract from the image. See :func:`imgaug.quokka`.
 
     Returns
     -------
-    kpsoi : KeypointsOnImage
+    kpsoi : imgaug.KeypointsOnImage
         Example keypoints on the quokka image.
+
     """
     left, top = 0, 0
     if extract is not None:
@@ -680,6 +699,7 @@ def quokka_keypoints(size=None, extract=None):
         kpsoi = kpsoi.on(shape_resized)
     return kpsoi
 
+
 def quokka_bounding_boxes(size=None, extract=None):
     """
     Returns example bounding boxes on the standard example quokke image.
@@ -688,17 +708,17 @@ def quokka_bounding_boxes(size=None, extract=None):
 
     Parameters
     ----------
-    size : None or float or tuple of two ints or tuple of two floats, optional(default=None)
+    size : None or float or tuple of int or tuple of float, optional
         Size of the output image on which the BBs are placed. If None, then the BBs
         are not projected to any new size (positions on the original image are used).
         Floats lead to relative size changes, ints to absolute sizes in pixels.
 
-    extract : None or "square" or tuple of number or BoundingBox or BoundingBoxesOnImage
-        Subarea to extract from the image. See `quokka()`.
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
+        Subarea to extract from the image. See :func:`imgaug.quokka`.
 
     Returns
     -------
-    bbsoi : BoundingBoxesOnImage
+    bbsoi : imgaug.BoundingBoxesOnImage
         Example BBs on the quokka image.
     """
     left, top = 0, 0
@@ -728,17 +748,20 @@ def quokka_bounding_boxes(size=None, extract=None):
         bbsoi = bbsoi.on(shape_resized)
     return bbsoi
 
+
 def angle_between_vectors(v1, v2):
     """
-    Returns the angle in radians between vectors 'v1' and 'v2'.
+    Returns the angle in radians between vectors `v1` and `v2`.
 
     From http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
 
     Parameters
     ----------
-    {v1, v2} : (N,) ndarray
-        Input
-        vectors.
+    v1 : (N,) ndarray
+        First vector.
+
+    v2 : (N,) ndarray
+        Second vector.
 
     Returns
     -------
@@ -747,13 +770,13 @@ def angle_between_vectors(v1, v2):
 
     Examples
     --------
-    >>> angle_between((1, 0, 0), (0, 1, 0))
+    >>> angle_between_vectors(np.float32([1, 0, 0]), np.float32([0, 1, 0]))
     1.5707963267948966
 
-    >>> angle_between((1, 0, 0), (1, 0, 0))
+    >>> angle_between_vectors(np.float32([1, 0, 0]), np.float32([1, 0, 0]))
     0.0
 
-    >>> angle_between((1, 0, 0), (-1, 0, 0))
+    >>> angle_between_vectors(np.float32([1, 0, 0]), np.float32([-1, 0, 0]))
     3.141592653589793
 
     """
@@ -762,6 +785,7 @@ def angle_between_vectors(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 
+# TODO is this used anywhere?
 def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
     def _make_line(p1, p2):
         A = (p1[1] - p2[1])
@@ -783,7 +807,7 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
         return False
 
 
-def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     """
     Draw text on an image.
 
@@ -796,17 +820,20 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=lo
         The image array to draw text on.
         Expected to be of dtype uint8 or float32 (value range 0.0 to 255.0).
 
-    {y, x} : int
-        x- and y- coordinate of the top left corner of the
-        text.
+    y : int
+        x-coordinate of the top left corner of the text.
 
-    color : iterable of 3 ints, optional(default=[0, 255, 0])
-        Color of the text to draw. For RGB-images this is expected to be
-        an RGB color.
+    x : int
+        y- coordinate of the top left corner of the text.
 
-    size : int, optional(default=25)
-        Font size of the text to
-        draw.
+    text : str
+        The text to draw.
+
+    color : iterable of int, optional
+        Color of the text to draw. For RGB-images this is expected to be an RGB color.
+
+    size : int, optional
+        Font size of the text to draw.
 
     Returns
     -------
@@ -844,6 +871,7 @@ def draw_text(img, y, x, text, color=[0, 255, 0], size=25): # pylint: disable=lo
 
 
 # TODO rename sizes to size?
+# TODO accept lists too as images
 def imresize_many_images(images, sizes=None, interpolation=None):
     """
     Resize many images to a specified size.
@@ -854,26 +882,26 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         Array of the images to resize.
         Expected to usually be of dtype uint8.
 
-    sizes : float or iterable of two ints or iterable of two floats
+    sizes : float or iterable of int or iterable of float
         The new size of the images, given either as a fraction (a single float) or as
-        a (height, width) tuple of two integers or as a (height fraction, width fraction)
+        a ``(height, width)`` tuple of two integers or as a ``(height fraction, width fraction)``
         tuple of two floats.
 
-    interpolation : None or string or int, optional(default=None)
+    interpolation : None or str or int, optional
         The interpolation to use during resize.
         If int, then expected to be one of:
 
-            * cv2.INTER_NEAREST (nearest neighbour interpolation)
-            * cv2.INTER_LINEAR (linear interpolation)
-            * cv2.INTER_AREA (area interpolation)
-            * cv2.INTER_CUBIC (cubic interpolation)
+            * ``cv2.INTER_NEAREST`` (nearest neighbour interpolation)
+            * ``cv2.INTER_LINEAR`` (linear interpolation)
+            * ``cv2.INTER_AREA`` (area interpolation)
+            * ``cv2.INTER_CUBIC`` (cubic interpolation)
 
         If string, then expected to be one of:
 
-            * "nearest" (identical to cv2.INTER_NEAREST)
-            * "linear" (identical to cv2.INTER_LINEAR)
-            * "area" (identical to cv2.INTER_AREA)
-            * "cubic" (identical to cv2.INTER_CUBIC)
+            * ``nearest`` (identical to ``cv2.INTER_NEAREST``)
+            * ``linear`` (identical to ``cv2.INTER_LINEAR``)
+            * ``area`` (identical to ``cv2.INTER_AREA``)
+            * ``cubic`` (identical to ``cv2.INTER_CUBIC``)
 
         If None, the interpolation will be chosen automatically. For size
         increases, area interpolation will be picked and for size decreases,
@@ -955,11 +983,11 @@ def imresize_single_image(image, sizes, interpolation=None):
         Array of the image to resize.
         Expected to usually be of dtype uint8.
 
-    sizes : float or iterable of two ints or iterable of two floats
-        See `imresize_many_images()`.
+    sizes : float or iterable of int or iterable of float
+        See :func:`imgaug.imresize_many_images`.
 
-    interpolation : None or string or int, optional(default=None)
-        See `imresize_many_images()`.
+    interpolation : None or str or int, optional
+        See :func:`imgaug.imresize_many_images`.
 
     Returns
     -------
@@ -983,39 +1011,39 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     """
     Pad an image-like array on its top/right/bottom/left side.
 
-    This function is a wrapper around `numpy.pad()`.
+    This function is a wrapper around :func:`numpy.pad`.
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray
+    arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array to pad.
 
-    top : int, optional(default=0)
+    top : int, optional
         Amount of pixels to add at the top side of the image. Must be 0 or greater.
 
-    right : int, optional(default=0)
+    right : int, optional
         Amount of pixels to add at the right side of the image. Must be 0 or greater.
 
-    bottom : int, optional(default=0)
+    bottom : int, optional
         Amount of pixels to add at the bottom side of the image. Must be 0 or greater.
 
-    left : int, optional(default=0)
+    left : int, optional
         Amount of pixels to add at the left side of the image. Must be 0 or greater.
 
-    mode : string, optional(default="constant")
-        Padding mode to use. See `numpy.pad()` for details.
-        In case of mode "constant", the parameter `cval` will be used as the `constant_values`
-        parameter to `numpy.pad()`.
-        In case of mode "linear_ramp", the parameter `cval` will be used as the `end_values`
-        parameter to `numpy.pad()`.
+    mode : str, optional
+        Padding mode to use. See :func:`numpy.pad` for details.
+        In case of mode ``constant``, the parameter `cval` will be used as the ``constant_values``
+        parameter to :func:`numpy.pad`.
+        In case of mode ``linear_ramp``, the parameter `cval` will be used as the ``end_values``
+        parameter to :func:`numpy.pad`.
 
-    cval : number, optional(default=0)
-        Value to use for padding if mode="constant". See `numpy.pad()` for details.
+    cval : number, optional
+        Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
 
     Returns
     -------
-    arr_pad : (H',W') or (H',W',C) ndarray
-        Padded array with height H'=H+top+bottom and width W'=W+left+right.
+    arr_pad : (H',W') ndarray or (H',W',C) ndarray
+        Padded array with height ``H'=H+top+bottom`` and width ``W'=W+left+right``.
 
     """
     do_assert(arr.ndim in [2, 3])
@@ -1049,7 +1077,7 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray
+    arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array for which to compute pad amounts.
 
     aspect_ratio : float
@@ -1058,9 +1086,9 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
 
     Returns
     -------
-    result : tuple of ints
+    result : tuple of int
         Required paddign amounts to reach the target aspect ratio, given as a tuple
-        of the form (top, right, bottom, left).
+        of the form ``(top, right, bottom, left)``.
 
     """
     do_assert(arr.ndim in [2, 3])
@@ -1085,7 +1113,7 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         pad_top = int(np.ceil(diff / 2))
         pad_bottom = int(np.floor(diff / 2))
 
-    return (pad_top, pad_right, pad_bottom, pad_left)
+    return pad_top, pad_right, pad_bottom, pad_left
 
 
 def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
@@ -1098,20 +1126,20 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray
+    arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array to pad.
 
     aspect_ratio : float
         Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
         as much width as height.
 
-    mode : string, optional(default="constant")
-        Padding mode to use. See `numpy.pad()` for details.
+    mode : str, optional
+        Padding mode to use. See :func:`numpy.pad` for details.
 
-    cval : number, optional(default=0)
-        Value to use for padding if mode="constant". See `numpy.pad()` for details.
+    cval : number, optional
+        Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
 
-    return_pad_amounts : bool, optional(default=False)
+    return_pad_amounts : bool, optional
         If False, then only the padded image will be returned. If True, a tuple with two
         entries will be returned, where the first entry is the padded image and the second
         entry are the amounts by which each image side was padded. These amounts are again a
@@ -1119,12 +1147,13 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
     Returns
     -------
-    result : tuple
-        First tuple entry: Padded image as (H',W') or (H',W',C) ndarray, fulfulling the given
-        aspect_ratio.
-        Second tuple entry: Amounts by which the image was padded on each side, given
-        as a tuple (top, right, bottom, left).
-        If return_pad_amounts is False, then only the image is returned.
+    arr_padded : (H',W') ndarray or (H',W',C) ndarray
+        Padded image as (H',W') or (H',W',C) ndarray, fulfulling the given aspect_ratio.
+
+    tuple of int
+        Amounts by which the image was padded on each side, given as a tuple ``(top, right, bottom, left)``.
+        This tuple is only returned if `return_pad_amounts` was set to True.
+        Otherwise only ``arr_padded`` is returned.
 
     """
     pad_top, pad_right, pad_bottom, pad_left = compute_paddings_for_aspect_ratio(arr, aspect_ratio)
@@ -1150,39 +1179,38 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray
-        Image-like array to pool. Ideally of datatype np.float64.
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. Ideally of datatype ``numpy.float64``.
 
-    block_size : int or tuple of two ints or tuple of three ints
-        Spatial size of each group of each values to pool, aka kernel size.
-        If a single integer, then a symmetric block of that size along height and width will
-        be used.
-        If a tuple of two values, it is assumed to be the block size along height and width
-        of the image-like, with pooling happening per channel.
-        If a tuple of three values, it is assuemd to be the block size along height, width and
-        channels.
+    block_size : int or tuple of int
+        Spatial size of each group of values to pool, aka kernel size.
+        If a single integer, then a symmetric block of that size along height and width will be used.
+        If a tuple of two values, it is assumed to be the block size along height and width of the image-like,
+        with pooling happening per channel.
+        If a tuple of three values, it is assumed to be the block size along height, width and channels.
 
     func : callable
         Function to apply to a given block in order to convert it to a single number,
-        e.g. np.average, np.min, np.max.
+        e.g. :func:`numpy.average`, :func:`numpy.min`, :func:`numpy.max`.
 
-    cval : number, optional(default=0)
+    cval : number, optional
         Value to use in order to pad the array along its border if the array cannot be divided
-        by block_size without remainder.
+        by `block_size` without remainder.
 
-    preserve_dtype : bool, optional(default=True)
+    preserve_dtype : bool, optional
         Whether to convert the array back to the input datatype if it is changed away from
         that in the pooling process.
 
     Returns
     -------
-    arr_reduced : (H',W') or (H',W',C') ndarray
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
         Array after pooling.
 
     """
     do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1
-    is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] and [is_single_integer(val) and val >= 1 for val in block_size]
+    is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
+        and [is_single_integer(val) and val >= 1 for val in block_size]
     do_assert(is_valid_int or is_valid_tuple)
 
     if is_single_integer(block_size):
@@ -1203,21 +1231,21 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray
-        Image-like array to pool. See `pool()` for details.
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. See :func:`imgaug.pool` for details.
 
-    block_size : int or tuple of two ints or tuple of three ints
-        Size of each block of values to pool. See `pool()` for details.
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool. See :func:`imgaug.pool` for details.
 
-    cval : number, optional(default=0)
-        Padding value. See `pool()` for details.
+    cval : number, optional
+        Padding value. See :func:`imgaug.pool` for details.
 
-    preserve_dtype : bool, optional(default=True)
-        Whether to preserve the input array dtype. See `pool()` for details.
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for details.
 
     Returns
     -------
-    arr_reduced : (H',W') or (H',W',C') ndarray
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
         Array after average pooling.
 
     """
@@ -1230,21 +1258,21 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray
-        Image-like array to pool. See `pool()` for details.
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. See :func:`imgaug.pool` for details.
 
-    block_size : int or tuple of two ints or tuple of three ints
-        Size of each block of values to pool. See `pool()` for details.
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool. See `imgaug.pool` for details.
 
-    cval : number, optional(default=0)
-        Padding value. See `pool()` for details.
+    cval : number, optional
+        Padding value. See :func:`imgaug.pool` for details.
 
-    preserve_dtype : bool, optional(default=True)
-        Whether to preserve the input array dtype. See `pool()` for details.
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for details.
 
     Returns
     -------
-    arr_reduced : (H',W') or (H',W',C') ndarray
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
         Array after max-pooling.
 
     """
@@ -1261,11 +1289,11 @@ def draw_grid(images, rows=None, cols=None):
         The input images to convert to a grid.
         Expected to be RGB and have dtype uint8.
 
-    rows : None or int, optional(default=None)
+    rows : None or int, optional
         The number of rows to show in the grid.
         If None, it will be automatically derived.
 
-    cols : None or int, optional(default=None)
+    cols : None or int, optional
         The number of cols to show in the grid.
         If None, it will be automatically derived.
 
@@ -1285,7 +1313,11 @@ def draw_grid(images, rows=None, cols=None):
     cell_height = max([image.shape[0] for image in images])
     cell_width = max([image.shape[1] for image in images])
     channels = set([image.shape[2] for image in images])
-    do_assert(len(channels) == 1, "All images are expected to have the same number of channels, but got channel set %s with length %d instead." % (str(channels), len(channels)))
+    do_assert(
+        len(channels) == 1,
+        "All images are expected to have the same number of channels, "
+        + "but got channel set %s with length %d instead." % (str(channels), len(channels))
+    )
     nb_channels = list(channels)[0]
     if rows is None and cols is None:
         rows = cols = int(math.ceil(math.sqrt(nb_images)))
@@ -1312,6 +1344,7 @@ def draw_grid(images, rows=None, cols=None):
 
     return grid
 
+
 def show_grid(images, rows=None, cols=None):
     """
     Converts the input images to a grid image and shows it in a new window.
@@ -1319,17 +1352,18 @@ def show_grid(images, rows=None, cols=None):
     Parameters
     ----------
     images : (N,H,W,3) ndarray or iterable of (H,W,3) array
-        See `draw_grid()`.
+        See :func:`imgaug.draw_grid`.
 
-    rows : None or int, optional(default=None)
-        See `draw_grid()`.
+    rows : None or int, optional
+        See :func:`imgaug.draw_grid`.
 
-    cols : None or int, optional(default=None)
-        See `draw_grid()`.
+    cols : None or int, optional
+        See :func:`imgaug.draw_grid`.
 
     """
     grid = draw_grid(images, rows=rows, cols=cols)
     imshow(grid)
+
 
 def imshow(image):
     """
@@ -1339,6 +1373,7 @@ def imshow(image):
     ----------
     image : (H,W,3) ndarray
         Image to show.
+
     """
     image_bgr = image
     if image.ndim == 3 and image.shape[2] in [3, 4]:
@@ -1365,12 +1400,13 @@ def do_assert(condition, message="Assertion failed."):
     condition : bool
         If False, an exception is raised.
 
-    message : string, optional(default="Assertion failed.")
+    message : str, optional
         Error message.
 
     """
     if not condition:
         raise AssertionError(str(message))
+
 
 class HooksImages(object):
     """
@@ -1380,32 +1416,32 @@ class HooksImages(object):
 
     Parameters
     ----------
-    activator : None or callable, optional(default=None)
+    activator : None or callable, optional
         A function that gives permission to execute an augmenter.
-        The expected interface is `f(images, augmenter, parents, default)`,
-        where `images` are the input images to augment, `augmenter` is the
-        instance of the augmenter to execute, `parents` are previously
-        executed augmenters and `default` is an expected default value to be
+        The expected interface is ``f(images, augmenter, parents, default)``,
+        where ``images`` are the input images to augment, ``augmenter`` is the
+        instance of the augmenter to execute, ``parents`` are previously
+        executed augmenters and ``default`` is an expected default value to be
         returned if the activator function does not plan to make a decision
         for the given inputs.
 
-    propagator : None or callable, optional(default=None)
+    propagator : None or callable, optional
         A function that gives permission to propagate the augmentation further
         to the children of an augmenter. This happens after the activator.
         In theory, an augmenter may augment images itself (if allowed by the
         activator) and then execute child augmenters afterwards (if allowed by
         the propagator). If the activator returned False, the propagation step
         will never be executed.
-        The expected interface is `f(images, augmenter, parents, default)`,
+        The expected interface is ``f(images, augmenter, parents, default)``,
         with all arguments having identical meaning to the activator.
 
-    preprocessor : None or callable, optional(default=None)
+    preprocessor : None or callable, optional
         A function to call before an augmenter performed any augmentations.
-        The interface is `f(images, augmenter, parents)`,
+        The interface is ``f(images, augmenter, parents)``,
         with all arguments having identical meaning to the activator.
         It is expected to return the input images, optionally modified.
 
-    postprocessor : None or callable, optional(default=None)
+    postprocessor : None or callable, optional
         A function to call after an augmenter performed augmentations.
         The interface is the same as for the preprocessor.
 
@@ -1433,13 +1469,11 @@ class HooksImages(object):
 
     """
 
-    #def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None, propagation_method=None):
     def __init__(self, activator=None, propagator=None, preprocessor=None, postprocessor=None):
         self.activator = activator
         self.propagator = propagator
         self.preprocessor = preprocessor
         self.postprocessor = postprocessor
-        #self.propagation_method = propagation_method
 
     def is_activated(self, images, augmenter, parents, default):
         """
@@ -1447,9 +1481,8 @@ class HooksImages(object):
 
         Returns
         -------
-        out : bool
-            If True, the augmenter may be executed. If False, it may
-            not be executed.
+        bool
+            If True, the augmenter may be executed. If False, it may not be executed.
 
         """
         if self.activator is None:
@@ -1457,8 +1490,6 @@ class HooksImages(object):
         else:
             return self.activator(images, augmenter, parents, default)
 
-    # TODO is a propagating hook necessary? seems to be covered by activated
-    # hook already
     def is_propagating(self, images, augmenter, parents, default):
         """
         Returns whether an augmenter may call its children to augment an
@@ -1468,9 +1499,8 @@ class HooksImages(object):
 
         Returns
         -------
-        out : bool
-            If True, the augmenter may be propagate to its children.
-            If False, it may not.
+        bool
+            If True, the augmenter may be propagate to its children. If False, it may not.
 
         """
         if self.propagator is None:
@@ -1478,20 +1508,13 @@ class HooksImages(object):
         else:
             return self.propagator(images, augmenter, parents, default)
 
-    #def get_propagation_method(self, images, augmenter, parents, child, default):
-    #    if self.propagation_method is None:
-    #        return default
-    #    else:
-    #        return self.propagation_method(images, augmenter, parents, child, default)
-
     def preprocess(self, images, augmenter, parents):
         """
-        A function to be called before the augmentation of images starts (per
-        augmenter).
+        A function to be called before the augmentation of images starts (per augmenter).
 
         Returns
         -------
-        out : (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
+        (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
             The input images, optionally modified.
 
         """
@@ -1507,7 +1530,7 @@ class HooksImages(object):
 
         Returns
         -------
-        out : (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
+        (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
             The input images, optionally modified.
 
         """
@@ -1515,6 +1538,7 @@ class HooksImages(object):
             return images
         else:
             return self.postprocessor(images, augmenter, parents)
+
 
 class HooksHeatmaps(HooksImages):
     """
@@ -1527,6 +1551,7 @@ class HooksHeatmaps(HooksImages):
 
     """
     pass
+
 
 class HooksKeypoints(HooksImages):
     """
@@ -1549,15 +1574,15 @@ def compute_geometric_median(X, eps=1e-5):
 
     Parameters
     ----------
-    X : [N, 2] ndarray
+    X : (N,2) ndarray
         Points in 2D. Second axis must be given in xy-form.
 
-    eps : float, optional(default=1e-5)
+    eps : float, optional
         Distance threshold when to return the median.
 
     Returns
     -------
-    out : [2,] ndarray
+    (2,) ndarray
         Geometric median as xy-coordinate.
 
     """
@@ -1616,6 +1641,7 @@ class Keypoint(object):
         -------
         result : int
             Keypoint's x-coordinate, rounded to the closest integer.
+
         """
         return int(np.round(self.x))
 
@@ -1628,6 +1654,7 @@ class Keypoint(object):
         -------
         result : int
             Keypoint's y-coordinate, rounded to the closest integer.
+
         """
         return int(np.round(self.y))
 
@@ -1644,15 +1671,15 @@ class Keypoint(object):
 
         Parameters
         ----------
-        from_shape : tuple
+        from_shape : tuple of int
             Shape of the original image. (Before resize.)
 
-        to_shape : tuple
+        to_shape : tuple of int
             Shape of the new image. (After resize.)
 
         Returns
         -------
-        out : Keypoint
+        imgaug.Keypoint
             Keypoint object with new coordinates.
 
         """
@@ -1671,15 +1698,15 @@ class Keypoint(object):
 
         Parameters
         ----------
-        x : number, optional(default=0)
+        x : number, optional
             Move by this value on the x axis.
 
-        y : number, optional(default=0)
+        y : number, optional
             Move by this value on the y axis.
 
         Returns
         -------
-        out : Keypoint
+        imgaug.Keypoint
             Keypoint object with new coordinates.
 
         """
@@ -1704,16 +1731,16 @@ class Keypoint(object):
         step_size : number
             The step size to move from every point to its neighbours.
 
-        return_array : bool, optional(default=False)
+        return_array : bool, optional
             Whether to return the generated points as a list of keypoints or an array
-            of shape [N, 2], where N is the number of generated points and the second axis contains
+            of shape ``(N,2)``, where ``N`` is the number of generated points and the second axis contains
             the x- (first value) and y- (second value) coordinates.
 
         Returns
         -------
-        points : list of Keypoint or ndarray
+        points : list of imgaug.Keypoint or (N,2) ndarray
             If return_array was False, then a list of Keypoint.
-            Otherwise a numpy array of shape [N, 2], where N is the number of generated points and
+            Otherwise a numpy array of shape ``(N,2)``, where ``N`` is the number of generated points and
             the second axis contains the x- (first value) and y- (second value) coordinates.
             The center keypoint (the one on which this function was called) is always included.
 
@@ -1763,7 +1790,7 @@ class KeypointsOnImage(object):
 
     Parameters
     ----------
-    keypoints : list of Keypoint
+    keypoints : list of imgaug.Keypoint
         List of keypoints on the image.
 
     shape : tuple of int
@@ -1776,7 +1803,6 @@ class KeypointsOnImage(object):
 
     """
     def __init__(self, keypoints, shape):
-        #assert len(shape) == 3, "KeypointsOnImage requires shape tuples of form (H, W, C) but got %s. Use C=1 for 2-dimensional images." % (str(shape),)
         self.keypoints = keypoints
         if is_np_array(shape):
             self.shape = shape.shape
@@ -1801,6 +1827,7 @@ class KeypointsOnImage(object):
         -------
         result : bool
             True if this object contains zero keypoints.
+
         """
         return len(self.keypoints) == 0
 
@@ -1810,13 +1837,13 @@ class KeypointsOnImage(object):
 
         Parameters
         ----------
-        image : ndarray or tuple
+        image : ndarray or tuple of int
             New image onto which the keypoints are to be projected.
             May also simply be that new image's shape tuple.
 
         Returns
         -------
-        keypoints : KeypointsOnImage
+        keypoints : imgaug.KeypointsOnImage
             Object containing all projected keypoints.
 
         """
@@ -1831,10 +1858,9 @@ class KeypointsOnImage(object):
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
             return KeypointsOnImage(keypoints, shape)
 
-    def draw_on_image(self, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+    def draw_on_image(self, image, color=(0, 255, 0), size=3, copy=True, raise_if_out_of_image=False):
         """
-        Draw all keypoints onto a given image. Each keypoint is marked by a
-        square of a chosen color and size.
+        Draw all keypoints onto a given image. Each keypoint is marked by a square of a chosen color and size.
 
         Parameters
         ----------
@@ -1843,20 +1869,18 @@ class KeypointsOnImage(object):
             This image should usually have the same shape as
             set in KeypointsOnImage.shape.
 
-        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=[0, 255, 0])
-            The RGB color of all keypoints. If a single int `C`, then that is
-            equivalent to (C,C,C).
+        color : int or list of int or tuple of int or (3,) ndarray, optional
+            The RGB color of all keypoints. If a single int ``C``, then that is
+            equivalent to ``(C,C,C)``.
 
-        size : int, optional(default=3)
-            The size of each point. If set to C, each square will have
-            size CxC.
+        size : int, optional
+            The size of each point. If set to ``C``, each square will have size ``C x C``.
 
-        copy : bool, optional(default=True)
+        copy : bool, optional
             Whether to copy the image before drawing the points.
 
-        raise_if_out_of_image : bool, optional(default=False)
-            Whether to raise an exception if any keypoint is outside of the
-            image.
+        raise_if_out_of_image : bool, optional
+            Whether to raise an exception if any keypoint is outside of the image.
 
         Returns
         -------
@@ -1889,10 +1913,10 @@ class KeypointsOnImage(object):
 
         Parameters
         ----------
-        x : number, optional(default=0)
+        x : number, optional
             Move each keypoint by this value on the x axis.
 
-        y : number, optional(default=0)
+        y : number, optional
             Move each keypoint by this value on the y axis.
 
         Returns
@@ -1906,8 +1930,7 @@ class KeypointsOnImage(object):
 
     def get_coords_array(self):
         """
-        Convert the coordinates of all keypoints in this object to
-        an array of shape (N,2).
+        Convert the coordinates of all keypoints in this object to an array of shape (N,2).
 
         Returns
         -------
@@ -1925,15 +1948,14 @@ class KeypointsOnImage(object):
     @staticmethod
     def from_coords_array(coords, shape):
         """
-        Convert an array (N,2) with a given image shape to a KeypointsOnImage
-        object.
+        Convert an array (N,2) with a given image shape to a KeypointsOnImage object.
 
         Parameters
         ----------
         coords : (N, 2) ndarray
-            Coordinates of N keypoints on the original image.
-            Each first entry (i, 0) is expected to be the x coordinate.
-            Each second entry (i, 1) is expected to be the y coordinate.
+            Coordinates of ``N`` keypoints on the original image.
+            Each first entry ``coords[i, 0]`` is expected to be the x coordinate.
+            Each second entry ``coords[i, 1]`` is expected to be the y coordinate.
 
         shape : tuple
             Shape tuple of the image on which the keypoints are placed.
@@ -1949,12 +1971,11 @@ class KeypointsOnImage(object):
 
     def to_keypoint_image(self, size=1):
         """
-        Draws a new black image of shape (H,W,N) in which all keypoint coordinates
-        are set to 255.
+        Draws a new black image of shape ``(H,W,N)`` in which all keypoint coordinates are set to 255.
         (H=shape height, W=shape width, N=number of keypoints)
 
-        This function can be used as a helper when augmenting keypoints with
-        a method that only supports the augmentation of images.
+        This function can be used as a helper when augmenting keypoints with a method that only supports the
+        augmentation of images.
 
         Parameters
         -------
@@ -1967,6 +1988,7 @@ class KeypointsOnImage(object):
             Image in which the keypoints are marked. H is the height,
             defined in KeypointsOnImage.shape[0] (analogous W). N is the
             number of keypoints.
+
         """
         do_assert(len(self.keypoints) > 0)
         height, width = self.shape[0:2]
@@ -1984,8 +2006,6 @@ class KeypointsOnImage(object):
             y1 = np.clip(y - sizeh, 0, height-1)
             y2 = np.clip(y + sizeh + 1, 0, height)
 
-            #if 0 <= y < height and 0 <= x < width:
-            #    image[y, x, i] = 255
             if x1 < x2 and y1 < y2:
                 image[y1:y2, x1:x2, i] = 128
             if 0 <= y < height and 0 <= x < width:
@@ -1995,32 +2015,31 @@ class KeypointsOnImage(object):
     @staticmethod
     def from_keypoint_image(image, if_not_found_coords={"x": -1, "y": -1}, threshold=1, nb_channels=None): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
         """
-        Converts an image generated by `to_keypoint_image()` back to
-        an KeypointsOnImage object.
+        Converts an image generated by ``to_keypoint_image()`` back to a KeypointsOnImage object.
 
         Parameters
         ----------
         image : (H,W,N) ndarray
-            The keypoints image. N is the number of
-            keypoints.
+            The keypoints image. N is the number of keypoints.
 
-        if_not_found_coords : tuple or list or dict or None, optional(default={x:-1, y:-1})
+        if_not_found_coords : tuple or list or dict or None, optional
             Coordinates to use for keypoints that cannot be found in `image`.
-            If this is a list/tuple, it must have two integer values. If it
-            is a dictionary, it must have the keys "x" and "y". If this
-            is None, then the keypoint will not be added to the final
+            If this is a list/tuple, it must have two integer values.
+            If it is a dictionary, it must have the keys ``x`` and ``y`` with
+            each containing one integer value.
+            If this is None, then the keypoint will not be added to the final
             KeypointsOnImage object.
 
-        threshold : int, optional(default=1)
+        threshold : int, optional
             The search for keypoints works by searching for the argmax in
             each channel. This parameters contains the minimum value that
             the max must have in order to be viewed as a keypoint.
 
-        nb_channels : None or int, optional(default=None)
+        nb_channels : None or int, optional
             Number of channels of the image on which the keypoints are placed.
             Some keypoint augmenters require that information.
             If set to None, the keypoint's shape will be set
-            to `(height, width)`, otherwise `(height, width, nb_channels)`.
+            to ``(height, width)``, otherwise ``(height, width, nb_channels)``.
 
         Returns
         -------
@@ -2044,7 +2063,8 @@ class KeypointsOnImage(object):
             if_not_found_x = if_not_found_coords["x"]
             if_not_found_y = if_not_found_coords["y"]
         else:
-            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (type(if_not_found_coords),))
+            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (
+                type(if_not_found_coords),))
 
         keypoints = []
         for i in sm.xrange(nb_keypoints):
@@ -2055,7 +2075,7 @@ class KeypointsOnImage(object):
                 keypoints.append(Keypoint(x=maxidx_ndim[1], y=maxidx_ndim[0]))
             else:
                 if drop_if_not_found:
-                    pass # dont add the keypoint to the result list, i.e. drop it
+                    pass  # dont add the keypoint to the result list, i.e. drop it
                 else:
                     keypoints.append(Keypoint(x=if_not_found_x, y=if_not_found_y))
 
@@ -2066,28 +2086,27 @@ class KeypointsOnImage(object):
 
     def to_distance_maps(self, inverted=False):
         """
-        Generates a (H,W,K) output containing K distance maps for K keypoints.
+        Generates a ``(H,W,K)`` output containing ``K`` distance maps for ``K`` keypoints.
 
-        The k-th distance map contains at every location (y, x) the euclidean distance to the
-        k-th keypoint.
+        The k-th distance map contains at every location ``(y, x)`` the euclidean distance to the k-th keypoint.
 
-        This function can be used as a helper when augmenting keypoints with
-        a method that only supports the augmentation of images.
+        This function can be used as a helper when augmenting keypoints with a method that only supports
+        the augmentation of images.
 
         Parameters
         -------
-        inverted : bool, optional(default=False)
+        inverted : bool, optional
             If True, inverted distance maps are returned where each distance value d is replaced
-            by d/(d+1), i.e. the distance maps have values in the range (0.0, 1.0] with 1.0
+            by ``d/(d+1)``, i.e. the distance maps have values in the range ``(0.0, 1.0]`` with 1.0
             denoting exactly the position of the respective keypoint.
 
         Returns
         -------
         distance_maps : (H,W,K) ndarray
-            A `float32` array containing `K` distance maps for K keypoints. Each location
-            `(y, x, k)` in the array denotes the euclidean distance at (y, x) to keypoint `k`.
-            In inverted mode the distance `d` is replaced by `d/(d+1)`. The height and width
-            of the array match the height and width in `KeypointsOnImage.shape`.
+            A ``float32`` array containing ``K`` distance maps for ``K`` keypoints. Each location
+            ``(y, x, k)`` in the array denotes the euclidean distance at ``(y, x)`` to the ``k``-th keypoint.
+            In inverted mode the distance ``d`` is replaced by ``d/(d+1)``. The height and width
+            of the array match the height and width in ``KeypointsOnImage.shape``.
 
         """
         do_assert(len(self.keypoints) > 0)
@@ -2108,41 +2127,42 @@ class KeypointsOnImage(object):
 
     # TODO add option to if_not_found_coords to reuse old keypoint coords
     @staticmethod
-    def from_distance_maps(distance_maps, inverted=False, if_not_found_coords={"x": -1, "y": -1}, threshold=None, nb_channels=None): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+    def from_distance_maps(distance_maps, inverted=False, if_not_found_coords={"x": -1, "y": -1}, threshold=None, # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+                           nb_channels=None):
         """
-        Converts an maps generated by `to_distance_maps()` back to a KeypointsOnImage object.
+        Converts maps generated by ``to_distance_maps()`` back to a KeypointsOnImage object.
 
         Parameters
         ----------
         distance_maps : (H,W,N) ndarray
-            The distance maps. N is the number of
-            keypoints.
+            The distance maps. N is the number of keypoints.
 
-        inverted : bool, optional(default=False)
+        inverted : bool, optional
             Whether the given distance maps were generated in inverted or normal mode.
 
-        if_not_found_coords : tuple or list or dict or None, optional(default={x:-1, y:-1})
-            Coordinates to use for keypoints that cannot be found in `distance_maps`.
-            If this is a list/tuple, it must have two integer values. If it
-            is a dictionary, it must have the keys "x" and "y". If this
-            is None, then the keypoint will not be added to the final
+        if_not_found_coords : tuple or list or dict or None, optional
+            Coordinates to use for keypoints that cannot be found in ``distance_maps``.
+            If this is a list/tuple, it must have two integer values.
+            If it is a dictionary, it must have the keys ``x`` and ``y``, with each
+            containing one integer value.
+            If this is None, then the keypoint will not be added to the final
             KeypointsOnImage object.
 
-        threshold : float, optional(default=None)
+        threshold : float, optional
             The search for keypoints works by searching for the argmin (non-inverted) or
             argmax (inverted) in each channel. This parameters contains the maximum (non-inverted)
             or minimum (inverted) value to accept in order to view a hit as a keypoint.
             Use None to use no min/max.
 
-        nb_channels : None or int, optional(default=None)
+        nb_channels : None or int, optional
             Number of channels of the image on which the keypoints are placed.
             Some keypoint augmenters require that information.
             If set to None, the keypoint's shape will be set
-            to `(height, width)`, otherwise `(height, width, nb_channels)`.
+            to ``(height, width)``, otherwise ``(height, width, nb_channels)``.
 
         Returns
         -------
-        out : KeypointsOnImage
+        imgaug.KeypointsOnImage
             The extracted keypoints.
 
         """
@@ -2162,7 +2182,8 @@ class KeypointsOnImage(object):
             if_not_found_x = if_not_found_coords["x"]
             if_not_found_y = if_not_found_coords["y"]
         else:
-            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (type(if_not_found_coords),))
+            raise Exception("Expected if_not_found_coords to be None or tuple or list or dict, got %s." % (
+                type(if_not_found_coords),))
 
         keypoints = []
         for i in sm.xrange(nb_keypoints):
@@ -2182,7 +2203,7 @@ class KeypointsOnImage(object):
                 keypoints.append(Keypoint(x=hitidx_ndim[1], y=hitidx_ndim[0]))
             else:
                 if drop_if_not_found:
-                    pass # dont add the keypoint to the result list, i.e. drop it
+                    pass  # dont add the keypoint to the result list, i.e. drop it
                 else:
                     keypoints.append(Keypoint(x=if_not_found_x, y=if_not_found_y))
 
@@ -2197,7 +2218,7 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        out : KeypointsOnImage
+        imgaug.KeypointsOnImage
             Shallow copy.
 
         """
@@ -2209,12 +2230,11 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        out : KeypointsOnImage
+        imgaug.KeypointsOnImage
             Deep copy.
 
         """
         # for some reason deepcopy is way slower here than manual copy
-        #return copy.deepcopy(self)
         kps = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
         return KeypointsOnImage(kps, tuple(self.shape))
 
@@ -2224,6 +2244,7 @@ class KeypointsOnImage(object):
     def __str__(self):
         return "KeypointsOnImage(%s, shape=%s)" % (str(self.keypoints), self.shape)
 
+
 # TODO functions: square(), to_aspect_ratio(), contains_point()
 class BoundingBox(object):
     """
@@ -2232,7 +2253,7 @@ class BoundingBox(object):
     Each bounding box is parameterized by its top left and bottom right corners. Both are given
     as x and y-coordinates. The corners are intended to lie inside the bounding box area.
     As a result, a bounding box that lies completely inside the image but has maximum extensions
-    would have coordinates `(0.0, 0.0)` and `(W - epsilon, H - epsilon)`. Note that coordinates
+    would have coordinates ``(0.0, 0.0)`` and ``(W - epsilon, H - epsilon)``. Note that coordinates
     are saved internally as floats.
 
     Parameters
@@ -2249,7 +2270,7 @@ class BoundingBox(object):
     y2 : number
         Y-coordinate of the bottom right of the bounding box.
 
-    label : None or string, optional(default=None)
+    label : None or str, optional
         Label of the bounding box, e.g. a string representing the class.
 
     """
@@ -2276,7 +2297,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : int
+        int
             X-coordinate of the top left corner, rounded to the closest integer.
 
         """
@@ -2289,7 +2310,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : int
+        int
             Y-coordinate of the top left corner, rounded to the closest integer.
 
         """
@@ -2302,7 +2323,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : int
+        int
             X-coordinate of the bottom left corner, rounded to the closest integer.
 
         """
@@ -2315,7 +2336,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : int
+        int
             Y-coordinate of the bottom left corner, rounded to the closest integer.
 
         """
@@ -2328,7 +2349,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : number
+        number
             Height of the bounding box.
 
         """
@@ -2341,7 +2362,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : number
+        number
             Width of the bounding box.
 
         """
@@ -2354,7 +2375,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : number
+        number
             X-coordinate of the center point of the bounding box.
 
         """
@@ -2367,7 +2388,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : number
+        number
             Y-coordinate of the center point of the bounding box.
 
         """
@@ -2380,7 +2401,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : number
+        number
             Area of the bounding box, i.e. `height * width`.
 
         """
@@ -2392,12 +2413,12 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        other : Keypoint
+        other : imgaug.Keypoint
             Point to check for.
 
         Returns
         -------
-        result : bool
+        bool
             True if the point is contained in the bounding box, False otherwise.
 
         """
@@ -2418,15 +2439,15 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        from_shape : tuple
+        from_shape : tuple of int
             Shape of the original image. (Before resize.)
 
-        to_shape : tuple
+        to_shape : tuple of int
             Shape of the new image. (After resize.)
 
         Returns
         -------
-        out : BoundingBox
+        out : imgaug.BoundingBox
             BoundingBox object with new coordinates.
 
         """
@@ -2457,24 +2478,24 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        all_sides : number, optional(default=0)
+        all_sides : number, optional
             Value by which to extend the bounding box size along all sides.
 
-        top : number, optional(default=0)
+        top : number, optional
             Value by which to extend the bounding box size along its top side.
 
-        right : number, optional(default=0)
+        right : number, optional
             Value by which to extend the bounding box size along its right side.
 
-        bottom : number, optional(default=0)
+        bottom : number, optional
             Value by which to extend the bounding box size along its bottom side.
 
-        left : number, optional(default=0)
+        left : number, optional
             Value by which to extend the bounding box size along its left side.
 
         Returns
         -------
-        result : BoundingBox
+        imgaug.BoundingBox
             Extended bounding box.
 
         """
@@ -2494,16 +2515,17 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        other : BoundingBox
+        other : imgaug.BoundingBox
             Other bounding box with which to generate the intersection.
 
-        default : any, optional(default=None)
+        default : any, optional
             Default value to return if there is no intersection.
 
         Returns
         -------
-        result : BoundingBox
-            Intersection bounding box of the two bounding boxes.
+        imgaug.BoundingBox or any
+            Intersection bounding box of the two bounding boxes if there is an intersection.
+            If there is no intersection, the default value will be returned, which can by anything.
 
         """
         x1_i = max(self.x1, other.x1)
@@ -2524,12 +2546,12 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        other : BoundingBox
+        other : imgaug.BoundingBox
             Other bounding box with which to generate the union.
 
         Returns
         -------
-        result : BoundingBox
+        imgaug.BoundingBox
             Union bounding box of the two bounding boxes.
 
         """
@@ -2544,18 +2566,19 @@ class BoundingBox(object):
         """
         Compute the IoU of this bounding box with another one.
 
-        IoU is the intersection over union, defined as:
-            area(intersection(A, B)) / area(union(A, B))
-            = area(intersection(A, B)) / (area(A) + area(B) - area(intersection(A, B)))
+        IoU is the intersection over union, defined as::
+
+            ``area(intersection(A, B)) / area(union(A, B))``
+            ``= area(intersection(A, B)) / (area(A) + area(B) - area(intersection(A, B)))``
 
         Parameters
         ----------
-        other : BoundingBox
+        other : imgaug.BoundingBox
             Other bounding box with which to compare.
 
         Returns
         -------
-        result : float
+        float
             IoU between the two bounding boxes.
 
         """
@@ -2572,15 +2595,16 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
-            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
-            assumed to represent the image shape.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape
+            and must contain at least two integers.
 
         Returns
         -------
-        result : bool
-            True if the bounding box is fully inside the image area.
-            False otherwise.
+        bool
+            True if the bounding box is fully inside the image area. False otherwise.
 
         """
         if isinstance(image, tuple):
@@ -2596,15 +2620,16 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
-            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
-            assumed to represent the image shape.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape
+            and must contain at least two integers.
 
         Returns
         -------
-        result : bool
-            True if the bounding box is at least partially inside the image area.
-            False otherwise.
+        bool
+            True if the bounding box is at least partially inside the image area. False otherwise.
 
         """
         if isinstance(image, tuple):
@@ -2622,20 +2647,20 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of ints
+        image : (H,W,...) ndarray or tuple of int
             Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
             assumed to represent the image shape and must contain at least two integers.
 
-        fully : bool, optional(default=True)
+        fully : bool, optional
             Whether to return True if the bounding box is fully outside fo the image area.
 
-        partly : bool, optional(default=False)
+        partly : bool, optional
             Whether to return True if the bounding box is at least partially outside fo the
             image area.
 
         Returns
         -------
-        result : bool
+        bool
             True if the bounding box is partially/fully outside of the image area, depending
             on defined parameters. False otherwise.
 
@@ -2653,13 +2678,14 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
-            Image dimensions to use for the clipping of the bounding box. If an ndarray, its
-            shape will be used. If a tuple, it is assumed to represent the image shape.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use for the clipping of the bounding box.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape and must contain at least two integers.
 
         Returns
         -------
-        result : BoundingBox
+        result : imgaug.BoundingBox
             Bounding box, clipped to fall within the image dimensions.
 
         """
@@ -2692,21 +2718,21 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        top : None or int, optional(default=None)
+        top : None or int, optional
             Amount of pixels by which to shift the bounding box from the top.
 
-        right : None or int, optional(default=None)
+        right : None or int, optional
             Amount of pixels by which to shift the bounding box from the right.
 
-        bottom : None or int, optional(default=None)
+        bottom : None or int, optional
             Amount of pixels by which to shift the bounding box from the bottom.
 
-        left : None or int, optional(default=None)
+        left : None or int, optional
             Amount of pixels by which to shift the bounding box from the left.
 
         Returns
         -------
-        result : BoundingBox
+        result : imgaug.BoundingBox
             Shifted bounding box.
 
         """
@@ -2731,22 +2757,22 @@ class BoundingBox(object):
         image : (H,W,C) ndarray(uint8)
             The image onto which to draw the bounding box.
 
-        color : iterable of int, optional(default=[0,255,0])
+        color : iterable of int, optional
             The color to use, corresponding to the channel layout of the image. Usually RGB.
 
-        alpha : float, optional(default=1.0)
+        alpha : float, optional
             The transparency of the drawn bounding box, where 1.0 denotes no transparency and
             0.0 is invisible.
 
-        thickness : int, optional(default=1)
+        thickness : int, optional
             The thickness of the bounding box in pixels. If the value is larger than 1, then
             additional pixels will be added around the bounding box (i.e. extension towards the
             outside).
 
-        copy : bool, optional(default=True)
+        copy : bool, optional
             Whether to copy the input image or change it in-place.
 
-        raise_if_out_of_image : bool, optional(default=False)
+        raise_if_out_of_image : bool, optional
             Whether to raise an error if the bounding box is partially/fully outside of the
             image. If set to False, no error will be raised and only the parts inside the image
             will be drawn.
@@ -2758,7 +2784,8 @@ class BoundingBox(object):
 
         """
         if raise_if_out_of_image and self.is_out_of_image(image):
-            raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (self.x1, self.y1, self.x2, self.y2, image.shape))
+            raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (
+                self.x1, self.y1, self.x2, self.y2, image.shape))
 
         result = np.copy(image) if copy else image
 
@@ -2805,21 +2832,22 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        image : (H,W) or (H,W,C) ndarray
+        image : (H,W) ndarray or (H,W,C) ndarray
             The image from which to extract the pixels within the bounding box.
 
-        prevent_zero_size : bool, optional(default=True)
+        prevent_zero_size : bool, optional
             Whether to prevent height or width of the extracted image from becoming zero.
             If this is set to True and height or width of the bounding box is below 1, the height/width will
             be increased to 1. This can be useful to prevent problems, e.g. with image saving or plotting.
-            If it is set to False, images will be returned as (H', W') or (H', W', 3) with H or W potentially being 0.
+            If it is set to False, images will be returned as ``(H', W')`` or ``(H', W', 3)`` with ``H`` or
+            ``W`` potentially being 0.
 
         Returns
         -------
-        result : (H',W') or (H',W',C) ndarray
+        image : (H',W') ndarray or (H',W',C) ndarray
             Pixels within the bounding box. Zero-padded if the bounding box is partially/fully
-            outside of the image. If prevent_zero_size is activated, it is guarantueed that H'>0 and W'>0,
-            otherwise only H'>=0 and W'>=0.
+            outside of the image. If prevent_zero_size is activated, it is guarantueed that ``H'>0``
+            and ``W'>0``, otherwise only ``H'>=0`` and ``W'>=0``.
 
         """
         pad_top = 0
@@ -2883,8 +2911,9 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : list of Keypoint
+        list of imgaug.Keypoint
             Corners of the bounding box as keypoints.
+
         """
         return [
             Keypoint(x=self.x1, y=self.y1),
@@ -2916,7 +2945,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        result : BoundingBox
+        imgaug.BoundingBox
             Shallow copy.
 
         """
@@ -2951,7 +2980,7 @@ class BoundingBox(object):
 
         Returns
         -------
-        out : BoundingBox
+        imgaug.BoundingBox
             Deep copy.
 
         """
@@ -2961,7 +2990,9 @@ class BoundingBox(object):
         return self.__str__()
 
     def __str__(self):
-        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f, label=%s)" % (self.x1, self.y1, self.x2, self.y2, self.label)
+        return "BoundingBox(x1=%.4f, y1=%.4f, x2=%.4f, y2=%.4f, label=%s)" % (
+            self.x1, self.y1, self.x2, self.y2, self.label)
+
 
 class BoundingBoxesOnImage(object):
     """
@@ -2969,7 +3000,7 @@ class BoundingBoxesOnImage(object):
 
     Parameters
     ----------
-    bounding_boxes : list of BoundingBox
+    bounding_boxes : list of imgaug.BoundingBox
         List of bounding boxes on the image.
 
     shape : tuple of int
@@ -3000,7 +3031,7 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        result : int
+        int
             Image height.
 
         """
@@ -3014,7 +3045,7 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        result : int
+        int
             Image width.
 
         """
@@ -3027,8 +3058,9 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        result : bool
+        bool
             True if this object contains zero bounding boxes.
+
         """
         return len(self.bounding_boxes) == 0
 
@@ -3038,13 +3070,13 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        image : ndarray or tuple
+        image : ndarray or tuple of int
             New image onto which the bounding boxes are to be projected.
             May also simply be that new image's shape tuple.
 
         Returns
         -------
-        bounding_boxes : BoundingBoxesOnImage
+        bounding_boxes : imgaug.BoundingBoxesOnImage
             Object containing all projected bounding boxes.
 
         """
@@ -3062,19 +3094,25 @@ class BoundingBoxesOnImage(object):
     @classmethod
     def from_xyxy_array(cls, bounding_box_matrix, shape):
         """
-        Makes the Bounding Box construction a one-liner.
-        It wraps the bounding box numpy array with BoundingBoxes and BoundingBoxesOnImage objects
-        Box format is: (x1, y1, x2, y2)
+        Convert an (N,4) ndarray to a BoundingBoxesOnImage object.
+
+        This is the inverse of :func:`imgaug.BoundingBoxesOnImage.to_xyxy_array`.
 
         Parameters
         ----------
-        bounding_box_matrix: Numpy array which contains the bounding boxes
-                            has a shape like: [N_Boxes, (x1, y1, x2, y2)]
-        shape: Shape of the image: (Height, Width, Channels) OR (Height, Width)
+        bounding_box_matrix : (N,4) ndarray
+            Array containing the corner coordinates (top-left, bottom-right) of ``N`` bounding boxes
+            in the form ``(x1, y1, x2, y2)``.
+
+        shape : tuple of int
+            Shape of the image on which the bounding boxes are placed.
+            Should usually be ``(H, W, C)`` or ``(H, W)``.
 
         Returns
         -------
-        result: BoundingBoxesOnImage
+        imgaug.BoundingBoxesOnImage
+            Object containing a list of BoundingBox objects following the provided corner coordinates.
+
         """
 
         nb_boxes, nb_coordinates = bounding_box_matrix.shape
@@ -3083,8 +3121,10 @@ class BoundingBoxesOnImage(object):
             raise ValueError("No bounding boxes found inside the box-matrix")
 
         if nb_coordinates != 4:
-            raise ValueError("Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
-                bounding_box_matrix.shape))
+            raise ValueError(
+                "Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
+                    bounding_box_matrix.shape)
+            )
 
         boxes = []
         for box in bounding_box_matrix:
@@ -3096,18 +3136,22 @@ class BoundingBoxesOnImage(object):
 
     def to_xyxy_array(self, dtype=np.float32):
         """
-        Unwraps BoundingBoxes inside the BoundingBoxesOnImage object to a simple Numpy array
+        Convert the BoundingBoxesOnImage object to an (N,4) ndarray.
+
+        This is the inverse of :func:`imgaug.BoundingBoxesOnImage.from_xyxy_array`.
 
         Parameters
         ----------
-        dtype: Numpy data type of the returned array
+        dtype : numpy.dtype, optional
+            Desired output datatype of the ndarray.
 
         Returns
         -------
-        result: Numpy array with a shape like: [N_Boxes, (x1, y1, x2, y2)]
-                Box format is: (x1, y1, x2, y2)
-        """
+        ndarray
+            (N,4) ndarray array, where ``N`` denotes the number of bounding boxes and ``4`` denotes the
+            top-left and bottom-right bounding box corner coordinates in form ``(x1, y1, x2, y2)``.
 
+        """
         bounding_box_matrix = np.zeros((len(self.bounding_boxes), 4), dtype=np.float32)
 
         for i, box in enumerate(self.bounding_boxes):
@@ -3120,7 +3164,7 @@ class BoundingBoxesOnImage(object):
 
         return bounding_box_matrix.astype(dtype)
 
-    def draw_on_image(self, image, color=[0, 255, 0], alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         """
         Draw all bounding boxes onto a given image.
 
@@ -3131,22 +3175,21 @@ class BoundingBoxesOnImage(object):
             This image should usually have the same shape as
             set in BoundingBoxesOnImage.shape.
 
-        color : int or list of ints or tuple of ints or (3,) ndarray, optional(default=[0, 255, 0])
-            The RGB color of all bounding boxes. If a single int `C`, then that is
-            equivalent to (C,C,C).
+        color : int or list of int or tuple of int or (3,) ndarray, optional
+            The RGB color of all bounding boxes. If a single int ``C``, then that is
+            equivalent to ``(C,C,C)``.
 
-        size : float, optional(default=1.0)
+        alpha : float, optional
             Alpha/transparency of the bounding box.
 
-        thickness : int, optional(default=1)
+        thickness : int, optional
             Thickness in pixels.
 
-        copy : bool, optional(default=True)
+        copy : bool, optional
             Whether to copy the image before drawing the points.
 
-        raise_if_out_of_image : bool, optional(default=False)
-            Whether to raise an exception if any bounding box is outside of the
-            image.
+        raise_if_out_of_image : bool, optional
+            Whether to raise an exception if any bounding box is outside of the image.
 
         Returns
         -------
@@ -3173,20 +3216,21 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        fully : bool, optional(default=True)
+        fully : bool, optional
             Whether to remove bounding boxes that are fully outside of the image.
 
-        partly : bool, optional(default=False)
+        partly : bool, optional
             Whether to remove bounding boxes that are partially outside of the image.
 
         Returns
         -------
-        result : BoundingBoxesOnImage
+        imgaug.BoundingBoxesOnImage
             Reduced set of bounding boxes, with those that were fully/partially outside of
             the image removed.
 
         """
-        bbs_clean = [bb for bb in self.bounding_boxes if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
+        bbs_clean = [bb for bb in self.bounding_boxes
+                     if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
     def cut_out_of_image(self):
@@ -3195,11 +3239,12 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        result : BoundingBoxesOnImage
+        imgaug.BoundingBoxesOnImage
             Bounding boxes, clipped to fall within the image dimensions.
 
         """
-        bbs_cut = [bb.cut_out_of_image(self.shape) for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
+        bbs_cut = [bb.cut_out_of_image(self.shape)
+                   for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
         return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
@@ -3208,21 +3253,21 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        top : None or int, optional(default=None)
+        top : None or int, optional
             Amount of pixels by which to shift all bounding boxes from the top.
 
-        right : None or int, optional(default=None)
+        right : None or int, optional
             Amount of pixels by which to shift all bounding boxes from the right.
 
-        bottom : None or int, optional(default=None)
+        bottom : None or int, optional
             Amount of pixels by which to shift all bounding boxes from the bottom.
 
-        left : None or int, optional(default=None)
+        left : None or int, optional
             Amount of pixels by which to shift all bounding boxes from the left.
 
         Returns
         -------
-        result : BoundingBoxesOnImage
+        imgaug.BoundingBoxesOnImage
             Shifted bounding boxes.
 
         """
@@ -3235,7 +3280,7 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        out : BoundingBoxesOnImage
+        imgaug.BoundingBoxesOnImage
             Shallow copy.
 
         """
@@ -3247,7 +3292,7 @@ class BoundingBoxesOnImage(object):
 
         Returns
         -------
-        out : BoundingBoxesOnImage
+        imgaug.BoundingBoxesOnImage
             Deep copy.
 
         """
@@ -3276,14 +3321,14 @@ class Polygon(object):
 
     Parameters
     ----------
-    exterior : list of Keypoint or list of tuple of floats or (N,2) ndarray
+    exterior : list of imgaug.Keypoint or list of tuple of float or (N,2) ndarray
         List of points defining the polygon. May be either a list of Keypoint objects or a list of tuples in xy-form
         or a numpy array of shape (N,2) for N points in xy-form.
         All coordinates are expected to be the absolute coordinates in the image, given as floats, e.g. x=10.7
         and y=3.4 for a point at coordinates (10.7, 3.4). Their order is expected to be clock-wise. They are expected
         to not be closed (i.e. first and last coordinate differ).
 
-    label : None or string, optional(default=None)
+    label : None or str, optional
         Label of the polygon, e.g. a string representing the class.
 
     """
@@ -3321,8 +3366,8 @@ class Polygon(object):
 
         Returns
         -------
-        result : (N,2) float32 ndarray
-            X-coordinates of all points in the exterior.
+        (N,2) ndarray
+            X-coordinates of all points in the exterior as a float32 ndarray.
 
         """
         return self.exterior[:, 0]
@@ -3334,8 +3379,8 @@ class Polygon(object):
 
         Returns
         -------
-        result : (N,2) float32 ndarray
-            Y-coordinates of all points in the exterior.
+        (N,2) ndarray
+            Y-coordinates of all points in the exterior as a float32 ndarray.
 
         """
         return self.exterior[:, 1]
@@ -3347,8 +3392,9 @@ class Polygon(object):
 
         Returns
         -------
-        result : (N,2) int32 ndarray
+        (N,2) ndarray
             X-coordinates of all points in the exterior, rounded to the closest integer value.
+            Result dtype is int32.
 
         """
         return np.int32(np.round(self.xx))
@@ -3360,8 +3406,9 @@ class Polygon(object):
 
         Returns
         -------
-        result : (N,2) int32 ndarray
+        (N,2) ndarray
             Y-coordinates of all points in the exterior, rounded to the closest integer value.
+            Result dtype is int32.
 
         """
         return np.int32(np.round(self.yy))
@@ -3376,7 +3423,8 @@ class Polygon(object):
 
         Returns
         -------
-        result : True if polygon has at least 3 points and is concave, otherwise False.
+        bool
+            True if polygon has at least 3 points and is concave, otherwise False.
 
         """
         if len(self.exterior) < 3:
@@ -3390,7 +3438,7 @@ class Polygon(object):
 
         Returns
         -------
-        result : number
+        number
             Area of the polygon.
 
         """
@@ -3412,15 +3460,15 @@ class Polygon(object):
 
         Parameters
         ----------
-        from_shape : tuple
+        from_shape : tuple of int
             Shape of the original image. (Before resize.)
 
-        to_shape : tuple
+        to_shape : tuple of int
             Shape of the new image. (After resize.)
 
         Returns
         -------
-        out : Polygon
+        imgaug.Polygon
             Polygon object with new coordinates.
 
         """
@@ -3444,14 +3492,17 @@ class Polygon(object):
         y : number
             Y-coordinate around which to search for close points.
 
-        return_distance : bool, optional(default=False)
+        return_distance : bool, optional
             Whether to also return the distance of the closest point.
 
         Returns
         -------
-        result : int or tuple(int, number)
-            Either the index of the closest point (return_distance=False) or a tuple of that index and also the
-            distance to the closest point (return_distance=True).
+        int
+            Index of the closest point.
+
+        number
+            Euclidean distance to the the closest point.
+            This value is only returned if `return_distance` was set to True.
 
         """
         assert len(self.exterior) > 0
@@ -3483,13 +3534,14 @@ class Polygon(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
-            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
-            assumed to represent the image shape.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape and must contain at least two integers.
 
         Returns
         -------
-        result : bool
+        bool
             True if the polygon is fully inside the image area.
             False otherwise.
 
@@ -3503,13 +3555,14 @@ class Polygon(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
-            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
-            assumed to represent the image shape.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape and must contain at least two integers.
 
         Returns
         -------
-        result : bool
+        bool
             True if the polygon is at least partially inside the image area.
             False otherwise.
 
@@ -3522,20 +3575,20 @@ class Polygon(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of ints
-            Image dimensions to use. If an ndarray, its shape will be used. If a tuple, it is
-            assumed to represent the image shape and must contain at least two integers.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape and must contain at least two integers.
 
-        fully : bool, optional(default=True)
+        fully : bool, optional
             Whether to return True if the polygon is fully outside fo the image area.
 
-        partly : bool, optional(default=False)
-            Whether to return True if the polygon is at least partially outside fo the
-            image area.
+        partly : bool, optional
+            Whether to return True if the polygon is at least partially outside fo the image area.
 
         Returns
         -------
-        result : bool
+        bool
             True if the polygon is partially/fully outside of the image area, depending
             on defined parameters. False otherwise.
 
@@ -3565,13 +3618,14 @@ class Polygon(object):
 
         Parameters
         ----------
-        image : (H,W,...) ndarray or tuple of at least two ints
-            Image dimensions to use for the clipping of the polygon. If an ndarray, its
-            shape will be used. If a tuple, it is assumed to represent the image shape.
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use for the clipping of the polygon.
+            If an ndarray, its shape will be used.
+            If a tuple, it is assumed to represent the image shape and must contain at least two integers.
 
         Returns
         -------
-        result : MultiPolygon
+        imgaug.MultiPolygon
             Polygon, clipped to fall within the image dimensions.
             Returned as MultiPolygon, because the clipping can split the polygon into multiple parts.
 
@@ -3613,21 +3667,21 @@ class Polygon(object):
 
         Parameters
         ----------
-        top : None or int, optional(default=None)
+        top : None or int, optional
             Amount of pixels by which to shift the polygon from the top.
 
-        right : None or int, optional(default=None)
+        right : None or int, optional
             Amount of pixels by which to shift the polygon from the right.
 
-        bottom : None or int, optional(default=None)
+        bottom : None or int, optional
             Amount of pixels by which to shift the polygon from the bottom.
 
-        left : None or int, optional(default=None)
+        left : None or int, optional
             Amount of pixels by which to shift the polygon from the left.
 
         Returns
         -------
-        result : Polygon
+        imgaug.Polygon
             Shifted polygon.
 
         """
@@ -3655,23 +3709,23 @@ class Polygon(object):
             The image onto which to draw the polygon. Usually expected to be of dtype uint8, though other dtypes
             are also handled.
 
-        color : iterable of int, optional(default=[0,255,0])
+        color : iterable of int, optional
             The color to use for the polygon (excluding perimeter). Must correspond to the channel layout of the
             image. Usually RGB.
 
-        color_perimeter : iterable of int, optional(default=[0,128,0])
+        color_perimeter : iterable of int, optional
             The color to use for the perimeter/border of the polygon. Must correspond to the channel layout of the
             image. Usually RGB.
 
-        alpha : float, optional(default=0.5)
+        alpha : float, optional
             The transparency of the polygon (excluding the perimeter), where 1.0 denotes no transparency and 0.0 is
             invisible.
 
-        alpha_perimeter : float, optional(default=1.0)
+        alpha_perimeter : float, optional
             The transparency of the polygon's perimeter/border, where 1.0 denotes no transparency and 0.0 is
             invisible.
 
-        raise_if_out_of_image : bool, optional(default=False)
+        raise_if_out_of_image : bool, optional
             Whether to raise an error if the polygon is partially/fully outside of the
             image. If set to False, no error will be raised and only the parts inside the image
             will be drawn.
@@ -3733,12 +3787,12 @@ class Polygon(object):
 
         Parameters
         ----------
-        image : (H,W) or (H,W,C) ndarray
+        image : (H,W) ndarray or (H,W,C) ndarray
             The image from which to extract the pixels within the polygon.
 
         Returns
         -------
-        result : (H',W') or (H',W',C) ndarray
+        result : (H',W') ndarray or (H',W',C) ndarray
             Pixels within the polygon. Zero-padded if the polygon is partially/fully
             outside of the image.
 
@@ -3791,7 +3845,7 @@ class Polygon(object):
 
         Returns
         -------
-        result : Polygon
+        imgaug.Polygon
             Copy of this polygon with the new point order.
 
         """
@@ -3820,7 +3874,7 @@ class Polygon(object):
 
         Returns
         -------
-        result : Polygon
+        imgaug.Polygon
             Copy of this polygon with the new point order.
 
         """
@@ -3839,7 +3893,7 @@ class Polygon(object):
 
         Returns
         -------
-        result : shapely.geometry.Polygon
+        shapely.geometry.Polygon
             The Shapely polygon matching this polygon's exterior.
 
         """
@@ -3851,16 +3905,16 @@ class Polygon(object):
 
         Parameters
         ----------
-        closed : bool, optional(default=False)
+        closed : bool, optional
             Whether to return the line string with the last point being identical to the first point.
 
-        interpolate : int, optional(default=0)
+        interpolate : int, optional
             Number of points to interpolate between any pair of two consecutive points. These points are added
             to the final line string.
 
         Returns
         -------
-        result : shapely.geometry.LineString
+        shapely.geometry.LineString
             The Shapely LineString matching the polygon's exterior.
 
         """
@@ -3872,7 +3926,7 @@ class Polygon(object):
 
         Returns
         -------
-        result : BoundingBox
+        imgaug.BoundingBox
             The bounding box tightly containing the polygon.
 
         """
@@ -3892,12 +3946,12 @@ class Polygon(object):
         polygon_shapely : shapely.geometry.Polygon
              The shapely polygon.
 
-        label : None or str, optional(default=None)
+        label : None or str, optional
             The label of the new polygon.
 
         Returns
         -------
-        result : Polygon
+        imgaug.Polygon
             A polygon with the same exterior as the Shapely polygon.
 
         """
@@ -3924,10 +3978,10 @@ class Polygon(object):
 
         Parameters
         ----------
-        other_polygon : Polygon or (N,2) float32 ndarray
+        other_polygon : imgaug.Polygon or (N,2) ndarray
             The other polygon with which to compare the exterior.
-            If this is an array, it is assumed to represent an exterior. It must then have shape (N,2) with the
-            second dimension denoting xy-coordinates.
+            If this is an ndarray, it is assumed to represent an exterior.
+            It must then have dtype float32 and shape (N,2) with the second dimension denoting xy-coordinates.
 
         max_distance : number
             The maximum euclidean distance between a point on one polygon and the closest point on the other polygon.
@@ -3942,7 +3996,7 @@ class Polygon(object):
 
         Returns
         -------
-        result : bool
+        bool
             Whether the two polygon's exteriors can be viewed as equal (approximate test).
 
         """
@@ -4007,22 +4061,22 @@ class Polygon(object):
         """
         Compare this polygon with another one and estimate whether they can be viewed as equal.
 
-        This is the same as `Polygon.exterior_almost_equals()` but additionally compares the labels.
+        This is the same as :func:`imgaug.Polygon.exterior_almost_equals` but additionally compares the labels.
 
         Parameters
         ----------
-        other : object
+        other
             The object to compare against. If not a Polygon, then False will be returned.
 
         max_distance : float
-            See `Polygon.exterior_almost_equals()`.
+            See :func:`imgaug.Polygon.exterior_almost_equals`.
 
         interpolate : int
-            See `Polygon.exterior_almost_equals()`.
+            See :func:`imgaug.Polygon.exterior_almost_equals`.
 
         Returns
         -------
-        result : bool
+        bool
             Whether the two polygons can be viewed as equal. In the case of the exteriors this is an approximate test.
 
         """
@@ -4043,15 +4097,15 @@ class Polygon(object):
 
         Parameters
         ----------
-        exterior : list of Keypoint or list of tuple of floats or (N,2) ndarray
-            List of points defining the polygon. See `Polygon.__init__()` for details.
+        exterior : list of imgaug.Keypoint or list of tuple or (N,2) ndarray, optional
+            List of points defining the polygon. See :func:`imgaug.Polygon.__init__` for details.
 
-        label : None or string
+        label : None or str, optional
             If not None, then the label of the copied object will be set to this value.
 
         Returns
         -------
-        result : Polygon
+        imgaug.Polygon
             Shallow copy.
 
         """
@@ -4063,15 +4117,15 @@ class Polygon(object):
 
         Parameters
         ----------
-        exterior : list of Keypoint or list of tuple of floats or (N,2) ndarray
-            List of points defining the polygon. See `Polygon.__init__()` for details.
+        exterior : list of Keypoint or list of tuple or (N,2) ndarray, optional
+            List of points defining the polygon. See `imgaug.Polygon.__init__` for details.
 
-        label : None or string
+        label : None or str
             If not None, then the label of the copied object will be set to this value.
 
         Returns
         -------
-        out : Polygon
+        imgaug.Polygon
             Deep copy.
 
         """
@@ -4090,9 +4144,10 @@ class Polygon(object):
 
 def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
     if len(points) <= 1:
-        raise Exception("Conversion to shapely line string requires at least two points, but points input contains "
-                        "only %d points." % (
-            len(points),))
+        raise Exception(
+            ("Conversion to shapely line string requires at least two points, but points input contains "
+             "only %d points.") % (len(points),)
+        )
 
     points_tuples = [(point[0], point[1]) for point in points]
 
@@ -4148,7 +4203,7 @@ class MultiPolygon(object):
 
     Parameters
     ----------
-    geoms : list of Polygon
+    geoms : list of imgaug.Polygon
         List of the polygons.
 
     """
@@ -4166,15 +4221,16 @@ class MultiPolygon(object):
 
         Parameters
         ----------
-        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon or shapely.geometry.collection.GeometryCollection
+        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon\
+                   or shapely.geometry.collection.GeometryCollection
             The object to convert to a MultiPolygon.
 
-        label : None or str, optional(default=None)
+        label : None or str, optional
             A label assigned to all Polygons within the MultiPolygon.
 
         Returns
         -------
-        result : MultiPolygon
+        imgaug.MultiPolygon
             The derived MultiPolygon.
 
         """
@@ -4197,23 +4253,22 @@ class HeatmapsOnImage(object):
 
     Parameters
     ----------
-    arr : (H,W) or (H,W,C) ndarray(float32)
-        Array representing the heatmap(s). If multiple heatmaps, then C is expected to denote
-        their number.
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Array representing the heatmap(s).
+        Must be of dtype float32.
+        If multiple heatmaps are provided, then ``C`` is expected to denote their number.
 
-    shape : tuple of ints
+    shape : tuple of int
         Shape of the image on which the heatmap(s) is/are placed. NOT the shape of the
         heatmap(s) array, unless it is identical to the image shape (note the likely
         difference between the arrays in the number of channels).
         If there is not a corresponding image, use the shape of the heatmaps array.
 
-    min_value : float, optional(default=0.0)
-        Minimum value for the heatmaps that `arr` represents. This will usually
-        be 0.0.
+    min_value : float, optional
+        Minimum value for the heatmaps that `arr` represents. This will usually be ``0.0``.
 
-    max_value : float, optional(default=1.0)
-        Maximum value for the heatmaps that `arr` represents. This will usually
-        be 1.0.
+    max_value : float, optional
+        Maximum value for the heatmaps that `arr` represents. This will usually be ``1.0``.
 
     """
 
@@ -4245,16 +4300,16 @@ class HeatmapsOnImage(object):
 
     def get_arr(self):
         """
-        Get the heatmap array in the desired value range.
+        Get the heatmap's array within the value range originally provided in ``__init__()``.
 
-        The HeatmapsOnImage object saves heatmaps internally in the value range (min=0.0, max=1.0).
-        This function converts the internal representation to (min=min_value, max=max_value),
-        where min_value and max_value are provided upon instantiation of the object.
+        The HeatmapsOnImage object saves heatmaps internally in the value range ``(min=0.0, max=1.0)``.
+        This function converts the internal representation to ``(min=min_value, max=max_value)``,
+        where ``min_value`` and ``max_value`` are provided upon instantiation of the object.
 
         Returns
         -------
-        result : (H,W) or (H,W,C) ndarray(float32)
-            Heatmap array.
+        result : (H,W) ndarray or (H,W,C) ndarray
+            Heatmap array. Dtype is float32.
 
         """
         if self.arr_was_2d and self.arr_0to1.shape[2] == 1:
@@ -4272,7 +4327,7 @@ class HeatmapsOnImage(object):
             return self.min_value + diff * arr
 
     # TODO
-    #def find_global_maxima(self):
+    # def find_global_maxima(self):
     #    raise NotImplementedError()
 
     def draw(self, size=None, cmap="jet"):
@@ -4281,20 +4336,20 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        size : None or float or iterable of two ints or iterable of two floats, optional(default=None)
-            Size of the rendered RGB image as (height, width).
-            See `imresize_single_image()` for details.
+        size : None or float or iterable of int or iterable of float, optional
+            Size of the rendered RGB image as ``(height, width)``.
+            See :func:`imgaug.imresize_single_image` for details.
             If set to None, no resizing is performed and the size of the heatmaps array is used.
 
-        cmap : string or None, optional(default="jet")
-            Color map of matplotlib to use in order to convert the heatmaps into RGB images.
+        cmap : str or None, optional
+            Color map of ``matplotlib`` to use in order to convert the heatmaps to RGB images.
             If set to None, no color map will be used and the heatmaps will be converted
-            as simple intensity maps.
+            to simple intensity maps.
 
         Returns
         -------
-        heatmaps_drawn : list of (H,W,3) ndarray(uint8)
-            Rendered heatmaps, one per heatmap array channel.
+        heatmaps_drawn : list of (H,W,3) ndarray
+            Rendered heatmaps. One per heatmap array channel. Dtype is uint8.
 
         """
         heatmaps_uint8 = self.to_uint8()
@@ -4305,8 +4360,7 @@ class HeatmapsOnImage(object):
             heatmap_c = heatmaps_uint8[..., c:c+1]
 
             if size is not None:
-                heatmap_c_rs = imresize_single_image(heatmap_c, size,
-                                                     interpolation="nearest")
+                heatmap_c_rs = imresize_single_image(heatmap_c, size, interpolation="nearest")
             else:
                 heatmap_c_rs = heatmap_c
             heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
@@ -4329,25 +4383,25 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        image : (H,W,3) ndarray(uint8)
-            Image onto which to draw the heatmaps.
+        image : (H,W,3) ndarray
+            Image onto which to draw the heatmaps. Expected to be of dtype uint8.
 
-        alpha : float, optional(default=0.75)
+        alpha : float, optional
             Alpha/opacity value to use for the mixing of image and heatmaps.
             Higher values mean that the heatmaps will be more visible and the image less visible.
 
-        cmap : string or None, optional(default="jet")
-            Color map to use. See `HeatmapsOnImage.draw()` for details.
+        cmap : str or None, optional
+            Color map to use. See :func:`imgaug.HeatmapsOnImage.draw` for details.
 
-        resize : "heatmaps" or "image", optional(default="heatmaps")
+        resize : {'heatmaps', 'image'}, optional
             In case of size differences between the image and heatmaps, either the image or
             the heatmaps can be resized. This parameter controls which of the two will be resized
             to the other's size.
 
         Returns
         -------
-        mix : list of (H,W,3) ndarray(uint8)
-            Rendered overlays, one per heatmap array channel.
+        mix : list of (H,W,3) ndarray
+            Rendered overlays. One per heatmap array channel. Dtype is uint8.
 
         """
         # assert RGB image
@@ -4382,13 +4436,11 @@ class HeatmapsOnImage(object):
 
             v' = max - (v - min)
 
-        where `v` is the value at some spatial location, `min` is the minimum value in the heatmap
-        and `max` is the maximum value.
-        As the heatmap uses internally a 0.0 to 1.0 representation, this simply
-        becomes `v' = 1.0 - v`.
+        where ``v`` is the value at some spatial location, ``min`` is the minimum value in the heatmap
+        and ``max`` is the maximum value.
+        As the heatmap uses internally a 0.0 to 1.0 representation, this simply becomes ``v' = 1.0 - v``.
 
-        Note that the attributes `min_value` and `max_value` are not switched. They both keep their
-        values.
+        Note that the attributes ``min_value`` and ``max_value`` are not switched. They both keep their values.
 
         This function can be useful e.g. when working with depth maps, where algorithms might have
         an easier time representing the furthest away points with zeros, requiring an inverted
@@ -4396,11 +4448,12 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        result : HeatmapsOnImage
+        arr_inv : imgaug.HeatmapsOnImage
             Inverted heatmap.
 
         """
-        arr_inv = HeatmapsOnImage.from_0to1(1 - self.arr_0to1, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        arr_inv = HeatmapsOnImage.from_0to1(1 - self.arr_0to1, shape=self.shape, min_value=self.min_value,
+                                            max_value=self.max_value)
         arr_inv.arr_was_2d = self.arr_was_2d
         return arr_inv
 
@@ -4410,32 +4463,33 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        top : int, optional(default=0)
+        top : int, optional
             Amount of pixels to add at the top side of the heatmaps. Must be 0 or greater.
 
-        right : int, optional(default=0)
+        right : int, optional
             Amount of pixels to add at the right side of the heatmaps. Must be 0 or greater.
 
-        bottom : int, optional(default=0)
+        bottom : int, optional
             Amount of pixels to add at the bottom side of the heatmaps. Must be 0 or greater.
 
-        left : int, optional(default=0)
+        left : int, optional
             Amount of pixels to add at the left side of the heatmaps. Must be 0 or greater.
 
-        mode : string, optional(default="constant")
-            Padding mode to use. See `numpy.pad()` for details.
+        mode : string, optional
+            Padding mode to use. See :func:`numpy.pad` for details.
 
-        cval : number, optional(default=0.0)
-            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+        cval : number, optional
+            Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
 
         Returns
         -------
-        result : HeatmapsOnImage
-            Padded heatmaps of height H'=H+top+bottom and width W'=W+left+right.
+        imgaug.HeatmapsOnImage
+            Padded heatmaps of height ``H'=H+top+bottom`` and width ``W'=W+left+right``.
 
         """
         arr_0to1_padded = pad(self.arr_0to1, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
-        return HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
         """
@@ -4451,13 +4505,13 @@ class HeatmapsOnImage(object):
             Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
             as much width as height.
 
-        mode : string, optional(default="constant")
-            Padding mode to use. See `numpy.pad()` for details.
+        mode : str, optional
+            Padding mode to use. See :func:`numpy.pad` for details.
 
-        cval : number, optional(default=0.0)
-            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+        cval : number, optional
+            Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
 
-        return_pad_amounts : bool, optional(default=False)
+        return_pad_amounts : bool, optional
             If False, then only the padded image will be returned. If True, a tuple with two
             entries will be returned, where the first entry is the padded image and the second
             entry are the amounts by which each image side was padded. These amounts are again a
@@ -4465,15 +4519,18 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        result : tuple
-            First tuple entry: Padded heatmaps as HeatmapsOnImage object.
-            Second tuple entry: Amounts by which the heatmaps were padded on each side, given
-            as a tuple (top, right, bottom, left).
-            If return_pad_amounts is False, then only the heatmaps object is returned.
+        heatmaps : imgaug.HeatmapsOnImage
+            Padded heatmaps as HeatmapsOnImage object.
+
+        pad_amounts : tuple of int
+            Amounts by which the heatmaps were padded on each side, given as a tuple ``(top, right, bottom, left)``.
+            This tuple is only returned if `return_pad_amounts` was set to True.
 
         """
-        arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
-        heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        arr_0to1_padded, pad_amounts = pad_to_aspect_ratio(self.arr_0to1, aspect_ratio=aspect_ratio, mode=mode,
+                                                           cval=cval, return_pad_amounts=True)
+        heatmaps = HeatmapsOnImage.from_0to1(arr_0to1_padded, shape=self.shape, min_value=self.min_value,
+                                             max_value=self.max_value)
         if return_pad_amounts:
             return heatmaps, pad_amounts
         else:
@@ -4485,17 +4542,18 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        block_size : int or tuple of two ints or tuple of three ints
-            Size of each block of values to pool, aka kernel size. See `imgaug.pool()` for details.
+        block_size : int or tuple of int
+            Size of each block of values to pool, aka kernel size. See :func:`imgaug.pool` for details.
 
         Returns
         -------
-        result : HeatmapsOnImage
+        imgaug.HeatmapsOnImage
             Heatmaps after average pooling.
 
         """
         arr_0to1_reduced = avg_pool(self.arr_0to1, block_size, cval=0.0)
-        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def max_pool(self, block_size):
         """
@@ -4503,17 +4561,18 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        block_size : int or tuple of two ints or tuple of three ints
-            Size of each block of values to pool, aka kernel size. See `imgaug.pool()` for details.
+        block_size : int or tuple of int
+            Size of each block of values to pool, aka kernel size. See :func:`imgaug.pool` for details.
 
         Returns
         -------
-        result : HeatmapsOnImage
+        imgaug.HeatmapsOnImage
             Heatmaps after max-pooling.
 
         """
         arr_0to1_reduced = max_pool(self.arr_0to1, block_size)
-        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def scale(self, sizes, interpolation="cubic"):
         """
@@ -4521,15 +4580,15 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        sizes : float or iterable of two ints or iterable of two floats
-            New size of the array in (height, width). See `imresize_single_image()` for details.
+        sizes : float or iterable of int or iterable of float
+            New size of the array in ``(height, width)``. See :func:`imgaug.imresize_single_image` for details.
 
-        interpolation : None or string or int, optional(default="cubic")
-            The interpolation to use during resize. See `imresize_single_image()` for details.
+        interpolation : None or str or int, optional
+            The interpolation to use during resize. See :func:`imgaug.imresize_single_image` for details.
 
         Returns
         -------
-        result : HeatmapsOnImage
+        imgaug.HeatmapsOnImage
             Rescaled heatmaps object.
 
         """
@@ -4540,7 +4599,8 @@ class HeatmapsOnImage(object):
         # TODO area interpolation too?
         arr_0to1_rescaled = np.clip(arr_0to1_rescaled, 0.0, 1.0)
 
-        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value, max_value=self.max_value)
+        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value,
+                                         max_value=self.max_value)
 
     def to_uint8(self):
         """
@@ -4548,8 +4608,8 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        arr_uint8 : (H,W,C) ndarray(uint8)
-            Heatmap as a 0-to-255 array.
+        arr_uint8 : (H,W,C) ndarray
+            Heatmap as a 0-to-255 array (dtype is uint8).
 
         """
         # TODO this always returns (H,W,C), even if input ndarray was originall (H,W)
@@ -4565,27 +4625,28 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        arr_uint8 : (H,W) or (H,W,C) ndarray(uint8)
-            Heatmap(s) array, where H=height, W=width, C=heatmap channels.
+        arr_uint8 : (H,W) ndarray or (H,W,C) ndarray
+            Heatmap(s) array, where ``H`` is height, ``W`` is width and ``C`` is the number of heatmap channels.
+            Expected dtype is uint8.
 
-        shape : tuple of ints
+        shape : tuple of int
             Shape of the image on which the heatmap(s) is/are placed. NOT the shape of the
             heatmap(s) array, unless it is identical to the image shape (note the likely
             difference between the arrays in the number of channels).
             If there is not a corresponding image, use the shape of the heatmaps array.
 
-        min_value : float, optional(default=0.0)
+        min_value : float, optional
             Minimum value for the heatmaps that the 0-to-255 array represents. This will usually
-            be 0.0. It is used when calling `HeatmapsOnImage.get_arr()`, which converts the
-            underlying (0, 255) array to value range (min_value, max_value).
+            be 0.0. It is used when calling :func:`imgaug.HeatmapsOnImage.get_arr`, which converts the
+            underlying ``(0, 255)`` array to value range ``(min_value, max_value)``.
 
-        max_value : float, optional(default=1.0)
+        max_value : float, optional
             Maximum value for the heatmaps that 0-to-255 array represents.
-            See parameter min_value for details.
+            See parameter `min_value` for details.
 
         Returns
         -------
-        heatmaps : HeatmapsOnImage
+        imgaug.HeatmapsOnImage
             Heatmaps object.
 
         """
@@ -4599,8 +4660,9 @@ class HeatmapsOnImage(object):
 
         Parameters
         ----------
-        arr_0to1 : (H,W) or (H,W,C) ndarray(float32)
-            Heatmap(s) array, where H=height, W=width, C=heatmap channels.
+        arr_0to1 : (H,W) or (H,W,C) ndarray
+            Heatmap(s) array, where ``H`` is height, ``W`` is width and ``C`` is the number of heatmap channels.
+            Expected dtype is float32.
 
         shape : tuple of ints
             Shape of the image on which the heatmap(s) is/are placed. NOT the shape of the
@@ -4608,21 +4670,22 @@ class HeatmapsOnImage(object):
             difference between the arrays in the number of channels).
             If there is not a corresponding image, use the shape of the heatmaps array.
 
-        min_value : float, optional(default=0.0)
+        min_value : float, optional
             Minimum value for the heatmaps that the 0-to-1 array represents. This will usually
-            be 0.0. It is used when calling `HeatmapsOnImage.get_arr()`, which converts the
-            underlying (0.0, 1.0) array to value range (min_value, max_value).
-            E.g. if you started with heatmaps in the range (-1.0, 1.0) and projected these
-            to (0.0, 1.0), you should call this function with min_value=-1.0, max_value=1.0
-            so that `get_arr()` returns heatmap arrays having value range (-1.0, 1.0).
+            be 0.0. It is used when calling :func:`imgaug.HeatmapsOnImage.get_arr`, which converts the
+            underlying ``(0.0, 1.0)`` array to value range ``(min_value, max_value)``.
+            E.g. if you started with heatmaps in the range ``(-1.0, 1.0)`` and projected these
+            to (0.0, 1.0), you should call this function with ``min_value=-1.0``, ``max_value=1.0``
+            so that :func:`imgaug.HeatmapsOnImage.get_arr` returns heatmap arrays having value
+            range (-1.0, 1.0).
 
-        max_value : float, optional(default=1.0)
+        max_value : float, optional
             Maximum value for the heatmaps that to 0-to-255 array represents.
             See parameter min_value for details.
 
         Returns
         -------
-        heatmaps : HeatmapsOnImage
+        heatmaps : imgaug.HeatmapsOnImage
             Heatmaps object.
 
         """
@@ -4631,8 +4694,8 @@ class HeatmapsOnImage(object):
         heatmaps.max_value = max_value
         return heatmaps
 
-    @staticmethod
-    def change_normalization(arr, source, target):
+    @classmethod
+    def change_normalization(cls, arr, source, target):
         """
         Change the value range of a heatmap from one min-max to another min-max.
 
@@ -4643,13 +4706,11 @@ class HeatmapsOnImage(object):
         arr : ndarray
             Heatmap array to modify.
 
-        source : tuple of two floats
-            Current value range of the input array, given as (min, max), where both are float
-            values.
+        source : tuple of float
+            Current value range of the input array, given as (min, max), where both are float values.
 
-        target : tuple of two floats
-            Desired output value range of the array, given as (min, max), where both are float
-            values.
+        target : tuple of float
+            Desired output value range of the array, given as (min, max), where both are float values.
 
         Returns
         -------
@@ -4699,7 +4760,7 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        out : HeatmapsOnImage
+        imgaug.HeatmapsOnImage
             Shallow copy.
 
         """
@@ -4711,7 +4772,7 @@ class HeatmapsOnImage(object):
 
         Returns
         -------
-        out : HeatmapsOnImage
+        imgaug.HeatmapsOnImage
             Deep copy.
 
         """
@@ -4747,7 +4808,7 @@ class SegmentationMapOnImage(object):
 
     shape : iterable of int
         Shape of the corresponding image (NOT the segmentation map array). This is expected
-        to be (H, W) or (H, W, C) with C usually being 3. If there is no corresponding image,
+        to be ``(H, W)`` or ``(H, W, C)`` with ``C`` usually being 3. If there is no corresponding image,
         then use the segmentation map's shape instead.
 
     nb_classes : int or None
@@ -4838,10 +4899,6 @@ class SegmentationMapOnImage(object):
         self.shape = shape
         self.nb_classes = nb_classes if nb_classes is not None else arr.shape[2]
 
-    #@property
-    #def nb_classes(self):
-    #    return self.arr.shape[2]
-
     def get_arr_int(self, background_threshold=0.01, background_class_id=None):
         """
         Get the segmentation map array as an integer array of shape (H, W).
@@ -4855,12 +4912,12 @@ class SegmentationMapOnImage(object):
 
         Parameters
         ----------
-        background_threshold : float, optional(default=0.01)
+        background_threshold : float, optional
             At each pixel, each class-heatmap has a value between 0.0 and 1.0. If none of the
             class-heatmaps has a value above this threshold, the method uses the background class
             id instead.
 
-        background_class_id : None or int, optional(default=None)
+        background_class_id : None or int, optional
             Class id to fall back to if no class-heatmap passes the threshold at a spatial
             location. May only be provided if the original input was an integer mask and in these
             cases defaults to 0. If the input were float or boolean masks, the background class id
@@ -4869,15 +4926,17 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : (H,W) ndarray(int)
-            Segmentation map array.
+        result : (H,W) ndarray
+            Segmentation map array (int32).
             If the original input consisted of boolean or float masks, then the highest possible
-            class id is `1+C`, where `C` is the number of provided float/boolean masks. The value
-            `0` in the integer mask then denotes the background class.
+            class id is ``1+C``, where ``C`` is the number of provided float/boolean masks. The value
+            ``0`` in the integer mask then denotes the background class.
 
         """
         if self.input_was[0] in ["bool", "float"]:
-            do_assert(background_class_id is None, "The background class id may only be changed if the original input to SegmentationMapOnImage was an *integer* based segmentation map.")
+            do_assert(background_class_id is None,
+                      "The background class id may only be changed if the original input to SegmentationMapOnImage "
+                      + "was an *integer* based segmentation map.")
 
         if background_class_id is None:
             background_class_id = 0
@@ -4896,43 +4955,43 @@ class SegmentationMapOnImage(object):
 
         return result.astype(np.int32)
 
-    #def get_arr_bool(self, allow_overlapping=False, threshold=0.5, background_threshold=0.01, background_class_id=0):
-    #    # TODO
+    # TODO
+    # def get_arr_bool(self, allow_overlapping=False, threshold=0.5, background_threshold=0.01, background_class_id=0):
     #    raise NotImplementedError()
 
-    def draw(self, size=None, background_threshold=0.01, background_class_id=None, colors=None, return_foreground_mask=False):
+    def draw(self, size=None, background_threshold=0.01, background_class_id=None, colors=None,
+             return_foreground_mask=False):
         """
         Render the segmentation map as an RGB image.
 
         Parameters
         ----------
-        size : None or float or iterable of two ints or iterable of two floats, optional(default=None)
-            Size of the rendered RGB image as (height, width).
-            See `imresize_single_image()` for details.
-            If set to None, no resizing is performed and the size of the segmentation map array is
-            used.
+        size : None or float or iterable of int or iterable of float, optional
+            Size of the rendered RGB image as ``(height, width)``.
+            See :func:`imgaug.imresize_single_image` for details.
+            If set to None, no resizing is performed and the size of the segmentation map array is used.
 
-        background_threshold : float, optional(default=0.01)
-            See `SegmentationMapOnImage.get_arr_int()`.
+        background_threshold : float, optional
+            See :func:`imgaug.SegmentationMapOnImage.get_arr_int`.
 
-        background_class_id : None or int, optional(default=None)
-            See `SegmentationMapOnImage.get_arr_int()`.
+        background_class_id : None or int, optional
+            See :func:`imgaug.SegmentationMapOnImage.get_arr_int`.
 
-        colors : None or list of tuple of int, optional(default=None)
+        colors : None or list of tuple of int, optional
             Colors to use. One for each class to draw. If None, then default colors will be used.
 
-        return_foreground_mask : bool, optional(default=False)
+        return_foreground_mask : bool, optional
             Whether to return a mask of the same size as the drawn segmentation map, containing
-            True at any spatial location that is not the background class and False everywhere
-            else.
+            True at any spatial location that is not the background class and False everywhere else.
 
         Returns
         -------
-        segmap_drawn : (H,W,3) ndarray(uint8)
-            Rendered segmentation map.
-        foreground_mask : (H,W) ndarray(bool)
-            Mask indicating the locations of foreground classes. Only returned if
-            return_foreground_mask is True.
+        segmap_drawn : (H,W,3) ndarray
+            Rendered segmentation map (dtype is uint8).
+
+        foreground_mask : (H,W) ndarray
+            Mask indicating the locations of foreground classes (dtype is bool).
+            This value is only returned if `return_foreground_mask` is True.
 
         """
         arr = self.get_arr_int(background_threshold=background_threshold, background_class_id=background_class_id)
@@ -4940,7 +4999,9 @@ class SegmentationMapOnImage(object):
         segmap_drawn = np.zeros((arr.shape[0], arr.shape[1], 3), dtype=np.uint8)
         if colors is None:
             colors = SegmentationMapOnImage.DEFAULT_SEGMENT_COLORS
-        do_assert(nb_classes <= len(colors), "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (nb_classes, len(colors),))
+        do_assert(nb_classes <= len(colors),
+                  "Can't draw all %d classes as it would exceed the maximum number of %d available colors." % (
+                      nb_classes, len(colors),))
 
         ids_in_map = np.unique(arr)
         for c, color in zip(sm.xrange(nb_classes), colors):
@@ -4957,41 +5018,42 @@ class SegmentationMapOnImage(object):
         if size is not None:
             segmap_drawn = imresize_single_image(segmap_drawn, size, interpolation="nearest")
             if foreground_mask is not None:
-                foreground_mask = imresize_single_image(foreground_mask.astype(np.uint8), size, interpolation="nearest") > 0
+                foreground_mask = imresize_single_image(
+                    foreground_mask.astype(np.uint8), size, interpolation="nearest") > 0
 
         if foreground_mask is not None:
             return segmap_drawn, foreground_mask
         return segmap_drawn
 
-    def draw_on_image(self, image, alpha=0.75, resize="segmentation_map", background_threshold=0.01, background_class_id=None, colors=None, draw_background=False):
+    def draw_on_image(self, image, alpha=0.75, resize="segmentation_map", background_threshold=0.01,
+                      background_class_id=None, colors=None, draw_background=False):
         """
         Draw the segmentation map as an overlay over an image.
 
         Parameters
         ----------
-        image : (H,W,3) ndarray(uint8)
-            Image onto which to draw the segmentation map.
+        image : (H,W,3) ndarray
+            Image onto which to draw the segmentation map. Dtype is expected to be uint8.
 
-        alpha : float, optional(default=0.75)
+        alpha : float, optional
             Alpha/opacity value to use for the mixing of image and segmentation map.
-            Higher values mean that the segmentation map will be more visible and the image less
-            visible.
+            Higher values mean that the segmentation map will be more visible and the image less visible.
 
-        resize : "segmentation_map" or "image", optional(default="segmentation_map")
+        resize : {'segmentation_map', 'image'}, optional
             In case of size differences between the image and segmentation map, either the image or
             the segmentation map can be resized. This parameter controls which of the two will be
             resized to the other's size.
 
-        background_threshold : float, optional(default=0.01)
-            See `SegmentationMapOnImage.get_arr_int()`.
+        background_threshold : float, optional
+            See :func:`imgaug.SegmentationMapOnImage.get_arr_int`.
 
-        background_class_id : None or int, optional(default=None)
-            See `SegmentationMapOnImage.get_arr_int()`.
+        background_class_id : None or int, optional
+            See :func:`imgaug.SegmentationMapOnImage.get_arr_int`.
 
-        colors : None or list of tuple of int, optional(default=None)
+        colors : None or list of tuple of int, optional
             Colors to use. One for each class to draw. If None, then default colors will be used.
 
-        draw_background : bool, optional(default=False)
+        draw_background : bool, optional
             If True, the background will be drawn like any other class.
             If False, the background will not be drawn, i.e. the respective background pixels
             will be identical with the image's RGB color at the corresponding spatial location
@@ -4999,8 +5061,8 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        mix : (H,W,3) ndarray(uint8)
-            Rendered overlays.
+        mix : (H,W,3) ndarray
+            Rendered overlays (dtype is uint8).
 
         """
         # assert RGB image
@@ -5045,32 +5107,28 @@ class SegmentationMapOnImage(object):
 
         Parameters
         ----------
-        top : int, optional(default=0)
-            Amount of pixels to add at the top side of the segmentation map. Must be 0 or
-            greater.
+        top : int, optional
+            Amount of pixels to add at the top side of the segmentation map. Must be 0 or greater.
 
-        right : int, optional(default=0)
-            Amount of pixels to add at the right side of the segmentation map. Must be 0 or
-            greater.
+        right : int, optional
+            Amount of pixels to add at the right side of the segmentation map. Must be 0 or greater.
 
-        bottom : int, optional(default=0)
-            Amount of pixels to add at the bottom side of the segmentation map. Must be 0 or
-            greater.
+        bottom : int, optional
+            Amount of pixels to add at the bottom side of the segmentation map. Must be 0 or greater.
 
-        left : int, optional(default=0)
-            Amount of pixels to add at the left side of the segmentation map. Must be 0 or
-            greater.
+        left : int, optional
+            Amount of pixels to add at the left side of the segmentation map. Must be 0 or greater.
 
-        mode : string, optional(default="constant")
-            Padding mode to use. See `numpy.pad()` for details.
+        mode : str, optional
+            Padding mode to use. See :func:`numpy.pad` for details.
 
-        cval : number, optional(default=0.0)
-            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+        cval : number, optional
+            Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
 
         Returns
         -------
-        segmap : SegmentationMapOnImage
-            Padded segmentation map of height H'=H+top+bottom and width W'=W+left+right.
+        segmap : imgaug.SegmentationMapOnImage
+            Padded segmentation map of height ``H'=H+top+bottom`` and width ``W'=W+left+right``.
 
         """
         arr_padded = pad(self.arr, top=top, right=right, bottom=bottom, left=left, mode=mode, cval=cval)
@@ -5092,13 +5150,13 @@ class SegmentationMapOnImage(object):
             Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
             as much width as height.
 
-        mode : string, optional(default="constant")
-            Padding mode to use. See `numpy.pad()` for details.
+        mode : str, optional
+            Padding mode to use. See :func:`numpy.pad` for details.
 
-        cval : number, optional(default=0.0)
-            Value to use for padding if mode="constant". See `numpy.pad()` for details.
+        cval : number, optional
+            Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
 
-        return_pad_amounts : bool, optional(default=False)
+        return_pad_amounts : bool, optional
             If False, then only the padded image will be returned. If True, a tuple with two
             entries will be returned, where the first entry is the padded image and the second
             entry are the amounts by which each image side was padded. These amounts are again a
@@ -5106,14 +5164,17 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        segmap : tuple
-            First tuple entry: Padded segmentation map as SegmentationMapOnImage object.
-            Second tuple entry: Amounts by which the segmentation map was padded on each side,
-            given as a tuple (top, right, bottom, left).
-            If return_pad_amounts is False, then only the segmentation map object is returned.
+        segmap : imgaug.SegmentationMapOnImage
+            Padded segmentation map as SegmentationMapOnImage object.
+
+        pad_amounts : tuple of int
+            Amounts by which the segmentation map was padded on each side, given as a
+            tuple ``(top, right, bottom, left)``.
+            This tuple is only returned if `return_pad_amounts` was set to True.
 
         """
-        arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval, return_pad_amounts=True)
+        arr_padded, pad_amounts = pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval,
+                                                      return_pad_amounts=True)
         segmap = SegmentationMapOnImage(arr_padded, shape=self.shape)
         segmap.input_was = self.input_was
         if return_pad_amounts:
@@ -5127,18 +5188,18 @@ class SegmentationMapOnImage(object):
 
         Parameters
         ----------
-        sizes : float or iterable of two ints or iterable of two floats
-            New size of the array in (height, width). See `imresize_single_image()` for details.
+        sizes : float or iterable of int or iterable of float
+            New size of the array in ``(height, width)``. See :func:`imgaug.imresize_single_image` for details.
 
-        interpolation : None or string or int, optional(default="cubic")
-            The interpolation to use during resize. See `imresize_single_image()` for details.
+        interpolation : None or str or int, optional
+            The interpolation to use during resize. See :func:`imgaug.imresize_single_image` for details.
             Note: The segmentation map is internally stored as multiple float-based heatmaps,
             making smooth interpolations potentially more reasonable than nearest neighbour
             interpolation.
 
         Returns
         -------
-        segmap : SegmentationMapOnImage
+        segmap : imgaug.SegmentationMapOnImage
             Rescaled segmentation map object.
 
         """
@@ -5160,11 +5221,11 @@ class SegmentationMapOnImage(object):
 
         Parameters
         ----------
-        only_nonempty : bool, optional(default=False)
+        only_nonempty : bool, optional
             If True, then only heatmaps for classes that appear in the segmentation map will be
             generated. Additionally, a list of these class ids will be returned.
 
-        not_none_if_no_nonempty : bool, optional(default=False)
+        not_none_if_no_nonempty : bool, optional
             If `only_nonempty` is True and for a segmentation map no channel was non-empty,
             this function usually returns None as the heatmaps object. If however this parameter
             is set to True, a heatmaps object with one channel (representing class 0)
@@ -5172,10 +5233,11 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        result : HeatmapsOnImage or None
-            Segmentation map as heatmaps.
+        imgaug.HeatmapsOnImage or None
+            Segmentation map as a heatmaps object.
             If `only_nonempty` was set to True and no class appeared in the segmentation map,
             then this is None.
+
         class_indices : list of int
             Class ids (0 to C-1) of the classes that were actually added to the heatmaps.
             Only returned if `only_nonempty` was set to True.
@@ -5204,20 +5266,20 @@ class SegmentationMapOnImage(object):
 
         Parameters
         ----------
-        heatmaps : HeatmapsOnImage
+        heatmaps : imgaug.HeatmapsOnImage
             Heatmaps to convert.
 
-        class_indices : None or list of int, optional(default=None)
+        class_indices : None or list of int, optional
             List of class indices represented by each heatmap channel. See also the
-            secondary output of `to_heatmap()`. If this is provided, it must have the same
-            length as the number of heatmap channels.
+            secondary output of :func:`imgaug.SegmentationMapOnImage.to_heatmap`.
+            If this is provided, it must have the same length as the number of heatmap channels.
 
-        nb_classes : None or int, optional(default=None)
+        nb_classes : None or int, optional
             Number of classes. Must be provided if class_indices is set.
 
         Returns
         -------
-        result : SegmentationMapOnImage
+        imgaug.SegmentationMapOnImage
             Segmentation map derived from heatmaps.
 
         """
@@ -5230,7 +5292,6 @@ class SegmentationMapOnImage(object):
             do_assert(len(class_indices) == heatmaps.arr_0to1.shape[2])
             arr_0to1 = heatmaps.arr_0to1
             arr_0to1_full = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1], nb_classes), dtype=np.float32)
-            #empty_channel = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1]), dtype=np.float32)
             class_indices_set = set(class_indices)
             heatmap_channel = 0
             for c in sm.xrange(nb_classes):
@@ -5245,7 +5306,7 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        out : SegmentationMapOnImage
+        imgaug.SegmentationMapOnImage
             Shallow copy.
 
         """
@@ -5257,7 +5318,7 @@ class SegmentationMapOnImage(object):
 
         Returns
         -------
-        out : SegmentationMapOnImage
+        imgaug.SegmentationMapOnImage
             Deep copy.
 
         """
@@ -5277,26 +5338,21 @@ class Batch(object):
     Parameters
     ----------
     images : None or (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
-        The images to
-        augment.
+        The images to augment.
 
-    heatmaps : None or list of HeatmapsOnImage
-        The heatmaps to
-        augment.
+    heatmaps : None or list of imgaug.HeatmapsOnImage
+        The heatmaps to augment.
 
     segmentation_maps : None or list of SegmentationMapOnImage
-        The segmentation maps to
-        augment.
+        The segmentation maps to augment.
 
     keypoints : None or list of KeypointOnImage
-        The keypoints to
-        augment.
+        The keypoints to augment.
 
     bounding_boxes : None or list of BoundingBoxesOnImage
-        The bounding boxes to
-        augment.
+        The bounding boxes to augment.
 
-    data : anything
+    data
         Additional data that is saved in the batch and may be read out
         after augmentation. This could e.g. contain filepaths to each image
         in `images`. As this object is usually used for background
@@ -5304,7 +5360,8 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
-    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None, data=None):
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None,
+                 data=None):
         self.images = images
         self.images_aug = None
         self.heatmaps = heatmaps
@@ -5354,11 +5411,12 @@ class Batch(object):
 
         return batch
 
+
 class BatchLoader(object):
     """
     Class to load batches in the background.
 
-    Loaded batches can be accesses using `BatchLoader.queue`.
+    Loaded batches can be accesses using :attr:`imgaug.BatchLoader.queue`.
 
     Parameters
     ----------
@@ -5366,14 +5424,14 @@ class BatchLoader(object):
         Function that yields Batch objects (i.e. expected to be a generator).
         Background loading automatically stops when the last batch was yielded.
 
-    queue_size : int, optional(default=50)
+    queue_size : int, optional
         Maximum number of batches to store in the queue. May be set higher
         for small images and/or small batches.
 
-    nb_workers : int, optional(default=1)
+    nb_workers : int, optional
         Number of workers to run in the background.
 
-    threaded : bool, optional(default=True)
+    threaded : bool, optional
         Whether to run the background processes using threads (true) or
         full processes (false).
 
@@ -5392,9 +5450,15 @@ class BatchLoader(object):
             finished_signal = multiprocessing.Event()
             self.finished_signals.append(finished_signal)
             if threaded:
-                worker = threading.Thread(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal, self.join_signal, None))
+                worker = threading.Thread(
+                    target=self._load_batches,
+                    args=(load_batch_func, self.queue, finished_signal, self.join_signal, None)
+                )
             else:
-                worker = multiprocessing.Process(target=self._load_batches, args=(load_batch_func, self.queue, finished_signal, self.join_signal, seeds[i]))
+                worker = multiprocessing.Process(
+                    target=self._load_batches,
+                    args=(load_batch_func, self.queue, finished_signal, self.join_signal, seeds[i])
+                )
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
@@ -5421,7 +5485,9 @@ class BatchLoader(object):
 
         try:
             for batch in load_batch_func():
-                do_assert(isinstance(batch, Batch), "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (type(batch),))
+                do_assert(isinstance(batch, Batch),
+                          "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (
+                              type(batch),))
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
                     try:
@@ -5439,10 +5505,7 @@ class BatchLoader(object):
                 finished_signal.set()
 
     def terminate(self):
-        """
-        Stop all workers.
-
-        """
+        """Stop all workers."""
         if not self.join_signal.is_set():
             self.join_signal.set()
         # give minimal time to put generated batches in queue and gracefully shut down
@@ -5508,9 +5571,9 @@ class BackgroundAugmenter(object):
         can lead to smoother and faster training. For large images, high
         values can block a lot of RAM though.
 
-    nb_workers : "auto" or int
-        Number of background workers to spawn. If auto, it will be set
-        to C-1, where C is the number of CPU cores.
+    nb_workers : 'auto' or int
+        Number of background workers to spawn.
+        If ``auto``, it will be set to ``C-1``, where ``C`` is the number of CPU cores.
 
     """
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
@@ -5529,7 +5592,6 @@ class BackgroundAugmenter(object):
             nb_workers = max(1, nb_workers - 1)
         else:
             do_assert(nb_workers >= 1)
-        #print("Starting %d background processes" % (nb_workers,))
 
         self.nb_workers = nb_workers
         self.workers = []
@@ -5540,7 +5602,10 @@ class BackgroundAugmenter(object):
 
         seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
         for i in range(nb_workers):
-            worker = multiprocessing.Process(target=self._augment_images_worker, args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i]))
+            worker = multiprocessing.Process(
+                target=self._augment_images_worker,
+                args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i])
+            )
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
@@ -5554,7 +5619,7 @@ class BackgroundAugmenter(object):
 
         Returns
         -------
-        out : None or ia.Batch
+        out : None or imgaug.Batch
             One batch or None if all workers have finished.
 
         """
@@ -5571,9 +5636,10 @@ class BackgroundAugmenter(object):
 
     def _augment_images_worker(self, augseq, queue_source, queue_result, source_finished_signals, seedval):
         """
-        Worker function that endlessly queries the source queue (input
-        batches), augments batches in it and sends the result to the output
-        queue.
+        Augment endlessly images in the source queue.
+
+        This is a worker function for that endlessly queries the source queue (input batches),
+        augments batches in it and sends the result to the output queue.
 
         """
         np.random.seed(seedval)
@@ -5600,6 +5666,7 @@ class BackgroundAugmenter(object):
     def terminate(self):
         """
         Terminates all background processes immediately.
+
         This will also free their RAM.
 
         """

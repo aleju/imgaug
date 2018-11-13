@@ -23,23 +23,28 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
+import warnings
+
 import numpy as np
 import cv2
 import six.moves as sm
-import warnings
 
-from .meta import Augmenter, WithChannels, handle_children_list
-from .arithmetic import Add
+from . import meta
+from . import arithmetic
+from .. import imgaug as ia
+from .. import parameters as iap
+
 
 # legacy support
-def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
+def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False,
+                 random_state=None):
     """Deprecated. Use WithColorspace."""
     warnings.warn('InColorspace is deprecated. Use WithColorspace.', DeprecationWarning)
     return WithColorspace(to_colorspace, from_colorspace, children, name, deterministic, random_state)
 
-class WithColorspace(Augmenter):
+
+class WithColorspace(meta.Augmenter):
     """
     Apply child augmenters within a specific colorspace.
 
@@ -50,23 +55,23 @@ class WithColorspace(Augmenter):
 
     Parameters
     ----------
-    to_colorspace : string
-        See `ChangeColorspace.__init__()`
+    to_colorspace : str
+        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
 
-    from_colorspace : string, optional(default="RGB")
-        See `ChangeColorspace.__init__()`
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
 
-    children : None or Augmenter or list of Augmenters, optional(default=None)
-        See `ChangeColorspace.__init__()`
+    children : None or Augmenter or list of Augmenters, optional
+        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -78,12 +83,13 @@ class WithColorspace(Augmenter):
 
     """
 
-    def __init__(self, to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False, random_state=None):
+    def __init__(self, to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False,
+                 random_state=None):
         super(WithColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.to_colorspace = to_colorspace
         self.from_colorspace = from_colorspace
-        self.children = handle_children_list(children, self.name, "then")
+        self.children = meta.handle_children_list(children, self.name, "then")
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -137,36 +143,38 @@ class WithColorspace(Augmenter):
         return [self.children]
 
     def __str__(self):
-        return "WithColorspace(from_colorspace=%s, to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" % (self.from_colorspace, self.to_colorspace, self.name, self.children, self.deterministic)
+        return "WithColorspace(from_colorspace=%s, to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" % (
+            self.from_colorspace, self.to_colorspace, self.name, self.children, self.deterministic)
+
 
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
-def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None): # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
     """
     Augmenter that transforms images into HSV space, selects the H and S
     channels and then adds a given range of values to these.
 
     Parameters
     ----------
-    value : int or tuple of int or list of int or StochasticParameter, optional(default=0)
-        See `Add.__init__()`
+    value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
 
-    per_channel : bool or float, optional(default=False)
-        See `Add.__init__()`
+    per_channel : bool or float, optional
+        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
 
-    from_colorspace : string, optional(default="RGB")
-        See `ChangeColorspace.__init__()`
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
 
-    channels : integer or list of integers or None, optional(default=[0, 1])
-        See `WithChannels.__init__()`
+    channels : int or list of int or None, optional
+        See :func:`imgaug.augmenters.meta.WithChannels.__init__()`.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
-    >> aug = AddToHueAndSaturation((-20, 20), per_channel=True)
+    >>> aug = AddToHueAndSaturation((-20, 20), per_channel=True)
 
     Adds random values between -20 and 20 to the hue and saturation
     (independently per channel and the same value for all pixels within
@@ -179,68 +187,67 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
     return WithColorspace(
         to_colorspace="HSV",
         from_colorspace=from_colorspace,
-        children=WithChannels(
+        children=meta.WithChannels(
             channels=channels,
-            children=Add(value=value, per_channel=per_channel)
+            children=arithmetic.Add(value=value, per_channel=per_channel)
         ),
         name=name
     )
+
 
 # TODO tests
 # Note: Not clear whether this class will be kept (for anything aside from grayscale)
 # other colorspaces dont really make sense and they also might not work correctly
 # due to having no clearly limited range (like 0-255 or 0-1)
-# TODO rename to ChangeColorspace3D and then introduce ChangeColorspace, which
-# does not enforce 3d images?
-class ChangeColorspace(Augmenter):
+# TODO rename to ChangeColorspace3D and then introduce ChangeColorspace, which does not enforce 3d images?
+class ChangeColorspace(meta.Augmenter):
     """
     Augmenter to change the colorspace of images.
 
-    NOTE: This augmenter is not tested. Some colorspaces might work, others
-    might not.
+    NOTE: This augmenter is not tested. Some colorspaces might work, others might not.
 
-    NOTE: This augmenter tries to project the colorspace value range on 0-255.
-    It outputs dtype=uint8 images.
+    NOTE: This augmenter tries to project the colorspace value range on 0-255. It outputs dtype=uint8 images.
 
     Parameters
     ----------
-    to_colorspace : string or iterable or StochasticParameter
+    to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
         The target colorspace.
-        Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+        Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``, ``HSV``, ``HLS``, ``Lab``, ``Luv``.
+        These are also accessible via ``ChangeColorspace.<NAME>``, e.g. ``ChangeColorspace.YCrCb``.
 
             * If a string, it must be among the allowed colorspaces.
-            * If an iterable, it is expected to be a list of strings, each one
+            * If a list, it is expected to be a list of strings, each one
               being an allowed colorspace. A random element from the list
               will be chosen per image.
             * If a StochasticParameter, it is expected to return string. A new
               sample will be drawn per image.
 
-    from_colorspace : string, optional(default="RGB")
+    from_colorspace : str, optional
         The source colorspace (of the input images).
-        Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
+        See `to_colorspace`. Only a single string is allowed.
 
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=1.0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         The alpha value of the new colorspace when overlayed over the
         old one. A value close to 1.0 means that mostly the new
         colorspace is visible. A value close to 0.0 means, that mostly the
         old image is visible.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -253,20 +260,9 @@ class ChangeColorspace(Augmenter):
     HLS = "HLS"
     Lab = "Lab"
     Luv = "Luv"
-    COLORSPACES = set([
-        RGB,
-        BGR,
-        GRAY,
-        CIE,
-        YCrCb,
-        HSV,
-        HLS,
-        Lab,
-        Luv
-    ])
+    COLORSPACES = {RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv}
     CV_VARS = {
         # RGB
-        #"RGB2RGB": cv2.COLOR_RGB2RGB,
         "RGB2BGR": cv2.COLOR_RGB2BGR,
         "RGB2GRAY": cv2.COLOR_RGB2GRAY,
         "RGB2CIE": cv2.COLOR_RGB2XYZ,
@@ -277,7 +273,6 @@ class ChangeColorspace(Augmenter):
         "RGB2LUV": cv2.COLOR_RGB2LUV,
         # BGR
         "BGR2RGB": cv2.COLOR_BGR2RGB,
-        #"BGR2BGR": cv2.COLOR_BGR2BGR,
         "BGR2GRAY": cv2.COLOR_BGR2GRAY,
         "BGR2CIE": cv2.COLOR_BGR2XYZ,
         "BGR2YCrCb": cv2.COLOR_BGR2YCR_CB,
@@ -293,11 +288,13 @@ class ChangeColorspace(Augmenter):
         "HLS2BGR": cv2.COLOR_HLS2BGR,
     }
 
-    def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False, random_state=None):
+    def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False,
+                 random_state=None):
         super(ChangeColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         # TODO somehow merge this with Alpha augmenter?
-        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
+                                                 list_to_choice=True)
 
         if ia.is_string(to_colorspace):
             ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
@@ -309,13 +306,14 @@ class ChangeColorspace(Augmenter):
         elif isinstance(to_colorspace, iap.StochasticParameter):
             self.to_colorspace = to_colorspace
         else:
-            raise Exception("Expected to_colorspace to be string, list of strings or StochasticParameter, got %s." % (type(to_colorspace),))
+            raise Exception("Expected to_colorspace to be string, list of strings or StochasticParameter, got %s." % (
+                type(to_colorspace),))
 
         self.from_colorspace = from_colorspace
         ia.do_assert(self.from_colorspace in ChangeColorspace.COLORSPACES)
         ia.do_assert(from_colorspace != ChangeColorspace.GRAY)
 
-        self.eps = 0.001 # epsilon value to check if alpha is close to 1.0 or 0.0
+        self.eps = 0.001  # epsilon value to check if alpha is close to 1.0 or 0.0
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
@@ -399,44 +397,42 @@ class ChangeColorspace(Augmenter):
     def get_parameters(self):
         return [self.to_colorspace, self.alpha]
 
-# TODO tests
-# TODO rename to Grayscale3D and add Grayscale that keeps the image at 1D
+
+# TODO rename to Grayscale3D and add Grayscale that keeps the image at 1D?
 def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
     """
     Augmenter to convert images to their grayscale versions.
 
-    NOTE: Number of output channels is still 3, i.e. this augmenter just
-    "removes" color.
+    NOTE: Number of output channels is still 3, i.e. this augmenter just "removes" color.
 
     Parameters
     ----------
-    alpha : number or tuple of number or list fo number or StochasticParameter, optional(default=0)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         The alpha value of the grayscale image when overlayed over the
         old image. A value close to 1.0 means, that mostly the new grayscale
         image is visible. A value close to 0.0 means, that mostly the
         old image is visible.
 
             * If a number, exactly that value will always be used.
-            * If a tuple (a, b), a random value from the range a <= x <= b will
+            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
               be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
-    from_colorspace : string, optional(default="RGB")
+    from_colorspace : str, optional
         The source colorspace (of the input images).
-        Allowed are: RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv.
-        Only RGB is decently tested.
+        Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``, ``HSV``, ``HLS``, ``Lab``, ``Luv``.
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -447,7 +443,7 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     >>> aug = iaa.Grayscale(alpha=(0.0, 1.0))
 
     creates an augmenter that turns images to their grayscale versions with
-    an alpha value in the range 0 <= alpha <= 1. An alpha value of 0.5 would
+    an alpha value in the range ``0 <= alpha <= 1``. An alpha value of 0.5 would
     mean, that the output image is 50 percent of the input image and 50
     percent of the grayscale image (i.e. 50 percent of color removed).
 
@@ -455,4 +451,5 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace, name=name, deterministic=deterministic, random_state=random_state)
+    return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace,
+                            name=name, deterministic=deterministic, random_state=random_state)

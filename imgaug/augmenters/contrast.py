@@ -19,52 +19,53 @@ List of augmenters:
 
 """
 from __future__ import print_function, division, absolute_import
-from .. import imgaug as ia
-from .. import parameters as iap
+
 import numpy as np
 import six.moves as sm
 import skimage.exposure as ski_exposure
 
 from . import meta
-from .meta import Augmenter
+from .. import imgaug as ia
+from .. import parameters as iap
 
 
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to `(I_ij/255.0)**gamma`.
+    """Adjust contrast by scaling each pixel value to ``(I_ij/255.0)**gamma``.
 
-    Values in the range gamma=(0.5, 2.0) seem to be sensible.
+    Values in the range ``gamma=(0.5, 2.0)`` seem to be sensible.
 
     Parameters
     ----------
-    gamma : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    gamma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Exponent for the contrast adjustment. Higher values darken the image.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value from the range [a, b] will be used per image.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
-    per_channel :  bool or float, optional(default=False)
+    per_channel :  bool or float, optional
         Whether to use the same value for all channels (False) or to sample a new value for each
-        channel (True). If this value is a float p, then for p percent of all images `per_channel`
+        channel (True). If this value is a float ``p``, then for ``p`` percent of all images `per_channel`
         will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
     -------
-    result : _ContrastFuncWrapper
+    _ContrastFuncWrapper
         Augmenter to perform gamma contrast adjustment.
 
     """
-    params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True, list_to_choice=True)]
+    params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True,
+                                            list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_gamma)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
@@ -75,48 +76,48 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
 
 def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to `1/(1 + exp(gain*(cutoff - I_ij/255.0)))`.
+    """Adjust contrast by scaling each pixel value to ``1/(1 + exp(gain*(cutoff - I_ij/255.0)))``.
 
-    Values in the range gain=(5, 20) and cutoff=(0.25, 0.75) seem to be sensible.
+    Values in the range ``gain=(5, 20)`` and ``cutoff=(0.25, 0.75)`` seem to be sensible.
 
     Parameters
     ----------
-    gain : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    gain : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Multiplier for the sigmoid function's output.
         Higher values lead to quicker changes from dark to light pixels.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value from the range [a, b] will be used per image.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
-    cutoff : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    cutoff : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Cutoff that shifts the sigmoid function in horizontal direction.
         Higher values mean that the switch from dark to light pixels happens later, i.e.
         the pixels will remain darker.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value from the range [a, b] will be used per image.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
-    per_channel :  bool or float, optional(default=False)
+    per_channel :  bool or float, optional
         Whether to use the same value for all channels (False) or to sample a new value for each
-        channel (True). If this value is a float p, then for p percent of all images `per_channel`
+        channel (True). If this value is a float ``p``, then for ``p`` percent of all images `per_channel`
         will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
     -------
-    result : _ContrastFuncWrapper
+    _ContrastFuncWrapper
         Augmenter to perform sigmoid contrast adjustment.
 
     """
@@ -135,42 +136,43 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
 
 
 def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to `gain * log(1 + I_ij)`.
+    """Adjust contrast by scaling each pixel value to ``gain * log(1 + I_ij)``.
 
     Parameters
     ----------
-    gain : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    gain : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Multiplier for the logarithm result. Values around 1.0 lead to a contrast-adjusted
         image. Values above 1.0 quickly lead to partially broken images due to exceeding the
         datatype's value range.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value from the range [a, b] will be used per image.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
-    per_channel :  bool or float, optional(default=False)
+    per_channel :  bool or float, optional
         Whether to use the same value for all channels (False) or to sample a new value for each
-        channel (True). If this value is a float p, then for p percent of all images `per_channel`
+        channel (True). If this value is a float ``p``, then for ``p`` percent of all images `per_channel`
         will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
     -------
-    result : _ContrastFuncWrapper
+    _ContrastFuncWrapper
         Augmenter to perform logarithmic contrast adjustment.
 
     """
     # TODO add inv parameter?
-    params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)]
+    params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True,
+                                            list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_log)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
@@ -181,36 +183,36 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
 
 def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to `128 + alpha*(I_ij-128)`.
+    """Adjust contrast by scaling each pixel value to ``128 + alpha*(I_ij-128)``.
 
     Parameters
     ----------
-    alpha : number or tuple of number or list of number or StochasticParameter, optional(default=1)
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Multiplier to linearly pronounce (>1.0), dampen (0.0 to 1.0) or invert (<0.0) the
         difference between each pixel value and the center value, i.e. `128`.
 
             * If a number, then that value will be used for all images.
-            * If a tuple (a, b), then a value from the range [a, b] will be used per image.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
-    per_channel :  bool or float, optional(default=False)
+    per_channel :  bool or float, optional
         Whether to use the same value for all channels (False) or to sample a new value for each
-        channel (True). If this value is a float p, then for p percent of all images `per_channel`
+        channel (True). If this value is a float ``p``, then for ``p`` percent of all images `per_channel`
         will be treated as True, otherwise as False.
 
-    name : string, optional(default=None)
-        See `Augmenter.__init__()`
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional(default=False)
-        See `Augmenter.__init__()`
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : int or np.random.RandomState or None, optional(default=None)
-        See `Augmenter.__init__()`
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
     -------
-    result : _ContrastFuncWrapper
+    _ContrastFuncWrapper
         Augmenter to perform contrast adjustment by linearly scaling the distance to 128.
 
     """
@@ -226,7 +228,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     )
 
 
-class _ContrastFuncWrapper(Augmenter):
+class _ContrastFuncWrapper(meta.Augmenter):
     def __init__(self, func, params1d, per_channel, name=None, deterministic=False, random_state=None):
         super(_ContrastFuncWrapper, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func = func
