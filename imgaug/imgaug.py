@@ -61,6 +61,9 @@ NP_UINT_TYPES = set(np.sctypes["uint"])
 
 IMSHOW_BACKEND_DEFAULT = "matplotlib"
 
+IMRESIZE_VALID_INTERPOLATIONS = ["nearest", "linear", "area", "cubic",
+                                 cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
 
 def is_np_array(val):
     """
@@ -955,7 +958,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         return np.copy(images)
 
     ip = interpolation
-    do_assert(ip is None or ip in ["nearest", "linear", "area", "cubic", cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC])
+    do_assert(ip is None or ip in IMRESIZE_VALID_INTERPOLATIONS)
     if ip is None:
         if height > im_height or width > im_width:
             ip = cv2.INTER_AREA

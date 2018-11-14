@@ -1531,3 +1531,201 @@ class CropToFixedSize(meta.Augmenter):
 
     def get_parameters(self):
         return [self.position]
+
+
+class KeepSizeByResize(meta.Augmenter):
+    """
+    Augmenter that resizes images before/after augmentation so that they retain their original height and width.
+
+    This can e.g. be placed after a cropping operation. Some augmenters have a ``keep_size`` parameter that does
+    mostly the same if set to True, though this augmenter offers control over the interpolation mode.
+
+    Parameters
+    ----------
+    children : Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to images. These augmenters may change the image size.
+
+    interpolation : KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or\
+                    {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or\
+                    list of str or list of int or StochasticParameter, optional
+        The interpolation mode to use when resizing images.
+        Can take any value that :func:`imgaug.imresize_single_image` accepts, e.g. ``cubic``.
+
+            * If this is KeepSizeByResize.NO_RESIZE then images will not be resized.
+            * If this is a single string, it is expected to have one of the following values: ``nearest``, ``linear``,
+              ``area``, ``cubic``.
+            * If this is a single integer, it is expected to have a value identical to one of: ``cv2.INTER_NEAREST``,
+              ``cv2.INTER_LINEAR``, ``cv2.INTER_AREA``, ``cv2.INTER_CUBIC``.
+            * If this is a list of strings or ints, it is expected that each string/int is one of the above mentioned
+              valid ones. A random one of these values will be sampled per image.
+            * If this is a StochasticParameter, it will be queried once per call to ``_augment_images()`` and must
+              return ``N`` strings or ints (matching the above mentioned ones) for ``N`` images.
+
+    interpolation_heatmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or\
+                             {'nearest', 'linear', 'area', 'cubic'} or\
+                             {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or\
+                             list of str or list of int or StochasticParameter, optional
+        The interpolation mode to use when resizing heatmaps.
+        Meaning and valid values are similar to `interpolation`. This parameter may also take the value
+        ``KeepSizeByResize.SAME_AS_IMAGES``, which will lead to copying the interpolation modes used for the
+        corresponding images. The value may also be returned on a per-image basis if `interpolation_heatmaps` is
+        provided as a StochasticParameter or may be one possible value if it is provided as a list of strings.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    NO_RESIZE = "NO_RESIZE"
+    SAME_AS_IMAGES = "SAME_AS_IMAGES"
+
+    def __init__(self, children, interpolation="cubic", interpolation_heatmaps=SAME_AS_IMAGES,
+                 name=None, deterministic=False, random_state=None):
+        super(KeepSizeByResize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        self.children = children
+
+        def _validate_param(val, allow_same_as_images):
+            if allow_same_as_images and val == self.SAME_AS_IMAGES:
+                return self.SAME_AS_IMAGES
+            elif val in ia.IMRESIZE_VALID_INTERPOLATIONS + [KeepSizeByResize.NO_RESIZE]:
+                return iap.Deterministic(val)
+            elif isinstance(val, list):
+                ia.do_assert(len(val) > 0,
+                             "Expected a list of at least one interpolation method. Got an empty list.")
+                valid_ips = ia.IMRESIZE_VALID_INTERPOLATIONS + [KeepSizeByResize.NO_RESIZE]
+                if allow_same_as_images:
+                    valid_ips = valid_ips + [KeepSizeByResize.SAME_AS_IMAGES]
+                ia.do_assert(all([ip in valid_ips for ip in val]),
+                             "Expected each interpolations to be one of '%s', got '%s'." % (
+                                 str(valid_ips), str(val)
+                             ))
+                return iap.Choice(val)
+            elif isinstance(val, iap.StochasticParameter):
+                return val
+            else:
+                raise Exception(
+                    ("Expected interpolation to be one of '%s' or a list of these values or a StochasticParameter. "
+                     + "Got type %s.") % (
+                        str(ia.IMRESIZE_VALID_INTERPOLATIONS), type(val)))
+
+        self.children = meta.handle_children_list(children, self.name, "then")
+        self.interpolation = _validate_param(interpolation, False)
+        self.interpolation_heatmaps = _validate_param(interpolation_heatmaps, True)
+
+    def _draw_samples(self, nb_images, random_state, return_heatmaps):
+        seed = random_state.randint(0, 10 ** 6, 1)[0]
+        interpolations = self.interpolation.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 0))
+        if not return_heatmaps:
+            return interpolations
+
+        if self.interpolation_heatmaps == KeepSizeByResize.SAME_AS_IMAGES:
+            interpolations_heatmaps = np.copy(interpolations)
+        else:
+            interpolations_heatmaps = self.interpolation_heatmaps.draw_samples(
+                (nb_images,), random_state=ia.new_random_state(seed + 10)
+            )
+            same_as_imgs_idx = (interpolations_heatmaps == self.SAME_AS_IMAGES)
+            interpolations_heatmaps[same_as_imgs_idx] = interpolations[same_as_imgs_idx]
+
+        return interpolations, interpolations_heatmaps
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        input_was_array = ia.is_np_array(images)
+        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+            input_sizes = [image.shape[0:2] for image in images]
+            interpolations = self._draw_samples(len(images), random_state, return_heatmaps=False)
+
+            images_aug = self.children.augment_images(
+                images=images,
+                parents=parents + [self],
+                hooks=hooks
+            )
+
+            result = []
+            for image_aug, input_size, interpolation in zip(images_aug, input_sizes, interpolations):
+                if interpolation == KeepSizeByResize.NO_RESIZE:
+                    result.append(image_aug)
+                else:
+                    result.append(ia.imresize_single_image(image_aug, input_size[0:2], interpolation))
+
+            if input_was_array:
+                # note here that NO_RESIZE can have led to different shapes
+                nb_shapes = len(set([image.shape for image in result]))
+                if nb_shapes == 1:
+                    result = np.array(result, dtype=images.dtype)
+
+        else:
+            result = images
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+            nb_heatmaps = len(heatmaps)
+            _, interpolations_heatmaps = self._draw_samples(nb_heatmaps, random_state, return_heatmaps=True)
+
+            # augment according to if and else list
+            heatmaps_aug = self.children.augment_heatmaps(
+                heatmaps,
+                parents=parents + [self],
+                hooks=hooks
+            )
+
+            result = []
+            for heatmap, heatmap_aug, interpolation in zip(heatmaps, heatmaps_aug, interpolations_heatmaps):
+                if interpolation == "NO_RESIZE":
+                    result.append(heatmap_aug)
+                else:
+                    input_size = heatmap.arr_0to1.shape[0:2]
+                    heatmap_aug = heatmap_aug.scale(input_size, interpolation=interpolation)
+                    heatmap_aug.shape = heatmap.shape
+                    result.append(heatmap_aug)
+        else:
+            result = heatmaps
+
+        return result
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+            interpolations = self._draw_samples(len(keypoints_on_images), random_state, return_heatmaps=False)
+
+            # augment according to if and else list
+            kps_aug = self.children.augment_keypoints(
+                keypoints_on_images=keypoints_on_images,
+                parents=parents + [self],
+                hooks=hooks
+            )
+
+            result = []
+            for kps, kps_aug, interpolation in zip(keypoints_on_images, kps_aug, interpolations):
+                if interpolation == KeepSizeByResize.NO_RESIZE:
+                    result.append(kps_aug)
+                else:
+                    result.append(kps_aug.on(kps.shape))
+        else:
+            result = keypoints_on_images
+
+        return result
+
+    def _to_deterministic(self):
+        aug = self.copy()
+        aug.children = aug.children.to_deterministic()
+        aug.deterministic = True
+        aug.random_state = ia.new_random_state()
+        return aug
+
+    def get_parameters(self):
+        return [self.interpolation, self.interpolation_heatmaps]
+
+    def get_children_lists(self):
+        return [self.children]
+
+    def __str__(self):
+        return ("KeepSizeByResize(interpolation=%s, interpolation_heatmaps=%s, name=%s, children=%s, "
+                + "deterministic=%s)") % (
+                    self.interpolation, self.interpolation_heatmaps, self.name, self.children, self.deterministic)
