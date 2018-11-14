@@ -4,6 +4,7 @@ from imgaug import augmenters as iaa
 import numpy as np
 from skimage import data
 
+
 def main():
     augseq = iaa.Sequential([
         iaa.Fliplr(0.5),
@@ -51,6 +52,7 @@ def main():
         keypoints_aug.append(batch.keypoints_aug)
     ia.imshow(draw_grid(images_aug, keypoints_aug))
 
+
 def load_images():
     batch_size = 4
     astronaut = data.astronaut()
@@ -71,6 +73,7 @@ def load_images():
         )
         yield batch
 
+
 def draw_grid(images_aug, keypoints_aug):
     if keypoints_aug is None:
         keypoints_aug = []
@@ -90,6 +93,7 @@ def draw_grid(images_aug, keypoints_aug):
 
     grid = ia.draw_grid(images_kps_batches, cols=len(images_aug[0]))
     return grid
+
 
 if __name__ == "__main__":
     main()

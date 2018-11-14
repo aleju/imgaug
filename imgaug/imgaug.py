@@ -5452,36 +5452,43 @@ class BatchLoader(object):
         Number of workers to run in the background.
 
     threaded : bool, optional
-        Whether to run the background processes using threads (true) or
-        full processes (false).
+        Whether to run the background processes using threads (True) or full processes (False).
 
     """
 
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
-        do_assert(queue_size > 0)
+        do_assert(queue_size >= 2)
         do_assert(nb_workers >= 1)
-        self.queue = multiprocessing.Queue(queue_size)
+        self._queue_internal = multiprocessing.Queue(queue_size//2)
+        self.queue = multiprocessing.Queue(queue_size//2)
         self.join_signal = multiprocessing.Event()
-        self.finished_signals = []
         self.workers = []
         self.threaded = threaded
         seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
         for i in range(nb_workers):
-            finished_signal = multiprocessing.Event()
-            self.finished_signals.append(finished_signal)
             if threaded:
                 worker = threading.Thread(
                     target=self._load_batches,
-                    args=(load_batch_func, self.queue, finished_signal, self.join_signal, None)
+                    args=(load_batch_func, self._queue_internal, self.join_signal, None)
                 )
             else:
                 worker = multiprocessing.Process(
                     target=self._load_batches,
-                    args=(load_batch_func, self.queue, finished_signal, self.join_signal, seeds[i])
+                    args=(load_batch_func, self._queue_internal, self.join_signal, seeds[i])
                 )
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
+
+        self.main_worker_thread = threading.Thread(
+            target=self._main_worker,
+            args=()
+        )
+        self.main_worker_thread.daemon = True
+        self.main_worker_thread.start()
+
+    def count_workers_alive(self):
+        return sum([int(worker.is_alive()) for worker in self.workers])
 
     def all_finished(self):
         """
@@ -5493,11 +5500,37 @@ class BatchLoader(object):
             True if all workers have finished. Else False.
 
         """
-        # we don't base this on the finished_signals as that led to plenty of deadlocks when signal.set() and
-        # signal.is_set() would overlap
-        return all([not worker.is_alive() for worker in self.workers])
+        return self.count_workers_alive() == 0
 
-    def _load_batches(self, load_batch_func, queue, finished_signal, join_signal, seedval):
+    def _main_worker(self):
+        workers_running = self.count_workers_alive()
+
+        while workers_running > 0 and not self.join_signal.is_set():
+            # wait for a new batch in the source queue and load it
+            try:
+                batch_str = self._queue_internal.get(timeout=0.1)
+                if batch_str == "":
+                    workers_running -= 1
+                else:
+                    self.queue.put(batch_str)
+            except QueueEmpty:
+                time.sleep(0.01)
+
+            workers_running = self.count_workers_alive()
+
+        # All workers have finished, move the remaining entries from internal to external queue
+        while True:
+            try:
+                batch_str = self._queue_internal.get(timeout=0.005)
+                if batch_str != "":
+                    self.queue.put(batch_str)
+            except QueueEmpty:
+                break
+
+        self.queue.put(pickle.dumps(None, protocol=-1))
+        time.sleep(0.01)
+
+    def _load_batches(self, load_batch_func, queue, join_signal, seedval):
         if seedval is not None:
             random.seed(seedval)
             np.random.seed(seedval)
@@ -5506,7 +5539,7 @@ class BatchLoader(object):
         try:
             for batch in load_batch_func():
                 do_assert(isinstance(batch, Batch),
-                          "Expected batch returned by lambda function to be of class imgaug.Batch, got %s." % (
+                          "Expected batch returned by load_batch_func to be of class imgaug.Batch, got %s." % (
                               type(batch),))
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
@@ -5520,9 +5553,8 @@ class BatchLoader(object):
         except Exception:
             traceback.print_exc()
         finally:
-            time.sleep(0.01)
-            if not finished_signal.is_set():
-                finished_signal.set()
+            queue.put("")
+        time.sleep(0.01)
 
     def terminate(self):
         """Stop all workers."""
@@ -5531,13 +5563,7 @@ class BatchLoader(object):
         # give minimal time to put generated batches in queue and gracefully shut down
         time.sleep(0.01)
 
-        # clean the queue, this reportedly prevents hanging threads
-        while True:
-            try:
-                self.queue.get(timeout=0.005)
-            except QueueEmpty:
-                break
-
+        self.main_worker_thread.join()
         if self.threaded:
             for worker in self.workers:
                 worker.join()
@@ -5550,22 +5576,23 @@ class BatchLoader(object):
 
             # wait until all workers are fully terminated
             while not self.all_finished():
-                time.sleep(0.01)
-            time.sleep(0.05)
+                time.sleep(0.001)
 
-            # set finished signals (used e.g. in BackgroundAugmenter)
-            # this is done after making sure that all workers are fully terminated, because overlapping
-            # calls to set() result in deadlocks
-            for finished_signal in self.finished_signals:
-                # Calling directly signal.set() here works in python 3.7, but always deadlocks in python 2.7.
-                # Wrapping the set() statement in an `if signal.is_set(): ...` removes the deadlock from 2.7, but
-                # then python 3.7 deadlocks at the is_set() condition. Using a wait() avoids the deadlock in 3.7
-                # and still works in 2.7.
-                # FIXME on 3.7 there was at least one deadlock at the if condition (under heavy CPU load)
-                if not finished_signal.wait(timeout=0.01):
-                    finished_signal.set()
+        self.queue.put(pickle.dumps(None, protocol=-1))
+        time.sleep(0.01)
 
+        # clean the queue, this reportedly prevents hanging threads
+        while True:
+            try:
+                self._queue_internal.get(timeout=0.005)
+            except QueueEmpty:
+                break
+
+        self._queue_internal.close()
         self.queue.close()
+        self._queue_internal.join_thread()
+        self.queue.join_thread()
+        time.sleep(0.025)
 
 
 class BackgroundAugmenter(object):
@@ -5599,7 +5626,6 @@ class BackgroundAugmenter(object):
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
         do_assert(queue_size > 0)
         self.augseq = augseq
-        self.source_finished_signals = batch_loader.finished_signals
         self.queue_source = batch_loader.queue
         self.queue_result = multiprocessing.Queue(queue_size)
 
@@ -5624,11 +5650,14 @@ class BackgroundAugmenter(object):
         for i in range(nb_workers):
             worker = multiprocessing.Process(
                 target=self._augment_images_worker,
-                args=(augseq, self.queue_source, self.queue_result, self.source_finished_signals, seeds[i])
+                args=(augseq, self.queue_source, self.queue_result, seeds[i])
             )
             worker.daemon = True
             worker.start()
             self.workers.append(worker)
+
+    def all_finished(self):
+        return self.nb_workers_finished == self.nb_workers
 
     def get_batch(self):
         """
@@ -5643,6 +5672,9 @@ class BackgroundAugmenter(object):
             One batch or None if all workers have finished.
 
         """
+        if self.all_finished():
+            return None
+
         batch_str = self.queue_result.get()
         batch = pickle.loads(batch_str)
         if batch is not None:
@@ -5650,11 +5682,12 @@ class BackgroundAugmenter(object):
         else:
             self.nb_workers_finished += 1
             if self.nb_workers_finished == self.nb_workers:
+                self.queue_source.get(timeout=0.001)  # remove the None from the source queue
                 return None
             else:
                 return self.get_batch()
 
-    def _augment_images_worker(self, augseq, queue_source, queue_result, source_finished_signals, seedval):
+    def _augment_images_worker(self, augseq, queue_source, queue_result, seedval):
         """
         Augment endlessly images in the source queue.
 
@@ -5667,21 +5700,28 @@ class BackgroundAugmenter(object):
         augseq.reseed(seedval)
         seed(seedval)
 
-        while True:
+        loader_finished = False
+
+        while not loader_finished:
             # wait for a new batch in the source queue and load it
             try:
                 batch_str = queue_source.get(timeout=0.1)
                 batch = pickle.loads(batch_str)
+                if batch is None:
+                    loader_finished = True
+                    # put it back in so that other workers know that the loading queue is finished
+                    queue_source.put(pickle.dumps(None, protocol=-1))
+                else:
+                    batch_aug = list(augseq.augment_batches([batch], background=False))[0]
 
-                batch_aug = list(augseq.augment_batches([batch], background=False))[0]
-
-                # send augmented batch to output queue
-                batch_str = pickle.dumps(batch_aug, protocol=-1)
-                queue_result.put(batch_str)
+                    # send augmented batch to output queue
+                    batch_str = pickle.dumps(batch_aug, protocol=-1)
+                    queue_result.put(batch_str)
             except QueueEmpty:
-                if all([signal.is_set() for signal in source_finished_signals]):
-                    queue_result.put(pickle.dumps(None, protocol=-1))
-                    return
+                time.sleep(0.01)
+
+        queue_result.put(pickle.dumps(None, protocol=-1))
+        time.sleep(0.01)
 
     def terminate(self):
         """
@@ -5694,3 +5734,4 @@ class BackgroundAugmenter(object):
             worker.terminate()
 
         self.queue_result.close()
+        time.sleep(0.01)
