@@ -6,6 +6,14 @@ Run tests via
 or alternatively:
     python -m pytest ./ --verbose --doctest-modules
 
+or use
+    python -m pytest ./test/augmenters/test_size.py --verbose --doctest-modules --ignore="test/run_all.py
+to run the tests in a specific file.
+
+or use
+    python -m pytest ./test/augmenters/test_size.py::test_Crop --verbose --doctest-modules --ignore="test/run_all.py
+to run only the test function "test_Crop" in test_size.py.
+
 """
 from __future__ import print_function, division, absolute_import
 
