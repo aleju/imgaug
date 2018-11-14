@@ -1,14 +1,37 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
+import time
+
 import numpy as np
 from skimage import data
+
+import imgaug as ia
+from imgaug import augmenters as iaa
 
 
 def main():
     augseq = iaa.Sequential([
         iaa.Fliplr(0.5),
         iaa.CoarseDropout(p=0.1, size_percent=0.1)
+    ])
+
+    def func_images(images, random_state, parents, hooks):
+        time.sleep(0.2)
+        return images
+
+    def func_heatmaps(heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def func_keypoints(keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    augseq_slow = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.Lambda(
+            func_images=func_images,
+            func_heatmaps=func_heatmaps,
+            func_keypoints=func_keypoints
+        )
     ])
 
     print("------------------")
@@ -52,14 +75,106 @@ def main():
         keypoints_aug.append(batch.keypoints_aug)
     ia.imshow(draw_grid(images_aug, keypoints_aug))
 
+    print("------------------")
+    print("BackgroundAugmenter with generator in BL")
+    print("------------------")
+    batch_loader = ia.BatchLoader(load_images())
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    images_aug = []
+    keypoints_aug = []
+    while True:
+        print("Next batch...")
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished.")
+            break
+        images_aug.append(batch.images_aug)
+        keypoints_aug.append(batch.keypoints_aug)
+    ia.imshow(draw_grid(images_aug, keypoints_aug))
 
-def load_images():
+    print("------------------")
+    print("Long running BackgroundAugmenter at BL-queue_size=12")
+    print("------------------")
+    batch_loader = ia.BatchLoader(load_images(n_batches=1000), queue_size=12)
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    i = 0
+    while True:
+        if i % 100 == 0:
+            print("batch=%d..." % (i,))
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished.")
+            break
+        i += 1
+
+    print("------------------")
+    print("Long running BackgroundAugmenter at BL-queue_size=2")
+    print("------------------")
+    batch_loader = ia.BatchLoader(load_images(n_batches=1000), queue_size=2)
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    i = 0
+    while True:
+        if i % 100 == 0:
+            print("batch=%d..." % (i,))
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished.")
+            break
+        i += 1
+
+    print("------------------")
+    print("Long running BackgroundAugmenter (slow loading)")
+    print("------------------")
+    batch_loader = ia.BatchLoader(load_images(n_batches=100, sleep=0.2))
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    i = 0
+    while True:
+        if i % 10 == 0:
+            print("batch=%d..." % (i,))
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished.")
+            break
+        i += 1
+
+    print("------------------")
+    print("Long running BackgroundAugmenter (slow aug) at BL-queue_size=12")
+    print("------------------")
+    batch_loader = ia.BatchLoader(load_images(n_batches=100), queue_size=12)
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_slow)
+    i = 0
+    while True:
+        if i % 10 == 0:
+            print("batch=%d..." % (i,))
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished.")
+            break
+        i += 1
+
+    print("------------------")
+    print("Long running BackgroundAugmenter (slow aug) at BL-queue_size=2")
+    print("------------------")
+    batch_loader = ia.BatchLoader(load_images(n_batches=100), queue_size=2)
+    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_slow)
+    i = 0
+    while True:
+        if i % 10 == 0:
+            print("batch=%d..." % (i,))
+        batch = bg_augmenter.get_batch()
+        if batch is None:
+            print("Finished.")
+            break
+        i += 1
+
+
+def load_images(n_batches=10, sleep=0.0):
     batch_size = 4
     astronaut = data.astronaut()
     astronaut = ia.imresize_single_image(astronaut, (64, 64))
     kps = ia.KeypointsOnImage([ia.Keypoint(x=15, y=25)], shape=astronaut.shape)
     counter = 0
-    for i in range(10):
+    for i in range(n_batches):
         batch_images = []
         batch_kps = []
         for b in range(batch_size):
@@ -72,6 +187,8 @@ def load_images():
             keypoints=batch_kps
         )
         yield batch
+        if sleep > 0:
+            time.sleep(sleep)
 
 
 def draw_grid(images_aug, keypoints_aug):
