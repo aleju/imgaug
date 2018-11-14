@@ -11,6 +11,7 @@ import sys
 import os
 import time
 import json
+import types
 
 import numpy as np
 import cv2
@@ -247,6 +248,24 @@ def is_callable(val):
         return hasattr(val, '__call__')
     else:
         return callable(val)
+
+
+def is_generator(val):
+    """
+    Checks whether a variable is a generator.
+
+    Parameters
+    ----------
+    val
+        The variable to check.
+
+    Returns
+    -------
+    bool
+        True is the variable is a generator. Otherwise False.
+
+    """
+    return isinstance(val, types.GeneratorType)
 
 
 def caller_name():
@@ -5440,9 +5459,11 @@ class BatchLoader(object):
 
     Parameters
     ----------
-    load_batch_func : callable
-        Function that yields Batch objects (i.e. expected to be a generator).
-        Background loading automatically stops when the last batch was yielded.
+    load_batch_func : callable or generator
+        Generator or generator function (i.e. function that yields Batch objects)
+        or a function that returns a list of Batch objects.
+        Background loading automatically stops when the last batch was yielded or the
+        last batch in the list was reached.
 
     queue_size : int, optional
         Maximum number of batches to store in the queue. May be set higher
@@ -5537,14 +5558,15 @@ class BatchLoader(object):
             seed(seedval)
 
         try:
-            for batch in load_batch_func():
+            gen = load_batch_func() if not is_generator(load_batch_func) else load_batch_func
+            for batch in gen:
                 do_assert(isinstance(batch, Batch),
                           "Expected batch returned by load_batch_func to be of class imgaug.Batch, got %s." % (
                               type(batch),))
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
                     try:
-                        queue.put(batch_pickled, timeout=0.001)
+                        queue.put(batch_pickled, timeout=0.005)
                         break
                     except QueueFull:
                         pass
@@ -5567,8 +5589,6 @@ class BatchLoader(object):
         if self.threaded:
             for worker in self.workers:
                 worker.join()
-            # we don't have to set the finished_signals here, because threads always finish
-            # gracefully
         else:
             for worker in self.workers:
                 worker.terminate()
