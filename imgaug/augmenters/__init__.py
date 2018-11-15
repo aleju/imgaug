@@ -10,3 +10,4 @@ from imgaug.augmenters.meta import *
 from imgaug.augmenters.overlay import *
 from imgaug.augmenters.segmentation import *
 from imgaug.augmenters.size import *
+from imgaug.augmenters.wheather import *

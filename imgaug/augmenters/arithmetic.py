@@ -8,7 +8,7 @@ Use instead::
 
 and then e.g.::
 
-    `seq = iaa.Sequential([iaa.Add((-5, 5)), iaa.Multiply((0.9, 1.1))])`
+    seq = iaa.Sequential([iaa.Add((-5, 5)), iaa.Multiply((0.9, 1.1))])
 
 List of augmenters:
 
@@ -573,7 +573,7 @@ class Multiply(meta.Augmenter):
                 ia.do_assert(sample >= 0)
                 image *= sample
 
-            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
+            image = meta.clip_augmented_image_(image, 0, 255)  # TODO make value range more flexible
             image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
 
             result[i] = image
