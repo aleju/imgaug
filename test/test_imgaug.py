@@ -374,6 +374,10 @@ def test_forward_random_state():
 
 
 def test_imresize_many_images():
+    interpolations = [None,
+                      "nearest", "linear", "area", "cubic",
+                      cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
     for c in [1, 3]:
         image1 = np.zeros((16, 16, c), dtype=np.uint8) + 255
         image2 = np.zeros((16, 16, c), dtype=np.uint8)
@@ -405,29 +409,146 @@ def test_imresize_many_images():
         images = np.uint8([image1, image2, image3])
         images_small = np.uint8([image1_small, image2_small, image3_small])
         images_large = np.uint8([image1_large, image2_large, image3_large])
-        interpolations = [None,
-                          "nearest", "linear", "area", "cubic",
-                          cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
 
-        for interpolation in interpolations:
-            images_same_observed = ia.imresize_many_images(images, (16, 16), interpolation=interpolation)
-            for image_expected, image_observed in zip(images, images_same_observed):
-                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
-                assert np.sum(diff) == 0
+        for images_this_iter in [images, list(images)]:  # test for ndarray and list(ndarray) input
+            for interpolation in interpolations:
+                images_same_observed = ia.imresize_many_images(images_this_iter, (16, 16), interpolation=interpolation)
+                for image_expected, image_observed in zip(images_this_iter, images_same_observed):
+                    diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                    assert np.sum(diff) == 0
 
-        for interpolation in interpolations:
-            images_small_observed = ia.imresize_many_images(images, (8, 8), interpolation=interpolation)
-            for image_expected, image_observed in zip(images_small, images_small_observed):
-                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
-                diff_fraction = np.sum(diff) / (image_observed.size * 255)
-                assert diff_fraction < 0.5
+            for interpolation in interpolations:
+                images_small_observed = ia.imresize_many_images(images_this_iter, (8, 8), interpolation=interpolation)
+                for image_expected, image_observed in zip(images_small, images_small_observed):
+                    diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                    diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                    assert diff_fraction < 0.5
 
-        for interpolation in interpolations:
-            images_large_observed = ia.imresize_many_images(images, (32, 32), interpolation=interpolation)
-            for image_expected, image_observed in zip(images_large, images_large_observed):
-                diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
-                diff_fraction = np.sum(diff) / (image_observed.size * 255)
-                assert diff_fraction < 0.5
+            for interpolation in interpolations:
+                images_large_observed = ia.imresize_many_images(images_this_iter, (32, 32), interpolation=interpolation)
+                for image_expected, image_observed in zip(images_large, images_large_observed):
+                    diff = np.abs(image_expected.astype(np.int32) - image_observed.astype(np.int32))
+                    diff_fraction = np.sum(diff) / (image_observed.size * 255)
+                    assert diff_fraction < 0.5
+
+    # test size given as single int
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, 8)
+    assert observed.shape == (1, 8, 8, 3)
+
+    # test size given as single float
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, 2.0)
+    assert observed.shape == (1, 8, 8, 3)
+
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, 0.5)
+    assert observed.shape == (1, 2, 2, 3)
+
+    # test size given as (float, float)
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, (2.0, 2.0))
+    assert observed.shape == (1, 8, 8, 3)
+
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, (0.5, 0.5))
+    assert observed.shape == (1, 2, 2, 3)
+
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, (2.0, 0.5))
+    assert observed.shape == (1, 8, 2, 3)
+
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, (0.5, 2.0))
+    assert observed.shape == (1, 2, 8, 3)
+
+    # test size given as int+float or float+int
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, (11, 2.0))
+    assert observed.shape == (1, 11, 8, 3)
+
+    images = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    observed = ia.imresize_many_images(images, (2.0, 11))
+    assert observed.shape == (1, 8, 11, 3)
+
+    # test no channels
+    images = np.zeros((1, 4, 4), dtype=np.uint8)
+    images_rs = ia.imresize_many_images(images, (2, 2))
+    assert images_rs.shape == (1, 2, 2)
+
+    images = [np.zeros((4, 4), dtype=np.uint8)]
+    images_rs = ia.imresize_many_images(images, (2, 2))
+    assert isinstance(images_rs, list)
+    assert images_rs[0].shape == (2, 2)
+
+    # test len 0 input
+    observed = ia.imresize_many_images(np.zeros((0, 8, 8, 3), dtype=np.uint8), (4, 4))
+    assert ia.is_np_array(observed)
+    assert observed.dtype.type == np.uint8
+    assert len(observed) == 0
+
+    observed = ia.imresize_many_images([], (4, 4))
+    assert isinstance(observed, list)
+    assert len(observed) == 0
+
+    # test images with zero height/width
+    images = [np.zeros((0, 4, 3), dtype=np.uint8)]
+    got_exception = False
+    try:
+        _ = ia.imresize_many_images(images, sizes=(2, 2))
+    except Exception as exc:
+        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
+        got_exception = True
+    assert got_exception
+
+    images = [np.zeros((4, 0, 3), dtype=np.uint8)]
+    got_exception = False
+    try:
+        _ = ia.imresize_many_images(images, sizes=(2, 2))
+    except Exception as exc:
+        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
+        got_exception = True
+    assert got_exception
+
+    images = [np.zeros((0, 0, 3), dtype=np.uint8)]
+    got_exception = False
+    try:
+        _ = ia.imresize_many_images(images, sizes=(2, 2))
+    except Exception as exc:
+        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # test invalid sizes
+    sizes_all = [(-1, 2), (0, 2)]
+    sizes_all = sizes_all\
+        + [(float(a), b) for a, b in sizes_all]\
+        + [(a, float(b)) for a, b in sizes_all]\
+        + [(float(a), float(b)) for a, b in sizes_all]\
+        + [(-a, -b) for a, b in sizes_all]\
+        + [(-float(a), -b) for a, b in sizes_all]\
+        + [(-a, -float(b)) for a, b in sizes_all]\
+        + [(-float(a), -float(b)) for a, b in sizes_all]
+    sizes_all = sizes_all\
+        + [(b, a) for a, b in sizes_all]
+    sizes_all = sizes_all\
+        + [-1.0, 0.0, -1, 0]
+    for sizes in sizes_all:
+        images = [np.zeros((4, 4, 3), dtype=np.uint8)]
+        got_exception = False
+        try:
+            _ = ia.imresize_many_images(images, sizes=sizes)
+        except Exception as exc:
+            assert "value is zero or lower than zero." in str(exc)
+            got_exception = True
+        assert got_exception
+
+    # test list input but all with same shape
+    images = [np.zeros((8, 8, 3), dtype=np.uint8) for _ in range(2)]
+    observed = ia.imresize_many_images(images, (4, 4))
+    assert isinstance(observed, list)
+    assert all([image.shape == (4, 4, 3) for image in observed])
+    assert all([image.dtype.type == np.uint8 for image in observed])
 
 
 def test_imresize_single_image():

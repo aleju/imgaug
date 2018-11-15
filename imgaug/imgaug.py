@@ -885,7 +885,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     Parameters
     ----------
-    images : (N,H,W,C) ndarray
+    images : (N,H,W,[C]) ndarray or list of (H,W,[C]) ndarray
         Array of the images to resize.
         Expected to usually be of dtype uint8.
 
@@ -916,7 +916,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     Returns
     -------
-    result : (N,H',W',C) ndarray
+    result : (N,H',W',[C]) ndarray
         Array of the resized images.
 
     Examples
@@ -931,25 +931,59 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     Converts 2 RGB images of height and width 16 to images of height 32 and width 64.
 
     """
+    # we just do nothing if the input contains zero images
+    # one could also argue that an exception would be appropiate here
+    if len(images) == 0:
+        return images
+
+    # verify that all input images have height/width > 0
+    do_assert(
+        all([image.shape[0] > 0 and image.shape[1] > 0 for image in images]),
+        ("Cannot resize images, because at least one image has a height and/or width of zero. "
+         + "Observed shapes were: %s.") % (str([image.shape for image in images]),)
+    )
+
+    # verify that sizes contains only values >0
+    if is_single_number(sizes) and sizes <= 0:
+        raise Exception(
+            "Cannot resize to the target size %.8f, because the value is zero or lower than zero." % (sizes,))
+    elif isinstance(sizes, tuple) and (sizes[0] <= 0 or sizes[1] <= 0):
+        sizes_str = [
+            "int %d" % (sizes[0],) if is_single_integer(sizes[0]) else "float %.8f" % (sizes[0],),
+            "int %d" % (sizes[1],) if is_single_integer(sizes[1]) else "float %.8f" % (sizes[1],),
+        ]
+        sizes_str = "(%s, %s)" % (sizes_str[0], sizes_str[1])
+        raise Exception(
+            "Cannot resize to the target sizes %s. At least one value is zero or lower than zero." % (sizes_str,))
+
+    # change afterward the validation to make the above error messages match the original input
+    if is_single_number(sizes):
+        sizes = (sizes, sizes)
+    else:
+        do_assert(len(sizes) == 2, "Expected tuple with exactly two entries, got %d entries." % (len(sizes),))
+        do_assert(all([is_single_number(val) for val in sizes]),
+                  "Expected tuple with two ints or floats, got types %s." % (str([type(val) for val in sizes]),))
+
+    # if input is a list, call this function N times for N images
+    # but check beforehand if all images have the same shape, then just convert to a single array and de-convert
+    # afterwards
+    if isinstance(images, list):
+        nb_shapes = len(set([image.shape for image in images]))
+        if nb_shapes == 1:
+            return list(imresize_many_images(np.array(images), sizes=sizes, interpolation=interpolation))
+        else:
+            return [imresize_many_images(image[np.newaxis, ...], sizes=sizes, interpolation=interpolation)
+                    for image in images]
+
     shape = images.shape
-    do_assert(images.ndim == 4, "Expected array of shape (N, H, W, C), got shape %s" % (str(shape),))
+    do_assert(images.ndim in [3, 4], "Expected array of shape (N, H, W, [C]), got shape %s" % (str(shape),))
     nb_images = shape[0]
     im_height, im_width = shape[1], shape[2]
-    nb_channels = shape[3]
-    if is_single_float(sizes):
-        do_assert(sizes > 0.0)
-        height = int(np.round(im_height * sizes))
-        width = int(np.round(im_width * sizes))
-    else:
-        do_assert(len(sizes) == 2)
-        all_int = all([is_single_integer(size) for size in sizes])
-        all_float = all([is_single_float(size) for size in sizes])
-        do_assert(all_int or all_float)
-        if all_int:
-            height, width = sizes[0], sizes[1]
-        else:
-            height = int(np.round(im_height * sizes[0]))
-            width = int(np.round(im_width * sizes[1]))
+    nb_channels = shape[3] if images.ndim > 3 else None
+
+    height, width = sizes[0], sizes[1]
+    height = int(np.round(im_height * height)) if is_single_float(height) else height
+    width = int(np.round(im_width * width)) if is_single_float(width) else width
 
     if height == im_height and width == im_width:
         return np.copy(images)
@@ -970,11 +1004,16 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
         ip = cv2.INTER_CUBIC
 
-    result = np.zeros((nb_images, height, width, nb_channels), dtype=images.dtype)
+    result_shape = (nb_images, height, width)
+    if nb_channels is not None:
+        result_shape = result_shape + (nb_channels,)
+    result = np.zeros(result_shape, dtype=images.dtype)
     for img_idx in sm.xrange(nb_images):
         # TODO fallback to scipy here if image isn't uint8
         result_img = cv2.resize(images[img_idx], (width, height), interpolation=ip)
-        if len(result_img.shape) == 2:
+        # cv2 removes the channel axis if input was (H, W, 1)
+        # we re-add it (but only if input was not (H, W))
+        if len(result_img.shape) == 2 and nb_channels is not None and nb_channels == 1:
             result_img = result_img[:, :, np.newaxis]
         result[img_idx] = result_img.astype(images.dtype)
     return result
