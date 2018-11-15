@@ -1026,6 +1026,16 @@ class ReplaceElementwise(meta.Augmenter):
         return [self.mask, self.replacement, self.per_channel]
 
 
+def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
+    """
+    Creates an augmenter to apply impulse noise to an image.
+
+    This is identical to ``SaltAndPepper``, except that per_channel is always set to True.
+
+    """
+    return SaltAndPepper(p=p, per_channel=True, name=name, deterministic=deterministic, random_state=random_state)
+
+
 def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adds salt and pepper noise to an image, i.e. some white-ish and black-ish pixels.
