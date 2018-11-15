@@ -297,22 +297,22 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
 
     Examples
     --------
-    >>> aug = iaa.GaussianNoise(scale=0.1*255)
+    >>> aug = iaa.AdditiveGaussianNoise(scale=0.1*255)
 
     adds gaussian noise from the distribution ``N(0, 0.1*255)`` to images.
 
-    >>> aug = iaa.GaussianNoise(scale=(0, 0.1*255))
+    >>> aug = iaa.AdditiveGaussianNoise(scale=(0, 0.1*255))
 
     adds gaussian noise from the distribution ``N(0, s)`` to images,
     where s is sampled per image from the range ``0 <= s <= 0.1*255``.
 
-    >>> aug = iaa.GaussianNoise(scale=0.1*255, per_channel=True)
+    >>> aug = iaa.AdditiveGaussianNoise(scale=0.1*255, per_channel=True)
 
     adds gaussian noise from the distribution ``N(0, 0.1*255)`` to images,
     where the noise value is different per pixel *and* channel (e.g. a
     different one for red, green and blue channels for the same pixel).
 
-    >>> aug = iaa.GaussianNoise(scale=0.1*255, per_channel=0.5)
+    >>> aug = iaa.AdditiveGaussianNoise(scale=0.1*255, per_channel=0.5)
 
     adds gaussian noise from the distribution ``N(0, 0.1*255)`` to images,
     where the noise value is sometimes (50 percent of all cases) the same
