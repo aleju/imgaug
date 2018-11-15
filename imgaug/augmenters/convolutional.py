@@ -21,6 +21,8 @@ List of augmenters:
     * EdgeDetect
     * DirectedEdgeDetect
 
+For MotionBlur, see ``blur.py``.
+
 """
 from __future__ import print_function, division, absolute_import
 
