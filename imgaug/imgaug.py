@@ -1460,7 +1460,7 @@ def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
         cv2.waitKey(0)
         cv2.destroyWindow(win_name)
     else:
-        plt.imshow(image)
+        plt.imshow(image, cmap="gray")
         plt.gcf().canvas.set_window_title("imgaug.imshow(%s)" % (image.shape,))
         plt.show()
 

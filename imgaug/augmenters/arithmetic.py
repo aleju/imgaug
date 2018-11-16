@@ -1243,7 +1243,7 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
         positive=True,
         mode="invert"
     ) + 0.5
-    replacement = replacement01 * 255
+    replacement = replacement01 * 255  # FIXME max replacement seems to essentially never exceed 254
 
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
