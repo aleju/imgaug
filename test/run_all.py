@@ -4,14 +4,14 @@ Run tests via
     python run_all.py
 
 or alternatively:
-    python -m pytest ./ --verbose --doctest-modules
+    python -m pytest ./ --verbose --doctest-modules --ignore="test/run_all.py" -s
 
 or use
-    python -m pytest ./test/augmenters/test_size.py --verbose --doctest-modules --ignore="test/run_all.py
+    python -m pytest ./test/augmenters/test_size.py --verbose --doctest-modules --ignore="test/run_all.py" -s
 to run the tests in a specific file.
 
 or use
-    python -m pytest ./test/augmenters/test_size.py::test_Crop --verbose --doctest-modules --ignore="test/run_all.py
+    python -m pytest ./test/augmenters/test_size.py::test_Crop --verbose --doctest-modules --ignore="test/run_all.py" -s
 to run only the test function "test_Crop" in test_size.py.
 
 """
