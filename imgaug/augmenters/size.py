@@ -25,6 +25,8 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
+import re
+
 import numpy as np
 import six.moves as sm
 
@@ -98,6 +100,56 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, cr
         crop_left = crop_left - regain_left
 
     return crop_top, crop_right, crop_bottom, crop_left
+
+
+def _handle_position_parameter(position):
+    if position == "uniform":
+        return iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0)
+    elif position == "normal":
+        return (
+            iap.Clip(iap.Normal(loc=0.5, scale=0.45 / 2), minval=0.0, maxval=1.0),
+            iap.Clip(iap.Normal(loc=0.5, scale=0.45 / 2), minval=0.0, maxval=1.0)
+        )
+    elif position == "center":
+        return iap.Deterministic(0.5), iap.Deterministic(0.5)
+    elif ia.is_string(position) and re.match(r"^(left|center|right)-(top|center|bottom)$", position):
+        mapping = {"top": 0.0, "center": 0.5, "bottom": 1.0, "left": 0.0, "right": 1.0}
+        return (
+            iap.Deterministic(mapping[position.split("-")[0]]),
+            iap.Deterministic(mapping[position.split("-")[1]])
+        )
+    elif isinstance(position, iap.StochasticParameter):
+        return position
+    elif isinstance(position, tuple):
+        ia.do_assert(
+            len(position) == 2,
+            "Expected tuple with two entries as position parameter. Got %d entries with types %s.." % (
+                len(position), str([type(el) for el in position])
+            ))
+        for el in position:
+            if ia.is_single_number(el) and (el < 0 or el > 1.0):
+                raise Exception(
+                    "Both position values must be within the value range [0.0, 1.0]. Got type %s with value %.8f." % (
+                        type(el), el,)
+                )
+        position = [iap.Deterministic(el) if ia.is_single_number(el) else el for el in position]
+
+        ia.do_assert(
+            all([isinstance(el, iap.StochasticParameter) for el in position]),
+            "Expected tuple with two entries that are both either StochasticParameter or float/int. Got types %s." % (
+                str([type(el) for el in position])
+            )
+        )
+        return tuple(position)
+    else:
+        raise Exception(
+            ("Expected one of the following as position parameter: string 'uniform', string 'normal', string 'center', "
+             + "a string matching regex ^(left|center|right)-(top|center|bottom)$, a single StochasticParameter or a "
+             + "tuple of two entries, both being either StochasticParameter or floats or int. Got instead type %s with "
+             + "content '%s'.") % (
+                type(position), str(position) if len(str(position)) < 20 else str(position)[0:20] + "..."
+            )
+        )
 
 
 # TODO rename to Resize to avoid confusion with Affine's scale
@@ -1210,9 +1262,7 @@ class PadToFixedSize(meta.Augmenter):
     over the image axis. E.g. if 2px have to be padded on the left or right to reach the
     required width, the augmenter will sometimes add 2px to the left and 0px to the right,
     sometimes add 2px to the right and 0px to the left and sometimes add 1px to both sides.
-    Set the attribute :attr:`imgaug.augmenters.size.PadToFixedSize.position` to
-    ``(imgaug.parameters.Deterministic(0.5), imgaug.parameters.Deterministic(0.5))``
-    in order to always pad equally on both axis.
+    Set `position` to ``center`` to prevent that.
 
     Parameters
     ----------
@@ -1228,6 +1278,36 @@ class PadToFixedSize(meta.Augmenter):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
 
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center',\
+            'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter\
+            or tuple of StochasticParameter, optional
+        Sets the center point of the padding, which determines how the required padding amounts are distributed
+        to each side. For a tuple ``(a, b)``, both ``a`` and ``b`` are expected to be in range ``[0.0, 1.0]``
+        and describe the fraction of padding applied to the left/right (low/high values for ``a``) and the fraction
+        of padding applied to the top/bottom (low/high values for ``b``). A padding position at ``(0.5, 0.5)``
+        would be the center of the image and distribute the padding equally to all sides. A padding position
+        at ``(0.0, 1.0)`` would be the left-bottom and would apply 100% of the required padding to the bottom and
+        left sides of the image so that the bottom left corner becomes more and more the new image center (depending on
+        how much is padded).
+
+            * If string ``uniform`` then the share of padding is randomly and uniformly distributed over each side.
+              Equivalent to ``(Uniform(0.0, 1.0), Uniform(0.0, 1.0))``.
+            * If string ``normal`` then the share of padding is distributed based on a normal distribution,
+              leading to a focus on the center of the images.
+              Equivalent to ``(Clip(Normal(0.5, 0.45/2), 0, 1), Clip(Normal(0.5, 0.45/2), 0, 1))``.
+            * If string ``center`` then center point of the padding is identical to the image center.
+              Equivalent to ``(0.5, 0.5)``.
+            * If a string matching regex ``^(left|center|right)-(top|center|bottom)$``, e.g. ``left-top`` or
+              ``center-bottom`` then sets the center point of the padding to the X-Y position matching that
+              description.
+            * If a tuple of float, then expected to have exactly two entries between ``0.0`` and ``1.0``, which will
+              always be used as the combination the position matching (x, y) form.
+            * If a StochasticParameter, then that parameter will be queries once per call to ``augment_*()`` to get
+              ``Nx2`` center positions matching (x, y) form.
+            * If a tuple of StochasticParameter, then expected to have exactly two entries that will both be queries
+              per call to ``augment_*()``, each for ``(N,)`` values, to get the center positions. First parameter is
+              used for x, second for y.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -1241,19 +1321,26 @@ class PadToFixedSize(meta.Augmenter):
     --------
     >>> aug = iaa.PadToFixedSize(width=100, height=100)
 
-    for edges smaller than 100 pixels, pads to 100 pixels, does nothing for the other edges.
+    For edges smaller than 100 pixels, pads to 100 pixels. Does nothing for the other edges.
+    The padding is randomly (uniformly) distributed over the sides, so that e.g. sometimes most of the required padding
+    is applied to the left, sometimes to the right (analogous top/bottom).
+
+    >>> aug = iaa.PadToFixedSize(width=100, height=100, position="center")
+
+    For edges smaller than 100 pixels, pads to 100 pixels. Does nothing for the other edges.
+    The padding is always equally distributed over the left/right and top/bottom sides.
 
     >>> aug = iaa.Sequential([
     >>>     iaa.PadToFixedSize(width=100, height=100),
     >>>     iaa.CropToFixedSize(width=100, height=100)
     >>> ])
 
-    pads to ``100x100`` pixel for smaller images, and crops to ``100x100`` pixel for larger images.
+    Pads to ``100x100`` pixel for smaller images, and crops to ``100x100`` pixel for larger images.
     The output images have fixed size, ``100x100`` pixel.
 
     """
 
-    def __init__(self, width, height, pad_mode="constant", pad_cval=0,
+    def __init__(self, width, height, pad_mode="constant", pad_cval=0, position="uniform",
                  name=None, deterministic=False, random_state=None):
         super(PadToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
@@ -1264,7 +1351,7 @@ class PadToFixedSize(meta.Augmenter):
         # (Deterministic(1.0), Deterministic(1.0)) to only add at the bottom right.
         # Analogously (0.5, 0.5) pads equally on both axis, (0.0, 1.0) pads left and bottom,
         # (1.0, 0.0) pads right and top.
-        self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
+        self.position = _handle_position_parameter(position)
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
         self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True,
@@ -1347,8 +1434,13 @@ class PadToFixedSize(meta.Augmenter):
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
 
-        pad_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-        pad_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        if isinstance(self.position, tuple):
+            pad_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            pad_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        else:
+            pads = self.position.draw_samples((nb_images, 2), random_state=ia.new_random_state(seed + 0))
+            pad_xs = pads[:, 0]
+            pad_ys = pads[:, 1]
 
         pad_modes = self.pad_mode.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
         pad_cvals = self.pad_cval.draw_samples(nb_images, random_state=ia.new_random_state(seed + 3))
@@ -1386,9 +1478,7 @@ class CropToFixedSize(meta.Augmenter):
     over the image axis. E.g. if 2px have to be cropped on the left or right to reach the
     required width, the augmenter will sometimes remove 2px from the left and 0px from the right,
     sometimes remove 2px from the right and 0px from the left and sometimes remove 1px from both
-    sides. Set the attribute :attr:`imgaug.augmenters.size.CropToFixedSize.position` to
-    ``(imgaug.parameters.Deterministic(0.5), imgaug.parameters.Deterministic(0.5))`` in
-    order to always crop equally on both axis.
+    sides. Set `position` to ``center`` to prevent that.
 
     Parameters
     ----------
@@ -1397,6 +1487,35 @@ class CropToFixedSize(meta.Augmenter):
 
     height : int
         Fixed height of new images.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center',\
+                'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter\
+                or tuple of StochasticParameter, optional
+         Sets the center point of the cropping, which determines how the required cropping amounts are distributed
+         to each side. For a tuple ``(a, b)``, both ``a`` and ``b`` are expected to be in range ``[0.0, 1.0]``
+         and describe the fraction of cropping applied to the left/right (low/high values for ``a``) and the fraction
+         of cropping applied to the top/bottom (low/high values for ``b``). A cropping position at ``(0.5, 0.5)``
+         would be the center of the image and distribute the cropping equally over all sides. A cropping position
+         at ``(1.0, 0.0)`` would be the right-top and would apply 100% of the required cropping to the right and
+         top sides of the image.
+
+            * If string ``uniform`` then the share of cropping is randomly and uniformly distributed over each side.
+              Equivalent to ``(Uniform(0.0, 1.0), Uniform(0.0, 1.0))``.
+            * If string ``normal`` then the share of cropping is distributed based on a normal distribution,
+              leading to a focus on the center of the images.
+              Equivalent to ``(Clip(Normal(0.5, 0.45/2), 0, 1), Clip(Normal(0.5, 0.45/2), 0, 1))``.
+            * If string ``center`` then center point of the cropping is identical to the image center.
+              Equivalent to ``(0.5, 0.5)``.
+            * If a string matching regex ``^(left|center|right)-(top|center|bottom)$``, e.g. ``left-top`` or
+              ``center-bottom`` then sets the center point of the cropping to the X-Y position matching that
+              description.
+            * If a tuple of float, then expected to have exactly two entries between ``0.0`` and ``1.0``, which will
+              always be used as the combination the position matching (x, y) form.
+            * If a StochasticParameter, then that parameter will be queries once per call to ``augment_*()`` to get
+              ``Nx2`` center positions matching (x, y) form.
+            * If a tuple of StochasticParameter, then expected to have exactly two entries that will both be queries
+              per call to ``augment_*()``, each for ``(N,)`` values, to get the center positions. First parameter is
+              used for x, second for y.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1411,7 +1530,14 @@ class CropToFixedSize(meta.Augmenter):
     --------
     >>> aug = iaa.CropToFixedSize(width=100, height=100)
 
-    for edges larger than 100 pixels, crops to 100 pixels, does nothing for the other edges.
+    For sides larger than 100 pixels, crops to 100 pixels. Does nothing for the other sides.
+    The cropping amounts are randomly (and uniformly) distributed over the sides of the image.
+
+    >>> aug = iaa.CropToFixedSize(width=100, height=100, position="center")
+
+    For sides larger than 100 pixels, crops to 100 pixels. Does nothing for the other sides.
+    The cropping amounts are always equally distributed over the left/right sides of the image (and analogously
+    for top/bottom).
 
     >>> aug = iaa.Sequential([
     >>>     iaa.PadToFixedSize(width=100, height=100),
@@ -1423,7 +1549,7 @@ class CropToFixedSize(meta.Augmenter):
 
     """
 
-    def __init__(self, width, height, name=None, deterministic=False, random_state=None):
+    def __init__(self, width, height, position="uniform", name=None, deterministic=False, random_state=None):
         super(CropToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
 
@@ -1433,7 +1559,7 @@ class CropToFixedSize(meta.Augmenter):
         # (Deterministic(1.0), Deterministic(1.0)) to only crop at the bottom right.
         # Analogously (0.5, 0.5) crops equally on both axis, (0.0, 1.0) crops left and bottom,
         # (1.0, 0.0) crops right and top.
-        self.position = (iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0))
+        self.position = _handle_position_parameter(position)
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
@@ -1442,15 +1568,24 @@ class CropToFixedSize(meta.Augmenter):
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ih, iw = image.shape[:2]
+            height_image, width_image = image.shape[0:2]
 
-            if ih > h:
-                offset_y = int(offset_ys[i] * (ih - h))
-                image = image[offset_y:offset_y+h, :, :]
+            crop_image_top, crop_image_bottom = 0, 0
+            crop_image_left, crop_image_right = 0, 0
 
-            if iw > w:
-                offset_x = int(offset_xs[i] * (iw - w))
-                image = image[:, offset_x:offset_x+w, :]
+            if height_image > h:
+                crop_image_top = int(offset_ys[i] * (height_image - h))
+                crop_image_bottom = height_image - h - crop_image_top
+
+            if width_image > w:
+                crop_image_left = int(offset_xs[i] * (width_image - w))
+                crop_image_right = width_image - w - crop_image_left
+
+            image = image[
+                crop_image_top:height_image-crop_image_bottom,
+                crop_image_left:width_image-crop_image_right,
+                ...
+            ]
 
             result.append(image)
 
@@ -1463,13 +1598,24 @@ class CropToFixedSize(meta.Augmenter):
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            ih, iw = keypoints_on_image.shape[:2]
+            height_image, width_image = keypoints_on_image.shape[0:2]
 
-            offset_y = int(offset_ys[i] * (ih - h)) if ih > h else 0
-            offset_x = int(offset_xs[i] * (iw - w)) if iw > w else 0
+            crop_image_top, crop_image_bottom = 0, 0
+            crop_image_left, crop_image_right = 0, 0
 
-            keypoints_cropped = keypoints_on_image.shift(x=-offset_x, y=-offset_y)
-            keypoints_cropped.shape = (min(ih, h), min(iw, w)) + keypoints_cropped.shape[2:]
+            if height_image > h:
+                crop_image_top = int(offset_ys[i] * (height_image - h))
+                crop_image_bottom = height_image - h - crop_image_top
+
+            if width_image > w:
+                crop_image_left = int(offset_xs[i] * (width_image - w))
+                crop_image_right = width_image - w - crop_image_left
+
+            keypoints_cropped = keypoints_on_image.shift(x=-crop_image_left, y=-crop_image_top)
+            keypoints_cropped.shape = (
+                height_image - crop_image_top - crop_image_bottom,
+                width_image - crop_image_left - crop_image_right
+            ) + keypoints_on_image.shape[2:]
 
             result.append(keypoints_cropped)
 
@@ -1480,19 +1626,17 @@ class CropToFixedSize(meta.Augmenter):
         w, h = self.size
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
-            ih, iw = heatmaps[i].shape[:2]
-
             height_image, width_image = heatmaps[i].shape[0:2]
             height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
 
             crop_image_top, crop_image_bottom = 0, 0
             crop_image_left, crop_image_right = 0, 0
 
-            if ih > h:
+            if height_image > h:
                 crop_image_top = int(offset_ys[i] * (height_image - h))
                 crop_image_bottom = height_image - h - crop_image_top
 
-            if iw > w:
+            if width_image > w:
                 crop_image_left = int(offset_xs[i] * (width_image - w))
                 crop_image_right = width_image - w - crop_image_left
 
@@ -1524,8 +1668,17 @@ class CropToFixedSize(meta.Augmenter):
 
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
-        offset_xs = 1.0 - self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-        offset_ys = 1.0 - self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+
+        if isinstance(self.position, tuple):
+            offset_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            offset_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+        else:
+            offsets = self.position.draw_samples((nb_images, 2), random_state=ia.new_random_state(seed + 0))
+            offset_xs = offsets[:, 0]
+            offset_ys = offsets[:, 1]
+
+        offset_xs = 1.0 - offset_xs
+        offset_ys = 1.0 - offset_ys
 
         return offset_xs, offset_ys
 

@@ -9,12 +9,15 @@ import six.moves as sm
 
 import imgaug as ia
 from imgaug import augmenters as iaa
+import imgaug.augmenters.size as iaa_size
 from imgaug import parameters as iap
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 
 
 def main():
     time_start = time.time()
+
+    test__handle_position_parameter()
 
     test_Scale()
     # TODO test_CropAndPad()
@@ -25,6 +28,98 @@ def main():
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+
+
+def test__handle_position_parameter():
+    observed = iaa_size._handle_position_parameter("uniform")
+    assert isinstance(observed, tuple)
+    assert len(observed) == 2
+    for i in range(2):
+        assert isinstance(observed[i], iap.Uniform)
+        assert isinstance(observed[i].a, iap.Deterministic)
+        assert isinstance(observed[i].b, iap.Deterministic)
+        assert 0.0 - 1e-4 < observed[i].a.value < 0.0 + 1e-4
+        assert 1.0 - 1e-4 < observed[i].b.value < 1.0 + 1e-4
+
+    observed = iaa_size._handle_position_parameter("center")
+    assert isinstance(observed, tuple)
+    assert len(observed) == 2
+    for i in range(2):
+        assert isinstance(observed[i], iap.Deterministic)
+        assert 0.5 - 1e-4 < observed[i].value < 0.5 + 1e-4
+
+    observed = iaa_size._handle_position_parameter("normal")
+    assert isinstance(observed, tuple)
+    assert len(observed) == 2
+    for i in range(2):
+        assert isinstance(observed[i], iap.Clip)
+        assert isinstance(observed[i].other_param, iap.Normal)
+        assert isinstance(observed[i].other_param.loc, iap.Deterministic)
+        assert isinstance(observed[i].other_param.scale, iap.Deterministic)
+        assert 0.5 - 1e-4 < observed[i].other_param.loc.value < 0.5 + 1e-4
+        assert 0.45/2 - 1e-4 < observed[i].other_param.scale.value < 0.45/2 + 1e-4
+
+    pos_x = [
+        ("left", 0.0),
+        ("center", 0.5),
+        ("right", 1.0)
+    ]
+    pos_y = [
+        ("top", 0.0),
+        ("center", 0.5),
+        ("bottom", 1.0)
+    ]
+    for x_str, x_val in pos_x:
+        for y_str, y_val in pos_y:
+            observed = iaa_size._handle_position_parameter("%s-%s" % (x_str, y_str))
+            assert isinstance(observed[0], iap.Deterministic)
+            assert x_val - 1e-4 < observed[0].value < x_val + 1e-4
+            assert isinstance(observed[1], iap.Deterministic)
+            assert y_val - 1e-4 < observed[1].value < y_val + 1e-4
+
+    observed = iaa_size._handle_position_parameter(iap.Poisson(2))
+    assert isinstance(observed, iap.Poisson)
+
+    observed = iaa_size._handle_position_parameter((0.4, 0.6))
+    assert isinstance(observed, tuple)
+    assert len(observed) == 2
+    assert isinstance(observed[0], iap.Deterministic)
+    assert 0.4 - 1e-4 < observed[0].value < 0.4 + 1e-4
+    assert isinstance(observed[1], iap.Deterministic)
+    assert 0.6 - 1e-4 < observed[1].value < 0.6 + 1e-4
+
+    got_exception = False
+    try:
+        _ = iaa_size._handle_position_parameter((1.2, 0.6))
+    except Exception as e:
+        assert "must be within the value range" in str(e)
+        got_exception = True
+    assert got_exception
+
+    observed = iaa_size._handle_position_parameter((iap.Poisson(2), iap.Poisson(3)))
+    assert isinstance(observed[0], iap.Poisson)
+    assert isinstance(observed[0].lam, iap.Deterministic)
+    assert 2 - 1e-4 < observed[0].lam.value < 2 + 1e-4
+    assert isinstance(observed[1], iap.Poisson)
+    assert isinstance(observed[1].lam, iap.Deterministic)
+    assert 3 - 1e-4 < observed[1].lam.value < 3 + 1e-4
+
+    observed = iaa_size._handle_position_parameter((0.4, iap.Poisson(3)))
+    assert isinstance(observed, tuple)
+    assert len(observed) == 2
+    assert isinstance(observed[0], iap.Deterministic)
+    assert 0.4 - 1e-4 < observed[0].value < 0.4 + 1e-4
+    assert isinstance(observed[1], iap.Poisson)
+    assert isinstance(observed[1].lam, iap.Deterministic)
+    assert 3 - 1e-4 < observed[1].lam.value < 3 + 1e-4
+
+    got_exception = False
+    try:
+        _ = iaa_size._handle_position_parameter(False)
+    except Exception as e:
+        assert "Expected one of the following as position parameter" in str(e)
+        got_exception = True
+    assert got_exception
 
 
 def test_Scale():
@@ -1097,8 +1192,7 @@ def test_PadToFixedSize():
     assert np.array_equal(observed, expected)
 
     # explicit non-center position test
-    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128)
-    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128, position="left-top")
     img1x1 = np.uint8([[255]])
     observed = aug.augment_image(img1x1)
     expected = np.uint8([
@@ -1110,8 +1204,7 @@ def test_PadToFixedSize():
     assert observed.shape == (3, 3)
     assert np.array_equal(observed, expected)
 
-    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128)
-    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128, position="right-bottom")
     img1x1 = np.uint8([[255]])
     observed = aug.augment_image(img1x1)
     expected = np.uint8([
@@ -1123,10 +1216,21 @@ def test_PadToFixedSize():
     assert observed.shape == (3, 3)
     assert np.array_equal(observed, expected)
 
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="constant", pad_cval=128, position=(0.5, 1.0))
+    img1x1 = np.uint8([[255]])
+    observed = aug.augment_image(img1x1)
+    expected = np.uint8([
+        [128, 255, 128],
+        [128, 128, 128],
+        [128, 128, 128]
+    ])
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 3)
+    assert np.array_equal(observed, expected)
+
     # basic keypoint test
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
-    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge", position="center")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
     assert observed[0].shape == expected.shape
@@ -1134,8 +1238,7 @@ def test_PadToFixedSize():
 
     # keypoint test with shape not being changed
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="edge")
-    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="edge", position="center")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
     assert observed[0].shape == expected.shape
@@ -1143,25 +1246,23 @@ def test_PadToFixedSize():
 
     # keypoint test with explicit non-center position
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
-    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge", position="left-top")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
     assert observed[0].shape == expected.shape
     assert keypoints_equal(observed, [expected])
 
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
-    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge", position="right-bottom")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(4, 4))
     assert observed[0].shape == expected.shape
     assert keypoints_equal(observed, [expected])
 
     # basic heatmaps test
+    # pad_mode should be ignored for heatmaps
     heatmaps = ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32) + 1.0, shape=(1, 1, 3))
-    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="edge")  # pad_mode should be ignored for heatmaps
-    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    aug = iaa.PadToFixedSize(height=3, width=3, pad_mode="edge", position="center")
     observed = aug.augment_heatmaps([heatmaps])[0]
     expected = np.float32([
         [0, 0, 0],
@@ -1173,9 +1274,9 @@ def test_PadToFixedSize():
     assert np.allclose(observed.arr_0to1, expected)
 
     # heatmaps with size unequal to image
+    # pad_mode should be ignored for heatmaps
     heatmaps = ia.HeatmapsOnImage(np.zeros((15, 15, 1), dtype=np.float32) + 1.0, shape=(30, 30, 3))
-    aug = iaa.PadToFixedSize(height=32, width=32, pad_mode="edge")  # pad_mode should be ignored for heatmaps
-    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    aug = iaa.PadToFixedSize(height=32, width=32, pad_mode="edge", position="left-top")
     observed = aug.augment_heatmaps([heatmaps])[0]
     expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
     expected[:, 0, 0] = 0.0
@@ -1246,8 +1347,7 @@ def test_CropToFixedSize():
     assert np.array_equal(observed, img4x4)
 
     # explicit non-center position test
-    aug = iaa.CropToFixedSize(height=3, width=3)
-    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="left-top")
     img5x5 = np.arange(25, dtype=np.uint8).reshape((5, 5))
     observed = aug.augment_image(img5x5)
     expected = img5x5[2:, 2:]
@@ -1255,8 +1355,7 @@ def test_CropToFixedSize():
     assert observed.shape == (3, 3)
     assert np.array_equal(observed, expected)
 
-    aug = iaa.CropToFixedSize(height=3, width=3)
-    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="right-bottom")
     img5x5 = np.arange(25, dtype=np.uint8).reshape((5, 5))
     observed = aug.augment_image(img5x5)
     expected = img5x5[:3, :3]
@@ -1264,10 +1363,17 @@ def test_CropToFixedSize():
     assert observed.shape == (3, 3)
     assert np.array_equal(observed, expected)
 
+    aug = iaa.CropToFixedSize(height=3, width=3, position=(0.5, 1.0))
+    img5x5 = np.arange(25, dtype=np.uint8).reshape((5, 5))
+    observed = aug.augment_image(img5x5)
+    expected = img5x5[:3, 1:4]
+    assert observed.dtype.type == np.uint8
+    assert observed.shape == (3, 3)
+    assert np.array_equal(observed, expected)
+
     # basic keypoint test
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-    aug = iaa.CropToFixedSize(height=1, width=1)
-    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    aug = iaa.CropToFixedSize(height=1, width=1, position="center")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 1))
     assert observed[0].shape == expected.shape
@@ -1275,8 +1381,7 @@ def test_CropToFixedSize():
 
     # keypoint test with shape not being changed
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-    aug = iaa.CropToFixedSize(height=3, width=3)
-    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="center")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
     assert observed[0].shape == expected.shape
@@ -1284,16 +1389,14 @@ def test_CropToFixedSize():
 
     # keypoint test with explicit non-center position
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(5, 5))
-    aug = iaa.CropToFixedSize(height=3, width=3)
-    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="left-top")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(3, 3))
     assert observed[0].shape == expected.shape
     assert keypoints_equal(observed, [expected])
 
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(5, 5))
-    aug = iaa.CropToFixedSize(height=3, width=3)
-    aug.position = (iap.Deterministic(1.0), iap.Deterministic(1.0))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="right-bottom")
     observed = aug.augment_keypoints([kpsoi])
     expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(3, 3))
     assert observed[0].shape == expected.shape
@@ -1301,17 +1404,33 @@ def test_CropToFixedSize():
 
     # basic heatmaps test
     heatmaps = ia.HeatmapsOnImage(np.zeros((5, 5, 1), dtype=np.float32) + 1.0, shape=(5, 5, 3))
-    aug = iaa.CropToFixedSize(height=3, width=3)
-    aug.position = (iap.Deterministic(0.5), iap.Deterministic(0.5))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="center")
     observed = aug.augment_heatmaps([heatmaps])[0]
     expected = np.zeros((3, 3, 1), dtype=np.float32) + 1.0
     assert observed.shape == (3, 3, 3)
     assert np.allclose(observed.arr_0to1, expected)
 
+    # heatmaps, crop at non-center position
+    heatmaps = np.linspace(0.0, 1.0, 5 * 5 * 1).reshape((5, 5, 1)).astype(np.float32)
+    heatmaps_oi = ia.HeatmapsOnImage(heatmaps, shape=(5, 5, 3))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="left-top")
+    observed = aug.augment_heatmaps([heatmaps_oi])[0]
+    expected = heatmaps[2:, 2:, :]
+    assert observed.shape == (3, 3, 3)
+    assert np.allclose(observed.arr_0to1, expected)
+
+    # heatmaps, crop at non-center position
+    heatmaps = np.linspace(0.0, 1.0, 5 * 5 * 1).reshape((5, 5, 1)).astype(np.float32)
+    heatmaps_oi = ia.HeatmapsOnImage(heatmaps, shape=(5, 5, 3))
+    aug = iaa.CropToFixedSize(height=3, width=3, position="right-bottom")
+    observed = aug.augment_heatmaps([heatmaps_oi])[0]
+    expected = heatmaps[:3, :3, :]
+    assert observed.shape == (3, 3, 3)
+    assert np.allclose(observed.arr_0to1, expected)
+
     # heatmaps with size unequal to image
     heatmaps = ia.HeatmapsOnImage(np.zeros((17, 17, 1), dtype=np.float32) + 1.0, shape=(34, 34, 3))
-    aug = iaa.CropToFixedSize(height=32, width=32)
-    aug.position = (iap.Deterministic(0.0), iap.Deterministic(0.0))
+    aug = iaa.CropToFixedSize(height=32, width=32, position="left-top")
     observed = aug.augment_heatmaps([heatmaps])[0]
     expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
     assert observed.shape == (32, 32, 3)
