@@ -365,5 +365,189 @@ def test_MedianBlur():
     assert keypoints_equal(observed, expected)
 
 
+def test_MotionBlur():
+    reseed()
+
+    # simple scenario
+    aug = iaa.MotionBlur(k=3, angle=0, direction=0.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(10)]
+    expected = np.float32([
+        [0, 1.0/3, 0],
+        [0, 1.0/3, 0],
+        [0, 1.0/3, 0]
+    ])
+    for matrices_image in matrices:
+        for matrix_channel in matrices_image:
+            assert np.allclose(matrix_channel, expected)
+
+    # 90deg angle
+    aug = iaa.MotionBlur(k=3, angle=90, direction=0.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(10)]
+    expected = np.float32([
+        [0, 0, 0],
+        [1.0/3, 1.0/3, 1.0/3],
+        [0, 0, 0]
+    ])
+    for matrices_image in matrices:
+        for matrix_channel in matrices_image:
+            assert np.allclose(matrix_channel, expected)
+
+    # 45deg angle
+    aug = iaa.MotionBlur(k=3, angle=45, direction=0.0, order=0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(10)]
+    expected = np.float32([
+        [0, 0, 1.0/3],
+        [0, 1.0/3, 0],
+        [1.0/3, 0, 0]
+    ])
+    for matrices_image in matrices:
+        for matrix_channel in matrices_image:
+            assert np.allclose(matrix_channel, expected)
+
+    # random angle
+    aug = iaa.MotionBlur(k=3, angle=[0, 90], direction=0.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(50)]
+    expected1 = np.float32([
+        [0, 1.0/3, 0],
+        [0, 1.0/3, 0],
+        [0, 1.0/3, 0]
+    ])
+    expected2 = np.float32([
+        [0, 0, 0],
+        [1.0/3, 1.0/3, 1.0/3],
+        [0, 0, 0],
+    ])
+    nb_seen = [0, 0]
+    for matrices_image in matrices:
+        assert np.allclose(matrices_image[0], matrices_image[1])
+        assert np.allclose(matrices_image[1], matrices_image[2])
+        for matrix_channel in matrices_image:
+            if np.allclose(matrix_channel, expected1):
+                nb_seen[0] += 1
+            elif np.allclose(matrix_channel, expected2):
+                nb_seen[1] += 1
+    assert nb_seen[0] > 0
+    assert nb_seen[1] > 0
+
+    # 5x5
+    aug = iaa.MotionBlur(k=5, angle=90, direction=0.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(10)]
+    expected = np.float32([
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [1.0/5, 1.0/5, 1.0/5, 1.0/5, 1.0/5],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+    ])
+    for matrices_image in matrices:
+        for matrix_channel in matrices_image:
+            assert np.allclose(matrix_channel, expected)
+
+    # random k
+    aug = iaa.MotionBlur(k=[3, 5], angle=90, direction=0.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(50)]
+    expected1 = np.float32([
+        [0, 0, 0],
+        [1.0/3, 1.0/3, 1.0/3],
+        [0, 0, 0],
+    ])
+    expected2 = np.float32([
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [1.0/5, 1.0/5, 1.0/5, 1.0/5, 1.0/5],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+    ])
+    nb_seen = [0, 0]
+    for matrices_image in matrices:
+        assert np.allclose(matrices_image[0], matrices_image[1])
+        assert np.allclose(matrices_image[1], matrices_image[2])
+        for matrix_channel in matrices_image:
+            if matrix_channel.shape == expected1.shape and np.allclose(matrix_channel, expected1):
+                nb_seen[0] += 1
+            elif matrix_channel.shape == expected2.shape and np.allclose(matrix_channel, expected2):
+                nb_seen[1] += 1
+    assert nb_seen[0] > 0
+    assert nb_seen[1] > 0
+
+    # direction 1.0
+    aug = iaa.MotionBlur(k=3, angle=0, direction=1.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(10)]
+    expected = np.float32([
+        [0, 1.0/1.5, 0],
+        [0, 0.5/1.5, 0],
+        [0, 0.0/1.5, 0]
+    ])
+    for matrices_image in matrices:
+        for matrix_channel in matrices_image:
+            assert np.allclose(matrix_channel, expected, rtol=0, atol=1e-2)
+
+    # direction -1.0
+    aug = iaa.MotionBlur(k=3, angle=0, direction=-1.0)
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(10)]
+    expected = np.float32([
+        [0, 0.0/1.5, 0],
+        [0, 0.5/1.5, 0],
+        [0, 1.0/1.5, 0]
+    ])
+    for matrices_image in matrices:
+        for matrix_channel in matrices_image:
+            assert np.allclose(matrix_channel, expected, rtol=0, atol=1e-2)
+
+    # random direction
+    aug = iaa.MotionBlur(k=3, angle=[0, 90], direction=[-1.0, 1.0])
+    matrix_func = aug.matrix
+    matrices = [matrix_func(np.zeros((128, 128, 3), dtype=np.uint8), 3, ia.new_random_state(i)) for i in range(50)]
+    expected1 = np.float32([
+        [0, 1.0/1.5, 0],
+        [0, 0.5/1.5, 0],
+        [0, 0.0/1.5, 0]
+    ])
+    expected2 = np.float32([
+        [0, 0.0/1.5, 0],
+        [0, 0.5/1.5, 0],
+        [0, 1.0/1.5, 0]
+    ])
+    nb_seen = [0, 0]
+    for matrices_image in matrices:
+        assert np.allclose(matrices_image[0], matrices_image[1])
+        assert np.allclose(matrices_image[1], matrices_image[2])
+        for matrix_channel in matrices_image:
+            if np.allclose(matrix_channel, expected1, rtol=0, atol=1e-2):
+                nb_seen[0] += 1
+            elif np.allclose(matrix_channel, expected2, rtol=0, atol=1e-2):
+                nb_seen[1] += 1
+    assert nb_seen[0] > 0
+    assert nb_seen[1] > 0
+
+    # test of actual augmenter
+    img = np.zeros((7, 7, 3), dtype=np.uint8)
+    img[3-1:3+2, 3-1:3+2, :] = 255
+    aug = iaa.MotionBlur(k=3, angle=90, direction=0.0)
+    img_aug = aug.augment_image(img)
+    v1 = (255*(1/3))
+    v2 = (255*(1/3)) * 2
+    v3 = (255*(1/3)) * 3
+    expected = np.float32([
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, v1, v2, v3, v2, v1, 0],
+        [0, v1, v2, v3, v2, v1, 0],
+        [0, v1, v2, v3, v2, v1, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+    ]).astype(np.uint8)
+    expected = np.tile(expected[..., np.newaxis], (1, 1, 3))
+    assert np.allclose(img_aug, expected)
+
+
 if __name__ == "__main__":
     main()

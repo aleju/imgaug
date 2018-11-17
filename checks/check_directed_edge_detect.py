@@ -9,6 +9,7 @@ POINT_SIZE = 5
 DEG_PER_STEP = 1
 TIME_PER_STEP = 10
 
+
 def main():
     image = data.astronaut()
 

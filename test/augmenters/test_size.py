@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
+import cv2
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -25,6 +26,7 @@ def main():
     test_Crop()
     test_PadToFixedSize()
     test_CropToFixedSize()
+    test_KeepSizeByResize()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
@@ -1435,6 +1437,125 @@ def test_CropToFixedSize():
     expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
     assert observed.shape == (32, 32, 3)
     assert np.allclose(observed.arr_0to1, expected)
+
+
+def test_KeepSizeByResize():
+    reseed()
+
+    children = iaa.Crop((1, 0, 0, 0), keep_size=False)
+
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic", interpolation_heatmaps="linear")
+    samples, samples_heatmaps = aug._draw_samples(1000, ia.new_random_state(1), True)
+    assert "cubic" in samples
+    assert len(set(samples)) == 1
+    assert "linear" in samples_heatmaps
+    assert len(set(samples_heatmaps)) == 1
+
+    aug = iaa.KeepSizeByResize(children, interpolation=iaa.KeepSizeByResize.NO_RESIZE,
+                               interpolation_heatmaps=iaa.KeepSizeByResize.SAME_AS_IMAGES)
+    samples, samples_heatmaps = aug._draw_samples(1000, ia.new_random_state(1), True)
+    assert iaa.KeepSizeByResize.NO_RESIZE in samples
+    assert len(set(samples)) == 1
+    assert iaa.KeepSizeByResize.NO_RESIZE in samples_heatmaps
+    assert len(set(samples_heatmaps)) == 1
+
+    aug = iaa.KeepSizeByResize(children, interpolation=cv2.INTER_LINEAR,
+                               interpolation_heatmaps=cv2.INTER_NEAREST)
+    samples, samples_heatmaps = aug._draw_samples(1000, ia.new_random_state(1), True)
+    assert cv2.INTER_LINEAR in samples
+    assert len(set(samples)) == 1
+    assert cv2.INTER_NEAREST in samples_heatmaps
+    assert len(set(samples_heatmaps)) == 1
+
+    aug = iaa.KeepSizeByResize(children, interpolation=["cubic", "nearest"],
+                               interpolation_heatmaps=["linear", iaa.KeepSizeByResize.SAME_AS_IMAGES])
+    samples, samples_heatmaps = aug._draw_samples(5000, ia.new_random_state(1), True)
+    assert "cubic" in samples
+    assert "nearest" in samples
+    assert len(set(samples)) == 2
+    assert "linear" in samples_heatmaps
+    assert "nearest" in samples_heatmaps
+    assert len(set(samples_heatmaps)) == 3
+    assert 0.5 - 0.1 < np.sum(samples == samples_heatmaps) / samples_heatmaps.size < 0.5 + 0.1
+
+    aug = iaa.KeepSizeByResize(children, interpolation=iap.Choice(["cubic", "linear"]),
+                               interpolation_heatmaps=iap.Choice(["linear", "nearest"]))
+    samples, samples_heatmaps = aug._draw_samples(10000, ia.new_random_state(1), True)
+    assert "cubic" in samples
+    assert "linear" in samples
+    assert len(set(samples)) == 2
+    assert "linear" in samples_heatmaps
+    assert "nearest" in samples_heatmaps
+    assert len(set(samples_heatmaps)) == 2
+
+    img = np.arange(0, 4*4*3, 1).reshape((4, 4, 3)).astype(np.uint8)
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic")
+    observed = aug.augment_image(img)
+    assert observed.shape == (4, 4, 3)
+    assert observed.dtype.type == np.uint8
+    expected = ia.imresize_single_image(img[1:, :, :], img.shape[0:2], interpolation="cubic")
+    assert np.allclose(observed, expected)
+
+    aug = iaa.KeepSizeByResize(children, interpolation=iaa.KeepSizeByResize.NO_RESIZE)
+    observed = aug.augment_image(img)
+    expected = img[1:, :, :]
+    assert observed.shape == (3, 4, 3)
+    assert observed.dtype.type == np.uint8
+    assert np.allclose(observed, expected)
+
+    # keypoints
+    keypoints = [ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=3)]
+    kpoi = ia.KeypointsOnImage(keypoints, shape=(4, 4, 3))
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic")
+    kpoi_aug = aug.augment_keypoints([kpoi])[0]
+    assert kpoi_aug.shape == (4, 4, 3)
+    assert 0 - 1e-4 < kpoi_aug.keypoints[0].x < 0 + 1e-4
+    assert ((1-1)/3)*4 - 1e-4 < kpoi_aug.keypoints[0].y < ((1-1)/3)*4 + 1e-4
+    assert 1 - 1e-4 < kpoi_aug.keypoints[1].x < 1 + 1e-4
+    assert ((1-1)/3)*4 - 1e-4 < kpoi_aug.keypoints[1].y < ((1-1)/3)*4 + 1e-4
+    assert 2 - 1e-4 < kpoi_aug.keypoints[2].x < 2 + 1e-4
+    assert ((3-1)/3)*4 - 1e-4 < kpoi_aug.keypoints[2].y < ((3-1)/3)*4 + 1e-4
+
+    kpoi = ia.KeypointsOnImage(keypoints, shape=(4, 4, 3))
+    aug = iaa.KeepSizeByResize(children, interpolation=iaa.KeepSizeByResize.NO_RESIZE)
+    kpoi_aug = aug.augment_keypoints([kpoi])[0]
+    assert kpoi_aug.shape == (3, 4, 3)
+    assert 0 - 1e-4 < kpoi_aug.keypoints[0].x < 0 + 1e-4
+    assert 0 - 1e-4 < kpoi_aug.keypoints[0].y < 0 + 1e-4
+    assert 1 - 1e-4 < kpoi_aug.keypoints[1].x < 1 + 1e-4
+    assert 0 - 1e-4 < kpoi_aug.keypoints[1].y < 0 + 1e-4
+    assert 2 - 1e-4 < kpoi_aug.keypoints[2].x < 2 + 1e-4
+    assert 2 - 1e-4 < kpoi_aug.keypoints[2].y < 2 + 1e-4
+
+    # heatmaps
+    heatmaps = np.linspace(0.0, 1.0, 4*4*1).reshape((4, 4, 1)).astype(np.float32)
+    heatmaps_oi = ia.HeatmapsOnImage(heatmaps, shape=(4, 4, 1))
+    heatmaps_oi_cubic = ia.HeatmapsOnImage(heatmaps[1:, :, :], shape=(3, 4, 3)).scale((4, 4), interpolation="cubic")
+    heatmaps_oi_cubic.shape = (4, 4, 3)
+    heatmaps_oi_nearest = ia.HeatmapsOnImage(heatmaps[1:, :, :], shape=(3, 4, 1)).scale((4, 4), interpolation="nearest")
+    heatmaps_oi_nearest.shape = (4, 4, 3)
+
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic", interpolation_heatmaps="nearest")
+    heatmaps_oi_aug = aug.augment_heatmaps([heatmaps_oi])[0]
+    assert heatmaps_oi_aug.arr_0to1.shape == (4, 4, 1)
+    assert np.allclose(heatmaps_oi_aug.arr_0to1, heatmaps_oi_nearest.arr_0to1)
+
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic", interpolation_heatmaps=["nearest", "cubic"])
+    heatmaps_oi_aug = aug.augment_heatmaps([heatmaps_oi])[0]
+    assert heatmaps_oi_aug.arr_0to1.shape == (4, 4, 1)
+    assert np.allclose(heatmaps_oi_aug.arr_0to1, heatmaps_oi_nearest.arr_0to1) \
+        or np.allclose(heatmaps_oi_aug.arr_0to1, heatmaps_oi_cubic.arr_0to1)
+
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic", interpolation_heatmaps=iaa.KeepSizeByResize.NO_RESIZE)
+    heatmaps_oi_aug = aug.augment_heatmaps([heatmaps_oi])[0]
+    assert heatmaps_oi_aug.arr_0to1.shape == (3, 4, 1)
+    assert np.allclose(heatmaps_oi_aug.arr_0to1, heatmaps_oi.arr_0to1[1:, :, :])
+
+    aug = iaa.KeepSizeByResize(children, interpolation="cubic",
+                               interpolation_heatmaps=iaa.KeepSizeByResize.SAME_AS_IMAGES)
+    heatmaps_oi_aug = aug.augment_heatmaps([heatmaps_oi])[0]
+    assert heatmaps_oi_aug.arr_0to1.shape == (4, 4, 1)
+    assert np.allclose(heatmaps_oi_aug.arr_0to1, heatmaps_oi_cubic.arr_0to1)
 
 
 if __name__ == "__main__":
