@@ -1783,7 +1783,12 @@ class KeepSizeByResize(meta.Augmenter):
             interpolations_heatmaps = self.interpolation_heatmaps.draw_samples(
                 (nb_images,), random_state=ia.new_random_state(seed + 10)
             )
-            same_as_imgs_idx = (interpolations_heatmaps == self.SAME_AS_IMAGES)
+
+            # Note that `interpolations_heatmaps == self.SAME_AS_IMAGES` works here only if the datatype of the array
+            # is such that it may contain strings. It does not work properly for e.g. integer arrays and will produce
+            # a single bool output, even for arrays with more than one entry.
+            same_as_imgs_idx = [ip == self.SAME_AS_IMAGES for ip in interpolations_heatmaps]
+
             interpolations_heatmaps[same_as_imgs_idx] = interpolations[same_as_imgs_idx]
 
         return interpolations, interpolations_heatmaps
