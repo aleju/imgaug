@@ -825,7 +825,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False, size_px_max=(2
 
 def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=False,
                         size_px_max=(4, 16), upscale_method=None,
-                        iterations=(1, 3), aggregation_method=["avg", "max"],  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+                        iterations=(1, 3), aggregation_method=["avg", "max"],
                         sigmoid=0.5, sigmoid_thresh=None,
                         name=None, deterministic=False, random_state=None):
     """
@@ -999,6 +999,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=F
     `first`).
 
     """
+    # pylint: disable=dangerous-default-value
     upscale_method_default = iap.Choice(["nearest", "linear", "cubic"], p=[0.05, 0.6, 0.35])
     sigmoid_thresh_default = iap.Normal(0.0, 5.0)
 

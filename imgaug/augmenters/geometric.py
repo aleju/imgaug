@@ -2195,7 +2195,7 @@ class ElasticTransformation(meta.Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
         nb_images = len(keypoints_on_images)
-        seeds, alphas, sigmas, orders, _cvals, _modes = self._draw_samples(nb_images, random_state)
+        seeds, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
@@ -2390,7 +2390,7 @@ class Rot90(meta.Augmenter):
         input_was_array = ia.is_np_array(arrs)
         input_dtype = arrs.dtype if input_was_array else None
         arrs_aug = []
-        for i, (arr, k_i) in enumerate(zip(arrs, ks)):
+        for arr, k_i in zip(arrs, ks):
             arr_aug = np.rot90(arr, k_i)
             if keep_size and arr.shape != arr_aug.shape and resize_func is not None:
                 arr_aug = resize_func(arr_aug, arr.shape[0:2])
