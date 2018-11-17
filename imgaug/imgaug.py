@@ -3426,9 +3426,9 @@ class Polygon(object):
                 # list of tuples (x, y)
                 self.exterior = np.float32([[point[0], point[1]] for point in exterior])
         else:
-            assert is_np_array(exterior)
-            assert exterior.ndim == 2
-            assert exterior.shape[1] == 2
+            do_assert(is_np_array(exterior))
+            do_assert(exterior.ndim == 2)
+            do_assert(exterior.shape[1] == 2)
             self.exterior = np.float32(exterior)
 
         # Remove last point if it is essentially the same as the first point (polygons are always assumed to be
@@ -3584,7 +3584,7 @@ class Polygon(object):
             This value is only returned if `return_distance` was set to True.
 
         """
-        assert len(self.exterior) > 0
+        do_assert(len(self.exterior) > 0)
         distances = []
         for x2, y2 in self.exterior:
             d = (x2 - x) ** 2 + (y2 - y) ** 2
@@ -3718,7 +3718,7 @@ class Polygon(object):
         poly_image = shapely.geometry.Polygon([(0, 0), (w, 0), (w, h), (0, h)])
         multipoly_inter_shapely = poly_shapely.intersection(poly_image)
         if not isinstance(multipoly_inter_shapely, shapely.geometry.MultiPolygon):
-            assert isinstance(multipoly_inter_shapely, shapely.geometry.Polygon)
+            do_assert(isinstance(multipoly_inter_shapely, shapely.geometry.Polygon))
             multipoly_inter_shapely = shapely.geometry.MultiPolygon([multipoly_inter_shapely])
 
         polygons = []
@@ -3736,7 +3736,7 @@ class Polygon(object):
                     polygons_reordered.append(polygon_reordered)
                     found = True
                     break
-            assert found  # could only not find closest points if new polys are empty
+            do_assert(found)  # could only not find closest points if new polys are empty
 
         return MultiPolygon(polygons_reordered)
 
@@ -3876,7 +3876,7 @@ class Polygon(object):
             outside of the image.
 
         """
-        assert image.ndim in [2, 3]
+        do_assert(image.ndim in [2, 3])
         if len(self.exterior) <= 2:
             raise Exception("Polygon must be made up of at least 3 points to extract its area from an image.")
 
@@ -3957,7 +3957,7 @@ class Polygon(object):
             Copy of this polygon with the new point order.
 
         """
-        assert 0 <= point_idx < len(self.exterior)
+        do_assert(0 <= point_idx < len(self.exterior))
         if point_idx == 0:
             return self.deepcopy()
         exterior = np.concatenate(
@@ -4034,7 +4034,7 @@ class Polygon(object):
             A polygon with the same exterior as the Shapely polygon.
 
         """
-        assert isinstance(polygon_shapely, shapely.geometry.Polygon)
+        do_assert(isinstance(polygon_shapely, shapely.geometry.Polygon))
         if len(polygon_shapely.exterior.coords) == 0:
             return Polygon([], label=label)
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
@@ -4288,7 +4288,7 @@ class MultiPolygon(object):
     """
     def __init__(self, geoms):
         """Create a new MultiPolygon instance."""
-        assert len(geoms) == 0 or all([isinstance(el, Polygon) for el in geoms])
+        do_assert(len(geoms) == 0 or all([isinstance(el, Polygon) for el in geoms]))
         self.geoms = geoms
 
     @staticmethod
@@ -4318,7 +4318,7 @@ class MultiPolygon(object):
         elif isinstance(geometry, shapely.geometry.Polygon):
             return MultiPolygon([Polygon.from_shapely(geometry, label=label)])
         elif isinstance(geometry, shapely.geometry.collection.GeometryCollection):
-            assert all([isinstance(poly, shapely.geometry.Polygon) for poly in geometry.geoms])
+            do_assert(all([isinstance(poly, shapely.geometry.Polygon) for poly in geometry.geoms]))
             return MultiPolygon([Polygon.from_shapely(poly, label=label) for poly in geometry.geoms])
         else:
             raise Exception("Unknown datatype '%s'. Expected shapely.geometry.Polygon or "
