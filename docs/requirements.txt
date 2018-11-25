@@ -7,3 +7,4 @@ scikit-image==0.14.1
 opencv-python==3.4.3.18
 imageio==2.4.1
 Shapely==1.6.4.post2
+numpydoc==0.8.0
