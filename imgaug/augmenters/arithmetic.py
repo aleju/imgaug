@@ -15,11 +15,14 @@ List of augmenters:
     * Add
     * AddElementwise
     * AdditiveGaussianNoise
+    * AdditiveLaplaceNoise
+    * AdditivePoissonNoise
     * Multiply
     * MultiplyElementwise
     * Dropout
     * CoarseDropout
     * ReplaceElementwise
+    * ImpulseNoise
     * SaltAndPepper
     * CoarseSaltAndPepper
     * Salt

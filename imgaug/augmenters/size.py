@@ -21,6 +21,7 @@ List of augmenters:
     * Pad
     * PadToFixedSize
     * CropToFixedSize
+    * KeepSizeByResize
 
 """
 from __future__ import print_function, division, absolute_import
