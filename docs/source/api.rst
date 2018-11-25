@@ -17,3 +17,4 @@ API
    api_augmenters_overlay
    api_augmenters_segmentation
    api_augmenters_size
+   api_augmenters_weather
