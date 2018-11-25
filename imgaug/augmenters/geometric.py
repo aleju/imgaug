@@ -483,7 +483,9 @@ class Affine(meta.Augmenter):
     def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples,
                                    cval_samples, mode_samples, order_samples, return_matrices=False):
         nb_images = len(images)
-        result = images
+        input_was_array = ia.is_np_array(images)
+        input_dtype = None if not input_was_array else images.dtype
+        result = []
         if return_matrices:
             matrices = [None] * nb_images
         for i in sm.xrange(nb_images):
@@ -544,9 +546,16 @@ class Affine(meta.Augmenter):
                     image_warped, matrix = image_warped
                     matrices[i] = matrix
 
-                result[i] = image_warped
+                result.append(image_warped)
             else:
-                result[i] = images[i]
+                result.append(images[i])
+
+        # the shapes can change due to fit_output, then it may not be possible to return an array, even when the input
+        # was an array
+        if input_was_array:
+            nb_shapes = len(set([image.shape for image in result]))
+            if nb_shapes == 1:
+                result = np.array(result, input_dtype)
 
         if return_matrices:
             result = (result, matrices)
@@ -566,7 +575,10 @@ class Affine(meta.Augmenter):
                                                              return_matrices=True)
         for heatmaps_i, arr_aug, matrix in zip(heatmaps, arrs_aug, matrices):
             heatmaps_i.arr_0to1 = arr_aug
-            _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
+            if self.fit_output:
+                _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
+            else:
+                output_shape_i = heatmaps_i.shape
             heatmaps_i.shape = output_shape_i
         return heatmaps
 
