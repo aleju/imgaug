@@ -1,5 +1,5 @@
-imgaug.augmenters\.color
-========================
+imgaug.augmenters\.contrast
+===========================
 
 .. automodule:: imgaug.augmenters.contrast
     :members:
