@@ -9,16 +9,16 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 |     | Image | Heatmaps | Seg. Maps | Keypoints | Bounding Boxes |
 | --- | ----- | -------- | --------- | --------- | -------------- |
-| *Original Input* | ![input image](doc/readme_images/small_overview/noop_image.jpg?raw=true "input image") | ![input heatmap](doc/readme_images/small_overview/noop_heatmap.jpg?raw=true "input heatmap") | ![input segmentation map](doc/readme_images/small_overview/noop_segmap.jpg?raw=true "input segmentation map") | ![input keypoints](doc/readme_images/small_overview/noop_kps.jpg?raw=true "input keypoints") | ![input bounding boxes](doc/readme_images/small_overview/noop_bbs.jpg?raw=true "input bounding boxes") |
-| Gauss. Noise<br>+&nbsp;Contrast<br>+&nbsp;Sharpen | ![non geometric image](doc/readme_images/small_overview/non_geometric_image.jpg?raw=true "non geometric image") | ![non geometric heatmap](doc/readme_images/small_overview/non_geometric_heatmap.jpg?raw=true "non geometric heatmap") | ![non geometric segmentation map](doc/readme_images/small_overview/non_geometric_segmap.jpg?raw=true "non geometric segmentation map") | ![non geometric keypoints](doc/readme_images/small_overview/non_geometric_kps.jpg?raw=true "non geometric keypoints") | ![non geometric bounding boxes](doc/readme_images/small_overview/non_geometric_bbs.jpg?raw=true "non geometric bounding boxes") |
-| Affine | ![affine image](doc/readme_images/small_overview/affine_image.jpg?raw=true "affine image") | ![affine heatmap](doc/readme_images/small_overview/affine_heatmap.jpg?raw=true "affine heatmap") | ![affine segmentation map](doc/readme_images/small_overview/affine_segmap.jpg?raw=true "affine segmentation map") | ![affine keypoints](doc/readme_images/small_overview/affine_kps.jpg?raw=true "affine keypoints") | ![affine bounding boxes](doc/readme_images/small_overview/affine_bbs.jpg?raw=true "affine bounding boxes") |
-| Crop<br>+&nbsp;Pad | ![cropandpad image](doc/readme_images/small_overview/cropandpad_image.jpg?raw=true "cropandpad image") | ![cropandpad heatmap](doc/readme_images/small_overview/cropandpad_heatmap.jpg?raw=true "cropandpad heatmap") | ![cropandpad segmentation map](doc/readme_images/small_overview/cropandpad_segmap.jpg?raw=true "cropandpad segmentation map") | ![cropandpad keypoints](doc/readme_images/small_overview/cropandpad_kps.jpg?raw=true "cropandpad keypoints") | ![cropandpad bounding boxes](doc/readme_images/small_overview/cropandpad_bbs.jpg?raw=true "cropandpad bounding boxes") |
-| Fliplr<br>+&nbsp;Perspective | ![fliplr perspective image](doc/readme_images/small_overview/fliplr_perspective_image.jpg?raw=true "fliplr perspective image") | ![fliplr perspective heatmap](doc/readme_images/small_overview/fliplr_perspective_heatmap.jpg?raw=true "fliplr perspective heatmap") | ![fliplr perspective segmentation map](doc/readme_images/small_overview/fliplr_perspective_segmap.jpg?raw=true "fliplr perspective segmentation map") | ![fliplr perspective keypoints](doc/readme_images/small_overview/fliplr_perspective_kps.jpg?raw=true "fliplr perspective keypoints") | ![fliplr perspective bounding boxes](doc/readme_images/small_overview/fliplr_perspective_bbs.jpg?raw=true "fliplr perspective bounding boxes")
+| *Original Input* | ![input image](../../imgaug-doc/readme_images/small_overview/noop_image.jpg?raw=true "input image") | ![input heatmap](../../imgaug-doc/readme_images/small_overview/noop_heatmap.jpg?raw=true "input heatmap") | ![input segmentation map](../../imgaug-doc/readme_images/small_overview/noop_segmap.jpg?raw=true "input segmentation map") | ![input keypoints](../../imgaug-doc/readme_images/small_overview/noop_kps.jpg?raw=true "input keypoints") | ![input bounding boxes](../../imgaug-doc/readme_images/small_overview/noop_bbs.jpg?raw=true "input bounding boxes") |
+| Gauss. Noise<br>+&nbsp;Contrast<br>+&nbsp;Sharpen | ![non geometric image](../../imgaug-doc/readme_images/small_overview/non_geometric_image.jpg?raw=true "non geometric image") | ![non geometric heatmap](../../imgaug-doc/readme_images/small_overview/non_geometric_heatmap.jpg?raw=true "non geometric heatmap") | ![non geometric segmentation map](../../imgaug-doc/readme_images/small_overview/non_geometric_segmap.jpg?raw=true "non geometric segmentation map") | ![non geometric keypoints](../../imgaug-doc/readme_images/small_overview/non_geometric_kps.jpg?raw=true "non geometric keypoints") | ![non geometric bounding boxes](../../imgaug-doc/readme_images/small_overview/non_geometric_bbs.jpg?raw=true "non geometric bounding boxes") |
+| Affine | ![affine image](../../imgaug-doc/readme_images/small_overview/affine_image.jpg?raw=true "affine image") | ![affine heatmap](../../imgaug-doc/readme_images/small_overview/affine_heatmap.jpg?raw=true "affine heatmap") | ![affine segmentation map](../../imgaug-doc/readme_images/small_overview/affine_segmap.jpg?raw=true "affine segmentation map") | ![affine keypoints](../../imgaug-doc/readme_images/small_overview/affine_kps.jpg?raw=true "affine keypoints") | ![affine bounding boxes](../../imgaug-doc/readme_images/small_overview/affine_bbs.jpg?raw=true "affine bounding boxes") |
+| Crop<br>+&nbsp;Pad | ![cropandpad image](../../imgaug-doc/readme_images/small_overview/cropandpad_image.jpg?raw=true "cropandpad image") | ![cropandpad heatmap](../../imgaug-doc/readme_images/small_overview/cropandpad_heatmap.jpg?raw=true "cropandpad heatmap") | ![cropandpad segmentation map](../../imgaug-doc/readme_images/small_overview/cropandpad_segmap.jpg?raw=true "cropandpad segmentation map") | ![cropandpad keypoints](../../imgaug-doc/readme_images/small_overview/cropandpad_kps.jpg?raw=true "cropandpad keypoints") | ![cropandpad bounding boxes](../../imgaug-doc/readme_images/small_overview/cropandpad_bbs.jpg?raw=true "cropandpad bounding boxes") |
+| Fliplr<br>+&nbsp;Perspective | ![fliplr perspective image](../../imgaug-doc/readme_images/small_overview/fliplr_perspective_image.jpg?raw=true "fliplr perspective image") | ![fliplr perspective heatmap](../../imgaug-doc/readme_images/small_overview/fliplr_perspective_heatmap.jpg?raw=true "fliplr perspective heatmap") | ![fliplr perspective segmentation map](../../imgaug-doc/readme_images/small_overview/fliplr_perspective_segmap.jpg?raw=true "fliplr perspective segmentation map") | ![fliplr perspective keypoints](../../imgaug-doc/readme_images/small_overview/fliplr_perspective_kps.jpg?raw=true "fliplr perspective keypoints") | ![fliplr perspective bounding boxes](../../imgaug-doc/readme_images/small_overview/fliplr_perspective_bbs.jpg?raw=true "fliplr perspective bounding boxes")
 
 
 **More (strong) example augmentations of one input image:**
 
-![64 quokkas](doc/readme_images/examples_grid.jpg?raw=true "64 quokkas")
+![64 quokkas](../../imgaug-doc/readme_images/examples_grid.jpg?raw=true "64 quokkas")
 
 ## Features of the library
 
@@ -95,7 +95,7 @@ Noop
 <tr>
 <td colspan="1">
 
-![Noop](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/noop.gif?raw=true "Noop")
+![Noop](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/noop.gif?raw=true "Noop")
 
 </td>
 <td>&nbsp;</td>
@@ -131,17 +131,17 @@ AdditiveGaussianNoise
 <tr>
 <td colspan="1">
 
-![Add](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/add.gif?raw=true "Add")
+![Add](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/add.gif?raw=true "Add")
 
 </td>
 <td colspan="1">
 
-![Add per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/add_per_channel_true.gif?raw=true "Add per_channel=True")
+![Add per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/add_per_channel_true.gif?raw=true "Add per_channel=True")
 
 </td>
 <td colspan="1">
 
-![AdditiveGaussianNoise](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivegaussiannoise.gif?raw=true "AdditiveGaussianNoise")
+![AdditiveGaussianNoise](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivegaussiannoise.gif?raw=true "AdditiveGaussianNoise")
 
 </td>
 </tr>
@@ -168,17 +168,17 @@ AdditiveLaplaceNoise<br/>(per_channel=True)
 <tr>
 <td colspan="1">
 
-![AdditiveGaussianNoise per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivegaussiannoise_per_channel_true.gif?raw=true "AdditiveGaussianNoise per_channel=True")
+![AdditiveGaussianNoise per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivegaussiannoise_per_channel_true.gif?raw=true "AdditiveGaussianNoise per_channel=True")
 
 </td>
 <td colspan="1">
 
-![AdditiveLaplaceNoise](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivelaplacenoise.gif?raw=true "AdditiveLaplaceNoise")
+![AdditiveLaplaceNoise](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivelaplacenoise.gif?raw=true "AdditiveLaplaceNoise")
 
 </td>
 <td colspan="1">
 
-![AdditiveLaplaceNoise per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivelaplacenoise_per_channel_true.gif?raw=true "AdditiveLaplaceNoise per_channel=True")
+![AdditiveLaplaceNoise per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivelaplacenoise_per_channel_true.gif?raw=true "AdditiveLaplaceNoise per_channel=True")
 
 </td>
 </tr>
@@ -205,17 +205,17 @@ Multiply
 <tr>
 <td colspan="1">
 
-![AdditivePoissonNoise](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivepoissonnoise.gif?raw=true "AdditivePoissonNoise")
+![AdditivePoissonNoise](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivepoissonnoise.gif?raw=true "AdditivePoissonNoise")
 
 </td>
 <td colspan="1">
 
-![AdditivePoissonNoise per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivepoissonnoise_per_channel_true.gif?raw=true "AdditivePoissonNoise per_channel=True")
+![AdditivePoissonNoise per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/additivepoissonnoise_per_channel_true.gif?raw=true "AdditivePoissonNoise per_channel=True")
 
 </td>
 <td colspan="1">
 
-![Multiply](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/multiply.gif?raw=true "Multiply")
+![Multiply](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/multiply.gif?raw=true "Multiply")
 
 </td>
 </tr>
@@ -242,17 +242,17 @@ Dropout<br/>(per_channel=True)
 <tr>
 <td colspan="1">
 
-![Multiply per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/multiply_per_channel_true.gif?raw=true "Multiply per_channel=True")
+![Multiply per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/multiply_per_channel_true.gif?raw=true "Multiply per_channel=True")
 
 </td>
 <td colspan="1">
 
-![Dropout](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/dropout.gif?raw=true "Dropout")
+![Dropout](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/dropout.gif?raw=true "Dropout")
 
 </td>
 <td colspan="1">
 
-![Dropout per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/dropout_per_channel_true.gif?raw=true "Dropout per_channel=True")
+![Dropout per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/dropout_per_channel_true.gif?raw=true "Dropout per_channel=True")
 
 </td>
 </tr>
@@ -279,17 +279,17 @@ ImpulseNoise
 <tr>
 <td colspan="1">
 
-![CoarseDropout p=0.2](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsedropout_p_0_2.gif?raw=true "CoarseDropout p=0.2")
+![CoarseDropout p=0.2](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsedropout_p_0_2.gif?raw=true "CoarseDropout p=0.2")
 
 </td>
 <td colspan="1">
 
-![CoarseDropout p=0.2, per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsedropout_p_0_2_per_channel_true.gif?raw=true "CoarseDropout p=0.2, per_channel=True")
+![CoarseDropout p=0.2, per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsedropout_p_0_2_per_channel_true.gif?raw=true "CoarseDropout p=0.2, per_channel=True")
 
 </td>
 <td colspan="1">
 
-![ImpulseNoise](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/impulsenoise.gif?raw=true "ImpulseNoise")
+![ImpulseNoise](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/impulsenoise.gif?raw=true "ImpulseNoise")
 
 </td>
 </tr>
@@ -316,17 +316,17 @@ Pepper
 <tr>
 <td colspan="1">
 
-![SaltAndPepper](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/saltandpepper.gif?raw=true "SaltAndPepper")
+![SaltAndPepper](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/saltandpepper.gif?raw=true "SaltAndPepper")
 
 </td>
 <td colspan="1">
 
-![Salt](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/salt.gif?raw=true "Salt")
+![Salt](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/salt.gif?raw=true "Salt")
 
 </td>
 <td colspan="1">
 
-![Pepper](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/pepper.gif?raw=true "Pepper")
+![Pepper](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/pepper.gif?raw=true "Pepper")
 
 </td>
 </tr>
@@ -353,17 +353,17 @@ CoarsePepper<br/>(p=0.2)
 <tr>
 <td colspan="1">
 
-![CoarseSaltAndPepper p=0.2](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsesaltandpepper_p_0_2.gif?raw=true "CoarseSaltAndPepper p=0.2")
+![CoarseSaltAndPepper p=0.2](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsesaltandpepper_p_0_2.gif?raw=true "CoarseSaltAndPepper p=0.2")
 
 </td>
 <td colspan="1">
 
-![CoarseSalt p=0.2](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsesalt_p_0_2.gif?raw=true "CoarseSalt p=0.2")
+![CoarseSalt p=0.2](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsesalt_p_0_2.gif?raw=true "CoarseSalt p=0.2")
 
 </td>
 <td colspan="1">
 
-![CoarsePepper p=0.2](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsepepper_p_0_2.gif?raw=true "CoarsePepper p=0.2")
+![CoarsePepper p=0.2](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsepepper_p_0_2.gif?raw=true "CoarsePepper p=0.2")
 
 </td>
 </tr>
@@ -390,17 +390,17 @@ JpegCompression
 <tr>
 <td colspan="1">
 
-![Invert](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/invert.gif?raw=true "Invert")
+![Invert](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/invert.gif?raw=true "Invert")
 
 </td>
 <td colspan="1">
 
-![Invert per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/invert_per_channel_true.gif?raw=true "Invert per_channel=True")
+![Invert per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/invert_per_channel_true.gif?raw=true "Invert per_channel=True")
 
 </td>
 <td colspan="1">
 
-![JpegCompression](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/jpegcompression.gif?raw=true "JpegCompression")
+![JpegCompression](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/jpegcompression.gif?raw=true "JpegCompression")
 
 </td>
 </tr>
@@ -434,17 +434,17 @@ MedianBlur
 <tr>
 <td colspan="1">
 
-![GaussianBlur](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/gaussianblur.gif?raw=true "GaussianBlur")
+![GaussianBlur](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/gaussianblur.gif?raw=true "GaussianBlur")
 
 </td>
 <td colspan="1">
 
-![AverageBlur](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/averageblur.gif?raw=true "AverageBlur")
+![AverageBlur](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/averageblur.gif?raw=true "AverageBlur")
 
 </td>
 <td colspan="1">
 
-![MedianBlur](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/medianblur.gif?raw=true "MedianBlur")
+![MedianBlur](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/medianblur.gif?raw=true "MedianBlur")
 
 </td>
 </tr>
@@ -471,17 +471,17 @@ MotionBlur<br/>(k=5)
 <tr>
 <td colspan="1">
 
-![BilateralBlur sigma_color=250, sigma_space=250](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/bilateralblur_sigma_color_250_sigma_space_250.gif?raw=true "BilateralBlur sigma_color=250, sigma_space=250")
+![BilateralBlur sigma_color=250, sigma_space=250](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/bilateralblur_sigma_color_250_sigma_space_250.gif?raw=true "BilateralBlur sigma_color=250, sigma_space=250")
 
 </td>
 <td colspan="1">
 
-![MotionBlur angle=0](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/motionblur_angle_0.gif?raw=true "MotionBlur angle=0")
+![MotionBlur angle=0](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/motionblur_angle_0.gif?raw=true "MotionBlur angle=0")
 
 </td>
 <td colspan="1">
 
-![MotionBlur k=5](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/motionblur_k_5.gif?raw=true "MotionBlur k=5")
+![MotionBlur k=5](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/motionblur_k_5.gif?raw=true "MotionBlur k=5")
 
 </td>
 </tr>
@@ -511,12 +511,12 @@ Grayscale
 <tr>
 <td colspan="1">
 
-![AddToHueAndSaturation](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/addtohueandsaturation.gif?raw=true "AddToHueAndSaturation")
+![AddToHueAndSaturation](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/addtohueandsaturation.gif?raw=true "AddToHueAndSaturation")
 
 </td>
 <td colspan="1">
 
-![Grayscale](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/grayscale.gif?raw=true "Grayscale")
+![Grayscale](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/grayscale.gif?raw=true "Grayscale")
 
 </td>
 <td>&nbsp;</td>
@@ -551,17 +551,17 @@ SigmoidContrast<br/>(cutoff=0.5)
 <tr>
 <td colspan="1">
 
-![GammaContrast](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/gammacontrast.gif?raw=true "GammaContrast")
+![GammaContrast](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/gammacontrast.gif?raw=true "GammaContrast")
 
 </td>
 <td colspan="1">
 
-![GammaContrast per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/gammacontrast_per_channel_true.gif?raw=true "GammaContrast per_channel=True")
+![GammaContrast per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/gammacontrast_per_channel_true.gif?raw=true "GammaContrast per_channel=True")
 
 </td>
 <td colspan="1">
 
-![SigmoidContrast cutoff=0.5](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_cutoff_0_5.gif?raw=true "SigmoidContrast cutoff=0.5")
+![SigmoidContrast cutoff=0.5](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_cutoff_0_5.gif?raw=true "SigmoidContrast cutoff=0.5")
 
 </td>
 </tr>
@@ -588,17 +588,17 @@ LogContrast
 <tr>
 <td colspan="1">
 
-![SigmoidContrast gain=10](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_gain_10.gif?raw=true "SigmoidContrast gain=10")
+![SigmoidContrast gain=10](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_gain_10.gif?raw=true "SigmoidContrast gain=10")
 
 </td>
 <td colspan="1">
 
-![SigmoidContrast per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_per_channel_true.gif?raw=true "SigmoidContrast per_channel=True")
+![SigmoidContrast per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_per_channel_true.gif?raw=true "SigmoidContrast per_channel=True")
 
 </td>
 <td colspan="1">
 
-![LogContrast](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/logcontrast.gif?raw=true "LogContrast")
+![LogContrast](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/logcontrast.gif?raw=true "LogContrast")
 
 </td>
 </tr>
@@ -625,17 +625,17 @@ LinearContrast<br/>(per_channel=True)
 <tr>
 <td colspan="1">
 
-![LogContrast per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/logcontrast_per_channel_true.gif?raw=true "LogContrast per_channel=True")
+![LogContrast per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/logcontrast_per_channel_true.gif?raw=true "LogContrast per_channel=True")
 
 </td>
 <td colspan="1">
 
-![LinearContrast](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/linearcontrast.gif?raw=true "LinearContrast")
+![LinearContrast](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/linearcontrast.gif?raw=true "LinearContrast")
 
 </td>
 <td colspan="1">
 
-![LinearContrast per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/linearcontrast_per_channel_true.gif?raw=true "LinearContrast per_channel=True")
+![LinearContrast per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/linearcontrast_per_channel_true.gif?raw=true "LinearContrast per_channel=True")
 
 </td>
 </tr>
@@ -669,17 +669,17 @@ EdgeDetect
 <tr>
 <td colspan="1">
 
-![Sharpen alpha=1](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sharpen_alpha_1.gif?raw=true "Sharpen alpha=1")
+![Sharpen alpha=1](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/sharpen_alpha_1.gif?raw=true "Sharpen alpha=1")
 
 </td>
 <td colspan="1">
 
-![Emboss alpha=1](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/emboss_alpha_1.gif?raw=true "Emboss alpha=1")
+![Emboss alpha=1](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/emboss_alpha_1.gif?raw=true "Emboss alpha=1")
 
 </td>
 <td colspan="1">
 
-![EdgeDetect](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/edgedetect.gif?raw=true "EdgeDetect")
+![EdgeDetect](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/edgedetect.gif?raw=true "EdgeDetect")
 
 </td>
 </tr>
@@ -698,7 +698,7 @@ DirectedEdgeDetect<br/>(alpha=1)
 <tr>
 <td colspan="1">
 
-![DirectedEdgeDetect alpha=1](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/directededgedetect_alpha_1.gif?raw=true "DirectedEdgeDetect alpha=1")
+![DirectedEdgeDetect alpha=1](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/directededgedetect_alpha_1.gif?raw=true "DirectedEdgeDetect alpha=1")
 
 </td>
 <td>&nbsp;</td>
@@ -730,12 +730,12 @@ Flipud
 <tr>
 <td colspan="1">
 
-![Fliplr (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/fliplr.gif?raw=true "Fliplr (+Keypoints, +BBs")![Fliplr (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/fliplr.gif?raw=true "Fliplr (heatmap augmentation)")![Fliplr (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/fliplr.gif?raw=true "Fliplr (segmentation map augmentation)")
+![Fliplr (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/fliplr.gif?raw=true "Fliplr (+Keypoints, +BBs")![Fliplr (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/fliplr.gif?raw=true "Fliplr (heatmap augmentation)")![Fliplr (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/fliplr.gif?raw=true "Fliplr (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![Flipud (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/flipud.gif?raw=true "Flipud (+Keypoints, +BBs")![Flipud (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/flipud.gif?raw=true "Flipud (heatmap augmentation)")![Flipud (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/flipud.gif?raw=true "Flipud (segmentation map augmentation)")
+![Flipud (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/flipud.gif?raw=true "Flipud (+Keypoints, +BBs")![Flipud (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/flipud.gif?raw=true "Flipud (heatmap augmentation)")![Flipud (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/flipud.gif?raw=true "Flipud (segmentation map augmentation)")
 
 </td>
 <td>&nbsp;</td>
@@ -770,17 +770,17 @@ Affine: cval
 <tr>
 <td colspan="1">
 
-![Affine (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/affine.gif?raw=true "Affine (+Keypoints, +BBs")![Affine (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/affine.gif?raw=true "Affine (heatmap augmentation)")![Affine (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/affine.gif?raw=true "Affine (segmentation map augmentation)")
+![Affine (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/affine.gif?raw=true "Affine (+Keypoints, +BBs")![Affine (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/affine.gif?raw=true "Affine (heatmap augmentation)")![Affine (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/affine.gif?raw=true "Affine (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![Affine: Modes (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_modes.gif?raw=true "Affine: Modes (+Keypoints, +BBs")![Affine: Modes (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/affine_modes.gif?raw=true "Affine: Modes (heatmap augmentation)")![Affine: Modes (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/affine_modes.gif?raw=true "Affine: Modes (segmentation map augmentation)")
+![Affine: Modes (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_modes.gif?raw=true "Affine: Modes (+Keypoints, +BBs")![Affine: Modes (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/affine_modes.gif?raw=true "Affine: Modes (heatmap augmentation)")![Affine: Modes (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/affine_modes.gif?raw=true "Affine: Modes (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![Affine: cval (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_cval.gif?raw=true "Affine: cval (+Keypoints, +BBs")![Affine: cval (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/affine_cval.gif?raw=true "Affine: cval (heatmap augmentation)")![Affine: cval (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/affine_cval.gif?raw=true "Affine: cval (segmentation map augmentation)")
+![Affine: cval (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_cval.gif?raw=true "Affine: cval (+Keypoints, +BBs")![Affine: cval (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/affine_cval.gif?raw=true "Affine: cval (heatmap augmentation)")![Affine: cval (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/affine_cval.gif?raw=true "Affine: cval (segmentation map augmentation)")
 
 </td>
 </tr>
@@ -815,17 +815,17 @@ ElasticTransformation<br/>(sigma=0.2)
 <tr>
 <td colspan="1">
 
-![PiecewiseAffine (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/piecewiseaffine.gif?raw=true "PiecewiseAffine (+Keypoints, +BBs")![PiecewiseAffine (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/piecewiseaffine.gif?raw=true "PiecewiseAffine (heatmap augmentation)")![PiecewiseAffine (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/piecewiseaffine.gif?raw=true "PiecewiseAffine (segmentation map augmentation)")
+![PiecewiseAffine (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/piecewiseaffine.gif?raw=true "PiecewiseAffine (+Keypoints, +BBs")![PiecewiseAffine (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/piecewiseaffine.gif?raw=true "PiecewiseAffine (heatmap augmentation)")![PiecewiseAffine (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/piecewiseaffine.gif?raw=true "PiecewiseAffine (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![PerspectiveTransform (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/perspectivetransform.gif?raw=true "PerspectiveTransform (+Keypoints, +BBs")![PerspectiveTransform (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/perspectivetransform.gif?raw=true "PerspectiveTransform (heatmap augmentation)")![PerspectiveTransform (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/perspectivetransform.gif?raw=true "PerspectiveTransform (segmentation map augmentation)")
+![PerspectiveTransform (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/perspectivetransform.gif?raw=true "PerspectiveTransform (+Keypoints, +BBs")![PerspectiveTransform (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/perspectivetransform.gif?raw=true "PerspectiveTransform (heatmap augmentation)")![PerspectiveTransform (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/perspectivetransform.gif?raw=true "PerspectiveTransform (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![ElasticTransformation sigma=0.2 (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (+Keypoints, +BBs")![ElasticTransformation sigma=0.2 (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (heatmap augmentation)")![ElasticTransformation sigma=0.2 (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (segmentation map augmentation)")
+![ElasticTransformation sigma=0.2 (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (+Keypoints, +BBs")![ElasticTransformation sigma=0.2 (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (heatmap augmentation)")![ElasticTransformation sigma=0.2 (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (segmentation map augmentation)")
 
 </td>
 </tr>
@@ -848,12 +848,12 @@ Rot90
 <tr>
 <td colspan="1">
 
-![ElasticTransformation sigma=5.0 (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (+Keypoints, +BBs")![ElasticTransformation sigma=5.0 (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (heatmap augmentation)")![ElasticTransformation sigma=5.0 (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (segmentation map augmentation)")
+![ElasticTransformation sigma=5.0 (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (+Keypoints, +BBs")![ElasticTransformation sigma=5.0 (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (heatmap augmentation)")![ElasticTransformation sigma=5.0 (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![Rot90 (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/rot90.gif?raw=true "Rot90 (+Keypoints, +BBs")![Rot90 (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/rot90.gif?raw=true "Rot90 (heatmap augmentation)")![Rot90 (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/rot90.gif?raw=true "Rot90 (segmentation map augmentation)")
+![Rot90 (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/rot90.gif?raw=true "Rot90 (+Keypoints, +BBs")![Rot90 (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/rot90.gif?raw=true "Rot90 (heatmap augmentation)")![Rot90 (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/rot90.gif?raw=true "Rot90 (segmentation map augmentation)")
 
 </td>
 <td>&nbsp;</td>
@@ -888,17 +888,17 @@ SimplexNoiseAlpha<br/>with EdgeDetect(1.0)
 <tr>
 <td colspan="1">
 
-![Alpha with EdgeDetect1.0](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/alpha_with_edgedetect_1_0.gif?raw=true "Alpha with EdgeDetect1.0")
+![Alpha with EdgeDetect1.0](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/alpha_with_edgedetect_1_0.gif?raw=true "Alpha with EdgeDetect1.0")
 
 </td>
 <td colspan="1">
 
-![Alpha with EdgeDetect1.0 per_channel=True](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/alpha_with_edgedetect_1_0_per_channel_true.gif?raw=true "Alpha with EdgeDetect1.0 per_channel=True")
+![Alpha with EdgeDetect1.0 per_channel=True](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/alpha_with_edgedetect_1_0_per_channel_true.gif?raw=true "Alpha with EdgeDetect1.0 per_channel=True")
 
 </td>
 <td colspan="1">
 
-![SimplexNoiseAlpha with EdgeDetect1.0](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/simplexnoisealpha_with_edgedetect_1_0.gif?raw=true "SimplexNoiseAlpha with EdgeDetect1.0")
+![SimplexNoiseAlpha with EdgeDetect1.0](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/simplexnoisealpha_with_edgedetect_1_0.gif?raw=true "SimplexNoiseAlpha with EdgeDetect1.0")
 
 </td>
 </tr>
@@ -917,7 +917,7 @@ FrequencyNoiseAlpha<br/>with EdgeDetect(1.0)
 <tr>
 <td colspan="1">
 
-![FrequencyNoiseAlpha with EdgeDetect1.0](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/frequencynoisealpha_with_edgedetect_1_0.gif?raw=true "FrequencyNoiseAlpha with EdgeDetect1.0")
+![FrequencyNoiseAlpha with EdgeDetect1.0](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/frequencynoisealpha_with_edgedetect_1_0.gif?raw=true "FrequencyNoiseAlpha with EdgeDetect1.0")
 
 </td>
 <td>&nbsp;</td>
@@ -949,12 +949,12 @@ Superpixels<br/>(n_segments=100)
 <tr>
 <td colspan="1">
 
-![Superpixels p_replace=1](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/superpixels_p_replace_1.gif?raw=true "Superpixels p_replace=1")
+![Superpixels p_replace=1](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/superpixels_p_replace_1.gif?raw=true "Superpixels p_replace=1")
 
 </td>
 <td colspan="1">
 
-![Superpixels n_segments=100](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/superpixels_n_segments_100.gif?raw=true "Superpixels n_segments=100")
+![Superpixels n_segments=100](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/superpixels_n_segments_100.gif?raw=true "Superpixels n_segments=100")
 
 </td>
 <td>&nbsp;</td>
@@ -989,17 +989,17 @@ Pad
 <tr>
 <td colspan="1">
 
-![CropAndPad (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/cropandpad.gif?raw=true "CropAndPad (+Keypoints, +BBs")![CropAndPad (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/cropandpad.gif?raw=true "CropAndPad (heatmap augmentation)")![CropAndPad (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/cropandpad.gif?raw=true "CropAndPad (segmentation map augmentation)")
+![CropAndPad (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/cropandpad.gif?raw=true "CropAndPad (+Keypoints, +BBs")![CropAndPad (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/cropandpad.gif?raw=true "CropAndPad (heatmap augmentation)")![CropAndPad (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/cropandpad.gif?raw=true "CropAndPad (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![Crop (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/crop.gif?raw=true "Crop (+Keypoints, +BBs")![Crop (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/crop.gif?raw=true "Crop (heatmap augmentation)")![Crop (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/crop.gif?raw=true "Crop (segmentation map augmentation)")
+![Crop (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/crop.gif?raw=true "Crop (+Keypoints, +BBs")![Crop (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/crop.gif?raw=true "Crop (heatmap augmentation)")![Crop (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/crop.gif?raw=true "Crop (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![Pad (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/pad.gif?raw=true "Pad (+Keypoints, +BBs")![Pad (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/pad.gif?raw=true "Pad (heatmap augmentation)")![Pad (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/pad.gif?raw=true "Pad (segmentation map augmentation)")
+![Pad (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/pad.gif?raw=true "Pad (+Keypoints, +BBs")![Pad (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/pad.gif?raw=true "Pad (heatmap augmentation)")![Pad (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/pad.gif?raw=true "Pad (segmentation map augmentation)")
 
 </td>
 </tr>
@@ -1022,12 +1022,12 @@ CropToFixedSize<br/>(height'=height-32,<br/>width'=width-32)
 <tr>
 <td colspan="1">
 
-![PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs")![PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)")![PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)")
+![PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs")![PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)")![PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)")
 
 </td>
 <td colspan="1">
 
-![CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs)](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs")![CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)](doc/readme_images/augmenter_videos/augment_heatmaps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)")![CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)](doc/readme_images/augmenter_videos/augment_segmentation_maps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)")
+![CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs)](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs")![CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_heatmaps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)")![CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)](../../imgaug-doc/readme_images/augmenter_videos/augment_segmentation_maps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)")
 
 </td>
 <td>&nbsp;</td>
@@ -1062,17 +1062,17 @@ Fog
 <tr>
 <td colspan="1">
 
-![FastSnowyLandscape lightness_multiplier=2.0](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/fastsnowylandscape_lightness_multiplier_2_0.gif?raw=true "FastSnowyLandscape lightness_multiplier=2.0")
+![FastSnowyLandscape lightness_multiplier=2.0](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/fastsnowylandscape_lightness_multiplier_2_0.gif?raw=true "FastSnowyLandscape lightness_multiplier=2.0")
 
 </td>
 <td colspan="1">
 
-![Clouds](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/clouds.gif?raw=true "Clouds")
+![Clouds](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/clouds.gif?raw=true "Clouds")
 
 </td>
 <td colspan="1">
 
-![Fog](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/fog.gif?raw=true "Fog")
+![Fog](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/fog.gif?raw=true "Fog")
 
 </td>
 </tr>
@@ -1091,7 +1091,7 @@ Snowflakes
 <tr>
 <td colspan="1">
 
-![Snowflakes](doc/readme_images/augmenter_videos/augment_images_with_coordsaug/snowflakes.gif?raw=true "Snowflakes")
+![Snowflakes](../../imgaug-doc/readme_images/augmenter_videos/augment_images_with_coordsaug/snowflakes.gif?raw=true "Snowflakes")
 
 </td>
 <td>&nbsp;</td>
