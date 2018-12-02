@@ -18,7 +18,7 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 **More (strong) example augmentations of one input image:**
 
-![64 quokkas](../../imgaug-doc/readme_images/examples_grid.jpg?raw=true "64 quokkas")
+![64 quokkas](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/examples_grid.jpg?raw=true "64 quokkas")
 
 ## Features of the library
 
@@ -715,30 +715,35 @@ DirectedEdgeDetect<br/>(alpha=1)
 </td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 <small>
 Fliplr
 </small>
 </td>
-<td colspan="1">
-<small>
-Flipud
-</small>
-</td>
-<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 
 ![Fliplr (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/fliplr.gif?raw=true "Fliplr (+Keypoints, +BBs")![Fliplr (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/fliplr.gif?raw=true "Fliplr (heatmap augmentation)")![Fliplr (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/fliplr.gif?raw=true "Fliplr (segmentation map augmentation)")
 
 </td>
-<td colspan="1">
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
+<small>
+Flipud
+</small>
+</td>
+</tr>
+<tr>
+<td colspan="3">
 
 ![Flipud (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/flipud.gif?raw=true "Flipud (+Keypoints, +BBs")![Flipud (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/flipud.gif?raw=true "Flipud (heatmap augmentation)")![Flipud (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/flipud.gif?raw=true "Flipud (segmentation map augmentation)")
 
 </td>
-<td>&nbsp;</td>
 </tr>
 <tr>
 
@@ -751,79 +756,99 @@ Flipud
 </td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 <small>
 Affine
 </small>
 </td>
-<td colspan="1">
+</tr>
+<tr>
+<td colspan="3">
+
+![Affine (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine.gif?raw=true "Affine (+Keypoints, +BBs")![Affine (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine.gif?raw=true "Affine (heatmap augmentation)")![Affine (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine.gif?raw=true "Affine (segmentation map augmentation)")
+
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
 <small>
 Affine: Modes
 </small>
 </td>
-<td colspan="1">
+</tr>
+<tr>
+<td colspan="3">
+
+![Affine: Modes (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_modes.gif?raw=true "Affine: Modes (+Keypoints, +BBs")![Affine: Modes (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine_modes.gif?raw=true "Affine: Modes (heatmap augmentation)")![Affine: Modes (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine_modes.gif?raw=true "Affine: Modes (segmentation map augmentation)")
+
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
 <small>
 Affine: cval
 </small>
 </td>
 </tr>
 <tr>
-<td colspan="1">
-
-![Affine (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine.gif?raw=true "Affine (+Keypoints, +BBs")![Affine (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine.gif?raw=true "Affine (heatmap augmentation)")![Affine (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine.gif?raw=true "Affine (segmentation map augmentation)")
-
-</td>
-<td colspan="1">
-
-![Affine: Modes (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_modes.gif?raw=true "Affine: Modes (+Keypoints, +BBs")![Affine: Modes (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine_modes.gif?raw=true "Affine: Modes (heatmap augmentation)")![Affine: Modes (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine_modes.gif?raw=true "Affine: Modes (segmentation map augmentation)")
-
-</td>
-<td colspan="1">
+<td colspan="3">
 
 ![Affine: cval (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_cval.gif?raw=true "Affine: cval (+Keypoints, +BBs")![Affine: cval (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine_cval.gif?raw=true "Affine: cval (heatmap augmentation)")![Affine: cval (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine_cval.gif?raw=true "Affine: cval (segmentation map augmentation)")
 
 </td>
 </tr>
 <tr>
-<td colspan="1">&nbsp;</td>
-<td colspan="1">
-<small>
 
-Augmentation of heatmaps and segmentation maps is currently always done with mode="constant" for consistency with keypoint and bounding box augmentation. It may be resonable to use mode="constant" for images too when augmenting heatmaps or segmentation maps.
-
-</small>
-</td>
-<td colspan="1">&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 <small>
 PiecewiseAffine
 </small>
 </td>
-<td colspan="1">
+</tr>
+<tr>
+<td colspan="3">
+
+![PiecewiseAffine (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/piecewiseaffine.gif?raw=true "PiecewiseAffine (+Keypoints, +BBs")![PiecewiseAffine (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/piecewiseaffine.gif?raw=true "PiecewiseAffine (heatmap augmentation)")![PiecewiseAffine (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/piecewiseaffine.gif?raw=true "PiecewiseAffine (segmentation map augmentation)")
+
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
 <small>
 PerspectiveTransform
 </small>
 </td>
-<td colspan="1">
+</tr>
+<tr>
+<td colspan="3">
+
+![PerspectiveTransform (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/perspectivetransform.gif?raw=true "PerspectiveTransform (+Keypoints, +BBs")![PerspectiveTransform (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/perspectivetransform.gif?raw=true "PerspectiveTransform (heatmap augmentation)")![PerspectiveTransform (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/perspectivetransform.gif?raw=true "PerspectiveTransform (segmentation map augmentation)")
+
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
 <small>
 ElasticTransformation<br/>(sigma=0.2)
 </small>
 </td>
 </tr>
 <tr>
-<td colspan="1">
-
-![PiecewiseAffine (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/piecewiseaffine.gif?raw=true "PiecewiseAffine (+Keypoints, +BBs")![PiecewiseAffine (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/piecewiseaffine.gif?raw=true "PiecewiseAffine (heatmap augmentation)")![PiecewiseAffine (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/piecewiseaffine.gif?raw=true "PiecewiseAffine (segmentation map augmentation)")
-
-</td>
-<td colspan="1">
-
-![PerspectiveTransform (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/perspectivetransform.gif?raw=true "PerspectiveTransform (+Keypoints, +BBs")![PerspectiveTransform (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/perspectivetransform.gif?raw=true "PerspectiveTransform (heatmap augmentation)")![PerspectiveTransform (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/perspectivetransform.gif?raw=true "PerspectiveTransform (segmentation map augmentation)")
-
-</td>
-<td colspan="1">
+<td colspan="3">
 
 ![ElasticTransformation sigma=0.2 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (+Keypoints, +BBs")![ElasticTransformation sigma=0.2 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (heatmap augmentation)")![ElasticTransformation sigma=0.2 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (segmentation map augmentation)")
 
@@ -833,30 +858,35 @@ ElasticTransformation<br/>(sigma=0.2)
 
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 <small>
 ElasticTransformation<br/>(sigma=5.0)
 </small>
 </td>
-<td colspan="1">
-<small>
-Rot90
-</small>
-</td>
-<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 
 ![ElasticTransformation sigma=5.0 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (+Keypoints, +BBs")![ElasticTransformation sigma=5.0 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (heatmap augmentation)")![ElasticTransformation sigma=5.0 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (segmentation map augmentation)")
 
 </td>
-<td colspan="1">
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
+<small>
+Rot90
+</small>
+</td>
+</tr>
+<tr>
+<td colspan="3">
 
 ![Rot90 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/rot90.gif?raw=true "Rot90 (+Keypoints, +BBs")![Rot90 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/rot90.gif?raw=true "Rot90 (heatmap augmentation)")![Rot90 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/rot90.gif?raw=true "Rot90 (segmentation map augmentation)")
 
 </td>
-<td>&nbsp;</td>
 </tr>
 <tr>
 
@@ -970,34 +1000,48 @@ Superpixels<br/>(n_segments=100)
 </td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 <small>
 CropAndPad
 </small>
 </td>
-<td colspan="1">
+</tr>
+<tr>
+<td colspan="3">
+
+![CropAndPad (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/cropandpad.gif?raw=true "CropAndPad (+Keypoints, +BBs")![CropAndPad (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/cropandpad.gif?raw=true "CropAndPad (heatmap augmentation)")![CropAndPad (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/cropandpad.gif?raw=true "CropAndPad (segmentation map augmentation)")
+
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
 <small>
 Crop
 </small>
 </td>
-<td colspan="1">
+</tr>
+<tr>
+<td colspan="3">
+
+![Crop (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/crop.gif?raw=true "Crop (+Keypoints, +BBs")![Crop (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/crop.gif?raw=true "Crop (heatmap augmentation)")![Crop (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/crop.gif?raw=true "Crop (segmentation map augmentation)")
+
+</td>
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
 <small>
 Pad
 </small>
 </td>
 </tr>
 <tr>
-<td colspan="1">
-
-![CropAndPad (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/cropandpad.gif?raw=true "CropAndPad (+Keypoints, +BBs")![CropAndPad (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/cropandpad.gif?raw=true "CropAndPad (heatmap augmentation)")![CropAndPad (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/cropandpad.gif?raw=true "CropAndPad (segmentation map augmentation)")
-
-</td>
-<td colspan="1">
-
-![Crop (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/crop.gif?raw=true "Crop (+Keypoints, +BBs")![Crop (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/crop.gif?raw=true "Crop (heatmap augmentation)")![Crop (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/crop.gif?raw=true "Crop (segmentation map augmentation)")
-
-</td>
-<td colspan="1">
+<td colspan="3">
 
 ![Pad (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/pad.gif?raw=true "Pad (+Keypoints, +BBs")![Pad (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/pad.gif?raw=true "Pad (heatmap augmentation)")![Pad (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/pad.gif?raw=true "Pad (segmentation map augmentation)")
 
@@ -1007,30 +1051,35 @@ Pad
 
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 <small>
 PadToFixedSize<br/>(height'=height+32,<br/>width'=width+32)
 </small>
 </td>
-<td colspan="1">
-<small>
-CropToFixedSize<br/>(height'=height-32,<br/>width'=width-32)
-</small>
-</td>
-<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
+<td colspan="3">
 
 ![PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs")![PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)")![PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)")
 
 </td>
-<td colspan="1">
+</tr>
+<tr>
+
+</tr>
+<tr>
+<td colspan="3">
+<small>
+CropToFixedSize<br/>(height'=height-32,<br/>width'=width-32)
+</small>
+</td>
+</tr>
+<tr>
+<td colspan="3">
 
 ![CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs")![CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)")![CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)")
 
 </td>
-<td>&nbsp;</td>
 </tr>
 <tr>
 
