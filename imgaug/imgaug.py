@@ -626,6 +626,8 @@ def quokka_heatmap(size=None, extract=None):
 
     """
     img = imageio.imread(QUOKKA_DEPTH_MAP_HALFRES_FP, pilmode="RGB")
+    img = imresize_single_image(img, (643, 960), interpolation="cubic")
+
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
@@ -637,7 +639,7 @@ def quokka_heatmap(size=None, extract=None):
     img_0to1 = img.astype(np.float32) / 255.0
     img_0to1 = 1 - img_0to1  # depth map was saved as 0 being furthest away
 
-    return HeatmapsOnImage(img_0to1, shape=(643, 960, 3))
+    return HeatmapsOnImage(img_0to1, shape=img_0to1.shape[0:2] + (3,))
 
 
 def quokka_segmentation_map(size=None, extract=None):
@@ -677,11 +679,12 @@ def quokka_segmentation_map(size=None, extract=None):
         bb = _quokka_normalize_extract(extract)
         img_seg = bb.extract_from_image(img_seg)
 
-    segmap = SegmentationMapOnImage(img_seg, shape=(643, 960, 3))
+    segmap = SegmentationMapOnImage(img_seg, shape=img_seg.shape[0:2] + (3,))
 
     if size is not None:
         shape_resized = _compute_resized_shape(img_seg.shape, size)
         segmap = segmap.scale(shape_resized[0:2])
+        segmap.shape = tuple(shape_resized[0:2]) + (3,)
 
     return segmap
 
