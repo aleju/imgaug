@@ -59,7 +59,7 @@ def test__handle_position_parameter():
         assert isinstance(observed[i].other_param.loc, iap.Deterministic)
         assert isinstance(observed[i].other_param.scale, iap.Deterministic)
         assert 0.5 - 1e-4 < observed[i].other_param.loc.value < 0.5 + 1e-4
-        assert 0.45/2 - 1e-4 < observed[i].other_param.scale.value < 0.45/2 + 1e-4
+        assert 0.35/2 - 1e-4 < observed[i].other_param.scale.value < 0.35/2 + 1e-4
 
     pos_x = [
         ("left", 0.0),
