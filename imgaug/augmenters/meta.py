@@ -1037,7 +1037,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         cell_width = max([image.shape[1] for image in augs_flat])
         width = cell_width * cols
         height = cell_height * (rows * len(images))
-        grid = np.zeros((height, width, 3))
+        grid = np.zeros((height, width, 3), dtype=augs[0][0].dtype)
         for row_idx in range(rows):
             for img_idx, image in enumerate(images):
                 for col_idx in range(cols):
