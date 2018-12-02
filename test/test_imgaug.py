@@ -4018,7 +4018,7 @@ def test_BatchLoader():
 
     for nb_workers in [1, 2]:
         # repeat these tests many times to catch rarer race conditions
-        for _ in sm.xrange(20):
+        for _ in sm.xrange(5):
             loader = ia.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
             loaded = []
             counter = 0

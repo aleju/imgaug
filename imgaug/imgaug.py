@@ -5581,6 +5581,8 @@ class BatchLoader(object):
                     self.queue.put(batch_str)
             except QueueEmpty:
                 time.sleep(0.01)
+            except (EOFError, BrokenPipeError):
+                break
 
             workers_running = self.count_workers_alive()
 
@@ -5591,6 +5593,8 @@ class BatchLoader(object):
                 if batch_str != "":
                     self.queue.put(batch_str)
             except QueueEmpty:
+                break
+            except (EOFError, BrokenPipeError):
                 break
 
         self.queue.put(pickle.dumps(None, protocol=-1))
@@ -5630,14 +5634,18 @@ class BatchLoader(object):
         # give minimal time to put generated batches in queue and gracefully shut down
         time.sleep(0.01)
 
-        self.main_worker_thread.join()
+        if self.main_worker_thread.is_alive():
+            self.main_worker_thread.join()
+
         if self.threaded:
             for worker in self.workers:
-                worker.join()
+                if worker.is_alive():
+                    worker.join()
         else:
             for worker in self.workers:
-                worker.terminate()
-                worker.join()
+                if worker.is_alive():
+                    worker.terminate()
+                    worker.join()
 
             # wait until all workers are fully terminated
             while not self.all_finished():
@@ -5653,11 +5661,17 @@ class BatchLoader(object):
             except QueueEmpty:
                 break
 
-        self._queue_internal.close()
-        self.queue.close()
+        if not self._queue_internal._closed:
+            self._queue_internal.close()
+        if not self.queue._closed:
+            self.queue.close()
         self._queue_internal.join_thread()
         self.queue.join_thread()
         time.sleep(0.025)
+
+    def __del__(self):
+        if not self.join_signal.is_set():
+            self.join_signal.set()
 
 
 class BackgroundAugmenter(object):
@@ -5708,9 +5722,6 @@ class BackgroundAugmenter(object):
         self.workers = []
         self.nb_workers_finished = 0
 
-        self.augment_images = True
-        self.augment_keypoints = True
-
         seeds = current_random_state().randint(0, 10**6, size=(nb_workers,))
         for i in range(nb_workers):
             worker = multiprocessing.Process(
@@ -5746,8 +5757,11 @@ class BackgroundAugmenter(object):
             return batch
         else:
             self.nb_workers_finished += 1
-            if self.nb_workers_finished == self.nb_workers:
-                self.queue_source.get(timeout=0.001)  # remove the None from the source queue
+            if self.nb_workers_finished >= self.nb_workers:
+                try:
+                    self.queue_source.get(timeout=0.001)  # remove the None from the source queue
+                except QueueEmpty:
+                    pass
                 return None
             else:
                 return self.get_batch()
@@ -5796,7 +5810,14 @@ class BackgroundAugmenter(object):
 
         """
         for worker in self.workers:
-            worker.terminate()
+            if worker.is_alive():
+                worker.terminate()
+        self.nb_workers_finished = len(self.workers)
 
-        self.queue_result.close()
+        if not self.queue_result._closed:
+            self.queue_result.close()
         time.sleep(0.01)
+
+    def __del__(self):
+        time.sleep(0.1)
+        self.terminate()
