@@ -108,8 +108,8 @@ def _handle_position_parameter(position):
         return iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0)
     elif position == "normal":
         return (
-            iap.Clip(iap.Normal(loc=0.5, scale=0.45 / 2), minval=0.0, maxval=1.0),
-            iap.Clip(iap.Normal(loc=0.5, scale=0.45 / 2), minval=0.0, maxval=1.0)
+            iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2), minval=0.0, maxval=1.0),
+            iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2), minval=0.0, maxval=1.0)
         )
     elif position == "center":
         return iap.Deterministic(0.5), iap.Deterministic(0.5)
