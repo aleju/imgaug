@@ -30,6 +30,8 @@ import shapely.ops
 if sys.version_info[0] == 2:
     import cPickle as pickle
     from Queue import Empty as QueueEmpty, Full as QueueFull
+    import socket
+    BrokenPipeError = socket.error
 elif sys.version_info[0] == 3:
     import pickle
     from queue import Empty as QueueEmpty, Full as QueueFull
