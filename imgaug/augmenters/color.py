@@ -150,8 +150,12 @@ class WithColorspace(meta.Augmenter):
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
+# TODO this is for now deactivated, because HSV images returned by opencv have value range 0-180 for the hue channel
+# and are supposed to be angular representations, i.e. if values go below 0 or above 180 they are supposed to overflow
+# to 180 and 0
+"""
 def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
-    """
+    ""
     Augmenter that transforms images into HSV space, selects the H and S
     channels and then adds a given range of values to these.
 
@@ -180,7 +184,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
     (independently per channel and the same value for all pixels within
     that channel).
 
-    """
+    ""
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
@@ -193,6 +197,100 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", cha
         ),
         name=name
     )
+"""
+
+
+class AddToHueAndSaturation(meta.Augmenter):
+    """
+    Augmenter that increases/decreases hue and saturation by random values.
+
+    The augmenter first transforms images to HSV colorspace, then adds random values to the H and S channels
+    and afterwards converts back to RGB.
+
+    Parameters
+    ----------
+    value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
+
+    per_channel : bool or float, optional
+        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+
+    channels : int or list of int or None, optional
+        See :func:`imgaug.augmenters.meta.WithChannels.__init__()`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> aug = AddToHueAndSaturation((-20, 20), per_channel=True)
+
+    Adds random values between -20 and 20 to the hue and saturation
+    (independently per channel and the same value for all pixels within
+    that channel).
+
+    """
+    def __init__(self, value=0, per_channel=False, from_colorspace="RGB", name=None, deterministic=False,
+                 random_state=None):
+        super(AddToHueAndSaturation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
+                                               list_to_choice=True, allow_floats=False)
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
+
+        # we don't change these in a modified to_deterministic() here, because they are called in _augment_images()
+        # with random states
+        self.colorspace_changer = ChangeColorspace(from_colorspace=from_colorspace, to_colorspace="HSV")
+        self.colorspace_changer_inv = ChangeColorspace(from_colorspace="HSV", to_colorspace=from_colorspace)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+
+        result = images
+        images_hsv = self.colorspace_changer._augment_images(images, ia.derive_random_state(random_state),
+                                                             parents + [self], hooks)
+
+        nb_images = len(images)
+        seeds = random_state.randint(0, 10**6, (nb_images,))
+        for i in sm.xrange(nb_images):
+            image_hsv = images_hsv[i].astype(np.int32)
+            rs_image = ia.new_random_state(seeds[i])
+            per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel == 1:
+                nb_channels = 2
+                samples = self.value.draw_samples((nb_channels,), random_state=rs_image).astype(image_hsv.dtype)
+                sample_hue = (samples[0] / 255) * (360/2)
+                sample_saturation = samples[1]
+            else:
+                sample = self.value.draw_sample(random_state=rs_image).astype(image_hsv.dtype)
+                sample_hue = (sample / 255) * (360/2)
+                sample_saturation = sample
+
+            ia.do_assert(-180 <= sample_hue <= 180)
+            ia.do_assert(-255 <= sample_saturation <= 255)
+            # np.mod() works also as required here for negative values
+            image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
+            image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
+
+            image_hsv = image_hsv.astype(input_dtypes[i])
+            image_rgb = self.colorspace_changer_inv._augment_images([image_hsv], rs_image, parents + [self], hooks)[0]
+            result[i] = image_rgb
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.value, self.per_channel]
+
+
 
 
 # TODO tests

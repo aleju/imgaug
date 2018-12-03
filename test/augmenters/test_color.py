@@ -38,7 +38,10 @@ def test_AddToHueAndSaturation():
 
     def _add_hue_saturation(img, value):
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-        img_hsv[..., 0:2] += value
+        img_hsv = img_hsv.astype(np.int32)
+        img_hsv[..., 0] = np.mod(img_hsv[..., 0] + (value/255)*180, 180)
+        img_hsv[..., 1] = np.clip(img_hsv[..., 1] + value, 0, 255)
+        img_hsv = img_hsv.astype(np.uint8)
         return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
 
     base_img = np.zeros((2, 2, 3), dtype=np.uint8)
@@ -57,13 +60,14 @@ def test_AddToHueAndSaturation():
     diff = np.abs(observed.astype(np.float32) - expected)
     assert np.all(diff <= 3)
 
-    aug = iaa.AddToHueAndSaturation((0, 2))
+    aug = iaa.AddToHueAndSaturation([0, 10, 20])
     base_img = base_img[0:1, 0:1, :]
     expected_imgs = [
         iaa.AddToHueAndSaturation(0).augment_image(base_img),
-        iaa.AddToHueAndSaturation(1).augment_image(base_img),
-        iaa.AddToHueAndSaturation(2).augment_image(base_img)
+        iaa.AddToHueAndSaturation(10).augment_image(base_img),
+        iaa.AddToHueAndSaturation(20).augment_image(base_img)
     ]
+
     assert not np.array_equal(expected_imgs[0], expected_imgs[1])
     assert not np.array_equal(expected_imgs[1], expected_imgs[2])
     assert not np.array_equal(expected_imgs[0], expected_imgs[2])
