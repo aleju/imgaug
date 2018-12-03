@@ -167,6 +167,95 @@ def main():
             break
         i += 1
 
+    for augseq_i in [augseq, augseq_slow]:
+        print("------------------")
+        print("Many very small runs (batches=1)")
+        print("------------------")
+        for i in range(100):
+            batch_loader = ia.BatchLoader(load_images(n_batches=1), queue_size=100)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            while True:
+                batch = bg_augmenter.get_batch()
+                if batch is None:
+                    print("Finished (%d/%d)." % (i+1, 100))
+                    break
+
+        print("------------------")
+        print("Many very small runs (batches=2)")
+        print("------------------")
+        for i in range(100):
+            batch_loader = ia.BatchLoader(load_images(n_batches=2), queue_size=100)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            while True:
+                batch = bg_augmenter.get_batch()
+                if batch is None:
+                    print("Finished (%d/%d)." % (i+1, 100))
+                    break
+
+        print("------------------")
+        print("Many very small runs, separate function (batches=1)")
+        print("------------------")
+
+        def _augment_small_1():
+            batch_loader = ia.BatchLoader(load_images(n_batches=1), queue_size=100)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            i = 0
+            while True:
+                batch = bg_augmenter.get_batch()
+                if batch is None:
+                    break
+                i += 1
+
+        for i in range(100):
+            _augment_small_1()
+            print("Finished (%d/%d)." % (i+1, 100))
+
+        print("------------------")
+        print("Many very small runs, separate function (batches=2)")
+        print("------------------")
+
+        def _augment_small_2():
+            batch_loader = ia.BatchLoader(load_images(n_batches=2), queue_size=100)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            i = 0
+            while True:
+                batch = bg_augmenter.get_batch()
+                if batch is None:
+                    break
+                i += 1
+
+        for i in range(100):
+            _augment_small_2()
+            print("Finished (%d/%d)." % (i+1, 100))
+
+        print("------------------")
+        print("Many very small runs, separate function, incomplete fetching (batches=2)")
+        print("------------------")
+
+        def _augment_small_3():
+            batch_loader = ia.BatchLoader(load_images(n_batches=2), queue_size=100)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch = bg_augmenter.get_batch()
+
+        for i in range(100):
+            _augment_small_3()
+            print("Finished (%d/%d)." % (i+1, 100))
+
+    #for augseq_i in [augseq, augseq_slow]:
+        print("------------------")
+        print("Many very small runs, separate function, incomplete fetching (batches=10)")
+        print("------------------")
+
+        def _augment_small_4():
+            batch_loader = ia.BatchLoader(load_images(n_batches=10), queue_size=100)
+            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch = bg_augmenter.get_batch()
+            #bg_augmenter.terminate()
+
+        for i in range(100):
+            _augment_small_4()
+            print("Finished (%d/%d)." % (i+1, 100))
+
 
 def load_images(n_batches=10, sleep=0.0):
     batch_size = 4
