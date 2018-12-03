@@ -130,10 +130,10 @@ class Add(meta.Augmenter):
                     image[..., c] += sample
             else:
                 sample = self.value.draw_sample(random_state=rs_image).astype(image.dtype)
-                ia.do_assert(-255 <= sample <= 255) # TODO make value range more flexible
+                ia.do_assert(-255 <= sample <= 255)  # TODO make value range more flexible
                 image += sample
 
-            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
+            image = meta.clip_augmented_image_(image, 0, 255)  # TODO make value range more flexible
             image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
 
             result[i] = image
