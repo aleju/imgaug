@@ -2632,7 +2632,7 @@ class Lambda(Augmenter):
 
     Parameters
     ----------
-    func_images : callable,
+    func_images : callable
         The function to call for each batch of images.
         It must follow the form
 
@@ -2642,7 +2642,7 @@ class Lambda(Augmenter):
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_images`.
 
-    func_heatmaps : callable,
+    func_heatmaps : callable
         The function to call for each batch of heatmaps.
         It must follow the form
 
@@ -2652,7 +2652,7 @@ class Lambda(Augmenter):
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
 
-    func_keypoints : callable,
+    func_keypoints : callable
         The function to call for each batch of image keypoints.
         It must follow the form
 
@@ -2739,21 +2739,21 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
 
     Parameters
     ----------
-    func_images : callable,
+    func_images : callable
         The function to call for each batch of images.
         It must follow the form ``function(images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_images`.
 
-    func_heatmaps : callable,
+    func_heatmaps : callable
         The function to call for each batch of heatmaps.
         It must follow the form ``function(heatmaps, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
 
-    func_keypoints : callable,
+    func_keypoints : callable
         The function to call for each batch of keypoints.
         It must follow the form ``function(keypoints_on_images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
@@ -2934,3 +2934,114 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
 
     return Lambda(func_images, func_heatmaps, func_keypoints,
                   name=name, deterministic=deterministic, random_state=random_state)
+
+
+class ChannelShuffle(Augmenter):
+    """
+    Augmenter that randomly shuffles the channels in images.
+
+    Parameters
+    ----------
+    p : float or imgaug.parameters.StochasticParameter, optional
+        Probability of shuffling channels in any given image.
+        May be a fixed probability as a float, or a StochasticParameter that returns 0s and 1s.
+
+    channels : None or imgaug.ALL or list of int, optional
+        Which channels are allowed to be shuffled with each other.
+        If this is ``None`` or ``imgaug.ALL``, then all channels may be shuffled. If it is a list of integers,
+        then only the channels with indices in that list may be shuffled. (Values start at 0. All channel indices in
+        the list must exist in each image.)
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> aug = iaa.ChannelShuffle(0.25)
+
+    Shuffles channels for 25% of all images.
+
+    >>> aug = iaa.ChannelShuffle(0.25, channels=[0, 1])
+
+    Shuffles channels 0 and 1 with each other for 25% of all images.
+
+    """
+
+    def __init__(self, p=1.0, channels=None, name=None, deterministic=False, random_state=None):
+        super(ChannelShuffle, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        self.p = iap.handle_probability_param(p, "p")
+        ia.do_assert(channels is None
+                     or channels == ia.ALL
+                     or (isinstance(channels, list) and all([ia.is_single_integer(v) for v in channels])),
+                     "Expected None or imgaug.ALL or list of int, got %s." % (type(channels),))
+        self.channels = channels
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        nb_images = len(images)
+        p_samples = self.p.draw_samples((nb_images,), random_state=random_state)
+        rss = ia.derive_random_states(random_state, nb_images)
+        for i in sm.xrange(nb_images):
+            if p_samples[i] >= 1-1e-4:
+                images[i] = shuffle_channels(images[i], rss[i], self.channels)
+        return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.p, self.channels]
+
+
+def shuffle_channels(image, random_state, channels=None):
+    """
+    Randomize the order of (color) channels in an image.
+
+    Parameters
+    ----------
+    image : (H,W,[C]) ndarray
+        Image of any dtype for which to shuffle the channels.
+
+    random_state : numpy.random.RandomState
+        The random state to use for this shuffling operation.
+
+    channels : None or imgaug.ALL or list of int, optional
+        Which channels are allowed to be shuffled with each other.
+        If this is ``None`` or ``imgaug.ALL``, then all channels may be shuffled. If it is a list of integers,
+        then only the channels with indices in that list may be shuffled. (Values start at 0. All channel indices in
+        the list must exist in each image.)
+
+    Returns
+    -------
+    ndarray
+        The input image with shuffled channels.
+
+    """
+    if image.ndim < 3 or image.shape[2] == 1:
+        return image
+    nb_channels = image.shape[2]
+    all_channels = np.arange(nb_channels)
+    is_all_channels = (
+        channels is None
+        or channels == ia.ALL
+        or len(set(all_channels).difference(set(channels))) == 0
+    )
+    if is_all_channels:
+        # note that if this is the case, then 'channels' may be None or imgaug.ALL, so don't simply move the
+        # assignment outside of the if/else
+        channels_perm = random_state.permutation(all_channels)
+        return image[..., channels_perm]
+    else:
+        channels_perm = random_state.permutation(channels)
+        channels_perm_full = all_channels
+        for channel_source, channel_target in zip(channels, channels_perm):
+            channels_perm_full[channel_source] = channel_target
+        return image[..., channels_perm_full]
