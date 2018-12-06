@@ -95,6 +95,7 @@ def main():
     test_Polygon_is_valid()
     test_Polygon_area()
     test_Polygon_project()
+    test_Polygon_find_closest_point_idx()
     test_Polygon__compute_inside_image_point_mask()
     test_Polygon_is_fully_within_image()
     test_Polygon_is_partly_within_image()
@@ -3360,6 +3361,28 @@ def test_Polygon_project():
     poly_proj = poly.project((1, 1), (2, 2))
     assert poly_proj.exterior.dtype.type == np.float32
     assert poly_proj.exterior.shape == (0, 2)
+
+
+def test_Polygon_find_closest_point_idx():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    closest_idx = poly.find_closest_point_index(x=0, y=0)
+    assert closest_idx == 0
+    closest_idx = poly.find_closest_point_index(x=1, y=0)
+    assert closest_idx == 1
+    closest_idx = poly.find_closest_point_index(x=1.0001, y=-0.001)
+    assert closest_idx == 1
+    closest_idx = poly.find_closest_point_index(x=0.2, y=0.2)
+    assert closest_idx == 0
+
+    closest_idx, distance = poly.find_closest_point_index(x=0, y=0, return_distance=True)
+    assert closest_idx == 0
+    assert np.allclose(distance, 0.0)
+    closest_idx, distance = poly.find_closest_point_index(x=0.1, y=0.15, return_distance=True)
+    assert closest_idx == 0
+    assert np.allclose(distance, np.sqrt((0.1**2) + (0.15**2)))
+    closest_idx, distance = poly.find_closest_point_index(x=0.9, y=0.15, return_distance=True)
+    assert closest_idx == 1
+    assert np.allclose(distance, np.sqrt(((1.0-0.9)**2) + (0.15**2)))
 
 
 def test_Polygon__compute_inside_image_point_mask():
