@@ -550,6 +550,14 @@ def test_imresize_many_images():
     assert all([image.shape == (4, 4, 3) for image in observed])
     assert all([image.dtype.type == np.uint8 for image in observed])
 
+    # test multiple shapes
+    images = [np.zeros((8, 8, 3), dtype=np.uint8), np.zeros((4, 4), dtype=np.uint8)]
+    observed = ia.imresize_many_images(images, (4, 4))
+    assert observed[0].shape == (4, 4, 3)
+    assert observed[1].shape == (4, 4)
+    assert observed[0].dtype == np.uint8
+    assert observed[1].dtype == np.uint8
+
 
 def test_imresize_single_image():
     for c in [-1, 1, 3]:
