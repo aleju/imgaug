@@ -3222,17 +3222,12 @@ class BoundingBoxesOnImage(object):
             top-left and bottom-right bounding box corner coordinates in form ``(x1, y1, x2, y2)``.
 
         """
-        bounding_box_matrix = np.zeros((len(self.bounding_boxes), 4), dtype=np.float32)
+        xyxy_array = np.zeros((len(self.bounding_boxes), 4), dtype=np.float32)
 
         for i, box in enumerate(self.bounding_boxes):
-            x1 = box.x1
-            y1 = box.y1
-            x2 = box.x2
-            y2 = box.y2
+            xyxy_array[i] = [box.x1, box.y1, box.x2, box.y2]
 
-            bounding_box_matrix[i] = [x1, y1, x2, y2]
-
-        return bounding_box_matrix.astype(dtype)
+        return xyxy_array.astype(dtype)
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         """
