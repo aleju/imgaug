@@ -2007,11 +2007,32 @@ def test_BoundingBox():
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image_pad[8:11, 8:11, :])
 
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+    image_pad = np.pad(image, ((0, 1), (0, 1)), mode="constant", constant_values=0)
+    bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image_pad[8:11, 8:11])
+
     image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
     image_pad = np.pad(image, ((1, 0), (1, 0), (0, 0)), mode="constant", constant_values=0)
     bb = ia.BoundingBox(y1=-1, y2=3, x1=-1, x2=4, label=None)
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image_pad[0:4, 0:5, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=1.99999, x1=1, x2=1.99999, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:1+1, 1:1+1, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=1, x1=2, x2=4, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:1+1, 2:4, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=1, x1=2, x2=2, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:1+1, 2:2+1, :])
 
     # to_keypoints()
     bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
