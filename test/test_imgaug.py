@@ -1522,6 +1522,67 @@ def test_KeypointsOnImage():
     expected_inv = np.divide(np.ones_like(expected), expected+1)
     assert np.allclose(np.max(distance_map_inv, axis=2), expected_inv)
 
+    # from_distance_maps()
+    distance_map1 = np.float32([
+        [2, 2, 2, 2, 2],
+        [2, 1, 1, 1, 2],
+        [2, 1, 0, 1, 2],
+        [2, 1, 1, 1, 2]
+    ])
+    distance_map2 = np.float32([
+        [4, 3, 2, 2, 2],
+        [4, 3, 2, 1, 1],
+        [4, 3, 2, 1, 0.1],
+        [4, 3, 2, 1, 1]
+    ])
+    distance_maps = np.concatenate([distance_map1[..., np.newaxis], distance_map2[..., np.newaxis]], axis=2)
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, nb_channels=4)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 4
+    assert kpi.keypoints[1].y == 2
+    assert kpi.shape == (4, 5, 4)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(np.divide(np.ones_like(distance_maps), distance_maps+1),
+                                                 inverted=True)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 4
+    assert kpi.keypoints[1].y == 2
+    assert kpi.shape == (4, 5)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords=(1, 1), threshold=0.09)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 1
+    assert kpi.keypoints[1].y == 1
+    assert kpi.shape == (4, 5)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords={"x": 1, "y": 2}, threshold=0.09)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 1
+    assert kpi.keypoints[1].y == 2
+    assert kpi.shape == (4, 5)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords=None, threshold=0.09)
+    assert len(kpi.keypoints) == 1
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.shape == (4, 5)
+
+    got_exception = False
+    try:
+        _ = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords=False, threshold=0.09)
+    except Exception as exc:
+        assert "Expected if_not_found_coords to be" in str(exc)
+        got_exception = True
+    assert got_exception
+
     # copy()
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
