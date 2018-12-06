@@ -1216,6 +1216,25 @@ def test_Keypoint():
     assert kp2.y == 2
     assert kp2.x == 4
 
+    # generate_similar_points_manhattan
+    kp = ia.Keypoint(y=4, x=5)
+    kps_manhatten = kp.generate_similar_points_manhattan(0, 1.0, return_array=False)
+    assert len(kps_manhatten) == 1
+    assert kps_manhatten[0].y == 4
+    assert kps_manhatten[0].x == 5
+
+    kps_manhatten = kp.generate_similar_points_manhattan(1, 1.0, return_array=False)
+    assert len(kps_manhatten) == 5
+    expected = [(4, 5), (3, 5), (4, 6), (5, 5), (4, 4)]
+    for y, x in expected:
+        assert any([np.allclose([y, x], [kp.y, kp.x]) for kp in kps_manhatten])
+
+    kps_manhatten = kp.generate_similar_points_manhattan(1, 1.0, return_array=True)
+    assert kps_manhatten.shape == (5, 2)
+    expected = [(4, 5), (3, 5), (4, 6), (5, 5), (4, 4)]
+    for y, x in expected:
+        assert any([np.allclose([y, x], [kp_y, kp_x]) for kp_x, kp_y in kps_manhatten])
+
     # __repr__ / __str_
     kp = ia.Keypoint(y=1, x=2)
     assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.00000000, y=1.00000000)"
