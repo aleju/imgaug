@@ -1474,6 +1474,54 @@ def test_KeypointsOnImage():
         got_exception = True
     assert got_exception
 
+    # to_distance_maps()
+    kpi = ia.KeypointsOnImage(keypoints=[ia.Keypoint(x=2, y=3)], shape=(5, 5, 3))
+    distance_map = kpi.to_distance_maps()
+    expected_xx = np.float32([
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4]
+    ])
+    expected_yy = np.float32([
+        [0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+        [2, 2, 2, 2, 2],
+        [3, 3, 3, 3, 3],
+        [4, 4, 4, 4, 4]
+    ])
+    expected = np.sqrt((expected_xx - 2)**2 + (expected_yy - 3)**2)
+    assert distance_map.shape == (5, 5, 1)
+    assert np.allclose(distance_map, expected[..., np.newaxis])
+
+    distance_map_inv = kpi.to_distance_maps(inverted=True)
+    expected_inv = np.divide(np.ones_like(expected), expected+1)
+    assert np.allclose(distance_map_inv, expected_inv[..., np.newaxis])
+
+    # to_distance_maps() with two keypoints
+    # positions on (4, 4) map (X=position, 1=KP 1 is closest, 2=KP 2 is closest, B=close to both)
+    # [1, X, 1, 1]
+    # [1, 1, 1, B]
+    # [B, 2, 2, 2]
+    # [2, 2, X, 2]
+    # this test could have been done a bit better by simply splitting the distance maps, one per keypoint, considering
+    # the function returns one distance map per keypoint
+    kpi = ia.KeypointsOnImage(keypoints=[ia.Keypoint(x=2, y=3), ia.Keypoint(x=1, y=0)], shape=(4, 4, 3))
+    expected = np.float32([
+        [(0-1)**2 + (0-0)**2, (1-1)**2 + (0-0)**2, (2-1)**2 + (0-0)**2, (3-1)**2 + (0-0)**2],
+        [(0-1)**2 + (1-0)**2, (1-1)**2 + (1-0)**2, (2-1)**2 + (1-0)**2, (3-1)**2 + (1-0)**2],
+        [(0-1)**2 + (2-0)**2, (1-2)**2 + (2-3)**2, (2-2)**2 + (2-3)**2, (3-2)**2 + (2-3)**2],
+        [(0-2)**2 + (3-3)**2, (1-2)**2 + (3-3)**2, (2-2)**2 + (3-3)**2, (3-2)**2 + (3-3)**2],
+    ])
+    distance_map = kpi.to_distance_maps()
+    expected = np.sqrt(expected)
+    assert np.allclose(np.min(distance_map, axis=2), expected)
+
+    distance_map_inv = kpi.to_distance_maps(inverted=True)
+    expected_inv = np.divide(np.ones_like(expected), expected+1)
+    assert np.allclose(np.max(distance_map_inv, axis=2), expected_inv)
+
     # copy()
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
