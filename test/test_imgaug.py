@@ -2096,6 +2096,14 @@ def test_BoundingBoxesOnImage():
     assert bbsoi.height == 40
     assert bbsoi.width == 50
 
+    # empty
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb], shape=(40, 50, 3))
+    assert not bbsoi.empty
+
+    bbsoi = ia.BoundingBoxesOnImage([], shape=(40, 50, 3))
+    assert bbsoi.empty
+
     # on()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
@@ -2130,6 +2138,50 @@ def test_BoundingBoxesOnImage():
     assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
     assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
     assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+
+    # from_xyxy_array()
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(
+        np.float32([
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 2.0, 3.0, 4.0]
+        ]),
+        shape=(40, 50, 3)
+    )
+    assert len(bbsoi.bounding_boxes) == 2
+    assert np.allclose(bbsoi.bounding_boxes[0].x1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].x2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x1, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y1, 2.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x2, 3.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y2, 4.0)
+    assert bbsoi.shape == (40, 50, 3)
+
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(
+        np.int32([
+            [0, 0, 1, 1],
+            [1, 2, 3, 4]
+        ]),
+        shape=(40, 50, 3)
+    )
+    assert len(bbsoi.bounding_boxes) == 2
+    assert np.allclose(bbsoi.bounding_boxes[0].x1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].x2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x1, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y1, 2.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x2, 3.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y2, 4.0)
+    assert bbsoi.shape == (40, 50, 3)
+
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(
+        np.zeros((0, 4), dtype=np.float32),
+        shape=(40, 50, 3)
+    )
+    assert len(bbsoi.bounding_boxes) == 0
+    assert bbsoi.shape == (40, 50, 3)
 
     # draw_on_image()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
