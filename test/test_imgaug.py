@@ -3477,6 +3477,15 @@ def test_Polygon_is_out_of_image():
         assert poly.is_out_of_image(shape, partly=False, fully=True)
         assert poly.is_out_of_image(shape, partly=True, fully=True)
 
+    poly = ia.Polygon([])
+    got_exception = False
+    try:
+        poly.is_out_of_image((1, 1, 3))
+    except Exception as exc:
+        assert "Cannot determine whether the polygon is inside the image" in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_Polygon_cut_out_of_image():
     _test_Polygon_cut_clip(lambda poly, image: poly.cut_out_of_image(image))
