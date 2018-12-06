@@ -3544,6 +3544,12 @@ def _test_Polygon_cut_clip(func):
     ]))
     assert multipoly_clipped.geoms[0].label == "test"
 
+    # poly outside of image
+    poly = ia.Polygon([(10.0, 10.0)])
+    multipoly_clipped = func(poly, (5, 5, 3))
+    assert isinstance(multipoly_clipped, ia.MultiPolygon)
+    assert len(multipoly_clipped.geoms) == 0
+
 
 def test_Polygon_shift():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
