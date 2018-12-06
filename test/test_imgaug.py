@@ -2183,6 +2183,23 @@ def test_BoundingBoxesOnImage():
     assert len(bbsoi.bounding_boxes) == 0
     assert bbsoi.shape == (40, 50, 3)
 
+    # to_xyxy_array()
+    xyxy_arr = np.float32([
+        [0.0, 0.0, 1.0, 1.0],
+        [1.0, 2.0, 3.0, 4.0]
+    ])
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(xyxy_arr, shape=(40, 50, 3))
+    xyxy_arr_out = bbsoi.to_xyxy_array()
+    assert np.allclose(xyxy_arr, xyxy_arr_out)
+    assert xyxy_arr_out.dtype == np.float32
+
+    xyxy_arr_out = bbsoi.to_xyxy_array(dtype=np.int32)
+    assert np.allclose(xyxy_arr.astype(np.int32), xyxy_arr_out)
+    assert xyxy_arr_out.dtype == np.int32
+
+    xyxy_arr_out = ia.BoundingBoxesOnImage([], shape=(40, 50, 3)).to_xyxy_array(dtype=np.int32)
+    assert xyxy_arr_out.shape == (0, 4)
+
     # draw_on_image()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
