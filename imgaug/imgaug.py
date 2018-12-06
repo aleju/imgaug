@@ -3176,7 +3176,7 @@ class BoundingBoxesOnImage(object):
             return BoundingBoxesOnImage(bounding_boxes, shape)
 
     @classmethod
-    def from_xyxy_array(cls, bounding_box_matrix, shape):
+    def from_xyxy_array(cls, xyxy, shape):
         """
         Convert an (N,4) ndarray to a BoundingBoxesOnImage object.
 
@@ -3184,9 +3184,9 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        bounding_box_matrix : (N,4) ndarray
+        xyxy : (N,4) ndarray
             Array containing the corner coordinates (top-left, bottom-right) of ``N`` bounding boxes
-            in the form ``(x1, y1, x2, y2)``.
+            in the form ``(x1, y1, x2, y2)``. Should usually be of dtype ``float32``.
 
         shape : tuple of int
             Shape of the image on which the bounding boxes are placed.
@@ -3198,23 +3198,9 @@ class BoundingBoxesOnImage(object):
             Object containing a list of BoundingBox objects following the provided corner coordinates.
 
         """
+        do_assert(xyxy.shape[1] == 4, "Expected input array of shape (N, 4), got shape %s." % (xyxy.shape,))
 
-        nb_boxes, nb_coordinates = bounding_box_matrix.shape
-
-        if nb_boxes < 1:
-            raise ValueError("No bounding boxes found inside the box-matrix")
-
-        if nb_coordinates != 4:
-            raise ValueError(
-                "Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
-                    bounding_box_matrix.shape)
-            )
-
-        boxes = []
-        for box in bounding_box_matrix:
-            x1, y1, x2, y2 = box
-            tmp_box = BoundingBox(x1, y1, x2, y2)
-            boxes.append(tmp_box)
+        boxes = [BoundingBox(*row) for row in xyxy]
 
         return cls(boxes, shape)
 
