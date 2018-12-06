@@ -1659,6 +1659,12 @@ def test_BoundingBox():
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     assert bb.area == (30-10) * (40-20)
 
+    # contains
+    bb = ia.BoundingBox(y1=1, x1=2, y2=1+4, x2=2+5, label=None)
+    assert bb.contains(ia.Keypoint(x=2.5, y=1.5)) is True
+    assert bb.contains(ia.Keypoint(x=2, y=1)) is True
+    assert bb.contains(ia.Keypoint(x=0, y=0)) is False
+
     # project
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = bb.project((10, 10), (10, 10))
