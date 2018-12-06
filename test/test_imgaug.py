@@ -3303,6 +3303,14 @@ def test_Polygon_area():
     poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
     assert 1/2 - 1e-8 < poly.area < 1/2 + 1e-8
 
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    got_exception = False
+    try:
+        _ = poly.area
+    except Exception as exc:
+        assert "Cannot compute the polygon's area because" in str(exc)
+        got_exception = True
+    assert got_exception
 
 
 def test_Polygon_project():
