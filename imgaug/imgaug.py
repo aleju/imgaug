@@ -999,7 +999,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         if nb_shapes == 1:
             return list(imresize_many_images(np.array(images), sizes=sizes, interpolation=interpolation))
         else:
-            return [imresize_many_images(image[np.newaxis, ...], sizes=sizes, interpolation=interpolation)
+            return [imresize_many_images(image[np.newaxis, ...], sizes=sizes, interpolation=interpolation)[0, ...]
                     for image in images]
 
     shape = images.shape
