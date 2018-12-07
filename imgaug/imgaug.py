@@ -4242,7 +4242,9 @@ def _interpolate_points(points, nb_steps, closed=True):
     points_interp = []
     for point_a, point_b in zip(points[:-1], points[1:]):
         points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
-    # close does not have to be reverted here, as last point in not included in the extend()
+    if not closed:
+        points_interp.append(points[-1])
+    # close does not have to be reverted here, as last point is not included in the extend()
     return points_interp
 
 
