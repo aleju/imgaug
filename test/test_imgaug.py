@@ -11,6 +11,10 @@ import shapely
 import shapely.geometry
 
 import imgaug as ia
+from imgaug.imgaug import (
+    _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
+    _interpolate_points, _interpolate_points_by_max_distance
+)
 from imgaug.testutils import reseed
 
 
@@ -112,6 +116,10 @@ def main():
     test_Polygon_deepcopy()
     test_Polygon___repr__()
     test_Polygon___str__()
+    test___convert_points_to_shapely_line_string()
+    test__interpolate_point_pair()
+    test__interpolate_points()
+    test__interpolate_points_by_max_distance()
     # test_Batch()
     test_BatchLoader()
     # test_BackgroundAugmenter.get_batch()
@@ -4348,6 +4356,42 @@ def test_Polygon_almost_equals():
 
     poly_a = ia.Polygon([(0, 0)])
     assert not poly_a.almost_equals("foo")
+
+
+def test___convert_points_to_shapely_line_string():
+    pass
+
+
+def test__interpolate_point_pair():
+    point_a = (0, 0)
+    point_b = (1, 2)
+    inter = _interpolate_point_pair(point_a, point_b, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0.5, 1.0]
+        ])
+    )
+
+    inter = _interpolate_point_pair(point_a, point_b, 2)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [1*1/3, 1*2/3],
+            [2*1/3, 2*2/3]
+        ])
+    )
+
+    inter = _interpolate_point_pair(point_a, point_b, 0)
+    assert len(inter) == 0
+
+
+def test__interpolate_points():
+    pass
+
+
+def test__interpolate_points_by_max_distance():
+    pass
 
 
 def test_BatchLoader():
