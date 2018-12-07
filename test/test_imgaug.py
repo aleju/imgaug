@@ -3833,6 +3833,16 @@ def test_Polygon_extract_from_image():
     subimage = poly.extract_from_image(image)
     assert np.array_equal(subimage, image[1:9, 1:9, :])
 
+    # error for invalid polygons
+    got_exception = False
+    poly = ia.Polygon([(0.51, 0.51), (9.4, 0.51)])
+    try:
+        _ = poly.extract_from_image(image)
+    except Exception as exc:
+        assert "Polygon must be made up" in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_Polygon_change_first_point_by_coords():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
