@@ -4249,6 +4249,7 @@ def _interpolate_points(points, nb_steps, closed=True):
 
 
 def _interpolate_points_by_max_distance(points, max_distance, closed=True):
+    do_assert(max_distance > 0, "max_distance must have value greater than 0, got %.8f" % (max_distance,))
     if len(points) <= 1:
         return points
     if closed:
@@ -4258,6 +4259,8 @@ def _interpolate_points_by_max_distance(points, max_distance, closed=True):
         dist = np.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2)
         nb_steps = int((dist / max_distance) - 1)
         points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
+    if not closed:
+        points_interp.append(points[-1])
     return points_interp
 
 
