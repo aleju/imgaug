@@ -4021,13 +4021,10 @@ class Polygon(object):
 
         """
         do_assert(isinstance(polygon_shapely, shapely.geometry.Polygon))
-        if len(polygon_shapely.exterior.coords) == 0:
+        # polygon_shapely.exterior can be None if the polygon was instantiated without points
+        if polygon_shapely.exterior is None or len(polygon_shapely.exterior.coords) == 0:
             return Polygon([], label=label)
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
-
-        if len(exterior) == 0:
-            return Polygon([], label=label)
-
         return Polygon(exterior, label=label)
 
     def exterior_almost_equals(self, other_polygon, max_distance=1e-6, interpolate=8):
