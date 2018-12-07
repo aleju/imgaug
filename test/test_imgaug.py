@@ -4489,7 +4489,85 @@ def test__interpolate_points():
 
 
 def test__interpolate_points_by_max_distance():
-    pass
+    # 2 points
+    points = [
+        (0, 0),
+        (0, 2)
+    ]
+    inter = _interpolate_points_by_max_distance(points, 10000)
+    assert np.allclose(
+        inter,
+        points
+    )
+
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2],
+            [0, 1.0]
+        ])
+    )
+
+    inter = _interpolate_points_by_max_distance(points, 1.0, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2]
+        ])
+    )
+
+    # 3 points
+    points = [
+        (0, 0),
+        (0, 2),
+        (2, 0)
+    ]
+
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2],
+            [1.0, 1.0],
+            [2, 0],
+            [1.0, 0]
+        ])
+    )
+
+    inter = _interpolate_points_by_max_distance(points, 1.0, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2],
+            [1.0, 1.0],
+            [2, 0]
+        ])
+    )
+
+    # 0 points
+    points = []
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert len(inter) == 0
+
+    # 1 points
+    points = [(0, 0)]
+
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0]
+        ])
+    )
 
 
 def test_BatchLoader():
