@@ -4346,6 +4346,9 @@ def test_Polygon_almost_equals():
     poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
     assert not poly_a.almost_equals(poly_b)
 
+    poly_a = ia.Polygon([(0, 0)])
+    assert not poly_a.almost_equals("foo")
+
 
 def test_BatchLoader():
     def _load_func():
