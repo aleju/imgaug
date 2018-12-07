@@ -4063,6 +4063,11 @@ def test_Polygon_from_shapely():
         assert x_exp - 1e-8 < x_obs < x_exp + 1e-8
         assert y_exp - 1e-8 < y_obs < y_exp + 1e-8
 
+    # empty polygon
+    poly_shapely = shapely.geometry.Polygon([])
+    poly = ia.Polygon.from_shapely(poly_shapely)
+    assert len(poly.exterior) == 0
+
 
 def test_Polygon_copy():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
