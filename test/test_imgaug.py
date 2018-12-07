@@ -4387,7 +4387,105 @@ def test__interpolate_point_pair():
 
 
 def test__interpolate_points():
-    pass
+    # 2 points
+    points = [
+        (0, 0),
+        (1, 2)
+    ]
+    inter = _interpolate_points(points, 0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [1, 2]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2],
+            [0.5, 1.0]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2]
+        ])
+    )
+
+    # 3 points
+    points = [
+        (0, 0),
+        (1, 2),
+        (0.5, 3)
+    ]
+
+    inter = _interpolate_points(points, 0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [1, 2],
+            [0.5, 3]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2],
+            [0.75, 2.5],
+            [0.5, 3],
+            [0.25, 1.5]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2],
+            [0.75, 2.5],
+            [0.5, 3]
+        ])
+    )
+
+    # 0 points
+    points = []
+    inter = _interpolate_points(points, 1)
+    assert len(inter) == 0
+
+    # 1 point
+    points = [(0, 0)]
+    inter = _interpolate_points(points, 0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0]
+        ])
+    )
+    inter = _interpolate_points(points, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0]
+        ])
+    )
+
 
 
 def test__interpolate_points_by_max_distance():
