@@ -14,6 +14,7 @@ import shapely.geometry
 
 import imgaug as ia
 from imgaug.imgaug import (
+    _quokka_normalize_extract, _compute_resized_shape,
     _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
     _interpolate_points, _interpolate_points_by_max_distance
 )
@@ -43,9 +44,16 @@ def main():
     test_derive_random_state()
     test_derive_random_states()
     test_forward_random_state()
+    # test__quokka_normalize_extract()
+    # test__compute_resized_shape()
     # test_quokka()
     # test_quokka_square()
+    # test_quokka_heatmap()
+    # test_quokka_segmentation_map()
+    # test_quokka_keypoints()
+    # test_quokka_bounding_boxes()
     # test_angle_between_vectors()
+    # test_compute_line_intersection_point()
     # test_draw_text()
     test_imresize_many_images()
     test_imresize_single_image()
@@ -383,6 +391,76 @@ def test_forward_random_state():
     ia.forward_random_state(rs1)
     rs2.uniform()
     assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
+
+
+def test__quokka_normalize_extract():
+    observed = _quokka_normalize_extract("square")
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 0
+    assert observed.y1 == 0
+    assert observed.x2 == 643
+    assert observed.y2 == 643
+
+    observed = _quokka_normalize_extract((1, 1, 644, 642))
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 1
+    assert observed.y1 == 1
+    assert observed.x2 == 644
+    assert observed.y2 == 642
+
+    observed = _quokka_normalize_extract(ia.BoundingBox(x1=1, y1=1, x2=644, y2=642))
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 1
+    assert observed.y1 == 1
+    assert observed.x2 == 644
+    assert observed.y2 == 642
+
+    observed = _quokka_normalize_extract(
+        ia.BoundingBoxesOnImage([ia.BoundingBox(x1=1, y1=1, x2=644, y2=642)], shape=(643, 960, 3))
+    )
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 1
+    assert observed.y1 == 1
+    assert observed.x2 == 644
+    assert observed.y2 == 642
+
+    got_exception = False
+    try:
+        _ = _quokka_normalize_extract(False)
+    except Exception as exc:
+        assert "Expected 'square' or tuple" in str(exc)
+        got_exception = True
+    assert got_exception
+
+
+def test__compute_resized_shape():
+    pass
+
+
+def test_quokka():
+    pass
+
+
+def test_quokka_square():
+    pass
+
+
+def test_quokka_heatmap():
+    pass
+
+
+def test_quokka_segmentation_map():
+    pass
+
+
+def test_quokka_keypoints():
+    pass
+
+
+def test_quokka_bounding_boxes():
+    pass
+
+
 
 
 def test_imresize_many_images():
