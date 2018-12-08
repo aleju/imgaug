@@ -4341,12 +4341,19 @@ class HeatmapsOnImage(object):
 
     def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
         """Construct a new HeatmapsOnImage object."""
-        do_assert(arr.dtype.type in [np.float32])
-        do_assert(arr.ndim in [2, 3])
-        do_assert(len(shape) in [2, 3])
+        do_assert(is_np_array(arr), "Expected numpy array as heatmap input array, got type %s" % (type(arr),))
+        do_assert(arr.dtype.type in [np.float32],
+                  "Heatmap input array expected to be of dtype float32, got dtype %s." % (arr.dtype,))
+        do_assert(arr.ndim in [2, 3], "Heatmap input array must be 2d or 3d, got shape %s." % (arr.shape,))
+        do_assert(len(shape) in [2, 3],
+                  "Argument 'shape' in HeatmapsOnImage expected to be 2d or 3d, got shape %s." % (shape,))
         do_assert(min_value < max_value)
-        do_assert(np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps)
-        do_assert(np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps)
+        do_assert(np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps,
+                  ("Value range of heatmap was chosen to be (%.8f, %.8f), but found value below minimum in first "
+                   + "50 heatmap array values.") % (min_value, max_value))
+        do_assert(np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps,
+                  ("Value range of heatmap was chosen to be (%.8f, %.8f), but found value above maximum in first "
+                   + "50 heatmap array values.") % (min_value, max_value))
 
         if arr.ndim == 2:
             arr = arr[..., np.newaxis]
