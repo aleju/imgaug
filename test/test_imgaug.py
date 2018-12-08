@@ -596,7 +596,7 @@ def test_quokka_keypoints():
     for kp, patch in zip(kpsoi_square.keypoints, patches):
         bb = ia.BoundingBox(x1=kp.x-1, x2=kp.x+2, y1=kp.y-1, y2=kp.y+2)
         patch_square = bb.extract_from_image(img_square)
-        assert np.average(np.abs(patch.astype(np.float32) - patch_square.astype(np.float32))) < 5
+        assert np.average(np.abs(patch.astype(np.float32) - patch_square.astype(np.float32))) < 1.0
 
     kpsoi_resized = ia.quokka_keypoints(size=(642, 959))
     assert kpsoi_resized.shape == (642, 959, 3)
@@ -607,9 +607,35 @@ def test_quokka_keypoints():
 
 
 def test_quokka_bounding_boxes():
-    pass
+    bbsoi = ia.quokka_bounding_boxes()
+    assert len(bbsoi.bounding_boxes) > 0
+    bb0 = bbsoi.bounding_boxes[0]
+    assert np.allclose(bb0.x1, 148.0)
+    assert np.allclose(bb0.y1, 50.0)
+    assert np.allclose(bb0.x2, 550.0)
+    assert np.allclose(bb0.y2, 642.0)
+    assert bbsoi.shape == (643, 960, 3)
 
+    img = ia.quokka()
+    patches = []
+    for bb in bbsoi.bounding_boxes:
+        patches.append(bb.extract_from_image(img))
 
+    img_square = ia.quokka(extract="square")
+    bbsoi_square = ia.quokka_bounding_boxes(extract="square")
+    assert len(bbsoi.bounding_boxes) == len(bbsoi_square.bounding_boxes)
+    assert bbsoi_square.shape == (643, 643, 3)
+
+    for bb, patch in zip(bbsoi_square.bounding_boxes, patches):
+        patch_square = bb.extract_from_image(img_square)
+        assert np.average(np.abs(patch.astype(np.float32) - patch_square.astype(np.float32))) < 1.0
+
+    bbsoi_resized = ia.quokka_bounding_boxes(size=(642, 959))
+    assert bbsoi_resized.shape == (642, 959, 3)
+    assert len(bbsoi.bounding_boxes) == len(bbsoi_resized.bounding_boxes)
+    for bb, bb_resized in zip(bbsoi.bounding_boxes, bbsoi_resized.bounding_boxes):
+        d = np.sqrt((bb.center_x - bb_resized.center_x) ** 2 + (bb.center_y - bb_resized.center_y) ** 2)
+        assert d < 1.0
 
 
 def test_imresize_many_images():
