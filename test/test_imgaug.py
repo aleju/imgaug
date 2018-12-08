@@ -53,7 +53,7 @@ def main():
     test_quokka_keypoints()
     test_quokka_bounding_boxes()
     # test_angle_between_vectors()
-    # test_compute_line_intersection_point()
+    test_compute_line_intersection_point()
     test_draw_text()
     test_imresize_many_images()
     test_imresize_single_image()
@@ -637,6 +637,56 @@ def test_quokka_bounding_boxes():
     for bb, bb_resized in zip(bbsoi.bounding_boxes, bbsoi_resized.bounding_boxes):
         d = np.sqrt((bb.center_x - bb_resized.center_x) ** 2 + (bb.center_y - bb_resized.center_y) ** 2)
         assert d < 1.0
+
+
+def test_compute_line_intersection_point():
+    # intersecting lines
+    line1 = (0, 0, 1, 0)
+    line2 = (0.5, -1, 0.5, 1)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert np.allclose(point[0], 0.5)
+    assert np.allclose(point[1], 0)
+
+    # intersection point outside of defined interval of one line, should not change anything
+    line1 = (0, 0, 1, 0)
+    line2 = (0.5, -1, 0.5, -0.5)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert np.allclose(point[0], 0.5)
+    assert np.allclose(point[1], 0)
+
+    # touching lines
+    line1 = (0, 0, 1, 0)
+    line2 = (0.5, -1, 0.5, 0)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert np.allclose(point[0], 0.5)
+    assert np.allclose(point[1], 0)
+
+    # parallel, not intersecting lines
+    line1 = (0, 0, 1, 0)
+    line2 = (0, -0.1, 1, -0.1)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert point is False
+
+    # parallel and overlapping lines (infinite intersection points)
+    line1 = (0, 0, 1, 0)
+    line2 = (0.1, 0, 1, 0)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert point is False
 
 
 def test_draw_text():
