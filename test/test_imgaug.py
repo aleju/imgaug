@@ -510,7 +510,26 @@ def test__compute_resized_shape():
 
 
 def test_quokka():
-    pass
+    img = ia.quokka()
+    assert img.shape == (643, 960, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [107.93576659, 118.18765066, 122.99378564]
+    )
+
+    img = ia.quokka(extract="square")
+    assert img.shape == (643, 643, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [111.25929196, 121.19431175, 125.71316898]
+    )
+
+    img = ia.quokka(size=(642, 959))
+    assert img.shape == (642, 959, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [107.84615822, 118.09832412, 122.90446467]
+    )
 
 
 def test_quokka_square():
