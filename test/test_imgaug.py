@@ -4793,15 +4793,15 @@ def test_BatchLoader():
 
 def test_BackgroundAugmenter__augment_images_worker():
     def gen():
-        yield ia.Batch(images=np.zeros((4, 4, 3), dtype=np.uint8))
+        yield ia.Batch(images=np.zeros((1, 4, 4, 3), dtype=np.uint8))
     bl = ia.BatchLoader(gen(), queue_size=2)
     bgaug = ia.BackgroundAugmenter(bl, iaa.Noop(), queue_size=1, nb_workers=1)
 
     queue_source = multiprocessing.Queue(2)
-    queue_target = multiprocessing.Queue(3)
+    queue_target = multiprocessing.Queue(2)
     queue_source.put(
         pickle.dumps(
-            ia.Batch(images=np.zeros((4, 8, 3), dtype=np.uint8)),
+            ia.Batch(images=np.zeros((1, 4, 8, 3), dtype=np.uint8)),
             protocol=-1
         )
     )
@@ -4812,12 +4812,12 @@ def test_BackgroundAugmenter__augment_images_worker():
     assert isinstance(batch_aug, ia.Batch)
     assert batch_aug.images is not None
     assert batch_aug.images.dtype == np.uint8
-    assert batch_aug.images.shape == (4, 8, 3)
-    assert np.array_equal(batch_aug.images, np.zeros((4, 8, 3), dtype=np.uint8))
+    assert batch_aug.images.shape == (1, 4, 8, 3)
+    assert np.array_equal(batch_aug.images, np.zeros((1, 4, 8, 3), dtype=np.uint8))
     assert batch_aug.images_aug is not None
     assert batch_aug.images_aug.dtype == np.uint8
-    assert batch_aug.images_aug.shape == (4, 8, 3)
-    assert np.array_equal(batch_aug.images_aug, np.zeros((4, 8, 3), dtype=np.uint8) + 1)
+    assert batch_aug.images_aug.shape == (1, 4, 8, 3)
+    assert np.array_equal(batch_aug.images_aug, np.zeros((1, 4, 8, 3), dtype=np.uint8) + 1)
 
     finished_signal = pickle.loads(queue_target.get())
     assert finished_signal is None
