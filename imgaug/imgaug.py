@@ -5677,8 +5677,11 @@ class BackgroundAugmenter(object):
 
     Parameters
     ----------
-    batch_loader : BatchLoader
-        BatchLoader object to load data in the background.
+    batch_loader : BatchLoader or multiprocessing.Queue
+        BatchLoader object that loads the data fed into the BackgroundAugmenter, or alternatively a Queue.
+        If a Queue, then it must be made sure that a final ``None`` in the Queue signals that the loading is
+        finished and no more batches will follow. Otherwise the BackgroundAugmenter will wait forever for the next
+        batch.
 
     augseq : Augmenter
         An augmenter to apply to all loaded images.
@@ -5699,7 +5702,7 @@ class BackgroundAugmenter(object):
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
         do_assert(queue_size > 0)
         self.augseq = augseq
-        self.queue_source = batch_loader.queue
+        self.queue_source = batch_loader if isinstance(batch_loader, multiprocessing.queues.Queue) else batch_loader.queue
         self.queue_result = multiprocessing.Queue(queue_size)
 
         if nb_workers == "auto":
