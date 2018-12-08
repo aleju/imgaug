@@ -5515,8 +5515,8 @@ class BatchLoader(object):
     """
 
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
-        do_assert(queue_size >= 2)
-        do_assert(nb_workers >= 1)
+        do_assert(queue_size >= 2, "Queue size for BatchLoader must be at least 2, got %d." % (queue_size,))
+        do_assert(nb_workers >= 1, "Number of workers for BatchLoader must be at least 1, got %d" % (nb_workers,))
         self._queue_internal = multiprocessing.Queue(queue_size//2)
         self.queue = multiprocessing.Queue(queue_size//2)
         self.join_signal = multiprocessing.Event()
@@ -5592,7 +5592,7 @@ class BatchLoader(object):
         self.queue.put(pickle.dumps(None, protocol=-1))
         time.sleep(0.01)
 
-    def _load_batches(self, load_batch_func, queue, join_signal, seedval):
+    def _load_batches(self, load_batch_func, queue_internal, join_signal, seedval):
         if seedval is not None:
             random.seed(seedval)
             np.random.seed(seedval)
@@ -5607,7 +5607,7 @@ class BatchLoader(object):
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
                     try:
-                        queue.put(batch_pickled, timeout=0.005)
+                        queue_internal.put(batch_pickled, timeout=0.005)
                         break
                     except QueueFull:
                         pass
@@ -5616,7 +5616,7 @@ class BatchLoader(object):
         except Exception:
             traceback.print_exc()
         finally:
-            queue.put("")
+            queue_internal.put("")
         time.sleep(0.01)
 
     def terminate(self):
@@ -5643,6 +5643,9 @@ class BatchLoader(object):
             while not self.all_finished():
                 time.sleep(0.001)
 
+        # empty queue until at least one element can be added and place None as signal that BL finished
+        if self.queue.full():
+            self.queue.get()
         self.queue.put(pickle.dumps(None, protocol=-1))
         time.sleep(0.01)
 
@@ -5675,8 +5678,7 @@ class BackgroundAugmenter(object):
     Parameters
     ----------
     batch_loader : BatchLoader
-        BatchLoader object to load data in the
-        background.
+        BatchLoader object to load data in the background.
 
     augseq : Augmenter
         An augmenter to apply to all loaded images.
