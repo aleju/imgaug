@@ -643,7 +643,7 @@ def quokka_heatmap(size=None, extract=None):
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
     if size is None:
-        size = (643, 960)
+        size = img.shape[0:2]
 
     shape_resized = _compute_resized_shape(img.shape, size)
     img = imresize_single_image(img, shape_resized[0:2])
