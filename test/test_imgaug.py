@@ -69,7 +69,7 @@ def main():
     test_HeatmapsOnImage_draw_on_image()
     test_HeatmapsOnImage_invert()
     test_HeatmapsOnImage_pad()
-    # test_HeatmapsOnImage_pad_to_aspect_ratio()
+    test_HeatmapsOnImage_pad_to_aspect_ratio()
     test_HeatmapsOnImage_avg_pool()
     test_HeatmapsOnImage_max_pool()
     test_HeatmapsOnImage_scale()
@@ -803,9 +803,9 @@ def test_compute_paddings_for_aspect_ratio():
 
     arr = np.zeros((1, 4), dtype=np.uint8)
     top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
-    assert top == 2
+    assert top == 1
     assert right == 0
-    assert bottom == 1
+    assert bottom == 2
     assert left == 0
 
     arr = np.zeros((4, 1), dtype=np.uint8)
@@ -2475,6 +2475,78 @@ def test_HeatmapsOnImage_pad():
     )
 
 
+def test_HeatmapsOnImage_pad_to_aspect_ratio():
+    heatmaps_arr = np.float32([
+        [0.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(1.0)
+    assert heatmaps_padded.arr_0to1.shape == (3, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(1.0, cval=0.5)
+    assert heatmaps_padded.arr_0to1.shape == (3, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.5, 0.5, 0.5]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(1.0, mode="edge")
+    assert heatmaps_padded.arr_0to1.shape == (3, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0]
+        ])
+    )
+
+    # test aspect ratio != 1.0
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(2.0, cval=0.1)
+    assert heatmaps_padded.arr_0to1.shape == (2, 4, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0, 0.1],
+            [0.0, 0.0, 1.0, 0.1]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(0.25, cval=0.1)
+    assert heatmaps_padded.arr_0to1.shape == (12, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1]
+        ])
+    )
+
+
 def test_HeatmapsOnImage_avg_pool():
     heatmaps_arr = np.float32([
         [0.0, 0.0, 0.5, 1.0],
@@ -2877,17 +2949,17 @@ def test_SegmentationMapOnImage_pad_to_aspect_ratio():
 
     segmap_padded = segmap.pad_to_aspect_ratio(1.0)
     observed = segmap_padded.arr
-    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="constant", constant_values=0)
+    expected = np.pad(segmap.arr, ((0, 1), (0, 0), (0, 0)), mode="constant", constant_values=0)
     assert np.allclose(observed, expected)
 
     segmap_padded = segmap.pad_to_aspect_ratio(1.0, cval=1.0)
     observed = segmap_padded.arr
-    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="constant", constant_values=1.0)
+    expected = np.pad(segmap.arr, ((0, 1), (0, 0), (0, 0)), mode="constant", constant_values=1.0)
     assert np.allclose(observed, expected)
 
     segmap_padded = segmap.pad_to_aspect_ratio(1.0, mode="edge")
     observed = segmap_padded.arr
-    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="edge")
+    expected = np.pad(segmap.arr, ((0, 1), (0, 0), (0, 0)), mode="edge")
     assert np.allclose(observed, expected)
 
     segmap_padded = segmap.pad_to_aspect_ratio(0.5)
@@ -4359,6 +4431,7 @@ def test_Polygon_almost_equals():
 
 
 def test___convert_points_to_shapely_line_string():
+    # TODO this function seems to already be covered completely by other tests, so add a proper test later
     pass
 
 
@@ -4485,7 +4558,6 @@ def test__interpolate_points():
             [0, 0]
         ])
     )
-
 
 
 def test__interpolate_points_by_max_distance():
