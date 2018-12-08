@@ -4,6 +4,8 @@ import time
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
+import multiprocessing
+import pickle
 import numpy as np
 import six.moves as sm
 import cv2
@@ -16,6 +18,7 @@ from imgaug.imgaug import (
     _interpolate_points, _interpolate_points_by_max_distance
 )
 from imgaug.testutils import reseed
+from imgaug import augmenters as iaa
 
 
 def main():
@@ -123,7 +126,7 @@ def main():
     # test_Batch()
     test_BatchLoader()
     # test_BackgroundAugmenter.get_batch()
-    # test_BackgroundAugmenter._augment_images_worker()
+    test_BackgroundAugmenter__augment_images_worker()
     # test_BackgroundAugmenter.terminate()
 
     time_end = time.time()
@@ -4786,6 +4789,51 @@ def test_BatchLoader():
             loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
             loader.terminate()
             assert loader.all_finished()
+
+
+def test_BackgroundAugmenter__augment_images_worker():
+    def gen():
+        yield ia.Batch(images=np.zeros((4, 4, 3), dtype=np.uint8))
+    bl = ia.BatchLoader(gen(), queue_size=2)
+    bgaug = ia.BackgroundAugmenter(bl, iaa.Noop(), queue_size=1, nb_workers=1)
+
+    queue_source = multiprocessing.Queue(2)
+    queue_target = multiprocessing.Queue(3)
+    queue_source.put(
+        pickle.dumps(
+            ia.Batch(images=np.zeros((4, 8, 3), dtype=np.uint8)),
+            protocol=-1
+        )
+    )
+    queue_source.put(pickle.dumps(None, protocol=-1))
+    bgaug._augment_images_worker(iaa.Add(1), queue_source, queue_target, 1)
+
+    batch_aug = pickle.loads(queue_target.get())
+    assert isinstance(batch_aug, ia.Batch)
+    assert batch_aug.images is not None
+    assert batch_aug.images.dtype == np.uint8
+    assert batch_aug.images.shape == (4, 8, 3)
+    assert np.array_equal(batch_aug.images, np.zeros((4, 8, 3), dtype=np.uint8))
+    assert batch_aug.images_aug is not None
+    assert batch_aug.images_aug.dtype == np.uint8
+    assert batch_aug.images_aug.shape == (4, 8, 3)
+    assert np.array_equal(batch_aug.images_aug, np.zeros((4, 8, 3), dtype=np.uint8) + 1)
+
+    finished_signal = pickle.loads(queue_target.get())
+    assert finished_signal is None
+
+    source_finished_signal = pickle.loads(queue_source.get())
+    assert source_finished_signal is None
+
+    assert queue_source.empty()
+    assert queue_target.empty()
+
+    queue_source.close()
+    queue_target.close()
+    queue_source.join_thread()
+    queue_target.join_thread()
+    bl.terminate()
+    bgaug.terminate()
 
 
 if __name__ == "__main__":
