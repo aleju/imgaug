@@ -892,13 +892,6 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     if img.dtype == np.float32:
         img = img.astype(np.uint8)
 
-    for i in range(len(color)):
-        val = color[i]
-        if isinstance(val, float):
-            val = int(val * 255)
-            val = np.clip(val, 0, 255)
-            color[i] = val
-
     img = PIL_Image.fromarray(img)
     font = PIL_ImageFont.truetype(DEFAULT_FONT_FP, size)
     context = PIL_ImageDraw.Draw(img)
