@@ -482,7 +482,7 @@ def _quokka_normalize_extract(extract):
         bb = extract.bounding_boxes[0]
     else:
         raise Exception(
-            "Expected None or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
+            "Expected 'square' or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
             + "for parameter 'extract', got %s." % (type(extract),)
         )
     return bb
