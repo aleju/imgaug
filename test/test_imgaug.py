@@ -576,7 +576,34 @@ def test_quokka_segmentation_map():
 
 
 def test_quokka_keypoints():
-    pass
+    kpsoi = ia.quokka_keypoints()
+    assert len(kpsoi.keypoints) > 0
+    assert np.allclose(kpsoi.keypoints[0].x, 163.0)
+    assert np.allclose(kpsoi.keypoints[0].y, 78.0)
+    assert kpsoi.shape == (643, 960, 3)
+
+    img = ia.quokka()
+    patches = []
+    for kp in kpsoi.keypoints:
+        bb = ia.BoundingBox(x1=kp.x-1, x2=kp.x+2, y1=kp.y-1, y2=kp.y+2)
+        patches.append(bb.extract_from_image(img))
+
+    img_square = ia.quokka(extract="square")
+    kpsoi_square = ia.quokka_keypoints(extract="square")
+    assert len(kpsoi.keypoints) == len(kpsoi_square.keypoints)
+    assert kpsoi_square.shape == (643, 643, 3)
+
+    for kp, patch in zip(kpsoi_square.keypoints, patches):
+        bb = ia.BoundingBox(x1=kp.x-1, x2=kp.x+2, y1=kp.y-1, y2=kp.y+2)
+        patch_square = bb.extract_from_image(img_square)
+        assert np.average(np.abs(patch.astype(np.float32) - patch_square.astype(np.float32))) < 5
+
+    kpsoi_resized = ia.quokka_keypoints(size=(642, 959))
+    assert kpsoi_resized.shape == (642, 959, 3)
+    assert len(kpsoi.keypoints) == len(kpsoi_resized.keypoints)
+    for kp, kp_resized in zip(kpsoi.keypoints, kpsoi_resized.keypoints):
+        d = np.sqrt((kp.x - kp_resized.x) ** 2 + (kp.y - kp_resized.y) ** 2)
+        assert d < 1.0
 
 
 def test_quokka_bounding_boxes():
