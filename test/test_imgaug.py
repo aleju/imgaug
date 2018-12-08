@@ -542,7 +542,20 @@ def test_quokka_square():
 
 
 def test_quokka_heatmap():
-    pass
+    hm = ia.quokka_heatmap()
+    assert hm.shape == (643, 960, 3)
+    assert hm.arr_0to1.shape == (643, 960, 1)
+    assert np.allclose(np.average(hm.arr_0to1), 0.57618505)
+
+    hm = ia.quokka_heatmap(extract="square")
+    assert hm.shape == (643, 643, 3)
+    assert hm.arr_0to1.shape == (643, 643, 1)
+    assert np.allclose(np.average(hm.arr_0to1), 0.48026952)
+
+    hm = ia.quokka_heatmap(size=(642, 959))
+    assert hm.shape == (642, 959, 3)
+    assert hm.arr_0to1.shape == (642, 959, 1)
+    assert np.allclose(np.average(hm.arr_0to1), 0.5762454)
 
 
 def test_quokka_segmentation_map():
