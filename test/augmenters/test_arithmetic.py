@@ -203,6 +203,12 @@ def test_AdditiveGaussianNoise():
         got_exception = True
     assert got_exception
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.AdditiveGaussianNoise(loc=0.5, scale=10)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_Dropout():
     reseed()
@@ -319,6 +325,12 @@ def test_Dropout():
         got_exception = True
     assert got_exception
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.Dropout(p=1.0)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_CoarseDropout():
     reseed()
@@ -393,6 +405,12 @@ def test_CoarseDropout():
     except Exception:
         got_exception = True
     assert got_exception
+
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.CoarseDropout(p=1.0, size_px=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 def test_Multiply():
@@ -544,6 +562,12 @@ def test_Multiply():
     assert isinstance(params[1], iap.Deterministic)
     assert params[0].value == 1
     assert params[1].value == 0
+
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.Multiply(mul=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 def test_MultiplyElementwise():
@@ -716,6 +740,12 @@ def test_MultiplyElementwise():
     assert params[0].value == 1
     assert params[1].value == 0
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.MultiplyElementwise(mul=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_ReplaceElementwise():
     reseed()
@@ -886,6 +916,12 @@ def test_ReplaceElementwise():
     assert params[1].value == 2
     assert params[2].value == 0
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.ReplaceElementwise(mask=1, replacement=0.5)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_SaltAndPepper():
     reseed()
@@ -978,6 +1014,12 @@ def test_CoarseSaltAndPepper():
     except Exception:
         got_exception = True
     assert got_exception
+
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.CoarseSaltAndPepper(p=1.0, size_px=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 def test_Salt():
@@ -1074,6 +1116,12 @@ def test_CoarseSalt():
         got_exception = True
     assert got_exception
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.CoarseSalt(p=1.0, size_px=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_Pepper():
     reseed()
@@ -1167,6 +1215,12 @@ def test_CoarsePepper():
     except Exception:
         got_exception = True
     assert got_exception
+
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.CoarsePepper(p=1.0, size_px=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 def test_Add():
@@ -1335,6 +1389,12 @@ def test_Add():
     assert isinstance(params[1], iap.Deterministic)
     assert params[0].value == 1
     assert params[1].value == 0
+
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.Add(value=10)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 def test_AddElementwise():
@@ -1528,6 +1588,12 @@ def test_AddElementwise():
     assert params[0].value == 1
     assert params[1].value == 0
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.AddElementwise(value=10)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_Invert():
     reseed()
@@ -1637,6 +1703,12 @@ def test_Invert():
     assert params[1].value == 0
     assert params[2] == 10
     assert params[3] == 20
+
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.Invert(p=1.0)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 def test_ContrastNormalization():
@@ -1749,6 +1821,12 @@ def test_ContrastNormalization():
     assert params[0].value == 1
     assert params[1].value == 0
 
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.ContrastNormalization(alpha=2)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
 
 def test_JpegCompression():
     reseed()
@@ -1806,7 +1884,7 @@ def test_JpegCompression():
     kps_aug = aug.augment_keypoints([kps])[0]
     for kp, kp_aug in zip(kps.keypoints, kps_aug.keypoints):
         assert np.allclose([kp.x, kp.y], [kp_aug.x, kp_aug.y])
-    
+
     # test heatmaps (not affected by augmenter)
     aug = iaa.JpegCompression(50)
     hm = ia.quokka_heatmap()
