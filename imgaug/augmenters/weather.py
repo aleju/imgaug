@@ -25,7 +25,7 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 import cv2
 
-from . import meta, arithmetic, blur, contrast
+from . import meta, arithmetic, blur, contrast, color as augmenters_color
 from .. import imgaug as ia
 from .. import parameters as iap
 
@@ -60,6 +60,9 @@ class FastSnowyLandscape(meta.Augmenter):
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
+    from_colorspace : str, optional
+        The source colorspace of the input images. See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -89,8 +92,8 @@ class FastSnowyLandscape(meta.Augmenter):
 
     """
 
-    def __init__(self, lightness_threshold=(100, 255), lightness_multiplier=(1.0, 4.0), name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, lightness_threshold=(100, 255), lightness_multiplier=(1.0, 4.0), from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
         super(FastSnowyLandscape, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.lightness_threshold = iap.handle_continuous_param(lightness_threshold, "lightness_threshold",
@@ -100,6 +103,7 @@ class FastSnowyLandscape(meta.Augmenter):
         self.lightness_multiplier = iap.handle_continuous_param(lightness_multiplier, "lightness_multiplier",
                                                                 value_range=(0, None), tuple_to_uniform=True,
                                                                 list_to_choice=True)
+        self.from_colorspace = from_colorspace
 
     def _draw_samples(self, augmentables, random_state):
         nb_augmentables = len(augmentables)
@@ -114,14 +118,20 @@ class FastSnowyLandscape(meta.Augmenter):
         result = images
 
         for i, (image, input_dtype, thresh, lmul) in enumerate(zip(images, input_dtypes, thresh_samples, lmul_samples)):
-            image_hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS).astype(np.float64)
+            color_transform = augmenters_color.ChangeColorspace.CV_VARS["%s2HLS" % (self.from_colorspace,)]
+            color_transform_inverse = augmenters_color.ChangeColorspace.CV_VARS["HLS2%s" % (self.from_colorspace,)]
+
+            image_hls = cv2.cvtColor(image, color_transform)
+            cvt_dtype = image_hls.dtype
+            image_hls = image_hls.astype(np.float64)
             lightness = image_hls[..., 1]
 
             lightness[lightness < thresh] *= lmul
 
             image_hls = meta.clip_augmented_image_(image_hls, 0, 255)  # TODO make value range more flexible
-            image_hls = meta.restore_augmented_image_dtype_(image_hls, input_dtype)
-            image_rgb = cv2.cvtColor(image_hls, cv2.COLOR_HLS2RGB)
+            image_hls = image_hls.astype(cvt_dtype)
+            image_rgb = cv2.cvtColor(image_hls, color_transform_inverse)
+            image_rgb = meta.restore_augmented_image_dtype_(image_rgb, input_dtype)
 
             result[i] = image_rgb
 
