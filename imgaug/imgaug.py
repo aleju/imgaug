@@ -498,7 +498,7 @@ def _compute_resized_shape(from_shape, to_shape):
         Old shape of the array. Usually expected to be a tuple of form ``(H, W)`` or ``(H, W, C)`` or
         alternatively an array with two or three dimensions.
 
-    to_shape : None or tuple of ints or tuple of floats or int or float
+    to_shape : None or tuple of ints or tuple of floats or int or float or ndarray
         New shape of the array.
 
             * If None, then `from_shape` will be used as the new shape.
@@ -510,6 +510,7 @@ def _compute_resized_shape(from_shape, to_shape):
               and width.
             * If a tuple ``(H', W', [C'])`` of floats (except ``C``), then ``H'`` and ``W'`` will
               be used as the new height and width.
+            * If a numpy array, then the array's shape will be used.
 
     Returns
     -------
