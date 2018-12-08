@@ -1183,8 +1183,8 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     elif aspect_ratio_current > aspect_ratio:
         # horizontal image, width > height
         diff = ((1/aspect_ratio) * width) - height
-        pad_top = int(np.ceil(diff / 2))
-        pad_bottom = int(np.floor(diff / 2))
+        pad_top = int(np.floor(diff / 2))
+        pad_bottom = int(np.ceil(diff / 2))
 
     return pad_top, pad_right, pad_bottom, pad_left
 
