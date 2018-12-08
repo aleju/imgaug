@@ -533,7 +533,12 @@ def test_quokka():
 
 
 def test_quokka_square():
-    pass
+    img = ia.quokka_square()
+    assert img.shape == (643, 643, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [111.25929196, 121.19431175, 125.71316898]
+    )
 
 
 def test_quokka_heatmap():
