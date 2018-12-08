@@ -559,7 +559,20 @@ def test_quokka_heatmap():
 
 
 def test_quokka_segmentation_map():
-    pass
+    segmap = ia.quokka_segmentation_map()
+    assert segmap.shape == (643, 960, 3)
+    assert segmap.arr.shape == (643, 960, 1)
+    assert np.allclose(np.average(segmap.arr), 0.3016427)
+
+    segmap = ia.quokka_segmentation_map(extract="square")
+    assert segmap.shape == (643, 643, 3)
+    assert segmap.arr.shape == (643, 643, 1)
+    assert np.allclose(np.average(segmap.arr), 0.450353)
+
+    segmap = ia.quokka_segmentation_map(size=(642, 959))
+    assert segmap.shape == (642, 959, 3)
+    assert segmap.arr.shape == (642, 959, 1)
+    assert np.allclose(np.average(segmap.arr), 0.30160266)
 
 
 def test_quokka_keypoints():
