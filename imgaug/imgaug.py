@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import shapely
 import shapely.geometry
 import shapely.ops
+from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -885,9 +886,6 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
         Input image with text drawn on it.
 
     """
-    # keeping PIL here so that it is not a dependency of the library right now
-    from PIL import Image, ImageDraw, ImageFont
-
     do_assert(img.dtype in [np.uint8, np.float32])
 
     input_dtype = img.dtype
@@ -901,9 +899,9 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
             val = np.clip(val, 0, 255)
             color[i] = val
 
-    img = Image.fromarray(img)
-    font = ImageFont.truetype(DEFAULT_FONT_FP, size)
-    context = ImageDraw.Draw(img)
+    img = PIL_Image.fromarray(img)
+    font = PIL_ImageFont.truetype(DEFAULT_FONT_FP, size)
+    context = PIL_ImageDraw.Draw(img)
     context.text((x, y), text, fill=tuple(color), font=font)
     img_np = np.asarray(img)
     img_np.setflags(write=True)  # PIL/asarray returns read only array
