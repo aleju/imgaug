@@ -32,6 +32,7 @@ def main():
     test_ReplaceElementwise()
     test_Invert()
     test_ContrastNormalization()
+    test_JpegCompression()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
@@ -1747,6 +1748,70 @@ def test_ContrastNormalization():
     assert isinstance(params[1], iap.Deterministic)
     assert params[0].value == 1
     assert params[1].value == 0
+
+
+def test_JpegCompression():
+    reseed()
+
+    img = ia.quokka(extract="square", size=(64, 64))
+
+    # basic test at 0 compression
+    aug = iaa.JpegCompression(0)
+    img_aug = aug.augment_image(img)
+    diff = np.average(np.abs(img.astype(np.float32) - img_aug.astype(np.float32)))
+    assert diff < 1.0
+
+    # basic test at 90 compression
+    aug = iaa.JpegCompression(90)
+    img_aug = aug.augment_image(img)
+    diff = np.average(np.abs(img.astype(np.float32) - img_aug.astype(np.float32)))
+    assert 1.0 < diff < 50.0
+
+    # test if stochastic parameters are used by initializer
+    aug = iaa.JpegCompression([0, 100])
+    assert isinstance(aug.compression, iap.Choice)
+    assert len(aug.compression.a) == 2
+    assert aug.compression.a[0] == 0
+    assert aug.compression.a[1] == 100
+
+    # test get_parameters()
+    assert len(aug.get_parameters()) == 1
+    assert aug.get_parameters()[0] == aug.compression
+
+    # test if stochastic parameters are used by augmentation
+    class _TwoValueParam(iap.StochasticParameter):
+        def __init__(self, v1, v2):
+            super(_TwoValueParam, self).__init__()
+            self.v1 = v1
+            self.v2 = v2
+
+        def _draw_samples(self, size, random_state):
+            arr = np.full(size, self.v1, dtype=np.float32)
+            arr[1::2] = self.v2
+            return arr
+
+    param = _TwoValueParam(0, 100)
+    aug = iaa.JpegCompression(param)
+    img_aug_c0 = iaa.JpegCompression(0).augment_image(img)
+    img_aug_c100 = iaa.JpegCompression(100).augment_image(img)
+    imgs_aug = aug.augment_images([img] * 4)
+    assert np.array_equal(imgs_aug[0], img_aug_c0)
+    assert np.array_equal(imgs_aug[1], img_aug_c100)
+    assert np.array_equal(imgs_aug[2], img_aug_c0)
+    assert np.array_equal(imgs_aug[3], img_aug_c100)
+
+    # test keypoints (not affected by augmenter)
+    aug = iaa.JpegCompression(50)
+    kps = ia.quokka_keypoints()
+    kps_aug = aug.augment_keypoints([kps])[0]
+    for kp, kp_aug in zip(kps.keypoints, kps_aug.keypoints):
+        assert np.allclose([kp.x, kp.y], [kp_aug.x, kp_aug.y])
+    
+    # test heatmaps (not affected by augmenter)
+    aug = iaa.JpegCompression(50)
+    hm = ia.quokka_heatmap()
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
 if __name__ == "__main__":
