@@ -76,7 +76,7 @@ def main():
     # test_HeatmapsOnImage_to_uint8()
     test_HeatmapsOnImage_from_uint8()
     # test_HeatmapsOnImage_from_0to1()
-    # test_HeatmapsOnImage_change_normalization()
+    test_HeatmapsOnImage_change_normalization()
     # test_HeatmapsOnImage_copy()
     # test_HeatmapsOnImage_deepcopy()
     test_SegmentationMapOnImage_bool()
@@ -2667,6 +2667,55 @@ def test_HeatmapsOnImage_from_uint8():
     ]))
     assert np.allclose(hm.min_value, -1.0)
     assert np.allclose(hm.max_value, 2.0)
+
+
+def test_HeatmapsOnImage_change_normalization():
+    # (0.0, 1.0) -> (0.0, 2.0)
+    arr = np.float32([
+        [0.0, 0.5, 1.0],
+        [1.0, 0.5, 0.0]
+    ])
+    observed = ia.HeatmapsOnImage.change_normalization(arr, (0.0, 1.0), (0.0, 2.0))
+    expected = np.float32([
+        [0.0, 1.0, 2.0],
+        [2.0, 1.0, 0.0]
+    ])
+    assert np.allclose(observed, expected)
+
+    # (0.0, 1.0) -> (-1.0, 0.0)
+    observed = ia.HeatmapsOnImage.change_normalization(arr, (0.0, 1.0), (-1.0, 0.0))
+    expected = np.float32([
+        [-1.0, -0.5, 0.0],
+        [0.0, -0.5, -1.0]
+    ])
+    assert np.allclose(observed, expected)
+
+    # (-1.0, 1.0) -> (1.0, 3.0)
+    arr = np.float32([
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0]
+    ])
+    observed = ia.HeatmapsOnImage.change_normalization(arr, (-1.0, 1.0), (1.0, 3.0))
+    expected = np.float32([
+        [1.0, 2.0, 3.0],
+        [3.0, 2.0, 1.0]
+    ])
+    assert np.allclose(observed, expected)
+
+    # (-1.0, 1.0) -> (1.0, 3.0)
+    # value ranges given as HeatmapsOnImage
+    arr = np.float32([
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0]
+    ])
+    source = ia.HeatmapsOnImage(np.float32([[0.0]]), min_value=-1.0, max_value=1.0, shape=(1, 1, 3))
+    target = ia.HeatmapsOnImage(np.float32([[1.0]]), min_value=1.0, max_value=3.0, shape=(1, 1, 3))
+    observed = ia.HeatmapsOnImage.change_normalization(arr, source, target)
+    expected = np.float32([
+        [1.0, 2.0, 3.0],
+        [3.0, 2.0, 1.0]
+    ])
+    assert np.allclose(observed, expected)
 
 
 def test_SegmentationMapOnImage_bool():
