@@ -906,7 +906,6 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
 
 
 # TODO rename sizes to size?
-# TODO accept lists too as images
 def imresize_many_images(images, sizes=None, interpolation=None):
     """
     Resize many images to a specified size.
