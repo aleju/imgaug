@@ -74,7 +74,7 @@ def main():
     test_HeatmapsOnImage_max_pool()
     test_HeatmapsOnImage_scale()
     # test_HeatmapsOnImage_to_uint8()
-    # test_HeatmapsOnImage_from_uint8()
+    test_HeatmapsOnImage_from_uint8()
     # test_HeatmapsOnImage_from_0to1()
     # test_HeatmapsOnImage_change_normalization()
     # test_HeatmapsOnImage_copy()
@@ -2617,6 +2617,56 @@ def test_HeatmapsOnImage_scale():
             [0.0, 0.0, 1.0, 1.0]
         ])
     )
+
+
+def test_HeatmapsOnImage_from_uint8():
+    hm = ia.HeatmapsOnImage.from_uint8(
+        np.uint8([
+            [0, 128, 255],
+            [255, 128, 0]
+        ])[..., np.newaxis],
+        (20, 30, 3)
+    )
+    assert hm.shape == (20, 30, 3)
+    assert hm.arr_0to1.shape == (2, 3, 1)
+    assert np.allclose(hm.arr_0to1[..., 0], np.float32([
+        [0, 128/255, 1.0],
+        [1.0, 128/255, 0]
+    ]))
+
+    # 2d uint8 arr
+    hm = ia.HeatmapsOnImage.from_uint8(
+        np.uint8([
+            [0, 128, 255],
+            [255, 128, 0]
+        ]),
+        (20, 30, 3)
+    )
+    assert hm.shape == (20, 30, 3)
+    assert hm.arr_0to1.shape == (2, 3, 1)
+    assert np.allclose(hm.arr_0to1[..., 0], np.float32([
+        [0, 128/255, 1.0],
+        [1.0, 128/255, 0]
+    ]))
+
+    # min_value, max_value
+    hm = ia.HeatmapsOnImage.from_uint8(
+        np.uint8([
+            [0, 128, 255],
+            [255, 128, 0]
+        ])[..., np.newaxis],
+        (20, 30, 3),
+        min_value=-1.0,
+        max_value=2.0
+    )
+    assert hm.shape == (20, 30, 3)
+    assert hm.arr_0to1.shape == (2, 3, 1)
+    assert np.allclose(hm.arr_0to1[..., 0], np.float32([
+        [0, 128/255, 1.0],
+        [1.0, 128/255, 0]
+    ]))
+    assert np.allclose(hm.min_value, -1.0)
+    assert np.allclose(hm.max_value, 2.0)
 
 
 def test_SegmentationMapOnImage_bool():
