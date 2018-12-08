@@ -527,24 +527,32 @@ def _compute_resized_shape(from_shape, to_shape):
     if to_shape is None:
         pass
     elif isinstance(to_shape, tuple):
+        do_assert(len(from_shape) in [2, 3])
+        do_assert(len(to_shape) in [2, 3])
+
         if len(from_shape) == 3 and len(to_shape) == 3:
             do_assert(from_shape[2] == to_shape[2])
         elif len(to_shape) == 3:
             to_shape_computed.append(to_shape[2])
 
-        if all([is_single_integer(v) for v in to_shape[0:2]]):
-            to_shape_computed[0] = to_shape[0]
-            to_shape_computed[1] = to_shape[1]
-        elif all([is_single_float(v) for v in to_shape[0:2]]):
-            to_shape_computed[0] = int(np.round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
-            to_shape_computed[1] = int(np.round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
+        do_assert(all([v is None or is_single_number(v) for v in to_shape[0:2]]),
+                  "Expected the first two entries in to_shape to be None or numbers, "
+                  + "got types %s." % (str([type(v) for v in to_shape[0:2]]),))
+
+        for i, from_shape_i in enumerate(from_shape[0:2]):
+            if to_shape[i] is None:
+                to_shape_computed[i] = from_shape_i
+            elif is_single_integer(to_shape[i]):
+                to_shape_computed[i] = to_shape[i]
+            else:  # float
+                to_shape_computed[i] = int(np.round(from_shape_i * to_shape[i]))
     elif is_single_integer(to_shape) or is_single_float(to_shape):
         to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
     else:
         raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int "
                         + "or single float, got %s." % (type(to_shape),))
 
-    return to_shape_computed
+    return tuple(to_shape_computed)
 
 
 def quokka(size=None, extract=None):
