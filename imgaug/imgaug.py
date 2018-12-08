@@ -647,7 +647,8 @@ def quokka_heatmap(size=None, extract=None):
 
     shape_resized = _compute_resized_shape(img.shape, size)
     img = imresize_single_image(img, shape_resized[0:2])
-    img_0to1 = img.astype(np.float32) / 255.0
+    img_0to1 = img[..., 0]  # depth map was saved as 3-channel RGB
+    img_0to1 = img_0to1.astype(np.float32) / 255.0
     img_0to1 = 1 - img_0to1  # depth map was saved as 0 being furthest away
 
     return HeatmapsOnImage(img_0to1, shape=img_0to1.shape[0:2] + (3,))
