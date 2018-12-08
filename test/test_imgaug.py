@@ -1573,13 +1573,14 @@ def test_Keypoint():
     assert len(kps_manhatten) == 5
     expected = [(4, 5), (3, 5), (4, 6), (5, 5), (4, 4)]
     for y, x in expected:
-        assert any([np.allclose([y, x], [kp.y, kp.x]) for kp in kps_manhatten])
+        assert any([np.allclose([y, x], [kp_manhatten.y, kp_manhatten.x]) for kp_manhatten in kps_manhatten])
 
     kps_manhatten = kp.generate_similar_points_manhattan(1, 1.0, return_array=True)
     assert kps_manhatten.shape == (5, 2)
     expected = [(4, 5), (3, 5), (4, 6), (5, 5), (4, 4)]
     for y, x in expected:
-        assert any([np.allclose([y, x], [kp_y, kp_x]) for kp_x, kp_y in kps_manhatten])
+        assert any([np.allclose([y, x], [kp_manhatten_y, kp_manhatten_x])
+                    for kp_manhatten_x, kp_manhatten_y in kps_manhatten])
 
     # __repr__ / __str_
     kp = ia.Keypoint(y=1, x=2)
