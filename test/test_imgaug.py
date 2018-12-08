@@ -434,7 +434,79 @@ def test__quokka_normalize_extract():
 
 
 def test__compute_resized_shape():
-    pass
+    # tuple of ints
+    from_shape = (10, 15, 3)
+    to_shape = (20, 30)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+    from_shape = (10, 15, 3)
+    to_shape = (20, 30, 3)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+    # tuple of floats
+    from_shape = (10, 15, 3)
+    to_shape = (2.0, 3.0)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 45, 3)
+
+    # tuple of int and float
+    from_shape = (10, 15, 3)
+    to_shape = (2.0, 25)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 25, 3)
+
+    from_shape = (10, 17, 3)
+    to_shape = (15, 2.0)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (15, 34, 3)
+
+    # None
+    from_shape = (10, 10, 3)
+    to_shape = None
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == from_shape
+
+    # tuple containing None
+    from_shape = (10, 15, 3)
+    to_shape = (2.0, None)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 15, 3)
+
+    from_shape = (10, 15, 3)
+    to_shape = (None, 25)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (10, 25, 3)
+
+    # single int
+    from_shape = (10, 15, 3)
+    to_shape = 20
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 20, 3)
+
+    # single float
+    from_shape = (10, 15, 3)
+    to_shape = 2.0
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+    # from/to shape as arrays
+    from_shape = (10, 10, 3)
+    to_shape = (20, 30, 3)
+    observed = _compute_resized_shape(np.zeros(from_shape), np.zeros(to_shape))
+    assert observed == to_shape
+
+    # from_shape is 2D
+    from_shape = (10, 15)
+    to_shape = (20, 30)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == to_shape
+
+    from_shape = (10, 15)
+    to_shape = (20, 30, 3)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
 
 
 def test_quokka():
