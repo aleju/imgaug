@@ -44,17 +44,17 @@ def main():
     test_derive_random_state()
     test_derive_random_states()
     test_forward_random_state()
-    # test__quokka_normalize_extract()
-    # test__compute_resized_shape()
-    # test_quokka()
-    # test_quokka_square()
-    # test_quokka_heatmap()
-    # test_quokka_segmentation_map()
-    # test_quokka_keypoints()
-    # test_quokka_bounding_boxes()
+    test__quokka_normalize_extract()
+    test__compute_resized_shape()
+    test_quokka()
+    test_quokka_square()
+    test_quokka_heatmap()
+    test_quokka_segmentation_map()
+    test_quokka_keypoints()
+    test_quokka_bounding_boxes()
     # test_angle_between_vectors()
     # test_compute_line_intersection_point()
-    # test_draw_text()
+    test_draw_text()
     test_imresize_many_images()
     test_imresize_single_image()
     test_pad()
@@ -636,6 +636,87 @@ def test_quokka_bounding_boxes():
     for bb, bb_resized in zip(bbsoi.bounding_boxes, bbsoi_resized.bounding_boxes):
         d = np.sqrt((bb.center_x - bb_resized.center_x) ** 2 + (bb.center_y - bb_resized.center_y) ** 2)
         assert d < 1.0
+
+
+def test_draw_text():
+    # make roughly sure that shape of drawn text matches expected text
+    img = np.zeros((20, 50, 3), dtype=np.uint8)
+    img_text = ia.draw_text(img, y=5, x=5, text="---------", size=10, color=[255, 255, 255])
+    assert np.max(img_text) == 255
+    assert np.min(img_text) == 0
+    assert np.sum(img_text == 255) / np.sum(img_text == 0)
+    first_row = None
+    last_row = None
+    first_col = None
+    last_col = None
+    for i in range(img.shape[0]):
+        if np.max(img_text[i, :, :]) == 255:
+            first_row = i
+            break
+    for i in range(img.shape[0]-1, 0, -1):
+        if np.max(img_text[i, :, :]) == 255:
+            last_row = i
+            break
+    for i in range(img.shape[1]):
+        if np.max(img_text[:, i, :]) == 255:
+            first_col = i
+            break
+    for i in range(img.shape[1]-1, 0, -1):
+        if np.max(img_text[:, i, :]) == 255:
+            last_col = i
+            break
+    bb = ia.BoundingBox(x1=first_col, y1=first_row, x2=last_col, y2=last_row)
+    assert bb.width > 4.0*bb.height
+
+    # test x
+    img = np.zeros((20, 100, 3), dtype=np.uint8)
+    img_text1 = ia.draw_text(img, y=5, x=5, text="XXXXXXX", size=10, color=[255, 255, 255])
+    img_text2 = ia.draw_text(img, y=5, x=50, text="XXXXXXX", size=10, color=[255, 255, 255])
+    first_col1 = None
+    first_col2 = None
+    for i in range(img.shape[1]):
+        if np.max(img_text1[:, i, :]) == 255:
+            first_col1 = i
+            break
+    for i in range(img.shape[1]):
+        if np.max(img_text2[:, i, :]) == 255:
+            first_col2 = i
+            break
+    assert 0 < first_col1 < 10
+    assert 45 < first_col2 < 55
+
+    # test y
+    img = np.zeros((100, 20, 3), dtype=np.uint8)
+    img_text1 = ia.draw_text(img, y=5, x=5, text="XXXXXXX", size=10, color=[255, 255, 255])
+    img_text2 = ia.draw_text(img, y=50, x=5, text="XXXXXXX", size=10, color=[255, 255, 255])
+    first_row1 = None
+    first_row2 = None
+    for i in range(img.shape[0]):
+        if np.max(img_text1[i, :, :]) == 255:
+            first_row1 = i
+            break
+    for i in range(img.shape[0]):
+        if np.max(img_text2[i, :, :]) == 255:
+            first_row2 = i
+            break
+    assert 0 < first_row1 < 15
+    assert 45 < first_row2 < 60
+
+    # test size
+    img = np.zeros((100, 100, 3), dtype=np.uint8)
+    img_text_small = ia.draw_text(img, y=5, x=5, text="X", size=10, color=[255, 255, 255])
+    img_text_large = ia.draw_text(img, y=5, x=5, text="X", size=50, color=[255, 255, 255])
+    nb_filled_small = np.sum(img_text_small > 10)
+    nb_filled_large = np.sum(img_text_large > 10)
+    assert nb_filled_large > 2*nb_filled_small
+
+    # text color
+    img = np.zeros((20, 20, 3), dtype=np.uint8)
+    img_text = ia.draw_text(img, y=5, x=5, text="X", size=10, color=[128, 129, 130])
+    maxcol = np.max(img_text, axis=(0, 1))
+    assert maxcol[0] == 128
+    assert maxcol[1] == 129
+    assert maxcol[2] == 130
 
 
 def test_imresize_many_images():
