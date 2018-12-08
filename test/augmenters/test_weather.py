@@ -3,7 +3,7 @@ from __future__ import print_function, division, absolute_import
 import time
 
 import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
+#matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import cv2
 
@@ -17,10 +17,10 @@ def main():
     time_start = time.time()
 
     test_FastSnowyLandscape()
-    # test_Clouds()
-    # test_Fog()
+    test_Clouds()
+    test_Fog()
     # test_CloudLayer()
-    # test_Snowflakes()
+    test_Snowflakes()
     # test_SnowflakesLayer()
 
     time_end = time.time()
@@ -123,3 +123,76 @@ def test_FastSnowyLandscape():
     expected = cv2.cvtColor(expected, cv2.COLOR_HLS2BGR)
     observed = aug.augment_image(image)
     assert np.array_equal(observed, expected)
+
+
+def test_Clouds():
+    # rough test as fairly hard to test more detailed
+    reseed()
+
+    img = np.zeros((100, 100, 3), dtype=np.uint8)
+    img_aug = iaa.Clouds().augment_image(img)
+    assert 50 < np.average(img_aug) < 240
+    assert np.max(img_aug) > 200
+
+    grad_x = img_aug[:, 1:].astype(np.float32) - img_aug[:, :-1].astype(np.float32)
+    grad_y = img_aug[1:, :].astype(np.float32) - img_aug[:-1, :].astype(np.float32)
+
+    assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
+    assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
+
+
+def test_Fog():
+    # rough test as fairly hard to test more detailed
+    reseed()
+
+    img = np.zeros((100, 100, 3), dtype=np.uint8)
+    img_aug = iaa.Clouds().augment_image(img)
+    assert 100 < np.average(img_aug) < 255
+    assert np.max(img_aug) > 100
+
+    grad_x = img_aug[:, 1:].astype(np.float32) - img_aug[:, :-1].astype(np.float32)
+    grad_y = img_aug[1:, :].astype(np.float32) - img_aug[:-1, :].astype(np.float32)
+
+    assert np.sum(np.abs(grad_x)) > 1 * img.shape[1]
+    assert np.sum(np.abs(grad_y)) > 1 * img.shape[0]
+
+
+def test_Snowflakes():
+    # rather rough test as fairly hard to test more detailed
+    reseed()
+
+    img = np.zeros((100, 100, 3), dtype=np.uint8)
+    img_aug = iaa.Snowflakes().augment_image(img)
+    assert 1.0 < np.average(img_aug) < 50
+    assert np.max(img_aug) > 200
+
+    grad_x = img_aug[:, 1:].astype(np.float32) - img_aug[:, :-1].astype(np.float32)
+    grad_y = img_aug[1:, :].astype(np.float32) - img_aug[:-1, :].astype(np.float32)
+
+    assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
+    assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
+
+    # test density
+    img_aug_undense = iaa.Snowflakes(density=0.001, density_uniformity=0.99).augment_image(img)
+    img_aug_dense = iaa.Snowflakes(density=0.1, density_uniformity=0.99).augment_image(img)
+    assert np.average(img_aug_undense) < np.average(img_aug_dense)
+
+    # test density_uniformity
+    img_aug_ununiform = iaa.Snowflakes(density=0.4, density_uniformity=0.1).augment_image(img)
+    img_aug_uniform = iaa.Snowflakes(density=0.4, density_uniformity=0.9).augment_image(img)
+
+    def _measure_uniformity(image, patch_size=5, n_patches=100):
+        pshalf = (patch_size-1) // 2
+        grad_x = image[:, 1:].astype(np.float32) - image[:, :-1].astype(np.float32)
+        grad_y = image[1:, :].astype(np.float32) - image[:-1, :].astype(np.float32)
+        grad = np.abs(grad_x[1:, :] + grad_y[:, 1:])
+        points_y = np.random.randint(0, image.shape[0], size=(n_patches,))
+        points_x = np.random.randint(0, image.shape[0], size=(n_patches,))
+        stds = []
+        for y, x in zip(points_y, points_x):
+            bb = ia.BoundingBox(x1=x-pshalf, y1=y-pshalf, x2=x+pshalf, y2=y+pshalf)
+            patch = bb.extract_from_image(grad)
+            stds.append(np.std(patch))
+        return 1 / (1+np.std(stds))
+
+    assert _measure_uniformity(img_aug_ununiform) < _measure_uniformity(img_aug_uniform)
