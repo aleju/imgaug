@@ -2319,7 +2319,6 @@ class ElasticTransformation(meta.Augmenter):
         return result
 
 
-# TODO numpy.rot90() also has an axes parameter. Does it make sense to add that here?
 class Rot90(meta.Augmenter):
     """
     Augmenter to rotate images clockwise by multiples of 90 degrees.
@@ -2329,7 +2328,7 @@ class Rot90(meta.Augmenter):
     Parameters
     ----------
     k : int or list of int or tuple of int or imaug.ALL or imgaug.parameters.StochasticParameter, optional
-        How often to rotate by 90 degrees.
+        How often to rotate clockwise by 90 degrees.
 
             * If a single int, then that value will be used for all images.
             * If a tuple ``(a, b)``, then a random value from the discrete
