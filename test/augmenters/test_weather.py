@@ -3,7 +3,7 @@ from __future__ import print_function, division, absolute_import
 import time
 
 import matplotlib
-#matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
+matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import cv2
 
