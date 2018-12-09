@@ -4380,6 +4380,9 @@ class HeatmapsOnImage(object):
     def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
         """Construct a new HeatmapsOnImage object."""
         do_assert(is_np_array(arr), "Expected numpy array as heatmap input array, got type %s" % (type(arr),))
+        # TODO maybe allow 0-sized heatmaps? in that case the min() and max() must be adjusted
+        do_assert(arr.shape[0] > 0 and arr.shape[1] > 0,
+                  "Expected numpy array as heatmap with height and width greater than 0, got shape %s." % (arr.shape,))
         do_assert(arr.dtype.type in [np.float32],
                   "Heatmap input array expected to be of dtype float32, got dtype %s." % (arr.dtype,))
         do_assert(arr.ndim in [2, 3], "Heatmap input array must be 2d or 3d, got shape %s." % (arr.shape,))
