@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
+import skimage.morphology
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -655,6 +656,39 @@ def test_Affine():
     assert (pixels_sums_aug[outer_pixels] > int(nb_iterations * (2/8 * 0.4))).all()
     assert (pixels_sums_aug[outer_pixels] < int(nb_iterations * (2/8 * 2.0))).all()
 
+    for backend in ["auto", "cv2", "skimage"]:
+        # measure alignment between images and heatmaps when rotating
+        aug = iaa.Affine(rotate=45, backend=backend)
+        image = np.zeros((7, 6), dtype=np.uint8)
+        image[:, 2:3+1] = 255
+        hm = ia.HeatmapsOnImage(image.astype(np.float32)/255, shape=(7, 6))
+        img_aug = aug.augment_image(image)
+        hm_aug = aug.augment_heatmaps([hm])[0]
+        assert hm_aug.shape == (7, 6)
+        assert hm_aug.arr_0to1.shape == (7, 6, 1)
+        img_aug_mask = img_aug > 255*0.1
+        hm_aug_mask = hm_aug.arr_0to1 > 0.1
+        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert (same / img_aug_mask.size) >= 0.99
+
+        # measure alignment between images and heatmaps when rotating
+        # here with smaller heatmaps
+        aug = iaa.Affine(rotate=45, backend=backend)
+        image = np.zeros((56, 48), dtype=np.uint8)
+        image[:, 16:24+1] = 255
+        hm = ia.HeatmapsOnImage(
+            ia.imresize_single_image(image, (28, 24), interpolation="cubic").astype(np.float32)/255,
+            shape=(56, 48)
+        )
+        img_aug = aug.augment_image(image)
+        hm_aug = aug.augment_heatmaps([hm])[0]
+        assert hm_aug.shape == (56, 48)
+        assert hm_aug.arr_0to1.shape == (28, 24, 1)
+        img_aug_mask = img_aug > 255*0.1
+        hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic") > 0.1
+        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert (same / img_aug_mask.size) >= 0.9
+
     # ---------------------
     # shear
     # ---------------------
@@ -758,17 +792,59 @@ def test_Affine():
     # ------------
     # fit_output
     # ------------
-    aug = iaa.Affine(scale=1.0, translate_px=100, fit_output=True)
-    assert aug.fit_output is True
-    observed = aug.augment_images(images)
-    expected = images
-    assert np.array_equal(observed, expected)
-    observed = aug.augment_keypoints(keypoints)
-    expected = keypoints
-    assert keypoints_equal(observed, expected)
-    observed = aug.augment_heatmaps([heatmaps])[0]
-    expected = heatmaps
-    assert np.array_equal(observed.get_arr(), expected.get_arr())
+    for backend in ["auto", "cv2", "skimage"]:
+        aug = iaa.Affine(scale=1.0, translate_px=100, fit_output=True, backend=backend)
+        assert aug.fit_output is True
+        observed = aug.augment_images(images)
+        expected = images
+        assert np.array_equal(observed, expected)
+        observed = aug.augment_keypoints(keypoints)
+        expected = keypoints
+        assert keypoints_equal(observed, expected)
+        observed = aug.augment_heatmaps([heatmaps])[0]
+        expected = heatmaps
+        assert np.allclose(observed.arr_0to1, expected.arr_0to1)
+
+        # fit_output with rotation
+        aug = iaa.Affine(rotate=45, fit_output=True, backend=backend)
+        img = np.zeros((10, 10), dtype=np.uint8)
+        img[0:2, 0:2] = 255
+        img[-2:, 0:2] = 255
+        img[0:2, -2:] = 255
+        img[-2:, -2:] = 255
+        hm = ia.HeatmapsOnImage(img.astype(np.float32)/255, shape=(10, 10))
+        img_aug = aug.augment_image(img)
+        hm_aug = aug.augment_heatmaps([hm])[0]
+        _labels, nb_labels = skimage.morphology.label(img_aug > 240, return_num=True, connectivity=2)
+        assert nb_labels == 4
+        _labels, nb_labels = skimage.morphology.label(hm_aug.arr_0to1 > 240/255, return_num=True, connectivity=2)
+        assert nb_labels == 4
+
+        # fit_output with differently sized heatmaps
+        aug = iaa.Affine(rotate=45, fit_output=True, backend=backend)
+        img = np.zeros((80, 80), dtype=np.uint8)
+        img[0:5, 0:5] = 255
+        img[-5:, 0:5] = 255
+        img[0:5, -5:] = 255
+        img[-5:, -5:] = 255
+        hm = ia.HeatmapsOnImage(
+            ia.imresize_single_image(img, (40, 40), interpolation="cubic").astype(np.float32)/255,
+            shape=(80, 80)
+        )
+        img_aug = aug.augment_image(img)
+        hm_aug = aug.augment_heatmaps([hm])[0]
+        # these asserts are deactivated because the image size can change under fit_output=True
+        # assert hm_aug.shape == (80, 80)
+        # assert hm_aug.arr_0to1.shape == (40, 40, 1)
+        _labels, nb_labels = skimage.morphology.label(img_aug > 240, return_num=True, connectivity=2)
+        assert nb_labels == 4
+        _labels, nb_labels = skimage.morphology.label(hm_aug.arr_0to1 > 200/255, return_num=True, connectivity=2)
+        assert nb_labels == 4
+
+        img_aug_mask = img_aug > 255*0.1
+        hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic") > 0.1
+        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert (same / img_aug_mask.size) >= 0.95
 
     # ------------
     # exceptions for bad inputs
