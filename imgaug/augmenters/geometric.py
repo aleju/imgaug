@@ -2322,7 +2322,7 @@ class ElasticTransformation(meta.Augmenter):
 # TODO numpy.rot90() also has an axes parameter. Does it make sense to add that here?
 class Rot90(meta.Augmenter):
     """
-    Augmenter to rotate images by multiples of 90 degrees.
+    Augmenter to rotate images clockwise by multiples of 90 degrees.
 
     This could also be achieved using ``Affine``, but Rot90 is significantly more efficient.
 
@@ -2403,7 +2403,7 @@ class Rot90(meta.Augmenter):
         input_dtype = arrs.dtype if input_was_array else None
         arrs_aug = []
         for arr, k_i in zip(arrs, ks):
-            arr_aug = np.rot90(arr, k_i)
+            arr_aug = np.rot90(arr, k_i, axes=(1, 0))  # adding axes here rotates clock-wise instead of ccw
             if keep_size and arr.shape != arr_aug.shape and resize_func is not None:
                 arr_aug = resize_func(arr_aug, arr.shape[0:2])
             arrs_aug.append(arr_aug)
@@ -2444,27 +2444,19 @@ class Rot90(meta.Augmenter):
             if (k_i % 4) == 0:
                 result.append(kpsoi_i)
             else:
-                k_i = k_i % 4  # this is also correct when k_i is negative
+                k_i = int(k_i) % 4  # this is also correct when k_i is negative
                 kps_aug = []
                 h, w = kpsoi_i.shape[0:2]
                 h_aug, w_aug = (h, w) if (k_i % 2) == 0 else (w, h)
+
                 for kp in kpsoi_i.keypoints:
                     y, x = kp.y, kp.x
-                    y_diff = abs(h - y)
-                    x_diff = abs(w - x)
-                    if k_i == 1:
-                        # (W-yd, xd)
-                        x_aug = w_aug - y_diff
-                        y_aug = x_diff
-                    elif k_i == 2:
-                        # (xd, yd)
-                        x_aug = x_diff
-                        y_aug = y_diff
-                    else:  # k_i == 3
-                        # (yd, H-xd)
-                        x_aug = y_diff
-                        y_aug = h_aug - x_diff
-                    kps_aug.append(ia.Keypoint(x=x_aug, y=y_aug))
+                    yr, xr = y, x
+                    wr, hr = w, h
+                    for _ in sm.xrange(k_i):
+                        xr, yr = (hr - 1) - yr, xr
+                        wr, hr = hr, wr
+                    kps_aug.append(ia.Keypoint(x=xr, y=yr))
 
                 shape_aug = tuple([h_aug, w_aug] + list(kpsoi_i.shape[2:]))
                 kpsoi_i_aug = ia.KeypointsOnImage(kps_aug, shape=shape_aug)
