@@ -46,6 +46,7 @@ def main():
     test_Lambda()
     test_AssertLambda()
     test_AssertShape()
+    test_ChannelShuffle()
     test_2d_inputs()
 
     time_end = time.time()
@@ -2836,6 +2837,87 @@ def test_WithChannels():
     aug = iaa.WithChannels(1, children, name="WithChannelsTest")
     expected = "WithChannels(channels=[1], name=WithChannelsTest, children=%s, deterministic=False)" % (str(children),)
     assert aug.__repr__() == aug.__str__() == expected
+
+
+def test_ChannelShuffle():
+    reseed()
+
+    # p=1.0
+    aug = iaa.ChannelShuffle(p=1.0)
+    img = np.uint8([0, 1]).reshape((1, 1, 2))
+    expected = [
+        np.uint8([0, 1]).reshape((1, 1, 2)),
+        np.uint8([1, 0]).reshape((1, 1, 2))
+    ]
+    seen = [False, False]
+    for _ in sm.xrange(100):
+        img_aug = aug.augment_image(img)
+        if np.array_equal(img_aug, expected[0]):
+            seen[0] = True
+        elif np.array_equal(img_aug, expected[1]):
+            seen[1] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
+
+    # p=0
+    aug = iaa.ChannelShuffle(p=0)
+    img = np.uint8([0, 1]).reshape((1, 1, 2))
+    for _ in sm.xrange(20):
+        img_aug = aug.augment_image(img)
+        assert np.array_equal(img_aug, img)
+
+    # channels=[0, 2]
+    aug = iaa.ChannelShuffle(p=1.0, channels=[0, 2])
+    img = np.uint8([0, 1, 2]).reshape((1, 1, 3))
+    expected = [
+        np.uint8([0, 1, 2]).reshape((1, 1, 3)),
+        np.uint8([2, 1, 0]).reshape((1, 1, 3))
+    ]
+    seen = [False, False]
+    for _ in sm.xrange(100):
+        img_aug = aug.augment_image(img)
+        if np.array_equal(img_aug, expected[0]):
+            seen[0] = True
+        elif np.array_equal(img_aug, expected[1]):
+            seen[1] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
+
+    # check p parsing
+    aug = iaa.ChannelShuffle(p=0.9, channels=[0, 2])
+    assert isinstance(aug.p, iap.Binomial)
+    assert isinstance(aug.p.p, iap.Deterministic)
+    assert np.allclose(aug.p.p.value, 0.9)
+    assert aug.channels == [0, 2]
+
+    # get_parameters()
+    aug = iaa.ChannelShuffle(p=1.0, channels=[0, 2])
+    assert aug.get_parameters()[0] == aug.p
+    assert aug.get_parameters()[1] == aug.channels
+
+    # heatmaps may not change
+    aug = iaa.ChannelShuffle(p=1.0)
+    hm = ia.HeatmapsOnImage(np.float32([[0, 0.5, 1.0]]), shape=(4, 4, 3))
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    assert hm_aug.shape == (4, 4, 3)
+    assert hm_aug.arr_0to1.shape == (1, 3, 1)
+    assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
+    # keypoints may not change
+    aug = iaa.ChannelShuffle(p=1.0)
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=3, y=1), ia.Keypoint(x=2, y=4)], shape=(10, 10, 3))
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (10, 10, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 1)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 2)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 4)
 
 
 def test_2d_inputs():
