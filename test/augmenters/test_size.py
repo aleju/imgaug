@@ -151,6 +151,7 @@ def test_Scale():
     assert 50 < np.average(observed2d) < 205
     assert 50 < np.average(observed3d) < 205
 
+    # heatmaps
     aug = iaa.Scale({"height": 8, "width": 12})
     heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
     heatmaps_aug = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img3d.shape)])[0]
@@ -162,6 +163,44 @@ def test_Scale():
     assert np.average(heatmaps_aug.get_arr()[:, 0]) < 0.05
     assert 0.8 < np.average(heatmaps_aug.get_arr()[2:6, 2:10]) < 1 + 1e-6
 
+    # heatmaps with different sizes than image
+    aug = iaa.Scale({"height": 16, "width": 2.0})
+    heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2*base_img3d.shape[0], 2*base_img3d.shape[1], 3))
+    heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
+    assert heatmaps_aug.shape == (16, int(base_img3d.shape[1]*2*2), 3)
+    assert heatmaps_aug.arr_0to1.shape == (8, 16, 1)
+    assert 0 - 1e-6 < heatmaps_aug.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < heatmaps_aug.max_value < 1 + 1e-6
+    assert np.average(heatmaps_aug.get_arr()[0, :]) < 0.05
+    assert np.average(heatmaps_aug.get_arr()[-1:, :]) < 0.05
+    assert np.average(heatmaps_aug.get_arr()[:, 0]) < 0.05
+    assert 0.8 < np.average(heatmaps_aug.get_arr()[2:6, 2:10]) < 1 + 1e-6
+
+    # keypoints on 3d image
+    aug = iaa.Scale({"height": 8, "width": 12})
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=4, y=1)], shape=base_img3d.shape)
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (8, 12, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 1.5)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 6)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+
+    # keypoints on 2d image,
+    # different resize factors per axis
+    aug = iaa.Scale({"height": 8, "width": 3.0})
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=4, y=1)], shape=base_img2d.shape)
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (8, 24)
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 12)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+
+    # images with stochastic parameter (choice)
     aug = iaa.Scale([12, 14])
     seen2d = [False, False]
     seen3d = [False, False]
@@ -183,6 +222,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # images with stochastic parameter (uniform)
     aug = iaa.Scale((12, 14))
     seen2d = [False, False, False]
     seen3d = [False, False, False]
@@ -208,66 +248,77 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # test "keep"
     aug = iaa.Scale("keep")
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == base_img2d.shape
     assert observed3d.shape == base_img3d.shape
 
+    # empty list, no change
     aug = iaa.Scale([])
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == base_img2d.shape
     assert observed3d.shape == base_img3d.shape
 
+    # empty dict, no change
     aug = iaa.Scale({})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == base_img2d.shape
     assert observed3d.shape == base_img3d.shape
 
+    # only change height
     aug = iaa.Scale({"height": 11})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (11, base_img2d.shape[1])
     assert observed3d.shape == (11, base_img3d.shape[1], 3)
 
+    # only change width
     aug = iaa.Scale({"width": 13})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (base_img2d.shape[0], 13)
     assert observed3d.shape == (base_img3d.shape[0], 13, 3)
 
+    # change height and width
     aug = iaa.Scale({"height": 12, "width": 13})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (12, 13)
     assert observed3d.shape == (12, 13, 3)
 
+    # change height, keep width
     aug = iaa.Scale({"height": 12, "width": "keep"})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (12, base_img2d.shape[1])
     assert observed3d.shape == (12, base_img3d.shape[1], 3)
 
+    # keep height, change width
     aug = iaa.Scale({"height": "keep", "width": 12})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (base_img2d.shape[0], 12)
     assert observed3d.shape == (base_img3d.shape[0], 12, 3)
 
+    # change height, keep width at same aspect ratio
     aug = iaa.Scale({"height": 12, "width": "keep-aspect-ratio"})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (12, int(12 * aspect_ratio2d))
     assert observed3d.shape == (12, int(12 * aspect_ratio3d), 3)
 
+    # keep height at same aspect ration, change width
     aug = iaa.Scale({"height": "keep-aspect-ratio", "width": 12})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (int(12 * (1/aspect_ratio2d)), 12)
     assert observed3d.shape == (int(12 * (1/aspect_ratio3d)), 12, 3)
 
+    # change height randomly, width deterministically
     aug = iaa.Scale({"height": [12, 14], "width": 12})
     seen2d = [False, False]
     seen3d = [False, False]
@@ -289,6 +340,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # change height deterministically, width randomly
     aug = iaa.Scale({"height": 12, "width": [12, 14]})
     seen2d = [False, False]
     seen3d = [False, False]
@@ -310,6 +362,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # change height deterministically, width randomly
     aug = iaa.Scale({"height": 12, "width": iap.Choice([12, 14])})
     seen2d = [False, False]
     seen3d = [False, False]
@@ -331,6 +384,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # change height randomly, width deterministically
     aug = iaa.Scale({"height": (12, 14), "width": 12})
     seen2d = [False, False, False]
     seen3d = [False, False, False]
@@ -356,6 +410,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # increase size by a factor of 2.0
     aug = iaa.Scale(2.0)
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
@@ -364,6 +419,7 @@ def test_Scale():
     assert intensity_low < np.average(observed2d) < intensity_high
     assert intensity_low < np.average(observed3d) < intensity_high
 
+    # increase size by a random factor
     aug = iaa.Scale([2.0, 4.0])
     seen2d = [False, False]
     seen3d = [False, False]
@@ -387,6 +443,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # increase size by a random factor
     aug = iaa.Scale(iap.Choice([2.0, 4.0]))
     seen2d = [False, False]
     seen3d = [False, False]
@@ -410,6 +467,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # decrease size by a random factor
     base_img2d = base_img2d[0:4, 0:4]
     base_img3d = base_img3d[0:4, 0:4, :]
     aug = iaa.Scale((0.76, 1.0))
@@ -435,6 +493,7 @@ def test_Scale():
     assert not not_seen2d
     assert not not_seen3d
 
+    # decrease size by random factors, one per side
     base_img2d = base_img2d[0:4, 0:4]
     base_img3d = base_img3d[0:4, 0:4, :]
     aug = iaa.Scale({"height": (0.76, 1.0), "width": (0.76, 1.0)})
@@ -462,15 +521,17 @@ def test_Scale():
     assert not not_seen2d
     assert not not_seen3d
 
+    # test bad input
     got_exception = False
     try:
         aug = iaa.Scale("foo")
-        observed2d = aug.augment_image(base_img2d)
+        _ = aug.augment_image(base_img2d)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
     assert got_exception
 
+    # test get_parameters
     aug = iaa.Scale(size=1, interpolation="nearest")
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Deterministic)
