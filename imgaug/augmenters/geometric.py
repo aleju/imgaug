@@ -1818,7 +1818,7 @@ class PerspectiveTransform(meta.Augmenter):
                 h, w = arr.shape[0:2]
                 heatmaps_i_aug = heatmaps_i_aug.scale((h, w))
             else:
-                heatmaps_i_aug.shape[0:2] = (max_heights_imgs[i], max_widths_imgs[i])
+                heatmaps_i_aug.shape = (max_heights_imgs[i], max_widths_imgs[i]) + heatmaps_i_aug.shape[2:]
 
             result[i] = heatmaps_i_aug
 
