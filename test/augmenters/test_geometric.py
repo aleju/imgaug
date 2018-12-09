@@ -2561,6 +2561,40 @@ def test_ElasticTransformation():
     iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
     iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
 
+    # test alignment between images and heatmaps
+    img = np.zeros((80, 80), dtype=np.uint8)
+    img[:, 30:50] = 255
+    img[30:50, :] = 255
+    hm = ia.HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
+    aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant", cval=0)
+    aug_det = aug.to_deterministic()
+    img_aug = aug_det.augment_image(img)
+    hm_aug = aug_det.augment_heatmaps([hm])[0]
+    assert hm_aug.shape == (80, 80)
+    assert hm_aug.arr_0to1.shape == (80, 80, 1)
+    img_aug_mask = img_aug > 255*0.1
+    hm_aug_mask = hm_aug.arr_0to1 > 0.1
+    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.99
+
+    # test alignment between images and heatmaps
+    # here with heatmaps that are smaller than the image
+    img = np.zeros((80, 80), dtype=np.uint8)
+    img[:, 30:50] = 255
+    img[30:50, :] = 255
+    img_small = ia.imresize_single_image(img, (40, 40), interpolation="nearest")
+    hm = ia.HeatmapsOnImage(img_small.astype(np.float32)/255.0, shape=(80, 80))
+    aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant", cval=0)
+    aug_det = aug.to_deterministic()
+    img_aug = aug_det.augment_image(img)
+    hm_aug = aug_det.augment_heatmaps([hm])[0]
+    assert hm_aug.shape == (80, 80)
+    assert hm_aug.arr_0to1.shape == (40, 40, 1)
+    img_aug_mask = img_aug > 255*0.1
+    hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, (80, 80), interpolation="nearest") > 0.1
+    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.96
+
     # get_parameters()
     aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")
     params = aug.get_parameters()
