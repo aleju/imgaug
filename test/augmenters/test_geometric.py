@@ -2112,7 +2112,7 @@ def test_PiecewiseAffine():
     assert isinstance(params[3], iap.Deterministic)
     assert isinstance(params[4], iap.Deterministic)
     assert isinstance(params[5], iap.Deterministic)
-    assert params[6] == False
+    assert params[6] is False
     assert 0.1 - 1e-8 < params[0].value < 0.1 + 1e-8
     assert params[1].value == 8
     assert params[2].value == 10
@@ -2132,13 +2132,51 @@ def test_PerspectiveTransform():
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
     aug.jitter = iap.Deterministic(0.2)
     observed = aug.augment_image(img)
-    expected = img[int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8)]
+    y1 = int(30*0.2)
+    y2 = int(30*0.8)
+    x1 = int(30*0.2)
+    x2 = int(30*0.8)
+    expected = img[y1:y2, x1:x2]
     assert all([abs(s1-s2) <= 1 for s1, s2 in zip(observed.shape, expected.shape)])
     if observed.shape != expected.shape:
         observed = ia.imresize_single_image(observed, expected.shape[0:2], interpolation="cubic")
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
+
+    hm = ia.HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(30, 30))
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    expected = (y2 - y1, x2 - x1)
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(hm_aug.shape, expected)])
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(hm_aug.arr_0to1.shape, expected + (1,))])
+    img_aug_mask = observed > 255*0.1
+    hm_aug_mask = hm_aug.arr_0to1 > 0.1
+    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.99
+
+    # without keep_size, different heatmap size
+    img_small = ia.imresize_single_image(img, (20, 25), interpolation="cubic")
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+    aug.jitter = iap.Deterministic(0.2)
+    img_aug = aug.augment_image(img)
+    y1 = int(30*0.2)
+    y2 = int(30*0.8)
+    x1 = int(30*0.2)
+    x2 = int(30*0.8)
+    x1_small = int(25*0.2)
+    x2_small = int(25*0.8)
+    y1_small = int(20*0.2)
+    y2_small = int(20*0.8)
+    hm = ia.HeatmapsOnImage(img_small.astype(np.float32)/255.0, shape=(30, 30))
+    hm_aug = aug.augment_heatmaps([hm])[0]
+    expected = (y2 - y1, x2 - x1)
+    expected_small = (y2_small - y1_small, x2_small - x1_small, 1)
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(hm_aug.shape, expected)])
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(hm_aug.arr_0to1.shape, expected_small)])
+    img_aug_mask = img_aug > 255*0.1
+    hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic") > 0.1
+    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.96
 
     # with keep_size
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
