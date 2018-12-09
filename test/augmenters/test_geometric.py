@@ -1800,6 +1800,16 @@ def test_PiecewiseAffine():
     assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
     assert np.array_equal(observed_arr, heatmaps_arr)
 
+    # scale 0, keypoints
+    aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=3), ia.Keypoint(x=3, y=8)], shape=(14, 14, 3))
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (14, 14, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 5)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 3)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 3)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 8)
+
     # stronger scale should lead to stronger changes
     aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
     aug2 = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
@@ -1821,6 +1831,54 @@ def test_PiecewiseAffine():
     assert heatmaps.min_value - 1e-6 < observed2.min_value < heatmaps.min_value + 1e-6
     assert heatmaps.max_value - 1e-6 < observed2.max_value < heatmaps.max_value + 1e-6
     assert np.average(observed1_arr[~mask]) < np.average(observed2_arr[~mask])
+
+    # strong scale, measure alignment between images and heatmaps
+    aug = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    aug_det = aug.to_deterministic()
+    img_aug = aug_det.augment_image(img)
+    hm_aug = aug_det.augment_heatmaps([heatmaps])[0]
+    assert hm_aug.shape == (60, 80, 3)
+    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    img_aug_mask = img_aug > 255*0.1
+    hm_aug_mask = hm_aug.arr_0to1 > 0.1
+    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.98
+
+    # strong scale, measure alignment between images and heatmaps
+    # heatmaps here smaller than image
+    aug_det = aug.to_deterministic()
+    heatmaps_small = ia.HeatmapsOnImage(
+        (ia.imresize_single_image(img, (30, 40+10), interpolation="cubic") / 255.0).astype(np.float32),
+        shape=(60, 80, 3)
+    )
+    img_aug = aug_det.augment_image(img)
+    hm_aug = aug_det.augment_heatmaps([heatmaps_small])[0]
+    assert hm_aug.shape == (60, 80, 3)
+    assert hm_aug.arr_0to1.shape == (30, 40+10, 1)
+    img_aug_mask = img_aug > 255*0.1
+    hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, (60, 80), interpolation="cubic") > 0.1
+    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.9  # seems to be 0.948 actually
+
+    # strong scale, measure alignment between images and keypoints
+    aug = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    aug_det = aug.to_deterministic()
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=15), ia.Keypoint(x=17, y=12)], shape=(24, 30, 3))
+    img_kps = np.zeros((24, 30, 3), dtype=np.uint8)
+    img_kps = kpsoi.draw_on_image(img_kps, color=[255, 255, 255])
+    img_kps_aug = aug_det.augment_image(img_kps)
+    kpsoi_aug = aug_det.augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (24, 30, 3)
+    bb1 = ia.BoundingBox(x1=kpsoi_aug.keypoints[0].x-1, y1=kpsoi_aug.keypoints[0].y-1,
+                         x2=kpsoi_aug.keypoints[0].x+1, y2=kpsoi_aug.keypoints[0].y+1)
+    bb2 = ia.BoundingBox(x1=kpsoi_aug.keypoints[1].x-1, y1=kpsoi_aug.keypoints[1].y-1,
+                         x2=kpsoi_aug.keypoints[1].x+1, y2=kpsoi_aug.keypoints[1].y+1)
+    patch1 = bb1.extract_from_image(img_kps_aug)
+    patch2 = bb2.extract_from_image(img_kps_aug)
+    assert np.max(patch1) > 150
+    assert np.max(patch2) > 150
+    assert np.average(img_kps_aug) < 40
 
     # scale as list
     aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
