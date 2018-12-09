@@ -207,6 +207,8 @@ class Affine(meta.Augmenter):
         part of the image plane. Activating this can be useful e.g. for rotations by 45 degrees to avoid that the
         image corners are outside of the image plane.
         Note that activating this will negate translation.
+        Note also that activating this may lead to image sizes differing from the input image sizes. To avoid this,
+        wrap ``Affine`` in ``KeepSizeByResize``, e.g. ``KeepSizeByResize(Affine(...))``.
 
     mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         Parameter that defines the handling of newly created pixels.
