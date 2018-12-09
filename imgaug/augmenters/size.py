@@ -773,7 +773,6 @@ class CropAndPad(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # TODO add test
         result = []
         nb_heatmaps = len(heatmaps)
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
