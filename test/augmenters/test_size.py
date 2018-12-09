@@ -1224,6 +1224,66 @@ def test_Crop():
         assert len(set(movements)) == 2
         assert len(set(movements_det)) == 1
 
+    # crop smaller heatmaps
+    # heatmap is (6, 8), image is (6, 16)
+    # image is cropped by (1, 4, 1, 4)
+    # expected image size: (4, 8)
+    # expected heatmap size: (4, 4)
+    aug = iaa.Crop(px=(1, 4, 1, 4), keep_size=False)
+    heatmaps_arr_small = np.zeros((6, 8), dtype=np.float32)
+    heatmaps_arr_small[1:-1, 1:-1] = 1.0
+    top, bottom, left, right = 1, 1, 2, 2
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (4, 8)
+    assert observed.arr_0to1.shape == (4, 4, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.arr_0to1[..., 0], heatmaps_arr_small_cropped)
+
+    # crop smaller heatmaps, with keep_size=True
+    # heatmap is (6, 8), image is (6, 16)
+    # image is cropped by (1, 4, 1, 4)
+    # expected image size: (4, 8) -> (6, 16) after resize
+    # expected heatmap size: (4, 4) -> (6, 4) after resize
+    aug = iaa.Crop(px=(1, 4, 1, 4), keep_size=True)
+    heatmaps_arr_small = np.zeros((6, 8), dtype=np.float32)
+    heatmaps_arr_small[1:-1, 1:-1] = 1.0
+    top, bottom, left, right = 1, 1, 2, 2
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (6, 16)
+    assert observed.arr_0to1.shape == (6, 8, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(
+        observed.arr_0to1[..., 0],
+        np.clip(
+            ia.imresize_single_image(heatmaps_arr_small_cropped, (6, 8), interpolation="cubic"),
+            0, 1.0
+        )
+    )
+
+    # keypoints
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=3, y=6), ia.Keypoint(x=8, y=5)], shape=(14, 14, 3))
+    kpsoi_aug = iaa.Crop((1, 0, 4, 4), keep_size=False).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (9, 10, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 3-4)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 6-1)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 8-4)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 5-1)
+
+    # keypoints, with keep_size=True
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=3, y=6), ia.Keypoint(x=8, y=5)], shape=(14, 14, 3))
+    kpsoi_aug = iaa.Crop((1, 0, 4, 4), keep_size=True).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (14, 14, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, ((3-4)/10)*14)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, ((6-1)/9)*14)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, ((8-4)/10)*14)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, ((5-1)/9)*14)
+
     # ------------------
     # crop by percentages
     # ------------------
@@ -1283,6 +1343,66 @@ def test_Crop():
         keypoints_moved = [keypoints[0].shift(x=-left_px, y=-top_px)]
         observed = aug.augment_keypoints(keypoints)
         assert keypoints_equal(observed, keypoints_moved)
+
+    # crop smaller heatmaps
+    # heatmap is (8, 12), image is (16, 32)
+    # image is cropped by (0.25, 0.25, 0.25, 0.25)
+    # expected image size: (8, 16)
+    # expected heatmap size: (4, 6)
+    aug = iaa.Crop(percent=(0.25, 0.25, 0.25, 0.25), keep_size=False)
+    heatmaps_arr_small = np.zeros((8, 12), dtype=np.float32)
+    heatmaps_arr_small[2:-2, 4:-4] = 1.0
+    top, bottom, left, right = 2, 2, 3, 3
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(16, 32))])[0]
+    assert observed.shape == (8, 16)
+    assert observed.arr_0to1.shape == (4, 6, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.arr_0to1[..., 0], heatmaps_arr_small_cropped)
+
+    # crop smaller heatmaps, with keep_size=True
+    # heatmap is (8, 12), image is (16, 32)
+    # image is cropped by (0.25, 0.25, 0.25, 0.25)
+    # expected image size: (8, 16) -> (16, 32) after resize
+    # expected heatmap size: (4, 6) -> (8, 12) after resize
+    aug = iaa.Crop(percent=(0.25, 0.25, 0.25, 0.25), keep_size=True)
+    heatmaps_arr_small = np.zeros((8, 12), dtype=np.float32)
+    heatmaps_arr_small[2:-2, 4:-4] = 1.0
+    top, bottom, left, right = 2, 2, 3, 3
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(16, 32))])[0]
+    assert observed.shape == (16, 32)
+    assert observed.arr_0to1.shape == (8, 12, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(
+        observed.arr_0to1[..., 0],
+        np.clip(
+            ia.imresize_single_image(heatmaps_arr_small_cropped, (8, 12), interpolation="cubic"),
+            0, 1.0
+        )
+    )
+
+    # keypoints
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=12, y=10), ia.Keypoint(x=8, y=12)], shape=(16, 20, 3))
+    kpsoi_aug = iaa.Crop(percent=(0.25, 0, 0.5, 0.1), keep_size=False).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (4, 18, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 12-2)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 10-4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 8-2)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 12-4)
+
+    # keypoints, with keep_size=True
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=12, y=10), ia.Keypoint(x=8, y=12)], shape=(16, 20, 3))
+    kpsoi_aug = iaa.Crop(percent=(0.25, 0, 0.5, 0.1), keep_size=True).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (16, 20, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, ((12-2)/18)*20)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, ((10-4)/4)*16)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, ((8-2)/18)*20)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, ((12-4)/4)*16)
 
     # test crop by range of percentages
     aug = iaa.Crop(percent=((0, 0.1), 0, 0, 0), keep_size=False)
