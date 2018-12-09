@@ -21,6 +21,7 @@ def main():
     test_PiecewiseAffine()
     test_PerspectiveTransform()
     test_ElasticTransformation()
+    test_Rot90()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
@@ -2573,6 +2574,193 @@ def test_ElasticTransformation():
     assert params[2].value == 2
     assert params[3].value == 10
     assert params[4].value == "constant"
+
+
+def test_Rot90():
+    img = np.arange(4*4*3).reshape((4, 4, 3)).astype(np.uint8)
+    hms = ia.HeatmapsOnImage(img[..., 0:1].astype(np.float32) / 255, shape=(4, 4, 3))
+    hms_smaller = ia.HeatmapsOnImage(np.float32([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]), shape=(4, 8, 3))
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=3)], shape=(4, 8, 3))
+
+    # k=0, k=4
+    for k in [0, 4]:
+        aug = iaa.Rot90(k, keep_size=False)
+
+        img_aug = aug.augment_image(img)
+        assert img_aug.dtype == np.uint8
+        assert np.array_equal(img_aug, img)
+
+        hms_aug = aug.augment_heatmaps([hms])[0]
+        assert hms_aug.arr_0to1.dtype == hms.arr_0to1.dtype
+        assert np.allclose(hms_aug.arr_0to1, hms.arr_0to1)
+        assert hms_aug.shape == hms.shape
+
+        kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+        assert kpsoi_aug.shape == kpsoi.shape
+        for kp_aug, kp in zip(kpsoi_aug.keypoints, kpsoi.keypoints):
+            assert np.allclose([kp_aug.x, kp_aug.y], [kp.x, kp.y])
+
+    # k=1, k=5
+    for k in [1, 5]:
+        aug = iaa.Rot90(k, keep_size=False)
+
+        img_aug = aug.augment_image(img)
+        assert img_aug.dtype == np.uint8
+        assert np.array_equal(img_aug, np.rot90(img, 1, axes=(1, 0)))
+
+        hms_aug = aug.augment_heatmaps([hms])[0]
+        assert hms_aug.arr_0to1.dtype == hms.arr_0to1.dtype
+        assert np.allclose(hms_aug.arr_0to1, np.rot90(hms.arr_0to1, 1, axes=(1, 0)))
+        assert hms_aug.shape == (4, 4, 3)
+
+        hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+        assert hms_smaller_aug.arr_0to1.dtype == hms_smaller.arr_0to1.dtype
+        assert np.allclose(hms_smaller_aug.arr_0to1, np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0)))
+        assert hms_smaller_aug.shape == (8, 4, 3)
+
+        kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+        assert kpsoi_aug.shape == (8, 4, 3)
+        expected = [(1, 1), (0, 2)]
+        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
+            assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    # k=2
+    aug = iaa.Rot90(2, keep_size=False)
+
+    img_aug = aug.augment_image(img)
+    assert img_aug.dtype == np.uint8
+    assert np.array_equal(img_aug, np.rot90(img, 2, axes=(1, 0)))
+
+    hms_aug = aug.augment_heatmaps([hms])[0]
+    assert hms_aug.arr_0to1.dtype == hms.arr_0to1.dtype
+    assert np.allclose(hms_aug.arr_0to1, np.rot90(hms.arr_0to1, 2, axes=(1, 0)))
+    assert hms_aug.shape == (4, 4, 3)
+
+    hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+    assert hms_smaller_aug.arr_0to1.dtype == hms_smaller.arr_0to1.dtype
+    assert np.allclose(hms_smaller_aug.arr_0to1, np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
+    assert hms_smaller_aug.shape == (4, 8, 3)
+
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (4, 8, 3)
+    expected = [(6, 1), (5, 0)]
+    for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
+        assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    # k=3, k=-1
+    for k in [3, -1]:
+        aug = iaa.Rot90(k, keep_size=False)
+
+        img_aug = aug.augment_image(img)
+        assert img_aug.dtype == np.uint8
+        assert np.array_equal(img_aug, np.rot90(img, 3, axes=(1, 0)))
+
+        hms_aug = aug.augment_heatmaps([hms])[0]
+        assert hms_aug.arr_0to1.dtype == hms.arr_0to1.dtype
+        assert np.allclose(hms_aug.arr_0to1, np.rot90(hms.arr_0to1, 3, axes=(1, 0)))
+        assert hms_aug.shape == (4, 4, 3)
+
+        hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+        assert hms_smaller_aug.arr_0to1.dtype == hms_smaller.arr_0to1.dtype
+        assert np.allclose(hms_smaller_aug.arr_0to1, np.rot90(hms_smaller.arr_0to1, 3, axes=(1, 0)))
+        assert hms_smaller_aug.shape == (8, 4, 3)
+
+        kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+        assert kpsoi_aug.shape == (8, 4, 3)
+        expected = [(2, 6), (3, 5)]
+        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
+            assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    # verify once without np.rot90
+    img_aug = iaa.Rot90(k=1, keep_size=False).augment_image(
+        np.uint8([[1, 0, 0],
+                  [0, 2, 0]])
+    )
+    expected = np.uint8([[0, 1], [2, 0], [0, 0]])
+    assert np.array_equal(img_aug, expected)
+
+    # keep_size=True
+    aug = iaa.Rot90(1, keep_size=True)
+
+    img_nonsquare = np.arange(5*4*3).reshape((5, 4, 3)).astype(np.uint8)
+    img_aug = aug.augment_image(img_nonsquare)
+    assert img_aug.dtype == np.uint8
+    assert np.array_equal(
+        img_aug, ia.imresize_single_image(np.rot90(img_nonsquare, 1, axes=(1, 0)), (5, 4), interpolation="cubic")
+    )
+
+    hms_aug = aug.augment_heatmaps([hms])[0]
+    assert hms_aug.arr_0to1.dtype == hms.arr_0to1.dtype
+    assert np.allclose(hms_aug.arr_0to1, np.rot90(hms.arr_0to1, 1, axes=(1, 0)))
+    assert hms_aug.shape == (4, 4, 3)
+
+    hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+    assert hms_smaller_aug.arr_0to1.dtype == hms_smaller.arr_0to1.dtype
+    hms_smaller_rot = np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0))
+    hms_smaller_rot = np.clip(ia.imresize_single_image(hms_smaller_rot, (2, 3), interpolation="cubic"), 0.0, 1.0)
+    assert np.allclose(hms_smaller_aug.arr_0to1, hms_smaller_rot)
+    assert hms_smaller_aug.shape == (4, 8, 3)
+
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (4, 8, 3)
+    expected = [(1, 1), (0, 2)]
+    expected = [(8*x/4, 4*y/8) for x, y in expected]
+    for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
+        assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    # test parameter stochasticity
+    aug = iaa.Rot90([1, 3])
+    assert isinstance(aug.k, iap.Choice)
+    assert len(aug.k.a) == 2
+    assert aug.k.a[0] == 1
+    assert aug.k.a[1] == 3
+
+    class _TwoValueParam(iap.StochasticParameter):
+        def __init__(self, v1, v2):
+            super(_TwoValueParam, self).__init__()
+            self.v1 = v1
+            self.v2 = v2
+
+        def _draw_samples(self, size, random_state):
+            arr = np.full(size, self.v1, dtype=np.int32)
+            arr[1::2] = self.v2
+            return arr
+
+    aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+    imgs_aug = aug.augment_images([img] * 4)
+    assert np.array_equal(imgs_aug[0], np.rot90(img, 1, axes=(1, 0)))
+    assert np.array_equal(imgs_aug[1], np.rot90(img, 2, axes=(1, 0)))
+    assert np.array_equal(imgs_aug[2], np.rot90(img, 1, axes=(1, 0)))
+    assert np.array_equal(imgs_aug[3], np.rot90(img, 2, axes=(1, 0)))
+
+    hms_aug = aug.augment_heatmaps([hms_smaller] * 4)
+    assert hms_aug[0].shape == (8, 4, 3)
+    assert hms_aug[1].shape == (4, 8, 3)
+    assert hms_aug[2].shape == (8, 4, 3)
+    assert hms_aug[3].shape == (4, 8, 3)
+    assert np.allclose(hms_aug[0].arr_0to1, np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0)))
+    assert np.allclose(hms_aug[1].arr_0to1, np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
+    assert np.allclose(hms_aug[2].arr_0to1, np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0)))
+    assert np.allclose(hms_aug[3].arr_0to1, np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
+
+    kpsoi_aug = aug.augment_keypoints([kpsoi] * 4)
+    assert kpsoi_aug[0].shape == (8, 4, 3)
+    assert kpsoi_aug[1].shape == (4, 8, 3)
+    assert kpsoi_aug[2].shape == (8, 4, 3)
+    assert kpsoi_aug[3].shape == (4, 8, 3)
+    assert np.allclose([kpsoi_aug[0].keypoints[0].x, kpsoi_aug[0].keypoints[0].y], [1, 1])
+    assert np.allclose([kpsoi_aug[0].keypoints[1].x, kpsoi_aug[0].keypoints[1].y], [0, 2])
+    assert np.allclose([kpsoi_aug[1].keypoints[0].x, kpsoi_aug[1].keypoints[0].y], [6, 1])
+    assert np.allclose([kpsoi_aug[1].keypoints[1].x, kpsoi_aug[1].keypoints[1].y], [5, 0])
+    assert np.allclose([kpsoi_aug[2].keypoints[0].x, kpsoi_aug[2].keypoints[0].y], [1, 1])
+    assert np.allclose([kpsoi_aug[2].keypoints[1].x, kpsoi_aug[2].keypoints[1].y], [0, 2])
+    assert np.allclose([kpsoi_aug[3].keypoints[0].x, kpsoi_aug[3].keypoints[0].y], [6, 1])
+    assert np.allclose([kpsoi_aug[3].keypoints[1].x, kpsoi_aug[3].keypoints[1].y], [5, 0])
+
+    # get_parameters()
+    aug = iaa.Rot90([1, 3], keep_size=False)
+    assert aug.get_parameters()[0] == aug.k
+    assert aug.get_parameters()[1] is False
 
 
 if __name__ == "__main__":
