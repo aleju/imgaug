@@ -132,1086 +132,309 @@ The images below show examples for most augmentation techniques (values written 
 
 <table>
 
+<tr><td colspan="5"><strong>meta</strong></td></tr>
 <tr>
-<td colspan="3">
-
-**meta**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Noop
-</small>
-</td>
-<td colspan="1">
-<small>
-ChannelShuffle
-</small>
-</td>
+<td colspan="1"><sub>Noop</sub></td>
+<td colspan="1"><sub>ChannelShuffle</sub></td>
 <td>&nbsp;</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![Noop](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/noop.gif?raw=true "Noop")
-
-</td>
-<td colspan="1">
-
-![ChannelShuffle](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/channelshuffle.gif?raw=true "ChannelShuffle")
-
-</td>
-<td>&nbsp;</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**arithmetic**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Add
-</small>
-</td>
-<td colspan="1">
-<small>
-Add<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-AdditiveGaussianNoise
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![Add](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/add.gif?raw=true "Add")
-
-</td>
-<td colspan="1">
-
-![Add per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/add_per_channel_true.gif?raw=true "Add per_channel=True")
-
-</td>
-<td colspan="1">
-
-![AdditiveGaussianNoise](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/additivegaussiannoise.gif?raw=true "AdditiveGaussianNoise")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-AdditiveGaussianNoise<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-AdditiveLaplaceNoise
-</small>
-</td>
-<td colspan="1">
-<small>
-AdditiveLaplaceNoise<br/>(per_channel=True)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![AdditiveGaussianNoise per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/additivegaussiannoise_per_channel_true.gif?raw=true "AdditiveGaussianNoise per_channel=True")
-
-</td>
-<td colspan="1">
-
-![AdditiveLaplaceNoise](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/additivelaplacenoise.gif?raw=true "AdditiveLaplaceNoise")
-
-</td>
-<td colspan="1">
-
-![AdditiveLaplaceNoise per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/additivelaplacenoise_per_channel_true.gif?raw=true "AdditiveLaplaceNoise per_channel=True")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-AdditivePoissonNoise
-</small>
-</td>
-<td colspan="1">
-<small>
-AdditivePoissonNoise<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-Multiply
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![AdditivePoissonNoise](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/additivepoissonnoise.gif?raw=true "AdditivePoissonNoise")
-
-</td>
-<td colspan="1">
-
-![AdditivePoissonNoise per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/additivepoissonnoise_per_channel_true.gif?raw=true "AdditivePoissonNoise per_channel=True")
-
-</td>
-<td colspan="1">
-
-![Multiply](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/multiply.gif?raw=true "Multiply")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Multiply<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-Dropout
-</small>
-</td>
-<td colspan="1">
-<small>
-Dropout<br/>(per_channel=True)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![Multiply per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/multiply_per_channel_true.gif?raw=true "Multiply per_channel=True")
-
-</td>
-<td colspan="1">
-
-![Dropout](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/dropout.gif?raw=true "Dropout")
-
-</td>
-<td colspan="1">
-
-![Dropout per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/dropout_per_channel_true.gif?raw=true "Dropout per_channel=True")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-CoarseDropout<br/>(p=0.2)
-</small>
-</td>
-<td colspan="1">
-<small>
-CoarseDropout<br/>(p=0.2, per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-ImpulseNoise
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![CoarseDropout p=0.2](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsedropout_p_0_2.gif?raw=true "CoarseDropout p=0.2")
-
-</td>
-<td colspan="1">
-
-![CoarseDropout p=0.2, per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsedropout_p_0_2_per_channel_true.gif?raw=true "CoarseDropout p=0.2, per_channel=True")
-
-</td>
-<td colspan="1">
-
-![ImpulseNoise](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/impulsenoise.gif?raw=true "ImpulseNoise")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-SaltAndPepper
-</small>
-</td>
-<td colspan="1">
-<small>
-Salt
-</small>
-</td>
-<td colspan="1">
-<small>
-Pepper
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![SaltAndPepper](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/saltandpepper.gif?raw=true "SaltAndPepper")
-
-</td>
-<td colspan="1">
-
-![Salt](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/salt.gif?raw=true "Salt")
-
-</td>
-<td colspan="1">
-
-![Pepper](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/pepper.gif?raw=true "Pepper")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-CoarseSaltAndPepper<br/>(p=0.2)
-</small>
-</td>
-<td colspan="1">
-<small>
-CoarseSalt<br/>(p=0.2)
-</small>
-</td>
-<td colspan="1">
-<small>
-CoarsePepper<br/>(p=0.2)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![CoarseSaltAndPepper p=0.2](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsesaltandpepper_p_0_2.gif?raw=true "CoarseSaltAndPepper p=0.2")
-
-</td>
-<td colspan="1">
-
-![CoarseSalt p=0.2](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsesalt_p_0_2.gif?raw=true "CoarseSalt p=0.2")
-
-</td>
-<td colspan="1">
-
-![CoarsePepper p=0.2](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/coarsepepper_p_0_2.gif?raw=true "CoarsePepper p=0.2")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Invert
-</small>
-</td>
-<td colspan="1">
-<small>
-Invert<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-JpegCompression
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![Invert](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/invert.gif?raw=true "Invert")
-
-</td>
-<td colspan="1">
-
-![Invert per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/invert_per_channel_true.gif?raw=true "Invert per_channel=True")
-
-</td>
-<td colspan="1">
-
-![JpegCompression](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/jpegcompression.gif?raw=true "JpegCompression")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**blur**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-GaussianBlur
-</small>
-</td>
-<td colspan="1">
-<small>
-AverageBlur
-</small>
-</td>
-<td colspan="1">
-<small>
-MedianBlur
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![GaussianBlur](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/gaussianblur.gif?raw=true "GaussianBlur")
-
-</td>
-<td colspan="1">
-
-![AverageBlur](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/averageblur.gif?raw=true "AverageBlur")
-
-</td>
-<td colspan="1">
-
-![MedianBlur](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/medianblur.gif?raw=true "MedianBlur")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-BilateralBlur<br/>(sigma_color=250,<br/>sigma_space=250)
-</small>
-</td>
-<td colspan="1">
-<small>
-MotionBlur<br/>(angle=0)
-</small>
-</td>
-<td colspan="1">
-<small>
-MotionBlur<br/>(k=5)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![BilateralBlur sigma_color=250, sigma_space=250](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/bilateralblur_sigma_color_250_sigma_space_250.gif?raw=true "BilateralBlur sigma_color=250, sigma_space=250")
-
-</td>
-<td colspan="1">
-
-![MotionBlur angle=0](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/motionblur_angle_0.gif?raw=true "MotionBlur angle=0")
-
-</td>
-<td colspan="1">
-
-![MotionBlur k=5](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/motionblur_k_5.gif?raw=true "MotionBlur k=5")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**color**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-AddToHueAndSaturation
-</small>
-</td>
-<td colspan="1">
-<small>
-Grayscale
-</small>
-</td>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![AddToHueAndSaturation](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/addtohueandsaturation.gif?raw=true "AddToHueAndSaturation")
-
-</td>
-<td colspan="1">
-
-![Grayscale](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/grayscale.gif?raw=true "Grayscale")
-
-</td>
-<td>&nbsp;</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**contrast**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-GammaContrast
-</small>
-</td>
-<td colspan="1">
-<small>
-GammaContrast<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-SigmoidContrast<br/>(cutoff=0.5)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![GammaContrast](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/gammacontrast.gif?raw=true "GammaContrast")
-
-</td>
-<td colspan="1">
-
-![GammaContrast per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/gammacontrast_per_channel_true.gif?raw=true "GammaContrast per_channel=True")
-
-</td>
-<td colspan="1">
-
-![SigmoidContrast cutoff=0.5](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_cutoff_0_5.gif?raw=true "SigmoidContrast cutoff=0.5")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-SigmoidContrast<br/>(gain=10)
-</small>
-</td>
-<td colspan="1">
-<small>
-SigmoidContrast<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-LogContrast
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![SigmoidContrast gain=10](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_gain_10.gif?raw=true "SigmoidContrast gain=10")
-
-</td>
-<td colspan="1">
-
-![SigmoidContrast per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/sigmoidcontrast_per_channel_true.gif?raw=true "SigmoidContrast per_channel=True")
-
-</td>
-<td colspan="1">
-
-![LogContrast](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/logcontrast.gif?raw=true "LogContrast")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-LogContrast<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-LinearContrast
-</small>
-</td>
-<td colspan="1">
-<small>
-LinearContrast<br/>(per_channel=True)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![LogContrast per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/logcontrast_per_channel_true.gif?raw=true "LogContrast per_channel=True")
-
-</td>
-<td colspan="1">
-
-![LinearContrast](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/linearcontrast.gif?raw=true "LinearContrast")
-
-</td>
-<td colspan="1">
-
-![LinearContrast per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/linearcontrast_per_channel_true.gif?raw=true "LinearContrast per_channel=True")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**convolutional**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Sharpen<br/>(alpha=1)
-</small>
-</td>
-<td colspan="1">
-<small>
-Emboss<br/>(alpha=1)
-</small>
-</td>
-<td colspan="1">
-<small>
-EdgeDetect
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![Sharpen alpha=1](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/sharpen_alpha_1.gif?raw=true "Sharpen alpha=1")
-
-</td>
-<td colspan="1">
-
-![Emboss alpha=1](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/emboss_alpha_1.gif?raw=true "Emboss alpha=1")
-
-</td>
-<td colspan="1">
-
-![EdgeDetect](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/edgedetect.gif?raw=true "EdgeDetect")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-DirectedEdgeDetect<br/>(alpha=1)
-</small>
-</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
-
-![DirectedEdgeDetect alpha=1](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/directededgedetect_alpha_1.gif?raw=true "DirectedEdgeDetect alpha=1")
-
-</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/noop.gif" height="148" width="100" alt="Noop"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/channelshuffle.gif" height="148" width="100" alt="ChannelShuffle"></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>arithmetic</strong></td></tr>
+<tr>
+<td colspan="1"><sub>Add</sub></td>
+<td colspan="1"><sub>Add<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>AdditiveGaussianNoise</sub></td>
+<td colspan="1"><sub>AdditiveGaussianNoise<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>AdditiveLaplaceNoise</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/add.gif" height="148" width="100" alt="Add"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/add_per_channel_true.gif" height="148" width="100" alt="Add per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/additivegaussiannoise.gif" height="148" width="100" alt="AdditiveGaussianNoise"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/additivegaussiannoise_per_channel_true.gif" height="148" width="100" alt="AdditiveGaussianNoise per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/additivelaplacenoise.gif" height="148" width="100" alt="AdditiveLaplaceNoise"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>AdditiveLaplaceNoise<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>AdditivePoissonNoise</sub></td>
+<td colspan="1"><sub>AdditivePoissonNoise<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>Multiply</sub></td>
+<td colspan="1"><sub>Multiply<br/>(per_channel=True)</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/additivelaplacenoise_per_channel_true.gif" height="148" width="100" alt="AdditiveLaplaceNoise per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/additivepoissonnoise.gif" height="148" width="100" alt="AdditivePoissonNoise"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/additivepoissonnoise_per_channel_true.gif" height="148" width="100" alt="AdditivePoissonNoise per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/multiply.gif" height="148" width="100" alt="Multiply"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/multiply_per_channel_true.gif" height="148" width="100" alt="Multiply per_channel=True"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>Dropout</sub></td>
+<td colspan="1"><sub>Dropout<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>CoarseDropout<br/>(p=0.2)</sub></td>
+<td colspan="1"><sub>CoarseDropout<br/>(p=0.2, per_channel=True)</sub></td>
+<td colspan="1"><sub>ImpulseNoise</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/dropout.gif" height="148" width="100" alt="Dropout"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/dropout_per_channel_true.gif" height="148" width="100" alt="Dropout per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/coarsedropout_p_0_2.gif" height="148" width="100" alt="CoarseDropout p=0.2"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/coarsedropout_p_0_2_per_channel_true.gif" height="148" width="100" alt="CoarseDropout p=0.2, per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/impulsenoise.gif" height="148" width="100" alt="ImpulseNoise"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>SaltAndPepper</sub></td>
+<td colspan="1"><sub>Salt</sub></td>
+<td colspan="1"><sub>Pepper</sub></td>
+<td colspan="1"><sub>CoarseSaltAndPepper<br/>(p=0.2)</sub></td>
+<td colspan="1"><sub>CoarseSalt<br/>(p=0.2)</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/saltandpepper.gif" height="148" width="100" alt="SaltAndPepper"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/salt.gif" height="148" width="100" alt="Salt"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/pepper.gif" height="148" width="100" alt="Pepper"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/coarsesaltandpepper_p_0_2.gif" height="148" width="100" alt="CoarseSaltAndPepper p=0.2"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/coarsesalt_p_0_2.gif" height="148" width="100" alt="CoarseSalt p=0.2"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>CoarsePepper<br/>(p=0.2)</sub></td>
+<td colspan="1"><sub>Invert</sub></td>
+<td colspan="1"><sub>Invert<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>JpegCompression</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/coarsepepper_p_0_2.gif" height="148" width="100" alt="CoarsePepper p=0.2"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/invert.gif" height="148" width="100" alt="Invert"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/invert_per_channel_true.gif" height="148" width="100" alt="Invert per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/jpegcompression.gif" height="148" width="100" alt="JpegCompression"></td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>blur</strong></td></tr>
+<tr>
+<td colspan="1"><sub>GaussianBlur</sub></td>
+<td colspan="1"><sub>AverageBlur</sub></td>
+<td colspan="1"><sub>MedianBlur</sub></td>
+<td colspan="1"><sub>BilateralBlur<br/>(sigma_color=250,<br/>sigma_space=250)</sub></td>
+<td colspan="1"><sub>MotionBlur<br/>(angle=0)</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/gaussianblur.gif" height="148" width="100" alt="GaussianBlur"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/averageblur.gif" height="148" width="100" alt="AverageBlur"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/medianblur.gif" height="148" width="100" alt="MedianBlur"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/bilateralblur_sigma_color_250_sigma_space_250.gif" height="148" width="100" alt="BilateralBlur sigma_color=250, sigma_space=250"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/motionblur_angle_0.gif" height="148" width="100" alt="MotionBlur angle=0"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>MotionBlur<br/>(k=5)</sub></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/motionblur_k_5.gif" height="148" width="100" alt="MotionBlur k=5"></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
 </tr>
+<tr><td colspan="5"><strong>color</strong></td></tr>
 <tr>
-<td colspan="3">
-
-**flip**
-
-</td>
-</tr>
-<tr>
-<td colspan="3">
-<small>
-Fliplr
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![Fliplr (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/fliplr.gif?raw=true "Fliplr (+Keypoints, +BBs")![Fliplr (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/fliplr.gif?raw=true "Fliplr (heatmap augmentation)")![Fliplr (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/fliplr.gif?raw=true "Fliplr (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-Flipud
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![Flipud (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/flipud.gif?raw=true "Flipud (+Keypoints, +BBs")![Flipud (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/flipud.gif?raw=true "Flipud (heatmap augmentation)")![Flipud (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/flipud.gif?raw=true "Flipud (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**geometric**
-
-</td>
-</tr>
-<tr>
-<td colspan="3">
-<small>
-Affine
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![Affine (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine.gif?raw=true "Affine (+Keypoints, +BBs")![Affine (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine.gif?raw=true "Affine (heatmap augmentation)")![Affine (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine.gif?raw=true "Affine (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-Affine: Modes
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![Affine: Modes (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_modes.gif?raw=true "Affine: Modes (+Keypoints, +BBs")![Affine: Modes (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine_modes.gif?raw=true "Affine: Modes (heatmap augmentation)")![Affine: Modes (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine_modes.gif?raw=true "Affine: Modes (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-Affine: cval
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![Affine: cval (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/affine_cval.gif?raw=true "Affine: cval (+Keypoints, +BBs")![Affine: cval (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/affine_cval.gif?raw=true "Affine: cval (heatmap augmentation)")![Affine: cval (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/affine_cval.gif?raw=true "Affine: cval (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-PiecewiseAffine
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![PiecewiseAffine (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/piecewiseaffine.gif?raw=true "PiecewiseAffine (+Keypoints, +BBs")![PiecewiseAffine (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/piecewiseaffine.gif?raw=true "PiecewiseAffine (heatmap augmentation)")![PiecewiseAffine (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/piecewiseaffine.gif?raw=true "PiecewiseAffine (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-PerspectiveTransform
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![PerspectiveTransform (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/perspectivetransform.gif?raw=true "PerspectiveTransform (+Keypoints, +BBs")![PerspectiveTransform (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/perspectivetransform.gif?raw=true "PerspectiveTransform (heatmap augmentation)")![PerspectiveTransform (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/perspectivetransform.gif?raw=true "PerspectiveTransform (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-ElasticTransformation<br/>(sigma=0.2)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![ElasticTransformation sigma=0.2 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (+Keypoints, +BBs")![ElasticTransformation sigma=0.2 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (heatmap augmentation)")![ElasticTransformation sigma=0.2 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_0_2.gif?raw=true "ElasticTransformation sigma=0.2 (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-ElasticTransformation<br/>(sigma=5.0)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![ElasticTransformation sigma=5.0 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (+Keypoints, +BBs")![ElasticTransformation sigma=5.0 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (heatmap augmentation)")![ElasticTransformation sigma=5.0 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/elastictransformation_sigma_5_0.gif?raw=true "ElasticTransformation sigma=5.0 (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-Rot90
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![Rot90 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/rot90.gif?raw=true "Rot90 (+Keypoints, +BBs")![Rot90 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/rot90.gif?raw=true "Rot90 (heatmap augmentation)")![Rot90 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/rot90.gif?raw=true "Rot90 (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**overlay**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Alpha<br/>with EdgeDetect(1.0)
-</small>
-</td>
-<td colspan="1">
-<small>
-Alpha<br/>with EdgeDetect(1.0)<br/>(per_channel=True)
-</small>
-</td>
-<td colspan="1">
-<small>
-SimplexNoiseAlpha<br/>with EdgeDetect(1.0)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![Alpha with EdgeDetect1.0](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/alpha_with_edgedetect_1_0.gif?raw=true "Alpha with EdgeDetect1.0")
-
-</td>
-<td colspan="1">
-
-![Alpha with EdgeDetect1.0 per_channel=True](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/alpha_with_edgedetect_1_0_per_channel_true.gif?raw=true "Alpha with EdgeDetect1.0 per_channel=True")
-
-</td>
-<td colspan="1">
-
-![SimplexNoiseAlpha with EdgeDetect1.0](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/simplexnoisealpha_with_edgedetect_1_0.gif?raw=true "SimplexNoiseAlpha with EdgeDetect1.0")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-FrequencyNoiseAlpha<br/>with EdgeDetect(1.0)
-</small>
-</td>
+<td colspan="1"><sub>AddToHueAndSaturation</sub></td>
+<td colspan="1"><sub>Grayscale</sub></td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
-
-![FrequencyNoiseAlpha with EdgeDetect1.0](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/frequencynoisealpha_with_edgedetect_1_0.gif?raw=true "FrequencyNoiseAlpha with EdgeDetect1.0")
-
-</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/addtohueandsaturation.gif" height="148" width="100" alt="AddToHueAndSaturation"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/grayscale.gif" height="148" width="100" alt="Grayscale"></td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
+<tr><td colspan="5"><strong>contrast</strong></td></tr>
 <tr>
-
+<td colspan="1"><sub>GammaContrast</sub></td>
+<td colspan="1"><sub>GammaContrast<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>SigmoidContrast<br/>(cutoff=0.5)</sub></td>
+<td colspan="1"><sub>SigmoidContrast<br/>(gain=10)</sub></td>
+<td colspan="1"><sub>SigmoidContrast<br/>(per_channel=True)</sub></td>
 </tr>
 <tr>
-<td colspan="3">
-
-**segmentation**
-
-</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/gammacontrast.gif" height="148" width="100" alt="GammaContrast"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/gammacontrast_per_channel_true.gif" height="148" width="100" alt="GammaContrast per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/sigmoidcontrast_cutoff_0_5.gif" height="148" width="100" alt="SigmoidContrast cutoff=0.5"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/sigmoidcontrast_gain_10.gif" height="148" width="100" alt="SigmoidContrast gain=10"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/sigmoidcontrast_per_channel_true.gif" height="148" width="100" alt="SigmoidContrast per_channel=True"></td>
 </tr>
 <tr>
-<td colspan="1">
-<small>
-Superpixels<br/>(p_replace=1)
-</small>
-</td>
-<td colspan="1">
-<small>
-Superpixels<br/>(n_segments=100)
-</small>
-</td>
+<td colspan="1"><sub>LogContrast</sub></td>
+<td colspan="1"><sub>LogContrast<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>LinearContrast</sub></td>
+<td colspan="1"><sub>LinearContrast<br/>(per_channel=True)</sub></td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
-
-![Superpixels p_replace=1](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/superpixels_p_replace_1.gif?raw=true "Superpixels p_replace=1")
-
-</td>
-<td colspan="1">
-
-![Superpixels n_segments=100](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/superpixels_n_segments_100.gif?raw=true "Superpixels n_segments=100")
-
-</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/logcontrast.gif" height="148" width="100" alt="LogContrast"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/logcontrast_per_channel_true.gif" height="148" width="100" alt="LogContrast per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/linearcontrast.gif" height="148" width="100" alt="LinearContrast"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/linearcontrast_per_channel_true.gif" height="148" width="100" alt="LinearContrast per_channel=True"></td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>convolutional</strong></td></tr>
+<tr>
+<td colspan="1"><sub>Sharpen<br/>(alpha=1)</sub></td>
+<td colspan="1"><sub>Emboss<br/>(alpha=1)</sub></td>
+<td colspan="1"><sub>EdgeDetect</sub></td>
+<td colspan="1"><sub>DirectedEdgeDetect<br/>(alpha=1)</sub></td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/sharpen_alpha_1.gif" height="148" width="100" alt="Sharpen alpha=1"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/emboss_alpha_1.gif" height="148" width="100" alt="Emboss alpha=1"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/edgedetect.gif" height="148" width="100" alt="EdgeDetect"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/directededgedetect_alpha_1.gif" height="148" width="100" alt="DirectedEdgeDetect alpha=1"></td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>flip</strong></td></tr>
+<tr>
+<td colspan="2"><sub>Fliplr</sub></td>
+<td colspan="2"><sub>Flipud</sub></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-
-**size**
-
-</td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/fliplr.gif" height="148" width="300" alt="Fliplr"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/flipud.gif" height="148" width="300" alt="Flipud"></td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>geometric</strong></td></tr>
+<tr>
+<td colspan="2"><sub>Affine</sub></td>
+<td colspan="2"><sub>Affine: Modes</sub></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-<small>
-CropAndPad
-</small>
-</td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/affine.gif" height="148" width="300" alt="Affine"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/affine_modes.gif" height="148" width="300" alt="Affine: Modes"></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-
-![CropAndPad (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/cropandpad.gif?raw=true "CropAndPad (+Keypoints, +BBs")![CropAndPad (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/cropandpad.gif?raw=true "CropAndPad (heatmap augmentation)")![CropAndPad (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/cropandpad.gif?raw=true "CropAndPad (segmentation map augmentation)")
-
-</td>
+<td colspan="2"><sub>Affine: cval</sub></td>
+<td colspan="2"><sub>PiecewiseAffine</sub></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/affine_cval.gif" height="148" width="300" alt="Affine: cval"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/piecewiseaffine.gif" height="148" width="300" alt="PiecewiseAffine"></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-<small>
-Crop
-</small>
-</td>
+<td colspan="2"><sub>PerspectiveTransform</sub></td>
+<td colspan="2"><sub>ElasticTransformation<br/>(sigma=0.2)</sub></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-
-![Crop (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/crop.gif?raw=true "Crop (+Keypoints, +BBs")![Crop (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/crop.gif?raw=true "Crop (heatmap augmentation)")![Crop (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/crop.gif?raw=true "Crop (segmentation map augmentation)")
-
-</td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/perspectivetransform.gif" height="148" width="300" alt="PerspectiveTransform"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/elastictransformation_sigma_0_2.gif" height="148" width="300" alt="ElasticTransformation sigma=0.2"></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-
+<td colspan="2"><sub>ElasticTransformation<br/>(sigma=5.0)</sub></td>
+<td colspan="2"><sub>Rot90</sub></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-<small>
-Pad
-</small>
-</td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/elastictransformation_sigma_5_0.gif" height="148" width="300" alt="ElasticTransformation sigma=5.0"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/rot90.gif" height="148" width="300" alt="Rot90"></td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>overlay</strong></td></tr>
+<tr>
+<td colspan="1"><sub>Alpha<br/>with EdgeDetect(1.0)</sub></td>
+<td colspan="1"><sub>Alpha<br/>with EdgeDetect(1.0)<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>SimplexNoiseAlpha<br/>with EdgeDetect(1.0)</sub></td>
+<td colspan="1"><sub>FrequencyNoiseAlpha<br/>with EdgeDetect(1.0)</sub></td>
+<td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="3">
-
-![Pad (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/pad.gif?raw=true "Pad (+Keypoints, +BBs")![Pad (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/pad.gif?raw=true "Pad (heatmap augmentation)")![Pad (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/pad.gif?raw=true "Pad (segmentation map augmentation)")
-
-</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/alpha_with_edgedetect_1_0.gif" height="148" width="100" alt="Alpha with EdgeDetect1.0"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/alpha_with_edgedetect_1_0_per_channel_true.gif" height="148" width="100" alt="Alpha with EdgeDetect1.0 per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/simplexnoisealpha_with_edgedetect_1_0.gif" height="148" width="100" alt="SimplexNoiseAlpha with EdgeDetect1.0"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/frequencynoisealpha_with_edgedetect_1_0.gif" height="148" width="100" alt="FrequencyNoiseAlpha with EdgeDetect1.0"></td>
+<td>&nbsp;</td>
 </tr>
+<tr><td colspan="5"><strong>segmentation</strong></td></tr>
 <tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-PadToFixedSize<br/>(height'=height+32,<br/>width'=width+32)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (+Keypoints, +BBs")![PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (heatmap augmentation)")![PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/padtofixedsize_height_height_32_width_width_32.gif?raw=true "PadToFixedSize height'=height+32, width'=width+32 (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-<small>
-CropToFixedSize<br/>(height'=height-32,<br/>width'=width-32)
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="3">
-
-![CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (+Keypoints, +BBs")![CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_heatmaps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (heatmap augmentation)")![CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_segmentation_maps/croptofixedsize_height_height_32_width_width_32.gif?raw=true "CropToFixedSize height'=height-32, width'=width-32 (segmentation map augmentation)")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="3">
-
-**weather**
-
-</td>
-</tr>
-<tr>
-<td colspan="1">
-<small>
-FastSnowyLandscape<br/>(lightness_multiplier=2.0)
-</small>
-</td>
-<td colspan="1">
-<small>
-Clouds
-</small>
-</td>
-<td colspan="1">
-<small>
-Fog
-</small>
-</td>
-</tr>
-<tr>
-<td colspan="1">
-
-![FastSnowyLandscape lightness_multiplier=2.0](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/fastsnowylandscape_lightness_multiplier_2_0.gif?raw=true "FastSnowyLandscape lightness_multiplier=2.0")
-
-</td>
-<td colspan="1">
-
-![Clouds](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/clouds.gif?raw=true "Clouds")
-
-</td>
-<td colspan="1">
-
-![Fog](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/fog.gif?raw=true "Fog")
-
-</td>
-</tr>
-<tr>
-
-</tr>
-<tr>
-<td colspan="1">
-<small>
-Snowflakes
-</small>
-</td>
+<td colspan="1"><sub>Superpixels<br/>(p_replace=1)</sub></td>
+<td colspan="1"><sub>Superpixels<br/>(n_segments=100)</sub></td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1">
-
-![Snowflakes](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/snowflakes.gif?raw=true "Snowflakes")
-
-</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/superpixels_p_replace_1.gif" height="148" width="100" alt="Superpixels p_replace=1"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/superpixels_n_segments_100.gif" height="148" width="100" alt="Superpixels n_segments=100"></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>size</strong></td></tr>
+<tr>
+<td colspan="2"><sub>CropAndPad</sub></td>
+<td colspan="2"><sub>Crop</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/cropandpad.gif" height="148" width="300" alt="CropAndPad"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/crop.gif" height="148" width="300" alt="Crop"></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2"><sub>Pad</sub></td>
+<td colspan="2"><sub>PadToFixedSize<br/>(height'=height+32,<br/>width'=width+32)</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/pad.gif" height="148" width="300" alt="Pad"></td>
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/padtofixedsize_height_height_32_width_width_32.gif" height="148" width="300" alt="PadToFixedSize height'=height+32, width'=width+32"></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2"><sub>CropToFixedSize<br/>(height'=height-32,<br/>width'=width-32)</sub></td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-
+<td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/croptofixedsize_height_height_32_width_width_32.gif" height="148" width="300" alt="CropToFixedSize height'=height-32, width'=width-32"></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr><td colspan="5"><strong>weather</strong></td></tr>
+<tr>
+<td colspan="1"><sub>FastSnowyLandscape<br/>(lightness_multiplier=2.0)</sub></td>
+<td colspan="1"><sub>Clouds</sub></td>
+<td colspan="1"><sub>Fog</sub></td>
+<td colspan="1"><sub>Snowflakes</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/fastsnowylandscape_lightness_multiplier_2_0.gif" height="144" width="128" alt="FastSnowyLandscape lightness_multiplier=2.0"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/clouds.gif" height="144" width="128" alt="Clouds"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/fog.gif" height="144" width="128" alt="Fog"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/snowflakes.gif" height="144" width="128" alt="Snowflakes"></td>
+<td>&nbsp;</td>
 </tr>
 
 </table>
