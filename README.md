@@ -77,15 +77,16 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 ## Features of the library
 
-* Supports many augmentation techniques.
+* Supports both common and exotic augmentation techniques.
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
 * Supports augmentation of:
-  * Images (uint8)
+  * Images (uint8; float32 and int32 will work in many augmenters, but are not unittested)
   * Heatmaps (float32) *(Beta)*
   * Segmentation maps (integer-based, bool, float-based) *(Beta)*
   * Keypoints/Landmarks (int32 or float32 coordinates)
   * Bounding Boxes (int32 or float32 coordinates)
   * Can augment all of the above automatically with the same sampled values. E.g. rotate both images and the segmentation maps on them by the same random value sampled from `uniform(0°, 30°)`.
+  * Native support for heatmaps and segmentation maps that are smaller than their corresponding images.
 * Define flexible stochastic ranges for each augmentation parameter.
   * E.g. "rotate each image by a value between -45 and 45 degrees".
   * E.g. "rotate each image by `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the gaussian distribution and `B(.)` the beta distribution.
