@@ -369,9 +369,13 @@ class Scale(meta.Augmenter):
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
             sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
-            h, w = self._compute_height_width(heatmaps_i.arr_0to1.shape, sample_h, sample_w)
+            h_img, w_img = self._compute_height_width(heatmaps_i.shape, sample_h, sample_w)
+            h = int(np.round(h_img * (heatmaps_i.arr_0to1.shape[0] / heatmaps_i.shape[0])))
+            w = int(np.round(w_img * (heatmaps_i.arr_0to1.shape[1] / heatmaps_i.shape[1])))
+            h = max(h, 1)
+            w = max(w, 1)
             heatmaps_i_scaled = heatmaps_i.scale((h, w), interpolation=sample_ip)
-            heatmaps_i_scaled.shape = (sample_h, sample_w) + heatmaps_i.shape[2:]
+            heatmaps_i_scaled.shape = (h_img, w_img) + heatmaps_i.shape[2:]
             result.append(heatmaps_i_scaled)
 
         return result
@@ -769,7 +773,6 @@ class CropAndPad(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # TODO add test
         result = []
         nb_heatmaps = len(heatmaps)
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))

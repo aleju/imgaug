@@ -4,6 +4,8 @@ import time
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
+import multiprocessing
+import pickle
 import numpy as np
 import six.moves as sm
 import cv2
@@ -11,7 +13,13 @@ import shapely
 import shapely.geometry
 
 import imgaug as ia
+from imgaug.imgaug import (
+    _quokka_normalize_extract, _compute_resized_shape,
+    _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
+    _interpolate_points, _interpolate_points_by_max_distance
+)
 from imgaug.testutils import reseed
+from imgaug import augmenters as iaa
 
 
 def main():
@@ -36,10 +44,17 @@ def main():
     test_derive_random_state()
     test_derive_random_states()
     test_forward_random_state()
-    # test_quokka()
-    # test_quokka_square()
+    test__quokka_normalize_extract()
+    test__compute_resized_shape()
+    test_quokka()
+    test_quokka_square()
+    test_quokka_heatmap()
+    test_quokka_segmentation_map()
+    test_quokka_keypoints()
+    test_quokka_bounding_boxes()
     # test_angle_between_vectors()
-    # test_draw_text()
+    test_compute_line_intersection_point()
+    test_draw_text()
     test_imresize_many_images()
     test_imresize_single_image()
     test_pad()
@@ -65,14 +80,14 @@ def main():
     test_HeatmapsOnImage_draw_on_image()
     test_HeatmapsOnImage_invert()
     test_HeatmapsOnImage_pad()
-    # test_HeatmapsOnImage_pad_to_aspect_ratio()
+    test_HeatmapsOnImage_pad_to_aspect_ratio()
     test_HeatmapsOnImage_avg_pool()
     test_HeatmapsOnImage_max_pool()
     test_HeatmapsOnImage_scale()
     # test_HeatmapsOnImage_to_uint8()
-    # test_HeatmapsOnImage_from_uint8()
+    test_HeatmapsOnImage_from_uint8()
     # test_HeatmapsOnImage_from_0to1()
-    # test_HeatmapsOnImage_change_normalization()
+    test_HeatmapsOnImage_change_normalization()
     # test_HeatmapsOnImage_copy()
     # test_HeatmapsOnImage_deepcopy()
     test_SegmentationMapOnImage_bool()
@@ -95,6 +110,7 @@ def main():
     test_Polygon_is_valid()
     test_Polygon_area()
     test_Polygon_project()
+    test_Polygon_find_closest_point_idx()
     test_Polygon__compute_inside_image_point_mask()
     test_Polygon_is_fully_within_image()
     test_Polygon_is_partly_within_image()
@@ -111,10 +127,14 @@ def main():
     test_Polygon_deepcopy()
     test_Polygon___repr__()
     test_Polygon___str__()
+    test___convert_points_to_shapely_line_string()
+    test__interpolate_point_pair()
+    test__interpolate_points()
+    test__interpolate_points_by_max_distance()
     # test_Batch()
     test_BatchLoader()
     # test_BackgroundAugmenter.get_batch()
-    # test_BackgroundAugmenter._augment_images_worker()
+    test_BackgroundAugmenter__augment_images_worker()
     # test_BackgroundAugmenter.terminate()
 
     time_end = time.time()
@@ -373,6 +393,383 @@ def test_forward_random_state():
     assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
 
 
+def test__quokka_normalize_extract():
+    observed = _quokka_normalize_extract("square")
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 0
+    assert observed.y1 == 0
+    assert observed.x2 == 643
+    assert observed.y2 == 643
+
+    observed = _quokka_normalize_extract((1, 1, 644, 642))
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 1
+    assert observed.y1 == 1
+    assert observed.x2 == 644
+    assert observed.y2 == 642
+
+    observed = _quokka_normalize_extract(ia.BoundingBox(x1=1, y1=1, x2=644, y2=642))
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 1
+    assert observed.y1 == 1
+    assert observed.x2 == 644
+    assert observed.y2 == 642
+
+    observed = _quokka_normalize_extract(
+        ia.BoundingBoxesOnImage([ia.BoundingBox(x1=1, y1=1, x2=644, y2=642)], shape=(643, 960, 3))
+    )
+    assert isinstance(observed, ia.BoundingBox)
+    assert observed.x1 == 1
+    assert observed.y1 == 1
+    assert observed.x2 == 644
+    assert observed.y2 == 642
+
+    got_exception = False
+    try:
+        _ = _quokka_normalize_extract(False)
+    except Exception as exc:
+        assert "Expected 'square' or tuple" in str(exc)
+        got_exception = True
+    assert got_exception
+
+
+def test__compute_resized_shape():
+    # tuple of ints
+    from_shape = (10, 15, 3)
+    to_shape = (20, 30)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+    from_shape = (10, 15, 3)
+    to_shape = (20, 30, 3)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+    # tuple of floats
+    from_shape = (10, 15, 3)
+    to_shape = (2.0, 3.0)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 45, 3)
+
+    # tuple of int and float
+    from_shape = (10, 15, 3)
+    to_shape = (2.0, 25)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 25, 3)
+
+    from_shape = (10, 17, 3)
+    to_shape = (15, 2.0)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (15, 34, 3)
+
+    # None
+    from_shape = (10, 10, 3)
+    to_shape = None
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == from_shape
+
+    # tuple containing None
+    from_shape = (10, 15, 3)
+    to_shape = (2.0, None)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 15, 3)
+
+    from_shape = (10, 15, 3)
+    to_shape = (None, 25)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (10, 25, 3)
+
+    # single int
+    from_shape = (10, 15, 3)
+    to_shape = 20
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 20, 3)
+
+    # single float
+    from_shape = (10, 15, 3)
+    to_shape = 2.0
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+    # from/to shape as arrays
+    from_shape = (10, 10, 3)
+    to_shape = (20, 30, 3)
+    observed = _compute_resized_shape(np.zeros(from_shape), np.zeros(to_shape))
+    assert observed == to_shape
+
+    # from_shape is 2D
+    from_shape = (10, 15)
+    to_shape = (20, 30)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == to_shape
+
+    from_shape = (10, 15)
+    to_shape = (20, 30, 3)
+    observed = _compute_resized_shape(from_shape, to_shape)
+    assert observed == (20, 30, 3)
+
+
+def test_quokka():
+    img = ia.quokka()
+    assert img.shape == (643, 960, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [107.93576659, 118.18765066, 122.99378564]
+    )
+
+    img = ia.quokka(extract="square")
+    assert img.shape == (643, 643, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [111.25929196, 121.19431175, 125.71316898]
+    )
+
+    img = ia.quokka(size=(642, 959))
+    assert img.shape == (642, 959, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [107.84615822, 118.09832412, 122.90446467]
+    )
+
+
+def test_quokka_square():
+    img = ia.quokka_square()
+    assert img.shape == (643, 643, 3)
+    assert np.allclose(
+        np.average(img, axis=(0, 1)),
+        [111.25929196, 121.19431175, 125.71316898]
+    )
+
+
+def test_quokka_heatmap():
+    hm = ia.quokka_heatmap()
+    assert hm.shape == (643, 960, 3)
+    assert hm.arr_0to1.shape == (643, 960, 1)
+    assert np.allclose(np.average(hm.arr_0to1), 0.57618505)
+
+    hm = ia.quokka_heatmap(extract="square")
+    assert hm.shape == (643, 643, 3)
+    assert hm.arr_0to1.shape == (643, 643, 1)
+    # TODO this value is 0.48026073 in python 2.7, while 0.48026952 in 3.7 -- why?
+    assert np.allclose(np.average(hm.arr_0to1), 0.48026952, atol=1e-4)
+
+    hm = ia.quokka_heatmap(size=(642, 959))
+    assert hm.shape == (642, 959, 3)
+    assert hm.arr_0to1.shape == (642, 959, 1)
+    assert np.allclose(np.average(hm.arr_0to1), 0.5762454)
+
+
+def test_quokka_segmentation_map():
+    segmap = ia.quokka_segmentation_map()
+    assert segmap.shape == (643, 960, 3)
+    assert segmap.arr.shape == (643, 960, 1)
+    assert np.allclose(np.average(segmap.arr), 0.3016427)
+
+    segmap = ia.quokka_segmentation_map(extract="square")
+    assert segmap.shape == (643, 643, 3)
+    assert segmap.arr.shape == (643, 643, 1)
+    assert np.allclose(np.average(segmap.arr), 0.450353)
+
+    segmap = ia.quokka_segmentation_map(size=(642, 959))
+    assert segmap.shape == (642, 959, 3)
+    assert segmap.arr.shape == (642, 959, 1)
+    assert np.allclose(np.average(segmap.arr), 0.30160266)
+
+
+def test_quokka_keypoints():
+    kpsoi = ia.quokka_keypoints()
+    assert len(kpsoi.keypoints) > 0
+    assert np.allclose(kpsoi.keypoints[0].x, 163.0)
+    assert np.allclose(kpsoi.keypoints[0].y, 78.0)
+    assert kpsoi.shape == (643, 960, 3)
+
+    img = ia.quokka()
+    patches = []
+    for kp in kpsoi.keypoints:
+        bb = ia.BoundingBox(x1=kp.x-1, x2=kp.x+2, y1=kp.y-1, y2=kp.y+2)
+        patches.append(bb.extract_from_image(img))
+
+    img_square = ia.quokka(extract="square")
+    kpsoi_square = ia.quokka_keypoints(extract="square")
+    assert len(kpsoi.keypoints) == len(kpsoi_square.keypoints)
+    assert kpsoi_square.shape == (643, 643, 3)
+
+    for kp, patch in zip(kpsoi_square.keypoints, patches):
+        bb = ia.BoundingBox(x1=kp.x-1, x2=kp.x+2, y1=kp.y-1, y2=kp.y+2)
+        patch_square = bb.extract_from_image(img_square)
+        assert np.average(np.abs(patch.astype(np.float32) - patch_square.astype(np.float32))) < 1.0
+
+    kpsoi_resized = ia.quokka_keypoints(size=(642, 959))
+    assert kpsoi_resized.shape == (642, 959, 3)
+    assert len(kpsoi.keypoints) == len(kpsoi_resized.keypoints)
+    for kp, kp_resized in zip(kpsoi.keypoints, kpsoi_resized.keypoints):
+        d = np.sqrt((kp.x - kp_resized.x) ** 2 + (kp.y - kp_resized.y) ** 2)
+        assert d < 1.0
+
+
+def test_quokka_bounding_boxes():
+    bbsoi = ia.quokka_bounding_boxes()
+    assert len(bbsoi.bounding_boxes) > 0
+    bb0 = bbsoi.bounding_boxes[0]
+    assert np.allclose(bb0.x1, 148.0)
+    assert np.allclose(bb0.y1, 50.0)
+    assert np.allclose(bb0.x2, 550.0)
+    assert np.allclose(bb0.y2, 642.0)
+    assert bbsoi.shape == (643, 960, 3)
+
+    img = ia.quokka()
+    patches = []
+    for bb in bbsoi.bounding_boxes:
+        patches.append(bb.extract_from_image(img))
+
+    img_square = ia.quokka(extract="square")
+    bbsoi_square = ia.quokka_bounding_boxes(extract="square")
+    assert len(bbsoi.bounding_boxes) == len(bbsoi_square.bounding_boxes)
+    assert bbsoi_square.shape == (643, 643, 3)
+
+    for bb, patch in zip(bbsoi_square.bounding_boxes, patches):
+        patch_square = bb.extract_from_image(img_square)
+        assert np.average(np.abs(patch.astype(np.float32) - patch_square.astype(np.float32))) < 1.0
+
+    bbsoi_resized = ia.quokka_bounding_boxes(size=(642, 959))
+    assert bbsoi_resized.shape == (642, 959, 3)
+    assert len(bbsoi.bounding_boxes) == len(bbsoi_resized.bounding_boxes)
+    for bb, bb_resized in zip(bbsoi.bounding_boxes, bbsoi_resized.bounding_boxes):
+        d = np.sqrt((bb.center_x - bb_resized.center_x) ** 2 + (bb.center_y - bb_resized.center_y) ** 2)
+        assert d < 1.0
+
+
+def test_compute_line_intersection_point():
+    # intersecting lines
+    line1 = (0, 0, 1, 0)
+    line2 = (0.5, -1, 0.5, 1)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert np.allclose(point[0], 0.5)
+    assert np.allclose(point[1], 0)
+
+    # intersection point outside of defined interval of one line, should not change anything
+    line1 = (0, 0, 1, 0)
+    line2 = (0.5, -1, 0.5, -0.5)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert np.allclose(point[0], 0.5)
+    assert np.allclose(point[1], 0)
+
+    # touching lines
+    line1 = (0, 0, 1, 0)
+    line2 = (0.5, -1, 0.5, 0)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert np.allclose(point[0], 0.5)
+    assert np.allclose(point[1], 0)
+
+    # parallel, not intersecting lines
+    line1 = (0, 0, 1, 0)
+    line2 = (0, -0.1, 1, -0.1)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert point is False
+
+    # parallel and overlapping lines (infinite intersection points)
+    line1 = (0, 0, 1, 0)
+    line2 = (0.1, 0, 1, 0)
+    point = ia.compute_line_intersection_point(
+        line1[0], line1[1], line1[2], line1[3],
+        line2[0], line2[1], line2[2], line2[3]
+    )
+    assert point is False
+
+
+def test_draw_text():
+    # make roughly sure that shape of drawn text matches expected text
+    img = np.zeros((20, 50, 3), dtype=np.uint8)
+    img_text = ia.draw_text(img, y=5, x=5, text="---------", size=10, color=[255, 255, 255])
+    assert np.max(img_text) == 255
+    assert np.min(img_text) == 0
+    assert np.sum(img_text == 255) / np.sum(img_text == 0)
+    first_row = None
+    last_row = None
+    first_col = None
+    last_col = None
+    for i in range(img.shape[0]):
+        if np.max(img_text[i, :, :]) == 255:
+            first_row = i
+            break
+    for i in range(img.shape[0]-1, 0, -1):
+        if np.max(img_text[i, :, :]) == 255:
+            last_row = i
+            break
+    for i in range(img.shape[1]):
+        if np.max(img_text[:, i, :]) == 255:
+            first_col = i
+            break
+    for i in range(img.shape[1]-1, 0, -1):
+        if np.max(img_text[:, i, :]) == 255:
+            last_col = i
+            break
+    bb = ia.BoundingBox(x1=first_col, y1=first_row, x2=last_col, y2=last_row)
+    assert bb.width > 4.0*bb.height
+
+    # test x
+    img = np.zeros((20, 100, 3), dtype=np.uint8)
+    img_text1 = ia.draw_text(img, y=5, x=5, text="XXXXXXX", size=10, color=[255, 255, 255])
+    img_text2 = ia.draw_text(img, y=5, x=50, text="XXXXXXX", size=10, color=[255, 255, 255])
+    first_col1 = None
+    first_col2 = None
+    for i in range(img.shape[1]):
+        if np.max(img_text1[:, i, :]) == 255:
+            first_col1 = i
+            break
+    for i in range(img.shape[1]):
+        if np.max(img_text2[:, i, :]) == 255:
+            first_col2 = i
+            break
+    assert 0 < first_col1 < 10
+    assert 45 < first_col2 < 55
+
+    # test y
+    img = np.zeros((100, 20, 3), dtype=np.uint8)
+    img_text1 = ia.draw_text(img, y=5, x=5, text="XXXXXXX", size=10, color=[255, 255, 255])
+    img_text2 = ia.draw_text(img, y=50, x=5, text="XXXXXXX", size=10, color=[255, 255, 255])
+    first_row1 = None
+    first_row2 = None
+    for i in range(img.shape[0]):
+        if np.max(img_text1[i, :, :]) == 255:
+            first_row1 = i
+            break
+    for i in range(img.shape[0]):
+        if np.max(img_text2[i, :, :]) == 255:
+            first_row2 = i
+            break
+    assert 0 < first_row1 < 15
+    assert 45 < first_row2 < 60
+
+    # test size
+    img = np.zeros((100, 100, 3), dtype=np.uint8)
+    img_text_small = ia.draw_text(img, y=5, x=5, text="X", size=10, color=[255, 255, 255])
+    img_text_large = ia.draw_text(img, y=5, x=5, text="X", size=50, color=[255, 255, 255])
+    nb_filled_small = np.sum(img_text_small > 10)
+    nb_filled_large = np.sum(img_text_large > 10)
+    assert nb_filled_large > 2*nb_filled_small
+
+    # text color
+    img = np.zeros((20, 20, 3), dtype=np.uint8)
+    img_text = ia.draw_text(img, y=5, x=5, text="X", size=10, color=[128, 129, 130])
+    maxcol = np.max(img_text, axis=(0, 1))
+    assert maxcol[0] == 128
+    assert maxcol[1] == 129
+    assert maxcol[2] == 130
+
+
 def test_imresize_many_images():
     interpolations = [None,
                       "nearest", "linear", "area", "cubic",
@@ -549,6 +946,14 @@ def test_imresize_many_images():
     assert isinstance(observed, list)
     assert all([image.shape == (4, 4, 3) for image in observed])
     assert all([image.dtype.type == np.uint8 for image in observed])
+
+    # test multiple shapes
+    images = [np.zeros((8, 8, 3), dtype=np.uint8), np.zeros((4, 4), dtype=np.uint8)]
+    observed = ia.imresize_many_images(images, (4, 4))
+    assert observed[0].shape == (4, 4, 3)
+    assert observed[1].shape == (4, 4)
+    assert observed[0].dtype == np.uint8
+    assert observed[1].dtype == np.uint8
 
 
 def test_imresize_single_image():
@@ -786,9 +1191,9 @@ def test_compute_paddings_for_aspect_ratio():
 
     arr = np.zeros((1, 4), dtype=np.uint8)
     top, right, bottom, left = ia.compute_paddings_for_aspect_ratio(arr, 1.0)
-    assert top == 2
+    assert top == 1
     assert right == 0
-    assert bottom == 1
+    assert bottom == 2
     assert left == 0
 
     arr = np.zeros((4, 1), dtype=np.uint8)
@@ -1208,6 +1613,26 @@ def test_Keypoint():
     assert kp2.y == 2
     assert kp2.x == 4
 
+    # generate_similar_points_manhattan
+    kp = ia.Keypoint(y=4, x=5)
+    kps_manhatten = kp.generate_similar_points_manhattan(0, 1.0, return_array=False)
+    assert len(kps_manhatten) == 1
+    assert kps_manhatten[0].y == 4
+    assert kps_manhatten[0].x == 5
+
+    kps_manhatten = kp.generate_similar_points_manhattan(1, 1.0, return_array=False)
+    assert len(kps_manhatten) == 5
+    expected = [(4, 5), (3, 5), (4, 6), (5, 5), (4, 4)]
+    for y, x in expected:
+        assert any([np.allclose([y, x], [kp_manhatten.y, kp_manhatten.x]) for kp_manhatten in kps_manhatten])
+
+    kps_manhatten = kp.generate_similar_points_manhattan(1, 1.0, return_array=True)
+    assert kps_manhatten.shape == (5, 2)
+    expected = [(4, 5), (3, 5), (4, 6), (5, 5), (4, 4)]
+    for y, x in expected:
+        assert any([np.allclose([y, x], [kp_manhatten_y, kp_manhatten_x])
+                    for kp_manhatten_x, kp_manhatten_y in kps_manhatten])
+
     # __repr__ / __str_
     kp = ia.Keypoint(y=1, x=2)
     assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.00000000, y=1.00000000)"
@@ -1447,6 +1872,115 @@ def test_KeypointsOnImage():
         got_exception = True
     assert got_exception
 
+    # to_distance_maps()
+    kpi = ia.KeypointsOnImage(keypoints=[ia.Keypoint(x=2, y=3)], shape=(5, 5, 3))
+    distance_map = kpi.to_distance_maps()
+    expected_xx = np.float32([
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4]
+    ])
+    expected_yy = np.float32([
+        [0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+        [2, 2, 2, 2, 2],
+        [3, 3, 3, 3, 3],
+        [4, 4, 4, 4, 4]
+    ])
+    expected = np.sqrt((expected_xx - 2)**2 + (expected_yy - 3)**2)
+    assert distance_map.shape == (5, 5, 1)
+    assert np.allclose(distance_map, expected[..., np.newaxis])
+
+    distance_map_inv = kpi.to_distance_maps(inverted=True)
+    expected_inv = np.divide(np.ones_like(expected), expected+1)
+    assert np.allclose(distance_map_inv, expected_inv[..., np.newaxis])
+
+    # to_distance_maps() with two keypoints
+    # positions on (4, 4) map (X=position, 1=KP 1 is closest, 2=KP 2 is closest, B=close to both)
+    # [1, X, 1, 1]
+    # [1, 1, 1, B]
+    # [B, 2, 2, 2]
+    # [2, 2, X, 2]
+    # this test could have been done a bit better by simply splitting the distance maps, one per keypoint, considering
+    # the function returns one distance map per keypoint
+    kpi = ia.KeypointsOnImage(keypoints=[ia.Keypoint(x=2, y=3), ia.Keypoint(x=1, y=0)], shape=(4, 4, 3))
+    expected = np.float32([
+        [(0-1)**2 + (0-0)**2, (1-1)**2 + (0-0)**2, (2-1)**2 + (0-0)**2, (3-1)**2 + (0-0)**2],
+        [(0-1)**2 + (1-0)**2, (1-1)**2 + (1-0)**2, (2-1)**2 + (1-0)**2, (3-1)**2 + (1-0)**2],
+        [(0-1)**2 + (2-0)**2, (1-2)**2 + (2-3)**2, (2-2)**2 + (2-3)**2, (3-2)**2 + (2-3)**2],
+        [(0-2)**2 + (3-3)**2, (1-2)**2 + (3-3)**2, (2-2)**2 + (3-3)**2, (3-2)**2 + (3-3)**2],
+    ])
+    distance_map = kpi.to_distance_maps()
+    expected = np.sqrt(expected)
+    assert np.allclose(np.min(distance_map, axis=2), expected)
+
+    distance_map_inv = kpi.to_distance_maps(inverted=True)
+    expected_inv = np.divide(np.ones_like(expected), expected+1)
+    assert np.allclose(np.max(distance_map_inv, axis=2), expected_inv)
+
+    # from_distance_maps()
+    distance_map1 = np.float32([
+        [2, 2, 2, 2, 2],
+        [2, 1, 1, 1, 2],
+        [2, 1, 0, 1, 2],
+        [2, 1, 1, 1, 2]
+    ])
+    distance_map2 = np.float32([
+        [4, 3, 2, 2, 2],
+        [4, 3, 2, 1, 1],
+        [4, 3, 2, 1, 0.1],
+        [4, 3, 2, 1, 1]
+    ])
+    distance_maps = np.concatenate([distance_map1[..., np.newaxis], distance_map2[..., np.newaxis]], axis=2)
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, nb_channels=4)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 4
+    assert kpi.keypoints[1].y == 2
+    assert kpi.shape == (4, 5, 4)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(np.divide(np.ones_like(distance_maps), distance_maps+1),
+                                                 inverted=True)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 4
+    assert kpi.keypoints[1].y == 2
+    assert kpi.shape == (4, 5)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords=(1, 1), threshold=0.09)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 1
+    assert kpi.keypoints[1].y == 1
+    assert kpi.shape == (4, 5)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords={"x": 1, "y": 2}, threshold=0.09)
+    assert len(kpi.keypoints) == 2
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.keypoints[1].x == 1
+    assert kpi.keypoints[1].y == 2
+    assert kpi.shape == (4, 5)
+
+    kpi = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords=None, threshold=0.09)
+    assert len(kpi.keypoints) == 1
+    assert kpi.keypoints[0].x == 2
+    assert kpi.keypoints[0].y == 2
+    assert kpi.shape == (4, 5)
+
+    got_exception = False
+    try:
+        _ = ia.KeypointsOnImage.from_distance_maps(distance_maps, if_not_found_coords=False, threshold=0.09)
+    except Exception as exc:
+        assert "Expected if_not_found_coords to be" in str(exc)
+        got_exception = True
+    assert got_exception
+
     # copy()
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
@@ -1522,6 +2056,12 @@ def test_BoundingBox():
     # area
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     assert bb.area == (30-10) * (40-20)
+
+    # contains
+    bb = ia.BoundingBox(y1=1, x1=2, y2=1+4, x2=2+5, label=None)
+    assert bb.contains(ia.Keypoint(x=2.5, y=1.5)) is True
+    assert bb.contains(ia.Keypoint(x=2, y=1)) is True
+    assert bb.contains(ia.Keypoint(x=0, y=0)) is False
 
     # project
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -1865,11 +2405,32 @@ def test_BoundingBox():
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image_pad[8:11, 8:11, :])
 
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+    image_pad = np.pad(image, ((0, 1), (0, 1)), mode="constant", constant_values=0)
+    bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image_pad[8:11, 8:11])
+
     image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
     image_pad = np.pad(image, ((1, 0), (1, 0), (0, 0)), mode="constant", constant_values=0)
     bb = ia.BoundingBox(y1=-1, y2=3, x1=-1, x2=4, label=None)
     image_sub = bb.extract_from_image(image)
     assert np.array_equal(image_sub, image_pad[0:4, 0:5, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=1.99999, x1=1, x2=1.99999, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:1+1, 1:1+1, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=1, x1=2, x2=4, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:1+1, 2:4, :])
+
+    image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+    bb = ia.BoundingBox(y1=1, y2=1, x1=2, x2=2, label=None)
+    image_sub = bb.extract_from_image(image)
+    assert np.array_equal(image_sub, image[1:1+1, 2:2+1, :])
 
     # to_keypoints()
     bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label=None)
@@ -1933,6 +2494,14 @@ def test_BoundingBoxesOnImage():
     assert bbsoi.height == 40
     assert bbsoi.width == 50
 
+    # empty
+    bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
+    bbsoi = ia.BoundingBoxesOnImage([bb], shape=(40, 50, 3))
+    assert not bbsoi.empty
+
+    bbsoi = ia.BoundingBoxesOnImage([], shape=(40, 50, 3))
+    assert bbsoi.empty
+
     # on()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
@@ -1967,6 +2536,67 @@ def test_BoundingBoxesOnImage():
     assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
     assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
     assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+
+    # from_xyxy_array()
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(
+        np.float32([
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 2.0, 3.0, 4.0]
+        ]),
+        shape=(40, 50, 3)
+    )
+    assert len(bbsoi.bounding_boxes) == 2
+    assert np.allclose(bbsoi.bounding_boxes[0].x1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].x2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x1, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y1, 2.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x2, 3.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y2, 4.0)
+    assert bbsoi.shape == (40, 50, 3)
+
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(
+        np.int32([
+            [0, 0, 1, 1],
+            [1, 2, 3, 4]
+        ]),
+        shape=(40, 50, 3)
+    )
+    assert len(bbsoi.bounding_boxes) == 2
+    assert np.allclose(bbsoi.bounding_boxes[0].x1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y1, 0.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].x2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[0].y2, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x1, 1.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y1, 2.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].x2, 3.0)
+    assert np.allclose(bbsoi.bounding_boxes[1].y2, 4.0)
+    assert bbsoi.shape == (40, 50, 3)
+
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(
+        np.zeros((0, 4), dtype=np.float32),
+        shape=(40, 50, 3)
+    )
+    assert len(bbsoi.bounding_boxes) == 0
+    assert bbsoi.shape == (40, 50, 3)
+
+    # to_xyxy_array()
+    xyxy_arr = np.float32([
+        [0.0, 0.0, 1.0, 1.0],
+        [1.0, 2.0, 3.0, 4.0]
+    ])
+    bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(xyxy_arr, shape=(40, 50, 3))
+    xyxy_arr_out = bbsoi.to_xyxy_array()
+    assert np.allclose(xyxy_arr, xyxy_arr_out)
+    assert xyxy_arr_out.dtype == np.float32
+
+    xyxy_arr_out = bbsoi.to_xyxy_array(dtype=np.int32)
+    assert np.allclose(xyxy_arr.astype(np.int32), xyxy_arr_out)
+    assert xyxy_arr_out.dtype == np.int32
+
+    xyxy_arr_out = ia.BoundingBoxesOnImage([], shape=(40, 50, 3)).to_xyxy_array(dtype=np.int32)
+    assert xyxy_arr_out.shape == (0, 4)
 
     # draw_on_image()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
@@ -2234,6 +2864,78 @@ def test_HeatmapsOnImage_pad():
     )
 
 
+def test_HeatmapsOnImage_pad_to_aspect_ratio():
+    heatmaps_arr = np.float32([
+        [0.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0]
+    ])
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(1.0)
+    assert heatmaps_padded.arr_0to1.shape == (3, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(1.0, cval=0.5)
+    assert heatmaps_padded.arr_0to1.shape == (3, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.5, 0.5, 0.5]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(1.0, mode="edge")
+    assert heatmaps_padded.arr_0to1.shape == (3, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0]
+        ])
+    )
+
+    # test aspect ratio != 1.0
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(2.0, cval=0.1)
+    assert heatmaps_padded.arr_0to1.shape == (2, 4, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.0, 0.0, 1.0, 0.1],
+            [0.0, 0.0, 1.0, 0.1]
+        ])
+    )
+
+    heatmaps_padded = heatmaps.pad_to_aspect_ratio(0.25, cval=0.1)
+    assert heatmaps_padded.arr_0to1.shape == (12, 3, 1)
+    assert np.allclose(
+        heatmaps_padded.arr_0to1[:, :, 0],
+        np.float32([
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1]
+        ])
+    )
+
+
 def test_HeatmapsOnImage_avg_pool():
     heatmaps_arr = np.float32([
         [0.0, 0.0, 0.5, 1.0],
@@ -2304,6 +3006,105 @@ def test_HeatmapsOnImage_scale():
             [0.0, 0.0, 1.0, 1.0]
         ])
     )
+
+
+def test_HeatmapsOnImage_from_uint8():
+    hm = ia.HeatmapsOnImage.from_uint8(
+        np.uint8([
+            [0, 128, 255],
+            [255, 128, 0]
+        ])[..., np.newaxis],
+        (20, 30, 3)
+    )
+    assert hm.shape == (20, 30, 3)
+    assert hm.arr_0to1.shape == (2, 3, 1)
+    assert np.allclose(hm.arr_0to1[..., 0], np.float32([
+        [0, 128/255, 1.0],
+        [1.0, 128/255, 0]
+    ]))
+
+    # 2d uint8 arr
+    hm = ia.HeatmapsOnImage.from_uint8(
+        np.uint8([
+            [0, 128, 255],
+            [255, 128, 0]
+        ]),
+        (20, 30, 3)
+    )
+    assert hm.shape == (20, 30, 3)
+    assert hm.arr_0to1.shape == (2, 3, 1)
+    assert np.allclose(hm.arr_0to1[..., 0], np.float32([
+        [0, 128/255, 1.0],
+        [1.0, 128/255, 0]
+    ]))
+
+    # min_value, max_value
+    hm = ia.HeatmapsOnImage.from_uint8(
+        np.uint8([
+            [0, 128, 255],
+            [255, 128, 0]
+        ])[..., np.newaxis],
+        (20, 30, 3),
+        min_value=-1.0,
+        max_value=2.0
+    )
+    assert hm.shape == (20, 30, 3)
+    assert hm.arr_0to1.shape == (2, 3, 1)
+    assert np.allclose(hm.arr_0to1[..., 0], np.float32([
+        [0, 128/255, 1.0],
+        [1.0, 128/255, 0]
+    ]))
+    assert np.allclose(hm.min_value, -1.0)
+    assert np.allclose(hm.max_value, 2.0)
+
+
+def test_HeatmapsOnImage_change_normalization():
+    # (0.0, 1.0) -> (0.0, 2.0)
+    arr = np.float32([
+        [0.0, 0.5, 1.0],
+        [1.0, 0.5, 0.0]
+    ])
+    observed = ia.HeatmapsOnImage.change_normalization(arr, (0.0, 1.0), (0.0, 2.0))
+    expected = np.float32([
+        [0.0, 1.0, 2.0],
+        [2.0, 1.0, 0.0]
+    ])
+    assert np.allclose(observed, expected)
+
+    # (0.0, 1.0) -> (-1.0, 0.0)
+    observed = ia.HeatmapsOnImage.change_normalization(arr, (0.0, 1.0), (-1.0, 0.0))
+    expected = np.float32([
+        [-1.0, -0.5, 0.0],
+        [0.0, -0.5, -1.0]
+    ])
+    assert np.allclose(observed, expected)
+
+    # (-1.0, 1.0) -> (1.0, 3.0)
+    arr = np.float32([
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0]
+    ])
+    observed = ia.HeatmapsOnImage.change_normalization(arr, (-1.0, 1.0), (1.0, 3.0))
+    expected = np.float32([
+        [1.0, 2.0, 3.0],
+        [3.0, 2.0, 1.0]
+    ])
+    assert np.allclose(observed, expected)
+
+    # (-1.0, 1.0) -> (1.0, 3.0)
+    # value ranges given as HeatmapsOnImage
+    arr = np.float32([
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0]
+    ])
+    source = ia.HeatmapsOnImage(np.float32([[0.0]]), min_value=-1.0, max_value=1.0, shape=(1, 1, 3))
+    target = ia.HeatmapsOnImage(np.float32([[1.0]]), min_value=1.0, max_value=3.0, shape=(1, 1, 3))
+    observed = ia.HeatmapsOnImage.change_normalization(arr, source, target)
+    expected = np.float32([
+        [1.0, 2.0, 3.0],
+        [3.0, 2.0, 1.0]
+    ])
+    assert np.allclose(observed, expected)
 
 
 def test_SegmentationMapOnImage_bool():
@@ -2636,17 +3437,17 @@ def test_SegmentationMapOnImage_pad_to_aspect_ratio():
 
     segmap_padded = segmap.pad_to_aspect_ratio(1.0)
     observed = segmap_padded.arr
-    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="constant", constant_values=0)
+    expected = np.pad(segmap.arr, ((0, 1), (0, 0), (0, 0)), mode="constant", constant_values=0)
     assert np.allclose(observed, expected)
 
     segmap_padded = segmap.pad_to_aspect_ratio(1.0, cval=1.0)
     observed = segmap_padded.arr
-    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="constant", constant_values=1.0)
+    expected = np.pad(segmap.arr, ((0, 1), (0, 0), (0, 0)), mode="constant", constant_values=1.0)
     assert np.allclose(observed, expected)
 
     segmap_padded = segmap.pad_to_aspect_ratio(1.0, mode="edge")
     observed = segmap_padded.arr
-    expected = np.pad(segmap.arr, ((1, 0), (0, 0), (0, 0)), mode="edge")
+    expected = np.pad(segmap.arr, ((0, 1), (0, 0), (0, 0)), mode="edge")
     assert np.allclose(observed, expected)
 
     segmap_padded = segmap.pad_to_aspect_ratio(0.5)
@@ -3071,6 +3872,14 @@ def test_Polygon_area():
     poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
     assert 1/2 - 1e-8 < poly.area < 1/2 + 1e-8
 
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    got_exception = False
+    try:
+        _ = poly.area
+    except Exception as exc:
+        assert "Cannot compute the polygon's area because" in str(exc)
+        got_exception = True
+    assert got_exception
 
 
 def test_Polygon_project():
@@ -3120,6 +3929,28 @@ def test_Polygon_project():
     poly_proj = poly.project((1, 1), (2, 2))
     assert poly_proj.exterior.dtype.type == np.float32
     assert poly_proj.exterior.shape == (0, 2)
+
+
+def test_Polygon_find_closest_point_idx():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    closest_idx = poly.find_closest_point_index(x=0, y=0)
+    assert closest_idx == 0
+    closest_idx = poly.find_closest_point_index(x=1, y=0)
+    assert closest_idx == 1
+    closest_idx = poly.find_closest_point_index(x=1.0001, y=-0.001)
+    assert closest_idx == 1
+    closest_idx = poly.find_closest_point_index(x=0.2, y=0.2)
+    assert closest_idx == 0
+
+    closest_idx, distance = poly.find_closest_point_index(x=0, y=0, return_distance=True)
+    assert closest_idx == 0
+    assert np.allclose(distance, 0.0)
+    closest_idx, distance = poly.find_closest_point_index(x=0.1, y=0.15, return_distance=True)
+    assert closest_idx == 0
+    assert np.allclose(distance, np.sqrt((0.1**2) + (0.15**2)))
+    closest_idx, distance = poly.find_closest_point_index(x=0.9, y=0.15, return_distance=True)
+    assert closest_idx == 1
+    assert np.allclose(distance, np.sqrt(((1.0-0.9)**2) + (0.15**2)))
 
 
 def test_Polygon__compute_inside_image_point_mask():
@@ -3214,6 +4045,15 @@ def test_Polygon_is_out_of_image():
         assert poly.is_out_of_image(shape, partly=False, fully=True)
         assert poly.is_out_of_image(shape, partly=True, fully=True)
 
+    poly = ia.Polygon([])
+    got_exception = False
+    try:
+        poly.is_out_of_image((1, 1, 3))
+    except Exception as exc:
+        assert "Cannot determine whether the polygon is inside the image" in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_Polygon_cut_out_of_image():
     _test_Polygon_cut_clip(lambda poly, image: poly.cut_out_of_image(image))
@@ -3271,6 +4111,12 @@ def _test_Polygon_cut_clip(func):
         [0.6, 1.0]
     ]))
     assert multipoly_clipped.geoms[0].label == "test"
+
+    # poly outside of image
+    poly = ia.Polygon([(10.0, 10.0)])
+    multipoly_clipped = func(poly, (5, 5, 3))
+    assert isinstance(multipoly_clipped, ia.MultiPolygon)
+    assert len(multipoly_clipped.geoms) == 0
 
 
 def test_Polygon_shift():
@@ -3369,7 +4215,21 @@ def test_Polygon_draw_on_image():
     expected = np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1))
     assert np.all(image_poly[3:8, 3:8, :] == expected)
 
-    # TODO test drawing on float32, float64 image
+    # simple drawing of square with float32 input
+    poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
+    image_poly = poly.draw_on_image(image.astype(np.float32),
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=1.0, alpha_perimeter=1.0,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.float32
+    assert image_poly.shape == (10, 10, 3)
+    for c_idx, value in enumerate([0, 255, 0]):
+        assert np.allclose(image_poly[2:9, 2:3, c_idx], np.zeros((7, 1), dtype=np.float32) + value)  # left boundary
+        assert np.allclose(image_poly[2:9, 8:9, c_idx], np.zeros((7, 1), dtype=np.float32) + value)  # right boundary
+        assert np.allclose(image_poly[2:3, 2:9, c_idx], np.zeros((1, 7), dtype=np.float32) + value)  # top boundary
+        assert np.allclose(image_poly[8:9, 2:9, c_idx], np.zeros((1, 7), dtype=np.float32) + value)  # bottom boundary
+    expected = np.tile(np.float32([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1))
+    assert np.allclose(image_poly[3:8, 3:8, :], expected)
 
     # drawing of poly that is half out of image
     poly = ia.Polygon([(2, 2+5), (8, 2+5), (8, 8+5), (2, 8+5)])
@@ -3446,6 +4306,26 @@ def test_Polygon_draw_on_image():
     expected = np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (6, 6, 1))
     assert np.all(image_poly[2:8, 2:8, :] == expected)
 
+    # alpha=0.5
+    poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
+    image_poly = poly.draw_on_image(image,
+                                    color=[32, 128, 32], color_perimeter=[0, 255, 0],
+                                    alpha=0.5, alpha_perimeter=0.5,
+                                    raise_if_out_of_image=False)
+    assert image_poly.dtype.type == np.uint8
+    assert image_poly.shape == (10, 10, 3)
+    for c_idx, value in enumerate([0, 255, 0]):
+        assert np.all(
+            image_poly[2:9, 8:9, c_idx] ==
+            (
+                0.5*image[2:9, 8:9, c_idx]
+                + np.full((7, 1), 0.5*value, dtype=np.float32)
+            ).astype(np.uint8)
+        )  # right boundary
+    expected = 0.5 * np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1)) \
+        + 0.5 * image[3:8, 3:8, :]
+    assert np.all(image_poly[3:8, 3:8, :] == expected.astype(np.uint8))
+
     # copy=False
     # test deactivated as the function currently does not offer a copy argument
     """
@@ -3521,6 +4401,16 @@ def test_Polygon_extract_from_image():
     subimage = poly.extract_from_image(image)
     assert np.array_equal(subimage, image[1:9, 1:9, :])
 
+    # error for invalid polygons
+    got_exception = False
+    poly = ia.Polygon([(0.51, 0.51), (9.4, 0.51)])
+    try:
+        _ = poly.extract_from_image(image)
+    except Exception as exc:
+        assert "Polygon must be made up" in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_Polygon_change_first_point_by_coords():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
@@ -3566,6 +4456,15 @@ def test_Polygon_change_first_point_by_coords():
     poly = ia.Polygon([(0, 0)])
     poly_reordered = poly.change_first_point_by_coords(x=0, y=0)
     assert np.allclose(poly_reordered.exterior, np.float32([[0, 0]]))
+
+    # invalid polygon
+    git_exception = False
+    poly = ia.Polygon([])
+    try:
+        _ = poly.change_first_point_by_coords(x=0, y=0)
+    except Exception as exc:
+        assert "Cannot reorder polygon points" in str(exc)
+        got_exception = True
 
 
 def test_Polygon_change_first_point_by_index():
@@ -3731,6 +4630,11 @@ def test_Polygon_from_shapely():
     for (x_exp, y_exp), (x_obs, y_obs) in zip(exterior, poly.exterior):
         assert x_exp - 1e-8 < x_obs < x_exp + 1e-8
         assert y_exp - 1e-8 < y_obs < y_exp + 1e-8
+
+    # empty polygon
+    poly_shapely = shapely.geometry.Polygon([])
+    poly = ia.Polygon.from_shapely(poly_shapely)
+    assert len(poly.exterior) == 0
 
 
 def test_Polygon_copy():
@@ -4010,6 +4914,221 @@ def test_Polygon_almost_equals():
     poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
     assert not poly_a.almost_equals(poly_b)
 
+    poly_a = ia.Polygon([(0, 0)])
+    assert not poly_a.almost_equals("foo")
+
+
+def test___convert_points_to_shapely_line_string():
+    # TODO this function seems to already be covered completely by other tests, so add a proper test later
+    pass
+
+
+def test__interpolate_point_pair():
+    point_a = (0, 0)
+    point_b = (1, 2)
+    inter = _interpolate_point_pair(point_a, point_b, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0.5, 1.0]
+        ])
+    )
+
+    inter = _interpolate_point_pair(point_a, point_b, 2)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [1*1/3, 1*2/3],
+            [2*1/3, 2*2/3]
+        ])
+    )
+
+    inter = _interpolate_point_pair(point_a, point_b, 0)
+    assert len(inter) == 0
+
+
+def test__interpolate_points():
+    # 2 points
+    points = [
+        (0, 0),
+        (1, 2)
+    ]
+    inter = _interpolate_points(points, 0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [1, 2]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2],
+            [0.5, 1.0]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2]
+        ])
+    )
+
+    # 3 points
+    points = [
+        (0, 0),
+        (1, 2),
+        (0.5, 3)
+    ]
+
+    inter = _interpolate_points(points, 0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [1, 2],
+            [0.5, 3]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2],
+            [0.75, 2.5],
+            [0.5, 3],
+            [0.25, 1.5]
+        ])
+    )
+
+    inter = _interpolate_points(points, 1, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0.5, 1.0],
+            [1, 2],
+            [0.75, 2.5],
+            [0.5, 3]
+        ])
+    )
+
+    # 0 points
+    points = []
+    inter = _interpolate_points(points, 1)
+    assert len(inter) == 0
+
+    # 1 point
+    points = [(0, 0)]
+    inter = _interpolate_points(points, 0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0]
+        ])
+    )
+    inter = _interpolate_points(points, 1)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0]
+        ])
+    )
+
+
+def test__interpolate_points_by_max_distance():
+    # 2 points
+    points = [
+        (0, 0),
+        (0, 2)
+    ]
+    inter = _interpolate_points_by_max_distance(points, 10000)
+    assert np.allclose(
+        inter,
+        points
+    )
+
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2],
+            [0, 1.0]
+        ])
+    )
+
+    inter = _interpolate_points_by_max_distance(points, 1.0, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2]
+        ])
+    )
+
+    # 3 points
+    points = [
+        (0, 0),
+        (0, 2),
+        (2, 0)
+    ]
+
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2],
+            [1.0, 1.0],
+            [2, 0],
+            [1.0, 0]
+        ])
+    )
+
+    inter = _interpolate_points_by_max_distance(points, 1.0, closed=False)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0],
+            [0, 1.0],
+            [0, 2],
+            [1.0, 1.0],
+            [2, 0]
+        ])
+    )
+
+    # 0 points
+    points = []
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert len(inter) == 0
+
+    # 1 points
+    points = [(0, 0)]
+
+    inter = _interpolate_points_by_max_distance(points, 1.0)
+    assert np.allclose(
+        inter,
+        np.float32([
+            [0, 0]
+        ])
+    )
+
 
 def test_BatchLoader():
     def _load_func():
@@ -4056,6 +5175,51 @@ def test_BatchLoader():
             loader = ia.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
             loader.terminate()
             assert loader.all_finished()
+
+
+def test_BackgroundAugmenter__augment_images_worker():
+    def gen():
+        yield ia.Batch(images=np.zeros((1, 4, 4, 3), dtype=np.uint8))
+    bl = ia.BatchLoader(gen(), queue_size=2)
+    bgaug = ia.BackgroundAugmenter(bl, iaa.Noop(), queue_size=1, nb_workers=1)
+
+    queue_source = multiprocessing.Queue(2)
+    queue_target = multiprocessing.Queue(2)
+    queue_source.put(
+        pickle.dumps(
+            ia.Batch(images=np.zeros((1, 4, 8, 3), dtype=np.uint8)),
+            protocol=-1
+        )
+    )
+    queue_source.put(pickle.dumps(None, protocol=-1))
+    bgaug._augment_images_worker(iaa.Add(1), queue_source, queue_target, 1)
+
+    batch_aug = pickle.loads(queue_target.get())
+    assert isinstance(batch_aug, ia.Batch)
+    assert batch_aug.images is not None
+    assert batch_aug.images.dtype == np.uint8
+    assert batch_aug.images.shape == (1, 4, 8, 3)
+    assert np.array_equal(batch_aug.images, np.zeros((1, 4, 8, 3), dtype=np.uint8))
+    assert batch_aug.images_aug is not None
+    assert batch_aug.images_aug.dtype == np.uint8
+    assert batch_aug.images_aug.shape == (1, 4, 8, 3)
+    assert np.array_equal(batch_aug.images_aug, np.zeros((1, 4, 8, 3), dtype=np.uint8) + 1)
+
+    finished_signal = pickle.loads(queue_target.get())
+    assert finished_signal is None
+
+    source_finished_signal = pickle.loads(queue_source.get())
+    assert source_finished_signal is None
+
+    assert queue_source.empty()
+    assert queue_target.empty()
+
+    queue_source.close()
+    queue_target.close()
+    queue_source.join_thread()
+    queue_target.join_thread()
+    bl.terminate()
+    bgaug.terminate()
 
 
 if __name__ == "__main__":

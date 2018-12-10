@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import shapely
 import shapely.geometry
 import shapely.ops
+from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -482,7 +483,7 @@ def _quokka_normalize_extract(extract):
         bb = extract.bounding_boxes[0]
     else:
         raise Exception(
-            "Expected None or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
+            "Expected 'square' or tuple of four entries or BoundingBox or BoundingBoxesOnImage "
             + "for parameter 'extract', got %s." % (type(extract),)
         )
     return bb
@@ -498,7 +499,7 @@ def _compute_resized_shape(from_shape, to_shape):
         Old shape of the array. Usually expected to be a tuple of form ``(H, W)`` or ``(H, W, C)`` or
         alternatively an array with two or three dimensions.
 
-    to_shape : None or tuple of ints or tuple of floats or int or float
+    to_shape : None or tuple of ints or tuple of floats or int or float or ndarray
         New shape of the array.
 
             * If None, then `from_shape` will be used as the new shape.
@@ -510,6 +511,7 @@ def _compute_resized_shape(from_shape, to_shape):
               and width.
             * If a tuple ``(H', W', [C'])`` of floats (except ``C``), then ``H'`` and ``W'`` will
               be used as the new height and width.
+            * If a numpy array, then the array's shape will be used.
 
     Returns
     -------
@@ -527,24 +529,32 @@ def _compute_resized_shape(from_shape, to_shape):
     if to_shape is None:
         pass
     elif isinstance(to_shape, tuple):
+        do_assert(len(from_shape) in [2, 3])
+        do_assert(len(to_shape) in [2, 3])
+
         if len(from_shape) == 3 and len(to_shape) == 3:
             do_assert(from_shape[2] == to_shape[2])
         elif len(to_shape) == 3:
             to_shape_computed.append(to_shape[2])
 
-        if all([is_single_integer(v) for v in to_shape[0:2]]):
-            to_shape_computed[0] = to_shape[0]
-            to_shape_computed[1] = to_shape[1]
-        elif all([is_single_float(v) for v in to_shape[0:2]]):
-            to_shape_computed[0] = int(np.round(from_shape[0] * to_shape[0])) if to_shape[0] is not None else from_shape[0]
-            to_shape_computed[1] = int(np.round(from_shape[1] * to_shape[1])) if to_shape[1] is not None else from_shape[1]
+        do_assert(all([v is None or is_single_number(v) for v in to_shape[0:2]]),
+                  "Expected the first two entries in to_shape to be None or numbers, "
+                  + "got types %s." % (str([type(v) for v in to_shape[0:2]]),))
+
+        for i, from_shape_i in enumerate(from_shape[0:2]):
+            if to_shape[i] is None:
+                to_shape_computed[i] = from_shape_i
+            elif is_single_integer(to_shape[i]):
+                to_shape_computed[i] = to_shape[i]
+            else:  # float
+                to_shape_computed[i] = int(np.round(from_shape_i * to_shape[i]))
     elif is_single_integer(to_shape) or is_single_float(to_shape):
         to_shape_computed = _compute_resized_shape(from_shape, (to_shape, to_shape))
     else:
         raise Exception("Expected to_shape to be None or ndarray or tuple of floats or tuple of ints or single int "
                         + "or single float, got %s." % (type(to_shape),))
 
-    return to_shape_computed
+    return tuple(to_shape_computed)
 
 
 def quokka(size=None, extract=None):
@@ -634,11 +644,12 @@ def quokka_heatmap(size=None, extract=None):
         bb = _quokka_normalize_extract(extract)
         img = bb.extract_from_image(img)
     if size is None:
-        size = (643, 960)
+        size = img.shape[0:2]
 
     shape_resized = _compute_resized_shape(img.shape, size)
     img = imresize_single_image(img, shape_resized[0:2])
-    img_0to1 = img.astype(np.float32) / 255.0
+    img_0to1 = img[..., 0]  # depth map was saved as 3-channel RGB
+    img_0to1 = img_0to1.astype(np.float32) / 255.0
     img_0to1 = 1 - img_0to1  # depth map was saved as 0 being furthest away
 
     return HeatmapsOnImage(img_0to1, shape=img_0to1.shape[0:2] + (3,))
@@ -821,6 +832,44 @@ def angle_between_vectors(v1, v2):
 
 # TODO is this used anywhere?
 def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
+    """
+    Compute the intersection point of two lines.
+
+    Taken from https://stackoverflow.com/a/20679579 .
+
+    Parameters
+    ----------
+    x1 : number
+        x coordinate of the first point on line 1. (The lines extends beyond this point.)
+
+    y1 : number:
+        y coordinate of the first point on line 1. (The lines extends beyond this point.)
+
+    x2 : number
+        x coordinate of the second point on line 1. (The lines extends beyond this point.)
+
+    y2 : number:
+        y coordinate of the second point on line 1. (The lines extends beyond this point.)
+
+    x3 : number
+        x coordinate of the first point on line 2. (The lines extends beyond this point.)
+
+    y3 : number:
+        y coordinate of the first point on line 2. (The lines extends beyond this point.)
+
+    x4 : number
+        x coordinate of the second point on line 2. (The lines extends beyond this point.)
+
+    y4 : number:
+        y coordinate of the second point on line 2. (The lines extends beyond this point.)
+
+    Returns
+    -------
+    tuple of number or bool
+        The coordinate of the intersection point as a tuple ``(x, y)``.
+        If the lines are parallel (no intersection point or an infinite number of them), the result is False.
+
+    """
     def _make_line(p1, p2):
         A = (p1[1] - p2[1])
         B = (p2[0] - p1[0])
@@ -830,13 +879,13 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
     L1 = _make_line((x1, y1), (x2, y2))
     L2 = _make_line((x3, y3), (x4, y4))
 
-    D  = L1[0] * L2[1] - L1[1] * L2[0]
+    D = L1[0] * L2[1] - L1[1] * L2[0]
     Dx = L1[2] * L2[1] - L1[1] * L2[2]
     Dy = L1[0] * L2[2] - L1[2] * L2[0]
     if D != 0:
         x = Dx / D
         y = Dy / D
-        return x,y
+        return x, y
     else:
         return False
 
@@ -875,25 +924,15 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
         Input image with text drawn on it.
 
     """
-    # keeping PIL here so that it is not a dependency of the library right now
-    from PIL import Image, ImageDraw, ImageFont
-
     do_assert(img.dtype in [np.uint8, np.float32])
 
     input_dtype = img.dtype
     if img.dtype == np.float32:
         img = img.astype(np.uint8)
 
-    for i in range(len(color)):
-        val = color[i]
-        if isinstance(val, float):
-            val = int(val * 255)
-            val = np.clip(val, 0, 255)
-            color[i] = val
-
-    img = Image.fromarray(img)
-    font = ImageFont.truetype(DEFAULT_FONT_FP, size)
-    context = ImageDraw.Draw(img)
+    img = PIL_Image.fromarray(img)
+    font = PIL_ImageFont.truetype(DEFAULT_FONT_FP, size)
+    context = PIL_ImageDraw.Draw(img)
     context.text((x, y), text, fill=tuple(color), font=font)
     img_np = np.asarray(img)
     img_np.setflags(write=True)  # PIL/asarray returns read only array
@@ -905,7 +944,6 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
 
 
 # TODO rename sizes to size?
-# TODO accept lists too as images
 def imresize_many_images(images, sizes=None, interpolation=None):
     """
     Resize many images to a specified size.
@@ -999,7 +1037,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         if nb_shapes == 1:
             return list(imresize_many_images(np.array(images), sizes=sizes, interpolation=interpolation))
         else:
-            return [imresize_many_images(image[np.newaxis, ...], sizes=sizes, interpolation=interpolation)
+            return [imresize_many_images(image[np.newaxis, ...], sizes=sizes, interpolation=interpolation)[0, ...]
                     for image in images]
 
     shape = images.shape
@@ -1183,8 +1221,8 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     elif aspect_ratio_current > aspect_ratio:
         # horizontal image, width > height
         diff = ((1/aspect_ratio) * width) - height
-        pad_top = int(np.ceil(diff / 2))
-        pad_bottom = int(np.floor(diff / 2))
+        pad_top = int(np.floor(diff / 2))
+        pad_bottom = int(np.ceil(diff / 2))
 
     return pad_top, pad_right, pad_bottom, pad_left
 
@@ -3176,7 +3214,7 @@ class BoundingBoxesOnImage(object):
             return BoundingBoxesOnImage(bounding_boxes, shape)
 
     @classmethod
-    def from_xyxy_array(cls, bounding_box_matrix, shape):
+    def from_xyxy_array(cls, xyxy, shape):
         """
         Convert an (N,4) ndarray to a BoundingBoxesOnImage object.
 
@@ -3184,9 +3222,9 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        bounding_box_matrix : (N,4) ndarray
+        xyxy : (N,4) ndarray
             Array containing the corner coordinates (top-left, bottom-right) of ``N`` bounding boxes
-            in the form ``(x1, y1, x2, y2)``.
+            in the form ``(x1, y1, x2, y2)``. Should usually be of dtype ``float32``.
 
         shape : tuple of int
             Shape of the image on which the bounding boxes are placed.
@@ -3198,23 +3236,9 @@ class BoundingBoxesOnImage(object):
             Object containing a list of BoundingBox objects following the provided corner coordinates.
 
         """
+        do_assert(xyxy.shape[1] == 4, "Expected input array of shape (N, 4), got shape %s." % (xyxy.shape,))
 
-        nb_boxes, nb_coordinates = bounding_box_matrix.shape
-
-        if nb_boxes < 1:
-            raise ValueError("No bounding boxes found inside the box-matrix")
-
-        if nb_coordinates != 4:
-            raise ValueError(
-                "Not found the 4 coordinates of the boxes, because the box-matrix has a shape: {0}".format(
-                    bounding_box_matrix.shape)
-            )
-
-        boxes = []
-        for box in bounding_box_matrix:
-            x1, y1, x2, y2 = box
-            tmp_box = BoundingBox(x1, y1, x2, y2)
-            boxes.append(tmp_box)
+        boxes = [BoundingBox(*row) for row in xyxy]
 
         return cls(boxes, shape)
 
@@ -3236,17 +3260,12 @@ class BoundingBoxesOnImage(object):
             top-left and bottom-right bounding box corner coordinates in form ``(x1, y1, x2, y2)``.
 
         """
-        bounding_box_matrix = np.zeros((len(self.bounding_boxes), 4), dtype=np.float32)
+        xyxy_array = np.zeros((len(self.bounding_boxes), 4), dtype=np.float32)
 
         for i, box in enumerate(self.bounding_boxes):
-            x1 = box.x1
-            y1 = box.y1
-            x2 = box.x2
-            y2 = box.y2
+            xyxy_array[i] = [box.x1, box.y1, box.x2, box.y2]
 
-            bounding_box_matrix[i] = [x1, y1, x2, y2]
-
-        return bounding_box_matrix.astype(dtype)
+        return xyxy_array.astype(dtype)
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
         """
@@ -4040,13 +4059,10 @@ class Polygon(object):
 
         """
         do_assert(isinstance(polygon_shapely, shapely.geometry.Polygon))
-        if len(polygon_shapely.exterior.coords) == 0:
+        # polygon_shapely.exterior can be None if the polygon was instantiated without points
+        if polygon_shapely.exterior is None or len(polygon_shapely.exterior.coords) == 0:
             return Polygon([], label=label)
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
-
-        if len(exterior) == 0:
-            return Polygon([], label=label)
-
         return Polygon(exterior, label=label)
 
     def exterior_almost_equals(self, other_polygon, max_distance=1e-6, interpolate=8):
@@ -4264,11 +4280,14 @@ def _interpolate_points(points, nb_steps, closed=True):
     points_interp = []
     for point_a, point_b in zip(points[:-1], points[1:]):
         points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
-    # close does not have to be reverted here, as last point in not included in the extend()
+    if not closed:
+        points_interp.append(points[-1])
+    # close does not have to be reverted here, as last point is not included in the extend()
     return points_interp
 
 
 def _interpolate_points_by_max_distance(points, max_distance, closed=True):
+    do_assert(max_distance > 0, "max_distance must have value greater than 0, got %.8f" % (max_distance,))
     if len(points) <= 1:
         return points
     if closed:
@@ -4278,6 +4297,8 @@ def _interpolate_points_by_max_distance(points, max_distance, closed=True):
         dist = np.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2)
         nb_steps = int((dist / max_distance) - 1)
         points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
+    if not closed:
+        points_interp.append(points[-1])
     return points_interp
 
 
@@ -4358,12 +4379,22 @@ class HeatmapsOnImage(object):
 
     def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
         """Construct a new HeatmapsOnImage object."""
-        do_assert(arr.dtype.type in [np.float32])
-        do_assert(arr.ndim in [2, 3])
-        do_assert(len(shape) in [2, 3])
+        do_assert(is_np_array(arr), "Expected numpy array as heatmap input array, got type %s" % (type(arr),))
+        # TODO maybe allow 0-sized heatmaps? in that case the min() and max() must be adjusted
+        do_assert(arr.shape[0] > 0 and arr.shape[1] > 0,
+                  "Expected numpy array as heatmap with height and width greater than 0, got shape %s." % (arr.shape,))
+        do_assert(arr.dtype.type in [np.float32],
+                  "Heatmap input array expected to be of dtype float32, got dtype %s." % (arr.dtype,))
+        do_assert(arr.ndim in [2, 3], "Heatmap input array must be 2d or 3d, got shape %s." % (arr.shape,))
+        do_assert(len(shape) in [2, 3],
+                  "Argument 'shape' in HeatmapsOnImage expected to be 2d or 3d, got shape %s." % (shape,))
         do_assert(min_value < max_value)
-        do_assert(np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps)
-        do_assert(np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps)
+        do_assert(np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps,
+                  ("Value range of heatmap was chosen to be (%.8f, %.8f), but found value below minimum in first "
+                   + "50 heatmap array values.") % (min_value, max_value))
+        do_assert(np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps,
+                  ("Value range of heatmap was chosen to be (%.8f, %.8f), but found value above maximum in first "
+                   + "50 heatmap array values.") % (min_value, max_value))
 
         if arr.ndim == 2:
             arr = arr[..., np.newaxis]
@@ -5525,8 +5556,8 @@ class BatchLoader(object):
     """
 
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
-        do_assert(queue_size >= 2)
-        do_assert(nb_workers >= 1)
+        do_assert(queue_size >= 2, "Queue size for BatchLoader must be at least 2, got %d." % (queue_size,))
+        do_assert(nb_workers >= 1, "Number of workers for BatchLoader must be at least 1, got %d" % (nb_workers,))
         self._queue_internal = multiprocessing.Queue(queue_size//2)
         self.queue = multiprocessing.Queue(queue_size//2)
         self.join_signal = multiprocessing.Event()
@@ -5602,7 +5633,7 @@ class BatchLoader(object):
         self.queue.put(pickle.dumps(None, protocol=-1))
         time.sleep(0.01)
 
-    def _load_batches(self, load_batch_func, queue, join_signal, seedval):
+    def _load_batches(self, load_batch_func, queue_internal, join_signal, seedval):
         if seedval is not None:
             random.seed(seedval)
             np.random.seed(seedval)
@@ -5617,7 +5648,7 @@ class BatchLoader(object):
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
                     try:
-                        queue.put(batch_pickled, timeout=0.005)
+                        queue_internal.put(batch_pickled, timeout=0.005)
                         break
                     except QueueFull:
                         pass
@@ -5626,7 +5657,7 @@ class BatchLoader(object):
         except Exception:
             traceback.print_exc()
         finally:
-            queue.put("")
+            queue_internal.put("")
         time.sleep(0.01)
 
     def terminate(self):
@@ -5653,6 +5684,9 @@ class BatchLoader(object):
             while not self.all_finished():
                 time.sleep(0.001)
 
+        # empty queue until at least one element can be added and place None as signal that BL finished
+        if self.queue.full():
+            self.queue.get()
         self.queue.put(pickle.dumps(None, protocol=-1))
         time.sleep(0.01)
 
@@ -5684,9 +5718,11 @@ class BackgroundAugmenter(object):
 
     Parameters
     ----------
-    batch_loader : BatchLoader
-        BatchLoader object to load data in the
-        background.
+    batch_loader : BatchLoader or multiprocessing.Queue
+        BatchLoader object that loads the data fed into the BackgroundAugmenter, or alternatively a Queue.
+        If a Queue, then it must be made sure that a final ``None`` in the Queue signals that the loading is
+        finished and no more batches will follow. Otherwise the BackgroundAugmenter will wait forever for the next
+        batch.
 
     augseq : Augmenter
         An augmenter to apply to all loaded images.
@@ -5707,7 +5743,7 @@ class BackgroundAugmenter(object):
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
         do_assert(queue_size > 0)
         self.augseq = augseq
-        self.queue_source = batch_loader.queue
+        self.queue_source = batch_loader if isinstance(batch_loader, multiprocessing.queues.Queue) else batch_loader.queue
         self.queue_result = multiprocessing.Queue(queue_size)
 
         if nb_workers == "auto":

@@ -151,6 +151,7 @@ def test_Scale():
     assert 50 < np.average(observed2d) < 205
     assert 50 < np.average(observed3d) < 205
 
+    # heatmaps
     aug = iaa.Scale({"height": 8, "width": 12})
     heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
     heatmaps_aug = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr, shape=base_img3d.shape)])[0]
@@ -162,6 +163,44 @@ def test_Scale():
     assert np.average(heatmaps_aug.get_arr()[:, 0]) < 0.05
     assert 0.8 < np.average(heatmaps_aug.get_arr()[2:6, 2:10]) < 1 + 1e-6
 
+    # heatmaps with different sizes than image
+    aug = iaa.Scale({"height": 16, "width": 2.0})
+    heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
+    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2*base_img3d.shape[0], 2*base_img3d.shape[1], 3))
+    heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
+    assert heatmaps_aug.shape == (16, int(base_img3d.shape[1]*2*2), 3)
+    assert heatmaps_aug.arr_0to1.shape == (8, 16, 1)
+    assert 0 - 1e-6 < heatmaps_aug.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < heatmaps_aug.max_value < 1 + 1e-6
+    assert np.average(heatmaps_aug.get_arr()[0, :]) < 0.05
+    assert np.average(heatmaps_aug.get_arr()[-1:, :]) < 0.05
+    assert np.average(heatmaps_aug.get_arr()[:, 0]) < 0.05
+    assert 0.8 < np.average(heatmaps_aug.get_arr()[2:6, 2:10]) < 1 + 1e-6
+
+    # keypoints on 3d image
+    aug = iaa.Scale({"height": 8, "width": 12})
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=4, y=1)], shape=base_img3d.shape)
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (8, 12, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 1.5)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 6)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+
+    # keypoints on 2d image,
+    # different resize factors per axis
+    aug = iaa.Scale({"height": 8, "width": 3.0})
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=4, y=1)], shape=base_img2d.shape)
+    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (8, 24)
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 3)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 12)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+
+    # images with stochastic parameter (choice)
     aug = iaa.Scale([12, 14])
     seen2d = [False, False]
     seen3d = [False, False]
@@ -183,6 +222,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # images with stochastic parameter (uniform)
     aug = iaa.Scale((12, 14))
     seen2d = [False, False, False]
     seen3d = [False, False, False]
@@ -208,66 +248,77 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # test "keep"
     aug = iaa.Scale("keep")
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == base_img2d.shape
     assert observed3d.shape == base_img3d.shape
 
+    # empty list, no change
     aug = iaa.Scale([])
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == base_img2d.shape
     assert observed3d.shape == base_img3d.shape
 
+    # empty dict, no change
     aug = iaa.Scale({})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == base_img2d.shape
     assert observed3d.shape == base_img3d.shape
 
+    # only change height
     aug = iaa.Scale({"height": 11})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (11, base_img2d.shape[1])
     assert observed3d.shape == (11, base_img3d.shape[1], 3)
 
+    # only change width
     aug = iaa.Scale({"width": 13})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (base_img2d.shape[0], 13)
     assert observed3d.shape == (base_img3d.shape[0], 13, 3)
 
+    # change height and width
     aug = iaa.Scale({"height": 12, "width": 13})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (12, 13)
     assert observed3d.shape == (12, 13, 3)
 
+    # change height, keep width
     aug = iaa.Scale({"height": 12, "width": "keep"})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (12, base_img2d.shape[1])
     assert observed3d.shape == (12, base_img3d.shape[1], 3)
 
+    # keep height, change width
     aug = iaa.Scale({"height": "keep", "width": 12})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (base_img2d.shape[0], 12)
     assert observed3d.shape == (base_img3d.shape[0], 12, 3)
 
+    # change height, keep width at same aspect ratio
     aug = iaa.Scale({"height": 12, "width": "keep-aspect-ratio"})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (12, int(12 * aspect_ratio2d))
     assert observed3d.shape == (12, int(12 * aspect_ratio3d), 3)
 
+    # keep height at same aspect ration, change width
     aug = iaa.Scale({"height": "keep-aspect-ratio", "width": 12})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (int(12 * (1/aspect_ratio2d)), 12)
     assert observed3d.shape == (int(12 * (1/aspect_ratio3d)), 12, 3)
 
+    # change height randomly, width deterministically
     aug = iaa.Scale({"height": [12, 14], "width": 12})
     seen2d = [False, False]
     seen3d = [False, False]
@@ -289,6 +340,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # change height deterministically, width randomly
     aug = iaa.Scale({"height": 12, "width": [12, 14]})
     seen2d = [False, False]
     seen3d = [False, False]
@@ -310,6 +362,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # change height deterministically, width randomly
     aug = iaa.Scale({"height": 12, "width": iap.Choice([12, 14])})
     seen2d = [False, False]
     seen3d = [False, False]
@@ -331,6 +384,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # change height randomly, width deterministically
     aug = iaa.Scale({"height": (12, 14), "width": 12})
     seen2d = [False, False, False]
     seen3d = [False, False, False]
@@ -356,6 +410,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # increase size by a factor of 2.0
     aug = iaa.Scale(2.0)
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
@@ -364,6 +419,7 @@ def test_Scale():
     assert intensity_low < np.average(observed2d) < intensity_high
     assert intensity_low < np.average(observed3d) < intensity_high
 
+    # increase size by a random factor
     aug = iaa.Scale([2.0, 4.0])
     seen2d = [False, False]
     seen3d = [False, False]
@@ -387,6 +443,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # increase size by a random factor
     aug = iaa.Scale(iap.Choice([2.0, 4.0]))
     seen2d = [False, False]
     seen3d = [False, False]
@@ -410,6 +467,7 @@ def test_Scale():
     assert all(seen2d)
     assert all(seen3d)
 
+    # decrease size by a random factor
     base_img2d = base_img2d[0:4, 0:4]
     base_img3d = base_img3d[0:4, 0:4, :]
     aug = iaa.Scale((0.76, 1.0))
@@ -435,6 +493,7 @@ def test_Scale():
     assert not not_seen2d
     assert not not_seen3d
 
+    # decrease size by random factors, one per side
     base_img2d = base_img2d[0:4, 0:4]
     base_img3d = base_img3d[0:4, 0:4, :]
     aug = iaa.Scale({"height": (0.76, 1.0), "width": (0.76, 1.0)})
@@ -462,15 +521,17 @@ def test_Scale():
     assert not not_seen2d
     assert not not_seen3d
 
+    # test bad input
     got_exception = False
     try:
         aug = iaa.Scale("foo")
-        observed2d = aug.augment_image(base_img2d)
+        _ = aug.augment_image(base_img2d)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
     assert got_exception
 
+    # test get_parameters
     aug = iaa.Scale(size=1, interpolation="nearest")
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Deterministic)
@@ -638,6 +699,82 @@ def test_Pad():
         assert len(set(movements)) == 2
         assert len(set(movements_det)) == 1
 
+    # pad smaller heatmaps
+    # heatmap is (6, 4), image is (6, 16)
+    # image is padded by (2, 4, 2, 4)
+    # expected image size: (10, 24)
+    # expected heatmap size: (10, 6)
+    aug = iaa.Pad(px=(2, 4, 2, 4), keep_size=False)
+    heatmaps_arr_small = np.float32([
+        [0, 0, 0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 0, 0, 0]
+    ])
+    top, bottom, left, right = 2, 2, 1, 1
+    heatmaps_arr_small_padded = np.pad(heatmaps_arr_small, ((top, bottom), (left, right)),
+                                       mode="constant",
+                                       constant_values=0)
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (10, 24)
+    assert observed.arr_0to1.shape == (10, 6, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.arr_0to1[..., 0], heatmaps_arr_small_padded)
+
+    # pad smaller heatmaps, with keep_size=True
+    # heatmap is (6, 4), image is (6, 16)
+    # image is padded by (2, 4, 2, 4)
+    # expected image size: (10, 24) -> (6, 16) after resize
+    # expected heatmap size: (10, 6) -> (6, 4) after resize
+    aug = iaa.Pad(px=(2, 4, 2, 4), keep_size=True)
+    heatmaps_arr_small = np.float32([
+        [0, 0, 0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 0, 0, 0]
+    ])
+    top, bottom, left, right = 2, 2, 1, 1
+    heatmaps_arr_small_padded = np.pad(heatmaps_arr_small, ((top, bottom), (left, right)),
+                                       mode="constant",
+                                       constant_values=0)
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (6, 16)
+    assert observed.arr_0to1.shape == (6, 4, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(
+        observed.arr_0to1[..., 0],
+        np.clip(
+            ia.imresize_single_image(heatmaps_arr_small_padded, (6, 4), interpolation="cubic"),
+            0, 1.0
+        )
+    )
+
+    # keypoints
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=0)], shape=(4, 4, 3))
+    kpsoi_aug = iaa.Pad((2, 0, 4, 4), keep_size=False).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (10, 8, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 4+1)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 2+2)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 4+3)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2+0)
+
+    # keypoints, with keep_size=True
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=0)], shape=(4, 4, 3))
+    kpsoi_aug = iaa.Pad((2, 0, 4, 4), keep_size=True).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (4, 4, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, ((4+1)/8)*4)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, ((2+2)/10)*4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, ((4+3)/8)*4)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, ((2+0)/10)*4)
+
     # pad modes
     image = np.zeros((1, 2), dtype=np.uint8)
     image[0, 0] = 100
@@ -800,6 +937,82 @@ def test_Pad():
         keypoints_moved = [keypoints[0].shift(x=left_px, y=top_px)]
         observed = aug.augment_keypoints(keypoints)
         assert keypoints_equal(observed, keypoints_moved)
+
+    # pad smaller heatmaps
+    # heatmap is (6, 4), image is (6, 16)
+    # image is padded by (0.5, 0.25, 0.5, 0.25)
+    # expected image size: (12, 24)
+    # expected heatmap size: (12, 6)
+    aug = iaa.Pad(percent=(0.5, 0.25, 0.5, 0.25), keep_size=False)
+    heatmaps_arr_small = np.float32([
+        [0, 0, 0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 0, 0, 0]
+    ])
+    top, bottom, left, right = 3, 3, 1, 1
+    heatmaps_arr_small_padded = np.pad(heatmaps_arr_small, ((top, bottom), (left, right)),
+                                       mode="constant",
+                                       constant_values=0)
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (12, 24)
+    assert observed.arr_0to1.shape == (12, 6, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.arr_0to1[..., 0], heatmaps_arr_small_padded)
+
+    # pad smaller heatmaps, with keep_size=True
+    # heatmap is (6, 4), image is (6, 16)
+    # image is padded by (0.5, 0.25, 0.5, 0.25)
+    # expected image size: (12, 24) -> (6, 16) after resize
+    # expected heatmap size: (12, 6) -> (6, 4) after resize
+    aug = iaa.Pad(percent=(0.5, 0.25, 0.5, 0.25), keep_size=True)
+    heatmaps_arr_small = np.float32([
+        [0, 0, 0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 1.0, 1.0, 0],
+        [0, 0, 0, 0]
+    ])
+    top, bottom, left, right = 3, 3, 1, 1
+    heatmaps_arr_small_padded = np.pad(heatmaps_arr_small, ((top, bottom), (left, right)),
+                                       mode="constant",
+                                       constant_values=0)
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (6, 16)
+    assert observed.arr_0to1.shape == (6, 4, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(
+        observed.arr_0to1[..., 0],
+        np.clip(
+            ia.imresize_single_image(heatmaps_arr_small_padded, (6, 4), interpolation="cubic"),
+            0, 1.0
+        )
+    )
+
+    # keypoints
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=0)], shape=(4, 4, 3))
+    kpsoi_aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=False).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (10, 8, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 4+1)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 2+2)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 4+3)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2+0)
+
+    # keypoints, with keep_size=True
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=0)], shape=(4, 4, 3))
+    kpsoi_aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=True).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (4, 4, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, ((4+1)/8)*4)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, ((2+2)/10)*4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, ((4+3)/8)*4)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, ((2+0)/10)*4)
 
     # test pad by range of percentages
     aug = iaa.Pad(percent=((0, 1.0), 0, 0, 0), keep_size=False)
@@ -1011,6 +1224,66 @@ def test_Crop():
         assert len(set(movements)) == 2
         assert len(set(movements_det)) == 1
 
+    # crop smaller heatmaps
+    # heatmap is (6, 8), image is (6, 16)
+    # image is cropped by (1, 4, 1, 4)
+    # expected image size: (4, 8)
+    # expected heatmap size: (4, 4)
+    aug = iaa.Crop(px=(1, 4, 1, 4), keep_size=False)
+    heatmaps_arr_small = np.zeros((6, 8), dtype=np.float32)
+    heatmaps_arr_small[1:-1, 1:-1] = 1.0
+    top, bottom, left, right = 1, 1, 2, 2
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (4, 8)
+    assert observed.arr_0to1.shape == (4, 4, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.arr_0to1[..., 0], heatmaps_arr_small_cropped)
+
+    # crop smaller heatmaps, with keep_size=True
+    # heatmap is (6, 8), image is (6, 16)
+    # image is cropped by (1, 4, 1, 4)
+    # expected image size: (4, 8) -> (6, 16) after resize
+    # expected heatmap size: (4, 4) -> (6, 4) after resize
+    aug = iaa.Crop(px=(1, 4, 1, 4), keep_size=True)
+    heatmaps_arr_small = np.zeros((6, 8), dtype=np.float32)
+    heatmaps_arr_small[1:-1, 1:-1] = 1.0
+    top, bottom, left, right = 1, 1, 2, 2
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(6, 16))])[0]
+    assert observed.shape == (6, 16)
+    assert observed.arr_0to1.shape == (6, 8, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(
+        observed.arr_0to1[..., 0],
+        np.clip(
+            ia.imresize_single_image(heatmaps_arr_small_cropped, (6, 8), interpolation="cubic"),
+            0, 1.0
+        )
+    )
+
+    # keypoints
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=3, y=6), ia.Keypoint(x=8, y=5)], shape=(14, 14, 3))
+    kpsoi_aug = iaa.Crop((1, 0, 4, 4), keep_size=False).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (9, 10, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 3-4)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 6-1)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 8-4)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 5-1)
+
+    # keypoints, with keep_size=True
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=3, y=6), ia.Keypoint(x=8, y=5)], shape=(14, 14, 3))
+    kpsoi_aug = iaa.Crop((1, 0, 4, 4), keep_size=True).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (14, 14, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, ((3-4)/10)*14)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, ((6-1)/9)*14)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, ((8-4)/10)*14)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, ((5-1)/9)*14)
+
     # ------------------
     # crop by percentages
     # ------------------
@@ -1070,6 +1343,66 @@ def test_Crop():
         keypoints_moved = [keypoints[0].shift(x=-left_px, y=-top_px)]
         observed = aug.augment_keypoints(keypoints)
         assert keypoints_equal(observed, keypoints_moved)
+
+    # crop smaller heatmaps
+    # heatmap is (8, 12), image is (16, 32)
+    # image is cropped by (0.25, 0.25, 0.25, 0.25)
+    # expected image size: (8, 16)
+    # expected heatmap size: (4, 6)
+    aug = iaa.Crop(percent=(0.25, 0.25, 0.25, 0.25), keep_size=False)
+    heatmaps_arr_small = np.zeros((8, 12), dtype=np.float32)
+    heatmaps_arr_small[2:-2, 4:-4] = 1.0
+    top, bottom, left, right = 2, 2, 3, 3
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(16, 32))])[0]
+    assert observed.shape == (8, 16)
+    assert observed.arr_0to1.shape == (4, 6, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(observed.arr_0to1[..., 0], heatmaps_arr_small_cropped)
+
+    # crop smaller heatmaps, with keep_size=True
+    # heatmap is (8, 12), image is (16, 32)
+    # image is cropped by (0.25, 0.25, 0.25, 0.25)
+    # expected image size: (8, 16) -> (16, 32) after resize
+    # expected heatmap size: (4, 6) -> (8, 12) after resize
+    aug = iaa.Crop(percent=(0.25, 0.25, 0.25, 0.25), keep_size=True)
+    heatmaps_arr_small = np.zeros((8, 12), dtype=np.float32)
+    heatmaps_arr_small[2:-2, 4:-4] = 1.0
+    top, bottom, left, right = 2, 2, 3, 3
+    heatmaps_arr_small_cropped = heatmaps_arr_small[top:-bottom, left:-right]
+    observed = aug.augment_heatmaps([ia.HeatmapsOnImage(heatmaps_arr_small, shape=(16, 32))])[0]
+    assert observed.shape == (16, 32)
+    assert observed.arr_0to1.shape == (8, 12, 1)
+    assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
+    assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
+    assert np.allclose(
+        observed.arr_0to1[..., 0],
+        np.clip(
+            ia.imresize_single_image(heatmaps_arr_small_cropped, (8, 12), interpolation="cubic"),
+            0, 1.0
+        )
+    )
+
+    # keypoints
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=12, y=10), ia.Keypoint(x=8, y=12)], shape=(16, 20, 3))
+    kpsoi_aug = iaa.Crop(percent=(0.25, 0, 0.5, 0.1), keep_size=False).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (4, 18, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 12-2)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 10-4)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 8-2)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 12-4)
+
+    # keypoints, with keep_size=True
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=12, y=10), ia.Keypoint(x=8, y=12)], shape=(16, 20, 3))
+    kpsoi_aug = iaa.Crop(percent=(0.25, 0, 0.5, 0.1), keep_size=True).augment_keypoints([kpsoi])[0]
+    assert kpsoi_aug.shape == (16, 20, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert np.allclose(kpsoi_aug.keypoints[0].x, ((12-2)/18)*20)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, ((10-4)/4)*16)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, ((8-2)/18)*20)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, ((12-4)/4)*16)
 
     # test crop by range of percentages
     aug = iaa.Crop(percent=((0, 0.1), 0, 0, 0), keep_size=False)
