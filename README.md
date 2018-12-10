@@ -89,7 +89,11 @@ The images below show examples for most augmentation techniques (values written 
 Noop
 </small>
 </td>
-<td>&nbsp;</td>
+<td colspan="1">
+<small>
+ChannelShuffle
+</small>
+</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
@@ -98,7 +102,11 @@ Noop
 ![Noop](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/noop.gif?raw=true "Noop")
 
 </td>
-<td>&nbsp;</td>
+<td colspan="1">
+
+![ChannelShuffle](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/augment_images_with_coordsaug/channelshuffle.gif?raw=true "ChannelShuffle")
+
+</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
@@ -1679,6 +1687,7 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | Lambda(I, K) | Applies lambda function `I` to images and `K` to keypoints. |
 | AssertLambda(I, K) | Checks images via lambda function `I` and keypoints via `K` and raises an error if false is returned by either of them. |
 | AssertShape(S) | Raises an error if input images are not of shape `S`. |
+| ChannelShuffle(P, C) | Permutes the order of the color channels for `P` percent of all images. Shuffles by default all channels, but may restrict to a subset using `C` (list of channel indices). |
 
 
 **overlay**
