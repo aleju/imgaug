@@ -476,6 +476,20 @@ def test_MotionBlur():
     assert nb_seen[0] > 0
     assert nb_seen[1] > 0
 
+    # k with choice [a, b, c, ...] must error in case of non-discrete values
+    got_exception = False
+    try:
+        _ = iaa.MotionBlur(k=[3, 3.5, 4])
+    except Exception as exc:
+        assert "to only contain integer" in str(exc)
+        got_exception = True
+    assert got_exception
+
+    # no error in case of (a, b), checks for #215
+    aug = iaa.MotionBlur(k=(3, 7))
+    for _ in range(10):
+        _ = aug.augment_image(np.zeros((11, 11, 3), dtype=np.uint8))
+
     # direction 1.0
     aug = iaa.MotionBlur(k=3, angle=0, direction=1.0)
     matrix_func = aug.matrix

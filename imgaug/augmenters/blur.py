@@ -497,14 +497,17 @@ def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, d
     picked per image).
 
     """
-    k_param = iap.handle_continuous_param(k, "k", value_range=(3, None), tuple_to_uniform=True, list_to_choice=True)
+    # TODO allow (1, None) and set to identity matrix if k == 1
+    k_param = iap.handle_discrete_param(k, "k", value_range=(3, None), tuple_to_uniform=True, list_to_choice=True,
+                                        allow_floats=False)
     angle_param = iap.handle_continuous_param(angle, "angle", value_range=None, tuple_to_uniform=True,
                                               list_to_choice=True)
     direction_param = iap.handle_continuous_param(direction, "direction", value_range=(-1.0-1e-6, 1.0+1e-6),
                                                   tuple_to_uniform=True, list_to_choice=True)
 
     def create_matrices(image, nb_channels, random_state_func):
-        k_sample = k_param.draw_sample(random_state=random_state_func)
+        # force discrete for k_sample via int() in case of stochastic parameter
+        k_sample = int(k_param.draw_sample(random_state=random_state_func))
         angle_sample = angle_param.draw_sample(random_state=random_state_func)
         direction_sample = direction_param.draw_sample(random_state=random_state_func)
 
