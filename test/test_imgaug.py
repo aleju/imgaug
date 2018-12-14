@@ -333,7 +333,9 @@ def test_new_random_state():
     ia.seed(seed)
 
     rs_observed = ia.new_random_state(seed=None, fully_random=False)
-    rs_expected = np.random.RandomState(np.random.RandomState(seed).randint(0, 10**6, 1)[0])
+    rs_expected = np.random.RandomState(
+        np.random.RandomState(seed).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE, 1)[0]
+    )
     assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
     rs_observed1 = ia.new_random_state(seed=None, fully_random=False)
     rs_observed2 = ia.new_random_state(seed=None, fully_random=False)
@@ -342,7 +344,9 @@ def test_new_random_state():
     ia.seed(seed)
     np.random.seed(seed)
     rs_observed = ia.new_random_state(seed=None, fully_random=True)
-    rs_not_expected = np.random.RandomState(np.random.RandomState(seed).randint(0, 10**6, 1)[0])
+    rs_not_expected = np.random.RandomState(
+        np.random.RandomState(seed).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE, 1)[0]
+    )
     assert rs_observed.randint(0, 10**6) != rs_not_expected.randint(0, 10**6)
 
     rs_observed1 = ia.new_random_state(seed=None, fully_random=True)
@@ -370,15 +374,14 @@ def test_copy_random_state():
 
 
 def test_derive_random_state():
-    rs = np.random.RandomState(1017)
     rs_observed = ia.derive_random_state(np.random.RandomState(1017))
-    rs_expected = np.random.RandomState(np.random.RandomState(1017).randint(0, 10**6))
+    rs_expected = np.random.RandomState(np.random.RandomState(1017).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE))
     assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
 
 
 def test_derive_random_states():
     rs_observed1, rs_observed2 = ia.derive_random_states(np.random.RandomState(1017), n=2)
-    seed = np.random.RandomState(1017).randint(0, 10**6)
+    seed = np.random.RandomState(1017).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE)
     rs_expected1 = np.random.RandomState(seed+0)
     rs_expected2 = np.random.RandomState(seed+1)
     assert rs_observed1.randint(0, 10**6) == rs_expected1.randint(0, 10**6)

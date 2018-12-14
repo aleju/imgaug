@@ -36,13 +36,13 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
-from PIL import Image
+from PIL import Image as PIL_Image
 import imageio
 import tempfile
 import numpy as np
-import six.moves as sm
 
 from . import meta
+from . import contrast as contrast_lib
 from .. import imgaug as ia
 from .. import parameters as iap
 
@@ -103,8 +103,7 @@ class Add(meta.Augmenter):
 
     """
 
-    def __init__(self, value=0, per_channel=False, name=None,
-                 deterministic=False, random_state=None):
+    def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
@@ -114,31 +113,40 @@ class Add(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
-        result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.int32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = image.shape[2]
-                samples = self.value.draw_samples((nb_channels,), random_state=rs_image).astype(image.dtype)
-                for c, sample in enumerate(samples):
-                    # TODO make value range more flexible
-                    ia.do_assert(-255 <= sample <= 255)
-                    image[..., c] += sample
+        nb_channels_max = meta.estimate_max_number_of_channels(images)
+        rss = ia.derive_random_states(random_state, 2)
+        value_samples = self.value.draw_samples((nb_images, nb_channels_max), random_state=rss[0])
+        per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[1])
+
+        gen = enumerate(zip(images, value_samples, per_channel_samples, input_dtypes))
+        for i, (image, value_samples_i, per_channel_samples_i, input_dtype) in gen:
+            nb_channels = image.shape[2]
+
+            if per_channel_samples_i > 0.5:
+                value = value_samples_i[0:nb_channels].reshape((1, 1, nb_channels))
             else:
-                sample = self.value.draw_sample(random_state=rs_image).astype(image.dtype)
-                ia.do_assert(-255 <= sample <= 255)  # TODO make value range more flexible
-                image += sample
+                value = value_samples_i[0:1].reshape((1, 1, 1))
 
-            image = meta.clip_augmented_image_(image, 0, 255)  # TODO make value range more flexible
-            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
+            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+            # The downside is that the mul parameter is limited in its value range.
+            #
+            # We need 2* the itemsize of the image here to allow to shift the image's max value to the lowest possible
+            # value, e.g. for uint8 it must allow for -255 to 255.
+            itemsize = image.dtype.itemsize * 2
+            dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
+            value = meta.clip_to_dtype_value_range_(value, dtype_target, validate=True)
 
-            result[i] = image
+            image, value = meta.promote_array_dtypes_([image, value], dtypes=[image.dtype, dtype_target],
+                                                      increase_itemsize_factor=2)
+            image = np.add(image, value, out=image, casting="no")
 
-        return result
+            image = meta.restore_dtypes_(image, input_dtype)
+            images[i] = image
+
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -219,30 +227,37 @@ class AddElementwise(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
-        result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            seed = seeds[i]
-            image = images[i].astype(np.int32)
+        rss = ia.derive_random_states(random_state, nb_images+1)
+        per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[-1])
+
+        gen = enumerate(zip(images, per_channel_samples, rss[:-1], input_dtypes))
+        for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
-            rs_image = ia.new_random_state(seed)
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                samples = self.value\
-                    .draw_samples((height, width, nb_channels), random_state=rs_image)\
-                    .astype(image.dtype)
-            else:
-                samples = self.value.draw_samples((height, width, 1), random_state=rs_image).astype(image.dtype)
-                samples = np.tile(samples, (1, 1, nb_channels))
-            after_add = image + samples
+            sample_shape = (height, width, nb_channels if per_channel_samples_i > 0.5 else 1)
+            value = self.value.draw_samples(sample_shape, random_state=rs)
 
-            after_add = meta.clip_augmented_image_(after_add, 0, 255) # TODO make value range more flexible
-            after_add = meta.restore_augmented_image_dtype_(after_add, input_dtypes[i])
+            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
+            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+            # The downside is that the mul parameter is limited in its value range.
+            #
+            # We need 2* the itemsize of the image here to allow to shift the image's max value to the lowest possible
+            # value, e.g. for uint8 it must allow for -255 to 255.
+            itemsize = image.dtype.itemsize * 2
+            dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
+            value = meta.clip_to_dtype_value_range_(value, dtype_target, validate=100)
 
-            result[i] = after_add
+            if value.shape[2] == 1:
+                value = np.tile(value, (1, 1, nb_channels))
 
-        return result
+            image, value = meta.promote_array_dtypes_([image, value], dtypes=[image.dtype, dtype_target],
+                                                      increase_itemsize_factor=2)
+            image = np.add(image, value, out=image, casting="no")
+            image = meta.restore_dtypes_(image, input_dtype)
+            images[i] = image
+
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -547,8 +562,7 @@ class Multiply(meta.Augmenter):
 
     """
 
-    def __init__(self, mul=1.0, per_channel=False, name=None,
-                 deterministic=False, random_state=None):
+    def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(Multiply, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True,
@@ -558,30 +572,41 @@ class Multiply(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
-        result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.float32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = image.shape[2]
-                samples = self.mul.draw_samples((nb_channels,), random_state=rs_image)
-                for c, sample in enumerate(samples):
-                    ia.do_assert(sample >= 0)
-                    image[..., c] *= sample
+        nb_channels_max = meta.estimate_max_number_of_channels(images)
+        rss = ia.derive_random_states(random_state, 2)
+        mul_samples = self.mul.draw_samples((nb_images, nb_channels_max), random_state=rss[0])
+        per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[1])
+
+        gen = enumerate(zip(images, mul_samples, per_channel_samples, input_dtypes))
+        for i, (image, mul_samples_i, per_channel_samples_i, input_dtype) in gen:
+            nb_channels = image.shape[2]
+
+            mul_min = np.min(mul_samples_i)
+            mul_max = np.max(mul_samples_i)
+            is_not_increasing_value_range = (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1)
+
+            if per_channel_samples_i > 0.5:
+                mul = mul_samples_i[0:nb_channels].reshape((1, 1, nb_channels))
             else:
-                sample = self.mul.draw_sample(random_state=rs_image)
-                ia.do_assert(sample >= 0)
-                image *= sample
+                mul = mul_samples_i[0:1].reshape((1, 1, 1))
 
-            image = meta.clip_augmented_image_(image, 0, 255)  # TODO make value range more flexible
-            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
+            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+            # The downside is that the mul parameter is limited in its value range.
+            itemsize = max(image.dtype.itemsize, 2 if mul.dtype.kind == "f" else 1)  # float min itemsize is 2, not 1
+            dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
+            mul = meta.clip_to_dtype_value_range_(mul, dtype_target, validate=True)
 
-            result[i] = image
+            image, mul = meta.promote_array_dtypes_([image, mul], dtypes=[image.dtype, dtype_target],
+                                                    increase_itemsize_factor=1 if is_not_increasing_value_range else 2)
+            image = np.multiply(image, mul, out=image, casting="no")
 
-        return result
+            image = meta.restore_dtypes_(image, input_dtype)
+            images[i] = image
+
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -663,28 +688,40 @@ class MultiplyElementwise(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
-        result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            seed = seeds[i]
-            image = images[i].astype(np.float32)
+        rss = ia.derive_random_states(random_state, nb_images+1)
+        per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[-1])
+
+        gen = enumerate(zip(images, per_channel_samples, rss[:-1], input_dtypes))
+        for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
-            rs_image = ia.new_random_state(seed)
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                samples = self.mul.draw_samples((height, width, nb_channels), random_state=rs_image)
-            else:
-                samples = self.mul.draw_samples((height, width, 1), random_state=rs_image)
-                samples = np.tile(samples, (1, 1, nb_channels))
-            image = image * samples
+            sample_shape = (height, width, nb_channels if per_channel_samples_i > 0.5 else 1)
+            mul = self.mul.draw_samples(sample_shape, random_state=rs)
 
-            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
-            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
+            # TODO maybe introduce to stochastic parameters some way to get the possible min/max values,
+            # could make things faster for dropout to get 0/1 min/max from the binomial
+            mul_min = np.min(mul)
+            mul_max = np.max(mul)
+            is_not_increasing_value_range = (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1)
 
-            result[i] = image
+            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
+            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+            # The downside is that the mul parameter is limited in its value range.
+            itemsize = max(image.dtype.itemsize, 2 if mul.dtype.kind == "f" else 1)  # float min itemsize is 2, not 1
+            dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
+            mul = meta.clip_to_dtype_value_range_(mul, dtype_target, validate=True, validate_values=(mul_min, mul_max))
 
-        return result
+            if mul.shape[2] == 1:
+                mul = np.tile(mul, (1, 1, nb_channels))
+
+            image, mul = meta.promote_array_dtypes_([image, mul], dtypes=[image, dtype_target],
+                                                    increase_itemsize_factor=1 if is_not_increasing_value_range else 4)
+            image = np.multiply(image, mul, out=image, casting="no")
+            image = meta.restore_dtypes_(image, input_dtype)
+            images[i] = image
+
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -980,44 +1017,26 @@ class ReplaceElementwise(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
-        result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            seed = seeds[i]
-            image = images[i].astype(np.float32)
+        rss = ia.derive_random_states(random_state, 2*nb_images+1)
+        per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[-1])
+
+        gen = enumerate(zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2], input_dtypes))
+        for i, (image, per_channel_i, rs_mask, rs_replacement, input_dtype) in gen:
             height, width, nb_channels = image.shape
-            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seed+1))
-            if per_channel == 1:
-                mask_samples = self.mask.draw_samples(
-                    (height, width, nb_channels),
-                    random_state=ia.new_random_state(seed+2)
-                )
-                replacement_samples = self.replacement.draw_samples(
-                    (height, width, nb_channels),
-                    random_state=ia.new_random_state(seed+3)
-                )
-            else:
-                mask_samples = self.mask.draw_samples(
-                    (height, width, 1),
-                    random_state=ia.new_random_state(seed+2)
-                )
+            sampling_shape = (height, width, nb_channels if per_channel_i > 0.5 else 1)
+            mask_samples = self.mask.draw_samples(sampling_shape, random_state=rs_mask)
+            replacement_samples = self.replacement.draw_samples(sampling_shape, random_state=rs_replacement)
+            if sampling_shape[2] == 1:
                 mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
-                replacement_samples = self.replacement.draw_samples(
-                    (height, width, 1),
-                    random_state=ia.new_random_state(seed+3)
-                )
                 replacement_samples = np.tile(replacement_samples, (1, 1, nb_channels))
-
             mask_thresh = mask_samples > 0.5
+            image, replacement_samples = meta.promote_array_dtypes_([image, replacement_samples])
             image_repl = image * (~mask_thresh) + replacement_samples * mask_thresh
+            image_repl = meta.restore_dtypes_(image_repl, input_dtype)
+            images[i] = image_repl
 
-            image_repl = meta.clip_augmented_image_(image_repl, 0, 255) # TODO make value range more flexible
-            image_repl = meta.restore_augmented_image_dtype_(image_repl, input_dtypes[i])
-
-            result[i] = image_repl
-
-        return result
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -1560,13 +1579,13 @@ class Invert(meta.Augmenter):
         If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as True, otherwise as False.
 
-    min_value : int or float, optional
-        Minimum of the range of possible pixel values.
-        For uint8 (0-255) images, this should be 0.
+    min_value : None or number, optional
+        Minimum of the value range of input images, e.g. 0 for uint8 images.
+        If set to None, the value will be automatically derived from the image's dtype.
 
     max_value : int or float, optional
-        Maximum of the range of possible pixel values.
-        For uint8 (0-255) images, this should be 255.
+        Maximum of the value range of input images, e.g. 255 for uint8 images.
+        If set to None, the value will be automatically derived from the image's dtype.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1592,7 +1611,7 @@ class Invert(meta.Augmenter):
 
     """
 
-    def __init__(self, p=0, per_channel=False, min_value=0, max_value=255, name=None, deterministic=False,
+    def __init__(self, p=0, per_channel=False, min_value=None, max_value=None, name=None, deterministic=False,
                  random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1602,37 +1621,31 @@ class Invert(meta.Augmenter):
         self.max_value = max_value
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
-
-        result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.int32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = image.shape[2]
-                p_samples = self.p.draw_samples((nb_channels,), random_state=rs_image)
-                for c, p_sample in enumerate(p_samples):
-                    ia.do_assert(0 <= p_sample <= 1)
+        nb_channels = meta.estimate_max_number_of_channels(images)
+        rss = ia.derive_random_states(random_state, 2)
+        p_samples = self.p.draw_samples((nb_images, nb_channels), random_state=rss[0])
+        per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[1])
+
+        for image, per_channel_samples_i, p_samples_i in zip(images, per_channel_samples, p_samples):
+            min_value_dt, max_value_dt = meta.get_value_range_of_dtype(image.dtype)
+            min_value = min_value_dt if self.min_value is None else self.min_value
+            max_value = max_value_dt if self.max_value is None else self.max_value
+            assert min_value >= min_value_dt
+            assert max_value <= max_value_dt
+
+            if per_channel_samples_i > 0.5:
+                for c, p_sample in enumerate(p_samples_i):
                     if p_sample > 0.5:
                         image_c = image[..., c]
-                        distance_from_min = np.abs(image_c - self.min_value) # d=abs(v-m)
-                        image[..., c] = -distance_from_min + self.max_value # v'=M-d
+                        distance_from_min = np.abs(image_c - min_value)  # d=abs(v-m)
+                        image[..., c] = max_value - distance_from_min  # v'=M-d
             else:
-                p_sample = self.p.draw_sample(random_state=rs_image)
-                ia.do_assert(0 <= p_sample <= 1.0)
-                if p_sample > 0.5:
-                    distance_from_min = np.abs(image - self.min_value) # d=abs(v-m)
-                    image = -distance_from_min + self.max_value
+                if p_samples_i[0] > 0.5:
+                    distance_from_min = np.abs(image - min_value)  # d=abs(v-m)
+                    image[:, :, :] = max_value - distance_from_min  # v'=M-d
 
-            image = meta.clip_augmented_image_(image, self.min_value, self.max_value)
-            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
-
-            result[i] = image
-
-        return result
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -1644,8 +1657,8 @@ class Invert(meta.Augmenter):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
 
-# TODO merge with contrast.LinearContrast
-class ContrastNormalization(meta.Augmenter):
+# TODO remove from examples and mark as deprecated
+def ContrastNormalization(alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Augmenter that changes the contrast of images.
 
@@ -1694,48 +1707,8 @@ class ContrastNormalization(meta.Augmenter):
     all channels.
 
     """
-
-    def __init__(self, alpha=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
-        super(ContrastNormalization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-
-        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
-                                                 list_to_choice=True)
-        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
-
-        result = images
-        nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.float32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel:
-                nb_channels = images[i].shape[2]
-                alphas = self.alpha.draw_samples((nb_channels,), random_state=rs_image)
-                for c, alpha in enumerate(alphas):
-                    image[..., c] = alpha * (image[..., c] - 128) + 128
-            else:
-                alpha = self.alpha.draw_sample(random_state=rs_image)
-                image = alpha * (image - 128) + 128
-
-            image = meta.clip_augmented_image_(image, 0, 255) # TODO make value range more flexible
-            image = meta.restore_augmented_image_dtype_(image, input_dtypes[i])
-
-            result[i] = image
-
-        return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
-    def get_parameters(self):
-        return [self.alpha, self.per_channel]
+    return contrast_lib.LinearContrast(alpha=alpha, per_channel=per_channel, name=name, deterministic=deterministic,
+                                       random_state=random_state)
 
 
 class JpegCompression(meta.Augmenter):
@@ -1804,23 +1777,30 @@ class JpegCompression(meta.Augmenter):
         nb_images = len(images)
         samples = self.compression.draw_samples((nb_images,), random_state=random_state)
 
-        for i in sm.xrange(nb_images):
-            image = images[i].astype(np.float32)
+        for i, (image, sample) in enumerate(zip(images, samples)):
+            ia.do_assert(image.dtype.type == np.uint8, "Can apply jpeg compression only to uint8 images.")
             nb_channels = image.shape[-1]
             is_single_channel = (nb_channels == 1)
             if is_single_channel:
                 image = image[..., 0]
-            sample = int(samples[i])
+            sample = int(sample)
             ia.do_assert(100 >= sample >= 0)
-            img = Image.fromarray(image.astype(np.uint8))
+            image_pil = PIL_Image.fromarray(image)
             with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as f:
                 # Map from compression to quality used by PIL
                 # We have valid compressions from 0 to 100, i.e. 101 possible values
-                quality = int(np.clip(np.round(
-                    self.minimum_quality + (self.maximum_quality - self.minimum_quality) * (1.0 - (sample / 101))
-                ), self.minimum_quality, self.maximum_quality))
+                quality = int(
+                    np.clip(
+                        np.round(
+                            self.minimum_quality
+                            + (self.maximum_quality - self.minimum_quality) * (1.0 - (sample / 101))
+                        ),
+                        self.minimum_quality,
+                        self.maximum_quality
+                    )
+                )
 
-                img.save(f, quality=quality)
+                image_pil.save(f, quality=quality)
                 if nb_channels == 1:
                     image = imageio.imread(f.name, pilmode="L")
                 else:

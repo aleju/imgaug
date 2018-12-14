@@ -330,10 +330,10 @@ def test_dtype_preservation():
         return [dt for dt in default_dtypes if dt not in dts]
 
     augs = [
-        (iaa.Add((-5, 5), name="Add"), default_dtypes),
-        (iaa.AddElementwise((-5, 5), name="AddElementwise"), default_dtypes),
-        (iaa.AdditiveGaussianNoise(0.01*255, name="AdditiveGaussianNoise"), default_dtypes),
-        (iaa.Multiply((0.95, 1.05), name="Multiply"), default_dtypes),
+        (iaa.Add((-5, 5), name="Add"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.AddElementwise((-5, 5), name="AddElementwise"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.AdditiveGaussianNoise(0.01*255, name="AdditiveGaussianNoise"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.Multiply((0.95, 1.05), name="Multiply"), _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.Dropout(0.01, name="Dropout"), default_dtypes),
         (iaa.CoarseDropout(0.01, size_px=6, name="CoarseDropout"), default_dtypes),
         (iaa.Invert(0.01, per_channel=True, name="Invert"), default_dtypes),
@@ -367,19 +367,27 @@ def test_dtype_preservation():
         # (iaa.PerspectiveTransform(scale=(0.01, 0.10), name="PerspectiveTransform"), not_dts([np.uint32])),
         (iaa.ElasticTransformation(alpha=(0.1, 0.2), sigma=(0.1, 0.2), name="ElasticTransformation"),
          _not_dts([np.float16])),
-        (iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
-        (iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
-        (iaa.OneOf([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))]), default_dtypes),
-        (iaa.Sometimes(0.5, iaa.Add((-5, 5)), name="Sometimes"), default_dtypes),
+        (iaa.Sequential([iaa.Noop(), iaa.Noop()], name="SequentialNoop"), default_dtypes),
+        (iaa.SomeOf(1, [iaa.Noop(), iaa.Noop()], name="SomeOfNoop"), default_dtypes),
+        (iaa.OneOf([iaa.Noop(), iaa.Noop()], name="OneOfNoop"), default_dtypes),
+        (iaa.Sometimes(0.5, iaa.Noop(), name="SometimesNoop"), default_dtypes),
+        (iaa.Sequential([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))], name="Sequential"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.SomeOf(1, [iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))], name="SomeOf"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.OneOf([iaa.Add((-5, 5)), iaa.AddElementwise((-5, 5))], name="OneOf"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.Sometimes(0.5, iaa.Add((-5, 5)), name="Sometimes"), _not_dts([np.uint32, np.int32, np.float64])),
         # WithChannels
         (iaa.Noop(name="Noop"), default_dtypes),
         # Lambda
         # AssertLambda
         # AssertShape
-        (iaa.Alpha((0.0, 0.1), iaa.Add(10), name="Alpha"), default_dtypes),
-        (iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"), default_dtypes),
-        (iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"), default_dtypes),
-        (iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"), default_dtypes),
+        (iaa.Alpha((0.0, 0.1), iaa.Noop(), name="AlphaNoop"), default_dtypes),
+        (iaa.AlphaElementwise((0.0, 0.1), iaa.Noop(), name="AlphaElementwiseNoop"), default_dtypes),
+        (iaa.SimplexNoiseAlpha(iaa.Noop(), name="SimplexNoiseAlphaNoop"), default_dtypes),
+        (iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Noop(), name="SimplexNoiseAlphaNoop"), default_dtypes),
+        (iaa.Alpha((0.0, 0.1), iaa.Add(10), name="Alpha"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"), _not_dts([np.uint32, np.int32, np.float64])),
+        (iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"), _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.Superpixels(p_replace=0.01, n_segments=64), _not_dts([np.float16, np.float32])),
         (iaa.Scale({"height": 4, "width": 4}, name="Scale"),
          _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),
@@ -392,10 +400,16 @@ def test_dtype_preservation():
     ]
 
     for (aug, allowed_dtypes) in augs:
+        # print("aug", aug.name)
+        # print("allowed_dtypes", allowed_dtypes)
         for images_i in images:
             if images_i.dtype in allowed_dtypes:
+                # print("image dt", images_i.dtype)
                 images_aug = aug.augment_images(images_i)
                 assert images_aug.dtype == images_i.dtype
+            else:
+                # print("image dt", images_i.dtype, "[SKIPPED]")
+                pass
 
 
 if __name__ == "__main__":
