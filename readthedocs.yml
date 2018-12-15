@@ -1,2 +1,5 @@
+version: 2
+
 submodules:
-  - imgaug-doc
+  include: all
+  recursive: true
