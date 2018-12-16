@@ -17,7 +17,8 @@ if not READ_THE_DOCS and not NO_CV2_INSTALLED_CHECK:
         )
 
 long_description = """A library for image augmentation in machine learning experiments, particularly convolutional
-neural networks. Supports augmentation of images and keypoints/landmarks in a variety of different ways."""
+neural networks. Supports the augmentation of images, keypoints/landmarks, bounding boxes, heatmaps and segmentation
+maps in a variety of different ways."""
 
 setup(
     name="imgaug",
@@ -36,8 +37,8 @@ setup(
         "imgaug.checks": ["README.md"]
     },
     license="MIT",
-    description="Image augmentation library for machine learning",
+    description="Image augmentation library for deep neural networks",
     long_description=long_description,
     keywords=["augmentation", "image", "deep learning", "neural network", "CNN", "machine learning",
-              "computer vision"]
+              "computer vision", "overfitting"]
 )
