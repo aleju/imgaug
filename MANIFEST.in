@@ -1,7 +1,10 @@
 include setup.py
+include setup.cfg
 include LICENSE
 include MANIFEST.in
-include *.md
-include *.txt
+include README.md
+include checks/README.md
+include requirements.txt
 recursive-include imgaug *.py *.jpg *.ttf *.png *.json
-recursive-include tests *.py
+recursive-include test *.py
+recursive-include checks *.py
