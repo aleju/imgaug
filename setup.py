@@ -17,11 +17,11 @@ Supports augmentation of images and keypoints/landmarks in a variety of differen
 
 setup(
     name="imgaug",
-    version="0.2.6",
+    version="0.2.7",
     author="Alexander Jung",
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
-    download_url="https://github.com/aleju/imgaug/archive/0.2.6.tar.gz",
+    download_url="https://github.com/aleju/imgaug/archive/0.2.7.tar.gz",
     install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six", "imageio"],
     packages=find_packages(),
     include_package_data=True,
