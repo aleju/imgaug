@@ -90,10 +90,9 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
         for i, (image, sig) in enumerate(zip(images, samples)):
             nb_channels = image.shape[2]
             if sig > 0 + self.eps:
-                # note that while gaussian_filter can be applied to all channels
-                # at the same time, that should not be done here, because then
-                # the blurring would also happen across channels (e.g. red
-                # values might be mixed with blue values in RGB)
+                # Note that while gaussian_filter can be applied to all channels at the same time, that should not
+                # be done here, because then the blurring would also happen across channels (e.g. red values might
+                # be mixed with blue values in RGB)
                 for channel in sm.xrange(nb_channels):
                     image[:, :, channel] = ndimage.gaussian_filter(image[:, :, channel], sig)
                 images[i] = image
@@ -294,8 +293,7 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
             if ki > 1:
                 ki = ki + 1 if ki % 2 == 0 else ki
                 image_aug = cv2.medianBlur(image, ki)
-                # cv2.medianBlur() removes channel axis for single-channel
-                # images
+                # cv2.medianBlur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
                 images[i] = image_aug
