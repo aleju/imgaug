@@ -85,20 +85,19 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
         self.eps = 0.001  # epsilon value to estimate whether sigma is sufficently above 0 to apply the blur
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
-        for i in sm.xrange(nb_images):
-            nb_channels = images[i].shape[2]
-            sig = samples[i]
+        for i, (image, sig) in enumerate(zip(images, samples)):
+            nb_channels = image.shape[2]
             if sig > 0 + self.eps:
                 # note that while gaussian_filter can be applied to all channels
                 # at the same time, that should not be done here, because then
                 # the blurring would also happen across channels (e.g. red
                 # values might be mixed with blue values in RGB)
                 for channel in sm.xrange(nb_channels):
-                    result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
-        return result
+                    image[:, :, channel] = ndimage.gaussian_filter(image[:, :, channel], sig)
+            images[i] = image
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
