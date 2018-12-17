@@ -59,7 +59,7 @@ def restore_dtypes_(images, dtypes, clip=True):
             result = images
         else:
             if clip:
-                min_value, max_value = get_value_range_of_dtype(dtype_to)
+                min_value, _, max_value = get_value_range_of_dtype(dtype_to)
                 images = np.clip(images, min_value, max_value, out=images)
             result = images.astype(dtype_to, copy=False)
     elif ia.is_iterable(images):
@@ -123,22 +123,31 @@ def promote_array_dtypes_(arrays, dtypes=None, increase_itemsize_factor=1, affec
 
 
 def get_value_range_of_dtype(dtype):
-    if ia.is_string(dtype):
-        dtype = np.dtype(dtype)
-    assert isinstance(dtype, np.dtype)
+    # normalize inputs, makes it work with strings (e.g. "uint8"), types like np.uint8 and also proper dtypes, like
+    # np.dtype("uint8")
+    dtype = np.dtype(dtype)
+
+    # This check seems to fail sometimes, e.g. get_value_range_of_dtype(np.int8)
+    # assert isinstance(dtype, np.dtype), "Expected instance of numpy.dtype, got %s." % (type(dtype),)
 
     if dtype.type in ia.NP_FLOAT_TYPES:
-        return np.finfo(dtype).min, np.finfo(dtype).max
-    elif dtype.type in ia.NP_UINT_TYPES or dtype.type in ia.NP_INT_TYPES:
-        return np.iinfo(dtype).min, np.iinfo(dtype).max
+        finfo = np.finfo(dtype)
+        return finfo.min, 0.0, finfo.max
+    elif dtype.type in ia.NP_UINT_TYPES:
+        iinfo = np.iinfo(dtype)
+        return iinfo.min, int(iinfo.min + 0.5 * iinfo.max), iinfo.max
+    elif dtype.type in ia.NP_INT_TYPES:
+        iinfo = np.iinfo(dtype)
+        return iinfo.min, 0, iinfo.max
     elif dtype.type == np.bool_:
-        return 0, 1
+        return 0, None, 1
     else:
         raise Exception("Cannot estimate value range of dtype '%s' (type: %s)" % (str(dtype), type(dtype)))
 
 
 def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None):
-    min_value, max_value = get_value_range_of_dtype(dtype)
+    dtype = np.dtype(dtype)
+    min_value, _, max_value = get_value_range_of_dtype(dtype)
     if validate:
         array_val = array
         if ia.is_single_integer(validate):

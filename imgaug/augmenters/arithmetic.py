@@ -1628,7 +1628,7 @@ class Invert(meta.Augmenter):
         per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[1])
 
         for image, per_channel_samples_i, p_samples_i in zip(images, per_channel_samples, p_samples):
-            min_value_dt, max_value_dt = meta.get_value_range_of_dtype(image.dtype)
+            min_value_dt, _, max_value_dt = meta.get_value_range_of_dtype(image.dtype)
             min_value = min_value_dt if self.min_value is None else self.min_value
             max_value = max_value_dt if self.max_value is None else self.max_value
             assert min_value >= min_value_dt
