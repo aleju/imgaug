@@ -288,20 +288,18 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
                          + "Add or subtract 1 to/from that value.")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
-        for i in sm.xrange(nb_images):
-            ki = samples[i]
+        for i, (image, ki) in enumerate(zip(images, samples)):
             if ki > 1:
                 ki = ki + 1 if ki % 2 == 0 else ki
-                image_aug = cv2.medianBlur(result[i], ki)
+                image_aug = cv2.medianBlur(image, ki)
                 # cv2.medianBlur() removes channel axis for single-channel
                 # images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
-                result[i] = image_aug
-        return result
+                images[i] = image_aug
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
