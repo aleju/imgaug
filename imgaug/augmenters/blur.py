@@ -396,22 +396,21 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
                                                        tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
-        seed = random_state.randint(0, 10**6)
-        samples_d = self.d.draw_samples((nb_images,), random_state=ia.new_random_state(seed))
-        samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
-        samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
-        for i in sm.xrange(nb_images):
-            ia.do_assert(images[i].shape[2] == 3,
-                         "BilateralBlur can currently only be applied to images with 3 channels.")
-            di = samples_d[i]
-            sigma_color_i = samples_sigma_color[i]
-            sigma_space_i = samples_sigma_space[i]
+        # Make sure that all images have 3 channels
+        ia.do_assert(all([image.shape[2] == 3 for image in images]),
+                     ("BilateralBlur can currently only be applied to images with 3 channels."
+                      + "Got channels: %s") % ([image.shape[2] for image in images],))
 
+        nb_images = len(images)
+        rss = ia.derive_random_states(random_state, 3)
+        samples_d = self.d.draw_samples((nb_images,), random_state=rss[0])
+        samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=rss[1])
+        samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=rss[2])
+        gen = enumerate(zip(images, samples_d, samples_sigma_color, samples_sigma_space))
+        for i, (image, di, sigma_color_i, sigma_space_i) in gen:
             if di != 1:
-                result[i] = cv2.bilateralFilter(images[i], di, sigma_color_i, sigma_space_i)
-        return result
+                images[i] = cv2.bilateralFilter(image, di, sigma_color_i, sigma_space_i)
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
