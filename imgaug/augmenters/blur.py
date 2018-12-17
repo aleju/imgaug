@@ -203,9 +203,10 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             samples = self.k.draw_samples((nb_images,), random_state=random_state)
             samples = (samples, samples)
         else:
+            rss = ia.derive_random_states(random_state, 2)
             samples = (
-                self.k[0].draw_samples((nb_images,), random_state=random_state),
-                self.k[1].draw_samples((nb_images,), random_state=random_state),
+                self.k[0].draw_samples((nb_images,), random_state=rss[0]),
+                self.k[1].draw_samples((nb_images,), random_state=rss[1]),
             )
         for i, (image, kh, kw) in enumerate(zip(images, samples[0], samples[1])):
             kernel_impossible = (kh == 0 or kw == 0)
