@@ -198,7 +198,6 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         nb_images = len(images)
         if self.mode == "single":
             samples = self.k.draw_samples((nb_images,), random_state=random_state)
@@ -208,17 +207,16 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
                 self.k[0].draw_samples((nb_images,), random_state=random_state),
                 self.k[1].draw_samples((nb_images,), random_state=random_state),
             )
-        for i in sm.xrange(nb_images):
-            kh, kw = samples[0][i], samples[1][i]
+        for i, (image, kh, kw) in enumerate(zip(images, samples[0], samples[1])):
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
             if not kernel_impossible and not kernel_does_nothing:
-                image_aug = cv2.blur(result[i], (kh, kw))
+                image_aug = cv2.blur(image, (kh, kw))
                 # cv2.blur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
-                result[i] = image_aug
-        return result
+                images[i] = image_aug
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
