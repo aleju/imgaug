@@ -96,7 +96,7 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
                 # values might be mixed with blue values in RGB)
                 for channel in sm.xrange(nb_channels):
                     image[:, :, channel] = ndimage.gaussian_filter(image[:, :, channel], sig)
-            images[i] = image
+                images[i] = image
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
