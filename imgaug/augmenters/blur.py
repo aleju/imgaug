@@ -76,6 +76,12 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
     from the range ``0.0 <= x <= 3.0``. The value is sampled per image.
 
     """
+    # float16 causes an error by gaussian_filter() (i.e. is immediately rejected)
+    # float64 seemed to be too inaccurate
+    # uint64+ and int64+ were not tested
+    ALLOWED_DTYPES = [
+        np.dtype(dt) for dt in [np.bool_, np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32, np.float32]
+    ]
 
     def __init__(self, sigma=0, name=None, deterministic=False, random_state=None):
         super(GaussianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
@@ -85,16 +91,32 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
         self.eps = 0.001  # epsilon value to estimate whether sigma is sufficently above 0 to apply the blur
 
     def _augment_images(self, images, random_state, parents, hooks):
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+        ia.do_assert(all([input_dtype.type in self.ALLOWED_DTYPES for input_dtype in input_dtypes]),
+                     "GaussianBlur currently only supports the following dtypes: %s" % (
+                         str([allowed_dtype.name for allowed_dtype in self.ALLOWED_DTYPES])
+                     ))
+
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
-        for i, (image, sig) in enumerate(zip(images, samples)):
+        for i, (image, sig, dtype) in enumerate(zip(images, samples, input_dtypes)):
             nb_channels = image.shape[2]
             if sig > 0 + self.eps:
+                if dtype == np.bool_:
+                    # We convert bool to float32 here, because gaussian_filter() seems to only return True when
+                    # the underlying value is approximately 1.0, not when it is above 0.5. So we do that here manually.
+                    # We don't use float16, because that dtype causes an error when calling gaussian_filter().
+                    image = image.astype(np.float32, copy=False)
+
                 # Note that while gaussian_filter can be applied to all channels at the same time, that should not
                 # be done here, because then the blurring would also happen across channels (e.g. red values might
                 # be mixed with blue values in RGB)
                 for channel in sm.xrange(nb_channels):
                     image[:, :, channel] = ndimage.gaussian_filter(image[:, :, channel], sig)
+
+                if dtype == np.bool_:
+                    image = image > 0.5
+
                 images[i] = image
         return images
 
