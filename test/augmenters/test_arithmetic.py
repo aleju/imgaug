@@ -695,6 +695,7 @@ def test_Multiply():
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
+            assert len(np.unique(image_aug)) == 1
 
             image = np.full((1, 1, 100), 10, dtype=dtype)
             aug = iaa.Multiply(iap.Uniform(0.5, 1.5), per_channel=True)
@@ -708,6 +709,7 @@ def test_Multiply():
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+            assert len(np.unique(image_aug)) == 1
 
             image = np.full((1, 1, 100), 10, dtype=dtype)
             aug = iaa.Multiply(iap.DiscreteUniform(1, 3), per_channel=True)
@@ -775,26 +777,30 @@ def test_Multiply():
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(-100 - 1e-1 < image_aug, image_aug < 100 + 1e-1))
+            assert np.allclose(image_aug[1:, :, 0], image_aug[:-1, :, 0])
+            assert np.allclose(image_aug[..., 0], image_aug[..., 1])
 
             image = np.full((1, 1, 100), 10.0, dtype=dtype)
             aug = iaa.Multiply(iap.Uniform(-10, 10), per_channel=True)
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(-100 - 1e-1 < image_aug, image_aug < 100 + 1e-1))
-            assert len(np.unique(image_aug))
+            assert not np.allclose(image_aug[:, :, 1:], image_aug[:, :, :-1])
 
             image = np.full((1, 1, 3), 10.0, dtype=dtype)
             aug = iaa.Multiply(iap.DiscreteUniform(-10, 10))
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(-100 - 1e-1 < image_aug, image_aug < 100 + 1e-1))
+            assert np.allclose(image_aug[1:, :, 0], image_aug[:-1, :, 0])
+            assert np.allclose(image_aug[..., 0], image_aug[..., 1])
 
             image = np.full((1, 1, 100), 10.0, dtype=dtype)
             aug = iaa.Multiply(iap.DiscreteUniform(-10, 10), per_channel=True)
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(-100 - 1e-1 < image_aug, image_aug < 100 + 1e-1))
-            assert len(np.unique(image_aug))
+            assert not np.allclose(image_aug[:, :, 1:], image_aug[:, :, :-1])
 
 
 def test_MultiplyElementwise():
@@ -1709,6 +1715,7 @@ def test_Add():
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+            assert len(np.unique(image_aug)) == 1
 
             image = np.full((1, 1, 100), 20, dtype=dtype)
             aug = iaa.Add(iap.Uniform(-10, 10), per_channel=True)
@@ -1722,6 +1729,7 @@ def test_Add():
             image_aug = aug.augment_image(image)
             assert image_aug.dtype.type == dtype
             assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+            assert len(np.unique(image_aug)) == 1
 
             image = np.full((1, 1, 100), 20, dtype=dtype)
             aug = iaa.Add(iap.DiscreteUniform(-10, 10), per_channel=True)
