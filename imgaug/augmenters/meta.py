@@ -122,6 +122,20 @@ def promote_array_dtypes_(arrays, dtypes=None, increase_itemsize_factor=1, affec
     return result
 
 
+def increase_array_resolutions_(arrays, factor):
+    assert ia.is_single_integer(factor)
+    assert factor in [1, 2, 4, 8]
+    if factor == 1:
+        return arrays
+
+    for i, array in enumerate(arrays):
+        dtype = array.dtype
+        dtype_target = np.dtype("%s%d" % (dtype.kind, dtype.itemsize * factor))
+        arrays[i] = array.astype(dtype_target, copy=False)
+
+    return arrays
+
+
 def get_value_range_of_dtype(dtype):
     # normalize inputs, makes it work with strings (e.g. "uint8"), types like np.uint8 and also proper dtypes, like
     # np.dtype("uint8")
@@ -138,7 +152,7 @@ def get_value_range_of_dtype(dtype):
         return iinfo.min, int(iinfo.min + 0.5 * iinfo.max), iinfo.max
     elif dtype.type in ia.NP_INT_TYPES:
         iinfo = np.iinfo(dtype)
-        return iinfo.min, 0, iinfo.max
+        return iinfo.min, -0.5, iinfo.max
     elif dtype.type == np.bool_:
         return 0, None, 1
     else:

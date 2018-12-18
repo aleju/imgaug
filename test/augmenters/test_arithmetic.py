@@ -10,6 +10,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug.augmenters import meta
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 
 
@@ -31,7 +32,7 @@ def main():
     test_CoarsePepper()
     test_ReplaceElementwise()
     test_Invert()
-    test_ContrastNormalization()
+    # test_ContrastNormalization()
     test_JpegCompression()
 
     time_end = time.time()
@@ -1709,6 +1710,150 @@ def test_Invert():
     hm = ia.quokka_heatmap()
     hm_aug = aug.augment_heatmaps([hm])[0]
     assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
+    #############################
+    # test other dtypes below
+    #############################
+    # with p=0.0
+    aug = iaa.Invert(p=0.0)
+    dtypes = [bool,
+              np.uint8, np.uint16, np.uint32, np.uint64,
+              np.int8, np.int16, np.int32, np.int64,
+              np.float16, np.float32, np.float64, np.float128]
+    for dtype in dtypes:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        image_min = np.full((3, 3), min_value, dtype=dtype)
+        image_center = np.full((3, 3), center_value, dtype=dtype)
+        image_max = np.full((3, 3), max_value, dtype=dtype)
+        image_min_aug = aug.augment_image(image_min)
+        image_center_aug = None
+        if dtype is not bool:
+            image_center_aug = aug.augment_image(image_center)
+        image_max_aug = aug.augment_image(image_max)
+
+        assert image_min_aug.dtype == np.dtype(dtype)
+        if image_center_aug is not None:
+            assert image_center_aug.dtype == np.dtype(dtype)
+        assert image_max_aug.dtype == np.dtype(dtype)
+
+        if dtype is bool:
+            assert np.all(image_min_aug == image_min)
+            assert np.all(image_max_aug == image_max)
+        elif np.dtype(dtype).kind in ["i", "u"]:
+            assert np.array_equal(image_min_aug, image_min)
+            assert np.array_equal(image_center_aug, image_center)
+            assert np.array_equal(image_max_aug, image_max)
+        else:
+            assert np.allclose(image_min_aug, image_min)
+            assert np.allclose(image_center_aug, image_center)
+            assert np.allclose(image_max_aug, image_max)
+
+    # with p=1.0
+    aug = iaa.Invert(p=1.0)
+    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
+              np.int8, np.int16, np.int32, np.int64,
+              np.float16, np.float32, np.float64, np.float128]
+    for dtype in dtypes:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        image_min = np.full((3, 3), min_value, dtype=dtype)
+        image_center = np.full((3, 3), center_value, dtype=dtype)
+        image_max = np.full((3, 3), max_value, dtype=dtype)
+        image_min_aug = aug.augment_image(image_min)
+        image_center_aug = None
+        if dtype is not bool:
+            image_center_aug = aug.augment_image(image_center)
+        image_max_aug = aug.augment_image(image_max)
+
+        assert image_min_aug.dtype == np.dtype(dtype)
+        if image_center_aug is not None:
+            assert image_center_aug.dtype == np.dtype(dtype)
+        assert image_max_aug.dtype == np.dtype(dtype)
+
+        if dtype is bool:
+            assert np.all(image_min_aug == image_max)
+            assert np.all(image_max_aug == image_min)
+        elif np.dtype(dtype).kind in ["i", "u"]:
+            assert np.array_equal(image_min_aug, image_max)
+            assert np.allclose(image_center_aug, image_center, atol=1.0+1e-4, rtol=0)
+            assert np.array_equal(image_max_aug, image_min)
+        else:
+            assert np.allclose(image_min_aug, image_max)
+            assert np.allclose(image_center_aug, image_center)
+            assert np.allclose(image_max_aug, image_min)
+
+    # with p=1.0 and min_value
+    aug = iaa.Invert(p=1.0, min_value=1)
+    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
+              np.int8, np.int16, np.int32,
+              np.float16, np.float32]
+    for dtype in dtypes:
+        _min_value, _center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value = 1
+        center_value = min_value + 0.5 * (max_value - min_value)
+        image_min = np.full((3, 3), min_value, dtype=dtype)
+        image_center = np.full((3, 3), center_value, dtype=dtype)
+        image_max = np.full((3, 3), max_value, dtype=dtype)
+        image_min_aug = aug.augment_image(image_min)
+        image_center_aug = None
+        if dtype is not bool:
+            image_center_aug = aug.augment_image(image_center)
+        image_max_aug = aug.augment_image(image_max)
+
+        assert image_min_aug.dtype == np.dtype(dtype)
+        if image_center_aug is not None:
+            assert image_center_aug.dtype == np.dtype(dtype)
+        assert image_max_aug.dtype == np.dtype(dtype)
+
+        if dtype is bool:
+            assert np.all(image_min_aug == 1)
+            assert np.all(image_max_aug == 1)
+        elif np.dtype(dtype).kind in ["i", "u"]:
+            assert np.array_equal(image_min_aug, image_max)
+            assert np.allclose(image_center_aug, image_center, atol=1.0+1e-4, rtol=0)
+            assert np.array_equal(image_max_aug, image_min)
+        else:
+            assert np.allclose(image_min_aug, image_max)
+            assert np.allclose(image_center_aug, image_center)
+            assert np.allclose(image_max_aug, image_min)
+
+    # with p=1.0 and max_value
+    aug = iaa.Invert(p=1.0, max_value=16)
+    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
+              np.int8, np.int16, np.int32,
+              np.float16, np.float32]
+    for dtype in dtypes:
+        min_value, _center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+        max_value = 16
+        center_value = min_value + 0.5 * (max_value - min_value)
+        image_min = np.full((3, 3), min_value, dtype=dtype)
+        image_center = np.full((3, 3), center_value, dtype=dtype)
+        image_max = np.full((3, 3), max_value, dtype=dtype)
+        image_min_aug = aug.augment_image(image_min)
+        image_center_aug = None
+        if dtype is not bool:
+            image_center_aug = aug.augment_image(image_center)
+        image_max_aug = aug.augment_image(image_max)
+
+        assert image_min_aug.dtype == np.dtype(dtype)
+        if image_center_aug is not None:
+            assert image_center_aug.dtype == np.dtype(dtype)
+        assert image_max_aug.dtype == np.dtype(dtype)
+
+        if dtype is bool:
+            assert not np.any(image_min_aug == 1)
+            assert not np.any(image_max_aug == 1)
+        elif np.dtype(dtype).kind in ["i", "u"]:
+            assert np.array_equal(image_min_aug, image_max)
+            assert np.allclose(image_center_aug, image_center, atol=1.0+1e-4, rtol=0)
+            assert np.array_equal(image_max_aug, image_min)
+        else:
+            assert np.allclose(image_min_aug, image_max)
+            if dtype is np.float16:
+                # for float16, this is off by about 10
+                assert np.allclose(image_center_aug, image_center, atol=0.001*np.finfo(dtype).max)
+            else:
+                assert np.allclose(image_center_aug, image_center)
+            assert np.allclose(image_max_aug, image_min)
 
 
 def deactivated_test_ContrastNormalization():
