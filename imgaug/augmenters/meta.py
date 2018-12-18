@@ -178,6 +178,30 @@ def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None
     return array
 
 
+def gate_dtypes(dtypes, allowed, disallowed, augmenter):
+    assert len(allowed) > 0
+    assert ia.is_string(allowed[0])
+    if len(disallowed) > 0:
+        assert ia.is_string(disallowed[0])
+
+    if ia.is_np_array(dtypes):
+        dtypes = [dtypes.dtype]
+    else:
+        dtypes = [np.dtype(dtype) if not ia.is_np_array(dtype) else dtype.dtype for dtype in dtypes]
+    for dtype in dtypes:
+        if dtype.name in allowed:
+            pass
+        elif dtype.name in disallowed:
+            raise ValueError("Got dtype '%s' in augmenter '%s' (class '%s'), which is a forbidden dtype (%s)." % (
+                dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(disallowed)
+            ))
+        else:
+            warnings.warn(("Got dtype '%s' in augmenter '%s' (class '%s'), which was neither explicitly allowed (%s), "
+                           "nor explicitly disallowed (%s). Generated outputs may contain errors..") % (
+                dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(allowed), ", ".join(disallowed)
+            ))
+
+
 # TODO switch all calls to restore_dtypes_()
 def restore_augmented_image_dtype_(image, orig_dtype):
     return image.astype(orig_dtype, copy=False)

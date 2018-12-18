@@ -51,6 +51,22 @@ class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: yes; tested
+
     Parameters
     ----------
     value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
@@ -111,6 +127,12 @@ class Add(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float64", "float96", "float128", "float256"],
+                         augmenter=self)
+
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
