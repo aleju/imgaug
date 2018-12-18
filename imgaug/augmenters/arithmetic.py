@@ -1048,6 +1048,25 @@ class ReplaceElementwise(meta.Augmenter):
     """
     Replace pixels in an image with new values.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: no
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no
+        * ``bool``: yes; tested
+
+    uint64 is currently not supported, because meta.clip_to_dtype_value_range_() does not support it,
+    which again is because numpy.clip() seems to not support it.
+
     Parameters
     ----------
     mask : float or tuple of float or list of float or imgaug.parameters.StochasticParameter
@@ -1107,6 +1126,13 @@ class ReplaceElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32", "int64",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
@@ -1119,14 +1145,19 @@ class ReplaceElementwise(meta.Augmenter):
             sampling_shape = (height, width, nb_channels if per_channel_i > 0.5 else 1)
             mask_samples = self.mask.draw_samples(sampling_shape, random_state=rs_mask)
             replacement_samples = self.replacement.draw_samples(sampling_shape, random_state=rs_replacement)
+
+            # round, this makes 0.2 e.g. become 0 in case of boolean image (otherwise replacing values with 0.2 would
+            # lead to True instead of False).
+            if image.dtype.kind in ["i", "u", "b"] and replacement_samples.dtype.kind == "f":
+                replacement_samples = np.round(replacement_samples)
+
+            replacement_samples = meta.clip_to_dtype_value_range_(replacement_samples, image.dtype, validate=False)
+
             if sampling_shape[2] == 1:
                 mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
                 replacement_samples = np.tile(replacement_samples, (1, 1, nb_channels))
             mask_thresh = mask_samples > 0.5
-            image, replacement_samples = meta.promote_array_dtypes_([image, replacement_samples])
-            image_repl = image * (~mask_thresh) + replacement_samples * mask_thresh
-            image_repl = meta.restore_dtypes_(image_repl, input_dtype)
-            images[i] = image_repl
+            image[mask_thresh] = replacement_samples[mask_thresh].astype(image.dtype)
 
         return images
 

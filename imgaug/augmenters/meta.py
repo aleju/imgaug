@@ -160,6 +160,10 @@ def get_value_range_of_dtype(dtype):
 
 
 def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None):
+    # for some reason, using 'out' did not work for uint64 (would clip max value to 0)
+    # but removing out then results in float64 array instead of uint64
+    assert array.dtype.name not in ["uint64", "uint128"]
+
     dtype = np.dtype(dtype)
     min_value, _, max_value = get_value_range_of_dtype(dtype)
     if validate:
