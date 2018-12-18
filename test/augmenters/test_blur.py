@@ -118,6 +118,7 @@ def test_GaussianBlur():
     #############################
     # test other dtypes below
     # ndimage.gaussian_filter() rejects: float16
+    # float64 implementation in gaussian_filter() was too inaccurate
     #############################
 
     # --
