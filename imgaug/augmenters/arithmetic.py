@@ -150,7 +150,7 @@ class Add(meta.Augmenter):
             else:
                 value = value_samples_i[0:1].reshape((1, 1, 1))
 
-            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+            # We limit here the value range of the value parameter to the bytes in the image's dtype.
             # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
             # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
             # The downside is that the mul parameter is limited in its value range.
@@ -186,6 +186,22 @@ class AddElementwise(meta.Augmenter):
 
     While the Add Augmenter adds a constant value per image, this one can
     add different values (sampled per pixel).
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: yes; tested
 
     Parameters
     ----------
@@ -247,6 +263,12 @@ class AddElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float64", "float96", "float128", "float256"],
+                         augmenter=self)
+
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
@@ -259,7 +281,7 @@ class AddElementwise(meta.Augmenter):
             sample_shape = (height, width, nb_channels if per_channel_samples_i > 0.5 else 1)
             value = self.value.draw_samples(sample_shape, random_state=rs)
 
-            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+            # We limit here the value range of the value parameter to the bytes in the image's dtype.
             # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
             # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
             # The downside is that the mul parameter is limited in its value range.

@@ -1784,6 +1784,194 @@ def test_AddElementwise():
     hm_aug = aug.augment_heatmaps([hm])[0]
     assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
+    ###################
+    # test other dtypes
+    ###################
+    # bool
+    image = np.zeros((3, 3), dtype=bool)
+    aug = iaa.AddElementwise(value=1)
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == np.bool_
+    assert np.all(image_aug == 1)
+
+    image = np.full((3, 3), True, dtype=bool)
+    aug = iaa.AddElementwise(value=1)
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == np.bool_
+    assert np.all(image_aug == 1)
+
+    image = np.full((3, 3), True, dtype=bool)
+    aug = iaa.AddElementwise(value=-1)
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == np.bool_
+    assert np.all(image_aug == 0)
+
+    image = np.full((3, 3), True, dtype=bool)
+    aug = iaa.AddElementwise(value=-2)
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == np.bool_
+    assert np.all(image_aug == 0)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        image = np.full((3, 3), min_value, dtype=dtype)
+        aug = iaa.AddElementwise(1)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == min_value + 1)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(11)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == min_value + 21)
+
+        image = np.full((3, 3), max_value - 2, dtype=dtype)
+        aug = iaa.AddElementwise(1)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == max_value - 1)
+
+        image = np.full((3, 3), max_value - 1, dtype=dtype)
+        aug = iaa.AddElementwise(1)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == max_value)
+
+        image = np.full((3, 3), max_value - 1, dtype=dtype)
+        aug = iaa.AddElementwise(2)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == max_value)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(-9)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == min_value + 1)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(-10)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == min_value)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(-11)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == min_value)
+
+        for _ in sm.xrange(10):
+            image = np.full((1, 1, 3), 20, dtype=dtype)
+            aug = iaa.AddElementwise(iap.Uniform(-10, 10))
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+
+            image = np.full((1, 1, 3), 20, dtype=dtype)
+            aug = iaa.AddElementwise(iap.Uniform(-10, 10), per_channel=True)
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+
+            image = np.full((1, 1, 3), 20, dtype=dtype)
+            aug = iaa.AddElementwise(iap.DiscreteUniform(-10, 10))
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+
+            image = np.full((1, 1, 3), 20, dtype=dtype)
+            aug = iaa.AddElementwise(iap.DiscreteUniform(-10, 10), per_channel=True)
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+
+    # float
+    for dtype in [np.float16, np.float32]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        if dtype == np.float16:
+            atol = 1e-3 * max_value
+        else:
+            atol = 1e-9 * max_value
+        _allclose = functools.partial(np.allclose, atol=atol, rtol=0)
+
+        image = np.full((3, 3), min_value, dtype=dtype)
+        aug = iaa.AddElementwise(1)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, min_value + 1)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(11)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, min_value + 21)
+
+        image = np.full((3, 3), max_value - 2, dtype=dtype)
+        aug = iaa.AddElementwise(1)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, max_value - 1)
+
+        image = np.full((3, 3), max_value - 1, dtype=dtype)
+        aug = iaa.AddElementwise(1)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, max_value)
+
+        image = np.full((3, 3), max_value - 1, dtype=dtype)
+        aug = iaa.AddElementwise(2)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, max_value)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(-9)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, min_value + 1)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(-10)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, min_value)
+
+        image = np.full((3, 3), min_value + 10, dtype=dtype)
+        aug = iaa.AddElementwise(-11)
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert _allclose(image_aug, min_value)
+
+        for _ in sm.xrange(10):
+            image = np.full((1, 1, 3), 0, dtype=dtype)
+            aug = iaa.AddElementwise(iap.Uniform(-10, 10))
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(-10 - 1e-2 < image_aug, image_aug < 10 + 1e-2))
+
+            image = np.full((1, 1, 3), 0, dtype=dtype)
+            aug = iaa.AddElementwise(iap.Uniform(-10, 10), per_channel=True)
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(-10 - 1e-2 < image_aug, image_aug < 10 + 1e-2))
+
+            image = np.full((1, 1, 3), 0, dtype=dtype)
+            aug = iaa.AddElementwise(iap.DiscreteUniform(-10, 10))
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(-10 - 1e-2 < image_aug, image_aug < 10 + 1e-2))
+
+            image = np.full((1, 1, 3), 0, dtype=dtype)
+            aug = iaa.AddElementwise(iap.DiscreteUniform(-10, 10), per_channel=True)
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(np.logical_and(-10 - 1e-2 < image_aug, image_aug < 10 + 1e-2))
+
 
 def test_Invert():
     reseed()
