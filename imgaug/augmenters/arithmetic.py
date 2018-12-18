@@ -693,6 +693,24 @@ class MultiplyElementwise(meta.Augmenter):
     While the Multiply Augmenter uses a constant multiplier per image,
     this one can use different multipliers per pixel.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: yes; tested
+
+    Note: tests were only conducted for rather small multipliers, around -10.0 to +10.0.
+
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -749,11 +767,17 @@ class MultiplyElementwise(meta.Augmenter):
     def __init__(self, mul=1.0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(MultiplyElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.mul = iap.handle_continuous_param(mul, "mul", value_range=(0, None), tuple_to_uniform=True,
+        self.mul = iap.handle_continuous_param(mul, "mul", value_range=None, tuple_to_uniform=True,
                                                list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float64", "float96", "float128", "float256"],
+                         augmenter=self)
+
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
@@ -784,7 +808,7 @@ class MultiplyElementwise(meta.Augmenter):
                 mul = np.tile(mul, (1, 1, nb_channels))
 
             image, mul = meta.promote_array_dtypes_([image, mul], dtypes=[image, dtype_target],
-                                                    increase_itemsize_factor=1 if is_not_increasing_value_range else 4)
+                                                    increase_itemsize_factor=1 if is_not_increasing_value_range else 2)
             image = np.multiply(image, mul, out=image, casting="no")
             image = meta.restore_dtypes_(image, input_dtype)
             images[i] = image
