@@ -470,22 +470,20 @@ def test_AverageBlur():
     assert np.all(image_aug == image)
 
     # uint, int
-    for dtype in [np.uint8, np.uint16, np.int16]:
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = int(center_value)
-        image[2, 2] = int(center_value)
+        image[1, 1] = int(center_value + 0.4 * max_value)
+        image[2, 2] = int(center_value + 0.4 * max_value)
         image_aug = aug.augment_image(image)
         assert image_aug.dtype.type == dtype
         assert np.all(image_aug == image)
 
     # float
-    # currently no float dtypes supported by this augmenter, may change in the future
-    for dtype in []:
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+    for dtype, value in zip([np.float16, np.float32, np.float64], [5000, 1000*1000, 1000*1000*1000]):
         image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = center_value
-        image[2, 2] = center_value
+        image[1, 1] = value
+        image[2, 2] = value
         image_aug = aug.augment_image(image)
         assert image_aug.dtype.type == dtype
         assert np.allclose(image_aug, image)
@@ -522,7 +520,7 @@ def test_AverageBlur():
     assert np.all(image_aug == expected)
 
     # uint, int
-    for dtype in [np.uint8, np.uint16, np.int16]:
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = 100
         image[2, 2] = 100
@@ -533,8 +531,7 @@ def test_AverageBlur():
         assert np.max(diff) <= 2
 
     # float
-    # currently no float dtypes supported by this augmenter, may change in the future
-    for dtype in []:
+    for dtype in [np.float16, np.float32, np.float64]:
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = 100.0
         image[2, 2] = 100.0
@@ -560,9 +557,9 @@ def test_AverageBlur():
     ])
 
     # uint, int
-    for dtype in [np.uint8, np.uint16, np.int16]:
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
         _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
-        value = int(center_value + 0.5 * max_value)
+        value = int(center_value + 0.4 * max_value)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = value
         image[2, 2] = value
@@ -574,10 +571,7 @@ def test_AverageBlur():
         assert np.max(diff) <= 2**(1 + np.dtype(dtype).itemsize)
 
     # float
-    # currently no float dtypes supported by this augmenter, may change in the future
-    for dtype in []:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
-        value = center_value + 0.5 * max_value
+    for dtype, value in zip([np.float16, np.float32, np.float64], [5000, 1000*1000, 1000*1000*1000]):
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = value
         image[2, 2] = value
@@ -590,7 +584,7 @@ def test_AverageBlur():
 
     # assert failure on invalid dtypes
     aug = iaa.AverageBlur(k=3)
-    for dt in [np.uint32, np.uint64, np.int8, np.int32, np.int64, np.float16, np.float32, np.float64]:
+    for dt in [np.uint32, np.uint64, np.int32, np.int64]:
         got_exception = False
         try:
             _ = aug.augment_image(np.zeros((1, 1), dtype=dt))

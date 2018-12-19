@@ -166,26 +166,24 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
         * ``uint16``: yes; tested
         * ``uint32``: no (1)
         * ``uint64``: no (2)
-        * ``int8``: no (3)
+        * ``int8``: yes; tested (3)
         * ``int16``: yes; tested
         * ``int32``: no (4)
         * ``int64``: no (5)
-        * ``float16``: no (6)
-        * ``float32``: no (7)
-        * ``float64``: no (8)
+        * ``float16``: yes; tested (6)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
         * ``float128``: no
-        * ``bool``: yes; tested (9)
+        * ``bool``: yes; tested (7)
 
         - (1) rejected by ``cv2.blur()``
         - (2) loss of resolution in ``cv2.blur()`` (result is ``int32``)
-        - (3) leads to error "Unsupported combination of source format (=1), and buffer format (=4) in function
-              'getRowSumFilter'" in ``cv2``
+        - (3) ``int8`` is mapped internally to ``int16``, ``int8`` itself leads to cv2 error "Unsupported combination
+              of source format (=1), and buffer format (=4) in function 'getRowSumFilter'" in ``cv2``
         - (4) results too inaccurate
         - (5) loss of resolution in ``cv2.blur()`` (result is ``int32``)
-        - (6) rejected by ``cv2.blur()``
-        - (7) results too inaccurate
-        - (8) results too inaccurate
-        - (9) ``bool`` is mapped internally to ``uint8``
+        - (6) ``float16`` is mapped internally to ``float32``
+        - (7) ``bool`` is mapped internally to ``float32``
 
     Parameters
     ----------
@@ -273,10 +271,10 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
 
     def _augment_images(self, images, random_state, parents, hooks):
         meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "int16"],
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
                          disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int8", "int32", "int64", "int128", "int256",
-                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                                     "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
                          augmenter=self)
 
         nb_images = len(images)
@@ -293,18 +291,21 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
             if not kernel_impossible and not kernel_does_nothing:
-                was_bool = False
-                if image.dtype == np.bool_:
-                    image = image.astype(np.uint8, copy=False) * 255
-                    was_bool = True
+                input_dtype = image.dtype
+                if image.dtype in [np.bool_, np.float16]:
+                    image = image.astype(np.float32, copy=False)
+                elif image.dtype == np.int8:
+                    image = image.astype(np.int16, copy=False)
 
                 image_aug = cv2.blur(image, (kh, kw))
                 # cv2.blur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
 
-                if was_bool:
-                    image_aug = image_aug >= 128
+                if input_dtype == np.bool_:
+                    image_aug = image_aug > 0.5
+                elif input_dtype in [np.int8, np.float16]:
+                    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
 
                 images[i] = image_aug
         return images
