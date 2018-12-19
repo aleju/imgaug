@@ -529,7 +529,7 @@ def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, d
 
     dtype support::
 
-        TODO
+        See ``imgaug.augmenters.convolutional.Convolve``.
 
     Parameters
     ----------

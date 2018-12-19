@@ -210,6 +210,10 @@ def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=N
     """
     Augmenter that sharpens images and overlays the result with the original image.
 
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
+
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -296,6 +300,10 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     The embossed version pronounces highlights and shadows,
     letting the image look as if it was recreated on a metal plate ("embossed").
 
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
+
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -376,6 +384,10 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     a black and white image and then overlays the result with the original
     image.
 
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
+
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -439,6 +451,10 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     Augmenter that detects edges that have certain directions and marks them
     in a black and white image and then overlays the result with the original
     image.
+
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
 
     Parameters
     ----------
