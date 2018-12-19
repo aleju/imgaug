@@ -53,7 +53,8 @@ def restore_dtypes_(images, dtypes, clip=True):
 
             dtypes = dtypes[0]
 
-        assert isinstance(dtypes, np.dtype)
+        dtypes = np.dtype(dtypes)
+
         dtype_to = dtypes
         if images.dtype.type == dtype_to:
             result = images

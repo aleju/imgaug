@@ -143,7 +143,7 @@ def test_GaussianBlur():
         assert np.all(image_aug == image)
 
     # float
-    for dtype in [np.float32]:
+    for dtype in [np.float16, np.float32, np.float64]:
         _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = center_value
@@ -180,18 +180,16 @@ def test_GaussianBlur():
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = 100
         image_aug = aug.augment_image(image)
-        # expected = (kernel * center_value).astype(dtype)
         expected = (kernel * 100).astype(dtype)
         diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
         assert image_aug.dtype.type == dtype
         assert np.max(diff) <= 2
 
     # float
-    for dtype in [np.float32]:
+    for dtype in [np.float16, np.float32, np.float64]:
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = 100.0
         image_aug = aug.augment_image(image)
-        # expected = (kernel * center_value).astype(dtype)
         expected = (kernel * 100.0).astype(dtype)
         diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
         assert image_aug.dtype.type == dtype
@@ -226,18 +224,16 @@ def test_GaussianBlur():
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = 100
         image_aug = aug.augment_image(image)
-        # expected = (kernel * center_value).astype(dtype)
         expected = (kernel * 100).astype(dtype)
         diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
         assert image_aug.dtype.type == dtype
         assert np.max(diff) <= 2
 
     # float
-    for dtype in [np.float32]:
+    for dtype in [np.float16, np.float32, np.float64]:
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = 100.0
         image_aug = aug.augment_image(image)
-        # expected = (kernel * center_value).astype(dtype)
         expected = (kernel * 100.0).astype(dtype)
         diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
         assert image_aug.dtype.type == dtype
@@ -265,7 +261,7 @@ def test_GaussianBlur():
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
         _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
-        value = int(center_value + 0.5 * max_value)
+        value = int(center_value + 0.4 * max_value)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = value
         image_aug = aug.augment_image(image)
@@ -276,9 +272,7 @@ def test_GaussianBlur():
         assert np.max(diff) <= 2**(1 + np.dtype(dtype).itemsize)
 
     # float
-    for dtype in [np.float32]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
-        value = center_value + 0.5 * max_value
+    for dtype, value in zip([np.float16, np.float32, np.float64], [5000, 1000*1000, 1000*1000*1000]):
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = value
         image_aug = aug.augment_image(image)
@@ -290,12 +284,12 @@ def test_GaussianBlur():
 
     # assert failure on invalid dtypes
     aug = iaa.GaussianBlur(sigma=1.0)
-    for dt in [np.int64, np.float16, np.float64, np.float128]:
+    for dt in [np.uint64, np.int64, np.float128]:
         got_exception = False
         try:
             _ = aug.augment_image(np.zeros((1, 1), dtype=dt))
         except Exception as exc:
-            assert "only supports the following dtypes" in str(exc)
+            assert "forbidden dtype" in str(exc)
             got_exception = True
         assert got_exception
 
