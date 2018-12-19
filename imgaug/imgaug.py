@@ -57,8 +57,12 @@ DEFAULT_FONT_FP = os.path.join(
 # a module and hence cannot be copied via deepcopy. That's why we use RandomState
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
+SEED_MIN_VALUE = 0
+SEED_MAX_VALUE = 2**32 - 1
 
 
+# to check if a dtype instance is among these dtypes, use e.g. `dtype.type in NP_FLOAT_TYPES`
+# do not just use `dtype in NP_FLOAT_TYPES` as that would fail
 NP_FLOAT_TYPES = set(np.sctypes["float"])
 NP_INT_TYPES = set(np.sctypes["int"])
 NP_UINT_TYPES = set(np.sctypes["uint"])
@@ -345,7 +349,7 @@ def new_random_state(seed=None, fully_random=False):
             # sample manually a seed instead of just RandomState(),
             # because the latter one
             # is way slower.
-            seed = CURRENT_RANDOM_STATE.randint(0, 10**6, 1)[0]
+            seed = CURRENT_RANDOM_STATE.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
     return np.random.RandomState(seed)
 
 
@@ -428,7 +432,7 @@ def derive_random_states(random_state, n=1):
         Derived random states.
 
     """
-    seed_ = random_state.randint(0, 10**6, 1)[0]
+    seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
     return [new_random_state(seed_+i) for i in sm.xrange(n)]
 
 

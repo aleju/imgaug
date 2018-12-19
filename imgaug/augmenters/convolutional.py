@@ -41,6 +41,29 @@ class Convolve(meta.Augmenter):
     """
     Apply a Convolution to input images.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: no (2)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (4)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (4)
+
+        - (1) rejected by ``cv2.filter2D()``.
+        - (2) causes error: cv2.error: OpenCV(3.4.2) (...)/filter.cpp:4487: error: (-213:The function/feature is
+              not implemented) Unsupported combination of source format (=1), and destination format (=1) in
+              function 'getLinearFilter'.
+        - (3) mapped internally to ``int16``.
+        - (4) mapped internally to ``float32``.
+
     Parameters
     ----------
     matrix : None or (H, W) ndarray or imgaug.parameters.StochasticParameter or callable, optional
@@ -113,13 +136,23 @@ class Convolve(meta.Augmenter):
                 type(matrix),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256",
+                                     "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
 
-        result = images
-        nb_images = len(images)
         seed = random_state.randint(0, 10**6, 1)[0]
-        for i in sm.xrange(nb_images):
+        for i, image in enumerate(images):
             _height, _width, nb_channels = images[i].shape
+
+            input_dtype = image.dtype
+            if image.dtype.type in [np.bool_, np.float16]:
+                image = image.astype(np.float32, copy=False)
+            elif image.dtype.type == np.int8:
+                image = image.astype(np.int16, copy=False)
+
             if self.matrix_type == "None":
                 matrices = [None] * nb_channels
             elif self.matrix_type == "constant":
@@ -145,16 +178,21 @@ class Convolve(meta.Augmenter):
             else:
                 raise Exception("Invalid matrix type")
 
+            image_aug = image
             for channel in sm.xrange(nb_channels):
                 if matrices[channel] is not None:
                     # ndimage.convolve caused problems here
-                    result_ic = cv2.filter2D(result[i][..., channel], -1, matrices[channel])
-                    # TODO make value range more flexible
-                    result_ic = meta.clip_augmented_images_(result_ic, 0, 255)
-                    result_ic = meta.restore_augmented_images_dtypes_(result_ic, input_dtypes[i])
-                    result[i][..., channel] = result_ic
+                    # cv2.filter2D() always returns same output dtype as input dtype
+                    image_aug[..., channel] = cv2.filter2D(image_aug[..., channel], -1, matrices[channel])
 
-        return result
+            if input_dtype == np.bool_:
+                image_aug = image_aug > 0.5
+            elif input_dtype in [np.int8, np.float16]:
+                image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+
+            images[i] = image_aug
+
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
@@ -171,6 +209,10 @@ class Convolve(meta.Augmenter):
 def Sharpen(alpha=0, lightness=1, name=None, deterministic=False, random_state=None):
     """
     Augmenter that sharpens images and overlays the result with the original image.
+
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
 
     Parameters
     ----------
@@ -258,6 +300,10 @@ def Emboss(alpha=0, strength=1, name=None, deterministic=False, random_state=Non
     The embossed version pronounces highlights and shadows,
     letting the image look as if it was recreated on a metal plate ("embossed").
 
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
+
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -338,6 +384,10 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
     a black and white image and then overlays the result with the original
     image.
 
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
+
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -401,6 +451,10 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0), name=None, deterministic=F
     Augmenter that detects edges that have certain directions and marks them
     in a black and white image and then overlays the result with the original
     image.
+
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
 
     Parameters
     ----------

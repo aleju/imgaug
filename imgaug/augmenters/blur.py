@@ -40,6 +40,27 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
     """
     Augmenter to blur images using gaussian kernels.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: no (1)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (3)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no
+        * ``bool``: yes; tested (4)
+
+        - (1) Results too inaccurate
+        - (2) Results too inaccurate
+        - (3) float16 is mapped internally to float32
+        - (4) bool is mapped internally to float32
+
     Parameters
     ----------
     sigma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -85,20 +106,43 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
         self.eps = 0.001  # epsilon value to estimate whether sigma is sufficently above 0 to apply the blur
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32", "float16", "float32",
+                                  "float64"],
+                         disallowed=["uint64", "uint128", "uint256",
+                                     "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
+        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
-        for i in sm.xrange(nb_images):
-            nb_channels = images[i].shape[2]
-            sig = samples[i]
+        for i, (image, sig, dtype) in enumerate(zip(images, samples, input_dtypes)):
+            nb_channels = image.shape[2]
             if sig > 0 + self.eps:
-                # note that while gaussian_filter can be applied to all channels
-                # at the same time, that should not be done here, because then
-                # the blurring would also happen across channels (e.g. red
-                # values might be mixed with blue values in RGB)
+                if dtype == np.bool_:
+                    # We convert bool to float32 here, because gaussian_filter() seems to only return True when
+                    # the underlying value is approximately 1.0, not when it is above 0.5. So we do that here manually.
+                    # We don't use float16, because that dtype causes an error when calling gaussian_filter().
+                    image = image.astype(np.float32, copy=False)
+                elif dtype == np.float16:
+                    # float16 is rejected by gaussian_filter, hence we convert to float32
+                    image = image.astype(np.float32, copy=False)
+
+                # Note that while gaussian_filter can be applied to all channels at the same time, that should not
+                # be done here, because then the blurring would also happen across channels (e.g. red values might
+                # be mixed with blue values in RGB)
                 for channel in sm.xrange(nb_channels):
-                    result[i][:, :, channel] = ndimage.gaussian_filter(result[i][:, :, channel], sig)
-        return result
+                    image[:, :, channel] = ndimage.gaussian_filter(image[:, :, channel], sig)
+
+                if dtype == np.bool_:
+                    image = image > 0.5
+                elif dtype == np.float16:
+                    image = meta.restore_dtypes_(image, np.float16)
+
+                images[i] = image
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -113,6 +157,33 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
 class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Blur an image by computing simple means over neighbourhoods.
+
+    The padding behaviour around the image borders is cv2's ``BORDER_REFLECT_101``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: no (4)
+        * ``int64``: no (5)
+        * ``float16``: yes; tested (6)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no
+        * ``bool``: yes; tested (7)
+
+        - (1) rejected by ``cv2.blur()``
+        - (2) loss of resolution in ``cv2.blur()`` (result is ``int32``)
+        - (3) ``int8`` is mapped internally to ``int16``, ``int8`` itself leads to cv2 error "Unsupported combination
+              of source format (=1), and buffer format (=4) in function 'getRowSumFilter'" in ``cv2``
+        - (4) results too inaccurate
+        - (5) loss of resolution in ``cv2.blur()`` (result is ``int32``)
+        - (6) ``float16`` is mapped internally to ``float32``
+        - (7) ``bool`` is mapped internally to ``float32``
 
     Parameters
     ----------
@@ -199,27 +270,45 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256",
+                                     "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
         nb_images = len(images)
         if self.mode == "single":
             samples = self.k.draw_samples((nb_images,), random_state=random_state)
             samples = (samples, samples)
         else:
+            rss = ia.derive_random_states(random_state, 2)
             samples = (
-                self.k[0].draw_samples((nb_images,), random_state=random_state),
-                self.k[1].draw_samples((nb_images,), random_state=random_state),
+                self.k[0].draw_samples((nb_images,), random_state=rss[0]),
+                self.k[1].draw_samples((nb_images,), random_state=rss[1]),
             )
-        for i in sm.xrange(nb_images):
-            kh, kw = samples[0][i], samples[1][i]
+        for i, (image, kh, kw) in enumerate(zip(images, samples[0], samples[1])):
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
             if not kernel_impossible and not kernel_does_nothing:
-                image_aug = cv2.blur(result[i], (kh, kw))
+                input_dtype = image.dtype
+                if image.dtype in [np.bool_, np.float16]:
+                    image = image.astype(np.float32, copy=False)
+                elif image.dtype == np.int8:
+                    image = image.astype(np.int16, copy=False)
+
+                image_aug = cv2.blur(image, (kh, kw))
                 # cv2.blur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
-                result[i] = image_aug
-        return result
+
+                if input_dtype == np.bool_:
+                    image_aug = image_aug > 0.5
+                elif input_dtype in [np.int8, np.float16]:
+                    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+
+                images[i] = image_aug
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -237,6 +326,10 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
 
     Median blurring can be used to remove small dirt from images.
     At larger kernel sizes, its effects have some similarity with Superpixels.
+
+    dtype support::
+
+        TODO
 
     Parameters
     ----------
@@ -290,20 +383,17 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
                          + "Add or subtract 1 to/from that value.")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
-        for i in sm.xrange(nb_images):
-            ki = samples[i]
+        for i, (image, ki) in enumerate(zip(images, samples)):
             if ki > 1:
                 ki = ki + 1 if ki % 2 == 0 else ki
-                image_aug = cv2.medianBlur(result[i], ki)
-                # cv2.medianBlur() removes channel axis for single-channel
-                # images
+                image_aug = cv2.medianBlur(image, ki)
+                # cv2.medianBlur() removes channel axis for single-channel images
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
-                result[i] = image_aug
-        return result
+                images[i] = image_aug
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -325,6 +415,10 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 
     See http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html#bilateralfilter
     for more information regarding the parameters.
+
+    dtype support::
+
+        TODO
 
     Parameters
     ----------
@@ -402,22 +496,21 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
                                                        tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        nb_images = len(images)
-        seed = random_state.randint(0, 10**6)
-        samples_d = self.d.draw_samples((nb_images,), random_state=ia.new_random_state(seed))
-        samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=ia.new_random_state(seed+1))
-        samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=ia.new_random_state(seed+2))
-        for i in sm.xrange(nb_images):
-            ia.do_assert(images[i].shape[2] == 3,
-                         "BilateralBlur can currently only be applied to images with 3 channels.")
-            di = samples_d[i]
-            sigma_color_i = samples_sigma_color[i]
-            sigma_space_i = samples_sigma_space[i]
+        # Make sure that all images have 3 channels
+        ia.do_assert(all([image.shape[2] == 3 for image in images]),
+                     ("BilateralBlur can currently only be applied to images with 3 channels."
+                      + "Got channels: %s") % ([image.shape[2] for image in images],))
 
+        nb_images = len(images)
+        rss = ia.derive_random_states(random_state, 3)
+        samples_d = self.d.draw_samples((nb_images,), random_state=rss[0])
+        samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=rss[1])
+        samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=rss[2])
+        gen = enumerate(zip(images, samples_d, samples_sigma_color, samples_sigma_space))
+        for i, (image, di, sigma_color_i, sigma_space_i) in gen:
             if di != 1:
-                result[i] = cv2.bilateralFilter(images[i], di, sigma_color_i, sigma_space_i)
-        return result
+                images[i] = cv2.bilateralFilter(image, di, sigma_color_i, sigma_space_i)
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -433,6 +526,10 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, deterministic=False, random_state=None):
     """
     Augmenter that sharpens images and overlays the result with the original image.
+
+    dtype support::
+
+        See ``imgaug.augmenters.convolutional.Convolve``.
 
     Parameters
     ----------

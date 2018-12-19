@@ -23,6 +23,7 @@ List of augmenters:
     * Lambda
     * AssertLambda
     * AssertShape
+    * ChannelShuffle
 
 Note that WithColorspace is in ``color.py``.
 """
@@ -42,6 +43,37 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
+def restore_dtypes_(images, dtypes, clip=True):
+    if ia.is_np_array(images):
+        if ia.is_iterable(dtypes):
+            assert len(dtypes) > 0
+
+            if len(dtypes) > 1:
+                assert all([dtype_i == dtypes[0] for dtype_i in dtypes])
+
+            dtypes = dtypes[0]
+
+        dtypes = np.dtype(dtypes)
+
+        dtype_to = dtypes
+        if images.dtype.type == dtype_to:
+            result = images
+        else:
+            if clip:
+                min_value, _, max_value = get_value_range_of_dtype(dtype_to)
+                images = np.clip(images, min_value, max_value, out=images)
+            result = images.astype(dtype_to, copy=False)
+    elif ia.is_iterable(images):
+        result = images
+        dtypes = dtypes if not isinstance(dtypes, np.dtype) else [dtypes] * len(images)
+        for i, (image, dtype) in enumerate(zip(images, dtypes)):
+            assert ia.is_np_array(image)
+            result[i] = restore_dtypes_(image, dtype, clip=clip)
+    else:
+        raise Exception("Expected numpy array or iterable of numpy arrays, got type '%s'." % (type(images),))
+    return result
+
+
 def copy_dtypes_for_restore(images, force_list=False):
     if ia.is_np_array(images):
         if force_list:
@@ -52,6 +84,130 @@ def copy_dtypes_for_restore(images, force_list=False):
         return [image.dtype for image in images]
 
 
+def get_minimal_dtype(arrays, increase_itemsize_factor=1):
+    input_dts = [array.dtype if not isinstance(array, np.dtype) else array
+                 for array in arrays]
+    promoted_dt = np.promote_types(*input_dts)
+    if increase_itemsize_factor > 1:
+        promoted_dt_highres = "%s%d" % (promoted_dt.kind, promoted_dt.itemsize * increase_itemsize_factor)
+        try:
+            promoted_dt_highres = np.dtype(promoted_dt_highres)
+            return promoted_dt_highres
+        except TypeError:
+            raise TypeError(
+                ("Unable to create a numpy dtype matching the name '%s'. "
+                 + "This error was caused when trying to find a minimal dtype covering the dtypes '%s' (which was "
+                 + "determined to be '%s') and then increasing its resolution (aka itemsize) by a factor of %d. "
+                 + "This error can be avoided by choosing arrays with lower resolution dtypes as inputs, e.g. by "
+                 + "reducing float32 to float16.") % (
+                    promoted_dt_highres,
+                    ", ".join([input_dt.name for input_dt in input_dts]),
+                    promoted_dt.name,
+                    increase_itemsize_factor
+                )
+            )
+    return promoted_dt
+
+
+def promote_array_dtypes_(arrays, dtypes=None, increase_itemsize_factor=1, affects=None):
+    if dtypes is None:
+        dtypes = [array.dtype for array in arrays]
+    dt = get_minimal_dtype(dtypes, increase_itemsize_factor=increase_itemsize_factor)
+    if affects is None:
+        affects = arrays
+    result = []
+    for array in affects:
+        if array.dtype.type != dt:
+            array = array.astype(dt, copy=False)
+        result.append(array)
+    return result
+
+
+def increase_array_resolutions_(arrays, factor):
+    assert ia.is_single_integer(factor)
+    assert factor in [1, 2, 4, 8]
+    if factor == 1:
+        return arrays
+
+    for i, array in enumerate(arrays):
+        dtype = array.dtype
+        dtype_target = np.dtype("%s%d" % (dtype.kind, dtype.itemsize * factor))
+        arrays[i] = array.astype(dtype_target, copy=False)
+
+    return arrays
+
+
+def get_value_range_of_dtype(dtype):
+    # normalize inputs, makes it work with strings (e.g. "uint8"), types like np.uint8 and also proper dtypes, like
+    # np.dtype("uint8")
+    dtype = np.dtype(dtype)
+
+    # This check seems to fail sometimes, e.g. get_value_range_of_dtype(np.int8)
+    # assert isinstance(dtype, np.dtype), "Expected instance of numpy.dtype, got %s." % (type(dtype),)
+
+    if dtype.type in ia.NP_FLOAT_TYPES:
+        finfo = np.finfo(dtype)
+        return finfo.min, 0.0, finfo.max
+    elif dtype.type in ia.NP_UINT_TYPES:
+        iinfo = np.iinfo(dtype)
+        return iinfo.min, int(iinfo.min + 0.5 * iinfo.max), iinfo.max
+    elif dtype.type in ia.NP_INT_TYPES:
+        iinfo = np.iinfo(dtype)
+        return iinfo.min, -0.5, iinfo.max
+    elif dtype.type == np.bool_:
+        return 0, None, 1
+    else:
+        raise Exception("Cannot estimate value range of dtype '%s' (type: %s)" % (str(dtype), type(dtype)))
+
+
+def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None):
+    # for some reason, using 'out' did not work for uint64 (would clip max value to 0)
+    # but removing out then results in float64 array instead of uint64
+    assert array.dtype.name not in ["uint64", "uint128"]
+
+    dtype = np.dtype(dtype)
+    min_value, _, max_value = get_value_range_of_dtype(dtype)
+    if validate:
+        array_val = array
+        if ia.is_single_integer(validate):
+            assert validate_values is None
+            array_val = array.flat[0:validate]
+        if validate_values is not None:
+            min_value_found, max_value_found = validate_values
+        else:
+            min_value_found = np.min(array_val)
+            max_value_found = np.max(array_val)
+        assert min_value <= min_value_found <= max_value
+        assert min_value <= max_value_found <= max_value
+    array = np.clip(array, min_value, max_value, out=array)
+    return array
+
+
+def gate_dtypes(dtypes, allowed, disallowed, augmenter):
+    assert len(allowed) > 0
+    assert ia.is_string(allowed[0])
+    if len(disallowed) > 0:
+        assert ia.is_string(disallowed[0])
+
+    if ia.is_np_array(dtypes):
+        dtypes = [dtypes.dtype]
+    else:
+        dtypes = [np.dtype(dtype) if not ia.is_np_array(dtype) else dtype.dtype for dtype in dtypes]
+    for dtype in dtypes:
+        if dtype.name in allowed:
+            pass
+        elif dtype.name in disallowed:
+            raise ValueError("Got dtype '%s' in augmenter '%s' (class '%s'), which is a forbidden dtype (%s)." % (
+                dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(disallowed)
+            ))
+        else:
+            warnings.warn(("Got dtype '%s' in augmenter '%s' (class '%s'), which was neither explicitly allowed (%s), "
+                           "nor explicitly disallowed (%s). Generated outputs may contain errors..") % (
+                dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(allowed), ", ".join(disallowed)
+            ))
+
+
+# TODO switch all calls to restore_dtypes_()
 def restore_augmented_image_dtype_(image, orig_dtype):
     return image.astype(orig_dtype, copy=False)
 
@@ -131,6 +287,18 @@ def invert_reduce_to_nonempty(objs, ids, objs_reduced):
     for idx, obj_from_reduced in zip(ids, objs_reduced):
         objs_inv[idx] = obj_from_reduced
     return objs_inv
+
+
+def estimate_max_number_of_channels(images):
+    if len(images) == 0:
+        return None
+    elif ia.is_np_array(images):
+        assert images.ndim == 4
+        return images.shape[3]
+    else:
+        channels = [estimate_max_number_of_channels(image[np.newaxis, ...]) for image in images]
+        channels = [channels_i for channels_i in channels if channels_i is not None]
+        return max(channels) if len(channels) > 0 else None
 
 
 @six.add_metaclass(ABCMeta)
