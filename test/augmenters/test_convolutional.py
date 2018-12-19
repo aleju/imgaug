@@ -9,6 +9,7 @@ import six.moves as sm
 
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug.augmenters import meta
 from imgaug.testutils import reseed
 
 
@@ -154,6 +155,147 @@ def test_Convolve():
     assert params[1] == "constant"
 
     # TODO add test for keypoints once their handling was improved in Convolve
+
+    ###################
+    # test other dtypes
+    ###################
+    identity_matrix = np.int64([[1]])
+    aug = iaa.Convolve(matrix=identity_matrix)
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[1, 1] = True
+    image_aug = aug.augment_image(image)
+    assert image.dtype.type == np.bool_
+    assert np.all(image_aug == image)
+
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+        image = np.zeros((3, 3), dtype=dtype)
+        image[1, 1] = 100
+        image_aug = aug.augment_image(image)
+        assert image.dtype.type == dtype
+        assert np.all(image_aug == image)
+
+    for dtype in [np.float16, np.float32, np.float64]:
+        image = np.zeros((3, 3), dtype=dtype)
+        image[1, 1] = 100.0
+        image_aug = aug.augment_image(image)
+        assert image.dtype.type == dtype
+        assert np.allclose(image_aug, image)
+
+    # ----
+    # non-identity matrix
+    # ----
+    matrix = np.float64([
+        [0, 0.6, 0],
+        [0, 0.4, 0],
+        [0,   0, 0]
+    ])
+    aug = iaa.Convolve(matrix=matrix)
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[1, 1] = True
+    image[2, 1] = True
+    expected = np.zeros((3, 3), dtype=bool)
+    expected[0, 1] = True
+    expected[2, 1] = True
+    image_aug = aug.augment_image(image)
+    assert image.dtype.type == np.bool_
+    assert np.all(image_aug == expected)
+
+    matrix = np.float64([
+        [0, 0.5, 0],
+        [0, 0.5, 0],
+        [0,   0, 0]
+    ])
+    aug = iaa.Convolve(matrix=matrix)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+        image = np.zeros((3, 3), dtype=dtype)
+        image[1, 1] = 100
+        image[2, 1] = 100
+        image_aug = aug.augment_image(image)
+
+        expected = np.zeros((3, 3), dtype=dtype)
+        expected[0, 1] = int(np.round(100 * 0.5))
+        expected[1, 1] = int(np.round(100 * 0.5))
+        expected[2, 1] = int(np.round(100 * 0.5 + 100 * 0.5))
+
+        diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+        assert image_aug.dtype.type == dtype
+        assert np.max(diff) <= 2
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64]:
+        image = np.zeros((3, 3), dtype=dtype)
+        image[1, 1] = 100.0
+        image[2, 1] = 100.0
+        image_aug = aug.augment_image(image)
+
+        expected = np.zeros((3, 3), dtype=dtype)
+        expected[0, 1] = 100 * 0.5
+        expected[1, 1] = 100 * 0.5
+        expected[2, 1] = 100 * 0.5 + 100 * 0.5
+
+        diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
+        assert image_aug.dtype.type == dtype
+        assert np.max(diff) < 1.0
+
+    # ----
+    # non-identity matrix, higher values
+    # ----
+    matrix = np.float64([
+        [0, 0.5, 0],
+        [0, 0.5, 0],
+        [0,   0, 0]
+    ])
+    aug = iaa.Convolve(matrix=matrix)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = int(center_value + 0.4 * max_value)
+
+        image = np.zeros((3, 3), dtype=dtype)
+        image[1, 1] = value
+        image[2, 1] = value
+        image_aug = aug.augment_image(image)
+
+        expected = np.zeros((3, 3), dtype=dtype)
+        expected[0, 1] = int(np.round(value * 0.5))
+        expected[1, 1] = int(np.round(value * 0.5))
+        expected[2, 1] = int(np.round(value * 0.5 + value * 0.5))
+
+        diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+        assert image_aug.dtype.type == dtype
+        assert np.max(diff) <= 2
+
+    # float
+    for dtype, value in zip([np.float16, np.float32, np.float64], [5000, 1000*1000, 1000*1000*1000]):
+        image = np.zeros((3, 3), dtype=dtype)
+        image[1, 1] = value
+        image[2, 1] = value
+        image_aug = aug.augment_image(image)
+
+        expected = np.zeros((3, 3), dtype=dtype)
+        expected[0, 1] = value * 0.5
+        expected[1, 1] = value * 0.5
+        expected[2, 1] = value * 0.5 + value * 0.5
+
+        diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
+        assert image_aug.dtype.type == dtype
+        assert np.max(diff) < 1.0
+
+    # assert failure on invalid dtypes
+    aug = iaa.Convolve(matrix=identity_matrix)
+    for dt in [np.uint32, np.uint64, np.int32, np.int64]:
+        got_exception = False
+        try:
+            _ = aug.augment_image(np.zeros((1, 1), dtype=dt))
+        except Exception as exc:
+            assert "forbidden dtype" in str(exc)
+            got_exception = True
+        assert got_exception
 
 
 def test_Sharpen():

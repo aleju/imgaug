@@ -327,6 +327,10 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
     Median blurring can be used to remove small dirt from images.
     At larger kernel sizes, its effects have some similarity with Superpixels.
 
+    dtype support::
+
+        TODO
+
     Parameters
     ----------
     k : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
@@ -411,6 +415,10 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 
     See http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html#bilateralfilter
     for more information regarding the parameters.
+
+    dtype support::
+
+        TODO
 
     Parameters
     ----------
@@ -518,6 +526,10 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, deterministic=False, random_state=None):
     """
     Augmenter that sharpens images and overlays the result with the original image.
+
+    dtype support::
+
+        TODO
 
     Parameters
     ----------
