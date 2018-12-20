@@ -22,7 +22,6 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 
 import numpy as np
-import six.moves as sm
 
 from . import meta
 from .. import parameters as iap
@@ -166,9 +165,9 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i in sm.xrange(nb_images):
-            if samples[i] == 1:
-                images[i] = np.flipud(images[i])
+        for i, (image, sample) in enumerate(zip(images, samples)):
+            if sample > 0.5:
+                images[i] = np.flipud(image)
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
@@ -189,6 +188,7 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             if samples[i] == 1:
                 height = keypoints_on_image.shape[0]
                 for keypoint in keypoints_on_image.keypoints:
+                    # TODO is this still correct with float keypoints? seems like the -1 should be dropped
                     keypoint.y = (height - 1) - keypoint.y
         return keypoints_on_images
 
