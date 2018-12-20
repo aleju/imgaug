@@ -215,6 +215,7 @@ def test_Fliplr():
     expected = np.zeros((3, 3), dtype=bool)
     expected[0, 2] = True
     image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == image.dtype.type
     assert np.all(image_aug == expected)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
@@ -225,6 +226,7 @@ def test_Fliplr():
         expected = np.zeros((3, 3), dtype=dtype)
         expected[0, 2] = value
         image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
         assert np.array_equal(image_aug, expected)
 
     for dtype, value in zip([np.float16, np.float32, np.float64, np.float128], [5000, 1000**2, 1000**3, 1000**4]):
@@ -234,6 +236,7 @@ def test_Fliplr():
         expected = np.zeros((3, 3), dtype=dtype)
         expected[0, 2] = value
         image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
         assert np.allclose(image_aug, expected, atol=atol)
 
 
