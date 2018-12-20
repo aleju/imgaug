@@ -25,7 +25,8 @@ List of augmenters:
     * AssertShape
     * ChannelShuffle
 
-Note that WithColorspace is in ``color.py``.
+Note: WithColorspace is in ``color.py``.
+
 """
 from __future__ import print_function, division, absolute_import
 
