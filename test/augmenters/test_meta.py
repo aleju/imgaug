@@ -88,6 +88,7 @@ def test_Noop():
     image = np.zeros((3, 3), dtype=bool)
     image[0, 0] = True
     image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == image.dtype.type
     assert np.all(image_aug == image)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
@@ -96,12 +97,14 @@ def test_Noop():
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = value
         image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
         assert np.array_equal(image_aug, image)
 
     for dtype, value in zip([np.float16, np.float32, np.float64, np.float128], [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = value
         image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
         assert np.all(image_aug == image)
 
 
