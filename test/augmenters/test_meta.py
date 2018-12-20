@@ -3256,6 +3256,73 @@ def test_ChannelShuffle():
     assert np.allclose(kpsoi_aug.keypoints[1].x, 2)
     assert np.allclose(kpsoi_aug.keypoints[1].y, 4)
 
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.ChannelShuffle(p=0.5)
+
+    image = np.zeros((3, 3, 2), dtype=bool)
+    image[0, 0, 0] = True
+    expected = [np.zeros((3, 3, 2), dtype=bool) for _ in sm.xrange(2)]
+    expected[0][0, 0, 0] = True
+    expected[1][0, 0, 1] = True
+    seen = [False, False]
+    for _ in sm.xrange(100):
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == image.dtype.type
+        if np.all(image_aug == expected[0]):
+            seen[0] = True
+        elif np.all(image_aug == expected[1]):
+            seen[1] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3, 2), dtype=dtype)
+        image[0, 0, 0] = value
+        expected = [np.zeros((3, 3, 2), dtype=dtype) for _ in sm.xrange(2)]
+        expected[0][0, 0, 0] = value
+        expected[1][0, 0, 1] = value
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            if np.all(image_aug == expected[0]):
+                seen[0] = True
+            elif np.all(image_aug == expected[1]):
+                seen[1] = True
+            else:
+                assert False
+            if all(seen):
+                break
+        assert all(seen)
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                            [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+        image = np.zeros((3, 3, 2), dtype=dtype)
+        image[0, 0, 0] = value
+        expected = [np.zeros((3, 3, 2), dtype=dtype) for _ in sm.xrange(2)]
+        expected[0][0, 0, 0] = value
+        expected[1][0, 0, 1] = value
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            if np.all(image_aug == expected[0]):
+                seen[0] = True
+            elif np.all(image_aug == expected[1]):
+                seen[1] = True
+            else:
+                assert False
+            if all(seen):
+                break
+        assert all(seen)
+
 
 def test_2d_inputs():
     """Test whether inputs of 2D-images (i.e. (H, W) instead of (H, W, C)) work."""
