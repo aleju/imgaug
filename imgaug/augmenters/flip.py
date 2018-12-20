@@ -82,9 +82,9 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i in sm.xrange(nb_images):
-            if samples[i] == 1:
-                images[i] = np.fliplr(images[i])
+        for i, (image, sample) in enumerate(zip(images, samples)):
+            if sample > 0.5:
+                images[i] = np.fliplr(image)
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
@@ -105,6 +105,7 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             if samples[i] == 1:
                 width = keypoints_on_image.shape[1]
                 for keypoint in keypoints_on_image.keypoints:
+                    # TODO is this still correct with float keypoints? Seems like the -1 should be dropped
                     keypoint.x = (width - 1) - keypoint.x
         return keypoints_on_images
 
