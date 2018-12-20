@@ -12,6 +12,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug.augmenters import meta
 from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
 
 
@@ -78,6 +79,30 @@ def test_Noop():
     assert keypoints_equal(observed, expected)
 
     assert iaa.Noop().get_parameters() == []
+
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.Noop()
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    image_aug = aug.augment_image(image)
+    assert np.all(image_aug == image)
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        image_aug = aug.augment_image(image)
+        assert np.array_equal(image_aug, image)
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128], [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        image_aug = aug.augment_image(image)
+        assert np.all(image_aug == image)
 
 
 def test_Lambda():
