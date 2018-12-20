@@ -2510,6 +2510,8 @@ def test_OneOf():
     for key, val in results.items():
         assert expected - expected_tolerance < val < expected + expected_tolerance
 
+    # dtypes not tested here as OneOf is just a thin wrapper around SomeOf, which is already tested for that
+
 
 def test_Sometimes():
     reseed()
@@ -2917,6 +2919,100 @@ def test_Sometimes():
         observed = aug.augment_image(image)
         assert ia.is_np_array(observed)
         assert observed.shape in [(8, 8, 3)]
+
+    ###################
+    # test other dtypes
+    ###################
+    # no change via Noop (known to work with any datatype)
+    aug = iaa.Sometimes(1.0, iaa.Noop())
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == image.dtype.type
+    assert np.all(image_aug == image)
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.array_equal(image_aug, image)
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                            [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == image)
+
+    # flips (known to work with any datatype)
+    aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0), iaa.Flipud(1.0))
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    expected = [np.zeros((3, 3), dtype=bool) for _ in sm.xrange(2)]
+    expected[0][0, 2] = True
+    expected[1][2, 0] = True
+    seen = [False, False]
+    for _ in sm.xrange(100):
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == image.dtype.type
+        if np.all(image_aug == expected[0]):
+            seen[0] = True
+        elif np.all(image_aug == expected[1]):
+            seen[1] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        expected = [np.zeros((3, 3), dtype=dtype) for _ in sm.xrange(2)]
+        expected[0][0, 2] = value
+        expected[1][2, 0] = value
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            if np.all(image_aug == expected[0]):
+                seen[0] = True
+            elif np.all(image_aug == expected[1]):
+                seen[1] = True
+            else:
+                assert False
+            if all(seen):
+                break
+        assert all(seen)
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                            [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        expected = [np.zeros((3, 3), dtype=dtype) for _ in sm.xrange(2)]
+        expected[0][0, 2] = value
+        expected[1][2, 0] = value
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            if np.all(image_aug == expected[0]):
+                seen[0] = True
+            elif np.all(image_aug == expected[1]):
+                seen[1] = True
+            else:
+                assert False
+            if all(seen):
+                break
+        assert all(seen)
 
 
 def test_WithChannels():

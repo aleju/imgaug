@@ -2397,19 +2397,7 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See ``imgaug.augmenters.meta.SomeOf``.
 
     Parameters
     ----------
@@ -2467,18 +2455,18 @@ class Sometimes(Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
 
     Parameters
     ----------
