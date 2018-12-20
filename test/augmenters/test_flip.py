@@ -10,6 +10,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug.augmenters import meta
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -203,6 +204,37 @@ def test_Fliplr():
     assert isinstance(params[0], iap.Binomial)
     assert isinstance(params[0].p, iap.Deterministic)
     assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
+
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.Fliplr(1.0)
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    expected = np.zeros((3, 3), dtype=bool)
+    expected[0, 2] = True
+    image_aug = aug.augment_image(image)
+    assert np.all(image_aug == expected)
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        expected = np.zeros((3, 3), dtype=dtype)
+        expected[0, 2] = value
+        image_aug = aug.augment_image(image)
+        assert np.array_equal(image_aug, expected)
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128], [5000, 1000**2, 1000**3, 1000**4]):
+        atol = 1e-9 * max_value if dtype != np.float16 else 1e-3 * max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        expected = np.zeros((3, 3), dtype=dtype)
+        expected[0, 2] = value
+        image_aug = aug.augment_image(image)
+        assert np.allclose(image_aug, expected, atol=atol)
 
 
 def test_Flipud():
