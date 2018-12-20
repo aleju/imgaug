@@ -2105,6 +2105,75 @@ def test_Sequential():
     )
     assert aug.__str__() == aug.__repr__() == expected
 
+    ###################
+    # test other dtypes
+    ###################
+    # no change via Noop (known to work with any datatype)
+    for random_order in [False, True]:
+        aug = iaa.Sequential([
+            iaa.Noop(),
+            iaa.Noop()
+        ], random_order=random_order)
+
+        image = np.zeros((3, 3), dtype=bool)
+        image[0, 0] = True
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == image.dtype.type
+        assert np.all(image_aug == image)
+
+        for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            value = max_value
+            image = np.zeros((3, 3), dtype=dtype)
+            image[0, 0] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.array_equal(image_aug, image)
+
+        for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                                [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+            image = np.zeros((3, 3), dtype=dtype)
+            image[0, 0] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(image_aug == image)
+
+    # flips (known to work with any datatype)
+    for random_order in [False, True]:
+        aug = iaa.Sequential([
+            iaa.Fliplr(1.0),
+            iaa.Flipud(1.0)
+        ], random_order=random_order)
+
+        image = np.zeros((3, 3), dtype=bool)
+        image[0, 0] = True
+        expected = np.zeros((3, 3), dtype=bool)
+        expected[2, 2] = True
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == image.dtype.type
+        assert np.all(image_aug == expected)
+
+        for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            value = max_value
+            image = np.zeros((3, 3), dtype=dtype)
+            image[0, 0] = value
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[2, 2] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.array_equal(image_aug, expected)
+
+        for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                                [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+            image = np.zeros((3, 3), dtype=dtype)
+            image[0, 0] = value
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[2, 2] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype.type == dtype
+            assert np.all(image_aug == expected)
+
 
 def test_SomeOf():
     reseed()
