@@ -112,6 +112,7 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
         return [self.p]
 
 
+# TODO merge with Fliplr
 class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
