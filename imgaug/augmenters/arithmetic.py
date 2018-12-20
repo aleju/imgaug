@@ -180,6 +180,7 @@ class Add(meta.Augmenter):
         return [self.value, self.per_channel]
 
 
+# TODO merge this with Add
 class AddElementwise(meta.Augmenter):
     """
     Add values to the pixels of images with possibly different values for neighbouring pixels.
@@ -317,6 +318,10 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False, name=None, determin
     """
     Add gaussian noise (aka white noise) to images.
 
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.AddElementwise``.
+
     Parameters
     ----------
     loc : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -400,9 +405,13 @@ def AdditiveLaplaceNoise(loc=0, scale=0, per_channel=False, name=None, determini
     Hence, this noise will add more outliers (very high/low values). It is somewhere between gaussian noise and
     salt and pepper noise.
 
-    Values of around ``255 * 0.05`` for `scale` lead to visible noise.
-    Values of around ``255 * 0.10`` for `scale` lead to very visible noise.
+    Values of around ``255 * 0.05`` for `scale` lead to visible noise (for uint8).
+    Values of around ``255 * 0.10`` for `scale` lead to very visible noise (for uint8).
     It is recommended to usually set `per_channel` to True.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.AddElementwise``.
 
     Parameters
     ----------
@@ -488,9 +497,13 @@ def AdditivePoissonNoise(lam=0, per_channel=False, name=None, deterministic=Fals
     a poisson distribution instead of a gaussian distribution. As poisson distributions produce only positive numbers,
     the sign of the sampled values are here randomly flipped.
 
-    Values of around ``10.0`` for `lam` lead to visible noise.
-    Values of around ``20.0`` for `lam` lead to very visible noise.
+    Values of around ``10.0`` for `lam` lead to visible noise (for uint8).
+    Values of around ``20.0`` for `lam` lead to very visible noise (for uint8).
     It is recommended to usually set `per_channel` to True.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.AddElementwise``.
 
     Parameters
     ----------
@@ -581,7 +594,13 @@ class Multiply(meta.Augmenter):
         * ``float128``: no
         * ``bool``: yes; tested
 
-    Note: tests were only conducted for rather small multipliers, around -10.0 to +10.0.
+        Note: tests were only conducted for rather small multipliers, around -10.0 to +10.0.
+
+        In general, the multipliers sampled from `mul` must be in a value range that corresponds to
+        the input image's dtype. E.g. if the input image has dtype uint16 and the samples generated
+        from `mul` are float64, this augmenter will still force all samples to be within the value
+        range of float16, as it has the same number of bytes (two) as uint16. This is done to
+        make overflows less likely to occur.
 
     Parameters
     ----------
@@ -686,6 +705,7 @@ class Multiply(meta.Augmenter):
         return [self.mul, self.per_channel]
 
 
+# TODO merge with Multiply
 class MultiplyElementwise(meta.Augmenter):
     """
     Multiply values of pixels with possibly different values for neighbouring pixels.
@@ -709,7 +729,13 @@ class MultiplyElementwise(meta.Augmenter):
         * ``float128``: no
         * ``bool``: yes; tested
 
-    Note: tests were only conducted for rather small multipliers, around -10.0 to +10.0.
+        Note: tests were only conducted for rather small multipliers, around -10.0 to +10.0.
+
+        In general, the multipliers sampled from `mul` must be in a value range that corresponds to
+        the input image's dtype. E.g. if the input image has dtype uint16 and the samples generated
+        from `mul` are float64, this augmenter will still force all samples to be within the value
+        range of float16, as it has the same number of bytes (two) as uint16. This is done to
+        make overflows less likely to occur.
 
     Parameters
     ----------
@@ -829,6 +855,10 @@ def Dropout(p=0, per_channel=False, name=None, deterministic=False, random_state
     """
     Augmenter that sets a certain fraction of pixels in images to zero.
 
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.MultiplyElementwise``.
+
     Parameters
     ----------
     p : float or tuple of float or imgaug.parameters.StochasticParameter, optional
@@ -920,6 +950,10 @@ def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False, min_s
     This method is implemented by generating the dropout mask at a
     lower resolution (than the image has) and then upsampling the mask
     before dropping the pixels.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.MultiplyElementwise``.
 
     Parameters
     ----------
@@ -1053,7 +1087,7 @@ class ReplaceElementwise(meta.Augmenter):
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
         * ``uint32``: yes; tested
-        * ``uint64``: no
+        * ``uint64``: no (1)
         * ``int8``: yes; tested
         * ``int16``: yes; tested
         * ``int32``: yes; tested
@@ -1064,8 +1098,8 @@ class ReplaceElementwise(meta.Augmenter):
         * ``float128``: no
         * ``bool``: yes; tested
 
-    uint64 is currently not supported, because meta.clip_to_dtype_value_range_() does not support it,
-    which again is because numpy.clip() seems to not support it.
+        - (1) uint64 is currently not supported, because meta.clip_to_dtype_value_range_() does not
+              support it, which again is because numpy.clip() seems to not support it.
 
     Parameters
     ----------
@@ -1177,6 +1211,10 @@ def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
 
     This is identical to ``SaltAndPepper``, except that per_channel is always set to True.
 
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
+
     """
     return SaltAndPepper(p=p, per_channel=True, name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1184,6 +1222,10 @@ def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
 def SaltAndPepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adds salt and pepper noise to an image, i.e. some white-ish and black-ish pixels.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
 
     Parameters
     ----------
@@ -1240,6 +1282,10 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None, per_channel=False,
                         deterministic=False, random_state=None):
     """
     Adds coarse salt and pepper noise to an image, i.e. rectangles that contain noisy white-ish and black-ish pixels.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
 
     Parameters
     ----------
@@ -1344,6 +1390,10 @@ def Salt(p=0, per_channel=False, name=None, deterministic=False, random_state=No
     """
     Adds salt noise to an image, i.e. white-ish pixels.
 
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
+
     Parameters
     ----------
     p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
@@ -1401,6 +1451,10 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False, min_size
                random_state=None):
     """
     Adds coarse salt noise to an image, i.e. rectangles containing noisy white-ish pixels.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
 
     Parameters
     ----------
@@ -1503,8 +1557,12 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False, min_size
 def Pepper(p=0, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adds pepper noise to an image, i.e. black-ish pixels.
-    This is similar to dropout, but slower and the black pixels are not
-    uniformly black.
+
+    This is similar to dropout, but slower and the black pixels are not uniformly black.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
 
     Parameters
     ----------
@@ -1569,6 +1627,10 @@ def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False, min_si
                  random_state=None):
     """
     Adds coarse pepper noise to an image, i.e. rectangles that contain noisy black-ish pixels.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
 
     Parameters
     ----------
@@ -1710,12 +1772,16 @@ class Invert(meta.Augmenter):
         * ``int8``: yes; tested
         * ``int16``: yes; tested
         * ``int32``: yes; tested
-        * ``int64``: no
+        * ``int64``: no (1)
         * ``float16``: yes; tested
         * ``float32``: yes; tested
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: no
+        * ``float64``: no (1)
+        * ``float128``: no (2)
+        * ``bool``: no (3)
+
+        - (1) Not allowed as int/float have to be increased in resolution when using min/max values.
+        - (2) Not tested.
+        - (3) Makes no sense when using min/max values.
 
     Parameters
     ----------
@@ -1929,6 +1995,10 @@ def ContrastNormalization(alpha=1.0, per_channel=False, name=None, deterministic
     """
     Augmenter that changes the contrast of images.
 
+    dtype support:
+
+        See ``imgaug.augmenters.contrast.LinearContrast``.
+
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1989,6 +2059,22 @@ class JpegCompression(meta.Augmenter):
 
     Note that this augmenter still returns images as numpy arrays (i.e. saves the images with JPEG compression and
     then reloads them into arrays). It does not return the raw JPEG file content.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

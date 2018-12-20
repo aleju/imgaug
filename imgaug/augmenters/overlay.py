@@ -46,6 +46,22 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
     ``factor >= 0.5`` is true (per image). It is recommended to *not* use
     augmenters that change keypoint positions with this class.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     factor : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -348,6 +364,22 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     per_channel is True).
 
     See ``Alpha`` for more description.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -652,6 +684,22 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False, size_px_max=(2
     connected blobs of 1s surrounded by 0s. If nearest neighbour upsampling
     is used, these blobs can be rectangular with sharp edges.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     first : None or imgaug.augmenters.meta.Augmenter or iterable of imgaug.augmenters.meta.Augmenter, optional
@@ -836,6 +884,22 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=F
     which can sometimes create large connected blobs of 1s surrounded by 0s
     and other times results in smaller patterns. If nearest neighbour
     upsampling is used, these blobs can be rectangular with sharp edges.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

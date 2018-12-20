@@ -61,6 +61,22 @@ class Affine(meta.Augmenter):
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter\
@@ -797,6 +813,22 @@ class AffineCv2(meta.Augmenter):
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
@@ -1339,6 +1371,22 @@ class PiecewiseAffine(meta.Augmenter):
     This is mostly a wrapper around scikit-image's PiecewiseAffine.
     See also the Affine augmenter for a similar technique.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     scale : float or tuple of float or imgaug.parameters.StochasticParameter, optional
@@ -1693,6 +1741,22 @@ class PerspectiveTransform(meta.Augmenter):
 
     Code partially from http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/ .
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1969,6 +2033,22 @@ class ElasticTransformation(meta.Augmenter):
         Recognition, 2003
 
     for a detailed explanation.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -2326,6 +2406,22 @@ class Rot90(meta.Augmenter):
     Augmenter to rotate images clockwise by multiples of 90 degrees.
 
     This could also be achieved using ``Affine``, but Rot90 is significantly more efficient.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

@@ -34,6 +34,22 @@ class Superpixels(meta.Augmenter):
 
     This implementation uses skimage's version of the SLIC algorithm.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional

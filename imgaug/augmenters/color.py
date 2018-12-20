@@ -53,6 +53,24 @@ class WithColorspace(meta.Augmenter):
     child augmenters C and finally changes the colorspace back from B to A.
     See also ChangeColorspace() for more.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
+        TODO
+
     Parameters
     ----------
     to_colorspace : str
@@ -207,6 +225,24 @@ class AddToHueAndSaturation(meta.Augmenter):
     The augmenter first transforms images to HSV colorspace, then adds random values to the H and S channels
     and afterwards converts back to RGB.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+        TODO add float support
+
     Parameters
     ----------
     value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
@@ -291,8 +327,6 @@ class AddToHueAndSaturation(meta.Augmenter):
         return [self.value, self.per_channel]
 
 
-
-
 # TODO tests
 # Note: Not clear whether this class will be kept (for anything aside from grayscale)
 # other colorspaces dont really make sense and they also might not work correctly
@@ -305,6 +339,24 @@ class ChangeColorspace(meta.Augmenter):
     NOTE: This augmenter is not tested. Some colorspaces might work, others might not.
 
     NOTE: This augmenter tries to project the colorspace value range on 0-255. It outputs dtype=uint8 images.
+
+    dtype support::
+
+        * ``uint8``: yes; not tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+        TODO add float support
 
     Parameters
     ----------
@@ -502,6 +554,24 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     Augmenter to convert images to their grayscale versions.
 
     NOTE: Number of output channels is still 3, i.e. this augmenter just "removes" color.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+        TODO add float support
 
     Parameters
     ----------

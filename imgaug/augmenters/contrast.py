@@ -34,6 +34,22 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
     Values in the range ``gamma=(0.5, 2.0)`` seem to be sensible.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     gamma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -79,6 +95,22 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
     """Adjust contrast by scaling each pixel value to ``1/(1 + exp(gain*(cutoff - I_ij/255.0)))``.
 
     Values in the range ``gain=(5, 20)`` and ``cutoff=(0.25, 0.75)`` seem to be sensible.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -138,6 +170,22 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
 def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """Adjust contrast by scaling each pixel value to ``gain * log(1 + I_ij)``.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     gain : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -184,6 +232,22 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
 def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """Adjust contrast by scaling each pixel value to ``128 + alpha*(I_ij-128)``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

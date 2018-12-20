@@ -158,6 +158,22 @@ class Scale(meta.Augmenter):
     """
     Augmenter that scales/resizes images to specified heights and widths.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     size : 'keep' or int or float or tuple of int or tuple of float or list of int or list of float or\
@@ -449,6 +465,22 @@ class CropAndPad(meta.Augmenter):
     percent (relative to input image size).
     Cropping removes pixels at the sides (i.e. extracts a subimage from
     a given full image). Padding adds pixels to the sides (e.g. black pixels).
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -921,6 +953,10 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
     """
     Augmenter that pads images, i.e. adds columns/rows to them.
 
+    dtype support::
+
+        See ``imgaug.augmenters.size.CropAndPad``.
+
     Parameters
     ----------
     px : None or int or imgaug.parameters.StochasticParameter or tuple, optional
@@ -1119,6 +1155,10 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
     The number of pixels to cut off may be defined in absolute values or
     percent of the image sizes.
 
+    dtype support::
+
+        See ``imgaug.augmenters.size.CropAndPad``.
+
     Parameters
     ----------
     px : None or int or imgaug.parameters.StochasticParameter or tuple, optional
@@ -1267,6 +1307,22 @@ class PadToFixedSize(meta.Augmenter):
     required width, the augmenter will sometimes add 2px to the left and 0px to the right,
     sometimes add 2px to the right and 0px to the left and sometimes add 1px to both sides.
     Set `position` to ``center`` to prevent that.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -1484,6 +1540,22 @@ class CropToFixedSize(meta.Augmenter):
     sometimes remove 2px from the right and 0px from the left and sometimes remove 1px from both
     sides. Set `position` to ``center`` to prevent that.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     width : int
@@ -1696,6 +1768,10 @@ class KeepSizeByResize(meta.Augmenter):
 
     This can e.g. be placed after a cropping operation. Some augmenters have a ``keep_size`` parameter that does
     mostly the same if set to True, though this augmenter offers control over the interpolation mode.
+
+    dtype support::
+
+        See ``imgaug.imresize_many_images``.
 
     Parameters
     ----------

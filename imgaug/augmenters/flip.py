@@ -32,6 +32,22 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
     """
     Flip/mirror input images horizontally.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     p : number or imgaug.parameters.StochasticParameter, optional
@@ -99,6 +115,22 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

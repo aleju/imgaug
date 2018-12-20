@@ -58,8 +58,8 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
 
         - (1) Results too inaccurate
         - (2) Results too inaccurate
-        - (3) float16 is mapped internally to float32
-        - (4) bool is mapped internally to float32
+        - (3) ``float16`` is mapped internally to ``float32``
+        - (4) ``bool`` is mapped internally to ``float32``
 
     Parameters
     ----------
@@ -329,7 +329,19 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
 
     dtype support::
 
-        TODO
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -418,7 +430,21 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 
     dtype support::
 
-        TODO
+        dtype support::
+
+        * ``uint8``: yes; not tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

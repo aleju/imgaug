@@ -387,7 +387,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         batches : imgaug.Batch or list of imgaug.Batch or list of imgaug.HeatmapsOnImage\
                   or list of imgaug.SegmentationMapOnImage or list of imgaug.KeypointsOnImage\
                   or list of ([N],H,W,[C]) ndarray
-            List of image batches to augment.
+            List of batches to augment.
             The expected input is a list, with each entry having one of the following datatypes:
 
                 * imgaug.Batch
@@ -497,7 +497,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_unnormalized = batch_aug.segmentation_maps_aug
             elif dt_orig == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
-            else: # only option left
+            else:  # only option left
                 ia.do_assert(dt_orig == "list_of_imgaug.BoundingBoxesOnImage")
                 batch_unnormalized = batch_aug.bounding_boxes_aug
             return batch_unnormalized
@@ -559,7 +559,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Parameters
         ----------
         image : (H,W,C) ndarray or (H,W) ndarray
-            The image to augment. Should have dtype uint8 (range 0-255).
+            The image to augment.
+            Channel-axis is optional, but expected to be the last axis if present.
+            In most cases, this array should be of dtype ``uint8``, which is supported by all
+            augmenters. Support for other dtypes varies by augmenter -- see the respective
+            augmenter-specific documentation for more details.
 
         hooks : None or imgaug.HooksImages, optional
             HooksImages object to dynamically interfere with the augmentation process.
@@ -581,13 +585,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Parameters
         ----------
         images : (N,H,W,C) ndarray or (N,H,W) ndarray or list of (H,W,C) ndarray or list of (H,W) ndarray
-            Images to augment. The input can be a list of numpy arrays or
-            a single array. Each array is expected to have shape ``(H, W, C)``
-            or ``(H, W)``, where H is the height, ``W`` is the width and ``C`` are the
-            channels. Number of channels may differ between images.
+            Images to augment.
+            The input can be a list of numpy arrays or a single array. Each array is expected to
+            have shape ``(H, W, C)`` or ``(H, W)``, where H is the height, ``W`` is the width and
+            ``C`` are the channels. Number of channels may differ between images.
             If a list is chosen, height and width may differ per between images.
-            Currently the recommended dtype is uint8 (i.e. integer values in
-            the range 0 to 255). Other dtypes are not tested.
+            In most cases, this array (or these arrays) should be of dtype ``uint8``, which is
+            supported by all augmenters. Support for other dtypes varies by augmenter -- see the
+            respective augmenter-specific documentation for more details.
 
         parents : None or list of imgaug.augmenters.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -1881,6 +1886,22 @@ class Sequential(Augmenter, list):
         aug = iaa.Fliplr(0.5)
         image_aug = aug.augment_image(image)
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
@@ -2036,6 +2057,22 @@ class SomeOf(Augmenter, list):
     This augmenter currently does not support replacing (i.e. picking the same
     child multiple times) due to implementation difficulties in connection
     with deterministic augmenters.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -2357,6 +2394,22 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
     """
     Augmenter that always executes exactly one of its children.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     children : list of imgaug.augmenters.meta.Augmenter
@@ -2409,6 +2462,22 @@ class Sometimes(Augmenter):
     Let ``p`` be the percent of images to augment.
     Let ``I`` be the input images.
     Then (on average) ``p`` percent of all images in ``I`` will be augmented using ``C``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -2606,8 +2675,23 @@ class WithChannels(Augmenter):
     Let ``I`` be the input images.
     Then this augmenter will pick the channels ``H`` from each image
     in ``I`` (resulting in new images) and apply ``C`` to them.
-    The result of the augmentation will be merged back into the original
-    images.
+    The result of the augmentation will be merged back into the original images.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -2763,6 +2847,22 @@ class Noop(Augmenter):
     in some situation, so that you can continue to call :func:`imgaug.augmenters.meta.Augmenter.augment_images`,
     without actually changing them (e.g. when switching from training to test).
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     name : None or str, optional
@@ -2797,6 +2897,22 @@ class Lambda(Augmenter):
     Augmenter that calls a lambda function for each batch of input image.
 
     This is useful to add missing functions to a list of augmenters.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -2905,6 +3021,22 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
     This is useful to make generic assumption about the input images and error
     out early if they aren't met.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     func_images : callable
@@ -2964,6 +3096,22 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
     """
     Augmenter to make assumptions about the shape of input image(s)
     and keypoints.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -3108,6 +3256,22 @@ class ChannelShuffle(Augmenter):
     """
     Augmenter that randomly shuffles the channels in images.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     p : float or imgaug.parameters.StochasticParameter, optional
@@ -3172,6 +3336,22 @@ class ChannelShuffle(Augmenter):
 def shuffle_channels(image, random_state, channels=None):
     """
     Randomize the order of (color) channels in an image.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

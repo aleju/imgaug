@@ -39,6 +39,22 @@ class FastSnowyLandscape(meta.Augmenter):
     This is based on the method proposed by
     https://medium.freecodecamp.org/image-augmentation-make-it-rain-make-it-snow-how-to-modify-a-photo-with-machine-learning-163c0cb3843f?gi=bca4a13e634c
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     lightness_threshold : number or tuple of number or list of number\
@@ -159,6 +175,22 @@ def Clouds(name=None, deterministic=False, random_state=None):
     This augmenter seems to be fairly robust w.r.t. the image size. Tested with ``96x128``, ``192x256``
     and ``960x1280``.
 
+    dtype support::
+
+        * ``uint8``: yes; tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     name : None or str, optional
@@ -206,6 +238,22 @@ def Fog(name=None, deterministic=False, random_state=None):
     This augmenter seems to be fairly robust w.r.t. the image size. Tested with ``96x128``, ``192x256``
     and ``960x1280``.
 
+    dtype support::
+
+        * ``uint8``: yes; tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     name : None or str, optional
@@ -240,6 +288,24 @@ def Fog(name=None, deterministic=False, random_state=None):
 class CloudLayer(meta.Augmenter):
     """
     Augmenter to add a single layer of clouds to an image.
+
+    dtype support::
+
+        * ``uint8``: yes; indirectly tested (1)
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
+        - (1) indirectly tested via tests four ``Clouds`` and ``Fog``
 
     Parameters
     ----------
@@ -442,6 +508,22 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9), flake_size
 
     This is a wrapper around ``SnowflakesLayer``. It executes 1 to 3 layers per image.
 
+    dtype support::
+
+        * ``uint8``: yes; tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     density : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
@@ -562,6 +644,24 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9), flake_size
 class SnowflakesLayer(meta.Augmenter):
     """
     Augmenter to add a single layer of falling snowflakes to images.
+
+    dtype support::
+
+        * ``uint8``: yes; indirectly tested (1)
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
+        - (1) indirectly tested via tests four ``Snowflakes``
 
     Parameters
     ----------
