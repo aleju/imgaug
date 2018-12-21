@@ -11,6 +11,7 @@ import scipy
 import matplotlib.pyplot as plt
 
 from . import imgaug as ia
+from imgaug.augmenters import meta
 from .external.opensimplex import OpenSimplex
 
 
@@ -1170,13 +1171,30 @@ class FromLowerResolution(StochasticParameter):
             h_small = max(hw_px[0], self.min_size)
             w_small = max(hw_px[1], self.min_size)
             samples = self.other_param.draw_samples((1, h_small, w_small, c), random_state=random_state)
-            if method != "nearest":
-                # hacky cast because opencv resize seems to be unable to handle non-nearest
-                # interpolation methods in combination with large ints
-                # also, using lower ints with interpolation!=nearest seems to not result in the
-                # expected "gradual" values, but rather still behave like nearest
-                samples = samples.astype(np.float32)
+
+            # This (1) makes sure that samples are of dtypes supported by imresize_many_images,
+            # and (2) forces samples to be float-kind if the requested interpolation is something
+            # else than nearest neighbour interpolation. (2) is a bit hacky and makes sure that
+            # continuous values are produced for e.g. cubic interpolation. This is particularly
+            # important for e.g. binomial distributios used in FromLowerResolution and thereby in
+            # e.g. CoarseDropout, where integer-kinds would lead to sharp edges despite using
+            # cubic interpolation.
+            if samples.dtype.kind == "f":
+                samples = meta.restore_dtypes_(samples, np.float32)
+            elif samples.dtype.kind == "i":
+                if method == "nearest":
+                    samples = meta.restore_dtypes_(samples, np.int32)
+                else:
+                    samples = meta.restore_dtypes_(samples, np.float32)
+            else:
+                assert samples.dtype.kind == "u"
+                if method == "nearest":
+                    samples = meta.restore_dtypes_(samples, np.uint16)
+                else:
+                    samples = meta.restore_dtypes_(samples, np.float32)
+
             samples_upscaled = ia.imresize_many_images(samples, (h, w), interpolation=method)
+
             if result is None:
                 result = np.zeros((n, h, w, c), dtype=samples_upscaled.dtype)
             result[i] = samples_upscaled

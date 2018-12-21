@@ -18,6 +18,7 @@ from imgaug.imgaug import (
     _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
     _interpolate_points, _interpolate_points_by_max_distance
 )
+from imgaug.augmenters import meta
 from imgaug.testutils import reseed
 from imgaug import augmenters as iaa
 
@@ -957,6 +958,94 @@ def test_imresize_many_images():
     assert observed[1].shape == (4, 4)
     assert observed[0].dtype == np.uint8
     assert observed[1].dtype == np.uint8
+
+    ###################
+    # test other dtypes
+    ###################
+    # interpolation="nearest"
+    image = np.zeros((4, 4), dtype=bool)
+    image[1, :] = True
+    image[2, :] = True
+    expected = np.zeros((3, 3), dtype=bool)
+    expected[1, :] = True
+    expected[2, :] = True
+    image_rs = ia.imresize_many_images([image], (3, 3), interpolation="nearest")[0]
+    assert image_rs.dtype.type == image.dtype.type
+    assert np.all(image_rs == expected)
+
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16, np.int32]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        for value in [min_value, max_value]:
+            image = np.zeros((4, 4), dtype=dtype)
+            image[1, :] = value
+            image[2, :] = value
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[1, :] = value
+            expected[2, :] = value
+            image_rs = ia.imresize_many_images([image], (3, 3), interpolation="nearest")[0]
+            assert image_rs.dtype.type == dtype
+            assert np.all(image_rs == expected)
+
+    for dtype in [np.float16, np.float32, np.float64]:
+        isize = np.dtype(dtype).itemsize
+        for value in [0.5, -0.5, 1.0, -1.0, 10.0, -10.0, -1000 ** (isize-1), 1000 * (isize+1)]:
+            image = np.zeros((4, 4), dtype=dtype)
+            image[1, :] = value
+            image[2, :] = value
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[1, :] = value
+            expected[2, :] = value
+            image_rs = ia.imresize_many_images([image], (3, 3), interpolation="nearest")[0]
+            assert image_rs.dtype.type == dtype
+            assert np.allclose(image_rs, expected, rtol=0, atol=1e-8)
+
+    # other interpolations
+    for ip in ["linear", "cubic", "area"]:
+        mask = np.zeros((4, 4), dtype=np.uint8)
+        mask[1, :] = 255
+        mask[2, :] = 255
+        mask = ia.imresize_many_images([mask], (3, 3), interpolation=ip)[0]
+        mask = mask.astype(np.float128) / 255.0
+
+        image = np.zeros((4, 4), dtype=bool)
+        image[1, :] = True
+        image[2, :] = True
+        expected = mask > 0.5
+        image_rs = ia.imresize_many_images([image], (3, 3), interpolation=ip)[0]
+        assert image_rs.dtype.type == image.dtype.type
+        assert np.all(image_rs == expected)
+
+        for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            dynamic_range = max_value - min_value
+            for value in [min_value+1, max_value-1]:
+                image = np.zeros((4, 4), dtype=dtype)
+                image[1, :] = value
+                image[2, :] = value
+                expected = np.round(mask * value).astype(dtype)
+                image_rs = ia.imresize_many_images([image], (3, 3), interpolation=ip)[0]
+                assert image_rs.dtype.type == dtype
+                diff = np.abs(image_rs.astype(np.int64) - expected.astype(np.int64))
+                assert np.all(diff < 2 * (1/255) * dynamic_range)
+
+        mask = np.zeros((4, 4), dtype=np.float64)
+        mask[1, :] = 1.0
+        mask[2, :] = 1.0
+        mask = ia.imresize_many_images([mask], (3, 3), interpolation=ip)[0]
+        mask = mask.astype(np.float128)
+
+        for dtype in [np.float16, np.float32, np.float64]:
+            isize = np.dtype(dtype).itemsize
+            for value in [0.5, -0.5, 1.0, -1.0, 10.0, -10.0, -1000 ** (isize-1), 1000 * (isize+1)]:
+                image = np.zeros((4, 4), dtype=dtype)
+                image[1, :] = value
+                image[2, :] = value
+                expected = (mask * float(value)).astype(dtype)
+                image_rs = ia.imresize_many_images([image], (3, 3), interpolation=ip)[0]
+                assert image_rs.dtype.type == dtype
+                # atol can be set tighter for interpolation="linear" with 1e-7 and 1e-8
+                # cubic seemed to be not that accurate
+                assert np.allclose(image_rs, expected, rtol=0, atol=max(abs(value * 1e-6), 1e-5))
 
 
 def test_imresize_single_image():

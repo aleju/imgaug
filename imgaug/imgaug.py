@@ -28,6 +28,8 @@ import shapely.geometry
 import shapely.ops
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
+from imgaug.augmenters import meta
+
 if sys.version_info[0] == 2:
     import cPickle as pickle
     from Queue import Empty as QueueEmpty, Full as QueueFull
@@ -898,8 +900,25 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     """
     Draw text on an image.
 
-    This uses by default DejaVuSans as its font, which is included in the
-    library.
+    This uses by default DejaVuSans as its font, which is included in this library.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: yes; not tested
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+        TODO check if other dtypes could be enabled
 
     Parameters
     ----------
@@ -952,11 +971,36 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     """
     Resize many images to a specified size.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: limited; tested (4)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (5)
+        * ``float32``: yes; tested (6)
+        * ``float64``: yes; tested (6)
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (7)
+
+        - (1) rejected by ``cv2.imresize``
+        - (2) results too inaccurate
+        - (3) mapped internally to ``int16`` when interpolation!="nearest"
+        - (4) only supported for interpolation="nearest", other interpolations lead to cv2 error
+        - (5) mapped internally to ``float32``
+        - (6) some indication in tests that accuracy is lacking a bit for interpolations other than
+              "nearest", but might be false positive
+        - (7) mapped internally to ``uint8``
+
     Parameters
     ----------
     images : (N,H,W,[C]) ndarray or list of (H,W,[C]) ndarray
         Array of the images to resize.
-        Expected to usually be of dtype uint8.
+        Usually recommended to be of dtype uint8.
 
     sizes : float or iterable of int or iterable of float
         The new size of the images, given either as a fraction (a single float) or as
@@ -1025,7 +1069,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         raise Exception(
             "Cannot resize to the target sizes %s. At least one value is zero or lower than zero." % (sizes_str,))
 
-    # change afterward the validation to make the above error messages match the original input
+    # change after the validation to make the above error messages match the original input
     if is_single_number(sizes):
         sizes = (sizes, sizes)
     else:
@@ -1073,24 +1117,58 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
         ip = cv2.INTER_CUBIC
 
+    if ip == cv2.INTER_NEAREST:
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "int32", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=None)
+    else:
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=None)
+
     result_shape = (nb_images, height, width)
     if nb_channels is not None:
         result_shape = result_shape + (nb_channels,)
     result = np.zeros(result_shape, dtype=images.dtype)
-    for img_idx in sm.xrange(nb_images):
-        # TODO fallback to scipy here if image isn't uint8
-        result_img = cv2.resize(images[img_idx], (width, height), interpolation=ip)
+    for i, image in enumerate(images):
+        input_dtype = image.dtype
+        if image.dtype.type == np.bool_:
+            image = image.astype(np.uint8) * 255
+        elif image.dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
+            image = image.astype(np.int16)
+        elif image.dtype.type == np.float16:
+            image = image.astype(np.float32)
+
+        result_img = cv2.resize(image, (width, height), interpolation=ip)
+        assert result_img.dtype == image.dtype
+
         # cv2 removes the channel axis if input was (H, W, 1)
         # we re-add it (but only if input was not (H, W))
         if len(result_img.shape) == 2 and nb_channels is not None and nb_channels == 1:
             result_img = result_img[:, :, np.newaxis]
-        result[img_idx] = result_img.astype(images.dtype)
+
+        if input_dtype.type == np.bool_:
+            result_img = result_img > 127
+        elif input_dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
+            result_img = meta.restore_dtypes_(result_img, np.int8)
+        elif input_dtype.type == np.float16:
+            result_img = meta.restore_dtypes_(result_img, np.float16)
+        result[i] = result_img
     return result
 
 
 def imresize_single_image(image, sizes, interpolation=None):
     """
     Resizes a single image.
+
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -1127,6 +1205,22 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     Pad an image-like array on its top/right/bottom/left side.
 
     This function is a wrapper around :func:`numpy.pad`.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: yes; fully tested
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -1181,6 +1275,7 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     return np.copy(arr)
 
 
+# TODO allow shape as input instead of array
 def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     """
     Compute the amount of pixels by which an array has to be padded to fulfill an aspect ratio.
@@ -1239,6 +1334,10 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
     sides (left/right or top/bottom) will be padded. In each case, both of the sides will
     be padded equally.
 
+    dtype support::
+
+        See :func:`imgaug.imgaug.pad`.
+
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
@@ -1292,6 +1391,22 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     """
     Rescale an array by pooling values within blocks.
 
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: yes; tested
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: yes; tested
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
@@ -1344,6 +1459,10 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
     Rescale an array using average pooling.
 
+    dtype support::
+
+        See :func:`imgaug.imgaug.avg_pool`.
+
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
@@ -1371,6 +1490,10 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
     Rescale an array using max-pooling.
 
+    dtype support::
+
+        See :func:`imgaug.imgaug.max_pool`.
+
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
@@ -1397,6 +1520,22 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
 def draw_grid(images, rows=None, cols=None):
     """
     Converts multiple input images into a single image showing them in a grid.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------
@@ -1464,6 +1603,13 @@ def show_grid(images, rows=None, cols=None):
     """
     Converts the input images to a grid image and shows it in a new window.
 
+    dtype support::
+
+        minimum_of(
+            :func:`imgaug.imgaug.show_grid`,
+            :func:`imgaug.imgaug.imshow`
+        )
+
     Parameters
     ----------
     images : (N,H,W,3) ndarray or iterable of (H,W,3) array
@@ -1483,6 +1629,22 @@ def show_grid(images, rows=None, cols=None):
 def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
     """
     Shows an image in a window.
+
+    dtype support::
+
+        * ``uint8``: yes; not tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
     Parameters
     ----------

@@ -1518,7 +1518,7 @@ def test_parameters_FromLowerResolution():
     seen = [0, 0]
     for _ in sm.xrange(200):
         samples = param.draw_samples((16, 16, 1))
-        nb_in_between = np.sum(np.logical_and(samples < 0.95, samples > 0.05))
+        nb_in_between = np.sum(np.logical_and(0.05 < samples, samples < 0.95))
         if nb_in_between == 0:
             seen[0] += 1
         else:
