@@ -3106,31 +3106,33 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name
 def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=True,
                 name=None, deterministic=False, random_state=None):
     """
-    Augmenter to make assumptions about the shape of input image(s)
-    and keypoints.
+    Augmenter to make assumptions about the shape of input image(s), heatmaps and keypoints.
 
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
 
     Parameters
     ----------
     shape : tuple
-        The expected shape, given as a tuple. The number of entries in the tuple
-        must match the number of dimensions, i.e. usually four entries for ``(N, H, W, C)``.
-        Each each entry may be None or a tuple of two ints or a list of ints.
+        The expected shape, given as a tuple. The number of entries in the tuple must match the
+        number of dimensions, i.e. it must contain four entries for ``(N, H, W, C)``. If only a
+        single image is augmented via ``augment_image()``, then ``N`` is viewed as 1 by this
+        augmenter. If the input image(s) don't have a channel axis, then ``C`` is viewed as 1
+        by this augmenter.
+        Each of the four entries may be None or a tuple of two ints or a list of ints.
 
             * If an entry is None, any value for that dimensions is accepted.
             * If an entry is int, exactly that integer value will be accepted
