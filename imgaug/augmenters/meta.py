@@ -3022,7 +3022,8 @@ class Lambda(Augmenter):
         return []
 
 
-def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, deterministic=False, random_state=None):
+def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name=None, deterministic=False,
+                 random_state=None):
     """
     Augmenter that runs an assert on each batch of input images
     using a lambda function as condition.
