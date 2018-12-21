@@ -371,6 +371,76 @@ def test_AssertLambda():
         errored = True
     assert errored
 
+    ###################
+    # test other dtypes
+    ###################
+    def func_images_succeeds(images, random_state, parents, hooks):
+        return np.allclose(images[0][0, 0], 1, rtol=0, atol=1e-6)
+
+    def func_images_fails(images, random_state, parents, hooks):
+        return np.allclose(images[0][0, 1], 1, rtol=0, atol=1e-6)
+
+    # assert succeeds
+    aug = iaa.AssertLambda(func_images=func_images_succeeds)
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype.type == image.dtype.type
+    assert np.all(image_aug == image)
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = 1
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.array_equal(image_aug, image)
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                            [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = 1
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype.type == dtype
+        assert np.all(image_aug == image)
+
+    # assert fails
+    aug = iaa.AssertLambda(func_images=func_images_fails)
+
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    got_exception = False
+    try:
+        _ = aug.augment_image(image)
+    except AssertionError:
+        got_exception = True
+    assert got_exception
+
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        value = max_value
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        got_exception = False
+        try:
+            _ = aug.augment_image(image)
+        except AssertionError:
+            got_exception = True
+        assert got_exception
+
+    for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
+                            [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = value
+        got_exception = False
+        try:
+            _ = aug.augment_image(image)
+        except AssertionError:
+            got_exception = True
+        assert got_exception
+
 
 def test_AssertShape():
     reseed()
