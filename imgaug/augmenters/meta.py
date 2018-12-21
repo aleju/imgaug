@@ -3048,21 +3048,21 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
 
     Parameters
     ----------
-    func_images : callable
+    func_images : None or callable, optional
         The function to call for each batch of images.
         It must follow the form ``function(images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_images`.
 
-    func_heatmaps : callable
+    func_heatmaps : None or callable, optional
         The function to call for each batch of heatmaps.
         It must follow the form ``function(heatmaps, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
 
-    func_keypoints : callable
+    func_keypoints : None or callable, optional
         The function to call for each batch of keypoints.
         It must follow the form ``function(keypoints_on_images, random_state, parents, hooks)``
         and return either True (valid input) or False (invalid input).
@@ -3096,7 +3096,9 @@ def AssertLambda(func_images, func_heatmaps, func_keypoints, name=None, determin
 
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
-    return Lambda(func_images_assert, func_heatmaps_assert, func_keypoints_assert,
+    return Lambda(func_images_assert if func_images is not None else None,
+                  func_heatmaps_assert if func_heatmaps is not None else None,
+                  func_keypoints_assert if func_keypoints is not None else None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
