@@ -2905,7 +2905,7 @@ class Lambda(Augmenter):
 
     Parameters
     ----------
-    func_images : callable
+    func_images : None or callable, optional
         The function to call for each batch of images.
         It must follow the form
 
@@ -2914,8 +2914,9 @@ class Lambda(Augmenter):
         and return the changed images (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_images`.
+        If this is None instead of a function, the images will not be altered.
 
-    func_heatmaps : callable
+    func_heatmaps : None or callable, optional
         The function to call for each batch of heatmaps.
         It must follow the form
 
@@ -2924,8 +2925,9 @@ class Lambda(Augmenter):
         and return the changed heatmaps (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
+        If this is None instead of a function, the heatmaps will not be altered.
 
-    func_keypoints : callable
+    func_keypoints : None or callable, optional
         The function to call for each batch of image keypoints.
         It must follow the form
 
@@ -2934,6 +2936,7 @@ class Lambda(Augmenter):
         and return the changed keypoints (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints`.
+        If this is None instead of a function, the keypoints will not be altered.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2946,6 +2949,16 @@ class Lambda(Augmenter):
 
     Examples
     --------
+    >>> def func_images(images, random_state, parents, hooks):
+    >>>     images[:, ::2, :, :] = 0
+    >>>     return images
+    >>>
+    >>> aug = iaa.Lambda(
+    >>>     func_images=func_images
+    >>> )
+
+    Replaces every second row in images with black pixels. Leaves heatmaps and keypoints unchanged.
+
     >>> def func_images(images, random_state, parents, hooks):
     >>>     images[:, ::2, :, :] = 0
     >>>     return images
@@ -2964,39 +2977,46 @@ class Lambda(Augmenter):
     >>>     func_keypoints=func_keypoints
     >>> )
 
-    Replaces every second row in images with black pixels and leaves keypoints
-    unchanged.
+    Replaces every second row in images with black pixels, sets every second row in heatmapps to
+    zero and leaves keypoints unchanged.
 
     """
 
-    def __init__(self, func_images, func_heatmaps, func_keypoints, name=None, deterministic=False, random_state=None):
+    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None, name=None, deterministic=False,
+                 random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
         self.func_keypoints = func_keypoints
 
     def _augment_images(self, images, random_state, parents, hooks):
-        return self.func_images(images, random_state, parents, hooks)
+        if self.func_images is not None:
+            return self.func_images(images, random_state, parents, hooks)
+        return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
-        ia.do_assert(ia.is_iterable(result),
-                     "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
-                     + "got %s." % (type(result),))
-        ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
-                     "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
-                     + "got %s." % ([type(el) for el in result],))
-        return result
+        if self.func_heatmaps is not None:
+            result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
+            ia.do_assert(ia.is_iterable(result),
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
+                         + "got %s." % (type(result),))
+            ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
+                         + "got %s." % ([type(el) for el in result],))
+            return result
+        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        result = self.func_keypoints(keypoints_on_images, random_state, parents, hooks)
-        ia.do_assert(ia.is_iterable(result),
-                     "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
-                     + "got %s." % (type(result),))
-        ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]),
-                     "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
-                     + "got %s." % ([type(el) for el in result],))
-        return result
+        if self.func_keypoints is not None:
+            result = self.func_keypoints(keypoints_on_images, random_state, parents, hooks)
+            ia.do_assert(ia.is_iterable(result),
+                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
+                         + "got %s." % (type(result),))
+            ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]),
+                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
+                         + "got %s." % ([type(el) for el in result],))
+            return result
+        return keypoints_on_images
 
     def get_parameters(self):
         return []
