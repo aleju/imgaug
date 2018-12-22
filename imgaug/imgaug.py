@@ -1443,6 +1443,13 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
         Array after pooling.
 
     """
+    meta.gate_dtypes(arr,
+                     allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                              "float16", "float32", "float64", "float128"],
+                     disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                 "float256"],
+                     augmenter=None)
+
     do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
