@@ -301,12 +301,11 @@ class _ContrastFuncWrapper(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, size=(1+nb_images,))
-        per_channel = self.per_channel.draw_samples((nb_images,), random_state=ia.new_random_state(seeds[0]))
+        rss = ia.derive_random_states(random_state, 1+nb_images)
+        per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
 
         result = images
-        for i, (image, per_channel_i, seed) in enumerate(zip(images, per_channel, seeds[1:])):
-            rs = ia.new_random_state(seed)
+        for i, (image, per_channel_i, rs) in enumerate(zip(images, per_channel, rss[1:])):
             nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
             samples_i = [param.draw_samples((nb_channels,), random_state=rs) for param in self.params1d]
             if per_channel_i > 0.5:
