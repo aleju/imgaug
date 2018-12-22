@@ -36,19 +36,25 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint8``: yes; fully tested (1)
+        * ``uint16``: yes; tested (1)
+        * ``uint32``: yes; tested (1)
+        * ``uint64``: yes; tested (1)
+        * ``int8``: limited; tested (1) (2)
+        * ``int16``: limited; tested (1) (2)
+        * ``int32``: limited; tested (1) (2)
+        * ``int64``: limited; tested (1) (2)
+        * ``float16``: limited; tested (2)
+        * ``float32``: limited; tested (2)
+        * ``float64``: limited; tested (2)
+        * ``float128``: no (3)
+        * ``bool``: no (4)
+
+        - (1) Scaling is done as ``I_ij/max``, where ``max`` is the maximum value of the dtype,
+              e.g. 255 for ``uint8``.
+        - (2) Must not contain negative values. Otherwise supported.
+        - (3) Rejected by scikit-image.
+        - (4) Does not make sense for contrast adjustments.
 
     Parameters
     ----------
@@ -83,8 +89,17 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
     params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True,
                                             list_to_choice=True)]
     func = _PreserveDtype(ski_exposure.adjust_gamma)
+
+    def gater_func(images):
+        meta.gate_dtypes(images,
+                         allowed=["uint8", "uint16", "uint32", "uint64",
+                                  "int8", "int16", "int32", "int64",
+                                  "float16", "float32", "float64"],
+                         disallowed=["float96", "float128", "float256"],
+                         augmenter=None)
+
     return _ContrastFuncWrapper(
-        func, params1d, per_channel,
+        func, params1d, per_channel, gater_func,
         name=name if name is not None else ia.caller_name(),
         deterministic=deterministic,
         random_state=random_state
@@ -293,13 +308,17 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
 
 
 class _ContrastFuncWrapper(meta.Augmenter):
-    def __init__(self, func, params1d, per_channel, name=None, deterministic=False, random_state=None):
+    def __init__(self, func, params1d, per_channel, gater_func=None, name=None, deterministic=False, random_state=None):
         super(_ContrastFuncWrapper, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func = func
         self.params1d = params1d
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
+        self.gater_func = gater_func
 
     def _augment_images(self, images, random_state, parents, hooks):
+        if self.gater_func is not None:
+            self.gater_func(images)
+
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, 1+nb_images)
         per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])

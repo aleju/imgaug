@@ -14,6 +14,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug.augmenters import contrast as contrast_lib
+from imgaug.augmenters import meta
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -91,6 +92,49 @@ def test_GammaContrast():
     heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
     heatmaps_aug = iaa.GammaContrast(gamma=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+    ###################
+    # test other dtypes
+    ###################
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        exps = [1, 2, 3]
+        values = [0, 100, int(center_value + 0.1*max_value)]
+        tolerances = [0, 0, 1e-8 * max_value if dtype in [np.uint64, np.int64] else 0]
+
+        for exp in exps:
+            aug = iaa.GammaContrast(exp)
+            for value, tolerance in zip(values, tolerances):
+                image = np.full((3, 3), value, dtype=dtype)
+                expected = (((image.astype(np.float128) / max_value) ** exp) * max_value).astype(dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert len(np.unique(image_aug)) == 1
+                value_aug = int(image_aug[0, 0])
+                value_expected = int(expected[0, 0])
+                diff = abs(value_aug - value_expected)
+                assert diff <= tolerance
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64]:
+        def _allclose(a, b):
+            atol = 1e-3 if dtype == np.float16 else 1e-8
+            return np.allclose(a, b, atol=atol, rtol=0)
+
+        exps = [1, 2]
+        isize = np.dtype(dtype).itemsize
+        values = [0, 1.0, 50.0, 100 ** (isize - 1)]
+
+        for exp in exps:
+            aug = iaa.GammaContrast(exp)
+            for value in values:
+                image = np.full((3, 3), value, dtype=dtype)
+                expected = (image.astype(np.float128) ** exp).astype(dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert _allclose(image_aug, expected)
 
 
 def test_SigmoidContrast():
