@@ -433,31 +433,80 @@ def test_LinearContrast():
     heatmaps_aug = iaa.LinearContrast(alpha=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    # test for other dtypes are in test_contrast_adjust_linear()
+
 
 def test_contrast_adjust_linear():
+    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32,
+                  np.float16, np.float32, np.float64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        cv = center_value
+        kind = np.dtype(dtype).kind
+        if kind in ["u", "i"]:
+            cv = int(cv)
+
+        def _compare(a, b):
+            if kind in ["u", "i"]:
+                return np.array_equal(a, b)
+            else:
+                assert kind == "f"
+                atol = 1e-4 if dtype == np.float16 else 1e-8
+                return np.allclose(a, b, atol=atol, rtol=0)
+
+        img = [
+            [cv-4, cv-3, cv-2],
+            [cv-1, cv+0, cv+1],
+            [cv+2, cv+3, cv+4]
+        ]
+        img = np.array(img, dtype=dtype)
+
+        # alphas [0, 1, 2, 4, 100]
+        alphas = [0, 1, 2, 4]
+        if dtype not in [np.uint8, np.int8, np.float16]:
+            alphas.append(100)
+
+        for alpha in alphas:
+            expected = [
+                [cv-4*alpha, cv-3*alpha, cv-2*alpha],
+                [cv-1*alpha, cv+0*alpha, cv+1*alpha],
+                [cv+2*alpha, cv+3*alpha, cv+4*alpha]
+            ]
+            expected = np.array(expected, dtype=dtype)
+            observed = contrast_lib._adjust_linear(img, alpha=alpha)
+            assert observed.dtype == np.dtype(dtype)
+            assert observed.shape == img.shape
+            assert _compare(observed, expected)
+
+    # overflow for uint8
+    cv = 127
     img = [
-        [124, 125, 126],
-        [127, 128, 129],
-        [130, 131, 132]
+        [cv-4, cv-3, cv-2],
+        [cv-1, cv+0, cv+1],
+        [cv+2, cv+3, cv+4]
     ]
-    img = np.uint8(img)
-
-    # alpha = 1
-    observed = contrast_lib._adjust_linear(img, alpha=1)
-    assert observed.dtype.type == np.uint8
-    assert observed.shape == img.shape
-    assert np.array_equal(observed, img)
-
-    # alpha = 2
+    img = np.array(img, dtype=np.uint8)
+    observed = contrast_lib._adjust_linear(img, alpha=255)
     expected = [
-        [120, 122, 124],
-        [126, 128, 130],
-        [132, 134, 136]
+        [0, 0, 0],
+        [0, cv, 255],
+        [255, 255, 255]
     ]
-    expected = np.uint8(expected)
-    observed = contrast_lib._adjust_linear(img, alpha=2)
-    assert observed.dtype.type == np.uint8
-    assert observed.shape == img.shape
+    assert np.array_equal(observed, expected)
+
+    # overflow in alpha for uint8, should not cause issues
+    cv = 127
+    img = [
+        [cv, cv, cv],
+        [cv, cv, cv],
+        [cv, cv, cv]
+    ]
+    img = np.array(img, dtype=np.uint8)
+    observed = contrast_lib._adjust_linear(img, alpha=257)
+    expected = [
+        [cv, cv, cv],
+        [cv, cv, cv],
+        [cv, cv, cv]
+    ]
     assert np.array_equal(observed, expected)
 
 

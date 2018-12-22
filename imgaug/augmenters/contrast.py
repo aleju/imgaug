@@ -103,7 +103,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
                         "int8", "int16", "int32", "int64",
                         "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256"],
+        dtypes_disallowed=["float96", "float128", "float256", "bool"],
         name=name if name is not None else ia.caller_name(),
         deterministic=deterministic,
         random_state=random_state
@@ -197,7 +197,7 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
                         "int8", "int16", "int32", "int64",
                         "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256"],
+        dtypes_disallowed=["float96", "float128", "float256", "bool"],
         name=name if name is not None else ia.caller_name(),
         deterministic=deterministic,
         random_state=random_state
@@ -278,7 +278,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
                         "int8", "int16", "int32", "int64",
                         "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256"],
+        dtypes_disallowed=["float96", "float128", "float256", "bool"],
         name=name if name is not None else ia.caller_name(),
         deterministic=deterministic,
         random_state=random_state
@@ -286,23 +286,28 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
 
 def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to ``128 + alpha*(I_ij-128)``.
+    """Adjust contrast by scaling each pixel value to ``127 + alpha*(I_ij-127)``.
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint8``: yes; fully tested (1)
+        * ``uint16``: yes; tested (1)
+        * ``uint32``: yes; tested (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (1)
+        * ``int16``: yes; tested (1)
+        * ``int32``: yes; tested (1)
+        * ``int64``: no (1)
+        * ``float16``: yes; tested (1)
+        * ``float32``: yes; tested (1)
+        * ``float64``: yes; tested (1)
+        * ``float128``: no (1)
+        * ``bool``: no (3)
+
+        - (1) Only tested for reasonable alphas with up to a value of around 100.
+        - (2) Conversion to ``float64`` is done during augmentation, hence ``uint64``, ``int64``,
+              and ``float128`` support cannot be guaranteed.
+        - (3) Does not make sense for contrast adjustments.
 
     Parameters
     ----------
@@ -341,6 +346,10 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     func = _adjust_linear
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
+        dtypes_allowed=["uint8", "uint16", "uint32",
+                        "int8", "int16", "int32",
+                        "float16", "float32", "float64"],
+        dtypes_disallowed=["uint64", "int64", "float96", "float128", "float256", "bool"],
         name=name if name is not None else ia.caller_name(),
         deterministic=deterministic,
         random_state=random_state
@@ -416,9 +425,9 @@ class _PreserveDtype(object):
 
 def _adjust_linear(image, alpha):
     input_dtype = image.dtype
-    image_aug = 128 + alpha * (image.astype(np.float64)-128)
-    if input_dtype.type == np.uint8:
-        image_aug = meta.clip_augmented_image_(image_aug, 0, 255)
-    if input_dtype.type != image_aug.dtype.type:
-        image_aug = meta.restore_augmented_image_dtype_(image_aug, input_dtype)
+    _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
+    if input_dtype.kind in ["u", "i"]:
+        center_value = int(center_value)
+    image_aug = center_value + alpha * (image.astype(np.float64)-center_value)
+    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
     return image_aug
