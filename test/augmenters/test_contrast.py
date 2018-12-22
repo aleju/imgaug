@@ -322,6 +322,52 @@ def test_LogContrast():
     heatmaps_aug = iaa.LogContrast(gain=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    ###################
+    # test other dtypes
+    ###################
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        gains = [0.5, 0.75, 1.0, 1.1]
+        values = [0, 100, int(center_value + 0.1 * max_value)]
+        tmax = 1e-8 * max_value if dtype in [np.uint64, np.int64] else 0
+        tolerances = [0, tmax, tmax]
+
+        for gain in gains:
+            aug = iaa.LogContrast(gain)
+            for value, tolerance in zip(values, tolerances):
+                image = np.full((3, 3), value, dtype=dtype)
+                expected = gain * np.log2(1 + (image.astype(np.float128)/max_value))
+                expected = (expected*max_value).astype(dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert len(np.unique(image_aug)) == 1
+                value_aug = int(image_aug[0, 0])
+                value_expected = int(expected[0, 0])
+                diff = abs(value_aug - value_expected)
+                assert diff <= tolerance
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64]:
+        def _allclose(a, b):
+            atol = 1e-2 if dtype == np.float16 else 1e-8
+            return np.allclose(a, b, atol=atol, rtol=0)
+
+        gains = [0.5, 0.75, 1.0, 1.1]
+        isize = np.dtype(dtype).itemsize
+        values = [0, 1.0, 50.0, 100 ** (isize - 1)]
+
+        for gain in gains:
+            aug = iaa.LogContrast(gain)
+            for value in values:
+                image = np.full((3, 3), value, dtype=dtype)
+                expected = gain * np.log2(1 + image.astype(np.float128))
+                expected = expected.astype(dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert _allclose(image_aug, expected)
+
 
 def test_LinearContrast():
     reseed()

@@ -30,7 +30,8 @@ from .. import parameters as iap
 
 
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to ``(I_ij/255.0)**gamma``.
+    """
+    Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
 
     Values in the range ``gamma=(0.5, 2.0)`` seem to be sensible.
 
@@ -110,7 +111,8 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
 
 def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to ``1/(1 + exp(gain*(cutoff - I_ij/255.0)))``.
+    """
+    Adjust contrast by scaling each pixel value to ``255 * 1/(1 + exp(gain*(cutoff - I_ij/255)))``.
 
     Values in the range ``gain=(5, 20)`` and ``cutoff=(0.25, 0.75)`` seem to be sensible.
 
@@ -203,29 +205,43 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
 
 
 def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, random_state=None):
-    """Adjust contrast by scaling each pixel value to ``gain * log(1 + I_ij)``.
+    """
+    Adjust contrast by scaling each pixel value to ``255 * gain * log_2(1 + I_ij/255)``.
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint8``: yes; fully tested (1) (2)
+        * ``uint16``: yes; tested (1) (2)
+        * ``uint32``: yes; tested (1) (2)
+        * ``uint64``: yes; tested (1) (2) (3)
+        * ``int8``: limited; tested (1) (2) (4)
+        * ``int16``: limited; tested (1) (2) (4)
+        * ``int32``: limited; tested (1) (2) (4)
+        * ``int64``: limited; tested (1) (2) (3) (4)
+        * ``float16``: limited; tested (4)
+        * ``float32``: limited; tested (4)
+        * ``float64``: limited; tested (4)
+        * ``float128``: no (5)
+        * ``bool``: no (6)
+
+        - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
+              dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
+              e.g. ``result*255`` for uint8.
+        - (2) Integer-like values are not rounded after applying the contrast adjustment equation
+              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
+              space to discrete happens according to floor function.
+        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+              applying the contrast normalization method. This might lead to inaccuracies for large
+              64bit integer values. Tests showed no indication of that happening though.
+        - (4) Must not contain negative values. Values >=0 are fully supported.
+        - (5) Leads to error in scikit-image.
+        - (6) Does not make sense for contrast adjustments.
 
     Parameters
     ----------
     gain : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Multiplier for the logarithm result. Values around 1.0 lead to a contrast-adjusted
-        image. Values above 1.0 quickly lead to partially broken images due to exceeding the
+        images. Values above 1.0 quickly lead to partially broken images due to exceeding the
         datatype's value range.
 
             * If a number, then that value will be used for all images.
@@ -259,6 +275,10 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
     func = _PreserveDtype(ski_exposure.adjust_log)
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
+        dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
+                        "int8", "int16", "int32", "int64",
+                        "float16", "float32", "float64"],
+        dtypes_disallowed=["float96", "float128", "float256"],
         name=name if name is not None else ia.caller_name(),
         deterministic=deterministic,
         random_state=random_state
