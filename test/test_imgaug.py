@@ -1750,16 +1750,21 @@ def test_max_pool():
 
 
 def test_draw_grid():
-    image = np.zeros((2, 2, 3), dtype=np.uint8)
-    image[0, 0] = 64
-    image[0, 1] = 128
-    image[1, 0] = 192
-    image[1, 1] = 256
+    # bool
+    dtype = bool
+    image = np.zeros((2, 2, 3), dtype=dtype)
+
+    image[0, 0] = False
+    image[0, 1] = True
+    image[1, 0] = True
+    image[1, 1] = False
 
     grid = ia.draw_grid([image], rows=1, cols=1)
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, image)
 
-    grid = ia.draw_grid(np.uint8([image]), rows=1, cols=1)
+    grid = ia.draw_grid(np.array([image], dtype=dtype), rows=1, cols=1)
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, image)
 
     grid = ia.draw_grid([image, image, image, image], rows=2, cols=2)
@@ -1767,10 +1772,12 @@ def test_draw_grid():
         np.hstack([image, image]),
         np.hstack([image, image])
     ])
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, expected)
 
     grid = ia.draw_grid([image, image], rows=1, cols=2)
     expected = np.hstack([image, image])
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, expected)
 
     grid = ia.draw_grid([image, image, image, image], rows=2, cols=None)
@@ -1778,6 +1785,7 @@ def test_draw_grid():
         np.hstack([image, image]),
         np.hstack([image, image])
     ])
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, expected)
 
     grid = ia.draw_grid([image, image, image, image], rows=None, cols=2)
@@ -1785,6 +1793,7 @@ def test_draw_grid():
         np.hstack([image, image]),
         np.hstack([image, image])
     ])
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, expected)
 
     grid = ia.draw_grid([image, image, image, image], rows=None, cols=None)
@@ -1792,7 +1801,122 @@ def test_draw_grid():
         np.hstack([image, image]),
         np.hstack([image, image])
     ])
+    assert grid.dtype == np.dtype(dtype)
     assert np.array_equal(grid, expected)
+
+    # int, uint
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        image = np.zeros((2, 2, 3), dtype=dtype)
+
+        image[0, 0] = min_value
+        image[0, 1] = center_value
+        image[1, 0] = center_value + int(0.3 * max_value)
+        image[1, 1] = max_value
+
+        grid = ia.draw_grid([image], rows=1, cols=1)
+        assert grid.dtype == np.dtype(dtype)
+        assert np.array_equal(grid, image)
+
+        grid = ia.draw_grid(np.array([image], dtype=dtype), rows=1, cols=1)
+        assert grid.dtype == np.dtype(dtype)
+        assert np.array_equal(grid, image)
+
+        grid = ia.draw_grid([image, image, image, image], rows=2, cols=2)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert np.array_equal(grid, expected)
+
+        grid = ia.draw_grid([image, image], rows=1, cols=2)
+        expected = np.hstack([image, image])
+        assert grid.dtype == np.dtype(dtype)
+        assert np.array_equal(grid, expected)
+
+        grid = ia.draw_grid([image, image, image, image], rows=2, cols=None)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert np.array_equal(grid, expected)
+
+        grid = ia.draw_grid([image, image, image, image], rows=None, cols=2)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert np.array_equal(grid, expected)
+
+        grid = ia.draw_grid([image, image, image, image], rows=None, cols=None)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert np.array_equal(grid, expected)
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+        def _allclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.allclose(a, b, atol=atol, rtol=0)
+
+        image = np.zeros((2, 2, 3), dtype=dtype)
+
+        isize = np.dtype(dtype).itemsize
+        image[0, 0] = (-1) * (1000 ** (isize-1))
+        image[0, 1] = -10.0
+        image[1, 0] = 10.0
+        image[1, 1] = 1000 ** (isize-1)
+
+        grid = ia.draw_grid([image], rows=1, cols=1)
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, image)
+
+        grid = ia.draw_grid(np.array([image], dtype=dtype), rows=1, cols=1)
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, image)
+
+        grid = ia.draw_grid([image, image, image, image], rows=2, cols=2)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, expected)
+
+        grid = ia.draw_grid([image, image], rows=1, cols=2)
+        expected = np.hstack([image, image])
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, expected)
+
+        grid = ia.draw_grid([image, image, image, image], rows=2, cols=None)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, expected)
+
+        grid = ia.draw_grid([image, image, image, image], rows=None, cols=2)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, expected)
+
+        grid = ia.draw_grid([image, image, image, image], rows=None, cols=None)
+        expected = np.vstack([
+            np.hstack([image, image]),
+            np.hstack([image, image])
+        ])
+        assert grid.dtype == np.dtype(dtype)
+        assert _allclose(grid, expected)
 
 
 def test_Keypoint():

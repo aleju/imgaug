@@ -1537,24 +1537,23 @@ def draw_grid(images, rows=None, cols=None):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
+        * ``int32``: yes; fully tested
+        * ``int64``: yes; fully tested
+        * ``float16``: yes; fully tested
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: yes; fully tested
+        * ``bool``: yes; fully tested
 
     Parameters
     ----------
     images : (N,H,W,3) ndarray or iterable of (H,W,3) array
         The input images to convert to a grid.
-        Expected to be RGB and have dtype uint8.
 
     rows : None or int, optional
         The number of rows to show in the grid.
@@ -1570,13 +1569,18 @@ def draw_grid(images, rows=None, cols=None):
         Image of the generated grid.
 
     """
+    nb_images = len(images)
+    do_assert(nb_images > 0)
+
     if is_np_array(images):
         do_assert(images.ndim == 4)
     else:
         do_assert(is_iterable(images) and is_np_array(images[0]) and images[0].ndim == 3)
+        dts = [image.dtype.name for image in images]
+        nb_dtypes = len(set(dts))
+        do_assert(nb_dtypes == 1, ("All images provided to draw_grid() must have the same dtype, "
+                                   + "found %d dtypes (%s)") % (nb_dtypes, ", ".join(dts)))
 
-    nb_images = len(images)
-    do_assert(nb_images > 0)
     cell_height = max([image.shape[0] for image in images])
     cell_width = max([image.shape[1] for image in images])
     channels = set([image.shape[2] for image in images])
@@ -1596,7 +1600,8 @@ def draw_grid(images, rows=None, cols=None):
 
     width = cell_width * cols
     height = cell_height * rows
-    grid = np.zeros((height, width, nb_channels), dtype=np.uint8)
+    dt = images.dtype if is_np_array(images) else images[0].dtype
+    grid = np.zeros((height, width, nb_channels), dtype=dt)
     cell_idx = 0
     for row_idx in sm.xrange(rows):
         for col_idx in sm.xrange(cols):
