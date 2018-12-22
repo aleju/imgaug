@@ -1174,7 +1174,7 @@ def imresize_single_image(image, sizes, interpolation=None):
     ----------
     image : (H,W,C) ndarray or (H,W) ndarray
         Array of the image to resize.
-        Expected to usually be of dtype uint8.
+        Usually recommended to be of dtype uint8.
 
     sizes : float or iterable of int or iterable of float
         See :func:`imgaug.imresize_many_images`.

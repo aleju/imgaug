@@ -430,8 +430,6 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 
     dtype support::
 
-        dtype support::
-
         * ``uint8``: yes; not tested
         * ``uint16``: ?
         * ``uint32``: ?

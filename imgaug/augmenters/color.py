@@ -343,18 +343,18 @@ class ChangeColorspace(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; not tested
-        * ``uint16``: no
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: no
-        * ``int16``: no
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: no
-        * ``float32``: no
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: no
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
         TODO add float support
 
@@ -558,18 +558,18 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: no
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: no
-        * ``int16``: no
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: no
-        * ``float32``: no
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: no
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
 
         TODO add float support
 
