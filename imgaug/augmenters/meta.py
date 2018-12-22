@@ -146,16 +146,16 @@ def get_value_range_of_dtype(dtype):
     # This check seems to fail sometimes, e.g. get_value_range_of_dtype(np.int8)
     # assert isinstance(dtype, np.dtype), "Expected instance of numpy.dtype, got %s." % (type(dtype),)
 
-    if dtype.type in ia.NP_FLOAT_TYPES:
+    if dtype.kind == "f":
         finfo = np.finfo(dtype)
         return finfo.min, 0.0, finfo.max
-    elif dtype.type in ia.NP_UINT_TYPES:
+    elif dtype.kind == "u":
         iinfo = np.iinfo(dtype)
         return iinfo.min, int(iinfo.min + 0.5 * iinfo.max), iinfo.max
-    elif dtype.type in ia.NP_INT_TYPES:
+    elif dtype.kind == "i":
         iinfo = np.iinfo(dtype)
         return iinfo.min, -0.5, iinfo.max
-    elif dtype.type == np.bool_:
+    elif dtype.kind == "b":
         return 0, None, 1
     else:
         raise Exception("Cannot estimate value range of dtype '%s' (type: %s)" % (str(dtype), type(dtype)))
