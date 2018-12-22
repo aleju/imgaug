@@ -1473,48 +1473,141 @@ def test_pad_to_aspect_ratio():
 
 
 def test_pool():
-    # basic functionality with uint8, int32, float32
-    arr = np.uint8([
-        [0, 1, 2, 3],
-        [4, 5, 6, 7],
-        [8, 9, 10, 11],
-        [12, 13, 14, 15]
-    ])
-    arr_pooled = ia.pool(arr, 2, np.average)
-    assert arr_pooled.shape == (2, 2)
-    assert arr_pooled.dtype == arr.dtype.type
-    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
-    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
-    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
-    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+    # -----
+    # uint, int
+    # -----
+    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
 
-    arr = np.int32([
-        [0, 1, 2, 3],
-        [4, 5, 6, 7],
-        [8, 9, 10, 11],
-        [12, 13, 14, 15]
-    ])
-    arr_pooled = ia.pool(arr, 2, np.average)
-    assert arr_pooled.shape == (2, 2)
-    assert arr_pooled.dtype == arr.dtype.type
-    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
-    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
-    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
-    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+        for func in [np.min, np.average, np.max]:
+            arr = np.array([
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+                [8, 9, 10, 11],
+                [12, 13, 14, 15]
+            ], dtype=dtype)
+            arr_pooled = ia.pool(arr, 2, func)
+            assert arr_pooled.shape == (2, 2)
+            assert arr_pooled.dtype == np.dtype(dtype)
+            assert arr_pooled[0, 0] == int(func([0, 1, 4, 5]))
+            assert arr_pooled[0, 1] == int(func([2, 3, 6, 7]))
+            assert arr_pooled[1, 0] == int(func([8, 9, 12, 13]))
+            assert arr_pooled[1, 1] == int(func([10, 11, 14, 15]))
 
-    arr = np.float32([
-        [0, 1, 2, 3],
-        [4, 5, 6, 7],
-        [8, 9, 10, 11],
-        [12, 13, 14, 15]
-    ])
+            arr = np.array([
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+                [8, 9, 10, 11],
+                [12, 13, 14, 15]
+            ], dtype=dtype)
+            arr = np.tile(arr[:, :, np.newaxis], (1, 1, 3))
+            arr[..., 1] += 1
+            arr[..., 2] += 2
+            arr_pooled = ia.pool(arr, 2, func)
+            assert arr_pooled.shape == (2, 2, 3)
+            assert arr_pooled.dtype == np.dtype(dtype)
+            for c in sm.xrange(3):
+                assert arr_pooled[0, 0, c] == int(func([0, 1, 4, 5])) + c
+                assert arr_pooled[0, 1, c] == int(func([2, 3, 6, 7])) + c
+                assert arr_pooled[1, 0, c] == int(func([8, 9, 12, 13])) + c
+                assert arr_pooled[1, 1, c] == int(func([10, 11, 14, 15])) + c
+
+            for value in [min_value, min_value+50, min_value+100, 0, 10, max_value,
+                          int(center_value + 0.10*max_value),
+                          int(center_value + 0.20*max_value),
+                          int(center_value + 0.25*max_value),
+                          int(center_value + 0.33*max_value)]:
+                arr = np.full((4, 4), value, dtype=dtype)
+                arr_pooled = ia.pool(arr, 2, func)
+                assert arr_pooled.shape == (2, 2)
+                assert arr_pooled.dtype == np.dtype(dtype)
+                assert np.all(arr_pooled == value)
+
+                arr = np.full((4, 4, 3), value, dtype=dtype)
+                arr_pooled = ia.pool(arr, 2, func)
+                assert arr_pooled.shape == (2, 2, 3)
+                assert arr_pooled.dtype == np.dtype(dtype)
+                assert np.all(arr_pooled == value)
+
+    # -----
+    # float
+    # -----
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+        def _allclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.allclose(a, b, atol=atol, rtol=0)
+
+        for func in [np.min, np.average, np.max]:
+            arr = np.array([
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+                [8, 9, 10, 11],
+                [12, 13, 14, 15]
+            ], dtype=dtype)
+            arr_pooled = ia.pool(arr, 2, func)
+            assert arr_pooled.shape == (2, 2)
+            assert arr_pooled.dtype == np.dtype(dtype)
+            assert arr_pooled[0, 0] == func([0, 1, 4, 5])
+            assert arr_pooled[0, 1] == func([2, 3, 6, 7])
+            assert arr_pooled[1, 0] == func([8, 9, 12, 13])
+            assert arr_pooled[1, 1] == func([10, 11, 14, 15])
+
+            arr = np.array([
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+                [8, 9, 10, 11],
+                [12, 13, 14, 15]
+            ], dtype=dtype)
+            arr = np.tile(arr[:, :, np.newaxis], (1, 1, 3))
+            arr[..., 1] += 1
+            arr[..., 2] += 2
+            arr_pooled = ia.pool(arr, 2, func)
+            assert arr_pooled.shape == (2, 2, 3)
+            assert arr_pooled.dtype == np.dtype(dtype)
+            for c in sm.xrange(3):
+                assert arr_pooled[0, 0, c] == func([0, 1, 4, 5]) + c
+                assert arr_pooled[0, 1, c] == func([2, 3, 6, 7]) + c
+                assert arr_pooled[1, 0, c] == func([8, 9, 12, 13]) + c
+                assert arr_pooled[1, 1, c] == func([10, 11, 14, 15]) + c
+
+            isize = np.dtype(dtype).itemsize
+            for value in [(-1) * (1000 ** (isize-1)), -50.0, 0.0, 50.0, 1000 ** (isize-1)]:
+                arr = np.full((4, 4), value, dtype=dtype)
+                arr_pooled = ia.pool(arr, 2, func)
+                dt = np.result_type(arr_pooled, 1.)
+                y = np.array(arr_pooled, dtype=dt, copy=False, subok=True)
+                assert arr_pooled.shape == (2, 2)
+                assert arr_pooled.dtype == np.dtype(dtype)
+                assert _allclose(arr_pooled, float(value))
+
+                arr = np.full((4, 4, 3), value, dtype=dtype)
+                arr_pooled = ia.pool(arr, 2, func)
+                assert arr_pooled.shape == (2, 2, 3)
+                assert arr_pooled.dtype == np.dtype(dtype)
+                assert _allclose(arr_pooled, float(value))
+
+    # ----
+    # bool
+    # ----
+    arr = np.zeros((4, 4), dtype=bool)
+    arr[0, 0] = True
+    arr[0, 1] = True
+    arr[1, 0] = True
+    arr_pooled = ia.pool(arr, 2, np.min)
+    assert arr_pooled.dtype == arr.dtype
+    assert np.all(arr_pooled == 0)
+
     arr_pooled = ia.pool(arr, 2, np.average)
-    assert arr_pooled.shape == (2, 2)
-    assert arr_pooled.dtype == arr.dtype.type
-    assert np.allclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
-    assert np.allclose(arr_pooled[0, 1], np.average([2, 3, 6, 7]))
-    assert np.allclose(arr_pooled[1, 0], np.average([8, 9, 12, 13]))
-    assert np.allclose(arr_pooled[1, 1], np.average([10, 11, 14, 15]))
+    assert arr_pooled.dtype == arr.dtype
+    assert np.all(arr_pooled[0, 0] == 1)
+    assert np.all(arr_pooled[:, 1] == 0)
+    assert np.all(arr_pooled[1, :] == 0)
+
+    arr_pooled = ia.pool(arr, 2, np.max)
+    assert arr_pooled.dtype == arr.dtype
+    assert np.all(arr_pooled[0, 0] == 1)
+    assert np.all(arr_pooled[:, 1] == 0)
+    assert np.all(arr_pooled[1, :] == 0)
 
     # preserve_dtype off
     arr = np.uint8([

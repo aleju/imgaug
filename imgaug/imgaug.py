@@ -1395,18 +1395,23 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: yes; tested
-        * ``int64``: ?
-        * ``float16``: ?
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested (2)
+        * ``uint64``: no (1)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested (2)
+        * ``int64``: no (1)
+        * ``float16``: yes; tested
         * ``float32``: yes; tested
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested (2)
+        * ``bool``: yes; tested
+
+        - (1) results too inaccurate (at least when using np.average as func)
+        - (2) Note that scikit-image documentation says that the wrapped pooling function converts
+              inputs to float64. Actual tests showed no indication of that happening (at least when
+              using preserve_dtype=True).
 
     Parameters
     ----------
