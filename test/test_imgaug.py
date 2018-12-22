@@ -1113,39 +1113,43 @@ def test_imresize_single_image():
 
 def test_pad():
     # -------
-    # uint8, int32
+    # uint, int
     # -------
-    for dtype in [np.uint8, np.int32]:
-        arr = np.zeros((3, 3), dtype=dtype) + 255
+    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        arr = np.zeros((3, 3), dtype=dtype) + max_value
 
         arr_pad = ia.pad(arr)
         assert arr_pad.shape == (3, 3)
-        assert arr_pad.dtype.type == dtype
+        # For some reason, arr_pad.dtype.type == dtype fails here for int64 but not for the other dtypes,
+        # even though int64 is the dtype of arr_pad. Also checked .name and .str for them -- all same value.
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.array_equal(arr_pad, arr)
 
         arr_pad = ia.pad(arr, top=1)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[0, :] == 0)
 
         arr_pad = ia.pad(arr, right=1)
         assert arr_pad.shape == (3, 4)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[:, -1] == 0)
 
         arr_pad = ia.pad(arr, bottom=1)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[-1, :] == 0)
 
         arr_pad = ia.pad(arr, left=1)
         assert arr_pad.shape == (3, 4)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[:, 0] == 0)
 
         arr_pad = ia.pad(arr, top=1, right=2, bottom=3, left=4)
         assert arr_pad.shape == (3+(1+3), 3+(2+4))
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[0, :] == 0)
         assert np.all(arr_pad[:, -2:] == 0)
         assert np.all(arr_pad[-3:, :] == 0)
@@ -1153,124 +1157,165 @@ def test_pad():
 
         arr_pad = ia.pad(arr, top=1, cval=10)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[0, :] == 10)
 
-        arr = np.zeros((3, 3, 3), dtype=dtype) + 128
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 127
         arr_pad = ia.pad(arr, top=1)
         assert arr_pad.shape == (4, 3, 3)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype == np.dtype(dtype)
         assert np.all(arr_pad[0, :, 0] == 0)
         assert np.all(arr_pad[0, :, 1] == 0)
         assert np.all(arr_pad[0, :, 2] == 0)
 
-        arr = np.zeros((3, 3), dtype=dtype) + 128
-        arr[1, 1] = 200
+        v1 = int(center_value + 0.25 * max_value)
+        v2 = int(center_value + 0.40 * max_value)
+        arr = np.zeros((3, 3), dtype=dtype) + v1
+        arr[1, 1] = v2
         arr_pad = ia.pad(arr, top=1, mode="maximum")
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert arr_pad[0, 0] == 128
-        assert arr_pad[0, 1] == 200
-        assert arr_pad[0, 2] == 128
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == v1
+        assert arr_pad[0, 1] == v2
+        assert arr_pad[0, 2] == v1
 
+        v1 = int(center_value + 0.25 * max_value)
         arr = np.zeros((3, 3), dtype=dtype)
-        arr_pad = ia.pad(arr, top=1, mode="constant", cval=123)
+        arr_pad = ia.pad(arr, top=1, mode="constant", cval=v1)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert arr_pad[0, 0] == 123
-        assert arr_pad[0, 1] == 123
-        assert arr_pad[0, 2] == 123
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == v1
+        assert arr_pad[0, 1] == v1
+        assert arr_pad[0, 2] == v1
         assert arr_pad[1, 0] == 0
 
-        arr = np.zeros((1, 1), dtype=dtype) + 100
-        arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=200)
+        arr = np.zeros((1, 1), dtype=dtype) + 0
+        arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=100)
         assert arr_pad.shape == (5, 1)
-        assert arr_pad.dtype.type == dtype
-        assert arr_pad[0, 0] == 200
-        assert arr_pad[1, 0] == 175
-        assert arr_pad[2, 0] == 150
-        assert arr_pad[3, 0] == 125
-        assert arr_pad[4, 0] == 100
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == 100
+        assert arr_pad[1, 0] == 75
+        assert arr_pad[2, 0] == 50
+        assert arr_pad[3, 0] == 25
+        assert arr_pad[4, 0] == 0
 
     # -------
-    # float32, float64
+    # float
     # -------
-    for dtype in [np.float32, np.float64]:
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
         arr = np.zeros((3, 3), dtype=dtype) + 1.0
+
+        def _allclose(a, b):
+            atol = 1e-3 if dtype == np.float16 else 1e-7
+            return np.allclose(a, b, atol=atol, rtol=0)
 
         arr_pad = ia.pad(arr)
         assert arr_pad.shape == (3, 3)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad, arr)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad, arr)
 
         arr_pad = ia.pad(arr, top=1)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad[0, :], dtype([0, 0, 0]))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([0, 0, 0]))
 
         arr_pad = ia.pad(arr, right=1)
         assert arr_pad.shape == (3, 4)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad[:, -1], dtype([0, 0, 0]))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[:, -1], dtype([0, 0, 0]))
 
         arr_pad = ia.pad(arr, bottom=1)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad[-1, :], dtype([0, 0, 0]))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[-1, :], dtype([0, 0, 0]))
 
         arr_pad = ia.pad(arr, left=1)
         assert arr_pad.shape == (3, 4)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad[:, 0], dtype([0, 0, 0]))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[:, 0], dtype([0, 0, 0]))
 
         arr_pad = ia.pad(arr, top=1, right=2, bottom=3, left=4)
         assert arr_pad.shape == (3+(1+3), 3+(2+4))
-        assert arr_pad.dtype.type == dtype
-        assert 0 - 1e-6 < np.max(arr_pad[0, :]) < 0 + 1e-6
-        assert 0 - 1e-6 < np.max(arr_pad[:, -2:]) < 0 + 1e-6
-        assert 0 - 1e-6 < np.max(arr_pad[-3, :]) < 0 + 1e-6
-        assert 0 - 1e-6 < np.max(arr_pad[:, :4]) < 0 + 1e-6
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(np.max(arr_pad[0, :]), 0)
+        assert _allclose(np.max(arr_pad[:, -2:]), 0)
+        assert _allclose(np.max(arr_pad[-3, :]), 0)
+        assert _allclose(np.max(arr_pad[:, :4]), 0)
 
         arr_pad = ia.pad(arr, top=1, cval=0.2)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad[0, :], dtype([0.2, 0.2, 0.2]))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([0.2, 0.2, 0.2]))
+
+        v1 = 1000 ** (np.dtype(dtype).itemsize - 1)
+        arr_pad = ia.pad(arr, top=1, cval=v1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([v1, v1, v1]))
+
+        v1 = (-1000) ** (np.dtype(dtype).itemsize - 1)
+        arr_pad = ia.pad(arr, top=1, cval=v1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([v1, v1, v1]))
 
         arr = np.zeros((3, 3, 3), dtype=dtype) + 0.5
         arr_pad = ia.pad(arr, top=1)
         assert arr_pad.shape == (4, 3, 3)
-        assert arr_pad.dtype.type == dtype
-        assert np.allclose(arr_pad[0, :, 0], dtype([0, 0, 0]))
-        assert np.allclose(arr_pad[0, :, 1], dtype([0, 0, 0]))
-        assert np.allclose(arr_pad[0, :, 2], dtype([0, 0, 0]))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :, 0], dtype([0, 0, 0]))
+        assert _allclose(arr_pad[0, :, 1], dtype([0, 0, 0]))
+        assert _allclose(arr_pad[0, :, 2], dtype([0, 0, 0]))
 
         arr = np.zeros((3, 3), dtype=dtype) + 0.5
         arr[1, 1] = 0.75
         arr_pad = ia.pad(arr, top=1, mode="maximum")
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert 0.50 - 1e-6 < arr_pad[0, 0] < 0.50 + 1e-6
-        assert 0.75 - 1e-6 < arr_pad[0, 1] < 0.75 + 1e-6
-        assert 0.50 - 1e-6 < arr_pad[0, 2] < 0.50 + 1e-6
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, 0], 0.5)
+        assert _allclose(arr_pad[0, 1], 0.75)
+        assert _allclose(arr_pad[0, 2], 0.50)
 
         arr = np.zeros((3, 3), dtype=dtype)
         arr_pad = ia.pad(arr, top=1, mode="constant", cval=0.4)
         assert arr_pad.shape == (4, 3)
-        assert arr_pad.dtype.type == dtype
-        assert 0.4 - 1e-6 < arr_pad[0, 0] < 0.4 + 1e-6
-        assert 0.4 - 1e-6 < arr_pad[0, 1] < 0.4 + 1e-6
-        assert 0.4 - 1e-6 < arr_pad[0, 2] < 0.4 + 1e-6
-        assert 0.0 - 1e-6 < arr_pad[1, 0] < 0.0 + 1e-6
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, 0], 0.4)
+        assert _allclose(arr_pad[0, 1], 0.4)
+        assert _allclose(arr_pad[0, 2], 0.4)
+        assert _allclose(arr_pad[1, 0], 0.0)
 
         arr = np.zeros((1, 1), dtype=dtype) + 0.6
         arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=1.0)
         assert arr_pad.shape == (5, 1)
-        assert arr_pad.dtype.type == dtype
-        assert 1.0 - 1e-6 < arr_pad[0, 0] < 1.0 + 1e-6
-        assert 0.9 - 1e-6 < arr_pad[1, 0] < 0.9 + 1e-6
-        assert 0.8 - 1e-6 < arr_pad[2, 0] < 0.8 + 1e-6
-        assert 0.7 - 1e-6 < arr_pad[3, 0] < 0.7 + 1e-6
-        assert 0.6 - 1e-6 < arr_pad[4, 0] < 0.6 + 1e-6
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, 0], 1.0)
+        assert _allclose(arr_pad[1, 0], 0.9)
+        assert _allclose(arr_pad[2, 0], 0.8)
+        assert _allclose(arr_pad[3, 0], 0.7)
+        assert _allclose(arr_pad[4, 0], 0.6)
+
+    # -------
+    # bool
+    # -------
+    dtype = bool
+    arr = np.zeros((3, 3), dtype=dtype)
+    arr_pad = ia.pad(arr)
+    assert arr_pad.shape == (3, 3)
+    # For some reason, arr_pad.dtype.type == dtype fails here for int64 but not for the other dtypes,
+    # even though int64 is the dtype of arr_pad. Also checked .name and .str for them -- all same value.
+    assert arr_pad.dtype == np.dtype(dtype)
+    assert np.all(arr_pad == arr)
+
+    arr_pad = ia.pad(arr, top=1)
+    assert arr_pad.shape == (4, 3)
+    assert arr_pad.dtype == np.dtype(dtype)
+    assert np.all(arr_pad[0, :] == 0)
+
+    arr_pad = ia.pad(arr, top=1, cval=True)
+    assert arr_pad.shape == (4, 3)
+    assert arr_pad.dtype == np.dtype(dtype)
+    assert np.all(arr_pad[0, :] == 1)
 
 
 def test_compute_paddings_for_aspect_ratio():

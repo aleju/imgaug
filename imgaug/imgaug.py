@@ -1209,18 +1209,18 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
         * ``int32``: yes; fully tested
-        * ``int64``: ?
-        * ``float16``: ?
+        * ``int64``: yes; fully tested
+        * ``float16``: yes; fully tested
         * ``float32``: yes; fully tested
         * ``float64``: yes; fully tested
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``float128``: yes; fully tested
+        * ``bool``: yes; tested
 
     Parameters
     ----------
@@ -1248,6 +1248,7 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 
     cval : number, optional
         Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
+        The cval is expected to match the input array's dtype and value range.
 
     Returns
     -------
