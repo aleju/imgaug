@@ -2424,6 +2424,70 @@ def test_PerspectiveTransform():
     assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
     assert params[1] is False
 
+    ###################
+    # test other dtypes
+    ###################
+
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+    aug.jitter = iap.Deterministic(0.2)
+    y1 = int(30 * 0.2)
+    y2 = int(30 * 0.8)
+    x1 = int(30 * 0.2)
+    x2 = int(30 * 0.8)
+
+    # bool
+    image = np.zeros((30, 30), dtype=bool)
+    image[12:18, :] = True
+    image[:, 12:18] = True
+    expected = image[y1:y2, x1:x2]
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype == image.dtype
+    assert image_aug.shape == expected.shape
+    assert (np.sum(image_aug == expected) / expected.size) > 0.9
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        if np.dtype(dtype).kind == "i":
+            values = [0, 1, 5, 10, 100, center_value, int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value-100, max_value]
+            values = values + [(-1)*value for value in values]
+        else:
+            values = [0, 1, 5, 10, 100, center_value, int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value-100, max_value]
+
+        for value in values:
+            image = np.zeros((30, 30), dtype=dtype)
+            image[12:18, :] = value
+            image[:, 12:18] = value
+            expected = image[y1:y2, x1:x2]
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == image.dtype
+            assert image_aug.shape == expected.shape
+            # rather high tolerance of 0.7 here because of interpolation
+            assert (np.sum(image_aug == expected) / expected.size) > 0.7
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64]:
+        def _isclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.isclose(a, b, atol=atol, rtol=0)
+
+        isize = np.dtype(dtype).itemsize
+        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+        values = values + [(-1) * value for value in values]
+        for value in values:
+            image = np.zeros((30, 30), dtype=dtype)
+            image[12:18, :] = value
+            image[:, 12:18] = value
+            expected = image[y1:y2, x1:x2]
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == image.dtype
+            assert image_aug.shape == expected.shape
+            # rather high tolerance of 0.7 here because of interpolation
+            assert (np.sum(_isclose(image_aug, expected)) / expected.size) > 0.7
+
 
 def test_ElasticTransformation():
     reseed()

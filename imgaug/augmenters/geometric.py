@@ -1743,19 +1743,34 @@ class PerspectiveTransform(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        if (keep_size=False)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes; tested (3)
+            * ``int16``: yes; tested
+            * ``int32``: no (2)
+            * ``int64``: no (2)
+            * ``float16``: yes; tested (4)
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: no (1)
+            * ``bool``: yes; tested (4)
+
+            - (1) rejected by opencv
+            - (2) leads to opencv error: cv2.error: ``OpenCV(3.4.4) (...)imgwarp.cpp:1805: error:
+                  (-215:Assertion failed) ifunc != 0 in function 'remap'``.
+            - (3) mapped internally to ``int16``.
+            - (4) mapped intenally to ``float32``.
+
+        else::
+
+            minimum of (
+                imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False),
+                imgaug.imresize_many_images
+            )
 
     Parameters
     ----------
@@ -1819,29 +1834,37 @@ class PerspectiveTransform(meta.Augmenter):
         )
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            image = images[i]
+
             # cv2.warpPerspective only supports <=4 channels
-            nb_channels = images[i].shape[2]
-            dtype = images[i].dtype
-            if dtype not in [np.float32, np.float64, np.uint8]:
-                images[i] = images[i].astype(np.float64)  # e.g. np.int32
+            nb_channels = image.shape[2]
+            input_dtype = image.dtype
+            if input_dtype in [np.int8]:
+                image = image.astype(np.int16)
+            elif input_dtype in [np.bool_, np.float16]:
+                image = image.astype(np.float32)
+
             if nb_channels <= 4:
-                warped = cv2.warpPerspective(images[i], M, (max_width, max_height))
+                warped = cv2.warpPerspective(image, M, (max_width, max_height))
                 if warped.ndim == 2 and images[i].ndim == 3:
                     warped = np.expand_dims(warped, 2)
             else:
                 # warp each channel on its own, re-add channel axis, then stack
                 # the result from a list of [H, W, 1] to (H, W, C).
-                warped = [cv2.warpPerspective(images[i][..., c], M, (max_width, max_height))
+                warped = [cv2.warpPerspective(image[..., c], M, (max_width, max_height))
                           for c in sm.xrange(nb_channels)]
                 warped = [warped_i[..., np.newaxis] for warped_i in warped]
                 warped = np.dstack(warped)
 
             if self.keep_size:
-                h, w = images[i].shape[0:2]
+                h, w = image.shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w), interpolation="cubic")
 
-            if warped.dtype != dtype:
-                warped = warped.astype(dtype)
+            if input_dtype == np.bool_:
+                warped = warped > 0.5
+            elif warped.dtype != input_dtype:
+                warped = meta.restore_dtypes_(warped, input_dtype)
+
             result[i] = warped
 
         return result
