@@ -2782,6 +2782,49 @@ def test_ElasticTransformation():
     assert params[3].value == 10
     assert params[4].value == "constant"
 
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.ElasticTransformation(sigma=0.5, alpha=5, order=0)
+    mask = np.zeros((21, 21), dtype=bool)
+    mask[7:13, 7:13] = True
+
+    # bool
+    image = np.zeros((21, 21), dtype=bool)
+    image[mask] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype == image.dtype
+    assert not np.all(image_aug == 1)
+    assert np.any(image_aug[~mask] == 1)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        image = np.zeros((21, 21), dtype=dtype)
+        image[7:13, 7:13] = max_value
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype == np.dtype(dtype)
+        assert not np.all(image_aug == max_value)
+        assert np.any(image_aug[~mask] == max_value)
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64]:
+        def _isclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.isclose(a, b, atol=atol, rtol=0)
+
+        isize = np.dtype(dtype).itemsize
+        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+        values = values + [(-1) * value for value in values]
+        for value in values:
+            image = np.zeros((21, 21), dtype=dtype)
+            image[7:13, 7:13] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert not np.all(_isclose(image_aug, float(value)))
+            assert np.any(_isclose(image_aug[~mask], float(value)))
+
 
 def test_Rot90():
     img = np.arange(4*4*3).reshape((4, 4, 3)).astype(np.uint8)

@@ -2037,18 +2037,23 @@ class ElasticTransformation(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; tested (1)
+        * ``uint32``: yes; tested (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (1)
+        * ``int16``: yes; tested (1)
+        * ``int32``: yes; tested (1)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (1) (3)
+        * ``float32``: yes; tested (1)
+        * ``float64``: yes; tested (1)
+        * ``float128``: no (4)
+        * ``bool``: yes; tested (1)
+
+        - (1) Only tested with `order` set to 0 (nearest neighbour interpolation).
+        - (2) Results too inaccurate.
+        - (3) Mapped internally to ``float32``.
+        - (4) dtype rejected by scipy.
 
     Parameters
     ----------
@@ -2175,9 +2180,10 @@ class ElasticTransformation(meta.Augmenter):
                                                    list_to_choice=True, allow_floats=False)
 
         if cval == ia.ALL:
+            # TODO change this so that it is dynamically created per image (or once per dtype)
             self.cval = iap.DiscreteUniform(0, 255)
         else:
-            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
+            self.cval = iap.handle_discrete_param(cval, "cval", value_range=None, tuple_to_uniform=True,
                                                   list_to_choice=True, allow_floats=True)
 
         if mode == ia.ALL:
@@ -2203,25 +2209,45 @@ class ElasticTransformation(meta.Augmenter):
         return seeds[0:-1], alphas, sigmas, orders, cvals, modes
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
         result = images
         nb_images = len(images)
         seeds, alphas, sigmas, orders, cvals, modes = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
+        for i, image in enumerate(images):
             image = images[i]
+            min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+            cval = cvals[i]
+            cval = max(min(cval, max_value), min_value)
+
+            input_dtype = image.dtype
+            if image.dtype == np.dtype(np.float16):
+                image = image.astype(np.float32)
+
             (source_indices_x, source_indices_y), (_dx, _dy) = ElasticTransformation.generate_indices(
                 image.shape[0:2],
                 alpha=alphas[i],
                 sigma=sigmas[i],
                 random_state=ia.new_random_state(seeds[i])
             )
-            result[i] = ElasticTransformation.map_coordinates(
-                images[i],
+            image_aug = ElasticTransformation.map_coordinates(
+                image,
                 source_indices_x,
                 source_indices_y,
                 order=orders[i],
-                cval=cvals[i],
+                cval=cval,
                 mode=modes[i]
             )
+
+            if image.dtype != input_dtype:
+                image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+            result[i] = image_aug
+
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
