@@ -1374,18 +1374,23 @@ class PiecewiseAffine(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested (1)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (2)
+        * ``bool``: yes; tested (3)
+
+        - (1) scikit-image converts internally to ``float64``, which might introduce inaccuracies.
+              Tests showed that these inaccuracies seemed to not be an issue.
+        - (2) results too inaccurate
+        - (3) mapped internally to ``float64``
 
     Parameters
     ----------
@@ -1509,9 +1514,10 @@ class PiecewiseAffine(meta.Augmenter):
             raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
+            # TODO change this so that it is dynamically created per image (or once per dtype)
             self.cval = iap.Uniform(0, 255)
         else:
-            self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
+            self.cval = iap.handle_continuous_param(cval, "cval", value_range=None, tuple_to_uniform=True,
                                                     list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
@@ -1534,34 +1540,47 @@ class PiecewiseAffine(meta.Augmenter):
         result = images
         nb_images = len(images)
 
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
+        rss = ia.derive_random_states(random_state, nb_images+5)
 
-        seed = seeds[-1]
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 1))
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 2))
-        cval_samples = self.cval.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 3))
-        mode_samples = self.mode.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 4))
-        order_samples = self.order.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 5))
+        # make sure to sample "order" here at the 3rd position to match the sampling steps
+        # in _augment_heatmaps()
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-5])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-4])
+        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-3])
+        cval_samples = self.cval.draw_samples((nb_images,), random_state=rss[-2])
+        mode_samples = self.mode.draw_samples((nb_images,), random_state=rss[-1])
 
-        for i in sm.xrange(nb_images):
-            rs_image = ia.new_random_state(seeds[i])
-            h, w = images[i].shape[0:2]
+        for i, image in enumerate(images):
+            rs_image = rss[i]
+            h, w = image.shape[0:2]
+
             transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
             if transformer is not None:
+                input_dtype = image.dtype
+                if image.dtype == np.bool_:
+                    image = image.astype(np.float64)
+
+                min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+                cval = cval_samples[i]
+                cval = max(min(cval, max_value), min_value)
+
                 image_warped = tf.warp(
-                    images[i],
+                    image,
                     transformer,
                     order=order_samples[i],
                     mode=mode_samples[i],
-                    cval=cval_samples[i],
+                    cval=cval,
                     preserve_range=True,
                     output_shape=images[i].shape
                 )
 
-                # warp changes uint8 to float64, making this necessary
-                if image_warped.dtype != images[i].dtype:
-                    image_warped = image_warped.astype(images[i].dtype, copy=False)
+                if input_dtype == np.bool_:
+                    image_warped = image_warped > 0.5
+                else:
+                    # warp seems to change everything to float64, including uint8,
+                    # making this necessary
+                    image_warped = meta.restore_dtypes_(image_warped, input_dtype)
 
                 result[i] = image_warped
 
@@ -1571,18 +1590,17 @@ class PiecewiseAffine(meta.Augmenter):
         result = heatmaps
         nb_images = len(heatmaps)
 
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
+        rss = ia.derive_random_states(random_state, nb_images+3)
 
-        seed = seeds[-1]
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 1))
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 2))
-        order_samples = self.order.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 5))
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-3])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-2])
+        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-1])
 
         for i in sm.xrange(nb_images):
             heatmaps_i = heatmaps[i]
             arr_0to1 = heatmaps_i.arr_0to1
 
-            rs_image = ia.new_random_state(seeds[i])
+            rs_image = rss[i]
             h, w = arr_0to1.shape[0:2]
             transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
@@ -1608,13 +1626,13 @@ class PiecewiseAffine(meta.Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
 
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
-        seed = seeds[-1]
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 1))
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 2))
+        rss = ia.derive_random_states(random_state, nb_images+2)
+
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
 
         for i in sm.xrange(nb_images):
-            rs_image = ia.new_random_state(seeds[i])
+            rs_image = rss[i]
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)

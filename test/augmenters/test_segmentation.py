@@ -138,13 +138,13 @@ def test_Superpixels():
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
-            values = [center_value, int(0.1 * max_value), int(0.2 * max_value),
+            values = [int(center_value), int(0.1 * max_value), int(0.2 * max_value),
                       int(0.5 * max_value), max_value-100]
             values = [((-1)*value, value) for value in values]
         else:
-            values = [(0, center_value),
+            values = [(0, int(center_value)),
                       (10, int(0.1 * max_value)), (10, int(0.2 * max_value)), (10, int(0.5 * max_value)),
-                      (0, max_value), (center_value, max_value)]
+                      (0, max_value), (int(center_value), max_value)]
 
         for v1, v2 in values:
             aug = iaa.Superpixels(p_replace=1.0, n_segments=2)

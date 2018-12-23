@@ -2726,8 +2726,10 @@ def test_Invert():
               np.float16, np.float32, np.float64, np.float128]
     for dtype in dtypes:
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        kind = np.dtype(dtype).kind
         image_min = np.full((3, 3), min_value, dtype=dtype)
-        image_center = np.full((3, 3), center_value, dtype=dtype)
+        if dtype is not bool:
+            image_center = np.full((3, 3), center_value if kind == "f" else int(center_value), dtype=dtype)
         image_max = np.full((3, 3), max_value, dtype=dtype)
         image_min_aug = aug.augment_image(image_min)
         image_center_aug = None
@@ -2759,8 +2761,10 @@ def test_Invert():
               np.float16, np.float32, np.float64, np.float128]
     for dtype in dtypes:
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        kind = np.dtype(dtype).kind
         image_min = np.full((3, 3), min_value, dtype=dtype)
-        image_center = np.full((3, 3), center_value, dtype=dtype)
+        if dtype is not bool:
+            image_center = np.full((3, 3), center_value if kind == "f" else int(center_value), dtype=dtype)
         image_max = np.full((3, 3), max_value, dtype=dtype)
         image_min_aug = aug.augment_image(image_min)
         image_center_aug = None
@@ -2793,9 +2797,11 @@ def test_Invert():
     for dtype in dtypes:
         _min_value, _center_value, max_value = meta.get_value_range_of_dtype(dtype)
         min_value = 1
+        kind = np.dtype(dtype).kind
         center_value = min_value + 0.5 * (max_value - min_value)
         image_min = np.full((3, 3), min_value, dtype=dtype)
-        image_center = np.full((3, 3), center_value, dtype=dtype)
+        if dtype is not bool:
+            image_center = np.full((3, 3), center_value if kind == "f" else int(center_value), dtype=dtype)
         image_max = np.full((3, 3), max_value, dtype=dtype)
         image_min_aug = aug.augment_image(image_min)
         image_center_aug = None
@@ -2828,9 +2834,11 @@ def test_Invert():
     for dtype in dtypes:
         min_value, _center_value, _max_value = meta.get_value_range_of_dtype(dtype)
         max_value = 16
+        kind = np.dtype(dtype).kind
         center_value = min_value + 0.5 * (max_value - min_value)
         image_min = np.full((3, 3), min_value, dtype=dtype)
-        image_center = np.full((3, 3), center_value, dtype=dtype)
+        if dtype is not bool:
+            image_center = np.full((3, 3), center_value if kind == "f" else int(center_value), dtype=dtype)
         image_max = np.full((3, 3), max_value, dtype=dtype)
         image_min_aug = aug.augment_image(image_min)
         image_center_aug = None

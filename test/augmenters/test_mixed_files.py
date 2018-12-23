@@ -388,7 +388,7 @@ def test_dtype_preservation():
         (iaa.AlphaElementwise((0.0, 0.1), iaa.Add(10), name="AlphaElementwise"), _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"), _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"), _not_dts([np.uint32, np.int32, np.float64])),
-        (iaa.Superpixels(p_replace=0.01, n_segments=64), _not_dts([np.float16, np.float32])),
+        (iaa.Superpixels(p_replace=0.01, n_segments=64), _not_dts([np.float16, np.float32, np.float64])),
         (iaa.Scale({"height": 4, "width": 4}, name="Scale"),
          _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),
         (iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),

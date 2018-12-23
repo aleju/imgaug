@@ -2239,7 +2239,7 @@ def test_PiecewiseAffine():
     # ---------
     # get_parameters
     # ---------
-    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=10, order=1, cval=2, mode="nearest", absolute_scale=False)
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=10, order=1, cval=2, mode="constant", absolute_scale=False)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Deterministic)
     assert isinstance(params[1], iap.Deterministic)
@@ -2253,7 +2253,64 @@ def test_PiecewiseAffine():
     assert params[2].value == 10
     assert params[3].value == 1
     assert params[4].value == 2
-    assert params[5].value == "nearest"
+    assert params[5].value == "constant"
+
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.PiecewiseAffine(scale=0.2, nb_rows=8, nb_cols=4, order=0, mode="constant")
+    mask = np.zeros((21, 21), dtype=bool)
+    mask[:, 7:13] = True
+
+    # bool
+    image = np.zeros((21, 21), dtype=bool)
+    image[mask] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype == image.dtype
+    assert not np.all(image_aug == 1)
+    assert np.any(image_aug[~mask] == 1)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        if np.dtype(dtype).kind == "i":
+            values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value-100, max_value]
+            values = values + [(-1)*value for value in values]
+        else:
+            values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value-100, max_value]
+
+        for value in values:
+            image = np.zeros((21, 21), dtype=dtype)
+            image[:, 7:13] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert not np.all(image_aug == value)
+            assert np.any(image_aug[~mask] == value)
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        def _isclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.isclose(a, b, atol=atol, rtol=0)
+
+        isize = np.dtype(dtype).itemsize
+        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+        values = values + [(-1) * value for value in values]
+        values = values + [min_value, max_value]
+        for value in values:
+            image = np.zeros((21, 21), dtype=dtype)
+            image[:, 7:13] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            # TODO switch all other tests from float(...) to np.float128(...) pattern, seems
+            # to be more accurate for 128bit floats
+            assert not np.all(_isclose(image_aug, np.float128(value)))
+            assert np.any(_isclose(image_aug[~mask], np.float128(value)))
 
 
 def test_PerspectiveTransform():
@@ -2450,11 +2507,11 @@ def test_PerspectiveTransform():
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
-            values = [0, 1, 5, 10, 100, center_value, int(0.1 * max_value), int(0.2 * max_value),
+            values = [0, 1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
                       int(0.5 * max_value), max_value-100, max_value]
             values = values + [(-1)*value for value in values]
         else:
-            values = [0, 1, 5, 10, 100, center_value, int(0.1 * max_value), int(0.2 * max_value),
+            values = [0, 1, 5, 10, 100, int(center_value), int(0.1 * max_value), int(0.2 * max_value),
                       int(0.5 * max_value), max_value-100, max_value]
 
         for value in values:
