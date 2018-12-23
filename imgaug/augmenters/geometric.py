@@ -2409,19 +2409,28 @@ class Rot90(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        if (keep_size=False or k is even)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: yes; tested
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: yes; tested
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: yes; tested
+            * ``bool``: yes; tested
+
+        else::
+
+            minimum_of (
+                imgaug.augmenters.geometric.Rot90(keep_size=False or k is even),
+                imgaug.imgaug.imresize_many_images
+            )
 
     Parameters
     ----------

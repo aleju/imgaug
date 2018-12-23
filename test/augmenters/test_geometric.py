@@ -11,6 +11,7 @@ import skimage.morphology
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug.augmenters import meta
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 
 
@@ -2967,6 +2968,47 @@ def test_Rot90():
     aug = iaa.Rot90([1, 3], keep_size=False)
     assert aug.get_parameters()[0] == aug.k
     assert aug.get_parameters()[1] is False
+
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.Rot90(2)
+
+    # bool
+    image = np.zeros((3, 3), dtype=bool)
+    image[0, 0] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype == image.dtype
+    assert np.all(image_aug[0, 0] == 0)
+    assert np.all(image_aug[2, 2] == 1)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        image = np.zeros((3, 3), dtype=dtype)
+        image[0, 0] = max_value
+        image_aug = aug.augment_image(image)
+        assert image_aug.dtype == np.dtype(dtype)
+        assert np.all(image_aug[0, 0] == 0)
+        assert np.all(image_aug[2, 2] == max_value)
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+        def _allclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.allclose(a, b, atol=atol, rtol=0)
+
+        isize = np.dtype(dtype).itemsize
+        values = [0, 1.0, 10.0, 100.0, 500 ** (isize-1), 1000 ** (isize-1)]
+        values = values + [(-1) * value for value in values]
+        for value in values:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[0, 0] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert _allclose(image_aug[0, 0], 0)
+            assert _allclose(image_aug[2, 2], float(value))
 
 
 if __name__ == "__main__":
