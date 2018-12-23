@@ -36,19 +36,33 @@ class Superpixels(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        if (image height and width < `max_size`)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: limited (1)
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: limited (1)
+            * ``float16``: no (2)
+            * ``float32``: no (2)
+            * ``float64``: no (3)
+            * ``float128``: no (2)
+            * ``bool``: yes; tested
+
+            - (1) Superpixel mean intensity replacement requires computing these means as float64s.
+                  This can cause inaccuracies for large integer values.
+            - (2) Error in scikit-image.
+            - (3) Loss of resolution in scikit-image.
+
+        else::
+
+            minimum_of (
+                imgaug.augmenters.segmentation.Superpixels(image height and width < `max_size`),
+                imgaug.imgaug.imresize_many_images(interpolation=`interpolation`)
+            )
 
     Parameters
     ----------
@@ -142,13 +156,18 @@ class Superpixels(meta.Augmenter):
         self.interpolation = interpolation
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64"],
+                         disallowed=["uint128", "uint256", "int128", "int256",
+                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                         augmenter=self)
+
         nb_images = len(images)
-        n_segments_samples = self.n_segments.draw_samples((nb_images,), random_state=random_state)
-        seeds = random_state.randint(0, 10**6, size=(nb_images,))
-        for i in sm.xrange(nb_images):
+        rss = ia.derive_random_states(random_state, 1+nb_images)
+        n_segments_samples = self.n_segments.draw_samples((nb_images,), random_state=rss[0])
+        for i, (image, rs) in enumerate(zip(images, rss[1:])):
             # TODO this results in an error when n_segments is 0
-            replace_samples = self.p_replace.draw_samples((n_segments_samples[i],),
-                                                          random_state=ia.new_random_state(seeds[i]))
+            replace_samples = self.p_replace.draw_samples((n_segments_samples[i],), random_state=rs)
 
             if np.max(replace_samples) == 0:
                 # not a single superpixel would be replaced by its average color,
@@ -156,6 +175,7 @@ class Superpixels(meta.Augmenter):
                 pass
             else:
                 image = images[i]
+                min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
 
                 orig_shape = image.shape
                 if self.max_size is not None:
@@ -180,7 +200,16 @@ class Superpixels(meta.Augmenter):
                         if replace_samples[ridx % len(replace_samples)] >= 0.5:
                             mean_intensity = region.mean_intensity
                             image_sp_c = image_sp[..., c]
-                            image_sp_c[segments == ridx] = np.clip(int(np.round(mean_intensity)), 0, 255)
+                            if image_sp_c.dtype.kind in ["i", "u", "b"]:
+                                # After rounding the value can end up slightly outside of the value_range.
+                                # Hence, we need to clip. We do clip via min(max(...)) instead of np.clip
+                                # because the latter one does not seem to keep dtypes for dtypes with
+                                # large itemsizes (e.g. uint64).
+                                value = int(np.round(mean_intensity))
+                                value = min(max(value, min_value), max_value)
+                                image_sp_c[segments == ridx] = value
+                            else:
+                                image_sp_c[segments == ridx] = mean_intensity
 
                 if orig_shape != image.shape:
                     image_sp = ia.imresize_single_image(image_sp, orig_shape[0:2], interpolation=self.interpolation)
