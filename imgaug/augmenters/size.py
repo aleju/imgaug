@@ -160,19 +160,7 @@ class Scale(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -364,8 +352,6 @@ class Scale(meta.Augmenter):
         samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ia.do_assert(image.dtype == np.uint8,
-                         "Scale() can currently only process images of dtype uint8 (got %s)" % (image.dtype,))
             sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
             h, w = self._compute_height_width(image.shape, sample_h, sample_w)
             image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
