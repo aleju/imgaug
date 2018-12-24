@@ -454,19 +454,28 @@ class CropAndPad(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        if (keep_size=False)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: yes; tested
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: yes; tested
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: yes; tested
+            * ``bool``: yes; tested
+
+        if (keep_size=True)::
+
+            minimum of (
+                imgaug.augmenters.size.CropAndPad(keep_size=False),
+                imgaug.imgaug.imresize_many_images
+            )
 
     Parameters
     ----------
@@ -695,7 +704,7 @@ class CropAndPad(meta.Augmenter):
             else:
                 raise Exception("Expected int, tuple of 4 ints/tuples/lists/StochasticParameters or "
                                 + "StochasticParameter, got type %s." % (type(px),))
-        else: # = elif percent is not None:
+        else:  # = elif percent is not None:
             self.mode = "percent"
             if ia.is_single_number(percent):
                 ia.do_assert(-1.0 < percent)
@@ -738,15 +747,14 @@ class CropAndPad(meta.Augmenter):
                                 + "StochasticParameter, got type %s." % (type(percent),))
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
-        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True,
+        # TODO enable ALL here, like in e.g. Affine
+        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
                                                   list_to_choice=True, allow_floats=True)
 
         self.keep_size = keep_size
         self.sample_independently = sample_independently
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images)
-
         result = []
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
@@ -759,20 +767,8 @@ class CropAndPad(meta.Augmenter):
 
             image_cr = images[i][crop_top:height-crop_bottom, crop_left:width-crop_right, :]
 
-            if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
-                if image_cr.ndim == 2:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right))
-                else:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
-
-                if pad_mode == "constant":
-                    image_cr_pa = np.pad(image_cr, pad_vals, mode=pad_mode, constant_values=pad_cval)
-                elif pad_mode == "linear_ramp":
-                    image_cr_pa = np.pad(image_cr, pad_vals, mode=pad_mode, end_values=pad_cval)
-                else:
-                    image_cr_pa = np.pad(image_cr, pad_vals, mode=pad_mode)
-            else:
-                image_cr_pa = image_cr
+            image_cr_pa = ia.pad(image_cr, top=pad_top, right=pad_right, bottom=pad_bottom, left=pad_left,
+                                 mode=pad_mode, cval=pad_cval)
 
             if self.keep_size:
                 image_cr_pa = ia.imresize_single_image(image_cr_pa, (height, width))
@@ -781,12 +777,11 @@ class CropAndPad(meta.Augmenter):
 
         if ia.is_np_array(images):
             if self.keep_size:
-                # this converts the list to an array of original input dtype
-
-                # without this, restore_augmented_images_dtypes_() expects input_dtypes to be a list
-                result = np.array(result)
-
-                meta.restore_augmented_images_dtypes_(result, input_dtypes)
+                result = np.array(result, dtype=images.dtype)
+            else:
+                nb_shapes = len(set([image.shape for image in result]))
+                if nb_shapes == 1:
+                    result = np.array(result, dtype=images.dtype)
 
         return result
 

@@ -1200,6 +1200,7 @@ def imresize_single_image(image, sizes, interpolation=None):
         return rs[0, ...]
 
 
+# TODO add crop() function too
 def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     """
     Pad an image-like array on its top/right/bottom/left side.
