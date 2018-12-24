@@ -1736,6 +1736,64 @@ def test_PadToFixedSize():
     assert observed.shape == (32, 32, 3)
     assert np.allclose(observed.arr_0to1, expected)
 
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.PadToFixedSize(height=4, width=3, position="center-top")
+    mask = np.zeros((4, 3), dtype=bool)
+    mask[2, 1] = True
+
+    # bool
+    image = np.zeros((3, 3), dtype=bool)
+    image[1, 1] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype == image.dtype
+    assert image_aug.shape == (4, 3)
+    assert np.all(image_aug[~mask] == 0)
+    assert np.all(image_aug[mask] == 1)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        if np.dtype(dtype).kind == "i":
+            values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value - 100, max_value]
+            values = values + [(-1) * value for value in values]
+        else:
+            values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value - 100, max_value]
+
+        for value in values:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert image_aug.shape == (4, 3)
+            assert np.all(image_aug[~mask] == 0)
+            assert np.all(image_aug[mask] == value)
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        def _isclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.isclose(a, b, atol=atol, rtol=0)
+
+        isize = np.dtype(dtype).itemsize
+        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+        values = values + [(-1) * value for value in values]
+        values = values + [min_value, max_value]
+        for value in values:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert image_aug.shape == (4, 3)
+            assert np.all(_isclose(image_aug[~mask], 0))
+            assert np.all(_isclose(image_aug[mask], np.float128(value)))
+
 
 def test_CropToFixedSize():
     reseed()
@@ -1887,6 +1945,64 @@ def test_CropToFixedSize():
     expected = np.zeros((16, 16, 1), dtype=np.float32) + 1.0
     assert observed.shape == (32, 32, 3)
     assert np.allclose(observed.arr_0to1, expected)
+
+    ###################
+    # test other dtypes
+    ###################
+    aug = iaa.CropToFixedSize(height=2, width=3, position="center-top")
+    mask = np.zeros((2, 3), dtype=bool)
+    mask[0, 1] = True
+
+    # bool
+    image = np.zeros((3, 3), dtype=bool)
+    image[1, 1] = True
+    image_aug = aug.augment_image(image)
+    assert image_aug.dtype == image.dtype
+    assert image_aug.shape == (2, 3)
+    assert np.all(image_aug[~mask] == 0)
+    assert np.all(image_aug[mask] == 1)
+
+    # uint, int
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        if np.dtype(dtype).kind == "i":
+            values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value - 100, max_value]
+            values = values + [(-1) * value for value in values]
+        else:
+            values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value), int(0.2 * max_value),
+                      int(0.5 * max_value), max_value - 100, max_value]
+
+        for value in values:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert image_aug.shape == (2, 3)
+            assert np.all(image_aug[~mask] == 0)
+            assert np.all(image_aug[mask] == value)
+
+    # float
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+        def _isclose(a, b):
+            atol = 1e-4 if dtype == np.float16 else 1e-8
+            return np.isclose(a, b, atol=atol, rtol=0)
+
+        isize = np.dtype(dtype).itemsize
+        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+        values = values + [(-1) * value for value in values]
+        values = values + [min_value, max_value]
+        for value in values:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = value
+            image_aug = aug.augment_image(image)
+            assert image_aug.dtype == np.dtype(dtype)
+            assert image_aug.shape == (2, 3)
+            assert np.all(_isclose(image_aug[~mask], 0))
+            assert np.all(_isclose(image_aug[mask], np.float128(value)))
 
 
 def test_KeepSizeByResize():

@@ -1276,6 +1276,8 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
 
 
 # TODO maybe rename this to PadToMinimumSize?
+# TODO this is very similar to CropAndPad, maybe add a way to generate crop values imagewise via a callback in
+#      in CropAndPad?
 class PadToFixedSize(meta.Augmenter):
     """
     Pad images to minimum width/height.
@@ -1291,19 +1293,7 @@ class PadToFixedSize(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.imgaug.pad`.
 
     Parameters
     ----------
@@ -1395,7 +1385,8 @@ class PadToFixedSize(meta.Augmenter):
         self.position = _handle_position_parameter(position)
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
-        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=(0, 255), tuple_to_uniform=True,
+        # TODO enable ALL here like in eg Affine
+        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
                                                   list_to_choice=True, allow_floats=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1508,6 +1499,9 @@ class PadToFixedSize(meta.Augmenter):
 
 
 # TODO maybe rename this to CropToMaximumSize ?
+# TODO this is very similar to CropAndPad, maybe add a way to generate crop values imagewise via a callback in
+#      in CropAndPad?
+# TODO add crop() function in imgaug, similar to pad
 class CropToFixedSize(meta.Augmenter):
     """
     Augmenter that crops down to a fixed maximum width/height.
@@ -1524,18 +1518,18 @@ class CropToFixedSize(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
 
     Parameters
     ----------
