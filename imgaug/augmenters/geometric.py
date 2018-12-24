@@ -63,19 +63,45 @@ class Affine(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        If (backend="skimage")::
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested (1)
+            * ``uint32``: yes; tested (1) (2)
+            * ``uint64``: no (3)
+            * ``int8``: yes; tested (1)
+            * ``int16``: yes; tested (1)
+            * ``int32``: yes; tested (1)  (2)
+            * ``int64``: no (3)
+            * ``float16``: yes; tested (1)
+            * ``float32``: yes; tested (1)
+            * ``float64``: yes; tested (1)
+            * ``float128``: no (3)
+            * ``bool``: yes; tested (1)
+
+            - (1) only tested with `order` set to 0.
+            - (2) scikit-image converts internally to float64, which might affect the accuracy of
+                  large integers. In tests this seemed to not be an issue.
+            - (3) results too inaccurate
+
+        If (backend="cv2")::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested (1)
+            * ``uint32``: no (2)
+            * ``uint64``: no (3)
+            * ``int8``: yes; tested (1)
+            * ``int16``: yes; tested (1)
+            * ``int32``: yes; tested (1)
+            * ``int64``: no (3)
+            * ``float16``: yes; tested (4)
+            * ``float32``: yes; tested (1)
+            * ``float64``: yes; tested (1)
+            * ``float128``: no (2)
+            * ``bool``: yes; tested (1) (4)
+
+            - (2) rejected by cv2
+            - (3) changed to ``int32`` by cv2
+            - (4) mapped internally to ``float32``
 
     Parameters
     ----------
@@ -338,6 +364,7 @@ class Affine(meta.Augmenter):
     the value of the nearest edge is used.
 
     """
+    VALID_DTYPES_CV2 = set(["uint8", "uint16", "int8", "int16", "int32", "float16", "float32", "float64", "bool"])
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0,
                  mode="constant", fit_output=False, backend="auto", name=None, deterministic=False, random_state=None):
@@ -397,9 +424,10 @@ class Affine(meta.Augmenter):
                 type(order),))
 
         if cval == ia.ALL:
-            self.cval = iap.Uniform(0, 255) # skimage transform expects float
+            # TODO change this so that it is dynamically created per image (or once per dtype)
+            self.cval = iap.Uniform(0, 255)  # skimage transform expects float
         else:
-            self.cval = iap.handle_continuous_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
+            self.cval = iap.handle_continuous_param(cval, "cval", value_range=None, tuple_to_uniform=True,
                                                     list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
@@ -508,6 +536,9 @@ class Affine(meta.Augmenter):
             matrices = [None] * nb_images
         for i in sm.xrange(nb_images):
             image = images[i]
+
+            min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
             if ia.is_single_float(translate_y):
@@ -526,15 +557,15 @@ class Affine(meta.Augmenter):
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
                     or shear != 0:
                 cv2_bad_order = order not in [0, 1, 3]
-                cv2_bad_dtype = image.dtype not in [np.uint8, np.float32, np.float64]
+                cv2_bad_dtype = image.dtype.name not in self.VALID_DTYPES_CV2
+                cv2_bad_dtype = False
                 cv2_bad_shape = image.shape[2] > 4
                 cv2_impossible = cv2_bad_order or cv2_bad_dtype or cv2_bad_shape
                 if self.backend == "skimage" or (self.backend == "auto" and cv2_impossible):
                     # cval contains 3 values as cv2 can handle 3, but skimage only 1
                     cval = cval[0]
                     # skimage does not clip automatically
-                    if image.dtype == np.uint8:
-                        cval = np.clip(cval, 0, 255)
+                    cval = max(min(cval, max_value), min_value)
                     image_warped = self._warp_skimage(
                         image,
                         scale_x, scale_y,
@@ -713,6 +744,15 @@ class Affine(meta.Augmenter):
 
     def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
                       fit_output, return_matrix=False):
+        meta.gate_dtypes(image,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
+        input_dtype = image.dtype
+
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
@@ -740,9 +780,12 @@ class Affine(meta.Augmenter):
             preserve_range=True,
             output_shape=output_shape,
         )
-        # warp changes uint8 to float64, making this necessary
-        if image_warped.dtype != image.dtype:
-            image_warped = image_warped.astype(image.dtype, copy=False)
+
+        # tf.warp changes all dtypes to float64, including uint8
+        if input_dtype == np.bool_:
+            image_warped = image_warped > 0.5
+        else:
+            image_warped = meta.restore_dtypes_(image_warped, input_dtype)
 
         if return_matrix:
             return image_warped, matrix
@@ -750,6 +793,17 @@ class Affine(meta.Augmenter):
 
     def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
                   fit_output, return_matrix=False):
+        meta.gate_dtypes(image,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
+        input_dtype = image.dtype
+        if input_dtype in [np.bool_, np.float16]:
+            image = image.astype(np.float32)
+
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
@@ -781,6 +835,11 @@ class Affine(meta.Augmenter):
         # cv2 warp drops last axis if shape is (H, W, 1)
         if image_warped.ndim == 2:
             image_warped = image_warped[..., np.newaxis]
+
+        if input_dtype == np.bool_:
+            image_warped = image_warped > 0.5
+        elif input_dtype == np.float16:
+            image_warped = meta.restore_dtypes_(image_warped, input_dtype)
 
         if return_matrix:
             return image_warped, matrix
@@ -1374,23 +1433,24 @@ class PiecewiseAffine(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
-        * ``uint32``: yes; tested (1)
-        * ``uint64``: no (2)
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
-        * ``int32``: yes; tested (1)
-        * ``int64``: no (2)
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
-        * ``float64``: yes; tested
-        * ``float128``: no (2)
-        * ``bool``: yes; tested (3)
+        * ``uint16``: yes; tested (1)
+        * ``uint32``: yes; tested (1) (2)
+        * ``uint64``: no (3)
+        * ``int8``: yes; tested (1)
+        * ``int16``: yes; tested (1)
+        * ``int32``: yes; tested (1) (2)
+        * ``int64``: no (3)
+        * ``float16``: yes; tested (1)
+        * ``float32``: yes; tested (1)
+        * ``float64``: yes; tested (1)
+        * ``float128``: no (3)
+        * ``bool``: yes; tested (1) (4)
 
-        - (1) scikit-image converts internally to ``float64``, which might introduce inaccuracies.
+        - (1) Only tested with `order` set to 0.
+        - (2) scikit-image converts internally to ``float64``, which might introduce inaccuracies.
               Tests showed that these inaccuracies seemed to not be an issue.
-        - (2) results too inaccurate
-        - (3) mapped internally to ``float64``
+        - (3) results too inaccurate
+        - (4) mapped internally to ``float64``
 
     Parameters
     ----------
@@ -1537,6 +1597,13 @@ class PiecewiseAffine(meta.Augmenter):
         self.absolute_scale = absolute_scale
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
         result = images
         nb_images = len(images)
 
@@ -1842,6 +1909,13 @@ class PerspectiveTransform(meta.Augmenter):
         self.keep_size = keep_size
 
     def _augment_images(self, images, random_state, parents, hooks):
+        meta.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
         result = images
         if not self.keep_size:
             result = list(result)
