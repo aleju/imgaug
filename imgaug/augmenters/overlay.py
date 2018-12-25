@@ -307,7 +307,13 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
         nb_heatmaps = len(heatmaps)
-        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+        if nb_heatmaps == 0:
+            return heatmaps
+
+        nb_channels = meta.estimate_max_number_of_channels(heatmaps)
+        rss = ia.derive_random_states(random_state, 2)
+        per_channel = self.per_channel.draw_samples(nb_heatmaps, random_state=rss[0])
+        alphas = self.factor.draw_samples((nb_heatmaps, nb_channels), random_state=rss[1])
 
         if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -331,32 +337,35 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             heatmaps_first = heatmaps
             heatmaps_second = heatmaps
 
-        for i in sm.xrange(nb_heatmaps):
-            heatmaps_first_i = heatmaps_first[i]
-            heatmaps_second_i = heatmaps_second[i]
-            rs_image = ia.new_random_state(seeds[i])
+        for i, (heatmaps_first_i, heatmaps_second_i) in enumerate(zip(heatmaps_first, heatmaps_second)):
             # sample alphas channelwise if necessary and try to use the image's channel number
             # values properly synchronized with the image augmentation
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel > 0.5:
-                nb_channels = heatmaps[i].shape[2] if len(heatmaps[i].shape) >= 3 else 1
-                samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
-                sample = np.average(samples)
+            # per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel[i] > 0.5:
+                nb_channels_i = heatmaps[i].shape[2] if len(heatmaps[i].shape) >= 3 else 1
+                alpha = np.average(alphas[i, 0:nb_channels_i])
             else:
-                sample = self.factor.draw_sample(random_state=rs_image)
-                ia.do_assert(0 <= sample <= 1.0)
+                alpha = alphas[i, 0]
+            ia.do_assert(0 <= alpha <= 1.0)
 
-            mask = sample >= 0.5
-            heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
-
-            result[i].arr_0to1 = heatmaps_arr_aug
+            if alpha >= 0.5:
+                result[i].arr_0to1 = heatmaps_first_i.arr_0to1
+            else:
+                result[i].arr_0to1 = heatmaps_second_i.arr_0to1
 
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        result = keypoints_on_images
         nb_images = len(keypoints_on_images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
+        if nb_images == 0:
+            return keypoints_on_images
+
+        nb_channels = meta.estimate_max_number_of_channels(keypoints_on_images)
+        rss = ia.derive_random_states(random_state, 2)
+        per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
+        alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
+
+        result = keypoints_on_images
 
         if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -380,28 +389,24 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             kps_ois_first = keypoints_on_images
             kps_ois_second = keypoints_on_images
 
-        for i in sm.xrange(nb_images):
-            kps_oi_first = kps_ois_first[i]
-            kps_oi_second = kps_ois_second[i]
-            rs_image = ia.new_random_state(seeds[i])
+        for i, (kps_oi_first, kps_oi_second) in enumerate(zip(kps_ois_first, kps_ois_second)):
             # keypoint augmentation also works channel-wise, even though
             # keypoints do not have channels, in order to keep the random
             # values properly synchronized with the image augmentation
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel > 0.5:
-                nb_channels = keypoints_on_images[i].shape[2]
-                samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
-                sample = np.average(samples)
+            # per_channel = self.per_channel.draw_sample(random_state=rs_image)
+            if per_channel[i] > 0.5:
+                nb_channels_i = keypoints_on_images[i].shape[2] if len(keypoints_on_images[i].shape) >= 3 else 1
+                alpha = np.average(alphas[i, 0:nb_channels_i])
             else:
-                sample = self.factor.draw_sample(random_state=rs_image)
-                ia.do_assert(0 <= sample <= 1.0)
+                alpha = alphas[i, 0]
+            ia.do_assert(0 <= alpha <= 1.0)
 
             # We cant choose "just a bit" of one keypoint augmentation result
             # without messing up the positions (interpolation doesn't make much
             # sense here),
             # so if the alpha is >= 0.5 (branch A is more visible than
             # branch B), the result of branch A, otherwise branch B.
-            if sample >= 0.5:
+            if alpha >= 0.5:
                 result[i] = kps_oi_first
             else:
                 result[i] = kps_oi_second

@@ -303,15 +303,15 @@ def invert_reduce_to_nonempty(objs, ids, objs_reduced):
 
 
 def estimate_max_number_of_channels(images):
-    if len(images) == 0:
-        return None
-    elif ia.is_np_array(images):
+    if ia.is_np_array(images):
         assert images.ndim == 4
         return images.shape[3]
     else:
-        channels = [estimate_max_number_of_channels(image[np.newaxis, ...]) for image in images]
-        channels = [channels_i for channels_i in channels if channels_i is not None]
-        return max(channels) if len(channels) > 0 else None
+        assert ia.is_iterable(images)
+        if len(images) == 0:
+            return None
+        channels = [el.shape[2] if len(el.shape) >= 3 else 1 for el in images]
+        return max(channels)
 
 
 @six.add_metaclass(ABCMeta)
