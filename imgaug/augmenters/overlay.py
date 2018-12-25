@@ -750,19 +750,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False, size_px_max=(2
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See ``imgaug.augmenters.overlay.AlphaElementwise``.
 
     Parameters
     ----------
@@ -951,19 +939,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=F
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See ``imgaug.augmenters.overlay.AlphaElementwise``.
 
     Parameters
     ----------
