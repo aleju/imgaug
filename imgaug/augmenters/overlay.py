@@ -101,7 +101,7 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     alpha = np.array(alpha, dtype=np.float64)
     alpha = alpha.reshape((1, 1, -1))
     if alpha.shape[2] != image_fg.shape[2]:
-        alpha = np.tile(alpha, (1, 1, image_fg.shape))
+        alpha = np.tile(alpha, (1, 1, image_fg.shape[2]))
 
     if not input_was_bool:
         if np.all(alpha >= 1.0 - eps):
@@ -154,19 +154,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.augmenters.overlay.blend_alpha`.
 
     Parameters
     ----------
@@ -258,6 +246,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
     """
 
+    # TODO rename first/second to foreground/background?
     def __init__(self, factor=0, first=None, second=None, per_channel=False,
                  name=None, deterministic=False, random_state=None):
         super(Alpha, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
@@ -273,12 +262,15 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
-        self.epsilon = 0.01
+        self.epsilon = 1e-2
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
+        nb_channels = meta.estimate_max_number_of_channels(images)
+        rss = ia.derive_random_states(random_state, 2)
+        per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
+        alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
         if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -302,43 +294,14 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             images_first = images
             images_second = images
 
-        for i in sm.xrange(nb_images):
-            image = images[i]
-            image_first = images_first[i]
-            image_second = images_second[i]
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            input_dtype = image.dtype
-            if per_channel == 1:
-                nb_channels = image.shape[2]
-                samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
-                for c, sample in enumerate(samples):
-                    ia.do_assert(0 <= sample <= 1.0)
-                    # if the value is nearly 1.0 or 0.0 skip the computation
-                    # and just use only the first/second image
-                    if sample >= 1.0 - self.epsilon:
-                        image[..., c] = image_first[..., c]
-                    elif sample <= 0.0 + self.epsilon:
-                        image[..., c] = image_second[..., c]
-                    else:
-                        image[..., c] = sample * image_first[..., c] + (1 - sample) * image_second[..., c]
-                # TODO change this to meta.clip_* and meta.restore_*
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(input_dtype)
+        for i, (image_first, image_second) in enumerate(zip(images_first, images_second)):
+            if per_channel[i] > 0.5:
+                nb_channels_i = image_first.shape[2]
+                alphas_i = alphas[i, 0:nb_channels_i]
             else:
-                sample = self.factor.draw_sample(random_state=rs_image)
-                ia.do_assert(0 <= sample <= 1.0)
-                # if the value is nearly 1.0 or 0.0 skip the computation
-                # and just use only the first/second image
-                if sample >= 1.0 - self.epsilon:
-                    image = image_first
-                elif sample <= 0.0 + self.epsilon:
-                    image = image_second
-                else:
-                    image = sample * image_first + (1 - sample) * image_second
-                # TODO change this to meta.clip_* and meta.restore_*
-                np.clip(image, 0, 255, out=image)
-                result[i] = image.astype(input_dtype)
+                alphas_i = alphas[i, 0]
+
+            result[i] = blend_alpha(image_first, image_second, alphas_i, eps=self.epsilon)
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
@@ -375,7 +338,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             # sample alphas channelwise if necessary and try to use the image's channel number
             # values properly synchronized with the image augmentation
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
+            if per_channel > 0.5:
                 nb_channels = heatmaps[i].shape[2] if len(heatmaps[i].shape) >= 3 else 1
                 samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
                 sample = np.average(samples)
@@ -425,7 +388,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             # keypoints do not have channels, in order to keep the random
             # values properly synchronized with the image augmentation
             per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
+            if per_channel > 0.5:
                 nb_channels = keypoints_on_images[i].shape[2]
                 samples = self.factor.draw_samples((nb_channels,), random_state=rs_image)
                 sample = np.average(samples)

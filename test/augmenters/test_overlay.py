@@ -98,12 +98,23 @@ def test_blend_linear():
             assert img_blend.shape == (3, 3, 1)
             assert np.all(img_blend == dtype(v2))
 
-            img_fg = np.full((3, 3, 1), v1, dtype=dtype)
-            img_bg = np.full((3, 3, 1), v2, dtype=dtype)
+            for c in sm.xrange(3):
+                img_fg = np.full((3, 3, c), v1, dtype=dtype)
+                img_bg = np.full((3, 3, c), v2, dtype=dtype)
+                img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
+                assert img_blend.dtype.name == np.dtype(dtype)
+                assert img_blend.shape == (3, 3, c)
+                for ci in sm.xrange(c):
+                    v_blend = min(max(int(0.75*np.float128(v1) + 0.25*np.float128(v2)), min_value), max_value)
+                    diff = v_blend - img_blend if v_blend > img_blend[0, 0, ci] else img_blend - v_blend
+                    assert np.all(diff < 1.01)
+
+            img_fg = np.full((3, 3, 2), v1, dtype=dtype)
+            img_bg = np.full((3, 3, 2), v2, dtype=dtype)
             img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
-            assert img_blend.shape == (3, 3, 1)
-            v_blend = min(max(int(0.75*np.float128(v1) + 0.25*np.float128(v2)), min_value), max_value)
+            assert img_blend.shape == (3, 3, 2)
+            v_blend = min(max(int(0.75 * np.float128(v1) + 0.25 * np.float128(v2)), min_value), max_value)
             diff = v_blend - img_blend if v_blend > img_blend[0, 0, 0] else img_blend - v_blend
             assert np.all(diff < 1.01)
 
@@ -163,12 +174,13 @@ def test_blend_linear():
             assert img_blend.shape == (3, 3, 1)
             assert _allclose(img_blend, np.float128(v2))
 
-            img_fg = np.full((3, 3, 1), v1, dtype=dtype)
-            img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
-            assert img_blend.dtype.name == np.dtype(dtype)
-            assert img_blend.shape == (3, 3, 1)
-            assert _allclose(img_blend, 0.75*np.float128(v1) + 0.25*np.float128(v2))
+            for c in sm.xrange(3):
+                img_fg = np.full((3, 3, c), v1, dtype=dtype)
+                img_bg = np.full((3, 3, c), v2, dtype=dtype)
+                img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
+                assert img_blend.dtype.name == np.dtype(dtype)
+                assert img_blend.shape == (3, 3, c)
+                assert _allclose(img_blend, 0.75*np.float128(v1) + 0.25*np.float128(v2))
 
             img_fg = np.full((3, 3, 2), v1, dtype=dtype)
             img_bg = np.full((3, 3, 2), v2, dtype=dtype)
