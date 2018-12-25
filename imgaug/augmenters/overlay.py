@@ -30,6 +30,112 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
+def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
+    """
+    Blend two images using an alpha blending.
+
+    In an alpha blending, the two images are naively mixed. Let ``A`` be the foreground image
+    and ``B`` the background image and ``a`` is the alpha value. Each pixel intensity is then
+    computed as ``a * A_ij + (1-a) * B_ij``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested (1)
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
+        * ``int32``: yes; fully tested
+        * ``int64``: yes; fully tested (1)
+        * ``float16``: yes; fully tested
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: no (2)
+        * ``bool``: yes; fully tested (2)
+
+        - (1) Tests show that these dtypes work, but a conversion to float128 happens, which only
+              has 96 bits of size instead of true 128 bits and hence not twice as much resolution.
+              It is possible that these dtypes result in inaccuracies.
+        - (2) Not available due to the input dtype having to be increased to an equivalent float
+              dtype with two times the input resolution.
+        - (3) Mapped internally to ``float16``.
+
+    Parameters
+    ----------
+    image_fg : (H,W,C) ndarray
+        Foreground image. Channel axis must be provided. Shape and dtype kind must match the one
+        of the background image.
+
+    image_bg : (H,W,C) ndarray
+        Background image. Channel axis must be provided. Shape and dtype kind must match the one
+        of the foreground image.
+
+    alpha : number or iterable of number
+        The blending factor between 0.0 and 1.0. Can be interpreted as the opacity of the
+        foreground image. Values around 1.0 result in only the foreground image being visible.
+        Values around 0.0 result in only the background image being visible.
+        Multiple alphas may be provided. In these cases, there must be exactly one alpha per
+        channel in the foreground/background image.
+
+    eps : number, optional
+        Controls when an alpha is to be interpreted as exactly 1.0 or exactly 0.0, resulting
+        in only the foreground/background being visible and skipping the actual computation.
+
+
+    Returns
+    -------
+    image_blend : (H,W,C) ndarray
+        Blend of foreground and background image.
+
+    """
+    assert image_fg.shape == image_bg.shape
+    assert image_fg.dtype.kind == image_bg.dtype.kind
+
+    input_was_bool = False
+    if image_fg.dtype.kind == "b":
+        input_was_bool = True
+        image_fg = image_fg.astype(np.float16)
+        image_bg = image_bg.astype(np.float16)
+
+    alpha = np.array(alpha, dtype=np.float64)
+    alpha = alpha.reshape((1, 1, -1))
+    if alpha.shape[2] != image_fg.shape[2]:
+        alpha = np.tile(alpha, (1, 1, image_fg.shape))
+
+    if not input_was_bool:
+        if np.all(alpha >= 1.0 - eps):
+            return np.copy(image_fg)
+        elif np.all(alpha <= eps):
+            return np.copy(image_bg)
+    assert np.all(np.logical_and(0 <= alpha, alpha <= 1.0))
+
+    dt_images = meta.get_minimal_dtype([image_fg, image_bg])
+
+    # doing this only for non-float images led to inaccuracies for large floats values
+    isize = dt_images.itemsize * 2
+    dt_blend = np.dtype("f%d" % (isize,))
+
+    if alpha.dtype != dt_blend:
+        alpha = alpha.astype(dt_blend)
+    if image_fg.dtype != dt_blend:
+        image_fg = image_fg.astype(dt_blend)
+    if image_bg.dtype != dt_blend:
+        image_bg = image_bg.astype(dt_blend)
+
+    # the following is equivalent to
+    #     image_blend = alpha * image_fg + (1 - alpha) * image_bg
+    # but supposedly faster
+    image_blend = image_bg + alpha * (image_fg - image_bg)
+
+    if input_was_bool:
+        image_blend = image_blend > 0.5
+    else:
+        image_blend = meta.restore_dtypes_(image_blend, dt_images)
+
+    return image_blend
+
+
 class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Augmenter to overlay two image sources with each other using an
