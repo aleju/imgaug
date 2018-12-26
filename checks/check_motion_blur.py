@@ -25,7 +25,6 @@ def main():
 
     for angle in cycle(np.arange(0, 360, DEG_PER_STEP)):
         rad = np.deg2rad(angle-90)
-        #print(deg, rad)
         point_x = int(center_x + r * np.cos(rad))
         point_y = int(center_y + r * np.sin(rad))
 
@@ -35,7 +34,6 @@ def main():
             point_y-POINT_SIZE:point_y+POINT_SIZE+1,
             point_x-POINT_SIZE:point_x+POINT_SIZE+1,
             :] = np.array([0, 255, 0])
-        #print(point_x, point_y)
 
         aug_inv = iaa.MotionBlur(k=35, angle=angle, direction=1.0)
         img_aug_inv = aug_inv.augment_image(image)
@@ -43,7 +41,6 @@ def main():
             point_y - POINT_SIZE:point_y + POINT_SIZE + 1,
             point_x - POINT_SIZE:point_x + POINT_SIZE + 1,
             :] = np.array([0, 255, 0])
-        # print(point_x, point_y)
 
         cv2.imshow("aug", np.hstack([img_aug[:, :, ::-1], img_aug_inv[:, :, ::-1]]))
         cv2.waitKey(TIME_PER_STEP)

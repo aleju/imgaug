@@ -1,10 +1,11 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
 import numpy as np
 from skimage import data
 import cv2
-from itertools import cycle
+
+import imgaug as ia
+from imgaug import augmenters as iaa
 
 VAL_PER_STEP = 1
 TIME_PER_STEP = 10

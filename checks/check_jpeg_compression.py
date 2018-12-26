@@ -1,8 +1,10 @@
 from __future__ import print_function, division
 
+import numpy as np
+
 import imgaug as ia
 from imgaug import augmenters as iaa
-import numpy as np
+
 
 def main():
     augs = [
@@ -25,6 +27,7 @@ def main():
         print(i, name)
         images_aug = aug.augment_images(images)
         ia.imshow(ia.draw_grid(images_aug, cols=5, rows=5))
+
 
 if __name__ == "__main__":
     main()

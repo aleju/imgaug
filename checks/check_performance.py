@@ -155,6 +155,8 @@ Images
 (16, 32, 32, 3)      | SUM 3.69956s | PER ITER avg 0.03700s, min 0.01358s, max 0.06233s
 (16, 256, 256, 3)    | SUM 212.91776s | PER ITER avg 2.12918s, min 0.57114s, max 3.95389s
 """
+
+
 def main():
     augmenters = [
         iaa.Noop(name="Noop"),
@@ -215,9 +217,6 @@ def main():
         y = random.randint(0, 31)
         kps.append(ia.Keypoint(x=x, y=y))
     kps = ia.KeypointsOnImage(kps, shape=(32, 32, 3))
-    #small_keypoints_one = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=3, y=3)], shape=(4, 4, 3))
-    #medium_keypoints_one = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=16, y=16), ia.Keypoint(x=31, y=31)], shape=(32, 32, 3))
-    #large_keypoints_one = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=128, y=128), ia.Keypoint(x=255, y=255)], shape=(256, 256, 3))
     small_keypoints_one = kps.on((4, 4, 3))
     medium_keypoints_one = kps.on((32, 32, 3))
     large_keypoints_one = kps.on((256, 256, 3))
@@ -238,12 +237,13 @@ def main():
             times = []
             for i in sm.xrange(100):
                 time_start = time.time()
-                img_aug = augmenter.augment_keypoints(keypoints)
+                _img_aug = augmenter.augment_keypoints(keypoints)
                 time_end = time.time()
                 times.append(time_end - time_start)
             times = np.array(times)
             img_str = "{:20s}".format(keypoints[0].shape)
-            print("%s | SUM %.5fs | PER ITER avg %.5fs, min %.5fs, max %.5fs" % (img_str, np.sum(times), np.average(times), np.min(times), np.max(times)))
+            print("%s | SUM %.5fs | PER ITER avg %.5fs, min %.5fs, max %.5fs" % (
+                img_str, float(np.sum(times)), np.average(times), np.min(times), np.max(times)))
 
     print("---------------------------")
     print("Images")
@@ -254,12 +254,14 @@ def main():
             times = []
             for i in sm.xrange(100):
                 time_start = time.time()
-                img_aug = augmenter.augment_images(images)
+                _img_aug = augmenter.augment_images(images)
                 time_end = time.time()
                 times.append(time_end - time_start)
             times = np.array(times)
             img_str = "{:20s}".format(images.shape)
-            print("%s | SUM %.5fs | PER ITER avg %.5fs, min %.5fs, max %.5fs" % (img_str, np.sum(times), np.average(times), np.min(times), np.max(times)))
+            print("%s | SUM %.5fs | PER ITER avg %.5fs, min %.5fs, max %.5fs" % (
+                img_str, float(np.sum(times)), np.average(times), np.min(times), np.max(times)))
+
 
 if __name__ == "__main__":
     main()

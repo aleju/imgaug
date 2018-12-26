@@ -1,8 +1,11 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
 import numpy as np
 from skimage import data
+
+import imgaug as ia
+from imgaug import augmenters as iaa
+
 
 def main():
     img = data.astronaut()
@@ -25,6 +28,7 @@ def main():
 
     all_rows = np.vstack([unseeded1, unseeded2, seeded1, seeded2, reseeded1, reseeded2, reseeded3, reseeded4])
     ia.imshow(all_rows)
+
 
 if __name__ == "__main__":
     main()

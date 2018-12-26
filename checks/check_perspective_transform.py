@@ -1,7 +1,10 @@
 from __future__ import print_function, division
+
+import numpy as np
+
 import imgaug as ia
 from imgaug import augmenters as iaa
-import numpy as np
+
 
 def main():
     image = ia.quokka(size=0.5)
@@ -34,9 +37,7 @@ def main():
             kps_aug = aug_det.augment_keypoints(kps)[0]
             img_aug_kps = kps_aug.draw_on_image(img_aug)
             img_aug_kps = np.pad(img_aug_kps, ((1, 1), (1, 1), (0, 0)), mode="constant", constant_values=255)
-            #print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
             images_aug.append(img_aug_kps)
-            #ia.imshow(img_aug_kps)
         print(aug.name)
         ia.imshow(ia.draw_grid(images_aug))
 
@@ -48,6 +49,7 @@ def main():
     ia.imshow(
         np.hstack([image6_aug[..., 0:3], image6_aug[..., 3:6]])
     )
+
 
 if __name__ == "__main__":
     main()

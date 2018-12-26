@@ -5,15 +5,22 @@ Run checks via
 """
 from __future__ import print_function, division
 
-import imgaug as ia
-from imgaug import augmenters as iaa
+import argparse
+
 import numpy as np
 from skimage import data
-import argparse
+
+import imgaug as ia
+from imgaug import augmenters as iaa
+
 
 def main():
     parser = argparse.ArgumentParser(description="Check augmenters visually.")
-    parser.add_argument('--only', default=None, help="If this is set, then only the results of an augmenter with this name will be shown. Optionally, comma-separated list.", required=False)
+    parser.add_argument(
+        "--only", default=None,
+        help="If this is set, then only the results of an augmenter with this name will be shown. "
+             "Optionally, comma-separated list.",
+        required=False)
     args = parser.parse_args()
 
     images = [
@@ -53,7 +60,6 @@ def main():
         )
     ]
 
-    # missing: InColorspace, Lambda, AssertLambda, AssertShape, Convolve
     augmenters = [
         iaa.Sequential([
             iaa.CoarseDropout(p=0.5, size_percent=0.05),
@@ -165,18 +171,12 @@ def main():
             name="AlphaElementwiseAffine"
         ),
         iaa.SimplexNoiseAlpha(
-            #first=iaa.GaussianBlur((1.0, 3.0)),
-            #first=iaa.MedianBlur((3, 7)),
             first=iaa.EdgeDetect(1.0),
-            #first=iaa.Affine(rotate=-45), #(-45, 45)),
             per_channel=False,
             name="SimplexNoiseAlpha"
         ),
         iaa.FrequencyNoiseAlpha(
-            #first=iaa.GaussianBlur((1.0, 3.0)),
-            #first=iaa.MedianBlur((3, 7)),
             first=iaa.EdgeDetect(1.0),
-            #first=iaa.Affine(rotate=-45), #(-45, 45)),
             per_channel=False,
             name="FrequencyNoiseAlpha"
         )
@@ -198,6 +198,7 @@ def main():
                 imgs_aug_drawn = [bbs_aug_one.draw_on_image(img_aug) for img_aug, bbs_aug_one in zip(imgs_aug_drawn, bbs_aug)]
                 grid.append(np.hstack(imgs_aug_drawn))
             ia.imshow(np.vstack(grid))
+
 
 if __name__ == "__main__":
     main()

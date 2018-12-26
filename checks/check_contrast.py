@@ -1,12 +1,12 @@
-import os
-import sys
-#sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + '/..'))
+from __future__ import print_function, division
+import argparse
+
+import numpy as np
+from skimage import data
+
 import imgaug as ia
 from imgaug import augmenters as iaa
-from skimage import data
-import numpy as np
-from scipy import misc
-import argparse
+
 
 def main():
     parser = argparse.ArgumentParser(description="Contrast check script")
@@ -21,7 +21,7 @@ def main():
         for gain in [5, 10, 15, 20, 25]:
             augs.append(("SigmoidContrast " + str(cutoff) + " " + str(gain), iaa.SigmoidContrast(gain, cutoff, per_channel=args.per_channel)))
 
-    for gain in [-1.0, 0.0, 0.25, 0.5, 1.0, 2.0, (0.5, 1.5), [0.5, 1.0, 1.5]]:
+    for gain in [0.0, 0.25, 0.5, 1.0, 2.0, (0.5, 1.5), [0.5, 1.0, 1.5]]:
         augs.append(("LogContrast " + str(gain), iaa.LogContrast(gain, per_channel=args.per_channel)))
 
     for alpha in [-1.0, 0.5, 0, 0.5, 1.0, 2.0, (0.5, 1.5), [0.5, 1.0, 1.5]]:
@@ -36,6 +36,7 @@ def main():
         images_aug = aug.augment_images(images)
         grid = ia.draw_grid(images_aug, rows=4, cols=4)
         ia.imshow(grid)
+
 
 if __name__ == "__main__":
     main()

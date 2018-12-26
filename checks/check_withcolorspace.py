@@ -1,8 +1,11 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
 import numpy as np
 from skimage import data
+
+import imgaug as ia
+from imgaug import augmenters as iaa
+
 
 def main():
     image = data.astronaut()
@@ -22,6 +25,7 @@ def main():
         aug_no_colorspace.augment_image(image)
     ])
     ia.imshow(img_show)
+
 
 if __name__ == "__main__":
     main()

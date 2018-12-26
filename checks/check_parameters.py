@@ -9,6 +9,7 @@ from imgaug.parameters import (
 )
 import numpy as np
 
+
 def main():
     params = [
         ("Binomial(0.1)", Binomial(0.1)),
@@ -78,6 +79,7 @@ def main():
     ia.imshow(np.vstack(images_params))
     ia.imshow(np.vstack(images_arithmetic))
     ia.imshow(np.vstack(images_noise))
+
 
 if __name__ == "__main__":
     main()

@@ -1,18 +1,22 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
+import time
+from itertools import cycle
+
+import cv2
 import numpy as np
 from skimage import data
-import cv2
-from itertools import cycle
-import time
+
+import imgaug as ia
+from imgaug import augmenters as iaa
 
 POINT_SIZE = 5
 SEGMENTS_PER_STEP = 1
 TIME_PER_STEP = 10
 
+
 def main():
-    image = data.astronaut()[...,::-1] # rgb2bgr
+    image = data.astronaut()[..., ::-1]  # rgb2bgr
     print(image.shape)
 
     cv2.namedWindow("aug", cv2.WINDOW_NORMAL)
@@ -28,6 +32,7 @@ def main():
 
         cv2.imshow("aug", img_aug)
         cv2.waitKey(TIME_PER_STEP)
+
 
 if __name__ == "__main__":
     main()

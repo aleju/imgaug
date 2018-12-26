@@ -10,8 +10,10 @@ def main():
     image = imageio.imread("https://upload.wikimedia.org/wikipedia/commons/8/89/Kukle%2CCzech_Republic..jpg",
                            format="jpg")
     augs = [
-        #("iaa.SnowflakesLayer()", iaa.SnowflakesLayer(density=0.05, flake_size=0.9, angle=(-45, 45), speed=(0.001, 0.04), blur_sigma1_fraction=(0.0001, 0.001), blur_sigma2_fraction=(0.001, 0.05)))
-        ("iaa.SnowflakesLayer()", iaa.SnowflakesLayer(density=0.05, density_uniformity=0.5, flake_size=0.9, flake_size_uniformity=0.5, angle=(-45, 45), speed=(0.001, 0.04), blur_sigma_fraction=(0.75*0.0001, 0.75*0.001)))
+        ("iaa.SnowflakesLayer()", iaa.SnowflakesLayer(
+            density=0.05, density_uniformity=0.5, flake_size=0.9, flake_size_uniformity=0.5,
+            angle=(-45, 45), speed=(0.001, 0.04), blur_sigma_fraction=(0.75*0.0001, 0.75*0.001))
+         )
     ]
 
     for descr, aug in augs:

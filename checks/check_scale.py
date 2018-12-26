@@ -1,9 +1,12 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
+import cv2
 import numpy as np
 from skimage import data
-import cv2
+
+import imgaug as ia
+from imgaug import augmenters as iaa
+
 
 def main():
     # test 2d image
@@ -68,7 +71,6 @@ def main():
             img_aug = aug_det.augment_image(image)
             kps_aug = aug_det.augment_keypoints(kps)[0]
             img_aug_kps = kps_aug.draw_on_image(img_aug)
-            #print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
             images_aug.append(img_aug_kps)
         print(aug.name)
         ia.imshow(ia.draw_grid(images_aug))
@@ -82,6 +84,7 @@ def main():
 
     print("random nearest/cubic")
     iaa.Scale(64, interpolation=["nearest", "cubic"]).show_grid([image], 8, 8)
+
 
 if __name__ == "__main__":
     main()

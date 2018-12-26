@@ -1,9 +1,12 @@
 from __future__ import print_function, division
-import imgaug as ia
-from imgaug import augmenters as iaa
+
 import numpy as np
 
+import imgaug as ia
+from imgaug import augmenters as iaa
+
 ia.seed(3)
+
 
 def main():
     image = ia.quokka(size=0.5)
@@ -14,35 +17,19 @@ def main():
                 ia.Keypoint(x=123, y=102),
                 ia.Keypoint(x=182, y=98),
                 ia.Keypoint(x=155, y=134),
-
-                #ia.Keypoint(x=255, y=213),
-                #ia.Keypoint(x=375, y=205),
-                #ia.Keypoint(x=323, y=279),
-
-                #ia.Keypoint(x=265, y=223),
-                #ia.Keypoint(x=385, y=215),
-                #ia.Keypoint(x=333, y=289),
-
-                #ia.Keypoint(x=275, y=233),
-                #ia.Keypoint(x=395, y=225),
-                #ia.Keypoint(x=343, y=299),
-
                 ia.Keypoint(x=-20, y=20)
             ],
             shape=(image.shape[0], image.shape[1])
         )
     ]
-    #kps[0] = kps[0].on(image.shape)
     print("image shape:", image.shape)
 
     augs = [
-        #iaa.PiecewiseAffine(scale=0),
         iaa.PiecewiseAffine(scale=0.05),
         iaa.PiecewiseAffine(scale=0.1),
         iaa.PiecewiseAffine(scale=0.2)
     ]
 
-    #print("original", image.shape)
     ia.imshow(kps[0].draw_on_image(image))
 
     print("-----------------")
@@ -54,15 +41,14 @@ def main():
             aug_det = aug.to_deterministic()
             img_aug = aug_det.augment_image(image)
             kps_aug = aug_det.augment_keypoints(kps)[0]
-            #img_aug_kps = kps_aug.draw_on_image(img_aug)
             img_aug_kps = keypoints_draw_on_image(kps_aug, img_aug)
             img_aug_kps = np.pad(img_aug_kps, ((1, 1), (1, 1), (0, 0)), mode="constant", constant_values=255)
-            #print(aug.name, img_aug_kps.shape, img_aug_kps.shape[1]/img_aug_kps.shape[0])
             images_aug.append(img_aug_kps)
-            #ia.imshow(img_aug_kps)
         print(aug.name)
         ia.imshow(ia.draw_grid(images_aug))
 
+
+# TODO why was this used here?
 def keypoints_draw_on_image(kps, image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False, border=50):
     if copy:
         image = np.copy(image)
@@ -89,6 +75,7 @@ def keypoints_draw_on_image(kps, image, color=[0, 255, 0], size=3, copy=True, ra
                 raise Exception("Cannot draw keypoint x=%d, y=%d on image with shape %s." % (y, x, image.shape))
 
     return image
+
 
 if __name__ == "__main__":
     main()
