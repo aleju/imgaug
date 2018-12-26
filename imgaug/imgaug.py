@@ -771,6 +771,7 @@ def quokka_bounding_boxes(size=None, extract=None):
     -------
     bbsoi : imgaug.BoundingBoxesOnImage
         Example BBs on the quokka image.
+
     """
     left, top = 0, 0
     if extract is not None:
