@@ -36,7 +36,7 @@ class Superpixels(meta.Augmenter):
 
     dtype support::
 
-        if (image height and width < `max_size`)::
+        if (image size less than max_size)::
 
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested
@@ -59,9 +59,9 @@ class Superpixels(meta.Augmenter):
 
         else::
 
-            minimum_of (
-                imgaug.augmenters.segmentation.Superpixels(image height and width < `max_size`),
-                imgaug.imgaug.imresize_many_images(interpolation=`interpolation`)
+            minimum of (
+                ``imgaug.augmenters.segmentation.Superpixels(image size less than max_size)``,
+                :func:`imgaug.imgaug.imresize_many_images`
             )
 
     Parameters
@@ -113,7 +113,7 @@ class Superpixels(meta.Augmenter):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imresize_single_image`.
+        :func:`imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.

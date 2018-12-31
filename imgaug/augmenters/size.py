@@ -473,8 +473,8 @@ class CropAndPad(meta.Augmenter):
         if (keep_size=True)::
 
             minimum of (
-                imgaug.augmenters.size.CropAndPad(keep_size=False),
-                imgaug.imgaug.imresize_many_images
+                ``imgaug.augmenters.size.CropAndPad(keep_size=False)``,
+                :func:`imgaug.imgaug.imresize_many_images`
             )
 
     Parameters
@@ -1746,7 +1746,7 @@ class KeepSizeByResize(meta.Augmenter):
 
     dtype support::
 
-        See ``imgaug.imresize_many_images``.
+        See :func:`imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -1757,7 +1757,7 @@ class KeepSizeByResize(meta.Augmenter):
                     {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or\
                     list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing images.
-        Can take any value that :func:`imgaug.imresize_single_image` accepts, e.g. ``cubic``.
+        Can take any value that :func:`imgaug.imgaug.imresize_single_image` accepts, e.g. ``cubic``.
 
             * If this is KeepSizeByResize.NO_RESIZE then images will not be resized.
             * If this is a single string, it is expected to have one of the following values: ``nearest``, ``linear``,

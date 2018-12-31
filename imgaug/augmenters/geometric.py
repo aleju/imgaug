@@ -64,6 +64,7 @@ class Affine(meta.Augmenter):
     dtype support::
 
         If (backend="skimage")::
+
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested (1)
             * ``uint32``: yes; tested (1) (2)
@@ -99,6 +100,7 @@ class Affine(meta.Augmenter):
             * ``float128``: no (2)
             * ``bool``: yes; tested (1) (4)
 
+            - (1) only tested with `order` set to 0.
             - (2) rejected by cv2
             - (3) changed to ``int32`` by cv2
             - (4) mapped internally to ``float32``
@@ -1853,8 +1855,8 @@ class PerspectiveTransform(meta.Augmenter):
         else::
 
             minimum of (
-                imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False),
-                imgaug.imresize_many_images
+                ``imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False)``,
+                :func:`imgaug.imgaug.imresize_many_images`
             )
 
     Parameters
@@ -2550,7 +2552,7 @@ class Rot90(meta.Augmenter):
 
     dtype support::
 
-        if (keep_size=False or k is even)::
+        if (keep_size=False)::
 
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested
@@ -2568,9 +2570,9 @@ class Rot90(meta.Augmenter):
 
         else::
 
-            minimum_of (
-                imgaug.augmenters.geometric.Rot90(keep_size=False or k is even),
-                imgaug.imgaug.imresize_many_images
+            minimum of (
+                ``imgaug.augmenters.geometric.Rot90(keep_size=False)``,
+                :func:`imgaug.imgaug.imresize_many_images`
             )
 
     Parameters

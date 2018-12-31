@@ -570,7 +570,7 @@ def quokka(size=None, extract=None):
     Parameters
     ----------
     size : None or float or tuple of int, optional
-        Size of the output image. Input into :func:`imgaug.imresize_single_image`.
+        Size of the output image. Input into :func:`imgaug.imgaug.imresize_single_image`.
         Usually expected to be a tuple ``(H, W)``, where ``H`` is the desired height
         and ``W`` is the width. If None, then the image will not be resized.
 
@@ -610,7 +610,7 @@ def quokka_square(size=None):
     Parameters
     ----------
     size : None or float or tuple of int, optional
-        Size of the output image. Input into :func:`imgaug.imresize_single_image`.
+        Size of the output image. Input into :func:`imgaug.imgaug.imresize_single_image`.
         Usually expected to be a tuple ``(H, W)``, where ``H`` is the desired height
         and ``W`` is the width. If None, then the image will not be resized.
 
@@ -1178,10 +1178,10 @@ def imresize_single_image(image, sizes, interpolation=None):
         Usually recommended to be of dtype uint8.
 
     sizes : float or iterable of int or iterable of float
-        See :func:`imgaug.imresize_many_images`.
+        See :func:`imgaug.imgaug.imresize_many_images`.
 
     interpolation : None or str or int, optional
-        See :func:`imgaug.imresize_many_images`.
+        See :func:`imgaug.imgaug.imresize_many_images`.
 
     Returns
     -------
@@ -1476,7 +1476,7 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.avg_pool`.
+        See :func:`imgaug.imgaug.pool`.
 
     Parameters
     ----------
@@ -1507,7 +1507,7 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.max_pool`.
+        See :func:`imgaug.imgaug.pool`.
 
     Parameters
     ----------
@@ -1625,8 +1625,8 @@ def show_grid(images, rows=None, cols=None):
 
     dtype support::
 
-        minimum_of(
-            :func:`imgaug.imgaug.show_grid`,
+        minimum of (
+            :func:`imgaug.imgaug.draw_grid`,
             :func:`imgaug.imgaug.imshow`
         )
 
@@ -4639,7 +4639,7 @@ class HeatmapsOnImage(object):
         ----------
         size : None or float or iterable of int or iterable of float, optional
             Size of the rendered RGB image as ``(height, width)``.
-            See :func:`imgaug.imresize_single_image` for details.
+            See :func:`imgaug.imgaug.imresize_single_image` for details.
             If set to None, no resizing is performed and the size of the heatmaps array is used.
 
         cmap : str or None, optional
@@ -4882,10 +4882,12 @@ class HeatmapsOnImage(object):
         Parameters
         ----------
         sizes : float or iterable of int or iterable of float
-            New size of the array in ``(height, width)``. See :func:`imgaug.imresize_single_image` for details.
+            New size of the array in ``(height, width)``.
+            See :func:`imgaug.imgaug.imresize_single_image` for details.
 
         interpolation : None or str or int, optional
-            The interpolation to use during resize. See :func:`imgaug.imresize_single_image` for details.
+            The interpolation to use during resize.
+            See :func:`imgaug.imgaug.imresize_single_image` for details.
 
         Returns
         -------
@@ -5271,7 +5273,7 @@ class SegmentationMapOnImage(object):
         ----------
         size : None or float or iterable of int or iterable of float, optional
             Size of the rendered RGB image as ``(height, width)``.
-            See :func:`imgaug.imresize_single_image` for details.
+            See :func:`imgaug.imgaug.imresize_single_image` for details.
             If set to None, no resizing is performed and the size of the segmentation map array is used.
 
         background_threshold : float, optional
@@ -5492,10 +5494,12 @@ class SegmentationMapOnImage(object):
         Parameters
         ----------
         sizes : float or iterable of int or iterable of float
-            New size of the array in ``(height, width)``. See :func:`imgaug.imresize_single_image` for details.
+            New size of the array in ``(height, width)``.
+            See :func:`imgaug.imgaug.imresize_single_image` for details.
 
         interpolation : None or str or int, optional
-            The interpolation to use during resize. See :func:`imgaug.imresize_single_image` for details.
+            The interpolation to use during resize.
+            See :func:`imgaug.imgaug.imresize_single_image` for details.
             Note: The segmentation map is internally stored as multiple float-based heatmaps,
             making smooth interpolations potentially more reasonable than nearest neighbour
             interpolation.

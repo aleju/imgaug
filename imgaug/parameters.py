@@ -1084,7 +1084,7 @@ class FromLowerResolution(StochasticParameter):
         Upsampling/interpolation method to use. This is used after the sampling
         is finished and the low resolution plane has to be upsampled to the
         requested `size` in ``draw_samples(size, ...)``. The method may be
-        the same as in :func:`imgaug.imresize_many_images`. Usually ``nearest``
+        the same as in :func:`imgaug.imgaug.imresize_many_images`. Usually ``nearest``
         or ``linear`` are good choices. ``nearest`` will result in rectangles
         with sharp edges and ``linear`` in rectangles with blurry and round
         edges. The method may be provided as a StochasticParameter, which
@@ -2164,7 +2164,7 @@ class SimplexNoise(StochasticParameter):
         Upsampling/interpolation method to use. This is used after the sampling
         is finished and the low resolution plane has to be upsampled to the
         requested `size` in ``_draw_samples(size, ...)``. The method may be
-        the same as in :func:`imgaug.imresize_many_images`. Usually ``nearest``
+        the same as in :func:`imgaug.imgaug.imresize_many_images`. Usually ``nearest``
         or ``linear`` are good choices. ``nearest`` will result in rectangles
         with sharp edges and ``linear`` in rectangles with blurry and round
         edges. The method may be provided as a StochasticParameter, which
@@ -2319,7 +2319,7 @@ class FrequencyNoise(StochasticParameter):
     upscale_method : None or imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the input image size. This parameter controls
-        the upscaling method. See also :func:`imgaug.imresize_many_images` for a
+        the upscaling method. See also :func:`imgaug.imgaug.imresize_many_images` for a
         description of possible values.
 
             * If None, then either 'nearest' or 'linear' or 'cubic' is picked.
