@@ -69,8 +69,6 @@ class WithColorspace(meta.Augmenter):
         * ``float128``: ?
         * ``bool``: ?
 
-        TODO
-
     Parameters
     ----------
     to_colorspace : str
@@ -225,6 +223,8 @@ class AddToHueAndSaturation(meta.Augmenter):
     The augmenter first transforms images to HSV colorspace, then adds random values to the H and S channels
     and afterwards converts back to RGB.
 
+    TODO add float support
+
     dtype support::
 
         * ``uint8``: yes; fully tested
@@ -240,8 +240,6 @@ class AddToHueAndSaturation(meta.Augmenter):
         * ``float64``: no
         * ``float128``: no
         * ``bool``: no
-
-        TODO add float support
 
     Parameters
     ----------
@@ -340,6 +338,8 @@ class ChangeColorspace(meta.Augmenter):
 
     NOTE: This augmenter tries to project the colorspace value range on 0-255. It outputs dtype=uint8 images.
 
+    TODO check dtype support
+
     dtype support::
 
         * ``uint8``: yes; not tested
@@ -355,8 +355,6 @@ class ChangeColorspace(meta.Augmenter):
         * ``float64``: ?
         * ``float128``: ?
         * ``bool``: ?
-
-        TODO add float support
 
     Parameters
     ----------
@@ -555,6 +553,8 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
 
     NOTE: Number of output channels is still 3, i.e. this augmenter just "removes" color.
 
+    TODO check dtype support
+
     dtype support::
 
         * ``uint8``: yes; fully tested
@@ -570,8 +570,6 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
         * ``float64``: ?
         * ``float128``: ?
         * ``bool``: ?
-
-        TODO add float support
 
     Parameters
     ----------

@@ -3366,18 +3366,20 @@ def shuffle_channels(image, random_state, channels=None):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        * ``uint16``: yes; indirectly tested (1)
+        * ``uint32``: yes; indirectly tested (1)
+        * ``uint64``: yes; indirectly tested (1)
+        * ``int8``: yes; indirectly tested (1)
+        * ``int16``: yes; indirectly tested (1)
+        * ``int32``: yes; indirectly tested (1)
+        * ``int64``: yes; indirectly tested (1)
+        * ``float16``: yes; indirectly tested (1)
+        * ``float32``: yes; indirectly tested (1)
+        * ``float64``: yes; indirectly tested (1)
+        * ``float128``: yes; indirectly tested (1)
+        * ``bool``: yes; indirectly tested (1)
+
+        - (1) Indirectly tested via ``ChannelShuffle``.
 
     Parameters
     ----------

@@ -1747,41 +1747,43 @@ class Invert(meta.Augmenter):
     ``v`` a value. Then the distance of ``v`` to ``m`` is ``d=abs(v-m)`` and the new value
     is given by ``v'=M-d``.
 
-    dtype support (min_value=None and max_value=None)::
+    dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
-        * ``uint32``: yes; tested
-        * ``uint64``: yes; tested
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
-        * ``int32``: yes; tested
-        * ``int64``: yes; tested
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
-        * ``float64``: yes; tested
-        * ``float128``: yes; tested
-        * ``bool``: yes; tested
+        if (min_value=None and max_value=None)::
 
-    dtype support (min_value!=None or max_value!=None)::
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: yes; tested
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: yes; tested
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: yes; tested
+            * ``bool``: yes; tested
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
-        * ``uint32``: yes; tested
-        * ``uint64``: yes; tested
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
-        * ``int32``: yes; tested
-        * ``int64``: no (1)
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
-        * ``float64``: no (1)
-        * ``float128``: no (2)
-        * ``bool``: no (3)
+        if (min_value!=None or max_value!=None)::
 
-        - (1) Not allowed as int/float have to be increased in resolution when using min/max values.
-        - (2) Not tested.
-        - (3) Makes no sense when using min/max values.
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: yes; tested
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: no (1)
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: no (1)
+            * ``float128``: no (2)
+            * ``bool``: no (3)
+
+            - (1) Not allowed as int/float have to be increased in resolution when using min/max values.
+            - (2) Not tested.
+            - (3) Makes no sense when using min/max values.
 
     Parameters
     ----------

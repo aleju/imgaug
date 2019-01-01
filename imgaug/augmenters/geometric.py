@@ -63,7 +63,7 @@ class Affine(meta.Augmenter):
 
     dtype support::
 
-        If (backend="skimage")::
+        if (backend="skimage")::
 
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested (1)
@@ -84,7 +84,7 @@ class Affine(meta.Augmenter):
                   large integers. In tests this seemed to not be an issue.
             - (3) results too inaccurate
 
-        If (backend="cv2")::
+        if (backend="cv2")::
 
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested (1)
@@ -1852,7 +1852,7 @@ class PerspectiveTransform(meta.Augmenter):
             - (3) mapped internally to ``int16``.
             - (4) mapped intenally to ``float32``.
 
-        else::
+        if (keep_size=True)::
 
             minimum of (
                 ``imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False)``,
@@ -2568,7 +2568,7 @@ class Rot90(meta.Augmenter):
             * ``float128``: yes; tested
             * ``bool``: yes; tested
 
-        else::
+        if (keep_size=True)::
 
             minimum of (
                 ``imgaug.augmenters.geometric.Rot90(keep_size=False)``,

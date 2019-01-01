@@ -36,7 +36,7 @@ class Superpixels(meta.Augmenter):
 
     dtype support::
 
-        if (image size less than max_size)::
+        if (image size <= max_size)::
 
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested
@@ -57,10 +57,10 @@ class Superpixels(meta.Augmenter):
             - (2) Error in scikit-image.
             - (3) Loss of resolution in scikit-image.
 
-        else::
+        if (image size > max_size)::
 
             minimum of (
-                ``imgaug.augmenters.segmentation.Superpixels(image size less than max_size)``,
+                ``imgaug.augmenters.segmentation.Superpixels(image size <= max_size)``,
                 :func:`imgaug.imgaug.imresize_many_images`
             )
 
