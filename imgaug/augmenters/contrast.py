@@ -96,8 +96,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
     """
     params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True,
                                             list_to_choice=True)]
-    func = _PreserveDtype(ski_exposure.adjust_gamma)
-
+    func = ski_exposure.adjust_gamma
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
@@ -191,7 +190,7 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
         iap.handle_continuous_param(cutoff, "cutoff", value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True),
         iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
     ]
-    func = _PreserveDtype(ski_exposure.adjust_sigmoid)
+    func = ski_exposure.adjust_sigmoid
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
@@ -272,7 +271,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
     # TODO add inv parameter?
     params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True,
                                             list_to_choice=True)]
-    func = _PreserveDtype(ski_exposure.adjust_log)
+    func = ski_exposure.adjust_log
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
@@ -405,6 +404,8 @@ class _ContrastFuncWrapper(meta.Augmenter):
         return self.params1d
 
 
+# TODO delete this or maybe move it somewhere else
+"""
 class _PreserveDtype(object):
     def __init__(self, func, adjust_value_range=False):
         self.func = func
@@ -421,6 +422,7 @@ class _PreserveDtype(object):
         image_aug = meta.restore_augmented_image_dtype_(image_aug, input_dtype)
 
         return image_aug
+"""
 
 
 def _adjust_linear(image, alpha):
