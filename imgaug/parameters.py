@@ -11,7 +11,6 @@ import scipy
 import matplotlib.pyplot as plt
 
 from . import imgaug as ia
-from .augmenters import meta
 from .external.opensimplex import OpenSimplex
 
 
@@ -1179,6 +1178,11 @@ class FromLowerResolution(StochasticParameter):
             # important for e.g. binomial distributios used in FromLowerResolution and thereby in
             # e.g. CoarseDropout, where integer-kinds would lead to sharp edges despite using
             # cubic interpolation.
+
+            # TODO had to temporarily move this here due to travis breaking from circular imports
+            # beautify this
+            from .augmenters import meta
+
             if samples.dtype.kind == "f":
                 samples = meta.restore_dtypes_(samples, np.float32)
             elif samples.dtype.kind == "i":
