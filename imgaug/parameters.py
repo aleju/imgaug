@@ -2247,7 +2247,11 @@ class SimplexNoise(StochasticParameter):
         for y in sm.xrange(h_small):
             for x in sm.xrange(w_small):
                 noise[y, x] = generator.noise2d(y=y, x=x)
-        noise_0to1 = (noise + 0.5) / 2
+        # TODO this was previously (noise+0.5)/2, which was wrong as the noise here is in
+        # range [-1.0, 1.0], but this new normalization might lead to bad masks due to too many
+        # values being significantly above 0.0 instead of being clipped to 0?
+        noise_0to1 = (noise + 1.0) / 2
+        noise_0to1 = np.clip(noise_0to1, 0.0, 1.0)  # this was also added with the fix
 
         if noise_0to1.shape != (h, w):
             noise_0to1_uint8 = (noise_0to1 * 255).astype(np.uint8)
