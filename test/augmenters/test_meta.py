@@ -20,10 +20,6 @@ def main():
     time_start = time.time()
 
     test_copy_dtypes_for_restore()
-    # test_restore_augmented_image_dtype_()
-    # test_restore_augmented_image_dtype()
-    test_restore_augmented_images_dtypes_()
-    test_restore_augmented_images_dtypes()
     test_clip_augmented_image_()
     test_clip_augmented_image()
     test_clip_augmented_images_()
