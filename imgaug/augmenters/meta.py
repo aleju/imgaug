@@ -220,30 +220,6 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
                 ))
 
 
-# TODO switch all calls to restore_dtypes_()
-def restore_augmented_image_dtype_(image, orig_dtype):
-    return image.astype(orig_dtype, copy=False)
-
-
-def restore_augmented_image_dtype(image, orig_dtype):
-    return image.astype(orig_dtype, copy=True)
-
-
-def restore_augmented_images_dtypes_(images, orig_dtypes):
-    if ia.is_np_array(images):
-        return images.astype(orig_dtypes, copy=False)
-    else:
-        return [image.astype(orig_dtype, copy=False) for image, orig_dtype in zip(images, orig_dtypes)]
-
-
-def restore_augmented_images_dtypes(images, orig_dtypes):
-    if ia.is_np_array(images):
-        images = np.copy(images)
-    else:
-        images = [np.copy(image) for image in images]
-    return restore_augmented_images_dtypes_(images, orig_dtypes)
-
-
 def clip_augmented_image_(image, min_value, max_value):
     return clip_augmented_images_(image, min_value, max_value)
 

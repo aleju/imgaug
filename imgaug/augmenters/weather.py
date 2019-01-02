@@ -147,10 +147,8 @@ class FastSnowyLandscape(meta.Augmenter):
 
             lightness[lightness < thresh] *= lmul
 
-            image_hls = meta.clip_augmented_image_(image_hls, 0, 255)  # TODO make value range more flexible
-            image_hls = image_hls.astype(cvt_dtype)
+            image_hls = meta.restore_dtypes_(image_hls, cvt_dtype)
             image_rgb = cv2.cvtColor(image_hls, color_transform_inverse)
-            image_rgb = meta.restore_augmented_image_dtype_(image_rgb, input_dtype)
 
             result[i] = image_rgb
 

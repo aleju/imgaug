@@ -20,8 +20,8 @@ def main():
     time_start = time.time()
 
     test_copy_dtypes_for_restore()
-    test_restore_augmented_image_dtype_()
-    test_restore_augmented_image_dtype()
+    # test_restore_augmented_image_dtype_()
+    # test_restore_augmented_image_dtype()
     test_restore_augmented_images_dtypes_()
     test_restore_augmented_images_dtypes()
     test_clip_augmented_image_()
@@ -787,6 +787,8 @@ def test_copy_dtypes_for_restore():
         assert all([dtype_i.type == dt for dtype_i in dtypes_copy])
 
 
+# TODO remove these tests once a similar test for restore_dtypes_() was added
+"""
 def test_restore_augmented_image_dtype_():
     image = np.zeros((16, 32, 3), dtype=np.uint8)
     image_result = iaa.restore_augmented_image_dtype_(image, np.int32)
@@ -829,6 +831,7 @@ def test_restore_augmented_images_dtypes():
     assert all([image.dtype.type == np.uint8 for image in images])
     images_restored = iaa.restore_augmented_images_dtypes(images, dtypes)
     assert all([image_restored.dtype.type == np.int32 for image_restored in images_restored])
+"""
 
 
 def test_clip_augmented_image_():
