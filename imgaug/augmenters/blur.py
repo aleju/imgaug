@@ -106,13 +106,13 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
         self.eps = 0.001  # epsilon value to estimate whether sigma is sufficently above 0 to apply the blur
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32", "float16", "float32",
-                                  "float64"],
-                         disallowed=["uint64", "uint128", "uint256",
-                                     "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32", "float16", "float32",
+                                "float64"],
+                       disallowed=["uint64", "uint128", "uint256",
+                                   "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
@@ -270,12 +270,12 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int32", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                       disallowed=["uint32", "uint64", "uint128", "uint256",
+                                   "int32", "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         nb_images = len(images)
         if self.mode == "single":

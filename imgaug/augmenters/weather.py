@@ -440,11 +440,11 @@ class CloudLayer(meta.Augmenter):
                 self.intensity_coarse_scale]
 
     def draw_on_image(self, image, random_state):
-        meta.gate_dtypes(image,
-                         allowed=["uint8",  "float16", "float32", "float64", "float96", "float128", "float256"],
-                         disallowed=["bool",
-                                     "uint16", "uint32", "uint64", "uint128", "uint256",
-                                     "int8", "int16", "int32", "int64", "int128", "int256"])
+        ia.gate_dtypes(image,
+                       allowed=["uint8",  "float16", "float32", "float64", "float96", "float128", "float256"],
+                       disallowed=["bool",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256"])
 
         alpha, intensity = self.generate_maps(image, random_state)
         alpha = alpha[..., np.newaxis]

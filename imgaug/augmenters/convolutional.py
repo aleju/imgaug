@@ -136,12 +136,12 @@ class Convolve(meta.Augmenter):
                 type(matrix),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int32", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                       disallowed=["uint32", "uint64", "uint128", "uint256",
+                                   "int32", "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         seed = random_state.randint(0, 10**6, 1)[0]
         for i, image in enumerate(images):

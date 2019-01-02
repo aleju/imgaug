@@ -184,42 +184,6 @@ def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None
     return array
 
 
-def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
-    assert len(allowed) > 0
-    assert ia.is_string(allowed[0])
-    if len(disallowed) > 0:
-        assert ia.is_string(disallowed[0])
-
-    if ia.is_np_array(dtypes):
-        dtypes = [dtypes.dtype]
-    else:
-        dtypes = [np.dtype(dtype) if not ia.is_np_array(dtype) else dtype.dtype for dtype in dtypes]
-    for dtype in dtypes:
-        if dtype.name in allowed:
-            pass
-        elif dtype.name in disallowed:
-            if augmenter is None:
-                raise ValueError("Got dtype '%s', which is a forbidden dtype (%s)." % (
-                    dtype.name, ", ".join(disallowed)
-                ))
-            else:
-                raise ValueError("Got dtype '%s' in augmenter '%s' (class '%s'), which is a forbidden dtype (%s)." % (
-                    dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(disallowed)
-                ))
-        else:
-            if augmenter is None:
-                warnings.warn(("Got dtype '%s', which was neither explicitly allowed "
-                               "(%s), nor explicitly disallowed (%s). Generated outputs may contain errors..") % (
-                        dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(allowed),
-                        ", ".join(disallowed)
-                    ))
-            else:
-                warnings.warn(("Got dtype '%s' in augmenter '%s' (class '%s'), which was neither explicitly allowed "
-                               "(%s), nor explicitly disallowed (%s). Generated outputs may contain errors..") % (
-                    dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(allowed), ", ".join(disallowed)
-                ))
-
-
 def clip_augmented_image_(image, min_value, max_value):
     return clip_augmented_images_(image, min_value, max_value)
 

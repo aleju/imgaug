@@ -838,12 +838,12 @@ class Affine(meta.Augmenter):
 
     def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
                       fit_output, return_matrix=False):
-        meta.gate_dtypes(image,
-                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(image,
+                       allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                "float16", "float32", "float64"],
+                       disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         input_dtype = image.dtype
 
@@ -887,13 +887,13 @@ class Affine(meta.Augmenter):
 
     def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
                   fit_output, return_matrix=False):
-        meta.gate_dtypes(image,
-                         allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(image,
+                       allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
+                                "float16", "float32", "float64"],
+                       disallowed=["uint32", "uint64", "uint128", "uint256",
+                                   "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
         if order != 0:
             ia.do_assert(image.dtype != np.int32,
                          ("Affine only supports cv2-based transformations of int32 arrays when "
@@ -1700,12 +1700,12 @@ class PiecewiseAffine(meta.Augmenter):
         self.absolute_scale = absolute_scale
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                "float16", "float32", "float64"],
+                       disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         result = images
         nb_images = len(images)
@@ -2012,12 +2012,12 @@ class PerspectiveTransform(meta.Augmenter):
         self.keep_size = keep_size
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "int8", "int16",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "int8", "int16",
+                                "float16", "float32", "float64"],
+                       disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         result = images
         if not self.keep_size:
@@ -2427,12 +2427,12 @@ class ElasticTransformation(meta.Augmenter):
         return seeds[0:-1], alphas, sigmas, orders, cvals, modes
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                "float16", "float32", "float64"],
+                       disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                   "float96", "float128", "float256"],
+                       augmenter=self)
 
         result = images
         nb_images = len(images)

@@ -156,11 +156,11 @@ class Superpixels(meta.Augmenter):
         self.interpolation = interpolation
 
     def _augment_images(self, images, random_state, parents, hooks):
-        meta.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64"],
-                         disallowed=["uint128", "uint256", "int128", "int256",
-                                     "float16", "float32", "float64", "float96", "float128", "float256"],
-                         augmenter=self)
+        ia.gate_dtypes(images,
+                       allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64"],
+                       disallowed=["uint128", "uint256", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
 
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, 1+nb_images)

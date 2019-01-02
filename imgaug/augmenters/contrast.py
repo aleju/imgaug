@@ -367,10 +367,10 @@ class _ContrastFuncWrapper(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         if self.dtypes_allowed is not None:
-            meta.gate_dtypes(images,
-                             allowed=self.dtypes_allowed,
-                             disallowed=self.dtypes_disallowed,
-                             augmenter=self)
+            ia.gate_dtypes(images,
+                           allowed=self.dtypes_allowed,
+                           disallowed=self.dtypes_disallowed,
+                           augmenter=self)
 
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, 1+nb_images)
