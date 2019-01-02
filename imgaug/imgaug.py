@@ -1192,11 +1192,11 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         elif input_dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
             # TODO this was moved here because putting it at the top somehow lead to errors on travis, apparently
             # due to circular imports...? needs to be made more beautiful
-            from imgaug.augmenters import meta
+            from .augmenters import meta
             result_img = meta.restore_dtypes_(result_img, np.int8)
         elif input_dtype.type == np.float16:
             # TODO see above
-            from imgaug.augmenters import meta
+            from .augmenters import meta
             result_img = meta.restore_dtypes_(result_img, np.float16)
         result[i] = result_img
     return result

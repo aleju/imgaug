@@ -11,7 +11,7 @@ import scipy
 import matplotlib.pyplot as plt
 
 from . import imgaug as ia
-from imgaug.augmenters import meta
+from .augmenters import meta
 from .external.opensimplex import OpenSimplex
 
 
