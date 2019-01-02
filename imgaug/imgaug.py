@@ -1017,9 +1017,9 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         * ``int16``: yes; tested
         * ``int32``: limited; tested (4)
         * ``int64``: no (2)
-        * ``float16``: yes; tested (5)
-        * ``float32``: yes; tested (6)
-        * ``float64``: yes; tested (6)
+        * ``float16``: yes; not tested (5) (8)
+        * ``float32``: yes; not tested (6) (8)
+        * ``float64``: yes; not tested (6) (8)
         * ``float128``: no (1)
         * ``bool``: yes; tested (7)
 
@@ -1031,6 +1031,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         - (6) some indication in tests that accuracy is lacking a bit for interpolations other than
               "nearest", but might be false positive
         - (7) mapped internally to ``uint8``
+        - (8) tests were temporarily deactivated due to breaking on travis TODO
 
     Parameters
     ----------
