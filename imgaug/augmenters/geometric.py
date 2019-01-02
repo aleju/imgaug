@@ -63,47 +63,132 @@ class Affine(meta.Augmenter):
 
     dtype support::
 
-        if (backend="skimage")::
+        if (backend="skimage", order in [0, 1])::
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested (1)
-            * ``uint32``: yes; tested (1) (2)
-            * ``uint64``: no (3)
-            * ``int8``: yes; tested (1)
-            * ``int16``: yes; tested (1)
-            * ``int32``: yes; tested (1)  (2)
-            * ``int64``: no (3)
-            * ``float16``: yes; tested (1)
-            * ``float32``: yes; tested (1)
-            * ``float64``: yes; tested (1)
-            * ``float128``: no (3)
-            * ``bool``: yes; tested (1)
-
-            - (1) only tested with `order` set to 0.
-            - (2) scikit-image converts internally to float64, which might affect the accuracy of
-                  large integers. In tests this seemed to not be an issue.
-            - (3) results too inaccurate
-
-        if (backend="cv2")::
-
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested (1)
-            * ``uint32``: no (2)
-            * ``uint64``: no (3)
-            * ``int8``: yes; tested (1)
-            * ``int16``: yes; tested (1)
-            * ``int32``: yes; tested (1)
-            * ``int64``: no (3)
-            * ``float16``: yes; tested (4)
-            * ``float32``: yes; tested (1)
-            * ``float64``: yes; tested (1)
+            * ``uint8``: yes; tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested  (1)
+            * ``int64``: no (2)
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
             * ``float128``: no (2)
-            * ``bool``: yes; tested (1) (4)
+            * ``bool``: yes; tested
 
-            - (1) only tested with `order` set to 0.
-            - (2) rejected by cv2
-            - (3) changed to ``int32`` by cv2
+            - (1) scikit-image converts internally to float64, which might affect the accuracy of
+                  large integers. In tests this seemed to not be an issue.
+            - (2) results too inaccurate
+
+        if (backend="skimage", order in [3, 4])::
+
+            * ``uint8``: yes; tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested  (1)
+            * ``int64``: no (2)
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: limited; tested (3)
+            * ``float128``: no (2)
+            * ``bool``: yes; tested
+
+            - (1) scikit-image converts internally to float64, which might affect the accuracy of
+                  large integers. In tests this seemed to not be an issue.
+            - (2) results too inaccurate
+            - (3) ``NaN`` around minimum and maximum of float64 value range
+
+        if (backend="skimage", order=5])::
+
+                * ``uint8``: yes; tested
+                * ``uint16``: yes; tested
+                * ``uint32``: yes; tested (1)
+                * ``uint64``: no (2)
+                * ``int8``: yes; tested
+                * ``int16``: yes; tested
+                * ``int32``: yes; tested  (1)
+                * ``int64``: no (2)
+                * ``float16``: yes; tested
+                * ``float32``: yes; tested
+                * ``float64``: limited; not tested (3)
+                * ``float128``: no (2)
+                * ``bool``: yes; tested
+
+                - (1) scikit-image converts internally to float64, which might affect the accuracy of
+                      large integers. In tests this seemed to not be an issue.
+                - (2) results too inaccurate
+                - (3) ``NaN`` around minimum and maximum of float64 value range
+
+        if (backend="cv2", order=0)::
+
+            * ``uint8``: yes; tested
+            * ``uint16``: yes; tested
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: no (2)
+            * ``float16``: yes; tested (3)
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: no (1)
+            * ``bool``: yes; tested (3)
+
+            - (1) rejected by cv2
+            - (2) changed to ``int32`` by cv2
+            - (3) mapped internally to ``float32``
+
+        if (backend="cv2", order=1):
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes; tested (3)
+            * ``int16``: yes; tested
+            * ``int32``: no (2)
+            * ``int64``: no (2)
+            * ``float16``: yes; tested (4)
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: no (1)
+            * ``bool``: yes; tested (4)
+
+            - (1) rejected by cv2
+            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4) (...)imgwarp.cpp:1805: error:
+                  (-215:Assertion failed) ifunc != 0 in function 'remap'``
+            - (3) mapped internally to ``int16``
             - (4) mapped internally to ``float32``
+
+        if (backend="cv2", order=3):
+
+            * ``uint8``: yes; tested
+            * ``uint16``: yes; tested
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes; tested (3)
+            * ``int16``: yes; tested
+            * ``int32``: no (2)
+            * ``int64``: no (2)
+            * ``float16``: yes; tested (4)
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: no (1)
+            * ``bool``: yes; tested (4)
+
+            - (1) rejected by cv2
+            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4) (...)imgwarp.cpp:1805: error:
+                  (-215:Assertion failed) ifunc != 0 in function 'remap'``
+            - (3) mapped internally to ``int16``
+            - (4) mapped internally to ``float32``
+
 
     Parameters
     ----------
@@ -366,7 +451,12 @@ class Affine(meta.Augmenter):
     the value of the nearest edge is used.
 
     """
-    VALID_DTYPES_CV2 = set(["uint8", "uint16", "int8", "int16", "int32", "float16", "float32", "float64", "bool"])
+    VALID_DTYPES_CV2_ORDER_0 = {"uint8", "uint16", "int8", "int16", "int32",
+                                "float16", "float32", "float64",
+                                "bool"}
+    VALID_DTYPES_CV2_ORDER_NOT_0 = {"uint8", "uint16", "int8", "int16",
+                                    "float16", "float32", "float64",
+                                    "bool"}
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0,
                  mode="constant", fit_output=False, backend="auto", name=None, deterministic=False, random_state=None):
@@ -559,8 +649,10 @@ class Affine(meta.Augmenter):
             if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
                     or shear != 0:
                 cv2_bad_order = order not in [0, 1, 3]
-                cv2_bad_dtype = image.dtype.name not in self.VALID_DTYPES_CV2
-                cv2_bad_dtype = False
+                if order == 0:
+                    cv2_bad_dtype = image.dtype.name not in self.VALID_DTYPES_CV2_ORDER_0
+                else:
+                    cv2_bad_dtype = image.dtype.name not in self.VALID_DTYPES_CV2_ORDER_NOT_0
                 cv2_bad_shape = image.shape[2] > 4
                 cv2_impossible = cv2_bad_order or cv2_bad_dtype or cv2_bad_shape
                 if self.backend == "skimage" or (self.backend == "auto" and cv2_impossible):
@@ -798,13 +890,20 @@ class Affine(meta.Augmenter):
         meta.gate_dtypes(image,
                          allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
                                   "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                         disallowed=["uint32", "uint64", "uint128", "uint256",
+                                     "int64", "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
+        if order != 0:
+            ia.do_assert(image.dtype != np.int32,
+                         ("Affine only supports cv2-based transformations of int32 arrays when "
+                          + "using order=0, but order was set to %d.") % (order,))
 
         input_dtype = image.dtype
         if input_dtype in [np.bool_, np.float16]:
             image = image.astype(np.float32)
+        elif input_dtype == np.int8 and order != 0:
+            image = image.astype(np.int16)
 
         height, width = image.shape[0], image.shape[1]
         shift_x = width / 2.0 - 0.5
@@ -825,6 +924,8 @@ class Affine(meta.Augmenter):
             matrix, output_shape = self._tf_to_fit_output(image.shape, matrix)
             dsize = (int(np.round(output_shape[1])), int(np.round(output_shape[0])))
 
+        # TODO this uses always a tuple of 3 values for cval, even if #chans != 3, works with 1d but what in other
+        # cases?
         image_warped = cv2.warpAffine(
             image,
             matrix.params[:2],
@@ -840,7 +941,7 @@ class Affine(meta.Augmenter):
 
         if input_dtype == np.bool_:
             image_warped = image_warped > 0.5
-        elif input_dtype == np.float16:
+        elif input_dtype in [np.int8, np.float16]:
             image_warped = meta.restore_dtypes_(image_warped, input_dtype)
 
         if return_matrix:

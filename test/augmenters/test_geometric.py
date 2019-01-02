@@ -564,7 +564,7 @@ def test_Affine():
     # ---------------------
     # rotate
     # ---------------------
-    # rotate by 45 degrees
+    # rotate by 90 degrees
     aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
     aug_det = aug.to_deterministic()
 
@@ -998,6 +998,92 @@ def test_Affine():
             assert np.all(_isclose(image_aug[~mask], 0))
             assert np.all(_isclose(image_aug[mask], np.float128(value)))
 
+    #
+    # skimage, order!=0 and rotate=180
+    #
+    for order in [1, 3, 4, 5]:
+        aug = iaa.Affine(rotate=180, order=order, mode="constant", backend="skimage")
+        aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+
+        image = np.zeros((17, 17), dtype=bool)
+        image[2:15, 5:13] = True
+        mask_inner = aug_flip.augment_image(image) == 1
+        mask_outer = aug_flip.augment_image(image) == 0
+        assert np.any(mask_inner) and np.any(mask_outer)
+
+        thresh_inner = 0.9
+        thresh_outer = 0.9
+        thresh_inner_float = 0.85 if order == 1 else 0.7
+        thresh_outer_float = 0.85 if order == 1 else 0.4
+
+        # bool
+        image = np.zeros((17, 17), dtype=bool)
+        image[2:15, 5:13] = True
+        image_aug = aug.augment_image(image)
+        image_exp = aug_flip.augment_image(image)
+        assert image_aug.dtype == image.dtype
+        assert (np.sum(image_aug == image_exp)/image.size) > thresh_inner
+
+        # uint, int
+        for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+            def _compute_matching(image_aug, image_exp, mask):
+                return np.sum(
+                    np.isclose(image_aug[mask], image_exp[mask], rtol=0, atol=1.001)
+                ) / np.sum(mask)
+
+            if np.dtype(dtype).kind == "i":
+                values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
+                          int(0.5 * max_value), max_value - 100, max_value]
+                values = values + [(-1) * value for value in values]
+            else:
+                values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value),
+                          int(0.2 * max_value), int(0.5 * max_value), max_value - 100, max_value]
+
+            for value in values:
+                image = np.zeros((17, 17), dtype=dtype)
+                image[2:15, 5:13] = value
+                image_aug = aug.augment_image(image)
+                image_exp = aug_flip.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert _compute_matching(image_aug, image_exp, mask_inner) > thresh_inner
+                assert _compute_matching(image_aug, image_exp, mask_outer) > thresh_outer
+
+        # float
+        dts = [np.float16, np.float32, np.float64]
+        if order == 5:
+            # float64 caused too many interpolation inaccuracies for order=5, not wrong but harder to test
+            dts = [np.float16, np.float32]
+        for dtype in dts:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+            def _isclose(a, b):
+                atol = 1e-4 if dtype == np.float16 else 1e-8
+                if order not in [0, 1]:
+                    atol = 1e-2
+                return np.isclose(a, b, atol=atol, rtol=0)
+
+            def _compute_matching(image_aug, image_exp, mask):
+                return np.sum(
+                    _isclose(image_aug[mask], image_exp[mask])
+                ) / np.sum(mask)
+
+            isize = np.dtype(dtype).itemsize
+            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+            values = values + [(-1) * value for value in values]
+            if order not in [3, 4]:  # results in NaNs otherwise
+                values = values + [min_value, max_value]
+            for value in values:
+                image = np.zeros((17, 17), dtype=dtype)
+                image[2:15, 5:13] = value
+                image_aug = aug.augment_image(image)
+                image_exp = aug_flip.augment_image(image)
+                np.set_printoptions(linewidth=250)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert _compute_matching(image_aug, image_exp, mask_inner) > thresh_inner_float
+                assert _compute_matching(image_aug, image_exp, mask_outer) > thresh_outer_float
+
     # cv2
     aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant", backend="cv2")
     mask = np.zeros((3, 3), dtype=bool)
@@ -1050,6 +1136,61 @@ def test_Affine():
             assert image_aug.dtype == np.dtype(dtype)
             assert np.all(_isclose(image_aug[~mask], 0))
             assert np.all(_isclose(image_aug[mask], np.float128(value)))
+
+    #
+    # cv2, order=1 and rotate=180
+    #
+    for order in [1, 3]:
+        aug = iaa.Affine(rotate=180, order=order, mode="constant", backend="cv2")
+        aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+
+        # bool
+        image = np.zeros((17, 17), dtype=bool)
+        image[2:15, 5:13] = True
+        image_aug = aug.augment_image(image)
+        image_exp = aug_flip.augment_image(image)
+        assert image_aug.dtype == image.dtype
+        assert (np.sum(image_aug == image_exp) / image.size) > 0.9
+
+        # uint, int
+        for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+            if np.dtype(dtype).kind == "i":
+                values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
+                          int(0.5 * max_value), max_value - 100, max_value]
+                values = values + [(-1) * value for value in values]
+            else:
+                values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value),
+                          int(0.2 * max_value), int(0.5 * max_value), max_value - 100, max_value]
+
+            for value in values:
+                image = np.zeros((17, 17), dtype=dtype)
+                image[2:15, 5:13] = value
+                image_aug = aug.augment_image(image)
+                image_exp = aug_flip.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert (np.sum(image_aug == image_exp) / image.size) > 0.9
+
+        # float
+        for dtype in [np.float16, np.float32, np.float64]:
+            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+
+            def _isclose(a, b):
+                atol = 1e-4 if dtype == np.float16 else 1e-8
+                return np.isclose(a, b, atol=atol, rtol=0)
+
+            isize = np.dtype(dtype).itemsize
+            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1), 1000 ** (isize - 1)]
+            values = values + [(-1) * value for value in values]
+            values = values + [min_value, max_value]
+            for value in values:
+                image = np.zeros((17, 17), dtype=dtype)
+                image[2:15, 5:13] = value
+                image_aug = aug.augment_image(image)
+                image_exp = aug_flip.augment_image(image)
+                assert image_aug.dtype == np.dtype(dtype)
+                assert (np.sum(_isclose(image_aug, image_exp)) / image.size) > 0.9
 
 
 def test_AffineCv2():
