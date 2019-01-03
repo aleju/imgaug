@@ -43,11 +43,11 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
         * ``uint32``: yes; fully tested
-        * ``uint64``: no; fully tested (1) (4)
+        * ``uint64``: yes; fully tested (1)
         * ``int8``: yes; fully tested
         * ``int16``: yes; fully tested
         * ``int32``: yes; fully tested
-        * ``int64``: no; fully tested (1) (4)
+        * ``int64``: yes; fully tested (1)
         * ``float16``: yes; fully tested
         * ``float32``: yes; fully tested
         * ``float64``: yes; fully tested
@@ -60,8 +60,6 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         - (2) Not available due to the input dtype having to be increased to an equivalent float
               dtype with two times the input resolution.
         - (3) Mapped internally to ``float16``.
-        - (4) Had to be temporarily deactivated due to errors on travis, even though it worked
-              locally. Maybe difference in float128 implementation between versions? TODO
 
     Parameters
     ----------
