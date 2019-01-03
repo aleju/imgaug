@@ -1,5 +1,5 @@
 six
-numpy>=1.13
+numpy>=1.14
 scipy
 Pillow
 matplotlib
