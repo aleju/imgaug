@@ -4644,7 +4644,7 @@ class HeatmapsOnImage(object):
             self.arr_was_2d = False
 
         eps = np.finfo(np.float32).eps
-        min_is_zero = 0.0 - eps  < min_value < 0.0 + eps
+        min_is_zero = 0.0 - eps < min_value < 0.0 + eps
         max_is_one = 1.0 - eps < max_value < 1.0 + eps
         if min_is_zero and max_is_one:
             self.arr_0to1 = arr
