@@ -11,7 +11,7 @@ setup(
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
     download_url="https://github.com/aleju/imgaug/archive/0.2.7.tar.gz",
-    install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.7.0", "six", "imageio", "Pillow", "matplotlib",
+    install_requires=["scipy", "scikit-image>=0.11.0", "numpy>=1.15.0", "six", "imageio", "Pillow", "matplotlib",
                       "Shapely", "opencv-python"],
     packages=find_packages(),
     include_package_data=True,
