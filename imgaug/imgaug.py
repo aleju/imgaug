@@ -2314,6 +2314,7 @@ class KeypointsOnImage(object):
         keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
+    # TODO add to_gaussian_heatmaps(), from_gaussian_heatmaps()
     def to_keypoint_image(self, size=1):
         """
         Draws a new black image of shape ``(H,W,N)`` in which all keypoint coordinates are set to 255.
@@ -3017,6 +3018,7 @@ class BoundingBox(object):
         else:
             return fully
 
+    # TODO rename to clip_*()
     def cut_out_of_image(self, image):
         """
         Cut off all parts of the bounding box that are outside of the image.
