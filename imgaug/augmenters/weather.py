@@ -300,7 +300,7 @@ class CloudLayer(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; tested (1)
+        * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
         * ``uint32``: no
         * ``uint64``: no
