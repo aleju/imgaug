@@ -2,7 +2,6 @@ from __future__ import print_function, division, absolute_import
 
 import time
 import itertools
-import functools
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -75,8 +74,8 @@ def test_GammaContrast():
     for _ in sm.xrange(100):
         img_aug = aug.augment_image(img1000d)
         assert img_aug.dtype.type == np.uint8
-        l = len(set(img_aug.flatten().tolist()))
-        if l == 1:
+        nb_values_uq = len(set(img_aug.flatten().tolist()))
+        if nb_values_uq == 1:
             seen[0] = True
         else:
             seen[1] = True
@@ -192,8 +191,8 @@ def test_SigmoidContrast():
     for _ in sm.xrange(100):
         img_aug = aug.augment_image(img1000d)
         assert img_aug.dtype.type == np.uint8
-        l = len(set(img_aug.flatten().tolist()))
-        if l == 1:
+        nb_values_uq = len(set(img_aug.flatten().tolist()))
+        if nb_values_uq == 1:
             seen[0] = True
         else:
             seen[1] = True
@@ -303,8 +302,8 @@ def test_LogContrast():
     for _ in sm.xrange(100):
         img_aug = aug.augment_image(img1000d)
         assert img_aug.dtype.type == np.uint8
-        l = len(set(img_aug.flatten().tolist()))
-        if l == 1:
+        nb_values_uq = len(set(img_aug.flatten().tolist()))
+        if nb_values_uq == 1:
             seen[0] = True
         else:
             seen[1] = True
@@ -414,8 +413,8 @@ def test_LinearContrast():
     for _ in sm.xrange(100):
         img_aug = aug.augment_image(img1000d)
         assert img_aug.dtype.type == np.uint8
-        l = len(set(img_aug.flatten().tolist()))
-        if l == 1:
+        nb_values_uq = len(set(img_aug.flatten().tolist()))
+        if nb_values_uq == 1:
             seen[0] = True
         else:
             seen[1] = True
