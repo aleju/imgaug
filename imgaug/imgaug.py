@@ -23,9 +23,6 @@ import six.moves as sm
 import skimage.draw
 import skimage.measure
 import collections
-import shapely
-import shapely.geometry
-import shapely.ops
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
 if sys.version_info[0] == 2:
@@ -3959,6 +3956,9 @@ class Polygon(object):
             Returned as MultiPolygon, because the clipping can split the polygon into multiple parts.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         # if fully out of image, clip everything away, nothing remaining
         if self.is_out_of_image(image, fully=True, partly=False):
             return MultiPolygon([])
@@ -4226,6 +4226,9 @@ class Polygon(object):
             The Shapely polygon matching this polygon's exterior.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         return shapely.geometry.Polygon([(point[0], point[1]) for point in self.exterior])
 
     def to_shapely_line_string(self, closed=False, interpolate=0):
@@ -4284,6 +4287,9 @@ class Polygon(object):
             A polygon with the same exterior as the Shapely polygon.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         do_assert(isinstance(polygon_shapely, shapely.geometry.Polygon))
         # polygon_shapely.exterior can be None if the polygon was instantiated without points
         if polygon_shapely.exterior is None or len(polygon_shapely.exterior.coords) == 0:
@@ -4326,6 +4332,9 @@ class Polygon(object):
             Whether the two polygon's exteriors can be viewed as equal (approximate test).
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         atol = max_distance
 
         ext_a = self.exterior
@@ -4469,6 +4478,9 @@ class Polygon(object):
 
 
 def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
+    # load shapely lazily, which makes the dependency more optional
+    import shapely.geometry
+
     if len(points) <= 1:
         raise Exception(
             ("Conversion to shapely line string requires at least two points, but points input contains "
@@ -4565,6 +4577,9 @@ class MultiPolygon(object):
             The derived MultiPolygon.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         if isinstance(geometry, shapely.geometry.MultiPolygon):
             return MultiPolygon([Polygon.from_shapely(poly, label=label) for poly in geometry.geoms])
         elif isinstance(geometry, shapely.geometry.Polygon):
