@@ -98,6 +98,7 @@ def test_blend_alpha():
             assert img_blend.shape == (3, 3, 1)
             assert np.all(img_blend == dtype(v2))
 
+            # TODO this test breaks for numpy <1.15 -- why?
             for c in sm.xrange(3):
                 img_fg = np.full((3, 3, c), v1, dtype=dtype)
                 img_bg = np.full((3, 3, c), v2, dtype=dtype)
