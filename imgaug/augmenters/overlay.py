@@ -93,8 +93,8 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     assert image_fg.shape == image_bg.shape
     assert image_fg.dtype.kind == image_bg.dtype.kind
     # TODO switch to gate_dtypes()
-    assert image_fg.dtype not in [np.uint64, np.int64, np.float128]
-    assert image_bg.dtype not in [np.uint64, np.int64, np.float128]
+    assert image_fg.dtype not in [np.float128]
+    assert image_bg.dtype not in [np.float128]
 
     input_was_bool = False
     if image_fg.dtype.kind == "b":
