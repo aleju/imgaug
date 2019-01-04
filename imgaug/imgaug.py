@@ -23,7 +23,6 @@ import six.moves as sm
 import skimage.draw
 import skimage.measure
 import collections
-import matplotlib.pyplot as plt
 import shapely
 import shapely.geometry
 import shapely.ops
@@ -1727,6 +1726,9 @@ def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
         cv2.waitKey(0)
         cv2.destroyWindow(win_name)
     else:
+        # import only when necessary (faster startup; optional dependency; less fragile -- see issue #225)
+        import matplotlib.pyplot as plt
+
         plt.imshow(image, cmap="gray")
         plt.gcf().canvas.set_window_title("imgaug.imshow(%s)" % (image.shape,))
         plt.show()
@@ -4705,6 +4707,9 @@ class HeatmapsOnImage(object):
             heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
 
             if cmap is not None:
+                # import only when necessary (faster startup; optional dependency; less fragile -- see issue #225)
+                import matplotlib.pyplot as plt
+
                 cmap_func = plt.get_cmap(cmap)
                 heatmap_cmapped = cmap_func(heatmap_c_rs)
                 heatmap_cmapped = np.delete(heatmap_cmapped, 3, 2)

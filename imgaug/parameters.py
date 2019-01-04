@@ -8,7 +8,6 @@ import numpy as np
 import six
 import six.moves as sm
 import scipy
-import matplotlib.pyplot as plt
 
 from . import imgaug as ia
 from .external.opensimplex import OpenSimplex
@@ -440,6 +439,9 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
             Image of the plot.
 
         """
+        # import only when necessary (faster startup; optional dependency; less fragile -- see issue #225)
+        import matplotlib.pyplot as plt
+
         points = []
         for _ in sm.xrange(size[0]):
             points.append(self.draw_samples(size[1:]).flatten())
