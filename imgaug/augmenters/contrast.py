@@ -53,11 +53,11 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
         - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for uint8.
+              e.g. ``result*255`` for ``uint8``.
         - (2) Integer-like values are not rounded after applying the contrast adjustment equation
               (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
               space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
               64bit integer values. Tests showed no indication of that happening though.
         - (4) Must not contain negative values. Values >=0 are fully supported.
@@ -133,11 +133,11 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
 
         - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for uint8.
+              e.g. ``result*255`` for ``uint8``.
         - (2) Integer-like values are not rounded after applying the contrast adjustment equation
               (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
               space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
               64bit integer values. Tests showed no indication of that happening though.
         - (4) Must not contain negative values. Values >=0 are fully supported.
@@ -225,11 +225,11 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
         - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for uint8.
+              e.g. ``result*255`` for ``uint8``.
         - (2) Integer-like values are not rounded after applying the contrast adjustment equation
               (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
               space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
               64bit integer values. Tests showed no indication of that happening though.
         - (4) Must not contain negative values. Values >=0 are fully supported.
