@@ -50,13 +50,14 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         * ``int64``: yes; fully tested (1)
         * ``float16``: yes; fully tested
         * ``float32``: yes; fully tested
-        * ``float64``: yes; fully tested
+        * ``float64``: yes; fully tested (1)
         * ``float128``: no (2)
         * ``bool``: yes; fully tested (2)
 
         - (1) Tests show that these dtypes work, but a conversion to float128 happens, which only
               has 96 bits of size instead of true 128 bits and hence not twice as much resolution.
-              It is possible that these dtypes result in inaccuracies.
+              It is possible that these dtypes result in inaccuracies, though the tests did not
+              indicate that.
         - (2) Not available due to the input dtype having to be increased to an equivalent float
               dtype with two times the input resolution.
         - (3) Mapped internally to ``float16``.
