@@ -1018,19 +1018,17 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         * ``int32``: limited; tested (4)
         * ``int64``: no (2)
         * ``float16``: yes; tested (5)
-        * ``float32``: yes; tested (6)
-        * ``float64``: yes; tested (6)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
         * ``float128``: no (1)
-        * ``bool``: yes; tested (7)
+        * ``bool``: yes; tested (6)
 
         - (1) rejected by ``cv2.imresize``
         - (2) results too inaccurate
         - (3) mapped internally to ``int16`` when interpolation!="nearest"
         - (4) only supported for interpolation="nearest", other interpolations lead to cv2 error
         - (5) mapped internally to ``float32``
-        - (6) some indication in tests that accuracy is lacking a bit for interpolations other than
-              "nearest", but might be false positive
-        - (7) mapped internally to ``uint8``
+        - (6) mapped internally to ``uint8``
 
     Parameters
     ----------
