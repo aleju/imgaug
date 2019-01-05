@@ -358,6 +358,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     )
 
 
+# this is essentially tested by tests for CLAHE
 class _IntensityChannelBasedApplier(object):
     RGB = color_lib.ChangeColorspace.RGB
     BGR = color_lib.ChangeColorspace.BGR
@@ -418,7 +419,9 @@ class _IntensityChannelBasedApplier(object):
                 images_change_cs.append(image[..., 0:3])
                 images_change_cs_indices.append(i)
             else:
-                warnings.warn("Got image with %d channels in CLAHE, expected 0, 1, 3 or 4 channels." % (nb_channels,))
+                warnings.warn("Got image with %d channels in _IntensityChannelBasedApplier (parents: %s), "
+                              "expected 0, 1, 3 or 4 channels." % (
+                                  nb_channels, ", ".join(parent.name for parent in parents)))
                 images_normalized.append(image)
 
         # convert colorspaces of normalized 3-channel images
@@ -755,7 +758,7 @@ class CLAHE(meta.Augmenter):
             return self.all_channel_clahe._augment_images(images_normalized, random_state_derived, parents + [self],
                                                           hooks)
 
-        return self.intensity_channel_based_applier.apply(images, random_state, parents, hooks,
+        return self.intensity_channel_based_applier.apply(images, random_state, parents + [self], hooks,
                                                           _augment_all_channels_clahe)
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
@@ -769,6 +772,192 @@ class CLAHE(meta.Augmenter):
                 self.all_channel_clahe.tile_grid_size_px,
                 self.all_channel_clahe.tile_grid_size_px_min,
                 self.intensity_channel_based_applier.change_colorspace.from_colorspace,  # from_colorspace is always str
+                self.intensity_channel_based_applier.change_colorspace.to_colorspace.value]
+
+
+class AllChannelsHistogramEqualization(meta.Augmenter):
+    """
+    Augmenter to perform standard histogram equalization on imgages, applied to all channels of each input image.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (2)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (2)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (2)
+        * ``bool``: no (1)
+
+        - (1) causes cv2 error: ``cv2.error: OpenCV(3.4.5) (...)/histogram.cpp:3345: error: (-215:Assertion failed)
+              src.type() == CV_8UC1 in function 'equalizeHist'``
+        - (2) rejected by cv2
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(AllChannelsHistogramEqualization, self).__init__(name=name, deterministic=deterministic,
+                                                               random_state=random_state)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        """
+        ia.gate_dtypes(images,
+                       allowed=["uint8", "uint16"],
+                       disallowed=["bool",
+                                   "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+        """
+        for i, image in enumerate(images):
+            image_warped = [cv2.equalizeHist(image[..., c]) for c in sm.xrange(image.shape[2])]
+            image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
+            image_warped = image_warped.transpose((1, 2, 0))
+
+            images[i] = image_warped
+        return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return []
+
+
+class HistogramEqualization(meta.Augmenter):
+    """
+    Augmenter to apply standard histogram equalization to images.
+
+    This augmenter is similar to ``imgaug.augmenters.contrast.CLAHE``.
+
+    The augmenter transforms input images to a target colorspace (e.g. ``Lab``), extracts an intensity-related channel
+    from the converted images (e.g. ``L`` for ``Lab``), applies Histogram Equalization to the channel and then
+    converts the resulting image back to the original colorspace.
+
+    Grayscale images (images without channel axis or with only one channel axis) are automatically handled,
+    `from_colorspace` does not have to be adjusted for them. For images with four channels (e.g. RGBA), the fourth
+    channel is ignored in the colorspace conversion (e.g. from an ``RGBA`` image, only the ``RGB`` part is converted,
+    normalized, converted back and concatenated with the input ``A`` channel).
+    Images with unusual channel numbers (2, 5 or more than 5) are normalized channel-by-channel (same behaviour as
+    ``AllChannelsHistogramEqualization``, though a warning will be raised).
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) This augmenter uses AllChannelsHistogramEqualization, which only supports ``uint8``.
+
+    Parameters
+    ----------
+    from_colorspace : {"RGB", "BGR", "HSV", "HLS", "Lab"}, optional
+        Colorspace of the input images.
+        If any input image has only one or zero channels, this setting will be ignored and it will be assumed that
+        the input is grayscale.
+        If a fourth channel is present in an input image, it will be removed before the colorspace conversion and
+        later re-added.
+        See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
+
+    to_colorspace : {"Lab", "HLS", "HSV"}, optional
+        Colorspace in which to perform CLAHE. For Lab, CLAHE will only be applied to the first channel (L), for HLS
+        to the second (L) and for HSV to the third (V).
+        To apply histogram equalization to all channels of an input image (without colorspace conversion),
+        see ``imgaug.augmenters.contrast.AllChannelsHistogramEqualization``.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> aug = iaa.HistogramEqualization()
+
+    Creates a standard histogram equalization augmenter.
+
+    >>> aug = iaa.HistogramEqualization(from_colorspace=iaa.HistogramEqualization.BGR,
+    >>>                                 to_colorspace=iaa.HistogramEqualization.HSV)
+
+    Creates a histogram equalization augmenter that converts images from BGR colorspace to HSV colorspace and then
+    applies the local histogram equalization to the ``V`` channel of the images (before converting back to ``BGR``).
+    Alternatively, ``Lab`` (default) or ``HLS`` can be used as the target colorspace. Grayscale images
+    (no channels / one channel) are never converted and are instead directly normalized (i.e. `from_colorspace` does
+    not have to be changed for them).
+
+    """
+    RGB = _IntensityChannelBasedApplier.RGB
+    BGR = _IntensityChannelBasedApplier.BGR
+    HSV = _IntensityChannelBasedApplier.HSV
+    HLS = _IntensityChannelBasedApplier.HLS
+    Lab = _IntensityChannelBasedApplier.Lab
+
+    def __init__(self,  from_colorspace=color_lib.ChangeColorspace.RGB, to_colorspace=color_lib.ChangeColorspace.Lab,
+                 name=None, deterministic=False, random_state=None):
+        super(HistogramEqualization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.all_channel_histogram_equalization = AllChannelsHistogramEqualization(
+            name="%s_AllChannelsHistogramEqualization" % (name,))
+
+        self.intensity_channel_based_applier = _IntensityChannelBasedApplier(from_colorspace, to_colorspace, name=name)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8"],
+                       disallowed=["bool",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        def _augment_all_channels_histogram_equalization(images_normalized, random_state_derived):
+            return self.all_channel_histogram_equalization._augment_images(images_normalized, random_state_derived,
+                                                                           parents + [self], hooks)
+
+        return self.intensity_channel_based_applier.apply(images, random_state, parents + [self], hooks,
+                                                          _augment_all_channels_histogram_equalization)
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.intensity_channel_based_applier.change_colorspace.from_colorspace,  # from_colorspace is always str
                 self.intensity_channel_based_applier.change_colorspace.to_colorspace.value]
 
 

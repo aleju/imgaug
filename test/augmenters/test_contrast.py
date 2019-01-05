@@ -12,6 +12,7 @@ import numpy as np
 import six.moves as sm
 import skimage
 import skimage.data
+import cv2
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -986,7 +987,8 @@ class TestCLAHE(unittest.TestCase):
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
                           from_colorspace=iaa.CLAHE.RGB,
-                          to_colorspace=iaa.CLAHE.Lab)
+                          to_colorspace=iaa.CLAHE.Lab,
+                          name="ExampleCLAHE")
         clahe.all_channel_clahe = mock_all_channel_clahe
         clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
         clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
@@ -999,7 +1001,8 @@ class TestCLAHE(unittest.TestCase):
             img5d_aug = clahe.augment_image(img5d)
             # Verify
             assert len(caught_warnings) == 1
-            assert "Got image with 5 channels in CLAHE" in str(caught_warnings[-1].message)
+            assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
+                   in str(caught_warnings[-1].message)
 
         assert np.array_equal(img5d_aug, img5d + 2)
 
@@ -1253,6 +1256,206 @@ class TestCLAHE(unittest.TestCase):
         assert params[2] == 2
         assert params[3] == iaa.CLAHE.BGR
         assert params[4] == iaa.CLAHE.HSV
+
+
+class TestAllChannelsHistogramEqualization(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_basic_functionality(self):
+        for nb_channels, nb_images, is_array in itertools.product([None, 1, 2, 3], [1, 2, 3], [False, True]):
+            with self.subTest(nb_channels=nb_channels, nb_images=nb_images, is_array=is_array):
+                img = [
+                    [0, 1, 2, 3],
+                    [4, 5, 6, 7],
+                    [8, 9, 10, 11],
+                    [12, 13, 14, 15],
+                    [16, 17, 18, 19]
+                ]
+                img = np.uint8(img)
+                if nb_channels is not None:
+                    img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
+
+                imgs = [img] * nb_images
+                if is_array:
+                    imgs = np.uint8(imgs)
+
+                def _side_effect(img_call):
+                    return img_call + 1
+
+                mock_equalizeHist = unittest.mock.MagicMock(side_effect=_side_effect)
+                with unittest.mock.patch('cv2.equalizeHist', mock_equalizeHist):
+                    aug = iaa.AllChannelsHistogramEqualization()
+                    imgs_aug = aug.augment_images(imgs)
+                if is_array:
+                    assert ia.is_np_array(imgs_aug)
+                else:
+                    assert isinstance(imgs_aug, list)
+                assert len(imgs_aug) == nb_images
+                for i in sm.xrange(nb_images):
+                    assert imgs_aug[i].dtype.name == "uint8"
+                    assert np.array_equal(imgs_aug[i], imgs[i] + 1)
+
+    def test_basic_functionality_integrationtest(self):
+        nb_channels = 3
+        nb_images = 2
+
+        img = [
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [8, 9, 10, 11],
+            [12, 13, 14, 15],
+            [16, 17, 18, 19]
+        ]
+        img = np.uint8(img)
+        img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
+
+        imgs = [img] * nb_images
+        imgs = np.uint8(imgs)
+        imgs[1][3:, ...] = 0
+
+        aug = iaa.AllChannelsHistogramEqualization()
+        imgs_aug = aug.augment_images(imgs)
+        assert imgs_aug.dtype.name == "uint8"
+        assert len(imgs_aug) == nb_images
+        for i in sm.xrange(nb_images):
+            assert imgs_aug[i].shape == img.shape
+            assert np.max(imgs_aug[i]) > np.max(img)
+        assert len(np.unique(imgs_aug[0])) > len(np.unique(imgs_aug[1]))
+
+    def test_other_dtypes(self):
+        aug = iaa.AllChannelsHistogramEqualization()
+
+        # np.uint16: cv2.error: OpenCV(3.4.5) (...)/histogram.cpp:3345: error: (-215:Assertion failed)
+        #            src.type() == CV_8UC1 in function 'equalizeHist'
+        # np.uint32: TypeError: src data type = 6 is not supported
+        # np.uint64: see np.uint16
+        # np.int8: see np.uint16
+        # np.int16: see np.uint16
+        # np.int32: see np.uint16
+        # np.int64: see np.uint16
+        # np.float16: TypeError: src data type = 23 is not supported
+        # np.float32: see np.uint16
+        # np.float64: see np.uint16
+        # np.float128: TypeError: src data type = 13 is not supported
+        for dtype in [np.uint8]:
+            with self.subTest(dtype=np.dtype(dtype).name):
+                min_value, _center_value, max_value = meta.get_value_range_of_dtype(dtype)
+                dynamic_range = max_value + abs(min_value)
+                if np.dtype(dtype).kind == "f":
+                    img = np.zeros((16,), dtype=dtype)
+                    for i in sm.xrange(16):
+                        img[i] = min_value + i * (0.01 * dynamic_range)
+                    img = img.reshape((4, 4))
+                else:
+                    img = np.arange(min_value, min_value + 16, dtype=dtype).reshape((4, 4))
+                img_aug = aug.augment_image(img)
+                assert img_aug.dtype.name == np.dtype(dtype).name
+                assert img_aug.shape == img.shape
+                assert np.min(img_aug) < min_value + 0.1 * dynamic_range
+                assert np.max(img_aug) > max_value - 0.1 * dynamic_range
+
+    def test_keypoints_not_changed(self):
+        kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
+        kpsoi_aug = iaa.AllChannelsHistogramEqualization().augment_keypoints([kpsoi])
+        assert keypoints_equal([kpsoi], kpsoi_aug)
+
+    def test_heatmaps_not_changed(self):
+        heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
+        heatmaps_aug = iaa.AllChannelsHistogramEqualization().augment_heatmaps([heatmaps])[0]
+        assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+    def test_get_parameters(self):
+        aug = iaa.AllChannelsHistogramEqualization()
+        params = aug.get_parameters()
+        assert len(params) == 0
+
+
+class TestHistogramEqualization(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_init(self):
+        aug = iaa.HistogramEqualization(from_colorspace=iaa.HistogramEqualization.BGR,
+                                        to_colorspace=iaa.HistogramEqualization.HSV)
+        assert isinstance(aug.all_channel_histogram_equalization, iaa.AllChannelsHistogramEqualization)
+
+        icba = aug.intensity_channel_based_applier
+        assert icba.change_colorspace.from_colorspace == iaa.HistogramEqualization.BGR
+        assert icba.change_colorspace.to_colorspace.value == iaa.HistogramEqualization.HSV
+
+    def test_basic_functionality_integrationtest(self):
+        for nb_channels in [None, 1, 3, 4, 5]:
+            with self.subTest(nb_channels=nb_channels):
+                img = [
+                    [0, 1, 2, 3, 4],
+                    [5, 6, 7, 8, 9],
+                    [10, 11, 12, 13, 14]
+                ]
+                img = np.uint8(img)
+                if nb_channels is not None:
+                    img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
+                    if nb_channels >= 3:
+                        img[..., 1] += 10
+                        img[..., 2] += 20
+
+                aug = iaa.HistogramEqualization(from_colorspace=iaa.HistogramEqualization.BGR,
+                                                to_colorspace=iaa.HistogramEqualization.HSV,
+                                                name="ExampleHistEq")
+
+                if nb_channels is None or nb_channels != 5:
+                    img_aug = aug.augment_image(img)
+                else:
+                    with warnings.catch_warnings(record=True) as caught_warnings:
+                        # Cause all warnings to always be triggered.
+                        warnings.simplefilter("always")
+                        # Trigger a warning.
+                        img_aug = aug.augment_image(img)
+                        # Verify
+                        assert len(caught_warnings) == 1
+                        assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"\
+                               in str(caught_warnings[-1].message)
+
+                expected = img
+                if nb_channels is None or nb_channels == 1:
+                    expected = cv2.equalizeHist(expected)
+                    if nb_channels == 1:
+                        expected = expected[..., np.newaxis]
+                elif nb_channels == 5:
+                    for c in sm.xrange(expected.shape[2]):
+                        expected[..., c:c+1] = cv2.equalizeHist(expected[..., c])[..., np.newaxis]
+                else:
+                    if nb_channels == 4:
+                        expected = expected[..., 0:3]
+                    expected = cv2.cvtColor(expected, cv2.COLOR_RGB2HSV)
+                    expected[..., 2] = cv2.equalizeHist(expected[..., 2])
+                    expected = cv2.cvtColor(expected, cv2.COLOR_HSV2RGB)
+                    if nb_channels == 4:
+                        expected = np.concatenate((expected, img[..., 3:4]), axis=2)
+
+                assert np.array_equal(img_aug, expected)
+
+    def test_determinism(self):
+        aug = iaa.HistogramEqualization(from_colorspace=iaa.HistogramEqualization.RGB,
+                                        to_colorspace=iaa.HistogramEqualization.Lab)
+
+        for nb_channels in [None, 1, 3, 4]:
+            with self.subTest(nb_channels=nb_channels):
+                img = np.random.randint(0, 255, (128, 128), dtype=np.uint8)
+                if nb_channels is not None:
+                    img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
+
+                aug_det = aug.to_deterministic()
+                result1 = aug_det.augment_image(img)
+                result2 = aug_det.augment_image(img)
+                assert np.array_equal(result1, result2)
+
+    def test_get_parameters(self):
+        aug = iaa.HistogramEqualization(from_colorspace=iaa.HistogramEqualization.BGR,
+                                        to_colorspace=iaa.HistogramEqualization.HSV)
+        params = aug.get_parameters()
+        assert params[0] == iaa.HistogramEqualization.BGR
+        assert params[1] == iaa.HistogramEqualization.HSV
 
 
 if __name__ == "__main__":
