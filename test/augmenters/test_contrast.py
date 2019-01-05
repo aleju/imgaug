@@ -771,10 +771,10 @@ class TestCLAHE(unittest.TestCase):
         assert clahe.all_channel_clahe.tile_grid_size_px[0].value == 3
         assert clahe.all_channel_clahe.tile_grid_size_px[1] is None
         assert clahe.all_channel_clahe.tile_grid_size_px_min == 2
-        assert clahe.change_colorspace.from_colorspace == iaa.CLAHE.BGR
-        assert clahe.change_colorspace.to_colorspace.value == iaa.CLAHE.HSV
-        assert clahe.change_colorspace_inv.from_colorspace == iaa.CLAHE.HSV
-        assert clahe.change_colorspace_inv.to_colorspace.value == iaa.CLAHE.BGR
+        assert clahe.intensity_channel_based_applier.change_colorspace.from_colorspace == iaa.CLAHE.BGR
+        assert clahe.intensity_channel_based_applier.change_colorspace.to_colorspace.value == iaa.CLAHE.HSV
+        assert clahe.intensity_channel_based_applier.change_colorspace_inv.from_colorspace == iaa.CLAHE.HSV
+        assert clahe.intensity_channel_based_applier.change_colorspace_inv.to_colorspace.value == iaa.CLAHE.BGR
 
     def test_single_image_grayscale(self):
         img = [
@@ -795,8 +795,8 @@ class TestCLAHE(unittest.TestCase):
                           from_colorspace=iaa.CLAHE.RGB,
                           to_colorspace=iaa.CLAHE.Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.change_colorspace = mock_change_colorspace
-        clahe.change_colorspace_inv = mock_change_colorspace_inv
+        clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
+        clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
 
         img_aug = clahe.augment_image(img)
         assert np.array_equal(img_aug, img+2)
@@ -841,8 +841,8 @@ class TestCLAHE(unittest.TestCase):
                           from_colorspace=iaa.CLAHE.RGB,
                           to_colorspace=to_colorspace)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.change_colorspace = mock_change_colorspace
-        clahe.change_colorspace_inv = mock_change_colorspace_inv
+        clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
+        clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
 
         img3d_aug = clahe.augment_image(np.copy(img3d))
         expected1 = img3d + 1
@@ -921,8 +921,8 @@ class TestCLAHE(unittest.TestCase):
                           from_colorspace=iaa.CLAHE.RGB,
                           to_colorspace=iaa.CLAHE.Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.change_colorspace = mock_change_colorspace
-        clahe.change_colorspace_inv = mock_change_colorspace_inv
+        clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
+        clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
 
         img4d_aug = clahe.augment_image(img4d)
         expected1 = img4d[..., 0:3] + 1
@@ -988,8 +988,8 @@ class TestCLAHE(unittest.TestCase):
                           from_colorspace=iaa.CLAHE.RGB,
                           to_colorspace=iaa.CLAHE.Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.change_colorspace = mock_change_colorspace
-        clahe.change_colorspace_inv = mock_change_colorspace_inv
+        clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
+        clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
 
         # note that self.assertWarningRegex does not exist in python 2.7
         with warnings.catch_warnings(record=True) as caught_warnings:
@@ -1057,8 +1057,8 @@ class TestCLAHE(unittest.TestCase):
                           from_colorspace=iaa.CLAHE.RGB,
                           to_colorspace=iaa.CLAHE.Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.change_colorspace = mock_change_colorspace
-        clahe.change_colorspace_inv = mock_change_colorspace_inv
+        clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
+        clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
 
         imgs_aug = clahe.augment_images(imgs)
         assert isinstance(imgs_aug, list)
@@ -1156,8 +1156,8 @@ class TestCLAHE(unittest.TestCase):
                           from_colorspace=iaa.CLAHE.RGB,
                           to_colorspace=iaa.CLAHE.Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.change_colorspace = mock_change_colorspace
-        clahe.change_colorspace_inv = mock_change_colorspace_inv
+        clahe.intensity_channel_based_applier.change_colorspace = mock_change_colorspace
+        clahe.intensity_channel_based_applier.change_colorspace_inv = mock_change_colorspace_inv
 
         imgs_aug = clahe.augment_images(imgs)
         assert ia.is_np_array(imgs_aug)

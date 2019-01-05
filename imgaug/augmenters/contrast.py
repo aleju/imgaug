@@ -358,6 +358,116 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     )
 
 
+class _IntensityChannelBasedApplier(object):
+    RGB = color_lib.ChangeColorspace.RGB
+    BGR = color_lib.ChangeColorspace.BGR
+    HSV = color_lib.ChangeColorspace.HSV
+    HLS = color_lib.ChangeColorspace.HLS
+    Lab = color_lib.ChangeColorspace.Lab
+    _CHANNEL_MAPPING = {
+        HSV: 2,
+        HLS: 1,
+        Lab: 0
+    }
+
+    def __init__(self, from_colorspace, to_colorspace, name):
+        super(_IntensityChannelBasedApplier, self).__init__()
+
+        # TODO maybe add CIE, Luv?
+        ia.do_assert(from_colorspace in [self.RGB,
+                                         self.BGR,
+                                         self.Lab,
+                                         self.HLS,
+                                         self.HSV])
+        ia.do_assert(to_colorspace in [self.Lab,
+                                       self.HLS,
+                                       self.HSV])
+
+        self.change_colorspace = color_lib.ChangeColorspace(
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            name="%s_IntensityChannelBasedApplier_ChangeColorspace" % (name,))
+        self.change_colorspace_inv = color_lib.ChangeColorspace(
+            to_colorspace=from_colorspace,
+            from_colorspace=to_colorspace,
+            name="%s_IntensityChannelBasedApplier_ChangeColorspaceInverse" % (name,))
+
+    def apply(self, images, random_state, parents, hooks, func):
+        input_was_array = ia.is_np_array(images)
+        rss = ia.derive_random_states(random_state, 3)
+
+        # normalize images
+        # (H, W, 1) will be used directly in AllChannelsCLAHE
+        # (H, W, 3) will be converted to target colorspace in the next block
+        # (H, W, 4) will be reduced to (H, W, 3) (remove 4th channel) and converted to target colorspace in next block
+        # (H, W, <else>) will raise a warning and be treated channelwise by AllChannelsCLAHE
+        images_normalized = []
+        images_change_cs = []
+        images_change_cs_indices = []
+        for i, image in enumerate(images):
+            nb_channels = image.shape[2]
+            if nb_channels == 1:
+                images_normalized.append(image)
+            elif nb_channels == 3:
+                images_normalized.append(None)
+                images_change_cs.append(image)
+                images_change_cs_indices.append(i)
+            elif nb_channels == 4:
+                # assume that 4th channel is an alpha channel, e.g. in RGBA
+                images_normalized.append(None)
+                images_change_cs.append(image[..., 0:3])
+                images_change_cs_indices.append(i)
+            else:
+                warnings.warn("Got image with %d channels in CLAHE, expected 0, 1, 3 or 4 channels." % (nb_channels,))
+                images_normalized.append(image)
+
+        # convert colorspaces of normalized 3-channel images
+        images_after_color_conversion = [None] * len(images_normalized)
+        if len(images_change_cs) > 0:
+            images_new_cs = self.change_colorspace._augment_images(images_change_cs, rss[0], parents + [self], hooks)
+            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
+                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
+                images_normalized[target_idx] = image_new_cs[..., chan_idx:chan_idx+1]
+                images_after_color_conversion[target_idx] = image_new_cs
+
+        # apply CLAHE channelwise
+        # images_aug = self.all_channel_clahe._augment_images(images_normalized, rss[1], parents + [self], hooks)
+        images_aug = func(images_normalized, rss[1])
+
+        # denormalize
+        result = []
+        images_change_cs = []
+        images_change_cs_indices = []
+        for i, (image, image_conv, image_aug) in enumerate(zip(images, images_after_color_conversion, images_aug)):
+            nb_channels = image.shape[2]
+            if nb_channels in [3, 4]:
+                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
+                image_tmp = image_conv
+                image_tmp[..., chan_idx:chan_idx+1] = image_aug
+
+                result.append(None if nb_channels == 3 else image[..., 3:4])
+                images_change_cs.append(image_tmp)
+                images_change_cs_indices.append(i)
+            else:
+                result.append(image_aug)
+
+        # invert colorspace conversion
+        if len(images_change_cs) > 0:
+            images_new_cs = self.change_colorspace_inv._augment_images(images_change_cs, rss[0], parents + [self],
+                                                                       hooks)
+            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
+                if result[target_idx] is None:
+                    result[target_idx] = image_new_cs
+                else:  # input image had four channels, 4th channel is already in result
+                    result[target_idx] = np.dstack((image_new_cs, result[target_idx]))
+
+        # convert to array if necessary
+        if input_was_array:
+            result = np.array(result, dtype=result[0].dtype)
+
+        return result
+
+
 # TODO add parameter `tile_grid_size_percent`
 class AllChannelsCLAHE(meta.Augmenter):
     """
@@ -614,16 +724,11 @@ class CLAHE(meta.Augmenter):
     them).
 
     """
-    RGB = color_lib.ChangeColorspace.RGB
-    BGR = color_lib.ChangeColorspace.BGR
-    HSV = color_lib.ChangeColorspace.HSV
-    HLS = color_lib.ChangeColorspace.HLS
-    Lab = color_lib.ChangeColorspace.Lab
-    _CHANNEL_MAPPING = {
-        HSV: 2,
-        HLS: 1,
-        Lab: 0
-    }
+    RGB = _IntensityChannelBasedApplier.RGB
+    BGR = _IntensityChannelBasedApplier.BGR
+    HSV = _IntensityChannelBasedApplier.HSV
+    HLS = _IntensityChannelBasedApplier.HLS
+    Lab = _IntensityChannelBasedApplier.Lab
 
     def __init__(self, clip_limit=40, tile_grid_size_px=8, tile_grid_size_px_min=3,
                  from_colorspace=color_lib.ChangeColorspace.RGB, to_colorspace=color_lib.ChangeColorspace.Lab,
@@ -631,26 +736,11 @@ class CLAHE(meta.Augmenter):
         super(CLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.all_channel_clahe = AllChannelsCLAHE(clip_limit=clip_limit,
-                                                 tile_grid_size_px=tile_grid_size_px,
-                                                 tile_grid_size_px_min=tile_grid_size_px_min,
-                                                 name="%s_AllChannelsCLAHE" % (name,))
+                                                  tile_grid_size_px=tile_grid_size_px,
+                                                  tile_grid_size_px_min=tile_grid_size_px_min,
+                                                  name="%s_AllChannelsCLAHE" % (name,))
 
-        # TODO maybe add CIE, Luv?
-        ia.do_assert(from_colorspace in [self.RGB,
-                                         self.BGR,
-                                         self.Lab,
-                                         self.HLS,
-                                         self.HSV])
-        ia.do_assert(to_colorspace in [self.Lab,
-                                       self.HLS,
-                                       self.HSV])
-
-        self.change_colorspace = color_lib.ChangeColorspace(to_colorspace=to_colorspace,
-                                                            from_colorspace=from_colorspace,
-                                                            name="%s_ChangeColorspace" % (name,))
-        self.change_colorspace_inv = color_lib.ChangeColorspace(to_colorspace=from_colorspace,
-                                                                from_colorspace=to_colorspace,
-                                                                name="%s_ChangeColorspaceInverse" % (name,))
+        self.intensity_channel_based_applier = _IntensityChannelBasedApplier(from_colorspace, to_colorspace, name=name)
 
     def _augment_images(self, images, random_state, parents, hooks):
         ia.gate_dtypes(images,
@@ -661,78 +751,12 @@ class CLAHE(meta.Augmenter):
                                    "float16", "float32", "float64", "float96", "float128", "float256"],
                        augmenter=self)
 
-        input_was_array = ia.is_np_array(images)
-        rss = ia.derive_random_states(random_state, 3)
+        def _augment_all_channels_clahe(images_normalized, random_state_derived):
+            return self.all_channel_clahe._augment_images(images_normalized, random_state_derived, parents + [self],
+                                                          hooks)
 
-        # normalize images
-        # (H, W, 1) will be used directly in AllChannelsCLAHE
-        # (H, W, 3) will be converted to target colorspace in the next block
-        # (H, W, 4) will be reduced to (H, W, 3) (remove 4th channel) and converted to target colorspace in next block
-        # (H, W, <else>) will raise a warning and be treated channelwise by AllChannelsCLAHE
-        images_normalized = []
-        images_change_cs = []
-        images_change_cs_indices = []
-        for i, image in enumerate(images):
-            nb_channels = image.shape[2]
-            if nb_channels == 1:
-                images_normalized.append(image)
-            elif nb_channels == 3:
-                images_normalized.append(None)
-                images_change_cs.append(image)
-                images_change_cs_indices.append(i)
-            elif nb_channels == 4:
-                # assume that 4th channel is an alpha channel, e.g. in RGBA
-                images_normalized.append(None)
-                images_change_cs.append(image[..., 0:3])
-                images_change_cs_indices.append(i)
-            else:
-                warnings.warn("Got image with %d channels in CLAHE, expected 0, 1, 3 or 4 channels." % (nb_channels,))
-                images_normalized.append(image)
-
-        # convert colorspaces of normalized 3-channel images
-        images_after_color_conversion = [None] * len(images_normalized)
-        if len(images_change_cs) > 0:
-            images_new_cs = self.change_colorspace._augment_images(images_change_cs, rss[0], parents + [self], hooks)
-            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
-                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
-                images_normalized[target_idx] = image_new_cs[..., chan_idx:chan_idx+1]
-                images_after_color_conversion[target_idx] = image_new_cs
-
-        # apply CLAHE channelwise
-        images_aug = self.all_channel_clahe._augment_images(images_normalized, rss[1], parents + [self], hooks)
-
-        # denormalize
-        result = []
-        images_change_cs = []
-        images_change_cs_indices = []
-        for i, (image, image_conv, image_aug) in enumerate(zip(images, images_after_color_conversion, images_aug)):
-            nb_channels = image.shape[2]
-            if nb_channels in [3, 4]:
-                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
-                image_tmp = image_conv
-                image_tmp[..., chan_idx:chan_idx+1] = image_aug
-
-                result.append(None if nb_channels == 3 else image[..., 3:4])
-                images_change_cs.append(image_tmp)
-                images_change_cs_indices.append(i)
-            else:
-                result.append(image_aug)
-
-        # invert colorspace conversion
-        if len(images_change_cs) > 0:
-            images_new_cs = self.change_colorspace_inv._augment_images(images_change_cs, rss[0], parents + [self],
-                                                                       hooks)
-            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
-                if result[target_idx] is None:
-                    result[target_idx] = image_new_cs
-                else:  # input image had four channels, 4th channel is already in result
-                    result[target_idx] = np.dstack((image_new_cs, result[target_idx]))
-
-        # convert to array if necessary
-        if input_was_array:
-            result = np.array(result, dtype=result[0].dtype)
-
-        return result
+        return self.intensity_channel_based_applier.apply(images, random_state, parents, hooks,
+                                                          _augment_all_channels_clahe)
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
@@ -744,8 +768,8 @@ class CLAHE(meta.Augmenter):
         return [self.all_channel_clahe.clip_limit,
                 self.all_channel_clahe.tile_grid_size_px,
                 self.all_channel_clahe.tile_grid_size_px_min,
-                self.change_colorspace.from_colorspace,  # from_colorspace is always str
-                self.change_colorspace.to_colorspace.value]
+                self.intensity_channel_based_applier.change_colorspace.from_colorspace,  # from_colorspace is always str
+                self.intensity_channel_based_applier.change_colorspace.to_colorspace.value]
 
 
 class _ContrastFuncWrapper(meta.Augmenter):
