@@ -359,11 +359,11 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
 
 
 # TODO add parameter `tile_grid_size_percent`
-class AllChannelCLAHE(meta.Augmenter):
+class AllChannelsCLAHE(meta.Augmenter):
     """
     Contrast Limited Adaptive Histogram Equalization, applied to all channels of the input images.
 
-    CLAHE Performs histogram equilization within image patches, i.e. over local neighbourhoods.
+    CLAHE performs histogram equilization within image patches, i.e. over local neighbourhoods.
 
     dtype support::
 
@@ -417,7 +417,7 @@ class AllChannelCLAHE(meta.Augmenter):
     """
     def __init__(self, clip_limit=40, tile_grid_size_px=8, tile_grid_size_px_min=3, per_channel=False, name=None,
                  deterministic=False, random_state=None):
-        super(AllChannelCLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(AllChannelsCLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.clip_limit = iap.handle_continuous_param(clip_limit, "clip_limit", value_range=(0+1e-4, None),
                                                       tuple_to_uniform=True, list_to_choice=True)
@@ -554,7 +554,7 @@ class CLAHE(meta.Augmenter):
         Colorspace in which to perform CLAHE. For Lab, CLAHE will only be applied to the first channel (L), for HLS
         to the second (L) and for HSV to the third (V).
         To apply CLAHE to all channels of an input image (without colorspace conversion),
-        see ``imgaug.augmenters.contrast.AllChannelCLAHE``.
+        see ``imgaug.augmenters.contrast.AllChannelsCLAHE``.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -582,10 +582,10 @@ class CLAHE(meta.Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(CLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.all_channel_clahe = AllChannelCLAHE(clip_limit=clip_limit,
+        self.all_channel_clahe = AllChannelsCLAHE(clip_limit=clip_limit,
                                                  tile_grid_size_px=tile_grid_size_px,
                                                  tile_grid_size_px_min=tile_grid_size_px_min,
-                                                 name="%s_AllChannelCLAHE" % (name,))
+                                                 name="%s_AllChannelsCLAHE" % (name,))
 
         # TODO maybe add CIE, Luv?
         ia.do_assert(from_colorspace in [self.RGB,
@@ -617,10 +617,10 @@ class CLAHE(meta.Augmenter):
         rss = ia.derive_random_states(random_state, 3)
 
         # normalize images
-        # (H, W, 1) will be used directly in AllChannelCLAHE
+        # (H, W, 1) will be used directly in AllChannelsCLAHE
         # (H, W, 3) will be converted to target colorspace in the next block
         # (H, W, 4) will be reduced to (H, W, 3) (remove 4th channel) and converted to target colorspace in next block
-        # (H, W, <else>) will raise a warning and be treated channelwise by AllChannelCLAHE
+        # (H, W, <else>) will raise a warning and be treated channelwise by AllChannelsCLAHE
         images_normalized = []
         images_change_cs = []
         images_change_cs_indices = []

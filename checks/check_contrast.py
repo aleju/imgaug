@@ -29,9 +29,9 @@ def main():
 
     for clip_limit in [0.1, 1, 5, 10]:
         for tile_grid_size_px in [3, 7]:
-            augs.append(("AllChannelCLAHE %d %dx%d" % (clip_limit, tile_grid_size_px, tile_grid_size_px),
-                         iaa.AllChannelCLAHE(clip_limit=clip_limit, tile_grid_size_px=tile_grid_size_px,
-                                             per_channel=args.per_channel)))
+            augs.append(("AllChannelsCLAHE %d %dx%d" % (clip_limit, tile_grid_size_px, tile_grid_size_px),
+                         iaa.AllChannelsCLAHE(clip_limit=clip_limit, tile_grid_size_px=tile_grid_size_px,
+                                              per_channel=args.per_channel)))
 
     for clip_limit in [0.1, 1, 5, 10]:
         for tile_grid_size_px in [3, 7, 15]:

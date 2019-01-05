@@ -512,12 +512,12 @@ def test_contrast_adjust_linear():
     assert np.array_equal(observed, expected)
 
 
-class TestAllChannelCLAHE(unittest.TestCase):
+class TestAllChannelsCLAHE(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_init(self):
-        aug = iaa.AllChannelCLAHE(clip_limit=10, tile_grid_size_px=11, tile_grid_size_px_min=4, per_channel=True)
+        aug = iaa.AllChannelsCLAHE(clip_limit=10, tile_grid_size_px=11, tile_grid_size_px_min=4, per_channel=True)
         assert isinstance(aug.clip_limit, iap.Deterministic)
         assert aug.clip_limit.value == 10
         assert isinstance(aug.tile_grid_size_px[0], iap.Deterministic)
@@ -527,7 +527,8 @@ class TestAllChannelCLAHE(unittest.TestCase):
         assert isinstance(aug.per_channel, iap.Deterministic)
         assert np.isclose(aug.per_channel.value, 1.0)
 
-        aug = iaa.AllChannelCLAHE(clip_limit=(10, 20), tile_grid_size_px=(11, 17), tile_grid_size_px_min=4, per_channel=0.5)
+        aug = iaa.AllChannelsCLAHE(clip_limit=(10, 20), tile_grid_size_px=(11, 17), tile_grid_size_px_min=4,
+                                   per_channel=0.5)
         assert isinstance(aug.clip_limit, iap.Uniform)
         assert aug.clip_limit.a.value == 10
         assert aug.clip_limit.b.value == 20
@@ -539,7 +540,7 @@ class TestAllChannelCLAHE(unittest.TestCase):
         assert isinstance(aug.per_channel, iap.Binomial)
         assert np.isclose(aug.per_channel.p.value, 0.5)
 
-        aug = iaa.AllChannelCLAHE(clip_limit=[10, 20, 30], tile_grid_size_px=[11, 17, 21])
+        aug = iaa.AllChannelsCLAHE(clip_limit=[10, 20, 30], tile_grid_size_px=[11, 17, 21])
         assert isinstance(aug.clip_limit, iap.Choice)
         assert aug.clip_limit.a[0] == 10
         assert aug.clip_limit.a[1] == 20
@@ -550,7 +551,7 @@ class TestAllChannelCLAHE(unittest.TestCase):
         assert aug.tile_grid_size_px[0].a[2] == 21
         assert aug.tile_grid_size_px[1] is None
 
-        aug = iaa.AllChannelCLAHE(tile_grid_size_px=((11, 17), [11, 13, 15]))
+        aug = iaa.AllChannelsCLAHE(tile_grid_size_px=((11, 17), [11, 13, 15]))
         assert isinstance(aug.tile_grid_size_px[0], iap.DiscreteUniform)
         assert aug.tile_grid_size_px[0].a.value == 11
         assert aug.tile_grid_size_px[0].b.value == 17
@@ -570,7 +571,7 @@ class TestAllChannelCLAHE(unittest.TestCase):
         img3d[..., 1] += 1
         img3d[..., 2] += 2
 
-        aug = iaa.AllChannelCLAHE(clip_limit=20, tile_grid_size_px=17)
+        aug = iaa.AllChannelsCLAHE(clip_limit=20, tile_grid_size_px=17)
 
         mock_clahe = unittest.mock.Mock()
         mock_clahe.apply.return_value = img
@@ -602,15 +603,15 @@ class TestAllChannelCLAHE(unittest.TestCase):
                 for tile_grid_size_px in [3, 5, 7]:
                     with self.subTest(per_channel=per_channel, clip_limit=clip_limit,
                                       tile_grid_size_px=tile_grid_size_px):
-                        aug = iaa.AllChannelCLAHE(clip_limit=clip_limit,
-                                                  tile_grid_size_px=tile_grid_size_px,
-                                                  per_channel=per_channel)
+                        aug = iaa.AllChannelsCLAHE(clip_limit=clip_limit,
+                                                   tile_grid_size_px=tile_grid_size_px,
+                                                   per_channel=per_channel)
                         img_aug = aug.augment_image(img)
                         assert int(np.max(img_aug)) - int(np.min(img_aug)) > 2
 
     def test_tile_grid_size_px_min(self):
         img = np.zeros((1, 1), dtype=np.uint8)
-        aug = iaa.AllChannelCLAHE(clip_limit=20, tile_grid_size_px=iap.Deterministic(-1), tile_grid_size_px_min=5)
+        aug = iaa.AllChannelsCLAHE(clip_limit=20, tile_grid_size_px=iap.Deterministic(-1), tile_grid_size_px_min=5)
         mock_clahe = unittest.mock.Mock()
         mock_clahe.apply.return_value = img
         mock_createCLAHE = unittest.mock.MagicMock(return_value=mock_clahe)
@@ -620,7 +621,7 @@ class TestAllChannelCLAHE(unittest.TestCase):
 
     def test_per_channel_integrationtest(self):
         # check that per_channel at 50% prob works
-        aug = iaa.AllChannelCLAHE(clip_limit=(1, 200), tile_grid_size_px=(3, 8), per_channel=0.5)
+        aug = iaa.AllChannelsCLAHE(clip_limit=(1, 200), tile_grid_size_px=(3, 8), per_channel=0.5)
         seen = [False, False]
         img1000d = np.zeros((3, 7, 1000), dtype=np.uint8)
         img1000d[0, 0, :] = 90
@@ -655,9 +656,9 @@ class TestAllChannelCLAHE(unittest.TestCase):
             with self.subTest(tile_grid_size_px=tile_grid_size_px,
                               tile_grid_size_px_min=tile_grid_size_px_min,
                               nb_calls_expected_i=nb_calls_expected_i):
-                aug = iaa.AllChannelCLAHE(clip_limit=20,
-                                          tile_grid_size_px=tile_grid_size_px,
-                                          tile_grid_size_px_min=tile_grid_size_px_min)
+                aug = iaa.AllChannelsCLAHE(clip_limit=20,
+                                           tile_grid_size_px=tile_grid_size_px,
+                                           tile_grid_size_px_min=tile_grid_size_px_min)
                 mock_clahe = unittest.mock.Mock()
                 mock_clahe.apply.return_value = img
                 mock_createCLAHE = unittest.mock.MagicMock(return_value=mock_clahe)
@@ -666,7 +667,7 @@ class TestAllChannelCLAHE(unittest.TestCase):
                 assert mock_createCLAHE.call_count == nb_calls_expected_i
 
     def test_other_dtypes(self):
-        aug = iaa.AllChannelCLAHE(clip_limit=0.01, tile_grid_size_px=3)
+        aug = iaa.AllChannelsCLAHE(clip_limit=0.01, tile_grid_size_px=3)
 
         # np.uint32: TypeError: src data type = 6 is not supported
         # np.uint64: cv2.error: OpenCV(3.4.2) (...)/clahe.cpp:351: error: (-215:Assertion failed)
@@ -740,16 +741,16 @@ class TestAllChannelCLAHE(unittest.TestCase):
 
     def test_keypoints_not_changed(self):
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
-        kpsoi_aug = iaa.AllChannelCLAHE().augment_keypoints([kpsoi])
+        kpsoi_aug = iaa.AllChannelsCLAHE().augment_keypoints([kpsoi])
         assert keypoints_equal([kpsoi], kpsoi_aug)
 
     def test_heatmaps_not_changed(self):
         heatmaps = ia.HeatmapsOnImage(np.zeros((3, 3, 1), dtype=np.float32) + 0.5, shape=(3, 3, 3))
-        heatmaps_aug = iaa.AllChannelCLAHE().augment_heatmaps([heatmaps])[0]
+        heatmaps_aug = iaa.AllChannelsCLAHE().augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
     def test_get_parameters(self):
-        aug = iaa.AllChannelCLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2, per_channel=True)
+        aug = iaa.AllChannelsCLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2, per_channel=True)
         params = aug.get_parameters()
         assert all([isinstance(params[i], iap.Deterministic) for i in [0, 3]])
         assert params[0].value == 1
