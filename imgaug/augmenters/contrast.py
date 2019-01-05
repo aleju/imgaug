@@ -489,6 +489,19 @@ class CLAHE(meta.Augmenter):
     """
     Contrast Limited Adaptive Histogram Equalization.
 
+    This augmenter applies CLAHE to images, a form of histogram equalization that normalizes within local image
+    patches.
+    The augmenter transforms input images to a target colorspace (e.g. ``Lab``), extracts an intensity-related channel
+    from the converted images (e.g. ``L`` for ``Lab``), applies CLAHE to the channel and then converts the resulting
+    image back to the original colorspace.
+
+    Grayscale images (images without channel axis or with only one channel axis) are automatically handled,
+    `from_colorspace` does not have to be adjusted for them. For images with four channels (e.g. RGBA), the fourth
+    channel is ignored in the colorspace conversion (e.g. from an ``RGBA`` image, only the ``RGB`` part is converted,
+    normalized, converted back and concatenated with the input ``A`` channel).
+    Images with unusual channel numbers (2, 5 or more than 5) are normalized channel-by-channel (same behaviour as
+    ``AllChannelsCLAHE``, though a warning will be raised).
+
     dtype support::
 
         * ``uint8``: yes; fully tested
@@ -510,7 +523,8 @@ class CLAHE(meta.Augmenter):
     Parameters
     ----------
     clip_limit : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Clipping limit. Higher values result in stronger contrast.
+        Clipping limit. Higher values result in stronger contrast. OpenCV uses a default of ``40``, though
+        values around ``5`` seem to already produce decent contrast.
 
             * If a number, then that value will be used for all images.
             * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
@@ -564,6 +578,40 @@ class CLAHE(meta.Augmenter):
 
     random_state : None or int or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> aug = iaa.CLAHE()
+
+    Creates a standard CLAHE augmenter.
+
+    >>> aug = iaa.CLAHE(clip_limit=(1, 50))
+
+    Creates a CLAHE augmenter with a clip limit uniformly sampled from ``[1..50]``, where ``1`` is rather low contrast
+    and ``50`` is rather high contrast.
+
+    >>> aug = iaa.CLAHE(tile_grid_size_px=(3, 21))
+
+    Creates a CLAHE augmenter with kernel sizes of ``SxS``, where ``S`` is uniformly sampled from from ``[3..21]``.
+    Sampling happens once per image.
+
+    >>> aug = iaa.CLAHE(tile_grid_size_px=iap.Discretize(iap.Normal(loc=7, scale=2)), tile_grid_size_px_min=3)
+
+    Creates a CLAHE augmenter with kernel sizes of ``SxS``, where ``S`` is sampled from ``N(7, 2)``, but does not go
+    below ``3``.
+
+    >>> aug = iaa.CLAHE(tile_grid_size_px=((3, 21), [3, 5, 7]))
+
+    Creates a CLAHE augmenter with kernel sizes of ``HxW``, where ``H`` is uniformly sampled from ``[3..21]`` and
+    ``W`` is randomly picked from the list ``[3, 5, 7]``.
+
+    >>> aug = iaa.CLAHE(from_colorspace=iaa.CLAHE.BGR, to_colorspace=iaa.CLAHE.HSV)
+
+    Creates a CLAHE augmenter that converts images from BGR colorspace to HSV colorspace and then applies the local
+    histogram equalization to the ``V`` channel of the images (before converting back to ``BGR``). Alternatively,
+    ``Lab`` (default) or ``HLS`` can be used as the target colorspace. Grayscale images (no channels / one channel)
+    are never converted and are instead directly normalized (i.e. `from_colorspace` does not have to be changed for
+    them).
 
     """
     RGB = color_lib.ChangeColorspace.RGB
