@@ -13,38 +13,39 @@ from . import imgaug as ia
 from .external.opensimplex import OpenSimplex
 
 
-def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
-    def check_value_range(v):
-        if value_range is None:
+def _check_value_range(v, name, value_range):
+    if value_range is None:
+        return True
+    elif isinstance(value_range, tuple):
+        ia.do_assert(len(value_range) == 2)
+        if value_range[0] is None and value_range[1] is None:
             return True
-        elif isinstance(value_range, tuple):
-            ia.do_assert(len(value_range) == 2)
-            if value_range[0] is None and value_range[1] is None:
-                return True
-            elif value_range[0] is None:
-                ia.do_assert(
-                    v <= value_range[1],
-                    "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1]))
-                return True
-            elif value_range[1] is None:
-                ia.do_assert(
-                    value_range[0] <= v,
-                    "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0]))
-                return True
-            else:
-                ia.do_assert(
-                    value_range[0] <= v <= value_range[1],
-                    "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (
-                        name, value_range[0], value_range[1]))
-                return True
-        elif ia.is_callable(value_range):
-            value_range(v)
+        elif value_range[0] is None:
+            ia.do_assert(
+                v <= value_range[1],
+                "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1]))
+            return True
+        elif value_range[1] is None:
+            ia.do_assert(
+                value_range[0] <= v,
+                "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0]))
             return True
         else:
-            raise Exception("Unexpected input for value_range, got %s." % (str(value_range),))
+            ia.do_assert(
+                value_range[0] <= v <= value_range[1],
+                "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (
+                    name, value_range[0], value_range[1]))
+            return True
+    elif ia.is_callable(value_range):
+        value_range(v)
+        return True
+    else:
+        raise Exception("Unexpected input for value_range, got %s." % (str(value_range),))
 
+
+def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True):
     if ia.is_single_number(param):
-        check_value_range(param)
+        _check_value_range(param, name, value_range)
         return Deterministic(param)
     elif tuple_to_uniform and isinstance(param, tuple):
         ia.do_assert(
@@ -54,8 +55,8 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
             all([ia.is_single_number(v) for v in param]),
             "Expected parameter '%s' with type tuple to only contain numbers, got %s." % (
                 name, [type(v) for v in param],))
-        check_value_range(param[0])
-        check_value_range(param[1])
+        _check_value_range(param[0], name, value_range)
+        _check_value_range(param[1], name, value_range)
         return Uniform(param[0], param[1])
     elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
         ia.do_assert(
@@ -63,7 +64,7 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
             "Expected iterable parameter '%s' to only contain numbers, got %s." % (
                 name, [type(v) for v in param],))
         for param_i in param:
-            check_value_range(param_i)
+            _check_value_range(param_i, name, value_range)
         return Choice(param)
     elif isinstance(param, StochasticParameter):
         return param
@@ -75,37 +76,8 @@ def handle_continuous_param(param, name, value_range=None, tuple_to_uniform=True
 
 
 def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, list_to_choice=True, allow_floats=True):
-    def check_value_range(v):
-        if value_range is None:
-            return True
-        elif isinstance(value_range, tuple):
-            ia.do_assert(len(value_range) == 2)
-            if value_range[0] is None and value_range[1] is None:
-                return True
-            elif value_range[0] is None:
-                ia.do_assert(
-                    v <= value_range[1],
-                    "Parameter '%s' is outside of the expected value range (x <= %.4f)" % (name, value_range[1]))
-                return True
-            elif value_range[1] is None:
-                ia.do_assert(
-                    value_range[0] <= v,
-                    "Parameter '%s' is outside of the expected value range (%.4f <= x)" % (name, value_range[0]))
-                return True
-            else:
-                ia.do_assert(
-                    value_range[0] <= v <= value_range[1],
-                    "Parameter '%s' is outside of the expected value range (%.4f <= x <= %.4f)" % (
-                        name, value_range[0], value_range[1]))
-                return True
-        elif ia.is_callable(value_range):
-            value_range(v)
-            return True
-        else:
-            raise Exception("Unexpected input for value_range, got %s." % (str(value_range),))
-
     if ia.is_single_integer(param) or (allow_floats and ia.is_single_float(param)):
-        check_value_range(param)
+        _check_value_range(param, name, value_range)
         return Deterministic(int(param))
     elif tuple_to_uniform and isinstance(param, tuple):
         ia.do_assert(len(param) == 2)
@@ -113,8 +85,8 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
             all([ia.is_single_number(v) if allow_floats else ia.is_single_integer(v) for v in param]),
             "Expected parameter '%s' of type tuple to only contain %s, got %s." % (
                 name, "number" if allow_floats else "integer", [type(v) for v in param],))
-        check_value_range(param[0])
-        check_value_range(param[1])
+        _check_value_range(param[0], name, value_range)
+        _check_value_range(param[1], name, value_range)
         return DiscreteUniform(int(param[0]), int(param[1]))
     elif list_to_choice and ia.is_iterable(param) and not isinstance(param, tuple):
         ia.do_assert(
@@ -123,7 +95,7 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
                 name, "number" if allow_floats else "integer", [type(v) for v in param],))
 
         for param_i in param:
-            check_value_range(param_i)
+            _check_value_range(param_i, name, value_range)
         return Choice([int(param_i) for param_i in param])
     elif isinstance(param, StochasticParameter):
         return param
@@ -133,6 +105,41 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True, 
         raise Exception(
             "Expected %s, tuple of two %s%s or StochasticParameter for %s, got %s." % (
                 allowed_type, allowed_type, list_str, name, type(param),))
+
+
+def handle_discrete_kernel_size_param(param, name, value_range=(1, None), allow_floats=True):
+    if ia.is_single_integer(param) or (allow_floats and ia.is_single_float(param)):
+        _check_value_range(param, name, value_range)
+        return Deterministic(int(param)), None
+    elif isinstance(param, tuple):
+        ia.do_assert(len(param) == 2)
+        if all([ia.is_single_integer(param_i) for param_i in param]) \
+                or (allow_floats and all([ia.is_single_float(param_i) for param_i in param])):
+            _check_value_range(param[0], name, value_range)
+            _check_value_range(param[1], name, value_range)
+            return DiscreteUniform(int(param[0]), int(param[1])), None
+        elif all([isinstance(param_i, StochasticParameter) for param_i in param]):
+            return param[0], param[1]
+        else:
+            handled = (
+                handle_discrete_param(param[0], "%s[0]" % (name,), value_range, allow_floats=allow_floats),
+                handle_discrete_param(param[1], "%s[1]" % (name,), value_range, allow_floats=allow_floats)
+            )
+
+            return handled
+    elif ia.is_iterable(param) and not isinstance(param, tuple):
+        ia.do_assert(
+            all([ia.is_single_number(v) if allow_floats else ia.is_single_integer(v) for v in param]),
+            "Expected iterable parameter '%s' to only contain %s, got %s." % (
+                name, "number" if allow_floats else "integer", [type(v) for v in param],))
+
+        for param_i in param:
+            _check_value_range(param_i, name, value_range)
+        return Choice([int(param_i) for param_i in param]), None
+    elif isinstance(param, StochasticParameter):
+        return param, None
+    else:
+        raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(param),))
 
 
 def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice=False):

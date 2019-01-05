@@ -23,8 +23,11 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 import six.moves as sm
 import skimage.exposure as ski_exposure
+import cv2
+import warnings
 
 from . import meta
+from . import color as color_lib
 from .. import imgaug as ia
 from .. import parameters as iap
 
@@ -353,6 +356,348 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
         deterministic=deterministic,
         random_state=random_state
     )
+
+
+# TODO add parameter `tile_grid_size_percent`
+class AllChannelCLAHE(meta.Augmenter):
+    """
+    Contrast Limited Adaptive Histogram Equalization, applied to all channels of the input images.
+
+    CLAHE Performs histogram equilization within image patches, i.e. over local neighbourhoods.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: no (2)
+        * ``int16``: no (2)
+        * ``int32``: no (2)
+        * ``int64``: no (2)
+        * ``float16``: no (2)
+        * ``float32``: no (2)
+        * ``float64``: no (2)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) rejected by cv2
+        - (2) results in error in cv2: ``cv2.error: OpenCV(3.4.2) (...)/clahe.cpp:351: error: (-215:Assertion failed)
+              src.type() == (((0) & ((1 << 3) - 1)) + (((1)-1) << 3))
+              || _src.type() == (((2) & ((1 << 3) - 1)) + (((1)-1) << 3)) in function 'apply'``
+
+    Parameters
+    ----------
+    clip_limit : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See ``imgaug.augmenters.contrast.CLAHE``.
+
+    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter \
+                        or tuple of tuple of int or tuple of list of int \
+                        or tuple of imgaug.parameters.StochasticParameter, optional
+        See ``imgaug.augmenters.contrast.CLAHE``.
+
+    tile_grid_size_px_min : int, optional
+        See ``imgaug.augmenters.contrast.CLAHE``.
+
+    per_channel : bool or float, optional
+        Whether to use the same values for all channels (False)
+        or to sample new values for each channel (True).
+        If this parameter is a float ``p``, then for ``p`` percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+    def __init__(self, clip_limit=40, tile_grid_size_px=8, tile_grid_size_px_min=3, per_channel=False, name=None,
+                 deterministic=False, random_state=None):
+        super(AllChannelCLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.clip_limit = iap.handle_continuous_param(clip_limit, "clip_limit", value_range=(0+1e-4, None),
+                                                      tuple_to_uniform=True, list_to_choice=True)
+        self.tile_grid_size_px = iap.handle_discrete_kernel_size_param(tile_grid_size_px, "tile_grid_size_px",
+                                                                       value_range=(0, None),
+                                                                       allow_floats=False)
+        self.tile_grid_size_px_min = tile_grid_size_px_min
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8", "uint16"],
+                       disallowed=["bool",
+                                   "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        nb_images = len(images)
+        nb_channels = meta.estimate_max_number_of_channels(images)
+
+        mode = "single" if self.tile_grid_size_px[1] is None else "two"
+        rss = ia.derive_random_states(random_state, 3 if mode == "single" else 4)
+        per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
+        clip_limit = self.clip_limit.draw_samples((nb_images, nb_channels), random_state=rss[1])
+        tile_grid_size_px_h = self.tile_grid_size_px[0].draw_samples((nb_images, nb_channels), random_state=rss[2])
+        if mode == "single":
+            tile_grid_size_px_w = tile_grid_size_px_h
+        else:
+            tile_grid_size_px_w = self.tile_grid_size_px[1].draw_samples((nb_images, nb_channels), random_state=rss[3])
+
+        tile_grid_size_px_w = np.maximum(tile_grid_size_px_w, self.tile_grid_size_px_min)
+        tile_grid_size_px_h = np.maximum(tile_grid_size_px_h, self.tile_grid_size_px_min)
+
+        gen = enumerate(zip(images, clip_limit, tile_grid_size_px_h, tile_grid_size_px_w, per_channel))
+        for i, (image, clip_limit_i, tgs_px_h_i, tgs_px_w_i, per_channel_i) in gen:
+            nb_channels = image.shape[2]
+            c_param = 0
+            image_warped = []
+            for c in sm.xrange(nb_channels):
+                if tgs_px_w_i[c_param] > 1 or tgs_px_h_i[c_param] > 1:
+                    clahe = cv2.createCLAHE(clipLimit=clip_limit_i[c_param],
+                                            tileGridSize=(tgs_px_w_i[c_param], tgs_px_h_i[c_param]))
+                    channel_warped = clahe.apply(image[..., c])
+                    image_warped.append(channel_warped)
+                else:
+                    image_warped.append(image[..., c])
+                if per_channel_i > 0.5:
+                    c_param += 1
+
+            # combine channels to one image
+            image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
+            image_warped = image_warped.transpose((1, 2, 0))
+
+            images[i] = image_warped
+        return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.clip_limit, self.tile_grid_size_px, self.tile_grid_size_px_min, self.per_channel]
+
+
+class CLAHE(meta.Augmenter):
+    """
+    Contrast Limited Adaptive Histogram Equalization.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) This augmenter uses ChangeColorspace, which is currently limited to ``uint8``.
+
+    Parameters
+    ----------
+    clip_limit : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Clipping limit. Higher values result in stronger contrast.
+
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
+            * If a list, then a random value will be sampled from that list per image.
+            * If a StochasticParameter, then a value will be sampled per image from that parameter.
+
+    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter \
+                        or tuple of tuple of int or tuple of list of int \
+                        or tuple of imgaug.parameters.StochasticParameter, optional
+        Kernel size, i.e. size of each local neighbourhood in pixels.
+
+            * If an int, then that value will be used for all images for both kernel height and width.
+            * If a tuple ``(a, b)``, then a value from the discrete range ``[a..b]`` will be sampled per
+              image.
+            * If a list, then a random value will be sampled from that list per image and used for both
+              kernel height and width.
+            * If a StochasticParameter, then a value will be sampled per image from that parameter per
+              image and used for both kernel height and width.
+            * If a tuple of tuple of int given as ``((a, b), (c, d))``, then two values will be sampled
+              independently from the discrete ranges ``[a..b]`` and ``[c..d]`` per image and used as
+              the kernel height and width.
+            * If a tuple of lists of int, then two values will be sampled independently per image, one
+              from the first list and one from the second, and used as the kernel height and width.
+            * If a tuple of StochasticParameter, then two values will be sampled indepdently per image,
+              one from the first parameter and one from the second, and used as the kernel height and
+              width.
+
+    tile_grid_size_px_min : int, optional
+        Minimum kernel size in px, per axis. If the sampling results in a value lower than this minimum,
+        it will be clipped to this value.
+
+    from_colorspace : {"RGB", "BGR", "HSV", "HLS", "Lab"}, optional
+        Colorspace of the input images.
+        If any input image has only one or zero channels, this setting will be ignored and it will be assumed that
+        the input is grayscale.
+        If a fourth channel is present in an input image, it will be removed before the colorspace conversion and
+        later re-added.
+        See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
+
+    to_colorspace : {"Lab", "HLS", "HSV"}, optional
+        Colorspace in which to perform CLAHE. For Lab, CLAHE will only be applied to the first channel (L), for HLS
+        to the second (L) and for HSV to the third (V).
+        To apply CLAHE to all channels of an input image (without colorspace conversion),
+        see ``imgaug.augmenters.contrast.AllChannelCLAHE``.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+    RGB = color_lib.ChangeColorspace.RGB
+    BGR = color_lib.ChangeColorspace.BGR
+    HSV = color_lib.ChangeColorspace.HSV
+    HLS = color_lib.ChangeColorspace.HLS
+    Lab = color_lib.ChangeColorspace.Lab
+    _CHANNEL_MAPPING = {
+        HSV: 2,
+        HLS: 1,
+        Lab: 0
+    }
+
+    def __init__(self, clip_limit=40, tile_grid_size_px=8, tile_grid_size_px_min=3,
+                 from_colorspace=color_lib.ChangeColorspace.RGB, to_colorspace=color_lib.ChangeColorspace.Lab,
+                 name=None, deterministic=False, random_state=None):
+        super(CLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.all_channel_clahe = AllChannelCLAHE(clip_limit=clip_limit,
+                                                 tile_grid_size_px=tile_grid_size_px,
+                                                 tile_grid_size_px_min=tile_grid_size_px_min,
+                                                 name="%s_AllChannelCLAHE" % (name,))
+
+        # TODO maybe add CIE, Luv?
+        ia.do_assert(from_colorspace in [self.RGB,
+                                         self.BGR,
+                                         self.Lab,
+                                         self.HLS,
+                                         self.HSV])
+        ia.do_assert(to_colorspace in [self.Lab,
+                                       self.HLS,
+                                       self.HSV])
+
+        self.change_colorspace = color_lib.ChangeColorspace(to_colorspace=to_colorspace,
+                                                            from_colorspace=from_colorspace,
+                                                            name="%s_ChangeColorspace" % (name,))
+        self.change_colorspace_inv = color_lib.ChangeColorspace(to_colorspace=from_colorspace,
+                                                                from_colorspace=to_colorspace,
+                                                                name="%s_ChangeColorspaceInverse" % (name,))
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8"],
+                       disallowed=["bool",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        input_was_array = ia.is_np_array(images)
+        rss = ia.derive_random_states(random_state, 3)
+
+        # normalize images
+        # (H, W, 1) will be used directly in AllChannelCLAHE
+        # (H, W, 3) will be converted to target colorspace in the next block
+        # (H, W, 4) will be reduced to (H, W, 3) (remove 4th channel) and converted to target colorspace in next block
+        # (H, W, <else>) will raise a warning and be treated channelwise by AllChannelCLAHE
+        images_normalized = []
+        images_change_cs = []
+        images_change_cs_indices = []
+        for i, image in enumerate(images):
+            nb_channels = image.shape[2]
+            if nb_channels == 1:
+                images_normalized.append(image)
+            elif nb_channels == 3:
+                images_normalized.append(None)
+                images_change_cs.append(image)
+                images_change_cs_indices.append(i)
+            elif nb_channels == 4:
+                # assume that 4th channel is an alpha channel, e.g. in RGBA
+                images_normalized.append(None)
+                images_change_cs.append(image[..., 0:3])
+                images_change_cs_indices.append(i)
+            else:
+                warnings.warn("Got image with %d channels in CLAHE, expected 0, 1, 3 or 4 channels." % (nb_channels,))
+                images_normalized.append(image)
+
+        # convert colorspaces of normalized 3-channel images
+        images_after_color_conversion = [None] * len(images_normalized)
+        if len(images_change_cs) > 0:
+            images_new_cs = self.change_colorspace._augment_images(images_change_cs, rss[0], parents + [self], hooks)
+            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
+                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
+                images_normalized[target_idx] = image_new_cs[..., chan_idx:chan_idx+1]
+                images_after_color_conversion[target_idx] = image_new_cs
+
+        # apply CLAHE channelwise
+        images_aug = self.all_channel_clahe._augment_images(images_normalized, rss[1], parents + [self], hooks)
+
+        # denormalize
+        result = []
+        images_change_cs = []
+        images_change_cs_indices = []
+        for i, (image, image_conv, image_aug) in enumerate(zip(images, images_after_color_conversion, images_aug)):
+            nb_channels = image.shape[2]
+            if nb_channels in [3, 4]:
+                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
+                image_tmp = image_conv
+                image_tmp[..., chan_idx:chan_idx+1] = image_aug
+
+                result.append(None if nb_channels == 3 else image[..., 3:4])
+                images_change_cs.append(image_tmp)
+                images_change_cs_indices.append(i)
+            else:
+                result.append(image_aug)
+
+        # invert colorspace conversion
+        if len(images_change_cs) > 0:
+            images_new_cs = self.change_colorspace_inv._augment_images(images_change_cs, rss[0], parents + [self],
+                                                                       hooks)
+            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
+                if result[target_idx] is None:
+                    result[target_idx] = image_new_cs
+                else:  # input image had four channels, 4th channel is already in result
+                    result[target_idx] = np.dstack((image_new_cs, result[target_idx]))
+
+        # convert to array if necessary
+        if input_was_array:
+            result = np.array(result, dtype=result[0].dtype)
+
+        return result
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.all_channel_clahe.clip_limit,
+                self.all_channel_clahe.tile_grid_size_px,
+                self.all_channel_clahe.tile_grid_size_px_min,
+                self.change_colorspace.from_colorspace,  # from_colorspace is always str
+                self.change_colorspace.to_colorspace.value]
 
 
 class _ContrastFuncWrapper(meta.Augmenter):

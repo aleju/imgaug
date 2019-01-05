@@ -27,6 +27,17 @@ def main():
     for alpha in [-1.0, 0.5, 0, 0.5, 1.0, 2.0, (0.5, 1.5), [0.5, 1.0, 1.5]]:
         augs.append(("LinearContrast " + str(alpha), iaa.LinearContrast(alpha, per_channel=args.per_channel)))
 
+    for clip_limit in [0.1, 1, 5, 10]:
+        for tile_grid_size_px in [3, 7]:
+            augs.append(("AllChannelCLAHE %d %dx%d" % (clip_limit, tile_grid_size_px, tile_grid_size_px),
+                         iaa.AllChannelCLAHE(clip_limit=clip_limit, tile_grid_size_px=tile_grid_size_px,
+                                             per_channel=args.per_channel)))
+
+    for clip_limit in [0.1, 1, 5, 10]:
+        for tile_grid_size_px in [3, 7, 15]:
+            augs.append(("CLAHE %d %dx%d" % (clip_limit, tile_grid_size_px, tile_grid_size_px),
+                         iaa.CLAHE(clip_limit=clip_limit, tile_grid_size_px=tile_grid_size_px)))
+
     images = [data.astronaut()] * 16
     images = ia.imresize_many_images(np.uint8(images), (128, 128))
     for name, aug in augs:
