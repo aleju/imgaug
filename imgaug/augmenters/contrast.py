@@ -16,6 +16,10 @@ List of augmenters:
     * SigmoidContrast
     * LogContrast
     * LinearContrast
+    * AllChannelsHistogramEqualization
+    * HistogramEqualization
+    * AllChannelsCLAHE
+    * CLAHE
 
 """
 from __future__ import print_function, division, absolute_import
