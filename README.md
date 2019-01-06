@@ -282,13 +282,27 @@ The images below show examples for most augmentation techniques (values written 
 <td colspan="1"><sub>LogContrast<br/>(per_channel=True)</sub></td>
 <td colspan="1"><sub>LinearContrast</sub></td>
 <td colspan="1"><sub>LinearContrast<br/>(per_channel=True)</sub></td>
-<td>&nbsp;</td>
+<td colspan="1"><sub>AllChannels-<br/>HistogramEqualization</sub></td>
 </tr>
 <tr>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/logcontrast.gif" height="148" width="100" alt="LogContrast"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/logcontrast_per_channel_true.gif" height="148" width="100" alt="LogContrast per_channel=True"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/linearcontrast.gif" height="148" width="100" alt="LinearContrast"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/linearcontrast_per_channel_true.gif" height="148" width="100" alt="LinearContrast per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/allchannels_histogramequalization.gif" height="148" width="100" alt="AllChannels- HistogramEqualization"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>HistogramEqualization</sub></td>
+<td colspan="1"><sub>AllChannelsCLAHE</sub></td>
+<td colspan="1"><sub>AllChannelsCLAHE<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>CLAHE</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/histogramequalization.gif" height="148" width="100" alt="HistogramEqualization"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/allchannelsclahe.gif" height="148" width="100" alt="AllChannelsCLAHE"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/allchannelsclahe_per_channel_true.gif" height="148" width="100" alt="AllChannelsCLAHE per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/clahe.gif" height="148" width="100" alt="CLAHE"></td>
 <td>&nbsp;</td>
 </tr>
 <tr><td colspan="5"><strong>convolutional</strong></td></tr>
