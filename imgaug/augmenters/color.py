@@ -409,6 +409,7 @@ class ChangeColorspace(meta.Augmenter):
     Lab = "Lab"
     Luv = "Luv"
     COLORSPACES = {RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv}
+    # TODO access cv2 COLOR_ variables directly instead of indirectly via dictionary mapping
     CV_VARS = {
         # RGB
         "RGB2BGR": cv2.COLOR_RGB2BGR,
@@ -417,8 +418,8 @@ class ChangeColorspace(meta.Augmenter):
         "RGB2YCrCb": cv2.COLOR_RGB2YCR_CB,
         "RGB2HSV": cv2.COLOR_RGB2HSV,
         "RGB2HLS": cv2.COLOR_RGB2HLS,
-        "RGB2LAB": cv2.COLOR_RGB2LAB,
-        "RGB2LUV": cv2.COLOR_RGB2LUV,
+        "RGB2Lab": cv2.COLOR_RGB2LAB,
+        "RGB2Luv": cv2.COLOR_RGB2LUV,
         # BGR
         "BGR2RGB": cv2.COLOR_BGR2RGB,
         "BGR2GRAY": cv2.COLOR_BGR2GRAY,
@@ -426,14 +427,17 @@ class ChangeColorspace(meta.Augmenter):
         "BGR2YCrCb": cv2.COLOR_BGR2YCR_CB,
         "BGR2HSV": cv2.COLOR_BGR2HSV,
         "BGR2HLS": cv2.COLOR_BGR2HLS,
-        "BGR2LAB": cv2.COLOR_BGR2LAB,
-        "BGR2LUV": cv2.COLOR_BGR2LUV,
+        "BGR2Lab": cv2.COLOR_BGR2LAB,
+        "BGR2Luv": cv2.COLOR_BGR2LUV,
         # HSV
         "HSV2RGB": cv2.COLOR_HSV2RGB,
         "HSV2BGR": cv2.COLOR_HSV2BGR,
         # HLS
         "HLS2RGB": cv2.COLOR_HLS2RGB,
         "HLS2BGR": cv2.COLOR_HLS2BGR,
+        # Lab
+        "Lab2RGB": cv2.COLOR_Lab2RGB,
+        "Lab2BGR": cv2.COLOR_Lab2BGR
     }
 
     def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False,
@@ -517,6 +521,7 @@ class ChangeColorspace(meta.Augmenter):
                         img_to_cs = cv2.cvtColor(img_rgb, from_to_var)
 
                 # this will break colorspaces that have values outside 0-255 or 0.0-1.0
+                # TODO dont convert to uint8
                 if ia.is_integer_array(img_to_cs):
                     img_to_cs = np.clip(img_to_cs, 0, 255).astype(np.uint8)
                 else:
@@ -532,6 +537,7 @@ class ChangeColorspace(meta.Augmenter):
                 elif alpha <= self.eps:
                     result[i] = image
                 else:
+                    # TODO dont convert to uint8
                     result[i] = (alpha * img_to_cs + (1 - alpha) * image).astype(np.uint8)
 
         return images

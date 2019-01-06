@@ -1,5 +1,5 @@
 six
-numpy>=1.13
+numpy>=1.15  # The test for imgaug.augmenters.overlay.blend_alpha() fails for numpy<1.15. All other tests seemed to work as of 2019/01/04.
 scipy
 Pillow
 matplotlib

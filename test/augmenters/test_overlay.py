@@ -57,9 +57,7 @@ def test_blend_alpha():
     assert np.all(img_blend[:, :, 0] == 0)
     assert np.all(img_blend[:, :, 1] == 1)
 
-    # FIXME uint64 and int64 had to be temporarily deactivated due to breaking on travis, while working locally
-    # for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
         values = [
             (0, 0),
@@ -100,6 +98,7 @@ def test_blend_alpha():
             assert img_blend.shape == (3, 3, 1)
             assert np.all(img_blend == dtype(v2))
 
+            # TODO this test breaks for numpy <1.15 -- why?
             for c in sm.xrange(3):
                 img_fg = np.full((3, 3, c), v1, dtype=dtype)
                 img_bg = np.full((3, 3, c), v2, dtype=dtype)
@@ -221,8 +220,7 @@ def test_blend_alpha():
                 img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
                 assert img_blend.dtype.name == np.dtype(dtype)
                 assert img_blend.shape == (3, 3, c)
-                # FIXME this was deactivated temporarily because it would break on travis for 2.7 and 3.6
-                # assert _allclose(img_blend, 0.75*max_float_dt(v1) + 0.25*max_float_dt(v2))
+                assert _allclose(img_blend, 0.75*max_float_dt(v1) + 0.25*max_float_dt(v2))
 
             img_fg = np.full((3, 3, 2), v1, dtype=dtype)
             img_bg = np.full((3, 3, 2), v2, dtype=dtype)

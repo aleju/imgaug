@@ -80,11 +80,11 @@ It converts a set of input images into a new, much larger set of slightly altere
 * Supports both common and exotic augmentation techniques.
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
 * Supports augmentation of:
-  * Images (uint8; float32 and int32 will work in many augmenters, but are not unittested)
-  * Heatmaps (float32) *(Beta)*
-  * Segmentation maps (integer-based, bool, float-based) *(Beta)*
-  * Keypoints/Landmarks (int32 or float32 coordinates)
-  * Bounding Boxes (int32 or float32 coordinates)
+  * Images (full support for uint8, for other dtypes see [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html))
+  * Heatmaps (float32)
+  * Segmentation maps (integer-based, bool, float-based)
+  * Keypoints/Landmarks (int or float coordinates)
+  * Bounding Boxes (int or float coordinates)
   * Can augment all of the above automatically with the same sampled values. E.g. rotate both images and the segmentation maps on them by the same random value sampled from `uniform(0°, 30°)`.
   * Native support for heatmaps and segmentation maps that are smaller than their corresponding images.
 * Define flexible stochastic ranges for each augmentation parameter.
@@ -282,13 +282,27 @@ The images below show examples for most augmentation techniques (values written 
 <td colspan="1"><sub>LogContrast<br/>(per_channel=True)</sub></td>
 <td colspan="1"><sub>LinearContrast</sub></td>
 <td colspan="1"><sub>LinearContrast<br/>(per_channel=True)</sub></td>
-<td>&nbsp;</td>
+<td colspan="1"><sub>AllChannels-<br/>HistogramEqualization</sub></td>
 </tr>
 <tr>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/logcontrast.gif" height="148" width="100" alt="LogContrast"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/logcontrast_per_channel_true.gif" height="148" width="100" alt="LogContrast per_channel=True"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/linearcontrast.gif" height="148" width="100" alt="LinearContrast"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/linearcontrast_per_channel_true.gif" height="148" width="100" alt="LinearContrast per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/allchannels_histogramequalization.gif" height="148" width="100" alt="AllChannels- HistogramEqualization"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>HistogramEqualization</sub></td>
+<td colspan="1"><sub>AllChannelsCLAHE</sub></td>
+<td colspan="1"><sub>AllChannelsCLAHE<br/>(per_channel=True)</sub></td>
+<td colspan="1"><sub>CLAHE</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/histogramequalization.gif" height="148" width="100" alt="HistogramEqualization"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/allchannelsclahe.gif" height="148" width="100" alt="AllChannelsCLAHE"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/allchannelsclahe_per_channel_true.gif" height="148" width="100" alt="AllChannelsCLAHE per_channel=True"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/clahe.gif" height="148" width="100" alt="CLAHE"></td>
 <td>&nbsp;</td>
 </tr>
 <tr><td colspan="5"><strong>convolutional</strong></td></tr>
@@ -919,6 +933,10 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | SigmoidContrast(G, C, PCH) | Similar to GammaContrast, but applies `I_ij' = 1/(1 + exp(G' * (C' - I_ij)))`, where `G'` is a gain value sampled from `G` and `C'` is a cutoff value sampled from `C`. |
 | LogContrast(G, PCH) | Similar to GammaContrast, but applies `I_ij = G' * log(1 + I_ij)`, where `G'` is a gain value sampled from `G`. |
 | LinearContrast(S, PCH) | Similar to GammaContrast, but applies `I_ij = 128 + S' * (I_ij - 128)`, where `S'` is a strength value sampled from `S`. This augmenter is identical to ContrastNormalization (which will be deprecated in the future). |
+| AllChannelsHistogramEqualization() | Applies standard histogram equalization to each channel of each input image. |
+| HistogramEqualization(F, T) | Similar to `AllChannelsHistogramEqualization`, but expects images to be in colorspace `F`, converts to colorspace `T` and normalizes only an intensity-related channel, e.g. `L` for `T=Lab` (default for `T`) or `V` for `T=HSV`. | 
+| AllChannelsCLAHE(CL, K, Kmin, PCH) | Contrast Limited Adaptive Histogram Equalization (histogram equalization in small image patches), applied to each image channel with clipping limit `CL` and kernel size `K` (clipped to range `[Kmin, inf)`). If `PCH` is true, different values for `CL` and `K` are sampled per channel. |
+| CLAHE(CL, K, Kmin, F, T) | Similar to `HistogramEqualization`, this applies CLAHE only to intensity-related channels in Lab/HSV/HLS colorspace. (Usually this works significantly better than `AllChannelsCLAHE`.) |
 
 
 **convolutional**
@@ -949,7 +967,7 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | PiecewiseAffine(S, R, C, O, M, CVAL) | Places a regular grid of points on the image. The grid has `R` rows and `C` columns. Then moves the points (and the image areas around them) by amounts that are samples from normal distribution N(0,`S`), leading to local distortions of varying strengths. `O`, `M` and `CVAL` are defined as in `Affine`. |
 | PerspectiveTransform(S, KS) | Applies a random four-point perspective transform to the image (kinda like an advanced form of cropping). Each point has a random distance from the image corner, derived from a normal distribution with sigma `S`. If `KS` is set to True (default), each image will be resized back to its original size. |
 | ElasticTransformation(S, SM, O, CVAL, M) | Moves each pixel individually around based on distortion fields. `SM` defines the smoothness of the distortion field and `S` its strength. `O` is the interpolation order, `CVAL` a constant fill value for newly created pixels and `M` the fill mode (see also augmenter `Affine`). |
-| Rot90(K, KS) | Rotate images `K` times by 90 degrees. (This is faster than `Affine`.) If `KS` is true, the resulting image will be resized to have the same size as the original input image. |
+| Rot90(K, KS) | Rotate images `K` times clockwise by 90 degrees. (This is faster than `Affine`.) If `KS` is true, the resulting image will be resized to have the same size as the original input image. |
 
 
 **meta**

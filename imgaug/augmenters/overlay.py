@@ -43,25 +43,24 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
         * ``uint32``: yes; fully tested
-        * ``uint64``: no; fully tested (1) (4)
+        * ``uint64``: yes; fully tested (1)
         * ``int8``: yes; fully tested
         * ``int16``: yes; fully tested
         * ``int32``: yes; fully tested
-        * ``int64``: no; fully tested (1) (4)
+        * ``int64``: yes; fully tested (1)
         * ``float16``: yes; fully tested
         * ``float32``: yes; fully tested
-        * ``float64``: yes; fully tested
+        * ``float64``: yes; fully tested (1)
         * ``float128``: no (2)
         * ``bool``: yes; fully tested (2)
 
         - (1) Tests show that these dtypes work, but a conversion to float128 happens, which only
               has 96 bits of size instead of true 128 bits and hence not twice as much resolution.
-              It is possible that these dtypes result in inaccuracies.
+              It is possible that these dtypes result in inaccuracies, though the tests did not
+              indicate that.
         - (2) Not available due to the input dtype having to be increased to an equivalent float
               dtype with two times the input resolution.
         - (3) Mapped internally to ``float16``.
-        - (4) Had to be temporarily deactivated due to errors on travis, even though it worked
-              locally. Maybe difference in float128 implementation between versions? TODO
 
     Parameters
     ----------
@@ -95,8 +94,8 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     assert image_fg.shape == image_bg.shape
     assert image_fg.dtype.kind == image_bg.dtype.kind
     # TODO switch to gate_dtypes()
-    assert image_fg.dtype not in [np.uint64, np.int64, np.float128]
-    assert image_bg.dtype not in [np.uint64, np.int64, np.float128]
+    assert image_fg.dtype not in [np.float128]
+    assert image_bg.dtype not in [np.float128]
 
     input_was_bool = False
     if image_fg.dtype.kind == "b":

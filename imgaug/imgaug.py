@@ -23,10 +23,6 @@ import six.moves as sm
 import skimage.draw
 import skimage.measure
 import collections
-import matplotlib.pyplot as plt
-import shapely
-import shapely.geometry
-import shapely.ops
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
 if sys.version_info[0] == 2:
@@ -1017,21 +1013,18 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         * ``int16``: yes; tested
         * ``int32``: limited; tested (4)
         * ``int64``: no (2)
-        * ``float16``: yes; not tested (5) (8)
-        * ``float32``: yes; not tested (6) (8)
-        * ``float64``: yes; not tested (6) (8)
+        * ``float16``: yes; tested (5)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
         * ``float128``: no (1)
-        * ``bool``: yes; tested (7)
+        * ``bool``: yes; tested (6)
 
         - (1) rejected by ``cv2.imresize``
         - (2) results too inaccurate
         - (3) mapped internally to ``int16`` when interpolation!="nearest"
         - (4) only supported for interpolation="nearest", other interpolations lead to cv2 error
         - (5) mapped internally to ``float32``
-        - (6) some indication in tests that accuracy is lacking a bit for interpolations other than
-              "nearest", but might be false positive
-        - (7) mapped internally to ``uint8``
-        - (8) tests were temporarily deactivated due to breaking on travis TODO
+        - (6) mapped internally to ``uint8``
 
     Parameters
     ----------
@@ -1730,6 +1723,9 @@ def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
         cv2.waitKey(0)
         cv2.destroyWindow(win_name)
     else:
+        # import only when necessary (faster startup; optional dependency; less fragile -- see issue #225)
+        import matplotlib.pyplot as plt
+
         plt.imshow(image, cmap="gray")
         plt.gcf().canvas.set_window_title("imgaug.imshow(%s)" % (image.shape,))
         plt.show()
@@ -2318,6 +2314,7 @@ class KeypointsOnImage(object):
         keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
         return KeypointsOnImage(keypoints, shape)
 
+    # TODO add to_gaussian_heatmaps(), from_gaussian_heatmaps()
     def to_keypoint_image(self, size=1):
         """
         Draws a new black image of shape ``(H,W,N)`` in which all keypoint coordinates are set to 255.
@@ -3021,6 +3018,7 @@ class BoundingBox(object):
         else:
             return fully
 
+    # TODO rename to clip_*()
     def cut_out_of_image(self, image):
         """
         Cut off all parts of the bounding box that are outside of the image.
@@ -3960,6 +3958,9 @@ class Polygon(object):
             Returned as MultiPolygon, because the clipping can split the polygon into multiple parts.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         # if fully out of image, clip everything away, nothing remaining
         if self.is_out_of_image(image, fully=True, partly=False):
             return MultiPolygon([])
@@ -4227,6 +4228,9 @@ class Polygon(object):
             The Shapely polygon matching this polygon's exterior.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         return shapely.geometry.Polygon([(point[0], point[1]) for point in self.exterior])
 
     def to_shapely_line_string(self, closed=False, interpolate=0):
@@ -4285,6 +4289,9 @@ class Polygon(object):
             A polygon with the same exterior as the Shapely polygon.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         do_assert(isinstance(polygon_shapely, shapely.geometry.Polygon))
         # polygon_shapely.exterior can be None if the polygon was instantiated without points
         if polygon_shapely.exterior is None or len(polygon_shapely.exterior.coords) == 0:
@@ -4327,6 +4334,9 @@ class Polygon(object):
             Whether the two polygon's exteriors can be viewed as equal (approximate test).
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         atol = max_distance
 
         ext_a = self.exterior
@@ -4470,6 +4480,9 @@ class Polygon(object):
 
 
 def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
+    # load shapely lazily, which makes the dependency more optional
+    import shapely.geometry
+
     if len(points) <= 1:
         raise Exception(
             ("Conversion to shapely line string requires at least two points, but points input contains "
@@ -4566,6 +4579,9 @@ class MultiPolygon(object):
             The derived MultiPolygon.
 
         """
+        # load shapely lazily, which makes the dependency more optional
+        import shapely.geometry
+
         if isinstance(geometry, shapely.geometry.MultiPolygon):
             return MultiPolygon([Polygon.from_shapely(poly, label=label) for poly in geometry.geoms])
         elif isinstance(geometry, shapely.geometry.Polygon):
@@ -4630,7 +4646,7 @@ class HeatmapsOnImage(object):
             self.arr_was_2d = False
 
         eps = np.finfo(np.float32).eps
-        min_is_zero = 0.0 - eps  < min_value < 0.0 + eps
+        min_is_zero = 0.0 - eps < min_value < 0.0 + eps
         max_is_one = 1.0 - eps < max_value < 1.0 + eps
         if min_is_zero and max_is_one:
             self.arr_0to1 = arr
@@ -4708,6 +4724,9 @@ class HeatmapsOnImage(object):
             heatmap_c_rs = np.squeeze(heatmap_c_rs).astype(np.float32) / 255.0
 
             if cmap is not None:
+                # import only when necessary (faster startup; optional dependency; less fragile -- see issue #225)
+                import matplotlib.pyplot as plt
+
                 cmap_func = plt.get_cmap(cmap)
                 heatmap_cmapped = cmap_func(heatmap_c_rs)
                 heatmap_cmapped = np.delete(heatmap_cmapped, 3, 2)

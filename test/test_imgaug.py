@@ -1036,18 +1036,21 @@ def test_imresize_many_images():
 
         for dtype in [np.float16, np.float32, np.float64]:
             isize = np.dtype(dtype).itemsize
+
             for value in [0.5, -0.5, 1.0, -1.0, 10.0, -10.0, -1000 ** (isize-1), 1000 * (isize+1)]:
                 image = np.zeros((4, 4), dtype=dtype)
                 image[1, :] = value
                 image[2, :] = value
-                expected = (mask * float(value)).astype(dtype)
+                expected = (mask * np.float128(value)).astype(dtype)
                 image_rs = ia.imresize_many_images([image], (3, 3), interpolation=ip)[0]
                 assert image_rs.dtype.type == dtype
-                # atol can be set tighter for interpolation="linear" with 1e-7 and 1e-8
-                # cubic seemed to be not that accurate
-                # FIXME this had to be temporarily deactivated due to erroring for float16 on
-                # travis even though it worked locally
-                # assert np.allclose(image_rs, expected, rtol=0, atol=max(abs(value * 1e-6), 1e-5))
+                # Our basis for the expected image is derived from uint8 as that is most likely to work, so we will
+                # have to accept here deviations of around 1/255.
+                atol = np.float128(1 / 255) * np.abs(np.float128(value)) + 1e-8
+                assert np.allclose(image_rs, expected, rtol=0, atol=atol)
+                # Expect at least one cell to have a difference between observed and expected image of approx. 0,
+                # currently we seem to be able to get away with this despite the above mentioned inaccuracy.
+                assert np.any(np.isclose(image_rs, expected, rtol=0, atol=1e-4))
 
 
 def test_imresize_single_image():

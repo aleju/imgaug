@@ -236,6 +236,7 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(AverageBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
+        # TODO replace this by iap.handle_discrete_kernel_size()
         self.mode = "single"
         if ia.is_single_number(k):
             self.k = iap.Deterministic(int(k))
@@ -385,6 +386,7 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
     def __init__(self, k=1, name=None, deterministic=False, random_state=None):
         super(MedianBlur, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
+        # TODO replace this by iap.handle_discrete_kernel_size()
         self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True,
                                            allow_floats=False)
         if ia.is_single_integer(k):

@@ -16,6 +16,10 @@ List of augmenters:
     * SigmoidContrast
     * LogContrast
     * LinearContrast
+    * AllChannelsHistogramEqualization
+    * HistogramEqualization
+    * AllChannelsCLAHE
+    * CLAHE
 
 """
 from __future__ import print_function, division, absolute_import
@@ -23,8 +27,11 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 import six.moves as sm
 import skimage.exposure as ski_exposure
+import cv2
+import warnings
 
 from . import meta
+from . import color as color_lib
 from .. import imgaug as ia
 from .. import parameters as iap
 
@@ -53,11 +60,11 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
         - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for uint8.
+              e.g. ``result*255`` for ``uint8``.
         - (2) Integer-like values are not rounded after applying the contrast adjustment equation
               (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
               space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
               64bit integer values. Tests showed no indication of that happening though.
         - (4) Must not contain negative values. Values >=0 are fully supported.
@@ -133,11 +140,11 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
 
         - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for uint8.
+              e.g. ``result*255`` for ``uint8``.
         - (2) Integer-like values are not rounded after applying the contrast adjustment equation
               (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
               space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
               64bit integer values. Tests showed no indication of that happening though.
         - (4) Must not contain negative values. Values >=0 are fully supported.
@@ -225,11 +232,11 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
         - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for uint8.
+              e.g. ``result*255`` for ``uint8``.
         - (2) Integer-like values are not rounded after applying the contrast adjustment equation
               (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
               space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to float64 values before
+        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
               64bit integer values. Tests showed no indication of that happening though.
         - (4) Must not contain negative values. Values >=0 are fully supported.
@@ -353,6 +360,609 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
         deterministic=deterministic,
         random_state=random_state
     )
+
+
+# TODO maybe offer the other contrast augmenters also wrapped in this, similar to CLAHE and HistogramEqualization?
+# this is essentially tested by tests for CLAHE
+class _IntensityChannelBasedApplier(object):
+    RGB = color_lib.ChangeColorspace.RGB
+    BGR = color_lib.ChangeColorspace.BGR
+    HSV = color_lib.ChangeColorspace.HSV
+    HLS = color_lib.ChangeColorspace.HLS
+    Lab = color_lib.ChangeColorspace.Lab
+    _CHANNEL_MAPPING = {
+        HSV: 2,
+        HLS: 1,
+        Lab: 0
+    }
+
+    def __init__(self, from_colorspace, to_colorspace, name):
+        super(_IntensityChannelBasedApplier, self).__init__()
+
+        # TODO maybe add CIE, Luv?
+        ia.do_assert(from_colorspace in [self.RGB,
+                                         self.BGR,
+                                         self.Lab,
+                                         self.HLS,
+                                         self.HSV])
+        ia.do_assert(to_colorspace in [self.Lab,
+                                       self.HLS,
+                                       self.HSV])
+
+        self.change_colorspace = color_lib.ChangeColorspace(
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            name="%s_IntensityChannelBasedApplier_ChangeColorspace" % (name,))
+        self.change_colorspace_inv = color_lib.ChangeColorspace(
+            to_colorspace=from_colorspace,
+            from_colorspace=to_colorspace,
+            name="%s_IntensityChannelBasedApplier_ChangeColorspaceInverse" % (name,))
+
+    def apply(self, images, random_state, parents, hooks, func):
+        input_was_array = ia.is_np_array(images)
+        rss = ia.derive_random_states(random_state, 3)
+
+        # normalize images
+        # (H, W, 1) will be used directly in AllChannelsCLAHE
+        # (H, W, 3) will be converted to target colorspace in the next block
+        # (H, W, 4) will be reduced to (H, W, 3) (remove 4th channel) and converted to target colorspace in next block
+        # (H, W, <else>) will raise a warning and be treated channelwise by AllChannelsCLAHE
+        images_normalized = []
+        images_change_cs = []
+        images_change_cs_indices = []
+        for i, image in enumerate(images):
+            nb_channels = image.shape[2]
+            if nb_channels == 1:
+                images_normalized.append(image)
+            elif nb_channels == 3:
+                images_normalized.append(None)
+                images_change_cs.append(image)
+                images_change_cs_indices.append(i)
+            elif nb_channels == 4:
+                # assume that 4th channel is an alpha channel, e.g. in RGBA
+                images_normalized.append(None)
+                images_change_cs.append(image[..., 0:3])
+                images_change_cs_indices.append(i)
+            else:
+                warnings.warn("Got image with %d channels in _IntensityChannelBasedApplier (parents: %s), "
+                              "expected 0, 1, 3 or 4 channels." % (
+                                  nb_channels, ", ".join(parent.name for parent in parents)))
+                images_normalized.append(image)
+
+        # convert colorspaces of normalized 3-channel images
+        images_after_color_conversion = [None] * len(images_normalized)
+        if len(images_change_cs) > 0:
+            images_new_cs = self.change_colorspace._augment_images(images_change_cs, rss[0], parents + [self], hooks)
+            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
+                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
+                images_normalized[target_idx] = image_new_cs[..., chan_idx:chan_idx+1]
+                images_after_color_conversion[target_idx] = image_new_cs
+
+        # apply CLAHE channelwise
+        # images_aug = self.all_channel_clahe._augment_images(images_normalized, rss[1], parents + [self], hooks)
+        images_aug = func(images_normalized, rss[1])
+
+        # denormalize
+        result = []
+        images_change_cs = []
+        images_change_cs_indices = []
+        for i, (image, image_conv, image_aug) in enumerate(zip(images, images_after_color_conversion, images_aug)):
+            nb_channels = image.shape[2]
+            if nb_channels in [3, 4]:
+                chan_idx = self._CHANNEL_MAPPING[self.change_colorspace.to_colorspace.value]
+                image_tmp = image_conv
+                image_tmp[..., chan_idx:chan_idx+1] = image_aug
+
+                result.append(None if nb_channels == 3 else image[..., 3:4])
+                images_change_cs.append(image_tmp)
+                images_change_cs_indices.append(i)
+            else:
+                result.append(image_aug)
+
+        # invert colorspace conversion
+        if len(images_change_cs) > 0:
+            images_new_cs = self.change_colorspace_inv._augment_images(images_change_cs, rss[0], parents + [self],
+                                                                       hooks)
+            for image_new_cs, target_idx in zip(images_new_cs, images_change_cs_indices):
+                if result[target_idx] is None:
+                    result[target_idx] = image_new_cs
+                else:  # input image had four channels, 4th channel is already in result
+                    result[target_idx] = np.dstack((image_new_cs, result[target_idx]))
+
+        # convert to array if necessary
+        if input_was_array:
+            result = np.array(result, dtype=result[0].dtype)
+
+        return result
+
+
+# TODO add parameter `tile_grid_size_percent`
+class AllChannelsCLAHE(meta.Augmenter):
+    """
+    Contrast Limited Adaptive Histogram Equalization, applied to all channels of the input images.
+
+    CLAHE performs histogram equilization within image patches, i.e. over local neighbourhoods.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: no (2)
+        * ``int16``: no (2)
+        * ``int32``: no (2)
+        * ``int64``: no (2)
+        * ``float16``: no (2)
+        * ``float32``: no (2)
+        * ``float64``: no (2)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) rejected by cv2
+        - (2) results in error in cv2: ``cv2.error: OpenCV(3.4.2) (...)/clahe.cpp:351: error: (-215:Assertion failed)
+              src.type() == (((0) & ((1 << 3) - 1)) + (((1)-1) << 3))
+              || _src.type() == (((2) & ((1 << 3) - 1)) + (((1)-1) << 3)) in function 'apply'``
+
+    Parameters
+    ----------
+    clip_limit : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See ``imgaug.augmenters.contrast.CLAHE``.
+
+    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter \
+                        or tuple of tuple of int or tuple of list of int \
+                        or tuple of imgaug.parameters.StochasticParameter, optional
+        See ``imgaug.augmenters.contrast.CLAHE``.
+
+    tile_grid_size_px_min : int, optional
+        See ``imgaug.augmenters.contrast.CLAHE``.
+
+    per_channel : bool or float, optional
+        Whether to use the same values for all channels (False)
+        or to sample new values for each channel (True).
+        If this parameter is a float ``p``, then for ``p`` percent of all images
+        `per_channel` will be treated as True, otherwise as False.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+    def __init__(self, clip_limit=40, tile_grid_size_px=8, tile_grid_size_px_min=3, per_channel=False, name=None,
+                 deterministic=False, random_state=None):
+        super(AllChannelsCLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.clip_limit = iap.handle_continuous_param(clip_limit, "clip_limit", value_range=(0+1e-4, None),
+                                                      tuple_to_uniform=True, list_to_choice=True)
+        self.tile_grid_size_px = iap.handle_discrete_kernel_size_param(tile_grid_size_px, "tile_grid_size_px",
+                                                                       value_range=(0, None),
+                                                                       allow_floats=False)
+        self.tile_grid_size_px_min = tile_grid_size_px_min
+        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8", "uint16"],
+                       disallowed=["bool",
+                                   "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        nb_images = len(images)
+        nb_channels = meta.estimate_max_number_of_channels(images)
+
+        mode = "single" if self.tile_grid_size_px[1] is None else "two"
+        rss = ia.derive_random_states(random_state, 3 if mode == "single" else 4)
+        per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
+        clip_limit = self.clip_limit.draw_samples((nb_images, nb_channels), random_state=rss[1])
+        tile_grid_size_px_h = self.tile_grid_size_px[0].draw_samples((nb_images, nb_channels), random_state=rss[2])
+        if mode == "single":
+            tile_grid_size_px_w = tile_grid_size_px_h
+        else:
+            tile_grid_size_px_w = self.tile_grid_size_px[1].draw_samples((nb_images, nb_channels), random_state=rss[3])
+
+        tile_grid_size_px_w = np.maximum(tile_grid_size_px_w, self.tile_grid_size_px_min)
+        tile_grid_size_px_h = np.maximum(tile_grid_size_px_h, self.tile_grid_size_px_min)
+
+        gen = enumerate(zip(images, clip_limit, tile_grid_size_px_h, tile_grid_size_px_w, per_channel))
+        for i, (image, clip_limit_i, tgs_px_h_i, tgs_px_w_i, per_channel_i) in gen:
+            nb_channels = image.shape[2]
+            c_param = 0
+            image_warped = []
+            for c in sm.xrange(nb_channels):
+                if tgs_px_w_i[c_param] > 1 or tgs_px_h_i[c_param] > 1:
+                    clahe = cv2.createCLAHE(clipLimit=clip_limit_i[c_param],
+                                            tileGridSize=(tgs_px_w_i[c_param], tgs_px_h_i[c_param]))
+                    channel_warped = clahe.apply(image[..., c])
+                    image_warped.append(channel_warped)
+                else:
+                    image_warped.append(image[..., c])
+                if per_channel_i > 0.5:
+                    c_param += 1
+
+            # combine channels to one image
+            image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
+            image_warped = image_warped.transpose((1, 2, 0))
+
+            images[i] = image_warped
+        return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.clip_limit, self.tile_grid_size_px, self.tile_grid_size_px_min, self.per_channel]
+
+
+class CLAHE(meta.Augmenter):
+    """
+    Contrast Limited Adaptive Histogram Equalization.
+
+    This augmenter applies CLAHE to images, a form of histogram equalization that normalizes within local image
+    patches.
+    The augmenter transforms input images to a target colorspace (e.g. ``Lab``), extracts an intensity-related channel
+    from the converted images (e.g. ``L`` for ``Lab``), applies CLAHE to the channel and then converts the resulting
+    image back to the original colorspace.
+
+    Grayscale images (images without channel axis or with only one channel axis) are automatically handled,
+    `from_colorspace` does not have to be adjusted for them. For images with four channels (e.g. ``RGBA``), the fourth
+    channel is ignored in the colorspace conversion (e.g. from an ``RGBA`` image, only the ``RGB`` part is converted,
+    normalized, converted back and concatenated with the input ``A`` channel).
+    Images with unusual channel numbers (2, 5 or more than 5) are normalized channel-by-channel (same behaviour as
+    ``AllChannelsCLAHE``, though a warning will be raised).
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) This augmenter uses ChangeColorspace, which is currently limited to ``uint8``.
+
+    Parameters
+    ----------
+    clip_limit : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Clipping limit. Higher values result in stronger contrast. OpenCV uses a default of ``40``, though
+        values around ``5`` seem to already produce decent contrast.
+
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
+            * If a list, then a random value will be sampled from that list per image.
+            * If a StochasticParameter, then a value will be sampled per image from that parameter.
+
+    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter \
+                        or tuple of tuple of int or tuple of list of int \
+                        or tuple of imgaug.parameters.StochasticParameter, optional
+        Kernel size, i.e. size of each local neighbourhood in pixels.
+
+            * If an int, then that value will be used for all images for both kernel height and width.
+            * If a tuple ``(a, b)``, then a value from the discrete range ``[a..b]`` will be sampled per
+              image.
+            * If a list, then a random value will be sampled from that list per image and used for both
+              kernel height and width.
+            * If a StochasticParameter, then a value will be sampled per image from that parameter per
+              image and used for both kernel height and width.
+            * If a tuple of tuple of int given as ``((a, b), (c, d))``, then two values will be sampled
+              independently from the discrete ranges ``[a..b]`` and ``[c..d]`` per image and used as
+              the kernel height and width.
+            * If a tuple of lists of int, then two values will be sampled independently per image, one
+              from the first list and one from the second, and used as the kernel height and width.
+            * If a tuple of StochasticParameter, then two values will be sampled indepdently per image,
+              one from the first parameter and one from the second, and used as the kernel height and
+              width.
+
+    tile_grid_size_px_min : int, optional
+        Minimum kernel size in px, per axis. If the sampling results in a value lower than this minimum,
+        it will be clipped to this value.
+
+    from_colorspace : {"RGB", "BGR", "HSV", "HLS", "Lab"}, optional
+        Colorspace of the input images.
+        If any input image has only one or zero channels, this setting will be ignored and it will be assumed that
+        the input is grayscale.
+        If a fourth channel is present in an input image, it will be removed before the colorspace conversion and
+        later re-added.
+        See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
+
+    to_colorspace : {"Lab", "HLS", "HSV"}, optional
+        Colorspace in which to perform CLAHE. For ``Lab``, CLAHE will only be applied to the first channel (``L``),
+        for ``HLS`` to the second (``L``) and for ``HSV`` to the third (``V``).
+        To apply CLAHE to all channels of an input image (without colorspace conversion),
+        see ``imgaug.augmenters.contrast.AllChannelsCLAHE``.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> aug = iaa.CLAHE()
+
+    Creates a standard CLAHE augmenter.
+
+    >>> aug = iaa.CLAHE(clip_limit=(1, 50))
+
+    Creates a CLAHE augmenter with a clip limit uniformly sampled from ``[1..50]``, where ``1`` is rather low contrast
+    and ``50`` is rather high contrast.
+
+    >>> aug = iaa.CLAHE(tile_grid_size_px=(3, 21))
+
+    Creates a CLAHE augmenter with kernel sizes of ``SxS``, where ``S`` is uniformly sampled from from ``[3..21]``.
+    Sampling happens once per image.
+
+    >>> aug = iaa.CLAHE(tile_grid_size_px=iap.Discretize(iap.Normal(loc=7, scale=2)), tile_grid_size_px_min=3)
+
+    Creates a CLAHE augmenter with kernel sizes of ``SxS``, where ``S`` is sampled from ``N(7, 2)``, but does not go
+    below ``3``.
+
+    >>> aug = iaa.CLAHE(tile_grid_size_px=((3, 21), [3, 5, 7]))
+
+    Creates a CLAHE augmenter with kernel sizes of ``HxW``, where ``H`` is uniformly sampled from ``[3..21]`` and
+    ``W`` is randomly picked from the list ``[3, 5, 7]``.
+
+    >>> aug = iaa.CLAHE(from_colorspace=iaa.CLAHE.BGR, to_colorspace=iaa.CLAHE.HSV)
+
+    Creates a CLAHE augmenter that converts images from BGR colorspace to HSV colorspace and then applies the local
+    histogram equalization to the ``V`` channel of the images (before converting back to ``BGR``). Alternatively,
+    ``Lab`` (default) or ``HLS`` can be used as the target colorspace. Grayscale images (no channels / one channel)
+    are never converted and are instead directly normalized (i.e. `from_colorspace` does not have to be changed for
+    them).
+
+    """
+    RGB = _IntensityChannelBasedApplier.RGB
+    BGR = _IntensityChannelBasedApplier.BGR
+    HSV = _IntensityChannelBasedApplier.HSV
+    HLS = _IntensityChannelBasedApplier.HLS
+    Lab = _IntensityChannelBasedApplier.Lab
+
+    def __init__(self, clip_limit=40, tile_grid_size_px=8, tile_grid_size_px_min=3,
+                 from_colorspace=color_lib.ChangeColorspace.RGB, to_colorspace=color_lib.ChangeColorspace.Lab,
+                 name=None, deterministic=False, random_state=None):
+        super(CLAHE, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.all_channel_clahe = AllChannelsCLAHE(clip_limit=clip_limit,
+                                                  tile_grid_size_px=tile_grid_size_px,
+                                                  tile_grid_size_px_min=tile_grid_size_px_min,
+                                                  name="%s_AllChannelsCLAHE" % (name,))
+
+        self.intensity_channel_based_applier = _IntensityChannelBasedApplier(from_colorspace, to_colorspace, name=name)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8"],
+                       disallowed=["bool",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        def _augment_all_channels_clahe(images_normalized, random_state_derived):
+            return self.all_channel_clahe._augment_images(images_normalized, random_state_derived, parents + [self],
+                                                          hooks)
+
+        return self.intensity_channel_based_applier.apply(images, random_state, parents + [self], hooks,
+                                                          _augment_all_channels_clahe)
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.all_channel_clahe.clip_limit,
+                self.all_channel_clahe.tile_grid_size_px,
+                self.all_channel_clahe.tile_grid_size_px_min,
+                self.intensity_channel_based_applier.change_colorspace.from_colorspace,  # from_colorspace is always str
+                self.intensity_channel_based_applier.change_colorspace.to_colorspace.value]
+
+
+class AllChannelsHistogramEqualization(meta.Augmenter):
+    """
+    Augmenter to perform standard histogram equalization on images, applied to all channels of each input image.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (2)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (2)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (2)
+        * ``bool``: no (1)
+
+        - (1) causes cv2 error: ``cv2.error: OpenCV(3.4.5) (...)/histogram.cpp:3345: error: (-215:Assertion failed)
+              src.type() == CV_8UC1 in function 'equalizeHist'``
+        - (2) rejected by cv2
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(AllChannelsHistogramEqualization, self).__init__(name=name, deterministic=deterministic,
+                                                               random_state=random_state)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8"],
+                       disallowed=["bool",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        for i, image in enumerate(images):
+            image_warped = [cv2.equalizeHist(image[..., c]) for c in sm.xrange(image.shape[2])]
+            image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
+            image_warped = image_warped.transpose((1, 2, 0))
+
+            images[i] = image_warped
+        return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return []
+
+
+class HistogramEqualization(meta.Augmenter):
+    """
+    Augmenter to apply standard histogram equalization to images.
+
+    This augmenter is similar to ``imgaug.augmenters.contrast.CLAHE``.
+
+    The augmenter transforms input images to a target colorspace (e.g. ``Lab``), extracts an intensity-related channel
+    from the converted images (e.g. ``L`` for ``Lab``), applies Histogram Equalization to the channel and then
+    converts the resulting image back to the original colorspace.
+
+    Grayscale images (images without channel axis or with only one channel axis) are automatically handled,
+    `from_colorspace` does not have to be adjusted for them. For images with four channels (e.g. RGBA), the fourth
+    channel is ignored in the colorspace conversion (e.g. from an ``RGBA`` image, only the ``RGB`` part is converted,
+    normalized, converted back and concatenated with the input ``A`` channel).
+    Images with unusual channel numbers (2, 5 or more than 5) are normalized channel-by-channel (same behaviour as
+    ``AllChannelsHistogramEqualization``, though a warning will be raised).
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) This augmenter uses AllChannelsHistogramEqualization, which only supports ``uint8``.
+
+    Parameters
+    ----------
+    from_colorspace : {"RGB", "BGR", "HSV", "HLS", "Lab"}, optional
+        Colorspace of the input images.
+        If any input image has only one or zero channels, this setting will be ignored and it will be assumed that
+        the input is grayscale.
+        If a fourth channel is present in an input image, it will be removed before the colorspace conversion and
+        later re-added.
+        See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
+
+    to_colorspace : {"Lab", "HLS", "HSV"}, optional
+        Colorspace in which to perform Histogram Equalization. For ``Lab``, the equalization will only be applied to
+        the first channel (``L``), for ``HLS`` to the second (``L``) and for ``HSV`` to the third (``V``).
+        To apply histogram equalization to all channels of an input image (without colorspace conversion),
+        see ``imgaug.augmenters.contrast.AllChannelsHistogramEqualization``.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> aug = iaa.HistogramEqualization()
+
+    Creates a standard histogram equalization augmenter.
+
+    >>> aug = iaa.HistogramEqualization(from_colorspace=iaa.HistogramEqualization.BGR,
+    >>>                                 to_colorspace=iaa.HistogramEqualization.HSV)
+
+    Creates a histogram equalization augmenter that converts images from BGR colorspace to HSV colorspace and then
+    applies the local histogram equalization to the ``V`` channel of the images (before converting back to ``BGR``).
+    Alternatively, ``Lab`` (default) or ``HLS`` can be used as the target colorspace. Grayscale images
+    (no channels / one channel) are never converted and are instead directly normalized (i.e. `from_colorspace` does
+    not have to be changed for them).
+
+    """
+    RGB = _IntensityChannelBasedApplier.RGB
+    BGR = _IntensityChannelBasedApplier.BGR
+    HSV = _IntensityChannelBasedApplier.HSV
+    HLS = _IntensityChannelBasedApplier.HLS
+    Lab = _IntensityChannelBasedApplier.Lab
+
+    def __init__(self,  from_colorspace=color_lib.ChangeColorspace.RGB, to_colorspace=color_lib.ChangeColorspace.Lab,
+                 name=None, deterministic=False, random_state=None):
+        super(HistogramEqualization, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+        self.all_channel_histogram_equalization = AllChannelsHistogramEqualization(
+            name="%s_AllChannelsHistogramEqualization" % (name,))
+
+        self.intensity_channel_based_applier = _IntensityChannelBasedApplier(from_colorspace, to_colorspace, name=name)
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        ia.gate_dtypes(images,
+                       allowed=["uint8"],
+                       disallowed=["bool",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
+                                   "int8", "int16", "int32", "int64", "int128", "int256",
+                                   "float16", "float32", "float64", "float96", "float128", "float256"],
+                       augmenter=self)
+
+        def _augment_all_channels_histogram_equalization(images_normalized, random_state_derived):
+            return self.all_channel_histogram_equalization._augment_images(images_normalized, random_state_derived,
+                                                                           parents + [self], hooks)
+
+        return self.intensity_channel_based_applier.apply(images, random_state, parents + [self], hooks,
+                                                          _augment_all_channels_histogram_equalization)
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.intensity_channel_based_applier.change_colorspace.from_colorspace,  # from_colorspace is always str
+                self.intensity_channel_based_applier.change_colorspace.to_colorspace.value]
 
 
 class _ContrastFuncWrapper(meta.Augmenter):
