@@ -42,7 +42,6 @@ import tempfile
 import numpy as np
 
 from . import meta
-from . import contrast as contrast_lib
 from .. import imgaug as ia
 from .. import parameters as iap
 
@@ -2046,6 +2045,8 @@ def ContrastNormalization(alpha=1.0, per_channel=False, name=None, deterministic
     all channels.
 
     """
+    # placed here to avoid cyclic dependency
+    from . import contrast as contrast_lib
     return contrast_lib.LinearContrast(alpha=alpha, per_channel=per_channel, name=name, deterministic=deterministic,
                                        random_state=random_state)
 
