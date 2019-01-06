@@ -2,8 +2,17 @@ from __future__ import print_function, division, absolute_import
 
 import time
 import itertools
-import unittest
-import unittest.mock
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 import warnings
 
 import matplotlib
@@ -574,12 +583,12 @@ class TestAllChannelsCLAHE(unittest.TestCase):
 
         aug = iaa.AllChannelsCLAHE(clip_limit=20, tile_grid_size_px=17)
 
-        mock_clahe = unittest.mock.Mock()
+        mock_clahe = mock.Mock()
         mock_clahe.apply.return_value = img
-        mock_createCLAHE = unittest.mock.MagicMock(return_value=mock_clahe)
+        mock_createCLAHE = mock.MagicMock(return_value=mock_clahe)
 
         # image with single channel
-        with unittest.mock.patch('cv2.createCLAHE', mock_createCLAHE):
+        with mock.patch('cv2.createCLAHE', mock_createCLAHE):
             _ = aug.augment_image(img)
 
         mock_createCLAHE.assert_called_once_with(clipLimit=20, tileGridSize=(17, 17))
@@ -588,7 +597,7 @@ class TestAllChannelsCLAHE(unittest.TestCase):
         mock_clahe.reset_mock()
 
         # image with three channels
-        with unittest.mock.patch('cv2.createCLAHE', mock_createCLAHE):
+        with mock.patch('cv2.createCLAHE', mock_createCLAHE):
             _ = aug.augment_image(img3d)
         assert np.array_equal(mock_clahe.apply.call_args_list[0][0][0], img3d[..., 0])
         assert np.array_equal(mock_clahe.apply.call_args_list[1][0][0], img3d[..., 1])
@@ -613,10 +622,10 @@ class TestAllChannelsCLAHE(unittest.TestCase):
     def test_tile_grid_size_px_min(self):
         img = np.zeros((1, 1), dtype=np.uint8)
         aug = iaa.AllChannelsCLAHE(clip_limit=20, tile_grid_size_px=iap.Deterministic(-1), tile_grid_size_px_min=5)
-        mock_clahe = unittest.mock.Mock()
+        mock_clahe = mock.Mock()
         mock_clahe.apply.return_value = img
-        mock_createCLAHE = unittest.mock.MagicMock(return_value=mock_clahe)
-        with unittest.mock.patch('cv2.createCLAHE', mock_createCLAHE):
+        mock_createCLAHE = mock.MagicMock(return_value=mock_clahe)
+        with mock.patch('cv2.createCLAHE', mock_createCLAHE):
             _ = aug.augment_image(img)
         mock_createCLAHE.assert_called_once_with(clipLimit=20, tileGridSize=(5, 5))
 
@@ -660,10 +669,10 @@ class TestAllChannelsCLAHE(unittest.TestCase):
                 aug = iaa.AllChannelsCLAHE(clip_limit=20,
                                            tile_grid_size_px=tile_grid_size_px,
                                            tile_grid_size_px_min=tile_grid_size_px_min)
-                mock_clahe = unittest.mock.Mock()
+                mock_clahe = mock.Mock()
                 mock_clahe.apply.return_value = img
-                mock_createCLAHE = unittest.mock.MagicMock(return_value=mock_clahe)
-                with unittest.mock.patch('cv2.createCLAHE', mock_createCLAHE):
+                mock_createCLAHE = mock.MagicMock(return_value=mock_clahe)
+                with mock.patch('cv2.createCLAHE', mock_createCLAHE):
                     _ = aug.augment_image(img)
                 assert mock_createCLAHE.call_count == nb_calls_expected_i
 
@@ -785,11 +794,11 @@ class TestCLAHE(unittest.TestCase):
         ]
         img = np.uint8(img)
 
-        mock_change_colorspace = unittest.mock.Mock()
+        mock_change_colorspace = mock.Mock()
         mock_change_colorspace._augment_images.return_value = [img[..., np.newaxis] + 1]
-        mock_all_channel_clahe = unittest.mock.Mock()
+        mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.return_value = [img[..., np.newaxis] + 2]
-        mock_change_colorspace_inv = unittest.mock.Mock()
+        mock_change_colorspace_inv = mock.Mock()
         mock_change_colorspace_inv._augment_image.return_value = [img[..., np.newaxis] + 3]
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
@@ -830,12 +839,12 @@ class TestCLAHE(unittest.TestCase):
         def side_effect_change_colorspace_inv(imgs_call, _random_state, _parents, _hooks):
             return [imgs_call[0] + 3]
 
-        mock_change_colorspace = unittest.mock.Mock()
+        mock_change_colorspace = mock.Mock()
         mock_change_colorspace._augment_images.side_effect = side_effect_change_colorspace
         mock_change_colorspace.to_colorspace = iap.Deterministic(to_colorspace)
-        mock_all_channel_clahe = unittest.mock.Mock()
+        mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = side_effect_all_channel_clahe
-        mock_change_colorspace_inv = unittest.mock.Mock()
+        mock_change_colorspace_inv = mock.Mock()
         mock_change_colorspace_inv._augment_images.side_effect = side_effect_change_colorspace_inv
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
@@ -910,12 +919,12 @@ class TestCLAHE(unittest.TestCase):
         def side_effect_change_colorspace_inv(imgs_call, _random_state, _parents, _hooks):
             return [imgs_call[0] + 3]
 
-        mock_change_colorspace = unittest.mock.Mock()
+        mock_change_colorspace = mock.Mock()
         mock_change_colorspace._augment_images.side_effect = side_effect_change_colorspace
         mock_change_colorspace.to_colorspace = iap.Deterministic(iaa.CLAHE.Lab)
-        mock_all_channel_clahe = unittest.mock.Mock()
+        mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = side_effect_all_channel_clahe
-        mock_change_colorspace_inv = unittest.mock.Mock()
+        mock_change_colorspace_inv = mock.Mock()
         mock_change_colorspace_inv._augment_images.side_effect = side_effect_change_colorspace_inv
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
@@ -978,11 +987,11 @@ class TestCLAHE(unittest.TestCase):
         def side_effect_change_colorspace_inv(imgs_call, _random_state, _parents, _hooks):
             return [imgs_call[0] + 3]
 
-        mock_change_colorspace = unittest.mock.Mock()
+        mock_change_colorspace = mock.Mock()
         mock_change_colorspace._augment_images.side_effect = side_effect_change_colorspace
-        mock_all_channel_clahe = unittest.mock.Mock()
+        mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = side_effect_all_channel_clahe
-        mock_change_colorspace_inv = unittest.mock.Mock()
+        mock_change_colorspace_inv = mock.Mock()
         mock_change_colorspace_inv._augment_images.side_effect = side_effect_change_colorspace_inv
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
@@ -1048,12 +1057,12 @@ class TestCLAHE(unittest.TestCase):
         def side_effect_change_colorspace_inv(imgs_call, _random_state, _parents, _hooks):
             return [img + 3 for img in imgs_call]
 
-        mock_change_colorspace = unittest.mock.Mock()
+        mock_change_colorspace = mock.Mock()
         mock_change_colorspace._augment_images.side_effect = side_effect_change_colorspace
         mock_change_colorspace.to_colorspace = iap.Deterministic(iaa.CLAHE.Lab)
-        mock_all_channel_clahe = unittest.mock.Mock()
+        mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = side_effect_all_channel_clahe
-        mock_change_colorspace_inv = unittest.mock.Mock()
+        mock_change_colorspace_inv = mock.Mock()
         mock_change_colorspace_inv._augment_images.side_effect = side_effect_change_colorspace_inv
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
@@ -1147,12 +1156,12 @@ class TestCLAHE(unittest.TestCase):
         def side_effect_change_colorspace_inv(imgs_call, _random_state, _parents, _hooks):
             return [img + 3 for img in imgs_call]
 
-        mock_change_colorspace = unittest.mock.Mock()
+        mock_change_colorspace = mock.Mock()
         mock_change_colorspace._augment_images.side_effect = side_effect_change_colorspace
         mock_change_colorspace.to_colorspace = iap.Deterministic(iaa.CLAHE.Lab)
-        mock_all_channel_clahe = unittest.mock.Mock()
+        mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = side_effect_all_channel_clahe
-        mock_change_colorspace_inv = unittest.mock.Mock()
+        mock_change_colorspace_inv = mock.Mock()
         mock_change_colorspace_inv._augment_images.side_effect = side_effect_change_colorspace_inv
 
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2,
@@ -1283,8 +1292,8 @@ class TestAllChannelsHistogramEqualization(unittest.TestCase):
                 def _side_effect(img_call):
                     return img_call + 1
 
-                mock_equalizeHist = unittest.mock.MagicMock(side_effect=_side_effect)
-                with unittest.mock.patch('cv2.equalizeHist', mock_equalizeHist):
+                mock_equalizeHist = mock.MagicMock(side_effect=_side_effect)
+                with mock.patch('cv2.equalizeHist', mock_equalizeHist):
                     aug = iaa.AllChannelsHistogramEqualization()
                     imgs_aug = aug.augment_images(imgs)
                 if is_array:
