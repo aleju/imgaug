@@ -5231,13 +5231,13 @@ class SegmentationMapOnImage(object):
     def __init__(self, arr, shape, nb_classes=None):
         do_assert(is_np_array(arr), "Expected to get numpy array, got %s." % (type(arr),))
 
-        if arr.dtype.type == np.bool_:
+        if arr.dtype.name == "bool":
             do_assert(arr.ndim in [2, 3])
             self.input_was = ("bool", arr.ndim)
             if arr.ndim == 2:
                 arr = arr[..., np.newaxis]
             arr = arr.astype(np.float32)
-        elif arr.dtype.type in NP_INT_TYPES.union(NP_UINT_TYPES):
+        elif arr.dtype.kind in ["i", "u"]:
             do_assert(arr.ndim == 2 or (arr.ndim == 3 and arr.shape[2] == 1))
             do_assert(nb_classes is not None)
             do_assert(nb_classes > 0)
@@ -5250,16 +5250,15 @@ class SegmentationMapOnImage(object):
             # present in the image. This would also get rid of nb_classes.
             arr = np.eye(nb_classes)[arr]  # from class indices to one hot
             arr = arr.astype(np.float32)
-        elif arr.dtype.type in NP_FLOAT_TYPES:
+        elif arr.dtype.kind == "f":
             do_assert(arr.ndim == 3)
             self.input_was = ("float", arr.dtype.type, arr.ndim)
             arr = arr.astype(np.float32)
         else:
-            raise Exception(("Input was expected to be an ndarray of dtype bool or any dtype in %s or any dtype in %s. "
-                             "Got dtype %s.") % (
-                                str(NP_INT_TYPES.union(NP_UINT_TYPES)), str(NP_FLOAT_TYPES), str(arr.dtype)))
+            raise Exception(("Input was expected to be an ndarray any bool, int, uint or float dtype. "
+                             + "Got dtype %s.") % (arr.dtype.name,))
         do_assert(arr.ndim == 3)
-        do_assert(arr.dtype.type == np.float32)
+        do_assert(arr.dtype.name == "float32")
         self.arr = arr
         self.shape = shape
         self.nb_classes = nb_classes if nb_classes is not None else arr.shape[2]
