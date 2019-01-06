@@ -821,15 +821,14 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
                                                                random_state=random_state)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        """
         ia.gate_dtypes(images,
-                       allowed=["uint8", "uint16"],
+                       allowed=["uint8"],
                        disallowed=["bool",
-                                   "uint32", "uint64", "uint128", "uint256",
+                                   "uint16", "uint32", "uint64", "uint128", "uint256",
                                    "int8", "int16", "int32", "int64", "int128", "int256",
                                    "float16", "float32", "float64", "float96", "float128", "float256"],
                        augmenter=self)
-        """
+
         for i, image in enumerate(images):
             image_warped = [cv2.equalizeHist(image[..., c]) for c in sm.xrange(image.shape[2])]
             image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
