@@ -782,7 +782,7 @@ class CLAHE(meta.Augmenter):
 
 class AllChannelsHistogramEqualization(meta.Augmenter):
     """
-    Augmenter to perform standard histogram equalization on imgages, applied to all channels of each input image.
+    Augmenter to perform standard histogram equalization on images, applied to all channels of each input image.
 
     dtype support::
 
