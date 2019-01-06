@@ -358,6 +358,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     )
 
 
+# TODO maybe offer the other contrast augmenters also wrapped in this, similar to CLAHE and HistogramEqualization?
 # this is essentially tested by tests for CLAHE
 class _IntensityChannelBasedApplier(object):
     RGB = color_lib.ChangeColorspace.RGB
@@ -609,7 +610,7 @@ class CLAHE(meta.Augmenter):
     image back to the original colorspace.
 
     Grayscale images (images without channel axis or with only one channel axis) are automatically handled,
-    `from_colorspace` does not have to be adjusted for them. For images with four channels (e.g. RGBA), the fourth
+    `from_colorspace` does not have to be adjusted for them. For images with four channels (e.g. ``RGBA``), the fourth
     channel is ignored in the colorspace conversion (e.g. from an ``RGBA`` image, only the ``RGB`` part is converted,
     normalized, converted back and concatenated with the input ``A`` channel).
     Images with unusual channel numbers (2, 5 or more than 5) are normalized channel-by-channel (same behaviour as
@@ -678,8 +679,8 @@ class CLAHE(meta.Augmenter):
         See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
 
     to_colorspace : {"Lab", "HLS", "HSV"}, optional
-        Colorspace in which to perform CLAHE. For Lab, CLAHE will only be applied to the first channel (L), for HLS
-        to the second (L) and for HSV to the third (V).
+        Colorspace in which to perform CLAHE. For ``Lab``, CLAHE will only be applied to the first channel (``L``),
+        for ``HLS`` to the second (``L``) and for ``HSV`` to the third (``V``).
         To apply CLAHE to all channels of an input image (without colorspace conversion),
         see ``imgaug.augmenters.contrast.AllChannelsCLAHE``.
 
@@ -889,8 +890,8 @@ class HistogramEqualization(meta.Augmenter):
         See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
 
     to_colorspace : {"Lab", "HLS", "HSV"}, optional
-        Colorspace in which to perform CLAHE. For Lab, CLAHE will only be applied to the first channel (L), for HLS
-        to the second (L) and for HSV to the third (V).
+        Colorspace in which to perform Histogram Equalization. For ``Lab``, the equalization will only be applied to
+        the first channel (``L``), for ``HLS`` to the second (``L``) and for ``HSV`` to the third (``V``).
         To apply histogram equalization to all channels of an input image (without colorspace conversion),
         see ``imgaug.augmenters.contrast.AllChannelsHistogramEqualization``.
 
