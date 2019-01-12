@@ -2240,6 +2240,9 @@ class PerspectiveTransform(meta.Augmenter):
 
 
 # code partially from https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
+# TODO add independent sigmas for x/y
+# TODO add independent alphas for x/y
+# TODO add backend arg
 class ElasticTransformation(meta.Augmenter):
     """
     Augmenter to transform images by moving pixels locally around using displacement fields.
