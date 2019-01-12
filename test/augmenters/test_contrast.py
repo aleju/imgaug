@@ -130,6 +130,25 @@ def test_GammaContrast():
                 diff = abs(value_aug - value_expected)
                 assert diff <= tolerance
 
+                # test other channel numbers
+                for nb_channels in [1, 2, 3, 4, 5, 7, 11]:
+                    image = np.full((3, 3), value, dtype=dtype)
+                    image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+                    for c in sm.xrange(nb_channels):
+                        image[..., c] += c
+                    expected = (((image.astype(np.float128) / max_value) ** exp) * max_value).astype(dtype)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.shape == (3, 3, nb_channels)
+                    assert image_aug.dtype == np.dtype(dtype)
+                    # can be less than nb_channels when multiple input values map to the same output value
+                    # mapping distribution can behave exponential with slow start and fast growth at the end
+                    assert len(np.unique(image_aug)) <= nb_channels
+                    for c in sm.xrange(nb_channels):
+                        value_aug = int(image_aug[0, 0, c])
+                        value_expected = int(expected[0, 0, c])
+                        diff = abs(value_aug - value_expected)
+                        assert diff <= tolerance
+
     # float
     for dtype in [np.float16, np.float32, np.float64]:
         def _allclose(a, b):
@@ -148,6 +167,21 @@ def test_GammaContrast():
                 image_aug = aug.augment_image(image)
                 assert image_aug.dtype == np.dtype(dtype)
                 assert _allclose(image_aug, expected)
+
+                # test other channel numbers
+                for nb_channels in [1, 2, 3, 4, 5, 7, 11]:
+                    image = np.full((3, 3), value, dtype=dtype)
+                    image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+                    for c in sm.xrange(nb_channels):
+                        image[..., c] += float(c)
+                    expected = (image.astype(np.float128) ** exp).astype(dtype)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.shape == (3, 3, nb_channels)
+                    assert image_aug.dtype == np.dtype(dtype)
+                    for c in sm.xrange(nb_channels):
+                        value_aug = image_aug[0, 0, c]
+                        value_expected = expected[0, 0, c]
+                        assert _allclose(value_aug, value_expected)
 
 
 def test_SigmoidContrast():

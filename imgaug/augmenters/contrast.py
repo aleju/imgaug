@@ -36,6 +36,75 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
+def adjust_gamma(arr, gamma):
+    """
+    Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested (1) (2) (3)
+        * ``uint16``: yes; tested (2) (3)
+        * ``uint32``: yes; tested (2) (3)
+        * ``uint64``: yes; tested (2) (3) (4)
+        * ``int8``: limited; tested (2) (3) (5)
+        * ``int16``: limited; tested (2) (3) (5)
+        * ``int32``: limited; tested (2) (3) (5)
+        * ``int64``: limited; tested (2) (3) (4) (5)
+        * ``float16``: limited; tested (5)
+        * ``float32``: limited; tested (5)
+        * ``float64``: limited; tested (5)
+        * ``float128``: no (6)
+        * ``bool``: no (7)
+
+        - (1) Handled by ``cv2``. Other dtypes are handled by ``skimage``.
+        - (2) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
+              dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
+              e.g. ``result*255`` for ``uint8``.
+        - (3) Integer-like values are not rounded after applying the contrast adjustment equation
+              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
+              space to discrete happens according to floor function.
+        - (4) Note that scikit-image doc says that integers are converted to ``float64`` values before
+              applying the contrast normalization method. This might lead to inaccuracies for large
+              64bit integer values. Tests showed no indication of that happening though.
+        - (5) Must not contain negative values. Values >=0 are fully supported.
+        - (6) Leads to error in scikit-image.
+        - (7) Does not make sense for contrast adjustments.
+
+    Parameters
+    ----------
+    arr : numpy.ndarray
+        Array for which to adjust the contrast. Dtype ``uint8`` is fastest.
+
+    gamma : number
+        Exponent for the contrast adjustment. Higher values darken the image.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array with adjusted contrast.
+
+    """
+    min_value = None
+    max_value = None
+    # int8 is also possible according to docs
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
+    # like `d` was 0 for CV_8S, causing that to fail
+    if arr.dtype.name in ["uint8"]:
+        min_value, _center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+        dynamic_range = max_value - min_value
+
+    if min_value is not None:
+        value_range = np.linspace(0, 1.0, num=max_value+1, dtype=np.float32)
+        # using np.float32(.) here still works when the input is a numpy array of size 1
+        table = ((value_range ** np.float32(gamma)) * dynamic_range + min_value).astype(arr.dtype)
+        arr_aug = cv2.LUT(arr, table)
+        if arr.ndim == 3 and arr_aug.ndim == 2:
+            return arr_aug[..., np.newaxis]
+        return arr_aug
+    else:
+        return ski_exposure.adjust_gamma(arr, gamma)
+
+
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
@@ -44,32 +113,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
     dtype support::
 
-        * ``uint8``: yes; fully tested (1) (2)
-        * ``uint16``: yes; tested (1) (2)
-        * ``uint32``: yes; tested (1) (2)
-        * ``uint64``: yes; tested (1) (2) (3)
-        * ``int8``: limited; tested (1) (2) (4)
-        * ``int16``: limited; tested (1) (2) (4)
-        * ``int32``: limited; tested (1) (2) (4)
-        * ``int64``: limited; tested (1) (2) (3) (4)
-        * ``float16``: limited; tested (4)
-        * ``float32``: limited; tested (4)
-        * ``float64``: limited; tested (4)
-        * ``float128``: no (5)
-        * ``bool``: no (6)
-
-        - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
-              dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for ``uint8``.
-        - (2) Integer-like values are not rounded after applying the contrast adjustment equation
-              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
-              space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
-              applying the contrast normalization method. This might lead to inaccuracies for large
-              64bit integer values. Tests showed no indication of that happening though.
-        - (4) Must not contain negative values. Values >=0 are fully supported.
-        - (5) Leads to error in scikit-image.
-        - (6) Does not make sense for contrast adjustments.
+        See :func:`imgaug.augmenters.contrast.adjust_gamma`.
 
     Parameters
     ----------
@@ -103,7 +147,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
     """
     params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True,
                                             list_to_choice=True)]
-    func = ski_exposure.adjust_gamma
+    func = adjust_gamma
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
@@ -999,6 +1043,8 @@ class _ContrastFuncWrapper(meta.Augmenter):
                     image_aug[..., c] = self.func(*args)
                 image_aug = image_aug.astype(input_dtype)
             else:
+                # don't use something like samples_i[...][0] here, because that returns python scalars and is slightly
+                # less accurate than keeping the numpy values
                 args = tuple([image] + samples_i)
                 image_aug = self.func(*args)
             result[i] = image_aug
