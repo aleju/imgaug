@@ -1197,6 +1197,26 @@ def test_pad():
         assert arr_pad[3, 0] == 25
         assert arr_pad[4, 0] == 0
 
+        # test other channel numbers
+        value = int(center_value + 0.25 * max_value)
+        for nb_channels in [None, 1, 2, 3, 4, 5, 7, 11]:
+            arr = np.full((3, 3), value, dtype=dtype)
+            if nb_channels is not None:
+                arr = arr[..., np.newaxis]
+                arr = np.tile(arr, (1, 1, nb_channels))
+                for c in sm.xrange(nb_channels):
+                    arr[..., c] += c
+            arr_pad = ia.pad(arr, top=1, mode="constant", cval=0)
+            assert arr_pad.dtype.name == np.dtype(dtype).name
+            if nb_channels is None:
+                assert arr_pad.shape == (4, 3)
+                assert np.all(arr_pad[0, :] == 0)
+                assert np.all(arr_pad[1:, :] == arr)
+            else:
+                assert arr_pad.shape == (4, 3, nb_channels)
+                assert np.all(arr_pad[0, :, :] == 0)
+                assert np.all(arr_pad[1:, :, :] == arr)
+
     # -------
     # float
     # -------
@@ -1292,6 +1312,26 @@ def test_pad():
         assert _allclose(arr_pad[2, 0], 0.8)
         assert _allclose(arr_pad[3, 0], 0.7)
         assert _allclose(arr_pad[4, 0], 0.6)
+
+        # test other channel numbers
+        value = 1000 ** (np.dtype(dtype).itemsize - 1)
+        for nb_channels in [None, 1, 2, 3, 4, 5, 7, 11]:
+            arr = np.full((3, 3), value, dtype=dtype)
+            if nb_channels is not None:
+                arr = arr[..., np.newaxis]
+                arr = np.tile(arr, (1, 1, nb_channels))
+                for c in sm.xrange(nb_channels):
+                    arr[..., c] += c
+            arr_pad = ia.pad(arr, top=1, mode="constant", cval=0)
+            assert arr_pad.dtype.name == np.dtype(dtype).name
+            if nb_channels is None:
+                assert arr_pad.shape == (4, 3)
+                assert _allclose(arr_pad[0, :], 0)
+                assert _allclose(arr_pad[1:, :], arr)
+            else:
+                assert arr_pad.shape == (4, 3, nb_channels)
+                assert _allclose(arr_pad[0, :, :], 0)
+                assert _allclose(arr_pad[1:, :, :], arr)
 
     # -------
     # bool
