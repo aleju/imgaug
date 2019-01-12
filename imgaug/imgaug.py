@@ -1320,10 +1320,28 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 
         if not bad_datatype_cv2 and not bad_mode_cv2:
             cval = float(cval) if arr.dtype.kind == "f" else int(cval)  # results in TypeError otherwise for np inputs
-            arr_pad = cv2.copyMakeBorder(arr, top=top, bottom=bottom, left=left, right=right,
-                                         borderType=mapping_mode_np_to_cv2[mode], value=cval)
-            if arr.ndim == 3 and arr_pad.ndim == 2:
-                arr_pad = arr_pad[..., np.newaxis]
+
+            if arr.ndim == 2 or arr.shape[2] <= 4:
+                # without this, only the first channel is padded with the cval, all following channels with 0
+                if arr.ndim == 3:
+                    cval = tuple([cval] * arr.shape[2])
+
+                arr_pad = cv2.copyMakeBorder(arr, top=top, bottom=bottom, left=left, right=right,
+                                             borderType=mapping_mode_np_to_cv2[mode], value=cval)
+                if arr.ndim == 3 and arr_pad.ndim == 2:
+                    arr_pad = arr_pad[..., np.newaxis]
+            else:
+                result = []
+                channel_start_idx = 0
+                while channel_start_idx < arr.shape[2]:
+                    arr_c = arr[..., channel_start_idx:channel_start_idx+4]
+                    cval_c = tuple([cval] * arr_c.shape[2])
+                    arr_pad_c = cv2.copyMakeBorder(arr_c, top=top, bottom=bottom, left=left, right=right,
+                                                   borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
+                    arr_pad_c = np.atleast_3d(arr_pad_c)
+                    result.append(arr_pad_c)
+                    channel_start_idx += 4
+                arr_pad = np.concatenate(result, axis=2)
         else:
             paddings_np = [(top, bottom), (left, right)]  # paddings for 2d case
             if arr.ndim == 3:

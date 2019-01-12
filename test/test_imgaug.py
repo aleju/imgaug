@@ -1187,6 +1187,17 @@ def test_pad():
         assert arr_pad[0, 2] == v1
         assert arr_pad[1, 0] == 0
 
+        for nb_channels in [1, 2, 3, 4, 5]:
+            v1 = int(center_value + 0.25 * max_value)
+            arr = np.zeros((3, 3, nb_channels), dtype=dtype)
+            arr_pad = ia.pad(arr, top=1, mode="constant", cval=v1)
+            assert arr_pad.shape == (4, 3, nb_channels)
+            assert arr_pad.dtype == np.dtype(dtype)
+            assert np.all(arr_pad[0, 0, :] == v1)
+            assert np.all(arr_pad[0, 1, :] == v1)
+            assert np.all(arr_pad[0, 2, :] == v1)
+            assert np.all(arr_pad[1, 0, :] == 0)
+
         arr = np.zeros((1, 1), dtype=dtype) + 0
         arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=100)
         assert arr_pad.shape == (5, 1)
@@ -1302,6 +1313,16 @@ def test_pad():
         assert _allclose(arr_pad[0, 1], 0.4)
         assert _allclose(arr_pad[0, 2], 0.4)
         assert _allclose(arr_pad[1, 0], 0.0)
+
+        for nb_channels in [1, 2, 3, 4, 5]:
+            arr = np.zeros((3, 3, nb_channels), dtype=dtype)
+            arr_pad = ia.pad(arr, top=1, mode="constant", cval=0.4)
+            assert arr_pad.shape == (4, 3, nb_channels)
+            assert arr_pad.dtype == np.dtype(dtype)
+            assert _allclose(arr_pad[0, 0, :], 0.4)
+            assert _allclose(arr_pad[0, 1, :], 0.4)
+            assert _allclose(arr_pad[0, 2, :], 0.4)
+            assert _allclose(arr_pad[1, 0, :], 0.0)
 
         arr = np.zeros((1, 1), dtype=dtype) + 0.6
         arr_pad = ia.pad(arr, top=4, mode="linear_ramp", cval=1.0)
