@@ -1852,6 +1852,7 @@ class Invert(meta.Augmenter):
                  random_state=None):
         super(Invert, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
+        # TODO allow list and tuple for p
         self.p = iap.handle_probability_param(p, "p")
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
         self.min_value = min_value
