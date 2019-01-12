@@ -852,7 +852,7 @@ class SnowflakesLayer(meta.Augmenter):
         # apply a bit of gaussian blur and then motion blur according to angle and speed
         sigma = max(height, width) * blur_sigma_fraction_sample
         sigma = np.clip(sigma, self.blur_sigma_limits[0], self.blur_sigma_limits[1])
-        noise_small_blur = self._blur(noise, sigma, random_state)
+        noise_small_blur = self._blur(noise, sigma)
         noise_small_blur = self._motion_blur(noise_small_blur, angle=angle_sample, speed=speed_sample,
                                              random_state=random_state)
 
@@ -887,9 +887,8 @@ class SnowflakesLayer(meta.Augmenter):
         return np.clip(noise.astype(np.float32) * gate_noise_up, 0, 255).astype(np.uint8)
 
     @classmethod
-    def _blur(cls, noise, sigma, random_state):
-        blurer = blur.GaussianBlur(sigma, random_state=random_state)
-        return blurer.augment_image(noise)
+    def _blur(cls, noise, sigma):
+        return blur.blur_gaussian_(noise, sigma=sigma)
 
     @classmethod
     def _motion_blur(cls, noise, angle, speed, random_state):
