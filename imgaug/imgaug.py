@@ -921,6 +921,7 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
         return False
 
 
+# TODO replace by cv2.putText()?
 def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     """
     Draw text on an image.
