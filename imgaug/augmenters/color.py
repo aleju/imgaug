@@ -112,16 +112,16 @@ class WithColorspace(meta.Augmenter):
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             result = ChangeColorspace(
                 to_colorspace=self.to_colorspace,
-                from_colorspace=self.from_colorspace,
+                from_colorspace=self.from_colorspace
             ).augment_images(images=result)
             result = self.children.augment_images(
                 images=result,
                 parents=parents + [self],
-                hooks=hooks,
+                hooks=hooks
             )
             result = ChangeColorspace(
                 to_colorspace=self.from_colorspace,
-                from_colorspace=self.to_colorspace,
+                from_colorspace=self.to_colorspace
             ).augment_images(images=result)
         return result
 

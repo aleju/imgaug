@@ -288,7 +288,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 images_first = images
             else:
                 images_first = self.first.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -297,7 +297,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 images_second = images
             else:
                 images_second = self.second.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -568,7 +568,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 images_first = images
             else:
                 images_first = self.first.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -577,7 +577,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 images_second = images
             else:
                 images_second = self.second.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )

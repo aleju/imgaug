@@ -207,16 +207,22 @@ def clip_augmented_images(images, min_value, max_value):
     return clip_augmented_images_(images, min_value, max_value)
 
 
-def handle_children_list(lst, augmenter_name, lst_name):
+def handle_children_list(lst, augmenter_name, lst_name, default="sequential"):
     if lst is None:
-        return Sequential([], name="%s-%s" % (augmenter_name, lst_name))
+        if default == "sequential":
+            return Sequential([], name="%s-%s" % (augmenter_name, lst_name))
+        else:
+            return default
     elif isinstance(lst, Augmenter):
         if ia.is_iterable(lst):
+            # TODO why was this assert added here? seems to make no sense
             ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
             return lst
         else:
             return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     elif ia.is_iterable(lst):
+        if len(lst) == 0 and default != "sequential":
+            return default
         ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
         return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     else:
@@ -252,6 +258,14 @@ def estimate_max_number_of_channels(images):
             return None
         channels = [el.shape[2] if len(el.shape) >= 3 else 1 for el in images]
         return max(channels)
+
+
+def copy_arrays(arrays):
+    if ia.is_np_array(arrays):
+        return np.copy(arrays)
+    else:
+        assert ia.is_iterable(arrays), "Expected ndarray or iterable of ndarray, got type %s." % (type(arrays),)
+        return [np.copy(array) for array in arrays]
 
 
 @six.add_metaclass(ABCMeta)
@@ -558,6 +572,34 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             Corresponding augmented images.
 
         """
+        if parents is not None and len(parents) > 0 and hooks is None:
+            # This is a child call. The data has already been validated and copied. We don't need to copy it again
+            # for hooks, as these don't exist. So we can augment here fully in-place.
+            if not self.activated or len(images) == 0:
+                return images
+
+            if self.deterministic:
+                state_orig = self.random_state.get_state()
+
+            images_result = self._augment_images(
+                images,
+                random_state=ia.copy_random_state(self.random_state),
+                parents=parents,
+                hooks=hooks
+            )
+            # move "forward" the random state, so that the next call to
+            # augment_images() will use different random values
+            ia.forward_random_state(self.random_state)
+
+            if self.deterministic:
+                self.random_state.set_state(state_orig)
+
+            return images_result
+
+        #
+        # Everything below is for non-in-place augmentation.
+        # It was either the first call (no parents) or hooks were provided.
+        #
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
@@ -2533,8 +2575,8 @@ class Sometimes(Augmenter):
 
         self.p = iap.handle_probability_param(p, "p")
 
-        self.then_list = handle_children_list(then_list, self.name, "then")
-        self.else_list = handle_children_list(else_list, self.name, "else")
+        self.then_list = handle_children_list(then_list, self.name, "then", default=None)
+        self.else_list = handle_children_list(else_list, self.name, "else", default=None)
 
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
@@ -2556,17 +2598,27 @@ class Sometimes(Augmenter):
                 images_then_list = images[indices_then_list]
                 images_else_list = images[indices_else_list]
 
+            # We copy here due to in-place augmentation. If only one of the two lists is None it is not an issue to
+            # augment in-place, hence we don't have to copy in that case.
+            if self.then_list is not None and self.else_list is not None:
+                images_then_list = copy_arrays(images_then_list)
+                images_else_list = copy_arrays(images_else_list)
+
             # augment according to if and else list
-            result_then_list = self.then_list.augment_images(
-                images=images_then_list,
-                parents=parents + [self],
-                hooks=hooks
-            )
-            result_else_list = self.else_list.augment_images(
-                images=images_else_list,
-                parents=parents + [self],
-                hooks=hooks
-            )
+            result_then_list = images_then_list
+            result_else_list = images_else_list
+            if self.then_list is not None and len(images_then_list) > 0:
+                result_then_list = self.then_list.augment_images(
+                    images=images_then_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+            if self.else_list is not None and len(images_else_list) > 0:
+                result_else_list = self.else_list.augment_images(
+                    images=images_else_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
 
             # map results of if/else lists back to their initial positions (in "images" variable)
             result = [None] * len(images)
@@ -2600,16 +2652,20 @@ class Sometimes(Augmenter):
             heatmaps_else_list = [heatmaps[i] for i in indices_else_list]
 
             # augment according to if and else list
-            result_then_list = self.then_list.augment_heatmaps(
-                heatmaps_then_list,
-                parents=parents + [self],
-                hooks=hooks
-            )
-            result_else_list = self.else_list.augment_heatmaps(
-                heatmaps_else_list,
-                parents=parents + [self],
-                hooks=hooks
-            )
+            result_then_list = heatmaps_then_list
+            result_else_list = heatmaps_else_list
+            if self.then_list is not None and len(heatmaps_then_list) > 0:
+                result_then_list = self.then_list.augment_heatmaps(
+                    heatmaps_then_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+            if self.else_list is not None and len(heatmaps_else_list) > 0:
+                result_else_list = self.else_list.augment_heatmaps(
+                    heatmaps_else_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
 
             # map results of if/else lists back to their initial positions (in "heatmaps" variable)
             result = [None] * len(heatmaps)
@@ -2637,16 +2693,20 @@ class Sometimes(Augmenter):
             images_else_list = [keypoints_on_images[i] for i in indices_else_list]
 
             # augment according to if and else list
-            result_then_list = self.then_list.augment_keypoints(
-                keypoints_on_images=images_then_list,
-                parents=parents + [self],
-                hooks=hooks
-            )
-            result_else_list = self.else_list.augment_keypoints(
-                keypoints_on_images=images_else_list,
-                parents=parents + [self],
-                hooks=hooks
-            )
+            result_then_list = images_then_list
+            result_else_list = images_else_list
+            if self.then_list is not None and len(images_then_list) > 0:
+                result_then_list = self.then_list.augment_keypoints(
+                    keypoints_on_images=images_then_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+            if self.else_list is not None and len(images_else_list) > 0:
+                result_else_list = self.else_list.augment_keypoints(
+                    keypoints_on_images=images_else_list,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
 
             # map results of if/else lists back to their initial positions (in "images" variable)
             result = [None] * len(keypoints_on_images)
@@ -2659,8 +2719,8 @@ class Sometimes(Augmenter):
 
     def _to_deterministic(self):
         aug = self.copy()
-        aug.then_list = aug.then_list.to_deterministic()
-        aug.else_list = aug.else_list.to_deterministic()
+        aug.then_list = aug.then_list.to_deterministic() if aug.then_list is not None else aug.then_list
+        aug.else_list = aug.else_list.to_deterministic() if aug.else_list is not None else aug.else_list
         aug.deterministic = True
         aug.random_state = ia.derive_random_state(self.random_state)
         return aug
@@ -2669,7 +2729,12 @@ class Sometimes(Augmenter):
         return [self.p]
 
     def get_children_lists(self):
-        return [self.then_list, self.else_list]
+        result = []
+        if self.then_list is not None:
+            result.append(self.then_list)
+        if self.else_list is not None:
+            result.append(self.else_list)
+        return result
 
     def __str__(self):
         return "Sometimes(p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s)" % (
@@ -2762,6 +2827,9 @@ class WithChannels(Augmenter):
             elif len(self.channels) == 0:
                 pass
             else:
+                # save the shapes as images are augmented below in-place
+                shapes_orig = [image.shape for image in images]
+
                 if ia.is_np_array(images):
                     images_then_list = images[..., self.channels]
                 else:
@@ -2774,9 +2842,10 @@ class WithChannels(Augmenter):
                 )
 
                 ia.do_assert(
-                    all([img_out.shape[0:2] == img_in.shape[0:2] for img_out, img_in in zip(result_then_list, result)]),
+                    all([img_out.shape[0:2] == shape_orig[0:2]
+                         for img_out, shape_orig in zip(result_then_list, shapes_orig)]),
                     "Heights/widths of images changed in WithChannels from %s to %s, but expected to be the same." % (
-                        str([img_in.shape[0:2] for img_in in result]),
+                        str([shape_orig[0:2] for shape_orig in shapes_orig]),
                         str([img_out.shape[0:2] for img_out in result_then_list]),
                     )
                 )
