@@ -901,11 +901,13 @@ class SnowflakesLayer(meta.Augmenter):
         blurer = blur.MotionBlur(k=max(k, 3), angle=angle, direction=1.0, random_state=random_state)
         return blurer.augment_image(noise)
 
+    # TODO replace this by a function from module blend.py
     @classmethod
     def _blend_by_sum(cls, image_f32, noise_small_blur_rgb):
         image_f32 = image_f32 + noise_small_blur_rgb
         return np.clip(image_f32, 0, 255).astype(np.uint8)
 
+    # TODO replace this by a function from module blend.py
     @classmethod
     def _blend_by_max(cls, image_f32, noise_small_blur_rgb):
         image_f32 = np.maximum(image_f32, noise_small_blur_rgb)

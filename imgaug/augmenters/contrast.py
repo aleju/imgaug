@@ -36,6 +36,7 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
+# TODO quite similar to the other adjust_contrast_*() functions, make DRY
 def adjust_contrast_gamma(arr, gamma):
     """
     Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
@@ -103,6 +104,7 @@ def adjust_contrast_gamma(arr, gamma):
         return ski_exposure.adjust_gamma(arr, gamma)
 
 
+# TODO quite similar to the other adjust_contrast_*() functions, make DRY
 def adjust_contrast_sigmoid(arr, gain, cutoff):
     """
     Adjust contrast by scaling each pixel value to ``255 * 1/(1 + exp(gain*(cutoff - I_ij/255)))``.
@@ -178,6 +180,7 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         return ski_exposure.adjust_sigmoid(arr, cutoff=cutoff, gain=gain)
 
 
+# TODO quite similar to the other adjust_contrast_*() functions, make DRY
 def adjust_contrast_log(arr, gain):
     """
     Adjust contrast by scaling each pixel value to ``255 * gain * log_2(1 + I_ij/255)``.
@@ -248,6 +251,7 @@ def adjust_contrast_log(arr, gain):
         return ski_exposure.adjust_log(arr, gain=gain)
 
 
+# TODO quite similar to the other adjust_contrast_*() functions, make DRY
 def adjust_contrast_linear(arr, alpha):
     """Adjust contrast by scaling each pixel value to ``127 + alpha*(I_ij-127)``.
 
