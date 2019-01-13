@@ -248,7 +248,7 @@ def adjust_contrast_log(arr, gain):
         return ski_exposure.adjust_log(arr, gain=gain)
 
 
-def _adjust_linear(image, alpha):
+def adjust_contrast_linear(image, alpha):
     input_dtype = image.dtype
     _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
     if input_dtype.kind in ["u", "i"]:
@@ -496,7 +496,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     params1d = [
         iap.handle_continuous_param(alpha, "alpha", value_range=None, tuple_to_uniform=True, list_to_choice=True)
     ]
-    func = _adjust_linear
+    func = adjust_contrast_linear
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32",

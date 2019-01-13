@@ -38,7 +38,7 @@ def main():
     test_SigmoidContrast()
     test_LogContrast()
     test_LinearContrast()
-    test_contrast_adjust_linear()
+    test_adjust_contrast_linear()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
@@ -440,8 +440,8 @@ def test_LinearContrast():
             img3d_aug = aug.augment_image(img3d)
             assert img_aug.dtype.type == np.uint8
             assert img3d_aug.dtype.type == np.uint8
-            assert np.array_equal(img_aug, contrast_lib._adjust_linear(img, alpha=alpha))
-            assert np.array_equal(img3d_aug, contrast_lib._adjust_linear(img3d, alpha=alpha))
+            assert np.array_equal(img_aug, contrast_lib.adjust_contrast_linear(img, alpha=alpha))
+            assert np.array_equal(img3d_aug, contrast_lib.adjust_contrast_linear(img3d, alpha=alpha))
 
     # check that tuple to uniform works
     aug = iaa.LinearContrast((1, 2))
@@ -484,10 +484,10 @@ def test_LinearContrast():
     heatmaps_aug = iaa.LinearContrast(alpha=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
-    # test for other dtypes are in test_contrast_adjust_linear()
+    # test for other dtypes are in test_adjust_contrast_linear()
 
 
-def test_contrast_adjust_linear():
+def test_adjust_contrast_linear():
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32,
                   np.float16, np.float32, np.float64]:
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
@@ -523,7 +523,7 @@ def test_contrast_adjust_linear():
                 [cv+2*alpha, cv+3*alpha, cv+4*alpha]
             ]
             expected = np.array(expected, dtype=dtype)
-            observed = contrast_lib._adjust_linear(img, alpha=alpha)
+            observed = contrast_lib.adjust_contrast_linear(img, alpha=alpha)
             assert observed.dtype == np.dtype(dtype)
             assert observed.shape == img.shape
             assert _compare(observed, expected)
@@ -536,7 +536,7 @@ def test_contrast_adjust_linear():
         [cv+2, cv+3, cv+4]
     ]
     img = np.array(img, dtype=np.uint8)
-    observed = contrast_lib._adjust_linear(img, alpha=255)
+    observed = contrast_lib.adjust_contrast_linear(img, alpha=255)
     expected = [
         [0, 0, 0],
         [0, cv, 255],
@@ -552,7 +552,7 @@ def test_contrast_adjust_linear():
         [cv, cv, cv]
     ]
     img = np.array(img, dtype=np.uint8)
-    observed = contrast_lib._adjust_linear(img, alpha=257)
+    observed = contrast_lib.adjust_contrast_linear(img, alpha=257)
     expected = [
         [cv, cv, cv],
         [cv, cv, cv],
