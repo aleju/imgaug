@@ -326,7 +326,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         per_channel = self.per_channel.draw_samples(nb_heatmaps, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_heatmaps, nb_channels), random_state=rss[1])
 
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 heatmaps_first = heatmaps
             else:
@@ -378,7 +378,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
         result = keypoints_on_images
 
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 kps_ois_first = keypoints_on_images
             else:
@@ -621,7 +621,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         nb_heatmaps = len(heatmaps)
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
 
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 heatmaps_first = heatmaps
             else:
@@ -679,7 +679,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         nb_images = len(keypoints_on_images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 kps_ois_first = keypoints_on_images
             else:

@@ -786,9 +786,6 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if parents is None:
             parents = []
 
-        if hooks is None:
-            hooks = ia.HooksHeatmaps()
-
         ia.do_assert(ia.is_iterable(heatmaps),
                      "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
         ia.do_assert(all([isinstance(heatmaps_i, ia.HeatmapsOnImage) for heatmaps_i in heatmaps]),
@@ -797,9 +794,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
 
-        heatmaps_copy = hooks.preprocess(heatmaps_copy, augmenter=self, parents=parents)
+        if hooks is not None:
+            heatmaps_copy = hooks.preprocess(heatmaps_copy, augmenter=self, parents=parents)
 
-        if hooks.is_activated(heatmaps_copy, augmenter=self, parents=parents, default=self.activated):
+        if (hooks is None and self.activated) \
+                or (hooks is not None
+                    and hooks.is_activated(heatmaps_copy, augmenter=self, parents=parents, default=self.activated)):
             if len(heatmaps_copy) > 0:
                 heatmaps_result = self._augment_heatmaps(
                     heatmaps_copy,
@@ -813,7 +813,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         else:
             heatmaps_result = heatmaps_copy
 
-        heatmaps_result = hooks.postprocess(heatmaps_result, augmenter=self, parents=parents)
+        if hooks is not None:
+            heatmaps_result = hooks.postprocess(heatmaps_result, augmenter=self, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -964,18 +965,19 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if parents is None:
             parents = []
 
-        if hooks is None:
-            hooks = ia.HooksKeypoints()
-
         ia.do_assert(ia.is_iterable(keypoints_on_images))
         ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage)
                           for keypoints_on_image in keypoints_on_images]))
 
         keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
 
-        keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
+        if hooks is not None:
+            keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
 
-        if hooks.is_activated(keypoints_on_images_copy, augmenter=self, parents=parents, default=self.activated):
+        if (hooks is None and self.activated) \
+                or (hooks is not None
+                    and hooks.is_activated(keypoints_on_images_copy,
+                                           augmenter=self, parents=parents, default=self.activated)):
             if len(keypoints_on_images_copy) > 0:
                 keypoints_on_images_result = self._augment_keypoints(
                     keypoints_on_images_copy,
@@ -989,7 +991,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         else:
             keypoints_on_images_result = keypoints_on_images_copy
 
-        keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=self, parents=parents)
+        if hooks is not None:
+            keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=self, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
@@ -2045,7 +2048,7 @@ class Sequential(Augmenter, list):
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.random_order:
                 for index in random_state.permutation(len(self)):
                     heatmaps = self[index].augment_heatmaps(
@@ -2063,7 +2066,8 @@ class Sequential(Augmenter, list):
         return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images,
+                                                     augmenter=self, parents=parents, default=True):
             if self.random_order:
                 for index in random_state.permutation(len(self)):
                     keypoints_on_images = self[index].augment_keypoints(
@@ -2344,7 +2348,7 @@ class SomeOf(Augmenter, list):
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             # This must happen before creating the augmenter_active array,
             # otherwise in case of determinism the number of augmented images
             # would change the random_state's state, resulting in the order
@@ -2384,7 +2388,7 @@ class SomeOf(Augmenter, list):
         return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             # This must happen before creating the augmenter_active array,
             # otherwise in case of determinism the number of augmented images
             # would change the random_state's state, resulting in the order
@@ -2640,7 +2644,7 @@ class Sometimes(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             nb_heatmaps = len(heatmaps)
             samples = self.p.draw_samples((nb_heatmaps,), random_state=random_state)
 
@@ -2681,7 +2685,7 @@ class Sometimes(Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         # TODO this is mostly copy pasted from _augment_images, make dry
         result = keypoints_on_images
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             nb_images = len(keypoints_on_images)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
@@ -2860,7 +2864,7 @@ class WithChannels(Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             # Augment heatmaps in the style of the children if all channels or the majority of
             # them are selected by this layer, otherwise don't change the heatmaps.
             heatmaps_to_aug = []
@@ -2886,7 +2890,7 @@ class WithChannels(Augmenter):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             # Augment keypoints in the style of the children if all channels or the majority of
             # them are selected by this layer, otherwise don't change the heatmaps.
             # We expect here the images channel number to be 3, but actually can't be fully sure

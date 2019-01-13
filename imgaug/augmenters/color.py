@@ -127,7 +127,7 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             result = self.children.augment_heatmaps(
                 result,
                 parents=parents + [self],
@@ -137,7 +137,7 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             result = self.children.augment_keypoints(
                 result,
                 parents=parents + [self],

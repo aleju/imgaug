@@ -1890,7 +1890,7 @@ class KeepSizeByResize(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             nb_heatmaps = len(heatmaps)
             _, interpolations_heatmaps = self._draw_samples(nb_heatmaps, random_state, return_heatmaps=True)
 
@@ -1916,7 +1916,7 @@ class KeepSizeByResize(meta.Augmenter):
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             interpolations = self._draw_samples(len(keypoints_on_images), random_state, return_heatmaps=False)
 
             # augment according to if and else list
