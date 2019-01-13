@@ -248,14 +248,30 @@ def adjust_contrast_log(arr, gain):
         return ski_exposure.adjust_log(arr, gain=gain)
 
 
-def adjust_contrast_linear(image, alpha):
-    input_dtype = image.dtype
-    _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
-    if input_dtype.kind in ["u", "i"]:
-        center_value = int(center_value)
-    image_aug = center_value + alpha * (image.astype(np.float64)-center_value)
-    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
-    return image_aug
+def adjust_contrast_linear(arr, alpha):
+    # int8 is also possible according to docs
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
+    # like `d` was 0 for CV_8S, causing that to fail
+    if arr.dtype.name in ["uint8"]:
+        min_value, center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+
+        value_range = np.arange(0, 256, dtype=np.float32)
+        # 255 * 1/(1 + exp(gain*(cutoff - I_ij/255)))
+        # using np.float32(.) here still works when the input is a numpy array of size 1
+        alpha = np.float32(alpha)
+        table = center_value + alpha * (value_range - center_value)
+        arr_aug = cv2.LUT(arr, np.clip(table, min_value, max_value).astype(arr.dtype))
+        if arr.ndim == 3 and arr_aug.ndim == 2:
+            return arr_aug[..., np.newaxis]
+        return arr_aug
+    else:
+        input_dtype = arr.dtype
+        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
+        if input_dtype.kind in ["u", "i"]:
+            center_value = int(center_value)
+        image_aug = center_value + alpha * (arr.astype(np.float64)-center_value)
+        image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+        return image_aug
 
 
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
