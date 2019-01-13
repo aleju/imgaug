@@ -256,7 +256,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
 
     dtype support::
 
-        See :func:`imgaug.augmenters.contrast.adjust_gamma`.
+        See :func:`imgaug.augmenters.contrast.adjust_contrast_gamma`.
 
     Parameters
     ----------
