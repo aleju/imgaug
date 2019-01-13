@@ -249,6 +249,45 @@ def adjust_contrast_log(arr, gain):
 
 
 def adjust_contrast_linear(arr, alpha):
+    """Adjust contrast by scaling each pixel value to ``127 + alpha*(I_ij-127)``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested (1) (2)
+        * ``uint16``: yes; tested (2)
+        * ``uint32``: yes; tested (2)
+        * ``uint64``: no (3)
+        * ``int8``: yes; tested (2)
+        * ``int16``: yes; tested (2)
+        * ``int32``: yes; tested (2)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (2)
+        * ``float32``: yes; tested (2)
+        * ``float64``: yes; tested (2)
+        * ``float128``: no (2)
+        * ``bool``: no (4)
+
+        - (1) Handled by ``cv2``. Other dtypes are handled by raw ``numpy``.
+        - (2) Only tested for reasonable alphas with up to a value of around 100.
+        - (3) Conversion to ``float64`` is done during augmentation, hence ``uint64``, ``int64``,
+              and ``float128`` support cannot be guaranteed.
+        - (4) Does not make sense for contrast adjustments.
+
+    Parameters
+    ----------
+    arr : numpy.ndarray
+        Array for which to adjust the contrast. Dtype ``uint8`` is fastest.
+
+    alpha : number
+        Multiplier to linearly pronounce (>1.0), dampen (0.0 to 1.0) or invert (<0.0) the
+        difference between each pixel value and the center value, e.g. ``127`` for ``uint8``.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array with adjusted contrast.
+
+    """
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
@@ -459,30 +498,13 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
 
     dtype support::
 
-        * ``uint8``: yes; fully tested (1)
-        * ``uint16``: yes; tested (1)
-        * ``uint32``: yes; tested (1)
-        * ``uint64``: no (2)
-        * ``int8``: yes; tested (1)
-        * ``int16``: yes; tested (1)
-        * ``int32``: yes; tested (1)
-        * ``int64``: no (1)
-        * ``float16``: yes; tested (1)
-        * ``float32``: yes; tested (1)
-        * ``float64``: yes; tested (1)
-        * ``float128``: no (1)
-        * ``bool``: no (3)
-
-        - (1) Only tested for reasonable alphas with up to a value of around 100.
-        - (2) Conversion to ``float64`` is done during augmentation, hence ``uint64``, ``int64``,
-              and ``float128`` support cannot be guaranteed.
-        - (3) Does not make sense for contrast adjustments.
+        See :func:`imgaug.augmenters.contrast.adjust_contrast_linear`.
 
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Multiplier to linearly pronounce (>1.0), dampen (0.0 to 1.0) or invert (<0.0) the
-        difference between each pixel value and the center value, i.e. `128`.
+        difference between each pixel value and the center value, e.g. ``127`` for ``uint8``.
 
             * If a number, then that value will be used for all images.
             * If a tuple ``(a, b)``, then a value from the range ``[a, b]`` will be used per image.
