@@ -36,7 +36,7 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
-def adjust_gamma(arr, gamma):
+def adjust_contrast_gamma(arr, gamma):
     """
     Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
 
@@ -220,7 +220,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
     """
     params1d = [iap.handle_continuous_param(gamma, "gamma", value_range=None, tuple_to_uniform=True,
                                             list_to_choice=True)]
-    func = adjust_gamma
+    func = adjust_contrast_gamma
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
