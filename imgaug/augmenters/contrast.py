@@ -178,6 +178,76 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         return ski_exposure.adjust_sigmoid(arr, cutoff=cutoff, gain=gain)
 
 
+def adjust_contrast_log(arr, gain):
+    """
+    Adjust contrast by scaling each pixel value to ``255 * gain * log_2(1 + I_ij/255)``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested (1) (2) (3)
+        * ``uint16``: yes; tested (2) (3)
+        * ``uint32``: yes; tested (2) (3)
+        * ``uint64``: yes; tested (2) (3) (4)
+        * ``int8``: limited; tested (2) (3) (5)
+        * ``int16``: limited; tested (2) (3) (5)
+        * ``int32``: limited; tested (2) (3) (5)
+        * ``int64``: limited; tested (2) (3) (4) (5)
+        * ``float16``: limited; tested (5)
+        * ``float32``: limited; tested (5)
+        * ``float64``: limited; tested (5)
+        * ``float128``: no (6)
+        * ``bool``: no (7)
+
+        - (1) Handled by ``cv2``. Other dtypes are handled by ``skimage``.
+        - (2) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
+              dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
+              e.g. ``result*255`` for ``uint8``.
+        - (3) Integer-like values are not rounded after applying the contrast adjustment equation
+              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
+              space to discrete happens according to floor function.
+        - (4) Note that scikit-image doc says that integers are converted to ``float64`` values before
+              applying the contrast normalization method. This might lead to inaccuracies for large
+              64bit integer values. Tests showed no indication of that happening though.
+        - (5) Must not contain negative values. Values >=0 are fully supported.
+        - (6) Leads to error in scikit-image.
+        - (7) Does not make sense for contrast adjustments.
+
+    Parameters
+    ----------
+    arr : numpy.ndarray
+        Array for which to adjust the contrast. Dtype ``uint8`` is fastest.
+
+    gain : number
+        Multiplier for the logarithm result. Values around 1.0 lead to a contrast-adjusted
+        images. Values above 1.0 quickly lead to partially broken images due to exceeding the
+        datatype's value range.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array with adjusted contrast.
+
+    """
+    # int8 is also possible according to docs
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
+    # like `d` was 0 for CV_8S, causing that to fail
+    if arr.dtype.name in ["uint8"]:
+        min_value, _center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+        dynamic_range = max_value - min_value
+
+        value_range = np.linspace(0, 1.0, num=dynamic_range+1, dtype=np.float32)
+        # 255 * 1/(1 + exp(gain*(cutoff - I_ij/255)))
+        # using np.float32(.) here still works when the input is a numpy array of size 1
+        gain = np.float32(gain)
+        table = min_value + dynamic_range * gain * np.log2(1 + value_range)
+        arr_aug = cv2.LUT(arr, np.clip(table, min_value, max_value).astype(arr.dtype))
+        if arr.ndim == 3 and arr_aug.ndim == 2:
+            return arr_aug[..., np.newaxis]
+        return arr_aug
+    else:
+        return ski_exposure.adjust_log(arr, gain=gain)
+
+
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
@@ -308,32 +378,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
 
     dtype support::
 
-        * ``uint8``: yes; fully tested (1) (2)
-        * ``uint16``: yes; tested (1) (2)
-        * ``uint32``: yes; tested (1) (2)
-        * ``uint64``: yes; tested (1) (2) (3)
-        * ``int8``: limited; tested (1) (2) (4)
-        * ``int16``: limited; tested (1) (2) (4)
-        * ``int32``: limited; tested (1) (2) (4)
-        * ``int64``: limited; tested (1) (2) (3) (4)
-        * ``float16``: limited; tested (4)
-        * ``float32``: limited; tested (4)
-        * ``float64``: limited; tested (4)
-        * ``float128``: no (5)
-        * ``bool``: no (6)
-
-        - (1) Normalization is done as ``I_ij/max``, where ``max`` is the maximum value of the
-              dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
-              e.g. ``result*255`` for ``uint8``.
-        - (2) Integer-like values are not rounded after applying the contrast adjustment equation
-              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
-              space to discrete happens according to floor function.
-        - (3) Note that scikit-image doc says that integers are converted to ``float64`` values before
-              applying the contrast normalization method. This might lead to inaccuracies for large
-              64bit integer values. Tests showed no indication of that happening though.
-        - (4) Must not contain negative values. Values >=0 are fully supported.
-        - (5) Leads to error in scikit-image.
-        - (6) Does not make sense for contrast adjustments.
+        See :func:`imgaug.augmenters.contrast.adjust_contrast_log`.
 
     Parameters
     ----------
@@ -370,7 +415,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
     # TODO add inv parameter?
     params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True,
                                             list_to_choice=True)]
-    func = ski_exposure.adjust_log
+    func = adjust_contrast_log
     return _ContrastFuncWrapper(
         func, params1d, per_channel,
         dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
