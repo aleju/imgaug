@@ -438,6 +438,11 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
     def get_children_lists(self):
         return [lst for lst in [self.first, self.second] if lst is not None]
 
+    def __str__(self):
+        return "%s(factor=%s, per_channel=%s, name=%s, first=%s, second=%s, deterministic=%s)" % (
+            self.__class__.__name__, self.factor, self.per_channel, self.name,
+            self.first, self.second, self.deterministic)
+
 
 # TODO merge this with Alpha
 class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-variable, line-too-long
