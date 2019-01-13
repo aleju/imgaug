@@ -214,22 +214,22 @@ def test_SigmoidContrast():
     assert isinstance(aug.params1d[0], iap.Uniform)
     assert isinstance(aug.params1d[0].a, iap.Deterministic)
     assert isinstance(aug.params1d[0].b, iap.Deterministic)
-    assert np.allclose(aug.params1d[0].a.value, 0.25)
-    assert np.allclose(aug.params1d[0].b.value, 0.75)
+    assert aug.params1d[0].a.value == 1
+    assert aug.params1d[0].b.value == 2
     assert isinstance(aug.params1d[1], iap.Uniform)
     assert isinstance(aug.params1d[1].a, iap.Deterministic)
     assert isinstance(aug.params1d[1].b, iap.Deterministic)
-    assert aug.params1d[1].a.value == 1
-    assert aug.params1d[1].b.value == 2
+    assert np.allclose(aug.params1d[1].a.value, 0.25)
+    assert np.allclose(aug.params1d[1].b.value, 0.75)
 
     # check that list to choice works
     # note that gain and cutoff are saved in inverted order in _ContrastFuncWrapper to match
     # the order of skimage's function
     aug = iaa.SigmoidContrast(gain=[1, 2], cutoff=[0.25, 0.75])
     assert isinstance(aug.params1d[0], iap.Choice)
-    assert all([np.allclose(val, val_choice) for val, val_choice in zip([0.25, 0.75], aug.params1d[0].a)])
+    assert all([val in aug.params1d[0].a for val in [1, 2]])
     assert isinstance(aug.params1d[1], iap.Choice)
-    assert all([val in aug.params1d[1].a for val in [1, 2]])
+    assert all([np.allclose(val, val_choice) for val, val_choice in zip([0.25, 0.75], aug.params1d[1].a)])
 
     # check that per_channel at 50% prob works
     aug = iaa.SigmoidContrast(gain=(1, 10), cutoff=(0.25, 0.75), per_channel=0.5)
@@ -263,6 +263,7 @@ def test_SigmoidContrast():
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
         min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        # dynamic_range = max_value - min_value
 
         gains = [5, 20]
         cutoffs = [0.25, 0.75]
@@ -274,9 +275,13 @@ def test_SigmoidContrast():
             aug = iaa.SigmoidContrast(gain=gain, cutoff=cutoff)
             for value, tolerance in zip(values, tolerances):
                 image = np.full((3, 3), value, dtype=dtype)
+                # TODO this looks like the equation commented out should acutally the correct one, but when using it
+                #      we get a difference between expectation and skimage ground truth
                 # 1/(1 + exp(gain*(cutoff - I_ij/max)))
                 expected = (1/(1 + np.exp(gain * (cutoff - image.astype(np.float128)/max_value))))
                 expected = (expected * max_value).astype(dtype)
+                # expected = (1/(1 + np.exp(gain * (cutoff - (image.astype(np.float128)-min_value)/dynamic_range))))
+                # expected = (min_value + expected * dynamic_range).astype(dtype)
                 image_aug = aug.augment_image(image)
                 assert image_aug.dtype == np.dtype(dtype)
                 assert len(np.unique(image_aug)) == 1
