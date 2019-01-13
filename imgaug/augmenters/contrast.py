@@ -299,7 +299,7 @@ def adjust_contrast_linear(arr, alpha):
         min_value, center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
 
         value_range = np.arange(0, 256, dtype=np.float32)
-        # 255 * 1/(1 + exp(gain*(cutoff - I_ij/255)))
+        # 127 + alpha*(I_ij-127)
         # using np.float32(.) here still works when the input is a numpy array of size 1
         alpha = np.float32(alpha)
         table = center_value + alpha * (value_range - center_value)
