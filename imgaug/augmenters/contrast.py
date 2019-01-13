@@ -248,6 +248,16 @@ def adjust_contrast_log(arr, gain):
         return ski_exposure.adjust_log(arr, gain=gain)
 
 
+def _adjust_linear(image, alpha):
+    input_dtype = image.dtype
+    _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
+    if input_dtype.kind in ["u", "i"]:
+        center_value = int(center_value)
+    image_aug = center_value + alpha * (image.astype(np.float64)-center_value)
+    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+    return image_aug
+
+
 def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, random_state=None):
     """
     Adjust contrast by scaling each pixel value to ``255 * ((I_ij/255)**gamma)``.
@@ -1172,13 +1182,3 @@ class _PreserveDtype(object):
 
         return image_aug
 """
-
-
-def _adjust_linear(image, alpha):
-    input_dtype = image.dtype
-    _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
-    if input_dtype.kind in ["u", "i"]:
-        center_value = int(center_value)
-    image_aug = center_value + alpha * (image.astype(np.float64)-center_value)
-    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
-    return image_aug
