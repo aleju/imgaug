@@ -792,7 +792,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                      "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (
                          [type(el) for el in heatmaps],))
 
-        heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
+        # copy, but only if topmost call or hooks are provided
+        if len(parents) == 0 or hooks is not None:
+            heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
+        else:
+            heatmaps_copy = heatmaps
 
         if hooks is not None:
             heatmaps_copy = hooks.preprocess(heatmaps_copy, augmenter=self, parents=parents)
@@ -969,7 +973,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage)
                           for keypoints_on_image in keypoints_on_images]))
 
-        keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
+        # copy, but only if topmost call or hooks are provided
+        if len(parents) == 0 or hooks is not None:
+            keypoints_on_images_copy = [keypoints_on_image.deepcopy() for keypoints_on_image in keypoints_on_images]
+        else:
+            keypoints_on_images_copy = keypoints_on_images
 
         if hooks is not None:
             keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
@@ -2601,12 +2609,6 @@ class Sometimes(Augmenter):
             else:
                 images_then_list = images[indices_then_list]
                 images_else_list = images[indices_else_list]
-
-            # We copy here due to in-place augmentation. If only one of the two lists is None it is not an issue to
-            # augment in-place, hence we don't have to copy in that case.
-            if self.then_list is not None and self.else_list is not None:
-                images_then_list = copy_arrays(images_then_list)
-                images_else_list = copy_arrays(images_else_list)
 
             # augment according to if and else list
             result_then_list = images_then_list

@@ -268,8 +268,8 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         ia.do_assert(first is not None or second is not None,
                      "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), "
                      + "but got two None values.")
-        self.first = meta.handle_children_list(first, self.name, "first")
-        self.second = meta.handle_children_list(second, self.name, "second")
+        self.first = meta.handle_children_list(first, self.name, "first", default=None)
+        self.second = meta.handle_children_list(second, self.name, "second", default=None)
 
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
@@ -331,7 +331,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 heatmaps_first = heatmaps
             else:
                 heatmaps_first = self.first.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -340,7 +340,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 heatmaps_second = heatmaps
             else:
                 heatmaps_second = self.second.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -383,7 +383,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 kps_ois_first = keypoints_on_images
             else:
                 kps_ois_first = self.first.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -392,7 +392,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 kps_ois_second = keypoints_on_images
             else:
                 kps_ois_second = self.second.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -436,7 +436,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         return [self.factor, self.per_channel]
 
     def get_children_lists(self):
-        return [self.first, self.second]
+        return [lst for lst in [self.first, self.second] if lst is not None]
 
 
 # TODO merge this with Alpha
@@ -626,7 +626,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 heatmaps_first = heatmaps
             else:
                 heatmaps_first = self.first.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -635,7 +635,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 heatmaps_second = heatmaps
             else:
                 heatmaps_second = self.second.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -684,7 +684,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 kps_ois_first = keypoints_on_images
             else:
                 kps_ois_first = self.first.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -693,7 +693,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 kps_ois_second = keypoints_on_images
             else:
                 kps_ois_second = self.second.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )

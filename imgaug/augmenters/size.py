@@ -1863,8 +1863,8 @@ class KeepSizeByResize(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         input_was_array = ia.is_np_array(images)
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
-            input_sizes = [image.shape[0:2] for image in images]
             interpolations = self._draw_samples(len(images), random_state, return_heatmaps=False)
+            input_shapes = [image.shape[0:2] for image in images]
 
             images_aug = self.children.augment_images(
                 images=images,
@@ -1873,11 +1873,11 @@ class KeepSizeByResize(meta.Augmenter):
             )
 
             result = []
-            for image_aug, input_size, interpolation in zip(images_aug, input_sizes, interpolations):
+            for image_aug, interpolation, input_shape in zip(images_aug, interpolations, input_shapes):
                 if interpolation == KeepSizeByResize.NO_RESIZE:
                     result.append(image_aug)
                 else:
-                    result.append(ia.imresize_single_image(image_aug, input_size[0:2], interpolation))
+                    result.append(ia.imresize_single_image(image_aug, input_shape[0:2], interpolation))
 
             if input_was_array:
                 # note here that NO_RESIZE can have led to different shapes
@@ -1893,6 +1893,7 @@ class KeepSizeByResize(meta.Augmenter):
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             nb_heatmaps = len(heatmaps)
             _, interpolations_heatmaps = self._draw_samples(nb_heatmaps, random_state, return_heatmaps=True)
+            input_arr_shapes = [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps]
 
             # augment according to if and else list
             heatmaps_aug = self.children.augment_heatmaps(
@@ -1902,12 +1903,12 @@ class KeepSizeByResize(meta.Augmenter):
             )
 
             result = []
-            for heatmap, heatmap_aug, interpolation in zip(heatmaps, heatmaps_aug, interpolations_heatmaps):
+            gen = zip(heatmaps, heatmaps_aug, interpolations_heatmaps, input_arr_shapes)
+            for heatmap, heatmap_aug, interpolation, input_arr_shape in gen:
                 if interpolation == "NO_RESIZE":
                     result.append(heatmap_aug)
                 else:
-                    input_size = heatmap.arr_0to1.shape[0:2]
-                    heatmap_aug = heatmap_aug.scale(input_size, interpolation=interpolation)
+                    heatmap_aug = heatmap_aug.scale(input_arr_shape[0:2], interpolation=interpolation)
                     heatmap_aug.shape = heatmap.shape
                     result.append(heatmap_aug)
         else:
@@ -1918,6 +1919,7 @@ class KeepSizeByResize(meta.Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             interpolations = self._draw_samples(len(keypoints_on_images), random_state, return_heatmaps=False)
+            input_shapes = [kpsoi_i.shape for kpsoi_i in keypoints_on_images]
 
             # augment according to if and else list
             kps_aug = self.children.augment_keypoints(
@@ -1927,13 +1929,14 @@ class KeepSizeByResize(meta.Augmenter):
             )
 
             result = []
-            for kps, kps_aug, interpolation in zip(keypoints_on_images, kps_aug, interpolations):
+            gen = zip(keypoints_on_images, kps_aug, interpolations, input_shapes)
+            for kps, kps_aug, interpolation, input_shape in gen:
                 if not kps.keypoints:
                     result.append(kps_aug)
                 elif interpolation == KeepSizeByResize.NO_RESIZE:
                     result.append(kps_aug)
                 else:
-                    result.append(kps_aug.on(kps.shape))
+                    result.append(kps_aug.on(input_shape))
         else:
             result = keypoints_on_images
 
