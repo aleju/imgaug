@@ -1862,7 +1862,7 @@ class KeepSizeByResize(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_was_array = ia.is_np_array(images)
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             input_sizes = [image.shape[0:2] for image in images]
             interpolations = self._draw_samples(len(images), random_state, return_heatmaps=False)
 

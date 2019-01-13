@@ -564,9 +564,6 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if parents is None:
             parents = []
 
-        if hooks is None:
-            hooks = ia.HooksImages()
-
         if ia.is_np_array(images):
             input_type = "array"
             input_added_axis = False
@@ -620,12 +617,15 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             raise Exception("Expected images as one numpy array or list/tuple of numpy arrays, got %s." % (
                 type(images),))
 
-        images_copy = hooks.preprocess(images_copy, augmenter=self, parents=parents)
+        if hooks is not None:
+            images_copy = hooks.preprocess(images_copy, augmenter=self, parents=parents)
 
         # the is_activated() call allows to use hooks that selectively
         # deactivate specific augmenters in previously defined augmentation
         # sequences
-        if hooks.is_activated(images_copy, augmenter=self, parents=parents, default=self.activated):
+        if (hooks is None and self.activated) \
+                or (hooks is not None
+                    and hooks.is_activated(images_copy, augmenter=self, parents=parents, default=self.activated)):
             if len(images) > 0:
                 images_result = self._augment_images(
                     images_copy,
@@ -641,7 +641,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         else:
             images_result = images_copy
 
-        images_result = hooks.postprocess(images_result, augmenter=self, parents=parents)
+        if hooks is not None:
+            images_result = hooks.postprocess(images_result, augmenter=self, parents=parents)
 
         # remove temporarily added channel axis for 2D input images
         output_type = "list" if isinstance(images_result, list) else "array"
@@ -703,7 +704,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_images`.
 
-        hooks : imgaug.HooksImages
+        hooks : imgaug.HooksImages or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_images`.
 
         Returns
@@ -1984,7 +1985,7 @@ class Sequential(Augmenter, list):
         self.random_order = random_order
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.random_order:
                 for index in random_state.permutation(len(self)):
                     images = self[index].augment_images(
@@ -2236,7 +2237,7 @@ class SomeOf(Augmenter, list):
         return augmenter_active
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             input_is_array = ia.is_np_array(images)
 
             # This must happen before creating the augmenter_active array,
@@ -2536,7 +2537,7 @@ class Sometimes(Augmenter):
         self.else_list = handle_children_list(else_list, self.name, "else")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             input_is_np_array = ia.is_np_array(images)
             if input_is_np_array:
                 input_dtype = images.dtype
@@ -2751,7 +2752,7 @@ class WithChannels(Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.channels is None:
                 result = self.children.augment_images(
                     images=images,

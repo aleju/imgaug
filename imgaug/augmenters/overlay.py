@@ -283,7 +283,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 images_first = images
             else:
@@ -563,7 +563,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 images_first = images
             else:

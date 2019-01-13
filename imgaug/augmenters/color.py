@@ -109,7 +109,7 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             result = ChangeColorspace(
                 to_colorspace=self.to_colorspace,
                 from_colorspace=self.from_colorspace,
