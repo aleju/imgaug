@@ -40,6 +40,7 @@ from PIL import Image as PIL_Image
 import imageio
 import tempfile
 import numpy as np
+import cv2
 
 from . import meta
 from .. import imgaug as ia
@@ -668,29 +669,67 @@ class Multiply(meta.Augmenter):
         for i, (image, mul_samples_i, per_channel_samples_i, input_dtype) in gen:
             nb_channels = image.shape[2]
 
-            mul_min = np.min(mul_samples_i)
-            mul_max = np.max(mul_samples_i)
-            is_not_increasing_value_range = (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1)
+            # Example code to directly multiply images via image*sample (uint8 only) -- apparently slower than LUT
+            # if per_channel_samples_i > 0.5:
+            #     result = []
+            #     image = image.astype(np.float32)
+            #     mul_samples_i = mul_samples_i.astype(np.float32)
+            #     for c, mul in enumerate(mul_samples_i[0:nb_channels]):
+            #         result.append(np.clip(image[..., c:c+1] * mul, 0, 255).astype(np.uint8))
+            #     images[i] = np.concatenate(result, axis=2)
+            # else:
+            #     images[i] = np.clip(
+            #         image.astype(np.float32) * mul_samples_i[0].astype(np.float32), 0, 255).astype(np.uint8)
 
-            if per_channel_samples_i > 0.5:
-                mul = mul_samples_i[0:nb_channels].reshape((1, 1, nb_channels))
+            if image.dtype.name == "uint8":
+                # Using this LUT approach is significantly faster than else-block code (more than 10x speedup)
+                # and is still faster than the simpler image*sample approach without LUT (1.5-3x speedup,
+                # maybe dependent on installed BLAS libraries?)
+                value_range = np.arange(0, 256, dtype=np.float32)
+                if per_channel_samples_i > 0.5:
+                    result = []
+                    mul_samples_i = mul_samples_i.astype(np.float32)
+                    tables = np.tile(value_range[np.newaxis, :], (nb_channels, 1)) \
+                        * mul_samples_i[0:nb_channels, np.newaxis]
+                    tables = np.clip(tables, 0, 255).astype(image.dtype)
+                    for c, table in enumerate(tables):
+                        arr_aug = cv2.LUT(image[..., c], table)
+                        result.append(arr_aug[..., np.newaxis])
+                    images[i] = np.concatenate(result, axis=2)
+                else:
+                    table = value_range * mul_samples_i[0].astype(np.float32)
+                    image_aug = cv2.LUT(image, np.clip(table, 0, 255).astype(image.dtype))
+                    if image_aug.ndim == 2:
+                        image_aug = image_aug[..., np.newaxis]
+                    images[i] = image_aug
             else:
-                mul = mul_samples_i[0:1].reshape((1, 1, 1))
+                # TODO estimate via image min/max values whether a resolution increase is necessary
 
-            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
-            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
-            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
-            # The downside is that the mul parameter is limited in its value range.
-            itemsize = max(image.dtype.itemsize, 2 if mul.dtype.kind == "f" else 1)  # float min itemsize is 2, not 1
-            dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
-            mul = meta.clip_to_dtype_value_range_(mul, dtype_target, validate=True)
+                if per_channel_samples_i > 0.5:
+                    mul = mul_samples_i[0:nb_channels].reshape((1, 1, nb_channels))
+                else:
+                    mul = mul_samples_i[0:1].reshape((1, 1, 1))
 
-            image, mul = meta.promote_array_dtypes_([image, mul], dtypes=[image.dtype, dtype_target],
-                                                    increase_itemsize_factor=1 if is_not_increasing_value_range else 2)
-            image = np.multiply(image, mul, out=image, casting="no")
+                mul_min = np.min(mul)
+                mul_max = np.max(mul)
+                is_not_increasing_value_range = (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1)
 
-            image = meta.restore_dtypes_(image, input_dtype)
-            images[i] = image
+                # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+                # This prevents overflow problems and makes it less likely that the image has to be up-casted, which
+                # again improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+                # The downside is that the mul parameter is limited in its value range.
+                itemsize = max(image.dtype.itemsize, 2 if mul.dtype.kind == "f" else 1)  # float min itemsize is 2 not 1
+                dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
+                mul = meta.clip_to_dtype_value_range_(mul, dtype_target, validate=True)
+
+                image, mul = meta.promote_array_dtypes_(
+                    [image, mul],
+                    dtypes=[image.dtype, dtype_target],
+                    increase_itemsize_factor=1 if is_not_increasing_value_range else 2)
+                image = np.multiply(image, mul, out=image, casting="no")
+
+                image = meta.restore_dtypes_(image, input_dtype)
+                images[i] = image
 
         return images
 
