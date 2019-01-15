@@ -1108,7 +1108,7 @@ class Deterministic(StochasticParameter):
             raise Exception("Expected StochasticParameter object or number or string, got %s." % (type(value),))
 
     def _draw_samples(self, size, random_state):
-        return np.tile(np.array([self.value]), size)
+        return np.full(size, self.value)
 
     def __repr__(self):
         return self.__str__()
