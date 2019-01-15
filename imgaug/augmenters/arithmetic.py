@@ -317,25 +317,43 @@ class AddElementwise(meta.Augmenter):
             sample_shape = (height, width, nb_channels if per_channel_samples_i > 0.5 else 1)
             value = self.value.draw_samples(sample_shape, random_state=rs)
 
-            # We limit here the value range of the value parameter to the bytes in the image's dtype.
-            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
-            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
-            # The downside is that the mul parameter is limited in its value range.
-            #
-            # We need 2* the itemsize of the image here to allow to shift the image's max value to the lowest possible
-            # value, e.g. for uint8 it must allow for -255 to 255.
-            itemsize = image.dtype.itemsize * 2
-            dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
-            value = meta.clip_to_dtype_value_range_(value, dtype_target, validate=100)
+            if image.dtype.name == "uint8":
+                # This special uint8 block is around 60-100% faster than the else-block further below (more speedup
+                # for smaller images).
+                #
+                # Also tested to instead compute min/max of image and value and then only convert image/value dtype
+                # if actually necessary, but that was like 20-30% slower, even for 224x224 images.
+                #
+                if value.dtype.kind == "f":
+                    value = np.round(value)
 
-            if value.shape[2] == 1:
-                value = np.tile(value, (1, 1, nb_channels))
+                image = image.astype(np.int16)
+                value = np.clip(value, -255, 255).astype(np.int16)
 
-            image, value = meta.promote_array_dtypes_([image, value], dtypes=[image.dtype, dtype_target],
-                                                      increase_itemsize_factor=2)
-            image = np.add(image, value, out=image, casting="no")
-            image = meta.restore_dtypes_(image, input_dtype)
-            images[i] = image
+                image_aug = image + value
+                image_aug = np.clip(image_aug, 0, 255).astype(np.uint8)
+
+                images[i] = image_aug
+            else:
+                # We limit here the value range of the value parameter to the bytes in the image's dtype.
+                # This prevents overflow problems and makes it less likely that the image has to be up-casted, which
+                # again improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+                # The downside is that the mul parameter is limited in its value range.
+                #
+                # We need 2* the itemsize of the image here to allow to shift the image's max value to the lowest
+                # possible value, e.g. for uint8 it must allow for -255 to 255.
+                itemsize = image.dtype.itemsize * 2
+                dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
+                value = meta.clip_to_dtype_value_range_(value, dtype_target, validate=100)
+
+                if value.shape[2] == 1:
+                    value = np.tile(value, (1, 1, nb_channels))
+
+                image, value = meta.promote_array_dtypes_([image, value], dtypes=[image.dtype, dtype_target],
+                                                          increase_itemsize_factor=2)
+                image = np.add(image, value, out=image, casting="no")
+                image = meta.restore_dtypes_(image, input_dtype)
+                images[i] = image
 
         return images
 

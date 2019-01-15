@@ -2305,6 +2305,21 @@ def test_AddElementwise():
     expected = [images_list[0] - 1]
     assert array_equal_lists(observed, expected)
 
+    # uint8, every possible addition for base value 127
+    for value_type in [int]:
+        for per_channel in [False, True]:
+            for value in np.arange(-255, 255+1):
+                aug = iaa.AddElementwise(value=value_type(value), per_channel=per_channel)
+                expected = np.clip(127 + value_type(value), 0, 255)
+
+                img = np.full((1, 1), 127, dtype=np.uint8)
+                img_aug = aug.augment_image(img)
+                assert img_aug.item(0) == expected
+
+                img = np.full((1, 1, 3), 127, dtype=np.uint8)
+                img_aug = aug.augment_image(img)
+                assert np.all(img_aug == expected)
+
     # test other parameters
     aug = iaa.AddElementwise(value=iap.DiscreteUniform(1, 10))
     observed = aug.augment_images(images)
