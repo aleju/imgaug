@@ -937,25 +937,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         if hooks.is_activated(keypoints_on_images_copy, augmenter=self, parents=parents, default=self.activated):
             if len(keypoints_on_images_copy) > 0:
-                # TODO empty KeypointsOnImage objects are filtered here, which means that their
-                # .shape is not altered by augmentation. Add a separate augment_shape() method and
-                # augment empty KPs via that or alternatively change all augmenters to be able to
-                # handle empty KeypointsOnImage objects
-                keypoints_on_images_to_aug, nonempty_idx = reduce_to_nonempty(keypoints_on_images_copy)
-
-                if len(nonempty_idx) > 0:
-                    keypoints_on_images_result = self._augment_keypoints(
-                        keypoints_on_images_to_aug,
-                        random_state=ia.copy_random_state(self.random_state),
-                        parents=parents,
-                        hooks=hooks
-                    )
-                else:
-                    keypoints_on_images_result = []
-
-                keypoints_on_images_result = invert_reduce_to_nonempty(keypoints_on_images_copy, nonempty_idx,
-                                                                       keypoints_on_images_result)
-
+                keypoints_on_images_result = self._augment_keypoints(
+                    keypoints_on_images_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
                 ia.forward_random_state(self.random_state)
             else:
                 keypoints_on_images_result = keypoints_on_images_copy

@@ -732,6 +732,9 @@ class Affine(meta.Augmenter):
             _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
+            if not keypoints_on_image.keypoints:
+                result.append(keypoints_on_image)
+                continue
             height, width = keypoints_on_image.height, keypoints_on_image.width
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
@@ -1452,6 +1455,9 @@ class AffineCv2(meta.Augmenter):
             _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
+            if not keypoints_on_image.keypoints:
+                result.append(keypoints_on_image)
+                continue
             height, width = keypoints_on_image.height, keypoints_on_image.width
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
@@ -1802,6 +1808,9 @@ class PiecewiseAffine(meta.Augmenter):
         nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
 
         for i in sm.xrange(nb_images):
+            if not keypoints_on_images[i].keypoints:
+                result.append(keypoints_on_images[i])
+                continue
             rs_image = rss[i]
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
@@ -2117,6 +2126,8 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             keypoints_on_image = keypoints_on_images[i]
+            if not keypoints_on_image.keypoints:
+                continue
             kps_arr = keypoints_on_image.get_coords_array()
 
             warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
@@ -2536,6 +2547,8 @@ class ElasticTransformation(meta.Augmenter):
         seeds, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             kpsoi = keypoints_on_images[i]
+            if not kpsoi.keypoints:
+                continue
             h, w = kpsoi.shape[0:2]
             (_source_indices_x, _source_indices_y), (dx, dy) = ElasticTransformation.generate_indices(
                 kpsoi.shape[0:2],
@@ -2791,7 +2804,10 @@ class Rot90(meta.Augmenter):
         ks = self._draw_samples(nb_images, random_state)
         result = []
         for kpsoi_i, k_i in zip(keypoints_on_images, ks):
-            if (k_i % 4) == 0:
+            if not kpsoi_i.keypoints:
+                result.append(kpsoi_i)
+                continue
+            elif (k_i % 4) == 0:
                 result.append(kpsoi_i)
             else:
                 k_i = int(k_i) % 4  # this is also correct when k_i is negative

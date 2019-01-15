@@ -101,7 +101,9 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
         nb_images = len(keypoints_on_images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if samples[i] == 1:
+            if not keypoints_on_image.keypoints:
+                continue
+            elif samples[i] == 1:
                 width = keypoints_on_image.shape[1]
                 for keypoint in keypoints_on_image.keypoints:
                     # TODO is this still correct with float keypoints? Seems like the -1 should be dropped
@@ -186,7 +188,9 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
         nb_images = len(keypoints_on_images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if samples[i] == 1:
+            if not keypoints_on_image.keypoints:
+                continue
+            elif samples[i] == 1:
                 height = keypoints_on_image.shape[0]
                 for keypoint in keypoints_on_image.keypoints:
                     # TODO is this still correct with float keypoints? seems like the -1 should be dropped
