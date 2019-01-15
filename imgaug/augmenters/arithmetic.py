@@ -145,28 +145,62 @@ class Add(meta.Augmenter):
         for i, (image, value_samples_i, per_channel_samples_i, input_dtype) in gen:
             nb_channels = image.shape[2]
 
-            if per_channel_samples_i > 0.5:
-                value = value_samples_i[0:nb_channels].reshape((1, 1, nb_channels))
+            # Example code to directly add images via image+sample (uint8 only)
+            # if per_channel_samples_i > 0.5:
+            #     result = []
+            #     image = image.astype(np.int16)
+            #     value_samples_i = value_samples_i.astype(np.int16)
+            #     for c, value in enumerate(value_samples_i[0:nb_channels]):
+            #         result.append(np.clip(image[..., c:c+1] + value, 0, 255).astype(np.uint8))
+            #     images[i] = np.concatenate(result, axis=2)
+            # else:
+            #     images[i] = np.clip(
+            #         image.astype(np.int16) + value_samples_i[0].astype(np.int16), 0, 255).astype(np.uint8)
+
+            if image.dtype.name == "uint8":
+                # Using this LUT approach is significantly faster than the else-block code (around 3-4x speedup)
+                # and is still faster than the simpler image+sample approach without LUT (about 10% at 64x64 and about
+                # 2x at 224x224 -- maybe dependent on installed BLAS libraries?)
+                value_samples_i = np.clip(np.round(value_samples_i), -255, 255).astype(np.int16)
+                value_range = np.arange(0, 256, dtype=np.int16)
+                if per_channel_samples_i > 0.5:
+                    result = []
+                    tables = np.tile(value_range[np.newaxis, :], (nb_channels, 1)) \
+                        + value_samples_i[0:nb_channels, np.newaxis]
+                    tables = np.clip(tables, 0, 255).astype(image.dtype)
+                    for c, table in enumerate(tables):
+                        arr_aug = cv2.LUT(image[..., c], table)
+                        result.append(arr_aug[..., np.newaxis])
+                    images[i] = np.concatenate(result, axis=2)
+                else:
+                    table = value_range + value_samples_i[0]
+                    image_aug = cv2.LUT(image, np.clip(table, 0, 255).astype(image.dtype))
+                    if image_aug.ndim == 2:
+                        image_aug = image_aug[..., np.newaxis]
+                    images[i] = image_aug
             else:
-                value = value_samples_i[0:1].reshape((1, 1, 1))
+                if per_channel_samples_i > 0.5:
+                    value = value_samples_i[0:nb_channels].reshape((1, 1, nb_channels))
+                else:
+                    value = value_samples_i[0:1].reshape((1, 1, 1))
 
-            # We limit here the value range of the value parameter to the bytes in the image's dtype.
-            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
-            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
-            # The downside is that the mul parameter is limited in its value range.
-            #
-            # We need 2* the itemsize of the image here to allow to shift the image's max value to the lowest possible
-            # value, e.g. for uint8 it must allow for -255 to 255.
-            itemsize = image.dtype.itemsize * 2
-            dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
-            value = meta.clip_to_dtype_value_range_(value, dtype_target, validate=True)
+                # We limit here the value range of the value parameter to the bytes in the image's dtype.
+                # This prevents overflow problems and makes it less likely that the image has to be up-casted, which
+                # again improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+                # The downside is that the mul parameter is limited in its value range.
+                #
+                # We need 2* the itemsize of the image here to allow to shift the image's max value to the lowest
+                # possible value, e.g. for uint8 it must allow for -255 to 255.
+                itemsize = image.dtype.itemsize * 2
+                dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
+                value = meta.clip_to_dtype_value_range_(value, dtype_target, validate=True)
 
-            image, value = meta.promote_array_dtypes_([image, value], dtypes=[image.dtype, dtype_target],
-                                                      increase_itemsize_factor=2)
-            image = np.add(image, value, out=image, casting="no")
+                image, value = meta.promote_array_dtypes_([image, value], dtypes=[image.dtype, dtype_target],
+                                                          increase_itemsize_factor=2)
+                image = np.add(image, value, out=image, casting="no")
 
-            image = meta.restore_dtypes_(image, input_dtype)
-            images[i] = image
+                image = meta.restore_dtypes_(image, input_dtype)
+                images[i] = image
 
         return images
 
