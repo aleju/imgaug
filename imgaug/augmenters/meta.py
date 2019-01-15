@@ -44,7 +44,7 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
-def restore_dtypes_(images, dtypes, clip=True):
+def restore_dtypes_(images, dtypes, clip=True, round=True):
     if ia.is_np_array(images):
         if ia.is_iterable(dtypes):
             assert len(dtypes) > 0
@@ -60,6 +60,8 @@ def restore_dtypes_(images, dtypes, clip=True):
         if images.dtype.type == dtype_to:
             result = images
         else:
+            if round and dtype_to.kind in ["u", "i", "b"]:
+                images = np.round(images)
             if clip:
                 min_value, _, max_value = get_value_range_of_dtype(dtype_to)
                 images = np.clip(images, min_value, max_value, out=images)

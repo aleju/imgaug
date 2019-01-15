@@ -1900,7 +1900,7 @@ def test_Add():
     assert array_equal_lists(observed, expected)
 
     # uint8, every possible addition for base value 127
-    for value_type in [int]:
+    for value_type in [float, int]:
         for per_channel in [False, True]:
             for value in np.arange(-255, 255+1):
                 aug = iaa.Add(value=value_type(value), per_channel=per_channel)
@@ -1913,6 +1913,25 @@ def test_Add():
                 img = np.full((1, 1, 3), 127, dtype=np.uint8)
                 img_aug = aug.augment_image(img)
                 assert np.all(img_aug == expected)
+
+    # specific tests with floats
+    aug = iaa.Add(value=0.75)
+    img = np.full((1, 1), 1, dtype=np.uint8)
+    img_aug = aug.augment_image(img)
+    assert img_aug.item(0) == 2
+
+    img = np.full((1, 1), 1, dtype=np.uint16)
+    img_aug = aug.augment_image(img)
+    assert img_aug.item(0) == 2
+
+    aug = iaa.Add(value=0.45)
+    img = np.full((1, 1), 1, dtype=np.uint8)
+    img_aug = aug.augment_image(img)
+    assert img_aug.item(0) == 1
+
+    img = np.full((1, 1), 1, dtype=np.uint16)
+    img_aug = aug.augment_image(img)
+    assert img_aug.item(0) == 1
 
     # test other parameters
     aug = iaa.Add(value=iap.DiscreteUniform(1, 10))

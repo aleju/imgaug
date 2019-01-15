@@ -285,7 +285,7 @@ def test_Alpha():
 
     aug = iaa.Alpha(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 10).astype(np.uint8)
+    expected = np.round(base_img + 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
@@ -299,7 +299,7 @@ def test_Alpha():
 
     aug = iaa.Alpha(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 20).astype(np.uint8)
+    expected = np.round(base_img + 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
@@ -313,17 +313,17 @@ def test_Alpha():
 
     aug = iaa.Alpha(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.Alpha(0.75, None, iaa.Add(20))
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.Alpha(0.75, iaa.Add(10), None)
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     base_img = np.zeros((1, 2, 1), dtype=np.uint8)
@@ -535,17 +535,17 @@ def test_AlphaElementwise():
 
     aug = iaa.AlphaElementwise(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.AlphaElementwise(0.75, None, iaa.Add(20))
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.AlphaElementwise(0.75, iaa.Add(10), None)
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     base_img = np.zeros((100, 100), dtype=np.uint8)

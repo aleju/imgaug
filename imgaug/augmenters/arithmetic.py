@@ -69,11 +69,11 @@ class Add(meta.Augmenter):
 
     Parameters
     ----------
-    value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+    value : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Value to add to all pixels.
 
-            * If an int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value from the discrete range ``[a .. b]``
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the discrete range ``[a, b]``
               will be used.
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image
@@ -122,8 +122,8 @@ class Add(meta.Augmenter):
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(Add, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
-                                               list_to_choice=True, allow_floats=False)
+        self.value = iap.handle_continuous_param(value, "value", value_range=None, tuple_to_uniform=True,
+                                                 list_to_choice=True)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -293,6 +293,7 @@ class AddElementwise(meta.Augmenter):
     def __init__(self, value=0, per_channel=False, name=None, deterministic=False, random_state=None):
         super(AddElementwise, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
+        # TODO open to continous, similar to Add
         self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
                                                list_to_choice=True, allow_floats=False)
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")

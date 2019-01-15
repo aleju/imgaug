@@ -49,7 +49,7 @@ def test_FastSnowyLandscape():
     mask = (image_hls[..., 1] < 100)
     expected = np.copy(image_hls).astype(np.float32)
     expected[..., 1][mask] *= 2.0
-    expected = np.clip(expected, 0, 255).astype(np.uint8)
+    expected = np.clip(np.round(expected), 0, 255).astype(np.uint8)
     expected = cv2.cvtColor(expected, cv2.COLOR_HLS2RGB)
     observed = aug.augment_image(image)
     assert np.array_equal(observed, expected)
@@ -74,13 +74,13 @@ def test_FastSnowyLandscape():
     mask = (image_hls[..., 1] < 75)
     expected1 = np.copy(image_hls).astype(np.float64)
     expected1[..., 1][mask] *= 2.0
-    expected1 = np.clip(expected1, 0, 255).astype(np.uint8)
+    expected1 = np.clip(np.round(expected1), 0, 255).astype(np.uint8)
     expected1 = cv2.cvtColor(expected1, cv2.COLOR_HLS2RGB)
 
     mask = (image_hls[..., 1] < 125)
     expected2 = np.copy(image_hls).astype(np.float64)
     expected2[..., 1][mask] *= 2.0
-    expected2 = np.clip(expected2, 0, 255).astype(np.uint8)
+    expected2 = np.clip(np.round(expected2), 0, 255).astype(np.uint8)
     expected2 = cv2.cvtColor(expected2, cv2.COLOR_HLS2RGB)
 
     observed = aug.augment_images([image] * 4)
@@ -96,13 +96,13 @@ def test_FastSnowyLandscape():
     mask = (image_hls[..., 1] < 100)
     expected1 = np.copy(image_hls).astype(np.float64)
     expected1[..., 1][mask] *= 1.5
-    expected1 = np.clip(expected1, 0, 255).astype(np.uint8)
+    expected1 = np.clip(np.round(expected1), 0, 255).astype(np.uint8)
     expected1 = cv2.cvtColor(expected1, cv2.COLOR_HLS2RGB)
 
     mask = (image_hls[..., 1] < 100)
     expected2 = np.copy(image_hls).astype(np.float64)
     expected2[..., 1][mask] *= 2.0
-    expected2 = np.clip(expected2, 0, 255).astype(np.uint8)
+    expected2 = np.clip(np.round(expected2), 0, 255).astype(np.uint8)
     expected2 = cv2.cvtColor(expected2, cv2.COLOR_HLS2RGB)
 
     observed = aug.augment_images([image] * 4)
@@ -119,7 +119,7 @@ def test_FastSnowyLandscape():
     mask = (image_hls[..., 1] < 100)
     expected = np.copy(image_hls).astype(np.float32)
     expected[..., 1][mask] *= 2.0
-    expected = np.clip(expected, 0, 255).astype(np.uint8)
+    expected = np.clip(np.round(expected), 0, 255).astype(np.uint8)
     expected = cv2.cvtColor(expected, cv2.COLOR_HLS2BGR)
     observed = aug.augment_image(image)
     assert np.array_equal(observed, expected)
