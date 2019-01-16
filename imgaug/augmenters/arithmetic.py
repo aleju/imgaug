@@ -874,7 +874,7 @@ class MultiplyElementwise(meta.Augmenter):
     ``0.5 <= x <= 1.5`` ands multiplies the pixel by that value. Therefore,
     added multipliers may differ between channels of the same pixel.
 
-    >>> aug = iaa.AddElementwise((0.5, 1.5), per_channel=0.5)
+    >>> aug = iaa.MultiplyElementwise((0.5, 1.5), per_channel=0.5)
 
     same as previous example, but the `per_channel` feature is only active
     for 50 percent of all images.
