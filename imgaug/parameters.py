@@ -561,6 +561,7 @@ class Choice(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         if any([isinstance(a_i, StochasticParameter) for a_i in self.a]):
+            # TODO replace by derive_random_state()
             seed = random_state.randint(0, 10**6, 1)[0]
             samples = ia.new_random_state(seed).choice(self.a, np.prod(size), replace=self.replace, p=self.p)
 
