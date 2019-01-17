@@ -1009,7 +1009,7 @@ class Uniform(StochasticParameter):
         if a > b:
             a, b = b, a
         elif a == b:
-            return np.tile(np.array([a]), size)
+            return np.full(size, a)
         return random_state.uniform(a, b, size)
 
     def __repr__(self):
