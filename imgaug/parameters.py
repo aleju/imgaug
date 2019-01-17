@@ -872,7 +872,7 @@ class Laplace(StochasticParameter):
         scale = self.scale.draw_sample(random_state=random_state)
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
-            return np.tile(loc, size)
+            return np.full(size, loc)
         else:
             return random_state.laplace(loc, scale, size=size)
 
