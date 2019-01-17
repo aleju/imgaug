@@ -1442,6 +1442,7 @@ class Multiply(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1504,6 +1505,7 @@ class Divide(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1576,6 +1578,7 @@ class Add(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1634,6 +1637,7 @@ class Subtract(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1709,6 +1713,7 @@ class Power(StochasticParameter):
         samples, exponents = both_np_float_if_one_is_float(samples, exponents)
         samples_dtype = samples.dtype
 
+        # TODO switch to this as numpy>=1.15 is now a requirement
         # float_power requires numpy>=1.12
         # result = np.float_power(samples, exponents)
         # TODO why was float32 type here replaced with complex number formulation?
