@@ -177,10 +177,9 @@ def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice
 
 
 def force_np_float_dtype(val):
-    if val.dtype.type in ia.NP_FLOAT_TYPES:
+    if val.dtype.kind == "f":
         return val
-    else:
-        return val.astype(np.float64)
+    return val.astype(np.float64)
 
 
 def both_np_float_if_one_is_float(a, b):
