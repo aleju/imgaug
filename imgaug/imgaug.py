@@ -55,7 +55,7 @@ DEFAULT_FONT_FP = os.path.join(
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 SEED_MIN_VALUE = 0
-SEED_MAX_VALUE = 2**31
+SEED_MAX_VALUE = 2**31-1
 
 
 # to check if a dtype instance is among these dtypes, use e.g. `dtype.type in NP_FLOAT_TYPES`
