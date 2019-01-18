@@ -43,6 +43,13 @@ import six.moves as sm
 from .. import imgaug as ia
 from .. import parameters as iap
 
+KIND_TO_DTYPES = {
+    "i": ["int8", "int16", "int32", "int64"],
+    "u": ["uint8", "uint16", "uint32", "uint64"],
+    "b": ["bool"],
+    "f": ["float16", "float32", "float64", "float128"]
+}
+
 
 def restore_dtypes_(images, dtypes, clip=True, round=True):
     if ia.is_np_array(images):
@@ -110,6 +117,46 @@ def get_minimal_dtype(arrays, increase_itemsize_factor=1):
                 )
             )
     return promoted_dt
+
+
+def get_minimal_dtype_for_values(values, allowed_kinds, default, allow_bool_as_intlike=True):
+    values_normalized = []
+    for value in values:
+        if ia.is_np_array(value):
+            values_normalized.extend([np.min(values), np.max(values)])
+        else:
+            values_normalized.append(value)
+    vmin = np.min(values_normalized)
+    vmax = np.max(values_normalized)
+    possible_kinds = []
+    if ia.is_single_float(vmin) or ia.is_single_float(vmax):
+        # at least one is a float
+        possible_kinds.append("f")
+    elif ia.is_single_bool(vmin) and ia.is_single_bool(vmax):
+        # both are bools
+        possible_kinds.extend(["b", "u", "i"])
+    else:
+        # at least one of them is an integer and none is float
+        if vmin >= 0:
+            possible_kinds.append("u")
+        possible_kinds.append("i")
+        # vmin and vmax are already guarantueed to not be float due to if-statement above
+        if allow_bool_as_intlike and 0 <= vmin <= 1 and 0 <= vmax <= 1:
+            possible_kinds.append("b")
+
+    for allowed_kind in allowed_kinds:
+        if allowed_kind in possible_kinds:
+            for dt in KIND_TO_DTYPES[allowed_kind]:
+                min_value, _center_value, max_value = get_value_range_of_dtype(dt)
+                if min_value >= vmin and max_value <= vmax:
+                    return np.dtype(dt)
+
+    if default == "raise":
+        raise Exception(("Did not find matching dtypes for vmin=%s (type %s) and vmax=%s (type %s). "
+                         + "Got %s input values of types %s.") % (
+            vmin, type(vmin), vmax, type(vmax), ", ".join([str(type(value)) for value in values])))
+    else:
+        return default
 
 
 def promote_array_dtypes_(arrays, dtypes=None, increase_itemsize_factor=1, affects=None):
