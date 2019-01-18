@@ -1388,14 +1388,20 @@ class Discretize(StochasticParameter):
         self.other_param = other_param
 
     def _draw_samples(self, size, random_state):
-        samples = self.other_param.draw_samples(
-            size, random_state=random_state
-        )
-        if ia.is_integer_array(samples):
-            # integer array, already discrete
+        samples = self.other_param.draw_samples(size, random_state=random_state)
+        if samples.dtype.kind in ["u", "i", "b"]:
             return samples
-        else:
-            return np.round(samples).astype(np.int32)
+
+        # dtype of ``samples`` should be float at this point
+        assert samples.dtype.kind == "f", "Expected to get uint, int, bool or float dtype as samples in Discretize(), " \
+                                          "but got dtype '%s' (kind '%s') instead." % (
+                                            samples.dtype.name, samples.dtype.kind)
+        # floats seem to reliably cover ints that have half the number of bits -- probably not the case for float128
+        # though as that is really float96
+        bitsize = 8 * samples.dtype.itemsize // 2
+        bitsize = max(bitsize, 8)  # in case some weird system knows something like float8 -- shouldn't happen though
+        dt = np.dtype("int%d" % (bitsize,))
+        return np.round(samples).astype(dt)
 
     def __repr__(self):
         return self.__str__()
