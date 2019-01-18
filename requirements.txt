@@ -5,9 +5,6 @@ numpy>=1.15,<1.16
 scipy
 Pillow
 matplotlib
-# cython is only added because scikit-image 1.14.2 seemed to require that on py3.4 -- probably a bug due to rushed
-# release and expected to be no longer necessary soon
-Cython
 scikit-image
 opencv-python
 imageio

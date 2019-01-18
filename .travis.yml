@@ -16,7 +16,7 @@ cache:
 
 python:
   - "2.7"
-  - "3.4"
+  # - "3.4"  temporarily removed until scikit-image can handle numpy 1.16 again (causes Cython issues for py3.4 now, maybe due to hotfixing in progress?)
   - "3.5"
   - "3.6"
 
