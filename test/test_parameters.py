@@ -1137,15 +1137,17 @@ def test_parameters_Weibull():
 
 def test_parameters_Uniform():
     reseed()
-    eps = np.finfo(np.float32).eps
+
+    def _eps(arr):
+        return np.finfo(arr.dtype).eps
 
     param = iap.Uniform(0, 1.0)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert 0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(0 - eps < samples, samples < 1.0 + eps))
+    assert 0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
     assert param.__str__() == param.__repr__() == "Uniform(Deterministic(int 0), Deterministic(float 1.00000000))"
 
     samples = param.draw_samples((10000,))
@@ -1162,32 +1164,32 @@ def test_parameters_Uniform():
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert -1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(-1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(1.0, -1.0)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert -1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(-1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(-1, 1)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert -1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(-1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(1, 1)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert 1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(1.0 - eps < samples, samples < 1.0 + eps))
+    assert 1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(-1.0, 1.0)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
@@ -1759,7 +1761,7 @@ def test_parameters_Multiply():
 
 def test_parameters_Divide():
     reseed()
-    # eps = np.finfo(np.float32).eps
+
     def _eps(arr):
         return np.finfo(arr.dtype).eps
 
