@@ -799,9 +799,6 @@ class Affine(meta.Augmenter):
             translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
             translate_samples = (translate_samples, translate_samples)
 
-        ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
-        ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
-
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
 

@@ -146,17 +146,26 @@ def get_minimal_dtype_for_values(values, allowed_kinds, default, allow_bool_as_i
 
     for allowed_kind in allowed_kinds:
         if allowed_kind in possible_kinds:
-            for dt in KIND_TO_DTYPES[allowed_kind]:
-                min_value, _center_value, max_value = get_value_range_of_dtype(dt)
-                if min_value >= vmin and max_value <= vmax:
-                    return np.dtype(dt)
+            dt = get_minimal_dtype_by_value_range(vmin, vmax, allowed_kind, default=None)
+            if dt is not None:
+                return dt
 
-    if default == "raise":
+    if ia.is_string(default) and default == "raise":
         raise Exception(("Did not find matching dtypes for vmin=%s (type %s) and vmax=%s (type %s). "
                          + "Got %s input values of types %s.") % (
             vmin, type(vmin), vmax, type(vmax), ", ".join([str(type(value)) for value in values])))
-    else:
-        return default
+    return default
+
+
+def get_minimal_dtype_by_value_range(low, high, kind, default):
+    assert low <= high, "Expected low to be less or equal than high, got %s and %s." % (low, high)
+    for dt in KIND_TO_DTYPES[kind]:
+        min_value, _center_value, max_value = get_value_range_of_dtype(dt)
+        if min_value <= low and high <= max_value:
+            return np.dtype(dt)
+    if ia.is_string(default) and default == "raise":
+        raise Exception("Could not find dtype of kind '%s' within value range [%s, %s]" % (kind, low, high))
+    return default
 
 
 def promote_array_dtypes_(arrays, dtypes=None, increase_itemsize_factor=1, affects=None):
