@@ -2212,6 +2212,8 @@ class Sigmoid(StochasticParameter):
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6)
         result = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        if result.dtype.kind != "f":
+            result = result.astype(np.float32)
         activated = self.activated.draw_sample(random_state=ia.new_random_state(seed+1))
         threshold = self.threshold.draw_sample(random_state=ia.new_random_state(seed+2))
         if activated > 0.5:
