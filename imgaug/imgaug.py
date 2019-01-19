@@ -811,13 +811,13 @@ def angle_between_vectors(v1, v2):
     Examples
     --------
     >>> angle_between_vectors(np.float32([1, 0, 0]), np.float32([0, 1, 0]))
-    1.5707963267948966
+    1.570796...
 
     >>> angle_between_vectors(np.float32([1, 0, 0]), np.float32([1, 0, 0]))
     0.0
 
     >>> angle_between_vectors(np.float32([1, 0, 0]), np.float32([-1, 0, 0]))
-    3.141592653589793
+    3.141592...
 
     """
     v1_u = v1 / np.linalg.norm(v1)
@@ -1023,12 +1023,15 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     Examples
     --------
     >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), 2.0)
+
     Converts 2 RGB images of height and width 16 to images of height and width 16*2 = 32.
 
     >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), (16, 32))
+
     Converts 2 RGB images of height and width 16 to images of height 16 and width 32.
 
     >>> imresize_many_images(np.zeros((2, 16, 16, 3), dtype=np.uint8), (2.0, 4.0))
+
     Converts 2 RGB images of height and width 16 to images of height 32 and width 64.
 
     """
@@ -1814,12 +1817,14 @@ class HooksImages(object):
     >>>     iaa.Dropout(0.05, name="dropout"),
     >>>     iaa.Affine(translate_px=-5, name="affine")
     >>> ])
+    >>> images = [np.zeros((10, 10), dtype=np.uint8)]
     >>>
     >>> def activator(images, augmenter, parents, default):
     >>>     return False if augmenter.name in ["blur", "dropout"] else default
     >>>
     >>> seq_det = seq.to_deterministic()
     >>> images_aug = seq_det.augment_images(images)
+    >>> heatmaps = [np.random.rand(*(3, 10, 10))]
     >>> heatmaps_aug = seq_det.augment_images(
     >>>     heatmaps,
     >>>     hooks=ia.HooksImages(activator=activator)
@@ -2160,6 +2165,7 @@ class KeypointsOnImage(object):
 
     Examples
     --------
+    >>> image = np.zeros((70, 70))
     >>> kps = [Keypoint(x=10, y=20), Keypoint(x=34, y=60)]
     >>> kps_oi = KeypointsOnImage(kps, shape=image.shape)
 
@@ -3372,6 +3378,7 @@ class BoundingBoxesOnImage(object):
 
     Examples
     --------
+    >>> image = np.zeros((100, 100))
     >>> bbs = [
     >>>     BoundingBox(x1=10, y1=20, x2=20, y2=30),
     >>>     BoundingBox(x1=25, y1=50, x2=30, y2=70)

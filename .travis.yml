@@ -43,8 +43,8 @@ before_script:
   #- flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
 script:
-  - python -m pytest ./test --verbose --doctest-modules --ignore="test/run_all.py" -s
-  - coverage run --source imgaug --omit ./imgaug -m pytest ./test --verbose --doctest-modules --ignore="test/run_all.py"
+  - python -m pytest ./test --verbose --xdoctest-modules --ignore="test/run_all.py" -s
+  - coverage run --source imgaug --omit ./imgaug -m pytest ./test --verbose --xdoctest-modules --ignore="test/run_all.py"
 
 
 after_success:
