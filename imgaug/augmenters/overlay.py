@@ -100,31 +100,38 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     input_was_bool = False
     if image_fg.dtype.kind == "b":
         input_was_bool = True
-        image_fg = image_fg.astype(np.float16)
-        image_bg = image_bg.astype(np.float16)
+        # use float32 instead of float16 here because it seems to be faster
+        image_fg = image_fg.astype(np.float32)
+        image_bg = image_bg.astype(np.float32)
 
     alpha = np.array(alpha, dtype=np.float64)
-    if alpha.ndim == 2:
-        assert alpha.shape == image_fg.shape[0:2]
-        alpha = alpha.reshape((alpha.shape[0], alpha.shape[1], 1))
-    elif alpha.ndim == 3:
-        assert alpha.shape == image_fg.shape or alpha.shape == image_fg.shape[0:2] + (1,)
+    if alpha.size == 1:
+        pass
     else:
-        alpha = alpha.reshape((1, 1, -1))
-    if alpha.shape[2] != image_fg.shape[2]:
-        alpha = np.tile(alpha, (1, 1, image_fg.shape[2]))
+        if alpha.ndim == 2:
+            assert alpha.shape == image_fg.shape[0:2]
+            alpha = alpha.reshape((alpha.shape[0], alpha.shape[1], 1))
+        elif alpha.ndim == 3:
+            assert alpha.shape == image_fg.shape or alpha.shape == image_fg.shape[0:2] + (1,)
+        else:
+            alpha = alpha.reshape((1, 1, -1))
+        if alpha.shape[2] != image_fg.shape[2]:
+            alpha = np.tile(alpha, (1, 1, image_fg.shape[2]))
 
     if not input_was_bool:
         if np.all(alpha >= 1.0 - eps):
             return np.copy(image_fg)
         elif np.all(alpha <= eps):
             return np.copy(image_bg)
-    assert np.all(np.logical_and(0 <= alpha, alpha <= 1.0))
+
+    # for efficiency reaons, only test one value of alpha here, even if alpha is much larger
+    assert 0 <= alpha.item(0) <= 1.0
 
     dt_images = meta.get_minimal_dtype([image_fg, image_bg])
 
     # doing this only for non-float images led to inaccuracies for large floats values
     isize = dt_images.itemsize * 2
+    isize = max(isize, 4)  # at least 4 bytes (=float32), tends to be faster than float16
     dt_blend = np.dtype("f%d" % (isize,))
 
     if alpha.dtype != dt_blend:
@@ -142,7 +149,9 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     if input_was_bool:
         image_blend = image_blend > 0.5
     else:
-        image_blend = meta.restore_dtypes_(image_blend, dt_images)
+        # skip clip, because alpha is expected to be in range [0.0, 1.0] and both images must have same dtype
+        # dont skip round, because otherwise it is very unlikely to hit the image's max possible value
+        image_blend = meta.restore_dtypes_(image_blend, dt_images, clip=False, round=True)
 
     return image_blend
 
