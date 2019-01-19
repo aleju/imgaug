@@ -113,14 +113,15 @@ def test_Grayscale():
     assert np.allclose(observed, expected.astype(np.uint8))
 
     aug = iaa.Grayscale((0.0, 1.0))
-    base_img = base_img[0:1, 0:1, :]
-    base_img_gray = iaa.Grayscale(1.0).augment_image(base_img)
-    distance_max = np.average(np.abs(base_img_gray.astype(np.int32) - base_img.astype(np.int32)))
+    base_img = np.uint8([255, 0, 0]).reshape((1, 1, 3))
+    base_img_float = base_img.astype(np.float64) / 255.0
+    base_img_gray = iaa.Grayscale(1.0).augment_image(base_img).astype(np.float64) / 255.0
+    distance_max = np.linalg.norm(base_img_gray.flatten() - base_img_float.flatten())
     nb_iterations = 1000
     distances = []
     for _ in sm.xrange(nb_iterations):
-        observed = aug.augment_image(base_img)
-        distance = np.average(np.abs(observed.astype(np.int32) - base_img.astype(np.int32))) / distance_max
+        observed = aug.augment_image(base_img).astype(np.float64) / 255.0
+        distance = np.linalg.norm(observed.flatten() - base_img_float.flatten()) / distance_max
         distances.append(distance)
 
     assert 0 - 1e-4 < min(distances) < 0.1
