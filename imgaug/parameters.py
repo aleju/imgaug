@@ -1339,14 +1339,8 @@ class Clip(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         samples = self.other_param.draw_samples(size, random_state=random_state)
-        if self.minval is not None and self.maxval is not None:
-            np.clip(samples, self.minval, self.maxval, out=samples)
-        elif self.minval is not None:
-            np.clip(samples, self.minval, np.max(samples), out=samples)
-        elif self.maxval is not None:
-            np.clip(samples, np.min(samples), self.maxval, out=samples)
-        else:
-            pass
+        if self.minval is not None or self.maxval is not None:
+            samples = np.clip(samples, self.minval, self.maxval, out=samples)
         return samples
 
     def __repr__(self):
