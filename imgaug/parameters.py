@@ -1797,17 +1797,17 @@ class RandomSign(StochasticParameter):
         self.p_positive = p_positive
 
     def _draw_samples(self, size, random_state):
-        samples = self.other_param.draw_samples(
-            size,
-            random_state=ia.copy_random_state(random_state)
-        )
-        coinflips = ia.copy_random_state(random_state).binomial(
-            1, self.p_positive, size=size
-        ).astype(np.int32)
+        rss = ia.derive_random_states(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rss[0])
+        # TODO add method to change from uint to int here instead of assert
+        assert samples.dtype.kind != "u", "Cannot flip signs of unsigned integers."
+        # TODO convert to same kind as samples
+        coinflips = rss[1].binomial(1, self.p_positive, size=size).astype(np.int8)
         signs = coinflips * 2 - 1
         # Add absolute here to guarantee that we get p_positive percent of
         # positive values. Otherwise we would merely flip p_positive percent
         # of all signs.
+        # TODO test if result[coinflips_mask] *= (-1) is faster  (with protection against mask being empty?)
         result = np.absolute(samples) * signs
         return result
 
