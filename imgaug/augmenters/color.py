@@ -31,7 +31,7 @@ import cv2
 import six.moves as sm
 
 from . import meta
-from . import arithmetic
+from . import overlay
 from .. import imgaug as ia
 from .. import parameters as iap
 
@@ -532,13 +532,7 @@ class ChangeColorspace(meta.Augmenter):
                     img_to_cs = img_to_cs[:, :, np.newaxis]
                     img_to_cs = np.tile(img_to_cs, (1, 1, 3))
 
-                if alpha >= (1 - self.eps):
-                    result[i] = img_to_cs
-                elif alpha <= self.eps:
-                    result[i] = image
-                else:
-                    # TODO dont convert to uint8
-                    result[i] = (alpha * img_to_cs + (1 - alpha) * image).astype(np.uint8)
+                result[i] = overlay.blend_alpha(img_to_cs, image, alpha, self.eps)
 
         return images
 
