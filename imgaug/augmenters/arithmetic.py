@@ -900,35 +900,65 @@ class MultiplyElementwise(meta.Augmenter):
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, nb_images+1)
         per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[-1])
+        is_mul_binomial = isinstance(self.mul, iap.Binomial) or (
+            isinstance(self.mul, iap.FromLowerResolution) and isinstance(self.mul.other_param, iap.Binomial)
+        )
 
         gen = enumerate(zip(images, per_channel_samples, rss[:-1], input_dtypes))
         for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
             sample_shape = (height, width, nb_channels if per_channel_samples_i > 0.5 else 1)
             mul = self.mul.draw_samples(sample_shape, random_state=rs)
+            # TODO let Binomial return boolean mask directly instead of [0, 1] integers?
+            # hack to improve performance for Dropout and CoarseDropout
+            # converts mul samples to mask if mul is binomial
+            if mul.dtype.kind != "b" and is_mul_binomial:
+                mul = mul.astype(bool, copy=False)
 
-            # TODO maybe introduce to stochastic parameters some way to get the possible min/max values,
-            # could make things faster for dropout to get 0/1 min/max from the binomial
-            mul_min = np.min(mul)
-            mul_max = np.max(mul)
-            is_not_increasing_value_range = (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1)
+            if mul.dtype.kind == "b":
+                images[i] *= mul
+            elif image.dtype.name == "uint8":
+                # This special uint8 block is around 60-100% faster than the else-block further below (more speedup
+                # for larger images).
+                #
+                if mul.dtype.kind == "f":
+                    # interestingly, float32 is here significantly faster than float16
+                    # TODO is that system dependent?
+                    # TODO does that affect int8-int32 too?
+                    mul = mul.astype(np.float32, copy=False)
+                    image_aug = image.astype(np.float32)
+                else:
+                    mul = mul.astype(np.int16, copy=False)
+                    image_aug = image.astype(np.int16)
 
-            # We limit here the value range of the mul parameter to the bytes in the image's dtype.
-            # This prevents overflow problems and makes it less likely that the image has to be up-casted, which again
-            # improves performance and saves memory. Note that this also enables more dtypes for image inputs.
-            # The downside is that the mul parameter is limited in its value range.
-            itemsize = max(image.dtype.itemsize, 2 if mul.dtype.kind == "f" else 1)  # float min itemsize is 2, not 1
-            dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
-            mul = meta.clip_to_dtype_value_range_(mul, dtype_target, validate=True, validate_values=(mul_min, mul_max))
+                image_aug = np.multiply(image_aug, mul, casting="no", out=image_aug)
+                images[i] = meta.restore_dtypes_(image_aug, np.uint8, round=False)
+            else:
+                # TODO maybe introduce to stochastic parameters some way to get the possible min/max values,
+                # could make things faster for dropout to get 0/1 min/max from the binomial
+                mul_min = np.min(mul)
+                mul_max = np.max(mul)
+                is_not_increasing_value_range = (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1)
 
-            if mul.shape[2] == 1:
-                mul = np.tile(mul, (1, 1, nb_channels))
+                # We limit here the value range of the mul parameter to the bytes in the image's dtype.
+                # This prevents overflow problems and makes it less likely that the image has to be up-casted, which
+                # again improves performance and saves memory. Note that this also enables more dtypes for image inputs.
+                # The downside is that the mul parameter is limited in its value range.
+                itemsize = max(image.dtype.itemsize, 2 if mul.dtype.kind == "f" else 1)  # float min itemsize is 2
+                dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
+                mul = meta.clip_to_dtype_value_range_(mul, dtype_target, validate=True,
+                                                      validate_values=(mul_min, mul_max))
 
-            image, mul = meta.promote_array_dtypes_([image, mul], dtypes=[image, dtype_target],
-                                                    increase_itemsize_factor=1 if is_not_increasing_value_range else 2)
-            image = np.multiply(image, mul, out=image, casting="no")
-            image = meta.restore_dtypes_(image, input_dtype)
-            images[i] = image
+                if mul.shape[2] == 1:
+                    mul = np.tile(mul, (1, 1, nb_channels))
+
+                image, mul = meta.promote_array_dtypes_(
+                    [image, mul],
+                    dtypes=[image, dtype_target],
+                    increase_itemsize_factor=1 if is_not_increasing_value_range else 2)
+                image = np.multiply(image, mul, out=image, casting="no")
+                image = meta.restore_dtypes_(image, input_dtype)
+                images[i] = image
 
         return images
 
