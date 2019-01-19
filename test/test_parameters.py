@@ -1601,7 +1601,7 @@ def test_parameters_Clip():
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
     assert 0.5 - _eps(sample) < sample < 0.5 + _eps(sample)
-    assert np.all(np.logical_and(0.5 - _eps(sample) < samples, samples < 0.5 + _eps(sample)))
+    assert np.all(np.logical_and(0.5 - _eps(sample) <= samples, samples <= 0.5 + _eps(sample)))
 
     param = iap.Clip(iap.Deterministic(2), -1, 1)
     sample = param.draw_sample()
@@ -1697,7 +1697,7 @@ def test_parameters_Multiply():
             p = iap.Multiply(iap.Deterministic(v1), v2)
             assert p.draw_sample() == v1 * v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 * v2)
 
             p = iap.Multiply(iap.Deterministic(v1), iap.Deterministic(v2))
@@ -1712,14 +1712,14 @@ def test_parameters_Multiply():
             sample = p.draw_sample()
             assert v1 * v2 - _eps(sample) < sample < v1 * v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 * v2)
 
             p = iap.Multiply(iap.Deterministic(v1), iap.Deterministic(v2))
             sample = p.draw_sample()
             assert v1 * v2 - _eps(sample) < sample < v1 * v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 * v2)
 
     param = iap.Multiply(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
@@ -1772,13 +1772,13 @@ def test_parameters_Divide():
             p = iap.Divide(iap.Deterministic(v1), v2)
             assert p.draw_sample() == (v1 / v2)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
             p = iap.Divide(iap.Deterministic(v1), iap.Deterministic(v2))
             assert p.draw_sample() == (v1 / v2)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
     for v1 in values_float:
@@ -1790,14 +1790,14 @@ def test_parameters_Divide():
             sample = p.draw_sample()
             assert (v1 / v2) - _eps(sample) <= sample <= (v1 / v2) + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
             p = iap.Divide(iap.Deterministic(v1), iap.Deterministic(v2))
             sample = p.draw_sample()
             assert (v1 / v2) - _eps(sample) <= sample <= (v1 / v2) + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
     param = iap.Divide(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
@@ -1858,13 +1858,13 @@ def test_parameters_Add():
             p = iap.Add(iap.Deterministic(v1), v2)
             assert p.draw_sample() == v1 + v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 + v2)
 
             p = iap.Add(iap.Deterministic(v1), iap.Deterministic(v2))
             assert p.draw_sample() == v1 + v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 + v2)
 
     for v1 in values_float:
@@ -1873,13 +1873,13 @@ def test_parameters_Add():
             sample = p.draw_sample()
             assert v1 + v2 - _eps(sample) < sample < v1 + v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 + v2)
 
             p = iap.Add(iap.Deterministic(v1), iap.Deterministic(v2))
             assert v1 + v2 - _eps(sample) < sample < v1 + v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 + v2)
 
     param = iap.Add(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
@@ -1929,13 +1929,13 @@ def test_parameters_Subtract():
             p = iap.Subtract(iap.Deterministic(v1), v2)
             assert p.draw_sample() == v1 - v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 - v2)
 
             p = iap.Subtract(iap.Deterministic(v1), iap.Deterministic(v2))
             assert p.draw_sample() == v1 - v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 - v2)
 
     for v1 in values_float:
@@ -1944,14 +1944,14 @@ def test_parameters_Subtract():
             sample = p.draw_sample()
             assert v1 - v2 - _eps(sample) < sample < v1 - v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 - v2)
 
             p = iap.Subtract(iap.Deterministic(v1), iap.Deterministic(v2))
             sample = p.draw_sample()
             assert v1 - v2 - _eps(sample) < sample < v1 - v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 - v2)
 
     param = iap.Subtract(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
@@ -2007,14 +2007,14 @@ def test_parameters_Power():
             sample = p.draw_sample()
             assert v1 ** v2 - _eps(sample) < sample < v1 ** v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 ** v2)
 
             p = iap.Power(iap.Deterministic(v1), iap.Deterministic(v2))
             sample = p.draw_sample()
             assert v1 ** v2 - _eps(sample) < sample < v1 ** v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 ** v2)
 
     param = iap.Power(iap.Deterministic(1.5), (1.0, 2.0), elementwise=False)
@@ -2422,9 +2422,14 @@ def test_parameters_Sigmoid():
                     samples = param.draw_samples((2, 3))
                     assert sample.shape == tuple()
                     assert samples.shape == (2, 3)
-                    expected = 1 / (1 + np.exp(-(val * mul + add - thresh)))
-                    assert expected - _eps(sample) < sample < expected + _eps(sample)
-                    assert np.all(np.logical_and(expected - _eps(sample) < samples, samples < expected + _eps(sample)))
+                    dt = sample.dtype
+                    val_ = np.array([val], dtype=dt)
+                    mul_ = np.array([mul], dtype=dt)
+                    add_ = np.array([add], dtype=dt)
+                    thresh_ = np.array([thresh], dtype=dt)
+                    expected = 1 / (1 + np.exp(-(val_ * mul_ + add_ - thresh_)))
+                    assert expected - 5*_eps(sample) < sample < expected + 5*_eps(sample)
+                    assert np.all(np.logical_and(expected - 5*_eps(sample) < samples, samples < expected + 5*_eps(sample)))
 
     param = iap.Sigmoid(iap.Choice([1, 10]), add=0, mul=1, threshold=0.5, activated=True)
     samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
