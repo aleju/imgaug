@@ -1005,16 +1005,13 @@ class Uniform(StochasticParameter):
         self.b = handle_continuous_param(b, "b")
 
     def _draw_samples(self, size, random_state):
-        from .augmenters import meta
         a = self.a.draw_sample(random_state=random_state)
         b = self.b.draw_sample(random_state=random_state)
         if a > b:
             a, b = b, a
-
-        dt_min = meta.get_minimal_dtype_by_value_range(a, b, kind="f", default=np.float64)
-        if a == b:
-            return np.full(size, a, dtype=dt_min)
-        return random_state.uniform(a, b, size).astype(dt_min)
+        elif a == b:
+            return np.full(size, a)
+        return random_state.uniform(a, b, size)
 
     def __repr__(self):
         return self.__str__()
