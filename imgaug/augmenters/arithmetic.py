@@ -1299,7 +1299,30 @@ class ReplaceElementwise(meta.Augmenter):
             height, width, nb_channels = image.shape
             sampling_shape = (height, width, nb_channels if per_channel_i > 0.5 else 1)
             mask_samples = self.mask.draw_samples(sampling_shape, random_state=rs_mask)
-            replacement_samples = self.replacement.draw_samples(sampling_shape, random_state=rs_replacement)
+
+            # This is slightly faster (~20%) for masks that are True at many locations, but slower (~50%) for masks
+            # with few Trues, which is probably the more common use-case:
+            # replacement_samples = self.replacement.draw_samples(sampling_shape, random_state=rs_replacement)
+            #
+            # # round, this makes 0.2 e.g. become 0 in case of boolean image (otherwise replacing values with 0.2 would
+            # # lead to True instead of False).
+            # if image.dtype.kind in ["i", "u", "b"] and replacement_samples.dtype.kind == "f":
+            #     replacement_samples = np.round(replacement_samples)
+            #
+            # replacement_samples = meta.clip_to_dtype_value_range_(replacement_samples, image.dtype, validate=False)
+            # replacement_samples = replacement_samples.astype(image.dtype, copy=False)
+            #
+            # if sampling_shape[2] == 1:
+            #     mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
+            #     replacement_samples = np.tile(replacement_samples, (1, 1, nb_channels))
+            # mask_thresh = mask_samples > 0.5
+            # image[mask_thresh] = replacement_samples[mask_thresh]
+
+            if sampling_shape[2] == 1:
+                mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
+            mask_thresh = mask_samples > 0.5
+            replacement_samples = self.replacement.draw_samples((int(np.sum(mask_thresh)),),
+                                                                random_state=rs_replacement)
 
             # round, this makes 0.2 e.g. become 0 in case of boolean image (otherwise replacing values with 0.2 would
             # lead to True instead of False).
@@ -1307,12 +1330,9 @@ class ReplaceElementwise(meta.Augmenter):
                 replacement_samples = np.round(replacement_samples)
 
             replacement_samples = meta.clip_to_dtype_value_range_(replacement_samples, image.dtype, validate=False)
+            replacement_samples = replacement_samples.astype(image.dtype, copy=False)
 
-            if sampling_shape[2] == 1:
-                mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
-                replacement_samples = np.tile(replacement_samples, (1, 1, nb_channels))
-            mask_thresh = mask_samples > 0.5
-            image[mask_thresh] = replacement_samples[mask_thresh].astype(image.dtype)
+            image[mask_thresh] = replacement_samples
 
         return images
 
