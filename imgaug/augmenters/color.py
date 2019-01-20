@@ -284,33 +284,43 @@ class AddToHueAndSaturation(meta.Augmenter):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
-        images_hsv = self.colorspace_changer._augment_images(images, ia.derive_random_state(random_state),
-                                                             parents + [self], hooks)
-
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image_hsv = images_hsv[i].astype(np.int32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = 2
-                samples = self.value.draw_samples((nb_channels,), random_state=rs_image).astype(image_hsv.dtype)
-                sample_hue = (samples[0] / 255) * (360/2)
-                sample_saturation = samples[1]
-            else:
-                sample = self.value.draw_sample(random_state=rs_image).astype(image_hsv.dtype)
-                sample_hue = (sample / 255) * (360/2)
-                sample_saturation = sample
 
-            ia.do_assert(-180 <= sample_hue <= 180)
-            ia.do_assert(-255 <= sample_saturation <= 255)
+        # surprisingly, placing this here seems to be slightly slower than placing it inside the loop
+        # if isinstance(images_hsv, list):
+        #    images_hsv = [img.astype(np.int32) for img in images_hsv]
+        # else:
+        #    images_hsv = images_hsv.astype(np.int32)
+
+        rss = ia.derive_random_states(random_state, 3)
+        images_hsv = self.colorspace_changer._augment_images(images, rss[0], parents + [self], hooks)
+        samples = self.value.draw_samples((nb_images, 2), random_state=rss[1]).astype(np.int32)
+        samples_hue = ((samples.astype(np.float32) / 255.0) * (360/2)).astype(np.int32)
+        per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[2])
+        rs_inv = random_state
+
+        ia.do_assert(-255 <= samples[0, 0] <= 255)
+
+        gen = enumerate(zip(images_hsv, samples, samples_hue, per_channel))
+        for i, (image_hsv, samples_i, samples_hue_i, per_channel_i) in gen:
+            assert image_hsv.dtype.name == "uint8"
+
+            image_hsv = image_hsv.astype(np.int16)  # int16 seems to be slightly faster than int32
+
+            sample_saturation = samples_i[0]
+            if per_channel_i > 0.5:
+                sample_hue = samples_hue_i[1]
+            else:
+                sample_hue = samples_hue_i[0]
+
             # np.mod() works also as required here for negative values
             image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
             image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
 
             image_hsv = image_hsv.astype(input_dtypes[i])
-            image_rgb = self.colorspace_changer_inv._augment_images([image_hsv], rs_image, parents + [self], hooks)[0]
+            # the inverse colorspace changer has a deterministic output (always <from_colorspace>, so that can
+            # always provide it the same random state as input
+            image_rgb = self.colorspace_changer_inv._augment_images([image_hsv], rs_inv, parents + [self], hooks)[0]
             result[i] = image_rgb
 
         return result
