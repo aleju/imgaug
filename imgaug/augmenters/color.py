@@ -267,6 +267,9 @@ class AddToHueAndSaturation(meta.Augmenter):
     that channel).
 
     """
+
+    _LUT_CACHE = None
+
     def __init__(self, value=0, per_channel=False, from_colorspace="RGB", name=None, deterministic=False,
                  random_state=None):
         super(AddToHueAndSaturation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
@@ -279,6 +282,20 @@ class AddToHueAndSaturation(meta.Augmenter):
         # with random states
         self.colorspace_changer = ChangeColorspace(from_colorspace=from_colorspace, to_colorspace="HSV")
         self.colorspace_changer_inv = ChangeColorspace(from_colorspace="HSV", to_colorspace=from_colorspace)
+
+        self.backend = "cv2"
+
+        # precompute tables for cv2.LUT
+        if self.backend == "cv2" and self._LUT_CACHE is None:
+            self._LUT_CACHE = (np.zeros((256*2, 256), dtype=np.int8),
+                               np.zeros((256*2, 256), dtype=np.int8))
+            value_range = np.arange(0, 256, dtype=np.int16)
+            # this could be done slightly faster by vectorizing the loop
+            for i in sm.xrange(-255, 255+1):
+                table_hue = np.mod(value_range + i, 180)
+                table_saturation = np.clip(value_range + i, 0, 255)
+                self._LUT_CACHE[0][i, :] = table_hue
+                self._LUT_CACHE[1][i, :] = table_saturation
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
@@ -301,11 +318,12 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         ia.do_assert(-255 <= samples[0, 0] <= 255)
 
+        # this is needed if no cache for LUT is used:
+        # value_range = np.arange(0, 256, dtype=np.int16)
+
         gen = enumerate(zip(images_hsv, samples, samples_hue, per_channel))
         for i, (image_hsv, samples_i, samples_hue_i, per_channel_i) in gen:
             assert image_hsv.dtype.name == "uint8"
-
-            image_hsv = image_hsv.astype(np.int16)  # int16 seems to be slightly faster than int32
 
             sample_saturation = samples_i[0]
             if per_channel_i > 0.5:
@@ -313,9 +331,27 @@ class AddToHueAndSaturation(meta.Augmenter):
             else:
                 sample_hue = samples_hue_i[0]
 
-            # np.mod() works also as required here for negative values
-            image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
-            image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
+            if self.backend == "cv2":
+                # this has roughly the same speed as the numpy backend for 64x64 and is about 25% faster for 224x224
+
+                # code without using cache:
+                # table_hue = np.mod(value_range + sample_hue, 180)
+                # table_saturation = np.clip(value_range + sample_saturation, 0, 255)
+
+                # table_hue = table_hue.astype(np.uint8, copy=False)
+                # table_saturation = table_saturation.astype(np.uint8, copy=False)
+
+                # image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], table_hue)
+                # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
+
+                # code with using cache (at best maybe 10% faster for 64x64):
+                image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], self._LUT_CACHE[0][int(sample_hue)])
+                image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], self._LUT_CACHE[1][int(sample_saturation)])
+            else:
+                image_hsv = image_hsv.astype(np.int16)  # int16 seems to be slightly faster than int32
+                # np.mod() works also as required here for negative values
+                image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
+                image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
 
             image_hsv = image_hsv.astype(input_dtypes[i])
             # the inverse colorspace changer has a deterministic output (always <from_colorspace>, so that can
