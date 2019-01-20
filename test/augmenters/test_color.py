@@ -39,7 +39,7 @@ def test_AddToHueAndSaturation():
     def _add_hue_saturation(img, value):
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         img_hsv = img_hsv.astype(np.int32)
-        img_hsv[..., 0] = np.mod(img_hsv[..., 0] + (value/255)*180, 180)
+        img_hsv[..., 0] = np.mod(img_hsv[..., 0] + (value/255.0) * (360/2), 180)
         img_hsv[..., 1] = np.clip(img_hsv[..., 1] + value, 0, 255)
         img_hsv = img_hsv.astype(np.uint8)
         return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
@@ -49,16 +49,34 @@ def test_AddToHueAndSaturation():
     base_img[..., 1] += 40
     base_img[..., 2] += 60
 
-    aug = iaa.AddToHueAndSaturation(0)
-    observed = aug.augment_image(base_img)
-    expected = base_img
-    assert np.allclose(observed, expected)
+    for per_channel in [False, True]:
+        for backend in ["cv2", "numpy"]:
+            aug = iaa.AddToHueAndSaturation(0, per_channel=per_channel)
+            aug.backend = backend
+            observed = aug.augment_image(base_img)
+            expected = base_img
+            assert np.allclose(observed, expected)
 
-    aug = iaa.AddToHueAndSaturation(30)
-    observed = aug.augment_image(base_img)
-    expected = _add_hue_saturation(base_img, 30)
-    diff = np.abs(observed.astype(np.float32) - expected)
-    assert np.all(diff <= 3)
+            aug = iaa.AddToHueAndSaturation(30, per_channel=per_channel)
+            aug.backend = backend
+            observed = aug.augment_image(base_img)
+            expected = _add_hue_saturation(base_img, 30)
+            diff = np.abs(observed.astype(np.float32) - expected)
+            assert np.all(diff <= 1)
+
+            aug = iaa.AddToHueAndSaturation(255, per_channel=per_channel)
+            aug.backend = backend
+            observed = aug.augment_image(base_img)
+            expected = _add_hue_saturation(base_img, 255)
+            diff = np.abs(observed.astype(np.float32) - expected)
+            assert np.all(diff <= 1)
+
+            aug = iaa.AddToHueAndSaturation(-255, per_channel=per_channel)
+            aug.backend = backend
+            observed = aug.augment_image(base_img)
+            expected = _add_hue_saturation(base_img, -255)
+            diff = np.abs(observed.astype(np.float32) - expected)
+            assert np.all(diff <= 1)
 
     aug = iaa.AddToHueAndSaturation([0, 10, 20])
     base_img = base_img[0:1, 0:1, :]
