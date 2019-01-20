@@ -16,7 +16,7 @@ from imgaug.imgaug import (
     _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
     _interpolate_points, _interpolate_points_by_max_distance
 )
-from imgaug.augmenters import meta
+from imgaug import dtypes as iadt
 from imgaug.testutils import reseed
 
 
@@ -967,7 +967,7 @@ def test_imresize_many_images():
     assert np.all(image_rs == expected)
 
     for dtype in [np.uint8, np.uint16, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         for value in [min_value, max_value]:
             image = np.zeros((4, 4), dtype=dtype)
             image[1, :] = value
@@ -1009,7 +1009,7 @@ def test_imresize_many_images():
         assert np.all(image_rs == expected)
 
         for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
             dynamic_range = max_value - min_value
             for value in [min_value+1, max_value-1]:
                 image = np.zeros((4, 4), dtype=dtype)
@@ -1114,7 +1114,7 @@ def test_pad():
     # uint, int
     # -------
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         arr = np.zeros((3, 3), dtype=dtype) + max_value
 
@@ -1536,7 +1536,7 @@ def test_pool():
     # uint, int
     # -----
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         for func in [np.min, np.average, np.max]:
             arr = np.array([
@@ -1865,7 +1865,7 @@ def test_draw_grid():
 
     # int, uint
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.zeros((2, 2, 3), dtype=dtype)
 

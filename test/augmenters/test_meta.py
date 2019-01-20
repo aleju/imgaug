@@ -23,6 +23,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug import dtypes as iadt
 from imgaug.augmenters import meta
 from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
 import imgaug.multicore as multicore
@@ -31,7 +32,6 @@ import imgaug.multicore as multicore
 def main():
     time_start = time.time()
 
-    test_copy_dtypes_for_restore()
     test_clip_augmented_image_()
     test_clip_augmented_image()
     test_clip_augmented_images_()
@@ -101,7 +101,7 @@ def test_Noop():
     assert np.all(image_aug == image)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = value
@@ -219,7 +219,7 @@ def test_Lambda():
     assert np.all(image_aug == expected)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = value
@@ -720,7 +720,7 @@ def test_AssertShape():
     assert np.all(image_aug == image)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3, 1), dtype=dtype)
         image[0, 0, 0] = value
@@ -749,7 +749,7 @@ def test_AssertShape():
     assert got_exception
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3, 1), dtype=dtype)
         image[0, 0, 0] = value
@@ -770,77 +770,6 @@ def test_AssertShape():
         except AssertionError:
             got_exception = True
         assert got_exception
-
-
-def test_copy_dtypes_for_restore():
-    # TODO using dtype=np.bool is causing this to fail as it ends up being <type bool> instead of
-    # <type 'numpy.bool_'>. Any problems from that for the library?
-    images = [
-        np.zeros((1, 1, 3), dtype=np.uint8),
-        np.zeros((10, 16, 3), dtype=np.float32),
-        np.zeros((20, 10, 6), dtype=np.int32)
-    ]
-
-    dtypes_copy = iaa.copy_dtypes_for_restore(images, force_list=False)
-    assert all([dtype_i.type == dtype_j for dtype_i, dtype_j in zip(dtypes_copy, [np.uint8, np.float32, np.int32])])
-
-    dts = [np.uint8, np.float32, np.int32]
-    for dt in dts:
-        images = np.zeros((10, 16, 32, 3), dtype=dt)
-        dtypes_copy = iaa.copy_dtypes_for_restore(images)
-        assert isinstance(dtypes_copy, np.dtype)
-        assert dtypes_copy.type == dt
-
-        dtypes_copy = iaa.copy_dtypes_for_restore(images, force_list=True)
-        assert isinstance(dtypes_copy, list)
-        assert all([dtype_i.type == dt for dtype_i in dtypes_copy])
-
-
-# TODO remove these tests once a similar test for restore_dtypes_() was added
-"""
-def test_restore_augmented_image_dtype_():
-    image = np.zeros((16, 32, 3), dtype=np.uint8)
-    image_result = iaa.restore_augmented_image_dtype_(image, np.int32)
-    assert image_result.dtype.type == np.int32
-
-
-def test_restore_augmented_image_dtype():
-    image = np.zeros((16, 32, 3), dtype=np.uint8)
-    image_result = iaa.restore_augmented_image_dtype(image, np.int32)
-    assert image_result.dtype.type == np.int32
-
-
-def test_restore_augmented_images_dtypes_():
-    images = np.zeros((10, 16, 32, 3), dtype=np.int32)
-    dtypes = iaa.copy_dtypes_for_restore(images)
-    images = images.astype(np.uint8)
-    assert images.dtype.type == np.uint8
-    images_result = iaa.restore_augmented_images_dtypes_(images, dtypes)
-    assert images_result.dtype.type == np.int32
-
-    images = [np.zeros((16, 32, 3), dtype=np.int32) for _ in sm.xrange(10)]
-    dtypes = iaa.copy_dtypes_for_restore(images)
-    images = [image.astype(np.uint8) for image in images]
-    assert all([image.dtype.type == np.uint8 for image in images])
-    images_result = iaa.restore_augmented_images_dtypes_(images, dtypes)
-    assert all([image_result.dtype.type == np.int32 for image_result in images_result])
-
-
-def test_restore_augmented_images_dtypes():
-    images = np.zeros((10, 16, 32, 3), dtype=np.int32)
-    dtypes = iaa.copy_dtypes_for_restore(images)
-    images = images.astype(np.uint8)
-    assert images.dtype.type == np.uint8
-    images_restored = iaa.restore_augmented_images_dtypes(images, dtypes)
-    assert images_restored.dtype.type == np.int32
-
-    images = [np.zeros((16, 32, 3), dtype=np.int32) for _ in sm.xrange(10)]
-    dtypes = iaa.copy_dtypes_for_restore(images)
-    images = [image.astype(np.uint8) for image in images]
-    assert all([image.dtype.type == np.uint8 for image in images])
-    images_restored = iaa.restore_augmented_images_dtypes(images, dtypes)
-    assert all([image_restored.dtype.type == np.int32 for image_restored in images_restored])
-"""
 
 
 def test_clip_augmented_image_():
@@ -2344,7 +2273,7 @@ def test_Sequential():
         assert np.all(image_aug == image)
 
         for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
             value = max_value
             image = np.zeros((3, 3), dtype=dtype)
             image[0, 0] = value
@@ -2376,7 +2305,7 @@ def test_Sequential():
         assert np.all(image_aug == expected)
 
         for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
             value = max_value
             image = np.zeros((3, 3), dtype=dtype)
             image[0, 0] = value
@@ -2641,7 +2570,7 @@ def test_SomeOf():
         assert np.all(image_aug == image)
 
         for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
             value = max_value
             image = np.zeros((3, 3), dtype=dtype)
             image[0, 0] = value
@@ -2677,7 +2606,7 @@ def test_SomeOf():
             assert any([np.all(image_aug == expected_i) for expected_i in expected])
 
         for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
             value = max_value
             image = np.zeros((3, 3), dtype=dtype)
             image[0, 0] = value
@@ -3155,7 +3084,7 @@ def test_Sometimes():
     assert np.all(image_aug == image)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = value
@@ -3194,7 +3123,7 @@ def test_Sometimes():
     assert all(seen)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = value
@@ -3346,7 +3275,7 @@ def test_WithChannels():
     assert np.all(image_aug == image)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3, 2), dtype=dtype)
         image[0, 0, :] = value
@@ -3375,7 +3304,7 @@ def test_WithChannels():
     assert np.all(image_aug == expected)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3, 2), dtype=dtype)
         image[0, 0, :] = value
@@ -3503,7 +3432,7 @@ def test_ChannelShuffle():
     assert all(seen)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = max_value
         image = np.zeros((3, 3, 2), dtype=dtype)
         image[0, 0, 0] = value

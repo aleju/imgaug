@@ -10,7 +10,8 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.augmenters import overlay, meta
+from imgaug import dtypes as iadt
+from imgaug.augmenters import overlay
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -58,7 +59,7 @@ def test_blend_alpha():
     assert np.all(img_blend[:, :, 1] == 1)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         values = [
             (0, 0),
             (0, 10),

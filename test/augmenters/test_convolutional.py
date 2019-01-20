@@ -9,7 +9,7 @@ import six.moves as sm
 
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.augmenters import meta
+from imgaug import dtypes as iadt
 from imgaug.testutils import reseed
 
 
@@ -253,7 +253,7 @@ def test_Convolve():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = int(center_value + 0.4 * max_value)
 
         image = np.zeros((3, 3), dtype=dtype)

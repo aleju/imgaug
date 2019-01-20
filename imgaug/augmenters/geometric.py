@@ -37,6 +37,7 @@ from . import meta
 from . import blur as blur_lib
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 class Affine(meta.Augmenter):
@@ -630,7 +631,7 @@ class Affine(meta.Augmenter):
         for i in sm.xrange(nb_images):
             image = images[i]
 
-            min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+            min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
 
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
             translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
@@ -839,12 +840,12 @@ class Affine(meta.Augmenter):
 
     def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
                       fit_output, return_matrix=False):
-        ia.gate_dtypes(image,
-                       allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                "float16", "float32", "float64"],
-                       disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(image,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
 
         input_dtype = image.dtype
 
@@ -880,7 +881,7 @@ class Affine(meta.Augmenter):
         if input_dtype == np.bool_:
             image_warped = image_warped > 0.5
         else:
-            image_warped = meta.restore_dtypes_(image_warped, input_dtype)
+            image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
 
         if return_matrix:
             return image_warped, matrix
@@ -888,13 +889,13 @@ class Affine(meta.Augmenter):
 
     def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
                   fit_output, return_matrix=False):
-        ia.gate_dtypes(image,
-                       allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
-                                "float16", "float32", "float64"],
-                       disallowed=["uint32", "uint64", "uint128", "uint256",
-                                   "int64", "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(image,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256",
+                                     "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
         if order != 0:
             ia.do_assert(image.dtype != np.int32,
                          ("Affine only supports cv2-based transformations of int32 arrays when "
@@ -943,7 +944,7 @@ class Affine(meta.Augmenter):
         if input_dtype == np.bool_:
             image_warped = image_warped > 0.5
         elif input_dtype in [np.int8, np.float16]:
-            image_warped = meta.restore_dtypes_(image_warped, input_dtype)
+            image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
 
         if return_matrix:
             return image_warped, matrix
@@ -1704,12 +1705,12 @@ class PiecewiseAffine(meta.Augmenter):
         self.absolute_scale = absolute_scale
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                "float16", "float32", "float64"],
-                       disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
 
         result = images
         nb_images = len(images)
@@ -1735,7 +1736,7 @@ class PiecewiseAffine(meta.Augmenter):
                 if image.dtype == np.bool_:
                     image = image.astype(np.float64)
 
-                min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+                min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
                 cval = cval_samples[i]
                 cval = max(min(cval, max_value), min_value)
 
@@ -1754,7 +1755,7 @@ class PiecewiseAffine(meta.Augmenter):
                 else:
                     # warp seems to change everything to float64, including uint8,
                     # making this necessary
-                    image_warped = meta.restore_dtypes_(image_warped, input_dtype)
+                    image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
 
                 result[i] = image_warped
 
@@ -2019,12 +2020,12 @@ class PerspectiveTransform(meta.Augmenter):
         self.keep_size = keep_size
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["bool", "uint8", "uint16", "int8", "int16",
-                                "float16", "float32", "float64"],
-                       disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
 
         result = images
         if not self.keep_size:
@@ -2065,7 +2066,7 @@ class PerspectiveTransform(meta.Augmenter):
             if input_dtype == np.bool_:
                 warped = warped > 0.5
             elif warped.dtype != input_dtype:
-                warped = meta.restore_dtypes_(warped, input_dtype)
+                warped = iadt.restore_dtypes_(warped, input_dtype)
 
             result[i] = warped
 
@@ -2459,11 +2460,11 @@ class ElasticTransformation(meta.Augmenter):
         return rss[0:-5], alphas, sigmas, orders, cvals, modes
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64",
-                                "float16", "float32", "float64"],
-                       disallowed=["uint128", "uint256", "int128", "int256", "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint128", "uint256", "int128", "int256", "float96", "float128", "float256"],
+                         augmenter=self)
 
         result = images
         nb_images = len(images)
@@ -2472,7 +2473,7 @@ class ElasticTransformation(meta.Augmenter):
 
         for i, image in enumerate(images):
             image = images[i]
-            min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+            min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
             cval = cvals[i]
             cval = max(min(cval, max_value), min_value)
 
@@ -2496,7 +2497,7 @@ class ElasticTransformation(meta.Augmenter):
             )
 
             if image.dtype != input_dtype:
-                image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+                image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
             result[i] = image_aug
 
         return result
@@ -2820,7 +2821,7 @@ class ElasticTransformation(meta.Augmenter):
                 result = np.concatenate(result, axis=2)
 
         if result.dtype.name != input_dtype.name:
-            result = meta.restore_dtypes_(result, input_dtype)
+            result = iadt.restore_dtypes_(result, input_dtype)
 
         return result
 

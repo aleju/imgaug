@@ -36,6 +36,7 @@ from . import convolutional as iaa_convolutional
 from . import geometric as iaa_geometric
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 # TODO add border mode, cval
@@ -153,15 +154,15 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
     if sigma > 0 + eps:
         dtype = image.dtype
 
-        ia.gate_dtypes(image,
-                       allowed=["bool",
-                                "uint8", "uint16", "uint32",
-                                "int8", "int16", "int32", "int64", "uint64",
-                                "float16", "float32", "float64"],
-                       disallowed=["uint128", "uint256",
-                                   "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=None)
+        iadt.gate_dtypes(image,
+                         allowed=["bool",
+                                  "uint8", "uint16", "uint32",
+                                  "int8", "int16", "int32", "int64", "uint64",
+                                  "float16", "float32", "float64"],
+                         disallowed=["uint128", "uint256",
+                                     "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=None)
 
         dts_not_supported_by_cv2 = ["uint32", "uint64", "int64", "float128"]
         backend_to_use = backend
@@ -248,7 +249,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
         if dtype.name == "bool":
             image = image > 0.5
         elif dtype.name != image.dtype.name:
-            image = meta.restore_dtypes_(image, dtype)
+            image = iadt.restore_dtypes_(image, dtype)
 
     return image
 
@@ -310,7 +311,7 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,), random_state=random_state)
-        for i, (image, sig) in enumerate(zip(images, samples)):
+        for image, sig in zip(images, samples):
             image[...] = blur_gaussian_(image, sigma=sig, eps=self.eps)
         return images
 
@@ -441,12 +442,12 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             raise Exception("Expected int, tuple/list with 2 entries or StochasticParameter. Got %s." % (type(k),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
-                       disallowed=["uint32", "uint64", "uint128", "uint256",
-                                   "int32", "int64", "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256",
+                                     "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
 
         nb_images = len(images)
         if self.mode == "single":
@@ -476,7 +477,7 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
                 if input_dtype == np.bool_:
                     image_aug = image_aug > 0.5
                 elif input_dtype in [np.int8, np.float16]:
-                    image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+                    image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
                 images[i] = image_aug
         return images

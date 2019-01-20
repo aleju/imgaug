@@ -34,6 +34,7 @@ from . import meta
 from . import overlay
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 # legacy support
@@ -298,7 +299,7 @@ class AddToHueAndSaturation(meta.Augmenter):
                 self._LUT_CACHE[1][i, :] = table_saturation
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
         nb_images = len(images)

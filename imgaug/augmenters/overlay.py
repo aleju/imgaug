@@ -28,6 +28,7 @@ import six.moves as sm
 from . import meta
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
@@ -127,7 +128,7 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     # for efficiency reaons, only test one value of alpha here, even if alpha is much larger
     assert 0 <= alpha.item(0) <= 1.0
 
-    dt_images = meta.get_minimal_dtype([image_fg, image_bg])
+    dt_images = iadt.get_minimal_dtype([image_fg, image_bg])
 
     # doing this only for non-float images led to inaccuracies for large floats values
     isize = dt_images.itemsize * 2
@@ -151,7 +152,7 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     else:
         # skip clip, because alpha is expected to be in range [0.0, 1.0] and both images must have same dtype
         # dont skip round, because otherwise it is very unlikely to hit the image's max possible value
-        image_blend = meta.restore_dtypes_(image_blend, dt_images, clip=False, round=True)
+        image_blend = iadt.restore_dtypes_(image_blend, dt_images, clip=False, round=True)
 
     return image_blend
 

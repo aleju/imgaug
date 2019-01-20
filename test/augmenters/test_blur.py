@@ -23,8 +23,8 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug import dtypes as iadt
 from imgaug.testutils import keypoints_equal, reseed
-from imgaug.augmenters import meta
 
 
 def main():
@@ -180,7 +180,7 @@ class Test_blur_gaussian_(unittest.TestCase):
                 dtype = np.dtype(dtype)
                 if dtype.name in dtypes_to_test:
                     with self.subTest(backend=backend, dtype=dtype.name):
-                        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+                        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
                         image = np.zeros((3, 3), dtype=dtype)
                         image[1, 1] = int(center_value)
                         image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0, backend=backend)
@@ -192,7 +192,7 @@ class Test_blur_gaussian_(unittest.TestCase):
                 dtype = np.dtype(dtype)
                 if dtype.name in dtypes_to_test:
                     with self.subTest(backend=backend, dtype=dtype.name):
-                        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+                        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
                         image = np.zeros((3, 3), dtype=dtype)
                         image[1, 1] = center_value
                         image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0, backend=backend)
@@ -239,7 +239,7 @@ class Test_blur_gaussian_(unittest.TestCase):
                 dtype = np.dtype(dtype)
                 if dtype.name in dtypes_to_test:
                     with self.subTest(backend=backend, dtype=dtype.name):
-                        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+                        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
                         dynamic_range = max_value - min_value
 
                         value = int(center_value + 0.4 * max_value)
@@ -413,7 +413,7 @@ def test_GaussianBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = int(center_value)
         image_aug = aug.augment_image(image)
@@ -422,7 +422,7 @@ def test_GaussianBlur():
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = center_value
         image_aug = aug.augment_image(image)
@@ -568,7 +568,7 @@ def test_GaussianBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         dynamic_range = max_value - min_value
 
         value = int(center_value + 0.4 * max_value)
@@ -785,7 +785,7 @@ def test_AverageBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = int(center_value + 0.4 * max_value)
         image[2, 2] = int(center_value + 0.4 * max_value)
@@ -872,7 +872,7 @@ def test_AverageBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = int(center_value + 0.4 * max_value)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = value

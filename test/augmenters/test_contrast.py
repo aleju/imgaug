@@ -26,8 +26,8 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug import dtypes as iadt
 from imgaug.augmenters import contrast as contrast_lib
-from imgaug.augmenters import meta
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -111,7 +111,7 @@ def test_GammaContrast():
     ###################
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         exps = [1, 2, 3]
         values = [0, 100, int(center_value + 0.1*max_value)]
@@ -262,7 +262,7 @@ def test_SigmoidContrast():
     ###################
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         # dynamic_range = max_value - min_value
 
         gains = [5, 20]
@@ -378,7 +378,7 @@ def test_LogContrast():
     ###################
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         gains = [0.5, 0.75, 1.0, 1.1]
         values = [0, 100, int(center_value + 0.1 * max_value)]
@@ -490,7 +490,7 @@ def test_LinearContrast():
 def test_adjust_contrast_linear():
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32,
                   np.float16, np.float32, np.float64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         cv = center_value
         kind = np.dtype(dtype).kind
         if kind in ["u", "i"]:
@@ -744,7 +744,7 @@ class TestAllChannelsCLAHE(unittest.TestCase):
         # np.float128: TypeError: src data type = 13 is not supported
         for dtype in [np.uint8, np.uint16]:
             with self.subTest(dtype=np.dtype(dtype).name):
-                min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+                min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
                 dynamic_range = max_value - min_value
 
                 img = np.zeros((11, 11, 1), dtype=dtype)
@@ -1388,7 +1388,7 @@ class TestAllChannelsHistogramEqualization(unittest.TestCase):
         # np.float128: TypeError: src data type = 13 is not supported
         for dtype in [np.uint8]:
             with self.subTest(dtype=np.dtype(dtype).name):
-                min_value, _center_value, max_value = meta.get_value_range_of_dtype(dtype)
+                min_value, _center_value, max_value = iadt.get_value_range_of_dtype(dtype)
                 dynamic_range = max_value + abs(min_value)
                 if np.dtype(dtype).kind == "f":
                     img = np.zeros((16,), dtype=dtype)

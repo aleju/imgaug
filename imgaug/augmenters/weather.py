@@ -28,6 +28,7 @@ import cv2
 from . import meta, arithmetic, blur, contrast, color as augmenters_color
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 class FastSnowyLandscape(meta.Augmenter):
@@ -132,7 +133,7 @@ class FastSnowyLandscape(meta.Augmenter):
         return thresh_samples, lmul_samples
 
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
         thresh_samples, lmul_samples = self._draw_samples(images, random_state)
         result = images
 
@@ -147,7 +148,7 @@ class FastSnowyLandscape(meta.Augmenter):
 
             lightness[lightness < thresh] *= lmul
 
-            image_hls = meta.restore_dtypes_(image_hls, cvt_dtype)
+            image_hls = iadt.restore_dtypes_(image_hls, cvt_dtype)
             image_rgb = cv2.cvtColor(image_hls, color_transform_inverse)
 
             result[i] = image_rgb
@@ -440,11 +441,11 @@ class CloudLayer(meta.Augmenter):
                 self.intensity_coarse_scale]
 
     def draw_on_image(self, image, random_state):
-        ia.gate_dtypes(image,
-                       allowed=["uint8",  "float16", "float32", "float64", "float96", "float128", "float256"],
-                       disallowed=["bool",
-                                   "uint16", "uint32", "uint64", "uint128", "uint256",
-                                   "int8", "int16", "int32", "int64", "int128", "int256"])
+        iadt.gate_dtypes(image,
+                         allowed=["uint8",  "float16", "float32", "float64", "float96", "float128", "float256"],
+                         disallowed=["bool",
+                                     "uint16", "uint32", "uint64", "uint128", "uint256",
+                                     "int8", "int16", "int32", "int64", "int128", "int256"])
 
         alpha, intensity = self.generate_maps(image, random_state)
         alpha = alpha[..., np.newaxis]
@@ -454,6 +455,7 @@ class CloudLayer(meta.Augmenter):
             return (1 - alpha) * image + alpha * intensity,
         else:
             intensity = np.clip(intensity, 0, 255)
+            # TODO use blend_alpha_() here
             return np.clip(
                 (1 - alpha) * image.astype(alpha.dtype) + alpha * intensity.astype(alpha.dtype),
                 0,
@@ -493,8 +495,7 @@ class CloudLayer(meta.Augmenter):
         height_intensity, width_intensity = (8, 8)  # TODO this might be too simplistic for some image sizes
         intensity = intensity_mean\
             + intensity_local_offset.draw_samples((height_intensity, width_intensity), random_state)
-        intensity = ia.imresize_single_image(intensity, (height, width),
-                                             interpolation="cubic")
+        intensity = ia.imresize_single_image(intensity, (height, width), interpolation="cubic")
 
         return intensity
 

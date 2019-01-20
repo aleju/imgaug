@@ -11,7 +11,7 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.augmenters import meta
+from imgaug import dtypes as iadt
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 
 
@@ -607,7 +607,7 @@ def test_Multiply():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.full((3, 3), 10, dtype=dtype)
         aug = iaa.Multiply(1)
@@ -720,7 +720,7 @@ def test_Multiply():
 
     # float
     for dtype in [np.float16, np.float32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if dtype == np.float16:
             atol = 1e-3 * max_value
@@ -1015,7 +1015,7 @@ def test_MultiplyElementwise():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.full((3, 3), 10, dtype=dtype)
         aug = iaa.MultiplyElementwise(1)
@@ -1130,7 +1130,7 @@ def test_MultiplyElementwise():
 
     # float
     for dtype in [np.float16, np.float32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if dtype == np.float16:
             atol = 1e-3 * max_value
@@ -1430,7 +1430,7 @@ def test_ReplaceElementwise():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         aug = iaa.ReplaceElementwise(mask=1, replacement=1)
         image = np.full((3, 3), 0, dtype=dtype)
@@ -1479,7 +1479,7 @@ def test_ReplaceElementwise():
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         atol = 1e-3*max_value if dtype == np.float16 else 1e-9 * max_value
         _allclose = functools.partial(np.allclose, atol=atol, rtol=0)
@@ -2067,7 +2067,7 @@ def test_Add():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.full((3, 3), min_value, dtype=dtype)
         aug = iaa.Add(1)
@@ -2148,7 +2148,7 @@ def test_Add():
 
     # float
     for dtype in [np.float16, np.float32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if dtype == np.float16:
             atol = 1e-3 * max_value
@@ -2478,7 +2478,7 @@ def test_AddElementwise():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.full((3, 3), min_value, dtype=dtype)
         aug = iaa.AddElementwise(1)
@@ -2561,7 +2561,7 @@ def test_AddElementwise():
 
     # float
     for dtype in [np.float16, np.float32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if dtype == np.float16:
             atol = 1e-3 * max_value
@@ -2774,7 +2774,7 @@ def test_Invert():
               np.int8, np.int16, np.int32, np.int64,
               np.float16, np.float32, np.float64, np.float128]
     for dtype in dtypes:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         kind = np.dtype(dtype).kind
         image_min = np.full((3, 3), min_value, dtype=dtype)
         if dtype is not bool:
@@ -2809,7 +2809,7 @@ def test_Invert():
               np.int8, np.int16, np.int32, np.int64,
               np.float16, np.float32, np.float64, np.float128]
     for dtype in dtypes:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         kind = np.dtype(dtype).kind
         image_min = np.full((3, 3), min_value, dtype=dtype)
         if dtype is not bool:
@@ -2844,7 +2844,7 @@ def test_Invert():
               np.int8, np.int16, np.int32,
               np.float16, np.float32]
     for dtype in dtypes:
-        _min_value, _center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, _center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         min_value = 1
         kind = np.dtype(dtype).kind
         center_value = min_value + 0.5 * (max_value - min_value)
@@ -2881,7 +2881,7 @@ def test_Invert():
               np.int8, np.int16, np.int32,
               np.float16, np.float32]
     for dtype in dtypes:
-        min_value, _center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, _center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
         max_value = 16
         kind = np.dtype(dtype).kind
         center_value = min_value + 0.5 * (max_value - min_value)

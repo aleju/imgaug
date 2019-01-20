@@ -9,7 +9,7 @@ import six.moves as sm
 
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.augmenters import meta
+from imgaug import dtypes as iadt
 from imgaug.testutils import reseed
 
 
@@ -135,7 +135,7 @@ def test_Superpixels():
     assert np.all(img_aug)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [int(center_value), int(0.1 * max_value), int(0.2 * max_value),

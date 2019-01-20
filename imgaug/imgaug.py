@@ -7,7 +7,6 @@ import sys
 import os
 import json
 import types
-import warnings
 
 import numpy as np
 import cv2
@@ -825,42 +824,6 @@ def angle_between_vectors(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 
-def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
-    assert len(allowed) > 0
-    assert is_string(allowed[0])
-    if len(disallowed) > 0:
-        assert is_string(disallowed[0])
-
-    if is_np_array(dtypes):
-        dtypes = [dtypes.dtype]
-    else:
-        dtypes = [np.dtype(dtype) if not is_np_array(dtype) else dtype.dtype for dtype in dtypes]
-    for dtype in dtypes:
-        if dtype.name in allowed:
-            pass
-        elif dtype.name in disallowed:
-            if augmenter is None:
-                raise ValueError("Got dtype '%s', which is a forbidden dtype (%s)." % (
-                    dtype.name, ", ".join(disallowed)
-                ))
-            else:
-                raise ValueError("Got dtype '%s' in augmenter '%s' (class '%s'), which is a forbidden dtype (%s)." % (
-                    dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(disallowed)
-                ))
-        else:
-            if augmenter is None:
-                warnings.warn(("Got dtype '%s', which was neither explicitly allowed "
-                               "(%s), nor explicitly disallowed (%s). Generated outputs may contain errors..") % (
-                        dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(allowed),
-                        ", ".join(disallowed)
-                    ))
-            else:
-                warnings.warn(("Got dtype '%s' in augmenter '%s' (class '%s'), which was neither explicitly allowed "
-                               "(%s), nor explicitly disallowed (%s). Generated outputs may contain errors..") % (
-                    dtype.name, augmenter.name, augmenter.__class__.__name__, ", ".join(allowed), ", ".join(disallowed)
-                ))
-
-
 # TODO is this used anywhere?
 def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
     """
@@ -1141,18 +1104,20 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
         ip = cv2.INTER_CUBIC
 
+    # TODO find more beautiful way to avoid circular imports
+    from . import dtypes as iadt
     if ip == cv2.INTER_NEAREST:
-        gate_dtypes(images,
-                    allowed=["bool", "uint8", "uint16", "int8", "int16", "int32", "float16", "float32", "float64"],
-                    disallowed=["uint32", "uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                "float96", "float128", "float256"],
-                    augmenter=None)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "int32", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=None)
     else:
-        gate_dtypes(images,
-                    allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
-                    disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
-                                "float96", "float128", "float256"],
-                    augmenter=None)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
+                                     "float96", "float128", "float256"],
+                         augmenter=None)
 
     result_shape = (nb_images, height, width)
     if nb_channels is not None:
@@ -1178,14 +1143,13 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         if input_dtype.type == np.bool_:
             result_img = result_img > 127
         elif input_dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
-            # TODO this was moved here because putting it at the top somehow lead to errors on travis, apparently
-            # due to circular imports...? needs to be made more beautiful
-            from .augmenters import meta
-            result_img = meta.restore_dtypes_(result_img, np.int8)
+            # TODO somehow better avoid circular imports here
+            from . import dtypes as iadt
+            result_img = iadt.restore_dtypes_(result_img, np.int8)
         elif input_dtype.type == np.float16:
             # TODO see above
-            from .augmenters import meta
-            result_img = meta.restore_dtypes_(result_img, np.float16)
+            from . import dtypes as iadt
+            result_img = iadt.restore_dtypes_(result_img, np.float16)
         result[i] = result_img
     return result
 
@@ -1525,12 +1489,14 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
         Array after pooling.
 
     """
-    gate_dtypes(arr,
-                allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                         "float16", "float32", "float64", "float128"],
-                disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                            "float256"],
-                augmenter=None)
+    # TODO find better way to avoid circular import
+    from . import dtypes as iadt
+    iadt.gate_dtypes(arr,
+                     allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                              "float16", "float32", "float64", "float128"],
+                     disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                                 "float256"],
+                     augmenter=None)
 
     do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1

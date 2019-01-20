@@ -34,6 +34,7 @@ from . import meta
 from . import color as color_lib
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
@@ -88,8 +89,8 @@ def adjust_contrast_gamma(arr, gamma):
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
-    if arr.dtype.name in ["uint8"]:
-        min_value, _center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+    if arr.dtype.name == "uint8":
+        min_value, _center_value, max_value = iadt.get_value_range_of_dtype(arr.dtype)
         dynamic_range = max_value - min_value
 
         value_range = np.linspace(0, 1.0, num=dynamic_range+1, dtype=np.float32)
@@ -162,8 +163,8 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
-    if arr.dtype.name in ["uint8"]:
-        min_value, _center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+    if arr.dtype.name == "uint8":
+        min_value, _center_value, max_value = iadt.get_value_range_of_dtype(arr.dtype)
         dynamic_range = max_value - min_value
 
         value_range = np.linspace(0, 1.0, num=dynamic_range+1, dtype=np.float32)
@@ -234,8 +235,8 @@ def adjust_contrast_log(arr, gain):
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
-    if arr.dtype.name in ["uint8"]:
-        min_value, _center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+    if arr.dtype.name == "uint8":
+        min_value, _center_value, max_value = iadt.get_value_range_of_dtype(arr.dtype)
         dynamic_range = max_value - min_value
 
         value_range = np.linspace(0, 1.0, num=dynamic_range+1, dtype=np.float32)
@@ -295,8 +296,8 @@ def adjust_contrast_linear(arr, alpha):
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
-    if arr.dtype.name in ["uint8"]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(arr.dtype)
+    if arr.dtype.name == "uint8":
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(arr.dtype)
 
         value_range = np.arange(0, 256, dtype=np.float32)
         # 127 + alpha*(I_ij-127)
@@ -309,11 +310,11 @@ def adjust_contrast_linear(arr, alpha):
         return arr_aug
     else:
         input_dtype = arr.dtype
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(input_dtype)
+        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(input_dtype)
         if input_dtype.kind in ["u", "i"]:
             center_value = int(center_value)
         image_aug = center_value + alpha * (arr.astype(np.float64)-center_value)
-        image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+        image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
         return image_aug
 
 
@@ -735,13 +736,13 @@ class AllChannelsCLAHE(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["uint8", "uint16"],
-                       disallowed=["bool",
-                                   "uint32", "uint64", "uint128", "uint256",
-                                   "int8", "int16", "int32", "int64", "int128", "int256",
-                                   "float16", "float32", "float64", "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["uint8", "uint16"],
+                         disallowed=["bool",
+                                     "uint32", "uint64", "uint128", "uint256",
+                                     "int8", "int16", "int32", "int64", "int128", "int256",
+                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                         augmenter=self)
 
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
@@ -940,13 +941,13 @@ class CLAHE(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(from_colorspace, to_colorspace, name=name)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["uint8"],
-                       disallowed=["bool",
-                                   "uint16", "uint32", "uint64", "uint128", "uint256",
-                                   "int8", "int16", "int32", "int64", "int128", "int256",
-                                   "float16", "float32", "float64", "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["uint8"],
+                         disallowed=["bool",
+                                     "uint16", "uint32", "uint64", "uint128", "uint256",
+                                     "int8", "int16", "int32", "int64", "int128", "int256",
+                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                         augmenter=self)
 
         def _augment_all_channels_clahe(images_normalized, random_state_derived):
             return self.all_channel_clahe._augment_images(images_normalized, random_state_derived, parents + [self],
@@ -1010,13 +1011,13 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
                                                                random_state=random_state)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["uint8"],
-                       disallowed=["bool",
-                                   "uint16", "uint32", "uint64", "uint128", "uint256",
-                                   "int8", "int16", "int32", "int64", "int128", "int256",
-                                   "float16", "float32", "float64", "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["uint8"],
+                         disallowed=["bool",
+                                     "uint16", "uint32", "uint64", "uint128", "uint256",
+                                     "int8", "int16", "int32", "int64", "int128", "int256",
+                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                         augmenter=self)
 
         for i, image in enumerate(images):
             image_warped = [cv2.equalizeHist(image[..., c]) for c in sm.xrange(image.shape[2])]
@@ -1128,13 +1129,13 @@ class HistogramEqualization(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(from_colorspace, to_colorspace, name=name)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["uint8"],
-                       disallowed=["bool",
-                                   "uint16", "uint32", "uint64", "uint128", "uint256",
-                                   "int8", "int16", "int32", "int64", "int128", "int256",
-                                   "float16", "float32", "float64", "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["uint8"],
+                         disallowed=["bool",
+                                     "uint16", "uint32", "uint64", "uint128", "uint256",
+                                     "int8", "int16", "int32", "int64", "int128", "int256",
+                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                         augmenter=self)
 
         def _augment_all_channels_histogram_equalization(images_normalized, random_state_derived):
             return self.all_channel_histogram_equalization._augment_images(images_normalized, random_state_derived,
@@ -1166,10 +1167,10 @@ class _ContrastFuncWrapper(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         if self.dtypes_allowed is not None:
-            ia.gate_dtypes(images,
-                           allowed=self.dtypes_allowed,
-                           disallowed=self.dtypes_disallowed,
-                           augmenter=self)
+            iadt.gate_dtypes(images,
+                             allowed=self.dtypes_allowed,
+                             disallowed=self.dtypes_disallowed,
+                             augmenter=self)
 
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, 1+nb_images)

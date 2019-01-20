@@ -11,7 +11,7 @@ import skimage.morphology
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.augmenters import meta
+from imgaug import dtypes as iadt
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 
 
@@ -960,7 +960,7 @@ def test_Affine():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -980,7 +980,7 @@ def test_Affine():
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -1026,7 +1026,7 @@ def test_Affine():
 
         # uint, int
         for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             def _compute_matching(image_aug, image_exp, mask):
                 return np.sum(
@@ -1056,7 +1056,7 @@ def test_Affine():
             # float64 caused too many interpolation inaccuracies for order=5, not wrong but harder to test
             dts = [np.float16, np.float32]
         for dtype in dts:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             def _isclose(a, b):
                 atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -1099,7 +1099,7 @@ def test_Affine():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -1119,7 +1119,7 @@ def test_Affine():
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -1154,7 +1154,7 @@ def test_Affine():
 
         # uint, int
         for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             if np.dtype(dtype).kind == "i":
                 values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -1174,7 +1174,7 @@ def test_Affine():
 
         # float
         for dtype in [np.float16, np.float32, np.float64]:
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             def _isclose(a, b):
                 atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -2522,7 +2522,7 @@ def test_PiecewiseAffine():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -2542,7 +2542,7 @@ def test_PiecewiseAffine():
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -2754,7 +2754,7 @@ def test_PerspectiveTransform():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [0, 1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -3188,7 +3188,7 @@ def test_ElasticTransformation():
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
         dtype = np.dtype(dtype)
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.zeros((21, 21), dtype=dtype)
         image[7:13, 7:13] = max_value
@@ -3240,7 +3240,7 @@ def test_ElasticTransformation():
             dtypes = [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]
         for dtype in dtypes:
             dtype = np.dtype(dtype)
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
             dynamic_range = max_value - min_value
 
             image = np.zeros((50, 50), dtype=dtype)
@@ -3258,7 +3258,7 @@ def test_ElasticTransformation():
         # float
         for dtype in [np.float16, np.float32, np.float64]:
             dtype = np.dtype(dtype)
-            min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             def _isclose(a, b):
                 atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -3479,7 +3479,7 @@ def test_Rot90():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         image = np.zeros((3, 3), dtype=dtype)
         image[0, 0] = max_value

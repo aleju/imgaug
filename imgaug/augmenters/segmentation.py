@@ -26,6 +26,7 @@ import six.moves as sm
 from . import meta
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 class Superpixels(meta.Augmenter):
@@ -156,11 +157,11 @@ class Superpixels(meta.Augmenter):
         self.interpolation = interpolation
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64"],
-                       disallowed=["uint128", "uint256", "int128", "int256",
-                                   "float16", "float32", "float64", "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64"],
+                         disallowed=["uint128", "uint256", "int128", "int256",
+                                     "float16", "float32", "float64", "float96", "float128", "float256"],
+                         augmenter=self)
 
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, 1+nb_images)
@@ -175,7 +176,7 @@ class Superpixels(meta.Augmenter):
                 pass
             else:
                 image = images[i]
-                min_value, _center_value, max_value = meta.get_value_range_of_dtype(image.dtype)
+                min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
 
                 orig_shape = image.shape
                 if self.max_size is not None:

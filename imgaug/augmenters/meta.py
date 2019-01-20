@@ -43,6 +43,7 @@ import six.moves as sm
 from .. import imgaug as ia
 from .. import parameters as iap
 
+"""
 KIND_TO_DTYPES = {
     "i": ["int8", "int16", "int32", "int64"],
     "u": ["uint8", "uint16", "uint32", "uint64"],
@@ -240,6 +241,7 @@ def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None
         assert min_value <= max_value_found <= max_value
     array = np.clip(array, min_value, max_value, out=array)
     return array
+"""
 
 
 def clip_augmented_image_(image, min_value, max_value):
@@ -3152,11 +3154,11 @@ class Lambda(Augmenter):
         if self.func_heatmaps is not None:
             result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
             ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
-                         + "got %s." % (type(result),))
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() "
+                         + "instances, got %s." % (type(result),))
             ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() instances, "
-                         + "got %s." % ([type(el) for el in result],))
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() "
+                         + "instances, got %s." % ([type(el) for el in result],))
             return result
         return heatmaps
 
@@ -3164,11 +3166,11 @@ class Lambda(Augmenter):
         if self.func_keypoints is not None:
             result = self.func_keypoints(keypoints_on_images, random_state, parents, hooks)
             ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
-                         + "got %s." % (type(result),))
+                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() "
+                         + "instances, got %s." % (type(result),))
             ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]),
-                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() instances, "
-                         + "got %s." % ([type(el) for el in result],))
+                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() "
+                         + "instances, got %s." % ([type(el) for el in result],))
             return result
         return keypoints_on_images
 
