@@ -281,6 +281,7 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
             match `size`.
 
         """
+        # TODO convert int to random state here
         random_state = random_state if random_state is not None else ia.current_random_state()
         samples = self._draw_samples(
             size if not ia.is_single_integer(size) else tuple([size]),

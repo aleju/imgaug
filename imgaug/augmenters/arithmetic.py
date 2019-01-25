@@ -1425,6 +1425,8 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None, per_channel=False,
     """
     Adds coarse salt and pepper noise to an image, i.e. rectangles that contain noisy white-ish and black-ish pixels.
 
+    TODO replace dtype support with uint8 only, because replacement is geared towards that value range
+
     dtype support::
 
         See ``imgaug.augmenters.arithmetic.ReplaceElementwise``.
