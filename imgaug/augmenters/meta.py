@@ -456,6 +456,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             return batch_unnormalized
 
         if not background:
+            # singlecore augmentation
+
             for batch_normalized in batches_normalized:
                 batch_augment_images = batch_normalized.images is not None
                 batch_augment_heatmaps = batch_normalized.heatmaps is not None
@@ -489,12 +491,15 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
                 yield batch_unnormalized
         else:
+            # multicore augmentation
+            import imgaug.multicore as multicore
+
             def load_batches():
                 for batch in batches_normalized:
                     yield batch
 
-            batch_loader = ia.BatchLoader(load_batches)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, self)
+            batch_loader = multicore.BatchLoader(load_batches)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, self)
             while True:
                 batch_aug = bg_augmenter.get_batch()
                 if batch_aug is None:

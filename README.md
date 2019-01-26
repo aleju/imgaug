@@ -799,6 +799,7 @@ which offer a bit more flexibility. (`augment_batches()` is a wrapper around the
 Using these classes is good practice, when you have a lot of images that you don't want to load at the same time.
 ```python
 import imgaug as ia
+import imgaug.multicore as multicore
 from imgaug import augmenters as iaa
 import numpy as np
 from skimage import data
@@ -851,8 +852,8 @@ def load_batches():
 #      augments images/keypoints and sends them to another queue.
 # The main process can then read augmented batches from the queue defined
 # by (2).
-batch_loader = ia.BatchLoader(load_batches)
-bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+batch_loader = multicore.BatchLoader(load_batches)
+bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
 
 # Run until load_batches() returns nothing anymore. This also allows infinite
 # training.

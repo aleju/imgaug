@@ -349,6 +349,7 @@ def example_background_augment_batches():
 def example_background_classes():
     print("Example: Background Augmentation via Classes")
     import imgaug as ia
+    import imgaug.multicore as multicore
     from imgaug import augmenters as iaa
     import numpy as np
     from skimage import data
@@ -401,8 +402,8 @@ def example_background_classes():
     #      augments images/keypoints and sends them to another queue.
     # The main process can then read augmented batches from the queue defined
     # by (2).
-    batch_loader = ia.BatchLoader(load_batches)
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    batch_loader = multicore.BatchLoader(load_batches)
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
 
     # Run until load_batches() returns nothing anymore. This also allows infinite
     # training.

@@ -6,6 +6,7 @@ import numpy as np
 from skimage import data
 
 import imgaug as ia
+import imgaug.multicore as multicore
 from imgaug import augmenters as iaa
 
 
@@ -61,8 +62,8 @@ def main():
     print("------------------")
     print("BackgroundAugmenter")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images)
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    batch_loader = multicore.BatchLoader(load_images)
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
     images_aug = []
     keypoints_aug = []
     while True:
@@ -78,8 +79,8 @@ def main():
     print("------------------")
     print("BackgroundAugmenter with generator in BL")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images())
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    batch_loader = multicore.BatchLoader(load_images())
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
     images_aug = []
     keypoints_aug = []
     while True:
@@ -95,8 +96,8 @@ def main():
     print("------------------")
     print("Long running BackgroundAugmenter at BL-queue_size=12")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images(n_batches=1000), queue_size=12)
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    batch_loader = multicore.BatchLoader(load_images(n_batches=1000), queue_size=12)
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
     i = 0
     while True:
         if i % 100 == 0:
@@ -110,8 +111,8 @@ def main():
     print("------------------")
     print("Long running BackgroundAugmenter at BL-queue_size=2")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images(n_batches=1000), queue_size=2)
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    batch_loader = multicore.BatchLoader(load_images(n_batches=1000), queue_size=2)
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
     i = 0
     while True:
         if i % 100 == 0:
@@ -125,8 +126,8 @@ def main():
     print("------------------")
     print("Long running BackgroundAugmenter (slow loading)")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images(n_batches=100, sleep=0.2))
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq)
+    batch_loader = multicore.BatchLoader(load_images(n_batches=100, sleep=0.2))
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
     i = 0
     while True:
         if i % 10 == 0:
@@ -140,8 +141,8 @@ def main():
     print("------------------")
     print("Long running BackgroundAugmenter (slow aug) at BL-queue_size=12")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images(n_batches=100), queue_size=12)
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_slow)
+    batch_loader = multicore.BatchLoader(load_images(n_batches=100), queue_size=12)
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_slow)
     i = 0
     while True:
         if i % 10 == 0:
@@ -155,8 +156,8 @@ def main():
     print("------------------")
     print("Long running BackgroundAugmenter (slow aug) at BL-queue_size=2")
     print("------------------")
-    batch_loader = ia.BatchLoader(load_images(n_batches=100), queue_size=2)
-    bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_slow)
+    batch_loader = multicore.BatchLoader(load_images(n_batches=100), queue_size=2)
+    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_slow)
     i = 0
     while True:
         if i % 10 == 0:
@@ -172,8 +173,8 @@ def main():
         print("Many very small runs (batches=1)")
         print("------------------")
         for i in range(100):
-            batch_loader = ia.BatchLoader(load_images(n_batches=1), queue_size=100)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch_loader = multicore.BatchLoader(load_images(n_batches=1), queue_size=100)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_i)
             while True:
                 batch = bg_augmenter.get_batch()
                 if batch is None:
@@ -184,8 +185,8 @@ def main():
         print("Many very small runs (batches=2)")
         print("------------------")
         for i in range(100):
-            batch_loader = ia.BatchLoader(load_images(n_batches=2), queue_size=100)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch_loader = multicore.BatchLoader(load_images(n_batches=2), queue_size=100)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_i)
             while True:
                 batch = bg_augmenter.get_batch()
                 if batch is None:
@@ -197,8 +198,8 @@ def main():
         print("------------------")
 
         def _augment_small_1():
-            batch_loader = ia.BatchLoader(load_images(n_batches=1), queue_size=100)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch_loader = multicore.BatchLoader(load_images(n_batches=1), queue_size=100)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_i)
             i = 0
             while True:
                 batch = bg_augmenter.get_batch()
@@ -215,8 +216,8 @@ def main():
         print("------------------")
 
         def _augment_small_2():
-            batch_loader = ia.BatchLoader(load_images(n_batches=2), queue_size=100)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch_loader = multicore.BatchLoader(load_images(n_batches=2), queue_size=100)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_i)
             i = 0
             while True:
                 batch = bg_augmenter.get_batch()
@@ -233,8 +234,8 @@ def main():
         print("------------------")
 
         def _augment_small_3():
-            batch_loader = ia.BatchLoader(load_images(n_batches=2), queue_size=100)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch_loader = multicore.BatchLoader(load_images(n_batches=2), queue_size=100)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_i)
             batch = bg_augmenter.get_batch()
 
         for i in range(100):
@@ -247,8 +248,8 @@ def main():
         print("------------------")
 
         def _augment_small_4():
-            batch_loader = ia.BatchLoader(load_images(n_batches=10), queue_size=100)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, augseq_i)
+            batch_loader = multicore.BatchLoader(load_images(n_batches=10), queue_size=100)
+            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq_i)
             batch = bg_augmenter.get_batch()
             #bg_augmenter.terminate()
 
