@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import time
+import sys
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -9,6 +10,16 @@ import six.moves as sm
 import skimage
 import skimage.data
 import scipy
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 import imgaug as ia
 from imgaug import parameters as iap
@@ -599,25 +610,33 @@ def test_parameters_both_np_float_if_one_is_float():
     assert b2.dtype.type == np.float64, b2.dtype.type
 
 
-def test_parameters_draw_distributions_grid():
-    params = [iap.Deterministic(1), iap.Uniform(0, 1.0)]
-    graph1 = params[0].draw_distribution_graph(size=(100000,))
-    graph2 = params[1].draw_distribution_graph(size=(100000,))
-    graph1_rs = ia.imresize_many_images(np.array([graph1]), sizes=(100, 100))[0]
-    graph2_rs = ia.imresize_many_images(np.array([graph2]), sizes=(100, 100))[0]
-    grid_expected = ia.draw_grid([graph1_rs, graph2_rs])
+class TestDrawDistributionsGrid(unittest.TestCase):
+    def setUp(self):
+        reseed()
 
-    grid_observed = iap.draw_distributions_grid(
-        params,
-        rows=None,
-        cols=None,
-        graph_sizes=(100, 100),
-        sample_sizes=[(100000,), (100000,)],
-        titles=None
-    )
+    def test_basic_functionality(self):
+        params = [mock.Mock(), mock.Mock()]
+        params[0].draw_distribution_graph.return_value = np.zeros((1, 1, 3), dtype=np.uint8)
+        params[1].draw_distribution_graph.return_value = np.zeros((1, 1, 3), dtype=np.uint8)
 
-    diff = np.abs(grid_expected.astype(np.int32) - grid_observed.astype(np.int32))
-    assert np.average(diff) < 10
+        draw_grid_mock = mock.Mock()
+        draw_grid_mock.return_value = np.zeros((4, 3, 2), dtype=np.uint8)
+        with mock.patch('imgaug.imgaug.draw_grid', draw_grid_mock):
+            grid_observed = iap.draw_distributions_grid(
+                params, rows=2, cols=3, graph_sizes=(20, 21),
+                sample_sizes=[(1, 2), (3, 4)], titles=["A", "B"])
+            assert grid_observed.shape == (4, 3, 2)
+        assert params[0].draw_distribution_graph.call_count == 1
+        assert params[1].draw_distribution_graph.call_count == 1
+        assert params[0].draw_distribution_graph.call_args[1]["size"] == (1, 2)
+        assert params[0].draw_distribution_graph.call_args[1]["title"] == "A"
+        assert params[1].draw_distribution_graph.call_args[1]["size"] == (3, 4)
+        assert params[1].draw_distribution_graph.call_args[1]["title"] == "B"
+        assert draw_grid_mock.call_count == 1
+        assert draw_grid_mock.call_args[0][0][0].shape == (20, 21, 3)
+        assert draw_grid_mock.call_args[0][0][1].shape == (20, 21, 3)
+        assert draw_grid_mock.call_args[1]["rows"] == 2
+        assert draw_grid_mock.call_args[1]["cols"] == 3
 
 
 def test_parameters_draw_distribution_graph():
