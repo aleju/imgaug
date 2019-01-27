@@ -71,7 +71,7 @@ were calculated based on a rather low number of 100 repetitions.
 ## imgaug.imgaug
 
 * Added constants that control the min/max values for seed generation
-* Improved performance of `pad()` by 2x
+* Improved performance of `pad()`
     * this change also improves the performance of:
         * `imgaug.imgaug.pad_to_aspect_ratio()`,
         * `imgaug.imgaug.HeatmapsOnImage.pad()`,
@@ -81,9 +81,36 @@ were calculated based on a rather low number of 100 repetitions.
         * `imgaug.augmenters.size.PadToFixedSize`,
         * `imgaug.augmenters.size.Pad`,
         * `imgaug.augmenters.size.CropAndPad`
+* Changed `imshow()` to explicitly make the plot figure size dependent on the input image size.
 * Refactored `SegmentationMapOnImage` to have simplified dtype handling in `__init__`
 * Fixed an issue with `SEED_MAX_VALUE` exceeding the `int32` maximum on some systems, causing crashes related to
   RandomState.
+* Moved BatchLoader to `multicore.py` and replaced the class with an alias pointing to `imgaug.multicore.BatchLoader`.
+* Moved BackgroundAugmenter to `multicore.py` and replaced the class with an alias pointing to `imgaug.multicore.BatchLoader`.
+
+
+## imgaug.multicore
+
+* Created this file.
+* Moved `BatchLoader` here from `imgaug.py`.
+* Moved `BackgroudAugmenter` here from `imgaug.py`.
+* Marked `BatchLoader` as deprecated.
+* Marked `BackgroundAugmenter` as deprecated.
+* Added class `Pool`. This is the new recommended way for multicore augmentation. `BatchLoader`/`BackgroundAugmenter` should not be used anymore. Example:
+  ```python
+  import imgaug as ia
+  from imgaug import augmenters as iaa
+  from imgaug import multicore
+  import numpy as np
+  aug = iaa.Add(1)
+  images = np.zeros((16, 128, 128, 3), dtype=np.uint8)
+  batches = [ia.Batch(images=np.copy(images)) for _ in range(100)]
+  with multicore.Pool(aug, processes=-1, seed=2) as pool:
+      batches_aug = pool.map_batches(batches, chunksize=8)
+  print(np.sum(batches_aug[0].images_aug[0]))
+  ```
+  The example starts a pool with N-1 workers (N=number of CPU cores) and augments 100 batches using these workers.
+  Use `imap_batches()` to feed in and get out a generator.
 
 
 ## imgaug.parameters
@@ -166,6 +193,8 @@ were calculated based on a rather low number of 100 repetitions.
     * This will similarly affect bounding box augmentation.
 * [critical] Fixed a bug in the augmentation of empty `KeypointsOnImage` instances that would lead image and keypoint
   augmentation to be un-aligned within a batch after the first empty `KeypointsOnImage` instance. (#231)
+* Added `pool()` to `Augmenter`. This is a helper to start a `imgaug.multicore.Pool` via `with augmenter.pool() as pool: ...`.
+* Changed `to_deterministic()` in `Augmenter` and various child classes to derive its new random state from the augmenter's local random state instead of the global random state.
 
 
 ## imgaug.augmenters.arithmetic
