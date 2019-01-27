@@ -6,6 +6,7 @@ import threading
 import traceback
 import time
 import random
+import warnings
 
 import numpy as np
 
@@ -327,6 +328,8 @@ class BatchLoader(object):
     """
 
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1, threaded=True):
+        warnings.warn(DeprecationWarning("BatchLoader is deprecated. Use imgaug.multicore.Pool instead."))
+
         ia.do_assert(queue_size >= 2, "Queue size for BatchLoader must be at least 2, got %d." % (queue_size,))
         ia.do_assert(nb_workers >= 1, "Number of workers for BatchLoader must be at least 1, got %d" % (nb_workers,))
         self._queue_internal = multiprocessing.Queue(queue_size//2)
@@ -595,6 +598,8 @@ class BackgroundAugmenter(object):
 
     """
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
+        warnings.warn(DeprecationWarning("BatchLoader is deprecated. Use imgaug.multicore.Pool instead."))
+
         ia.do_assert(queue_size > 0)
         self.augseq = augseq
         self.queue_source = batch_loader if isinstance(batch_loader, multiprocessing.queues.Queue) else batch_loader.queue
