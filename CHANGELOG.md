@@ -127,6 +127,9 @@ were calculated based on a rather low number of 100 repetitions.
 * Refactored `float check in force_np_float_dtype()`
 * Refactored `RandomSign`
 * Refactored various unittests to be more flexible with regards to returned dtypes
+* Refactored `StochasticParameter.draw_distribution_graph()` to use internally tempfile-based drawing. Should result in higher-quality outputs.
+* Refactored unittest for `draw_distributions_grid()` to improve performance
+* Fixed in `draw_distributions_grid()` a possible error from arrays with unequal shapes being combined to one array
 * Fixed a problem with `Sigmoid` not returning floats
 * Fixed noise produced by `SimplexNoise` having values below 0.0 or above 1.0
 * Fixed noise produced by `SimplexNoise` being more biased towards 0 than it should be
