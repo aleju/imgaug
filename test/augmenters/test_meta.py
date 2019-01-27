@@ -1417,6 +1417,50 @@ def test_Augmenter_augment_keypoints():
     assert len(kpsoi_aug[0].keypoints) == 0
     assert len(kpsoi_aug[1].keypoints) == 0
 
+    # Test if augmenting lists of KeypointsOnImage is still aligned with image augmentation when one KeypointsOnImage
+    # instance is empty (no keypoints)
+    kpsoi_lst = [
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=1, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([], shape=(1, 8)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=1, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10)),
+        ia.KeypointsOnImage([ia.Keypoint(x=0, y=0)], shape=(1, 10))
+    ]
+    image = np.zeros((1, 10), dtype=np.uint8)
+    image[0, 0] = 255
+    images = np.tile(image[np.newaxis, :, :], (len(kpsoi_lst), 1, 1))
+
+    aug = iaa.Affine(translate_px={"x": (0, 8)}, order=0, mode="constant", cval=0)
+
+    for _ in sm.xrange(10):
+        for is_list in [False, True]:
+            aug_det = aug.to_deterministic()
+            if is_list:
+                images_aug = aug_det.augment_images(list(images))
+            else:
+                images_aug = aug_det.augment_images(images)
+            kpsoi_lst_aug = aug_det.augment_keypoints(kpsoi_lst)
+
+            if is_list:
+                translations_imgs = np.argmax(np.array(images_aug, dtype=np.uint8)[:, 0, :], axis=1)
+            else:
+                translations_imgs = np.argmax(images_aug[:, 0, :], axis=1)
+            translations_kps = [kpsoi.keypoints[0].x if len(kpsoi.keypoints) > 0 else None for kpsoi in kpsoi_lst_aug]
+
+            assert len([kpresult for kpresult in translations_kps if kpresult is None]) == 1
+            assert translations_kps[5] is None
+            translations_imgs = np.concatenate([translations_imgs[0:5], translations_imgs[6:]])
+            translations_kps = np.array(translations_kps[0:5] + translations_kps[6:], dtype=translations_imgs.dtype)
+            translations_kps[2] -= 1
+            translations_kps[8-1] -= 1
+            assert np.array_equal(translations_imgs, translations_kps)
+
 
 def test_Augmenter_augment_segmentation_maps():
     reseed()
