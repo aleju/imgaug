@@ -1312,11 +1312,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if random_state is None:
             random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
-            pass # just use the provided random state without change
+            pass  # just use the provided random state without change
         else:
             random_state = ia.new_random_state(random_state)
 
         if not self.deterministic or deterministic_too:
+            # TODO replace by ia.derive_random_state()
             seed = random_state.randint(0, 10**6, 1)[0]
             self.random_state = ia.new_random_state(seed)
 
