@@ -34,7 +34,6 @@ def main():
     test_parameters_handle_probability_param()
     test_parameters_force_np_float_dtype()
     test_parameters_both_np_float_if_one_is_float()
-    test_parameters_draw_distributions_grid()
     test_parameters_draw_distribution_graph()
     test_parameters_Biomial()
     test_parameters_Choice()
