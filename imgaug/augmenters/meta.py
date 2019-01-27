@@ -498,17 +498,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 for batch in batches_normalized:
                     yield batch
 
-            batch_loader = multicore.BatchLoader(load_batches)
-            bg_augmenter = multicore.BackgroundAugmenter(batch_loader, self)
-            while True:
-                batch_aug = bg_augmenter.get_batch()
-                if batch_aug is None:
-                    break
-                else:
-                    batch_unnormalized = unnormalize_batch(batch_aug)
-                    yield batch_unnormalized
-            batch_loader.terminate()
-            bg_augmenter.terminate()
+            with multicore.Pool(self) as pool:
+                for batch_aug in pool.imap_batches(load_batches()):
+                    yield unnormalize_batch(batch_aug)
 
     def augment_image(self, image, hooks=None):
         """
