@@ -1263,7 +1263,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         aug = self.copy()
-        aug.random_state = ia.new_random_state()
+
+        # This was changed for 0.2.8 from deriving a new random state based on the global random state to deriving
+        # it from the augmenter's local random state. This should reduce the risk that re-runs of scripts lead to
+        # different results upon small changes somewhere. It also decreases the likelihood of problems when using
+        # multiprocessing (the child processes might use the same global random state as the parent process).
+        # Note for the latter point that augment_batches() might call to_deterministic() if the batch contains
+        # multiply types of augmentables.
+        # aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
+
         aug.deterministic = True
         return aug
 
@@ -1965,7 +1974,7 @@ class Sequential(Augmenter, list):
         augs = [aug.to_deterministic() for aug in self]
         seq = self.copy()
         seq[:] = augs
-        seq.random_state = ia.new_random_state()
+        seq.random_state = ia.derive_random_state(self.random_state)
         seq.deterministic = True
         return seq
 
@@ -2308,7 +2317,7 @@ class SomeOf(Augmenter, list):
         augs = [aug.to_deterministic() for aug in self]
         seq = self.copy()
         seq[:] = augs
-        seq.random_state = ia.new_random_state()
+        seq.random_state = ia.derive_random_state(self.random_state)
         seq.deterministic = True
         return seq
 
@@ -2585,7 +2594,7 @@ class Sometimes(Augmenter):
         aug.then_list = aug.then_list.to_deterministic()
         aug.else_list = aug.else_list.to_deterministic()
         aug.deterministic = True
-        aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
         return aug
 
     def get_parameters(self):
@@ -2758,7 +2767,7 @@ class WithChannels(Augmenter):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
         aug.deterministic = True
-        aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
         return aug
 
     def get_parameters(self):
