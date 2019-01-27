@@ -5772,7 +5772,6 @@ class Batch(object):
 
 
 def BatchLoader(*args, **kwargs):
-    import warnings
     warnings.warn(DeprecationWarning("Using imgaug.imgaug.BatchLoader is depcrecated. "
                                      "Use imgaug.multicore.BatchLoader instead."))
 
@@ -5781,7 +5780,6 @@ def BatchLoader(*args, **kwargs):
 
 
 def BackgroundAugmenter(*args, **kwargs):
-    import warnings
     warnings.warn(DeprecationWarning("Using imgaug.imgaug.BackgroundAugmenter is depcrecated. "
                                      "Use imgaug.multicore.BackgroundAugmenter instead."))
 
