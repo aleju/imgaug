@@ -1719,8 +1719,12 @@ def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
         # import only when necessary (faster startup; optional dependency; less fragile -- see issue #225)
         import matplotlib.pyplot as plt
 
-        plt.imshow(image, cmap="gray")
-        plt.gcf().canvas.set_window_title("imgaug.imshow(%s)" % (image.shape,))
+        dpi = 96
+        h, w = image.shape[0] / dpi, image.shape[1] / dpi
+        w = max(w, 6)  # if the figure is too narrow, the footer may appear and make the fig suddenly wider (ugly)
+        fig, ax = plt.subplots(figsize=(w, h), dpi=dpi)
+        fig.canvas.set_window_title("imgaug.imshow(%s)" % (image.shape,))
+        ax.imshow(image, cmap="gray")  # cmap is only activate for grayscale images
         plt.show()
 
 
