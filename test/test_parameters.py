@@ -23,7 +23,7 @@ def main():
     test_parameters_handle_probability_param()
     test_parameters_force_np_float_dtype()
     test_parameters_both_np_float_if_one_is_float()
-    test_parameters_draw_distribution_grid()
+    test_parameters_draw_distributions_grid()
     test_parameters_draw_distribution_graph()
     test_parameters_Biomial()
     test_parameters_Choice()
@@ -599,7 +599,7 @@ def test_parameters_both_np_float_if_one_is_float():
     assert b2.dtype.type == np.float64, b2.dtype.type
 
 
-def test_parameters_draw_distribution_grid():
+def test_parameters_draw_distributions_grid():
     params = [iap.Deterministic(1), iap.Uniform(0, 1.0)]
     graph1 = params[0].draw_distribution_graph(size=(100000,))
     graph2 = params[1].draw_distribution_graph(size=(100000,))
