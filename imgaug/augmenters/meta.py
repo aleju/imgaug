@@ -1353,7 +1353,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         A global random state exists exactly once. Many augmenters can point
         to it (and thereby use it to sample random numbers).
-        Local random usually exists for exactly one augmenter and are
+        Local random states usually exist for exactly one augmenter and are
         saved within that augmenter.
 
         Usually there is no need to change global into local random states.
