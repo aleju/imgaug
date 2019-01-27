@@ -1,3 +1,4 @@
+"""Classes and functions dealing with multicore augmentation."""
 from __future__ import print_function, division, absolute_import
 import sys
 import multiprocessing
@@ -18,6 +19,285 @@ if sys.version_info[0] == 2:
 elif sys.version_info[0] == 3:
     import pickle
     from queue import Empty as QueueEmpty, Full as QueueFull
+
+
+class Pool(object):
+    """
+    Wrapper around the standard library's multiprocessing.Pool for multicore augmentation.
+    """
+    # This attribute saves the augmentation sequence for background workers so that it does not have to be resend with
+    # every batch. The attribute is set once per worker in the worker's initializer. As each worker has its own
+    # process, it is a different variable per worker (though usually should be of equal content).
+    _WORKER_AUGSEQ = None
+
+    # This attribute saves the initial seed for background workers so that for any future batch the batch's specific
+    # seed can be derived, roughly via SEED_START+SEED_BATCH. As each worker has its own process, this seed can be
+    # unique per worker even though all seemingly use the same constant attribute.
+    _WORKER_SEED_START = None
+
+    def __init__(self, augseq, processes=None, maxtasksperchild=None, seed=None):
+        """
+        Initialize augmentation pool.
+
+        Parameters
+        ----------
+        augseq : Augmenter
+            The augmentation sequence to apply to batches.
+
+        processes : None or int, optional
+            The number of background workers, similar to the same parameter in multiprocessing.Pool.
+            If ``None``, the number of the machine's CPU cores will be used (this counts hyperthreads as CPU cores).
+            If this is set to a negative value ``p``, then ``P - abs(p)`` will be used, where ``P`` is the number
+            of CPU cores. E.g. ``-1`` would use all cores except one (this is useful to e.g. reserve one core to
+            feed batches to the GPU).
+
+        maxtasksperchild : None or int, optional
+            The number of tasks done per worker process before the process is killed and restarted, similar to the
+            same parameter in multiprocessing.Pool. If ``None``, worker processes will not be automatically restarted.
+
+        seed : None or int, optional
+            The seed to use for child processes. If ``None``, a random seed will be used.
+
+        """
+        # make sure that don't call pool again in a child process
+        assert Pool._WORKER_AUGSEQ is None, "_WORKER_AUGSEQ was already set when calling " \
+                                            "Pool.__init__(). Did you try to instantiate a Pool within a Pool?"
+        assert processes is None or processes != 0
+
+        self.augseq = augseq
+        self.processes = processes
+        self.maxtasksperchild = maxtasksperchild
+        self.seed = seed
+        if self.seed is not None:
+            assert ia.SEED_MIN_VALUE <= self.seed <= ia.SEED_MAX_VALUE
+
+        # multiprocessing.Pool instance
+        self._pool = None
+
+        # Running counter of the number of augmented batches. This will be used to send indexes for each batch to
+        # the workers so that they can augment using SEED_BASE+SEED_BATCH and ensure consistency of applied
+        # augmentation order between script runs.
+        self._batch_idx = 0
+
+    @property
+    def pool(self):
+        """Return the multiprocessing.Pool instance or create it if not done yet.
+
+        Returns
+        -------
+        multiprocessing.Pool
+            The multiprocessing.Pool used internally by this imgaug.multicore.Pool.
+
+        """
+        if self._pool is None:
+            processes = self.processes
+            if processes is not None and processes < 0:
+                try:
+                    # cpu count includes the hyperthreads, e.g. 8 for 4 cores + hyperthreading
+                    processes = multiprocessing.cpu_count() - abs(processes)
+                    processes = max(processes, 1)
+                except (ImportError, NotImplementedError):
+                    processes = None
+
+            self._pool = multiprocessing.Pool(processes,
+                                              initializer=_Pool_initialize_worker,
+                                              initargs=(self.augseq, self.seed),
+                                              maxtasksperchild=self.maxtasksperchild)
+        return self._pool
+
+    def map_batches(self, batches, chunksize=None):
+        """
+        Augment batches.
+
+        Parameters
+        ----------
+        batches : list of imgaug.imgaug.Batch
+            The batches to augment.
+
+        chunksize : None or int, optional
+            Rough indicator of how many tasks should be sent to each worker. Increasing this number can improve
+            performance.
+
+        Returns
+        -------
+        list of imgaug.imgaug.Batch
+            Augmented batches.
+
+        """
+        assert isinstance(batches, list), ("Expected to get a list as 'batches', got type %s. "
+                                           + "Call imap_batches() if you use generators.") % (type(batches),)
+        return self.pool.map(_Pool_starworker, self._handle_batch_ids(batches), chunksize=chunksize)
+
+    def map_batches_async(self, batches, chunksize=None, callback=None, error_callback=None):
+        """
+        Augment batches asynchonously.
+
+        Parameters
+        ----------
+        batches : list of imgaug.imgaug.Batch
+            The batches to augment.
+
+        chunksize : None or int, optional
+            Rough indicator of how many tasks should be sent to each worker. Increasing this number can improve
+            performance.
+
+        callback : None or callable, optional
+            Function to call upon finish. See `multiprocessing.Pool`.
+
+        error_callback : None or callable, optional
+            Function to call upon errors. See `multiprocessing.Pool`.
+
+        Returns
+        -------
+        multiprocessing.MapResult
+            Asynchonous result. See `multiprocessing.Pool`.
+
+        """
+        assert isinstance(batches, list), ("Expected to get a list as 'batches', got type %s. "
+                                           + "Call imap_batches() if you use generators.") % (type(batches),)
+        return self.pool.map_async(_Pool_starworker, self._handle_batch_ids(batches),
+                                   chunksize=chunksize, callback=callback, error_callback=error_callback)
+
+    def imap_batches(self, batches, chunksize=1):
+        """
+        Augment batches from a generator.
+
+        Parameters
+        ----------
+        batches : generator of imgaug.imgaug.Batch
+            The batches to augment, provided as a generator. Each call to the generator should yield exactly one
+            batch.
+
+        chunksize : None or int, optional
+            Rough indicator of how many tasks should be sent to each worker. Increasing this number can improve
+            performance.
+
+        Yields
+        ------
+        imgaug.imgaug.Batch
+            Augmented batch.
+
+        """
+        assert ia.is_generator(batches), ("Expected to get a generator as 'batches', got type %s. "
+                                          + "Call map_batches() if you use lists.") % (type(batches),)
+        # TODO change this to 'yield from' once switched to 3.3+
+        gen = self.pool.imap(_Pool_starworker, self._handle_batch_ids_gen(batches), chunksize=chunksize)
+        for batch in gen:
+            yield batch
+
+    def imap_batches_unordered(self, batches, chunksize=1):
+        """
+        Augment batches from a generator in a way that does not guarantee to preserve order.
+
+        Parameters
+        ----------
+        batches : generator of imgaug.imgaug.Batch
+            The batches to augment, provided as a generator. Each call to the generator should yield exactly one
+            batch.
+
+        chunksize : None or int, optional
+            Rough indicator of how many tasks should be sent to each worker. Increasing this number can improve
+            performance.
+
+        Yields
+        ------
+        imgaug.imgaug.Batch
+            Augmented batch.
+
+        """
+        assert ia.is_generator(batches), ("Expected to get a generator as 'batches', got type %s. "
+                                          + "Call map_batches() if you use lists.") % (type(batches),)
+        # TODO change this to 'yield from' once switched to 3.3+
+        gen = self.pool.imap_unordered(_Pool_starworker, self._handle_batch_ids_gen(batches), chunksize=chunksize)
+        for batch in gen:
+            yield batch
+
+    def __enter__(self):
+        assert self._pool is None, "Tried to __enter__ a pool that has already been initialized."
+        _ = self.pool  # initialize multiprocessing pool
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # We don't check here if _pool is still not None here. Should we?
+        self.close()
+
+    def close(self):
+        """Close the pool gracefully."""
+        if self._pool is not None:
+            self._pool.close()
+            self._pool.join()
+            self._pool = None
+
+    def terminate(self):
+        """Terminate the pool immediately."""
+        if self._pool is not None:
+            self._pool.terminate()
+            self._pool.join()
+            self._pool = None
+
+    def join(self):
+        """
+        Wait for the workers to exit.
+
+        This may only be called after calling :func:`imgaug.multicore.Pool.join` or
+        :func:`imgaug.multicore.Pool.terminate`.
+
+        """
+        if self._pool is not None:
+            self._pool.join()
+
+    def _handle_batch_ids(self, batches):
+        ids = np.arange(self._batch_idx, self._batch_idx + len(batches))
+        inputs = list(zip(ids, batches))
+        self._batch_idx += len(batches)
+        return inputs
+
+    def _handle_batch_ids_gen(self, batches):
+        for batch in batches:
+            batch_idx = self._batch_idx
+            yield batch_idx, batch
+            self._batch_idx += 1
+
+
+# could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
+def _Pool_initialize_worker(augseq, seed_start):
+    if seed_start is None:
+        process_name = multiprocessing.current_process().name
+        # time_ns() exists only in 3.7+
+        if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
+            seed_offset = time.time_ns()
+        else:
+            seed_offset = int(time.time() * 10**6) % 10**6
+        seed = hash(process_name) + seed_offset
+        seed_global = ia.SEED_MIN_VALUE + (seed - 10**9) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        seed_local = ia.SEED_MIN_VALUE + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        ia.seed(seed_global)
+        augseq.reseed(seed_local)
+    Pool._WORKER_SEED_START = seed_start
+    Pool._WORKER_AUGSEQ = augseq
+    Pool._WORKER_AUGSEQ.localize_random_state_()  # not sure if really necessary, but won't hurt either
+
+
+# could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
+def _Pool_worker(batch_idx, batch):
+    assert ia.is_single_integer(batch_idx)
+    assert isinstance(batch, ia.Batch)
+    assert Pool._WORKER_AUGSEQ is not None
+    aug = Pool._WORKER_AUGSEQ
+    if Pool._WORKER_SEED_START is not None:
+        seed = Pool._WORKER_SEED_START + batch_idx
+        seed_global = ia.SEED_MIN_VALUE + (seed - 10**9) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        seed_local = ia.SEED_MIN_VALUE + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        ia.seed(seed_global)
+        aug.reseed(seed_local)
+    result = list(aug.augment_batches([batch], background=False))[0]
+    return result
+
+
+# could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
+# starworker is here necessary, because starmap does not exist in 2.7
+def _Pool_starworker(inputs):
+    return _Pool_worker(*inputs)
 
 
 class BatchLoader(object):
@@ -199,6 +479,89 @@ class BatchLoader(object):
     def __del__(self):
         if not self.join_signal.is_set():
             self.join_signal.set()
+
+
+class BackgroundAugmenter2(object):
+    def __init__(self, _, augseq, queue_size=50, nb_workers="auto"):
+        self.pool = None
+
+    def all_finished(self):
+        return TODO
+
+    def get_batch(self):
+        if self.all_finished():
+            return None
+
+        batch_str = self.queue_result.get()
+        batch = pickle.loads(batch_str)
+        if batch is not None:
+            return batch
+        else:
+            self.nb_workers_finished += 1
+            if self.nb_workers_finished >= self.nb_workers:
+                try:
+                    self.queue_source.get(timeout=0.001)  # remove the None from the source queue
+                except QueueEmpty:
+                    pass
+                return None
+            else:
+                return self.get_batch()
+
+    def _augment_images_worker(self, augseq, queue_source, queue_result, seedval):
+        """
+        Augment endlessly images in the source queue.
+
+        This is a worker function for that endlessly queries the source queue (input batches),
+        augments batches in it and sends the result to the output queue.
+
+        """
+        np.random.seed(seedval)
+        random.seed(seedval)
+        augseq.reseed(seedval)
+        ia.seed(seedval)
+
+        loader_finished = False
+
+        while not loader_finished:
+            # wait for a new batch in the source queue and load it
+            try:
+                batch_str = queue_source.get(timeout=0.1)
+                batch = pickle.loads(batch_str)
+                if batch is None:
+                    loader_finished = True
+                    # put it back in so that other workers know that the loading queue is finished
+                    queue_source.put(pickle.dumps(None, protocol=-1))
+                else:
+                    batch_aug = list(augseq.augment_batches([batch], background=False))[0]
+
+                    # send augmented batch to output queue
+                    batch_str = pickle.dumps(batch_aug, protocol=-1)
+                    queue_result.put(batch_str)
+            except QueueEmpty:
+                time.sleep(0.01)
+
+        queue_result.put(pickle.dumps(None, protocol=-1))
+        time.sleep(0.01)
+
+    def terminate(self):
+        """
+        Terminates all background processes immediately.
+
+        This will also free their RAM.
+
+        """
+        for worker in self.workers:
+            if worker.is_alive():
+                worker.terminate()
+        self.nb_workers_finished = len(self.workers)
+
+        if not self.queue_result._closed:
+            self.queue_result.close()
+        time.sleep(0.01)
+
+    def __del__(self):
+        time.sleep(0.1)
+        self.terminate()
 
 
 class BackgroundAugmenter(object):
