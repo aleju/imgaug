@@ -1066,6 +1066,73 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             )
         return result
 
+    def pool(self, processes=None, maxtasksperchild=None, seed=None):
+        """
+        Create a pool used for multicore augmentation from this augmenter.
+
+        Parameters
+        ----------
+        processes : None or int, optional
+            Same as for :func:`imgaug.multicore.Pool.__init__`.
+            The number of background workers, similar to the same parameter in multiprocessing.Pool.
+            If ``None``, the number of the machine's CPU cores will be used (this counts hyperthreads as CPU cores).
+            If this is set to a negative value ``p``, then ``P - abs(p)`` will be used, where ``P`` is the number
+            of CPU cores. E.g. ``-1`` would use all cores except one (this is useful to e.g. reserve one core to
+            feed batches to the GPU).
+
+        maxtasksperchild : None or int, optional
+            Same as for :func:`imgaug.multicore.Pool.__init__`.
+            The number of tasks done per worker process before the process is killed and restarted, similar to the
+            same parameter in multiprocessing.Pool. If ``None``, worker processes will not be automatically restarted.
+
+        seed : None or int, optional
+            Same as for :func:`imgaug.multicore.Pool.__init__`.
+            The seed to use for child processes. If ``None``, a random seed will be used.
+
+        Returns
+        -------
+        imgaug.multicore.Pool
+            Pool for multicore augmentation.
+
+        Examples
+        --------
+        >>> import imgaug as ia
+        >>> from imgaug import augmenters as iaa
+        >>> import numpy as np
+        >>> aug = iaa.Add(1)
+        >>> images = np.zeros((16, 128, 128, 3), dtype=np.uint8)
+        >>> batches = [ia.Batch(images=np.copy(images)) for _ in range(100)]
+        >>> with aug.pool(processes=-1, seed=2) as pool:
+        >>>     batches_aug = pool.map_batches(batches, chunksize=8)
+        >>> print(np.sum(batches_aug[0].images_aug[0]))
+        49152
+
+        Creates ``100`` batches of empty images. Each batch contains ``16`` images of size ``128x128``. The batches
+        are then augmented on all CPU cores except one (``processes=-1``). After augmentation, the sum of pixel values
+        from the first augmented image is printed.
+
+        >>> import imgaug as ia
+        >>> from imgaug import augmenters as iaa
+        >>> import numpy as np
+        >>> aug = iaa.Dropout(0.2)
+        >>> images = np.zeros((16, 128, 128, 3), dtype=np.uint8)
+        >>> def generate_batches():
+        >>>     for _ in range(100):
+        >>>         yield ia.Batch(images=np.copy(images))
+        >>>
+        >>> with aug.pool(processes=-1, seed=2) as pool:
+        >>>     batches_aug = pool.imap_batches(generate_batches(), chunksize=8)
+        >>>     batch_aug = next(batches_aug)
+        >>>     print(np.sum(batch_aug.images_aug[0]))
+        49152
+
+        Same as above. This time, a generator is used to generate batches of images. Again, the first augmented image's
+        sum of pixels is printed.
+
+        """
+        import imgaug.multicore as multicore
+        return multicore.Pool(self, processes=processes, maxtasksperchild=maxtasksperchild, seed=seed)
+
     # TODO most of the code of this function could be replaced with ia.draw_grid()
     # TODO add parameter for handling multiple images ((a) next to each other in each row or (b) multiply row count
     # by number of images and put each one in a new row)
