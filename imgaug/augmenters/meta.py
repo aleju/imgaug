@@ -1283,9 +1283,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         This function is useful, when augmentations are run in the
         background (i.e. on multiple cores).
         It should be called before sending this Augmenter object to a
-        background worker (i.e., if ``N`` workers are used, the function
-        should be called ``N`` times). Otherwise, all background workers will
+        background worker or once within each worker with different seeds
+        (i.e., if ``N`` workers are used, the function should be called
+        ``N`` times). Otherwise, all background workers will
         use the same seeds and therefore apply the same augmentations.
+
+        If this augmenter or any child augmenter had a random state that
+        pointed to the global random state, it will automatically be
+        replaced with a local random state. This is similar to what
+        :func:`imgaug.augmenters.meta.Augmenter.localize_random_state`
+        does.
 
         Parameters
         ----------
