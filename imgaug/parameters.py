@@ -209,7 +209,7 @@ def draw_distributions_grid(params, rows=None, cols=None, graph_sizes=(350, 350)
         images = [param_i.draw_distribution_graph(title=title_i)
                   for param_i, title_i in zip(params, titles)]
 
-    images_rs = ia.imresize_many_images(np.array(images), sizes=graph_sizes)
+    images_rs = ia.imresize_many_images(images, sizes=graph_sizes)
     grid = ia.draw_grid(images_rs, rows=rows, cols=cols)
     return grid
 
