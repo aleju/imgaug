@@ -2,12 +2,14 @@ from __future__ import print_function, division, absolute_import
 import copy as copy_module
 from collections import defaultdict
 from abc import ABCMeta, abstractmethod
+import tempfile
 
 import numpy as np
 import six
 import six.moves as sm
 import scipy
 import scipy.stats
+import imageio
 
 from . import imgaug as ia
 from .external.opensimplex import OpenSimplex
@@ -468,15 +470,12 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
             title_fragments = [title[i:i+50] for i in sm.xrange(0, len(title), 50)]
             ax.set_title("\n".join(title_fragments))
         fig.tight_layout(pad=0)
-        fig.canvas.draw()
 
-        # This seems to be an older style to get the image out of matplotlib:
-        # data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        # data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-
-        # This seems to be the newer style to do that:
-        data = np.array(fig.canvas.renderer._renderer)
-        data = data[:, :, :3]  # matplotlib returns RGBA, for legacy reasons we remove the A here
+        with tempfile.NamedTemporaryFile(suffix=".png") as f:
+            # we don't add bbox_inches='tight' here so that draw_distributions_grid has an easier
+            # time combining many plots
+            fig.savefig(f.name)
+            data = imageio.imread(f)[..., 0:3]
 
         plt.close()
 
