@@ -26,8 +26,8 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug import dtypes as iadt
 from imgaug.augmenters import contrast as contrast_lib
-from imgaug.augmenters import meta
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -38,7 +38,7 @@ def main():
     test_SigmoidContrast()
     test_LogContrast()
     test_LinearContrast()
-    test_contrast_adjust_linear()
+    test_adjust_contrast_linear()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
@@ -111,7 +111,7 @@ def test_GammaContrast():
     ###################
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         exps = [1, 2, 3]
         values = [0, 100, int(center_value + 0.1*max_value)]
@@ -129,6 +129,25 @@ def test_GammaContrast():
                 value_expected = int(expected[0, 0])
                 diff = abs(value_aug - value_expected)
                 assert diff <= tolerance
+
+                # test other channel numbers
+                for nb_channels in [1, 2, 3, 4, 5, 7, 11]:
+                    image = np.full((3, 3), value, dtype=dtype)
+                    image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+                    for c in sm.xrange(nb_channels):
+                        image[..., c] += c
+                    expected = (((image.astype(np.float128) / max_value) ** exp) * max_value).astype(dtype)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.shape == (3, 3, nb_channels)
+                    assert image_aug.dtype == np.dtype(dtype)
+                    # can be less than nb_channels when multiple input values map to the same output value
+                    # mapping distribution can behave exponential with slow start and fast growth at the end
+                    assert len(np.unique(image_aug)) <= nb_channels
+                    for c in sm.xrange(nb_channels):
+                        value_aug = int(image_aug[0, 0, c])
+                        value_expected = int(expected[0, 0, c])
+                        diff = abs(value_aug - value_expected)
+                        assert diff <= tolerance
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
@@ -148,6 +167,21 @@ def test_GammaContrast():
                 image_aug = aug.augment_image(image)
                 assert image_aug.dtype == np.dtype(dtype)
                 assert _allclose(image_aug, expected)
+
+                # test other channel numbers
+                for nb_channels in [1, 2, 3, 4, 5, 7, 11]:
+                    image = np.full((3, 3), value, dtype=dtype)
+                    image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+                    for c in sm.xrange(nb_channels):
+                        image[..., c] += float(c)
+                    expected = (image.astype(np.float128) ** exp).astype(dtype)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.shape == (3, 3, nb_channels)
+                    assert image_aug.dtype == np.dtype(dtype)
+                    for c in sm.xrange(nb_channels):
+                        value_aug = image_aug[0, 0, c]
+                        value_expected = expected[0, 0, c]
+                        assert _allclose(value_aug, value_expected)
 
 
 def test_SigmoidContrast():
@@ -180,22 +214,22 @@ def test_SigmoidContrast():
     assert isinstance(aug.params1d[0], iap.Uniform)
     assert isinstance(aug.params1d[0].a, iap.Deterministic)
     assert isinstance(aug.params1d[0].b, iap.Deterministic)
-    assert np.allclose(aug.params1d[0].a.value, 0.25)
-    assert np.allclose(aug.params1d[0].b.value, 0.75)
+    assert aug.params1d[0].a.value == 1
+    assert aug.params1d[0].b.value == 2
     assert isinstance(aug.params1d[1], iap.Uniform)
     assert isinstance(aug.params1d[1].a, iap.Deterministic)
     assert isinstance(aug.params1d[1].b, iap.Deterministic)
-    assert aug.params1d[1].a.value == 1
-    assert aug.params1d[1].b.value == 2
+    assert np.allclose(aug.params1d[1].a.value, 0.25)
+    assert np.allclose(aug.params1d[1].b.value, 0.75)
 
     # check that list to choice works
     # note that gain and cutoff are saved in inverted order in _ContrastFuncWrapper to match
     # the order of skimage's function
     aug = iaa.SigmoidContrast(gain=[1, 2], cutoff=[0.25, 0.75])
     assert isinstance(aug.params1d[0], iap.Choice)
-    assert all([np.allclose(val, val_choice) for val, val_choice in zip([0.25, 0.75], aug.params1d[0].a)])
+    assert all([val in aug.params1d[0].a for val in [1, 2]])
     assert isinstance(aug.params1d[1], iap.Choice)
-    assert all([val in aug.params1d[1].a for val in [1, 2]])
+    assert all([np.allclose(val, val_choice) for val, val_choice in zip([0.25, 0.75], aug.params1d[1].a)])
 
     # check that per_channel at 50% prob works
     aug = iaa.SigmoidContrast(gain=(1, 10), cutoff=(0.25, 0.75), per_channel=0.5)
@@ -228,7 +262,8 @@ def test_SigmoidContrast():
     ###################
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
+        # dynamic_range = max_value - min_value
 
         gains = [5, 20]
         cutoffs = [0.25, 0.75]
@@ -240,9 +275,13 @@ def test_SigmoidContrast():
             aug = iaa.SigmoidContrast(gain=gain, cutoff=cutoff)
             for value, tolerance in zip(values, tolerances):
                 image = np.full((3, 3), value, dtype=dtype)
+                # TODO this looks like the equation commented out should acutally the correct one, but when using it
+                #      we get a difference between expectation and skimage ground truth
                 # 1/(1 + exp(gain*(cutoff - I_ij/max)))
                 expected = (1/(1 + np.exp(gain * (cutoff - image.astype(np.float128)/max_value))))
                 expected = (expected * max_value).astype(dtype)
+                # expected = (1/(1 + np.exp(gain * (cutoff - (image.astype(np.float128)-min_value)/dynamic_range))))
+                # expected = (min_value + expected * dynamic_range).astype(dtype)
                 image_aug = aug.augment_image(image)
                 assert image_aug.dtype == np.dtype(dtype)
                 assert len(np.unique(image_aug)) == 1
@@ -339,7 +378,7 @@ def test_LogContrast():
     ###################
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         gains = [0.5, 0.75, 1.0, 1.1]
         values = [0, 100, int(center_value + 0.1 * max_value)]
@@ -401,8 +440,8 @@ def test_LinearContrast():
             img3d_aug = aug.augment_image(img3d)
             assert img_aug.dtype.type == np.uint8
             assert img3d_aug.dtype.type == np.uint8
-            assert np.array_equal(img_aug, contrast_lib._adjust_linear(img, alpha=alpha))
-            assert np.array_equal(img3d_aug, contrast_lib._adjust_linear(img3d, alpha=alpha))
+            assert np.array_equal(img_aug, contrast_lib.adjust_contrast_linear(img, alpha=alpha))
+            assert np.array_equal(img3d_aug, contrast_lib.adjust_contrast_linear(img3d, alpha=alpha))
 
     # check that tuple to uniform works
     aug = iaa.LinearContrast((1, 2))
@@ -445,13 +484,13 @@ def test_LinearContrast():
     heatmaps_aug = iaa.LinearContrast(alpha=2).augment_heatmaps([heatmaps])[0]
     assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
-    # test for other dtypes are in test_contrast_adjust_linear()
+    # test for other dtypes are in test_adjust_contrast_linear()
 
 
-def test_contrast_adjust_linear():
+def test_adjust_contrast_linear():
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32,
                   np.float16, np.float32, np.float64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         cv = center_value
         kind = np.dtype(dtype).kind
         if kind in ["u", "i"]:
@@ -484,7 +523,7 @@ def test_contrast_adjust_linear():
                 [cv+2*alpha, cv+3*alpha, cv+4*alpha]
             ]
             expected = np.array(expected, dtype=dtype)
-            observed = contrast_lib._adjust_linear(img, alpha=alpha)
+            observed = contrast_lib.adjust_contrast_linear(img, alpha=alpha)
             assert observed.dtype == np.dtype(dtype)
             assert observed.shape == img.shape
             assert _compare(observed, expected)
@@ -497,7 +536,7 @@ def test_contrast_adjust_linear():
         [cv+2, cv+3, cv+4]
     ]
     img = np.array(img, dtype=np.uint8)
-    observed = contrast_lib._adjust_linear(img, alpha=255)
+    observed = contrast_lib.adjust_contrast_linear(img, alpha=255)
     expected = [
         [0, 0, 0],
         [0, cv, 255],
@@ -513,7 +552,7 @@ def test_contrast_adjust_linear():
         [cv, cv, cv]
     ]
     img = np.array(img, dtype=np.uint8)
-    observed = contrast_lib._adjust_linear(img, alpha=257)
+    observed = contrast_lib.adjust_contrast_linear(img, alpha=257)
     expected = [
         [cv, cv, cv],
         [cv, cv, cv],
@@ -705,7 +744,7 @@ class TestAllChannelsCLAHE(unittest.TestCase):
         # np.float128: TypeError: src data type = 13 is not supported
         for dtype in [np.uint8, np.uint16]:
             with self.subTest(dtype=np.dtype(dtype).name):
-                min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+                min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
                 dynamic_range = max_value - min_value
 
                 img = np.zeros((11, 11, 1), dtype=dtype)
@@ -1349,7 +1388,7 @@ class TestAllChannelsHistogramEqualization(unittest.TestCase):
         # np.float128: TypeError: src data type = 13 is not supported
         for dtype in [np.uint8]:
             with self.subTest(dtype=np.dtype(dtype).name):
-                min_value, _center_value, max_value = meta.get_value_range_of_dtype(dtype)
+                min_value, _center_value, max_value = iadt.get_value_range_of_dtype(dtype)
                 dynamic_range = max_value + abs(min_value)
                 if np.dtype(dtype).kind == "f":
                     img = np.zeros((16,), dtype=dtype)

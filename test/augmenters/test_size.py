@@ -11,8 +11,8 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 import imgaug.augmenters.size as iaa_size
-import imgaug.augmenters.meta as meta
 from imgaug import parameters as iap
+from imgaug import dtypes as iadt
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 
 
@@ -1091,7 +1091,7 @@ def test_Pad():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -1112,7 +1112,7 @@ def test_Pad():
 
     # float
     for dtype in [np.float16, np.float32, np.float64, np.float128]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -1527,7 +1527,7 @@ def test_Crop():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -1548,7 +1548,7 @@ def test_Crop():
 
     # float
     for dtype in [np.float16, np.float32, np.float64, np.float128]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -1754,7 +1754,7 @@ def test_PadToFixedSize():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -1775,7 +1775,7 @@ def test_PadToFixedSize():
 
     # float
     for dtype in [np.float16, np.float32, np.float64, np.float128]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
@@ -1964,7 +1964,7 @@ def test_CropToFixedSize():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         if np.dtype(dtype).kind == "i":
             values = [1, 5, 10, 100, int(0.1 * max_value), int(0.2 * max_value),
@@ -1985,7 +1985,7 @@ def test_CropToFixedSize():
 
     # float
     for dtype in [np.float16, np.float32, np.float64, np.float128]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         def _isclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8

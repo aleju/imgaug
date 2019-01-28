@@ -28,6 +28,7 @@ import six.moves as sm
 from . import meta
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
@@ -100,31 +101,38 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     input_was_bool = False
     if image_fg.dtype.kind == "b":
         input_was_bool = True
-        image_fg = image_fg.astype(np.float16)
-        image_bg = image_bg.astype(np.float16)
+        # use float32 instead of float16 here because it seems to be faster
+        image_fg = image_fg.astype(np.float32)
+        image_bg = image_bg.astype(np.float32)
 
     alpha = np.array(alpha, dtype=np.float64)
-    if alpha.ndim == 2:
-        assert alpha.shape == image_fg.shape[0:2]
-        alpha = alpha.reshape((alpha.shape[0], alpha.shape[1], 1))
-    elif alpha.ndim == 3:
-        assert alpha.shape == image_fg.shape or alpha.shape == image_fg.shape[0:2] + (1,)
+    if alpha.size == 1:
+        pass
     else:
-        alpha = alpha.reshape((1, 1, -1))
-    if alpha.shape[2] != image_fg.shape[2]:
-        alpha = np.tile(alpha, (1, 1, image_fg.shape[2]))
+        if alpha.ndim == 2:
+            assert alpha.shape == image_fg.shape[0:2]
+            alpha = alpha.reshape((alpha.shape[0], alpha.shape[1], 1))
+        elif alpha.ndim == 3:
+            assert alpha.shape == image_fg.shape or alpha.shape == image_fg.shape[0:2] + (1,)
+        else:
+            alpha = alpha.reshape((1, 1, -1))
+        if alpha.shape[2] != image_fg.shape[2]:
+            alpha = np.tile(alpha, (1, 1, image_fg.shape[2]))
 
     if not input_was_bool:
         if np.all(alpha >= 1.0 - eps):
             return np.copy(image_fg)
         elif np.all(alpha <= eps):
             return np.copy(image_bg)
-    assert np.all(np.logical_and(0 <= alpha, alpha <= 1.0))
 
-    dt_images = meta.get_minimal_dtype([image_fg, image_bg])
+    # for efficiency reaons, only test one value of alpha here, even if alpha is much larger
+    assert 0 <= alpha.item(0) <= 1.0
+
+    dt_images = iadt.get_minimal_dtype([image_fg, image_bg])
 
     # doing this only for non-float images led to inaccuracies for large floats values
     isize = dt_images.itemsize * 2
+    isize = max(isize, 4)  # at least 4 bytes (=float32), tends to be faster than float16
     dt_blend = np.dtype("f%d" % (isize,))
 
     if alpha.dtype != dt_blend:
@@ -142,7 +150,9 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     if input_was_bool:
         image_blend = image_blend > 0.5
     else:
-        image_blend = meta.restore_dtypes_(image_blend, dt_images)
+        # skip clip, because alpha is expected to be in range [0.0, 1.0] and both images must have same dtype
+        # dont skip round, because otherwise it is very unlikely to hit the image's max possible value
+        image_blend = iadt.restore_dtypes_(image_blend, dt_images, clip=False, round=True)
 
     return image_blend
 
@@ -268,8 +278,8 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         ia.do_assert(first is not None or second is not None,
                      "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), "
                      + "but got two None values.")
-        self.first = meta.handle_children_list(first, self.name, "first")
-        self.second = meta.handle_children_list(second, self.name, "second")
+        self.first = meta.handle_children_list(first, self.name, "first", default=None)
+        self.second = meta.handle_children_list(second, self.name, "second", default=None)
 
         self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
 
@@ -283,12 +293,12 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 images_first = images
             else:
                 images_first = self.first.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -297,7 +307,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 images_second = images
             else:
                 images_second = self.second.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -326,12 +336,12 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         per_channel = self.per_channel.draw_samples(nb_heatmaps, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_heatmaps, nb_channels), random_state=rss[1])
 
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 heatmaps_first = heatmaps
             else:
                 heatmaps_first = self.first.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -340,7 +350,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 heatmaps_second = heatmaps
             else:
                 heatmaps_second = self.second.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -378,12 +388,12 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
         result = keypoints_on_images
 
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 kps_ois_first = keypoints_on_images
             else:
                 kps_ois_first = self.first.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -392,7 +402,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 kps_ois_second = keypoints_on_images
             else:
                 kps_ois_second = self.second.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -436,7 +446,12 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         return [self.factor, self.per_channel]
 
     def get_children_lists(self):
-        return [self.first, self.second]
+        return [lst for lst in [self.first, self.second] if lst is not None]
+
+    def __str__(self):
+        return "%s(factor=%s, per_channel=%s, name=%s, first=%s, second=%s, deterministic=%s)" % (
+            self.__class__.__name__, self.factor, self.per_channel, self.name,
+            self.first, self.second, self.deterministic)
 
 
 # TODO merge this with Alpha
@@ -563,12 +578,12 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         nb_images = len(images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 images_first = images
             else:
                 images_first = self.first.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -577,7 +592,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 images_second = images
             else:
                 images_second = self.second.augment_images(
-                    images=images,
+                    images=meta.copy_arrays(images),
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -621,12 +636,12 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         nb_heatmaps = len(heatmaps)
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
 
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 heatmaps_first = heatmaps
             else:
                 heatmaps_first = self.first.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -635,7 +650,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 heatmaps_second = heatmaps
             else:
                 heatmaps_second = self.second.augment_heatmaps(
-                    heatmaps,
+                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -679,12 +694,12 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         nb_images = len(keypoints_on_images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             if self.first is None:
                 kps_ois_first = keypoints_on_images
             else:
                 kps_ois_first = self.first.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )
@@ -693,7 +708,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 kps_ois_second = keypoints_on_images
             else:
                 kps_ois_second = self.second.augment_keypoints(
-                    keypoints_on_images=keypoints_on_images,
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
                     parents=parents + [self],
                     hooks=hooks
                 )

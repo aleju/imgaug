@@ -12,6 +12,7 @@ import scipy.stats
 import imageio
 
 from . import imgaug as ia
+from . import dtypes as iadt
 from .external.opensimplex import OpenSimplex
 
 
@@ -177,10 +178,9 @@ def handle_probability_param(param, name, tuple_to_uniform=False, list_to_choice
 
 
 def force_np_float_dtype(val):
-    if val.dtype.type in ia.NP_FLOAT_TYPES:
+    if val.dtype.kind == "f":
         return val
-    else:
-        return val.astype(np.float64)
+    return val.astype(np.float64)
 
 
 def both_np_float_if_one_is_float(a, b):
@@ -281,6 +281,7 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
             match `size`.
 
         """
+        # TODO convert int to random state here
         random_state = random_state if random_state is not None else ia.current_random_state()
         samples = self._draw_samples(
             size if not ia.is_single_integer(size) else tuple([size]),
@@ -561,6 +562,7 @@ class Choice(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         if any([isinstance(a_i, StochasticParameter) for a_i in self.a]):
+            # TODO replace by derive_random_state()
             seed = random_state.randint(0, 10**6, 1)[0]
             samples = ia.new_random_state(seed).choice(self.a, np.prod(size), replace=self.replace, p=self.p)
 
@@ -646,7 +648,7 @@ class DiscreteUniform(StochasticParameter):
         if a > b:
             a, b = b, a
         elif a == b:
-            return np.tile(np.array([a]), size)
+            return np.full(size, a)
         return random_state.randint(a, b + 1, size)
 
     def __repr__(self):
@@ -741,7 +743,7 @@ class Normal(StochasticParameter):
         scale = self.scale.draw_sample(random_state=random_state)
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
-            return np.tile(loc, size)
+            return np.full(size, loc)
         else:
             return random_state.normal(loc, scale, size=size)
 
@@ -872,7 +874,7 @@ class Laplace(StochasticParameter):
         scale = self.scale.draw_sample(random_state=random_state)
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
-            return np.tile(loc, size)
+            return np.full(size, loc)
         else:
             return random_state.laplace(loc, scale, size=size)
 
@@ -972,6 +974,7 @@ class Weibull(StochasticParameter):
         return "Weibull(a=%s)" % (self.a,)
 
 
+# TODO rename (a, b) to (low, high) as in numpy?
 class Uniform(StochasticParameter):
     """
     Parameter that resembles a (continuous) uniform range [a, b).
@@ -1009,7 +1012,7 @@ class Uniform(StochasticParameter):
         if a > b:
             a, b = b, a
         elif a == b:
-            return np.tile(np.array([a]), size)
+            return np.full(size, a)
         return random_state.uniform(a, b, size)
 
     def __repr__(self):
@@ -1108,7 +1111,7 @@ class Deterministic(StochasticParameter):
             raise Exception("Expected StochasticParameter object or number or string, got %s." % (type(value),))
 
     def _draw_samples(self, size, random_state):
-        return np.tile(np.array([self.value]), size)
+        return np.full(size, self.value)
 
     def __repr__(self):
         return self.__str__()
@@ -1256,24 +1259,19 @@ class FromLowerResolution(StochasticParameter):
             # important for e.g. binomial distributios used in FromLowerResolution and thereby in
             # e.g. CoarseDropout, where integer-kinds would lead to sharp edges despite using
             # cubic interpolation.
-
-            # TODO had to temporarily move this here due to travis breaking from circular imports
-            # beautify this
-            from .augmenters import meta
-
             if samples.dtype.kind == "f":
-                samples = meta.restore_dtypes_(samples, np.float32)
+                samples = iadt.restore_dtypes_(samples, np.float32)
             elif samples.dtype.kind == "i":
                 if method == "nearest":
-                    samples = meta.restore_dtypes_(samples, np.int32)
+                    samples = iadt.restore_dtypes_(samples, np.int32)
                 else:
-                    samples = meta.restore_dtypes_(samples, np.float32)
+                    samples = iadt.restore_dtypes_(samples, np.float32)
             else:
                 assert samples.dtype.kind == "u"
                 if method == "nearest":
-                    samples = meta.restore_dtypes_(samples, np.uint16)
+                    samples = iadt.restore_dtypes_(samples, np.uint16)
                 else:
-                    samples = meta.restore_dtypes_(samples, np.float32)
+                    samples = iadt.restore_dtypes_(samples, np.float32)
 
             samples_upscaled = ia.imresize_many_images(samples, (h, w), interpolation=method)
 
@@ -1338,14 +1336,8 @@ class Clip(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         samples = self.other_param.draw_samples(size, random_state=random_state)
-        if self.minval is not None and self.maxval is not None:
-            np.clip(samples, self.minval, self.maxval, out=samples)
-        elif self.minval is not None:
-            np.clip(samples, self.minval, np.max(samples), out=samples)
-        elif self.maxval is not None:
-            np.clip(samples, np.min(samples), self.maxval, out=samples)
-        else:
-            pass
+        if self.minval is not None or self.maxval is not None:
+            samples = np.clip(samples, self.minval, self.maxval, out=samples)
         return samples
 
     def __repr__(self):
@@ -1388,14 +1380,20 @@ class Discretize(StochasticParameter):
         self.other_param = other_param
 
     def _draw_samples(self, size, random_state):
-        samples = self.other_param.draw_samples(
-            size, random_state=random_state
-        )
-        if ia.is_integer_array(samples):
-            # integer array, already discrete
+        samples = self.other_param.draw_samples(size, random_state=random_state)
+        if samples.dtype.kind in ["u", "i", "b"]:
             return samples
-        else:
-            return np.round(samples).astype(np.int32)
+
+        # dtype of ``samples`` should be float at this point
+        assert samples.dtype.kind == "f", "Expected to get uint, int, bool or float dtype as samples in Discretize(), " \
+                                          "but got dtype '%s' (kind '%s') instead." % (
+                                            samples.dtype.name, samples.dtype.kind)
+        # floats seem to reliably cover ints that have half the number of bits -- probably not the case for float128
+        # though as that is really float96
+        bitsize = 8 * samples.dtype.itemsize // 2
+        bitsize = max(bitsize, 8)  # in case some weird system knows something like float8 -- shouldn't happen though
+        dt = np.dtype("int%d" % (bitsize,))
+        return np.round(samples).astype(dt)
 
     def __repr__(self):
         return self.__str__()
@@ -1442,6 +1440,7 @@ class Multiply(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1504,6 +1503,7 @@ class Divide(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1576,6 +1576,7 @@ class Add(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1634,6 +1635,7 @@ class Subtract(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
+        # TODO replace with derive_random_state()
         seed = random_state.randint(0, 10**6, 1)[0]
         samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
 
@@ -1709,6 +1711,7 @@ class Power(StochasticParameter):
         samples, exponents = both_np_float_if_one_is_float(samples, exponents)
         samples_dtype = samples.dtype
 
+        # TODO switch to this as numpy>=1.15 is now a requirement
         # float_power requires numpy>=1.12
         # result = np.float_power(samples, exponents)
         # TODO why was float32 type here replaced with complex number formulation?
@@ -1791,17 +1794,17 @@ class RandomSign(StochasticParameter):
         self.p_positive = p_positive
 
     def _draw_samples(self, size, random_state):
-        samples = self.other_param.draw_samples(
-            size,
-            random_state=ia.copy_random_state(random_state)
-        )
-        coinflips = ia.copy_random_state(random_state).binomial(
-            1, self.p_positive, size=size
-        ).astype(np.int32)
+        rss = ia.derive_random_states(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rss[0])
+        # TODO add method to change from uint to int here instead of assert
+        assert samples.dtype.kind != "u", "Cannot flip signs of unsigned integers."
+        # TODO convert to same kind as samples
+        coinflips = rss[1].binomial(1, self.p_positive, size=size).astype(np.int8)
         signs = coinflips * 2 - 1
         # Add absolute here to guarantee that we get p_positive percent of
         # positive values. Otherwise we would merely flip p_positive percent
         # of all signs.
+        # TODO test if result[coinflips_mask] *= (-1) is faster  (with protection against mask being empty?)
         result = np.absolute(samples) * signs
         return result
 
@@ -2197,6 +2200,8 @@ class Sigmoid(StochasticParameter):
     def _draw_samples(self, size, random_state):
         seed = random_state.randint(0, 10**6)
         result = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        if result.dtype.kind != "f":
+            result = result.astype(np.float32)
         activated = self.activated.draw_sample(random_state=ia.new_random_state(seed+1))
         threshold = self.threshold.draw_sample(random_state=ia.new_random_state(seed+2))
         if activated > 0.5:

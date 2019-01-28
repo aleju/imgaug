@@ -10,7 +10,8 @@ import six.moves as sm
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.augmenters import overlay, meta
+from imgaug import dtypes as iadt
+from imgaug.augmenters import overlay
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -58,7 +59,7 @@ def test_blend_alpha():
     assert np.all(img_blend[:, :, 1] == 1)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
-        min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         values = [
             (0, 0),
             (0, 10),
@@ -285,7 +286,7 @@ def test_Alpha():
 
     aug = iaa.Alpha(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 10).astype(np.uint8)
+    expected = np.round(base_img + 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
@@ -299,7 +300,7 @@ def test_Alpha():
 
     aug = iaa.Alpha(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 20).astype(np.uint8)
+    expected = np.round(base_img + 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
@@ -313,17 +314,17 @@ def test_Alpha():
 
     aug = iaa.Alpha(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.Alpha(0.75, None, iaa.Add(20))
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.Alpha(0.75, iaa.Add(10), None)
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     base_img = np.zeros((1, 2, 1), dtype=np.uint8)
@@ -535,17 +536,17 @@ def test_AlphaElementwise():
 
     aug = iaa.AlphaElementwise(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
-    expected = (base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.AlphaElementwise(0.75, None, iaa.Add(20))
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * 10 + 0.25 * (10 + 20)).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     aug = iaa.AlphaElementwise(0.75, iaa.Add(10), None)
     observed = aug.augment_image(base_img + 10)
-    expected = (base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
+    expected = np.round(base_img + 0.75 * (10 + 10) + 0.25 * 10).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     base_img = np.zeros((100, 100), dtype=np.uint8)

@@ -1,19 +1,30 @@
 from __future__ import print_function, division, absolute_import
 
 import time
+import warnings
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import cv2
-from scipy import ndimage
 
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug import dtypes as iadt
 from imgaug.testutils import keypoints_equal, reseed
-from imgaug.augmenters import meta
 
 
 def main():
@@ -26,6 +37,275 @@ def main():
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+
+
+class Test_blur_gaussian_(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_integration(self):
+        for backend in ["auto", "scipy", "cv2"]:
+            for nb_channels in [None, 1, 3, 4, 5, 10]:
+                with self.subTest(backend=backend, nb_channels=nb_channels):
+                    image = np.zeros((5, 5), dtype=np.uint8)
+                    if nb_channels is not None:
+                        image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+
+                    image[2, 2] = 255
+                    mask = image < 255
+                    observed = iaa.blur_gaussian_(np.copy(image), sigma=5.0, backend=backend)
+                    assert observed.shape == image.shape
+                    assert observed.dtype.name == "uint8"
+                    assert np.all(observed[2, 2] < 255)
+                    assert np.sum(observed[mask]) > (5*5-1)
+                    if nb_channels is not None and nb_channels > 1:
+                        for c in sm.xrange(1, observed.shape[2]):
+                            assert np.array_equal(observed[..., c], observed[..., 0])
+
+    def test_sigma_zero(self):
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        observed = iaa.blur_gaussian_(np.copy(image), 0)
+        assert np.array_equal(observed, image)
+
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4, 1))
+        observed = iaa.blur_gaussian_(np.copy(image), 0)
+        assert np.array_equal(observed, image)
+
+        image = np.arange(4*4*3).astype(np.uint8).reshape((4, 4, 3))
+        observed = iaa.blur_gaussian_(np.copy(image), 0)
+        assert np.array_equal(observed, image)
+
+    def test_eps(self):
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        observed_no_eps = iaa.blur_gaussian_(np.copy(image), 1.0, eps=0)
+        observed_with_eps = iaa.blur_gaussian_(np.copy(image), 1.0, eps=1e10)
+        assert not np.array_equal(observed_no_eps, observed_with_eps)
+        assert np.array_equal(observed_with_eps, image)
+
+    def test_ksize(self):
+        def side_effect(image, ksize, sigmaX, sigmaY, borderType):
+            return image + 1
+
+        for (sigma, ksize, ksize_expected) in [(5.0, None, 2.6*5.0), (5.0, 3, 3)]:
+            with self.subTest(sigma=sigma, ksize=ksize):
+                mock_GaussianBlur = mock.Mock(side_effect=side_effect)
+                image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+                with mock.patch('cv2.GaussianBlur', mock_GaussianBlur):
+                    observed = iaa.blur_gaussian_(np.copy(image), sigma=sigma, ksize=ksize, backend="cv2")
+                    assert np.array_equal(observed, image+1)
+                assert mock_GaussianBlur.call_count == 1
+                assert np.array_equal(mock_GaussianBlur.call_args[0][0], image)
+                assert isinstance(mock_GaussianBlur.call_args[0][1], tuple)
+                assert np.allclose(np.float32(mock_GaussianBlur.call_args[0][1]),
+                                   np.float32([ksize_expected, ksize_expected]))
+                assert np.isclose(mock_GaussianBlur.call_args[1]["sigmaX"], sigma)
+                assert np.isclose(mock_GaussianBlur.call_args[1]["sigmaY"], sigma)
+                assert mock_GaussianBlur.call_args[1]["borderType"] == cv2.BORDER_REFLECT_101
+
+    def test_backends_called(self):
+        def side_effect_cv2(image, ksize, sigmaX, sigmaY, borderType):
+            return image + 1
+
+        def side_effect_scipy(image, sigma, mode):
+            return image + 1
+
+        mock_GaussianBlur = mock.Mock(side_effect=side_effect_cv2)
+        mock_gaussian_filter = mock.Mock(side_effect=side_effect_scipy)
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        with mock.patch('cv2.GaussianBlur', mock_GaussianBlur):
+            _observed = iaa.blur_gaussian_(np.copy(image), sigma=1.0, eps=0, backend="cv2")
+        assert mock_GaussianBlur.call_count == 1
+
+        with mock.patch('scipy.ndimage.gaussian_filter', mock_gaussian_filter):
+            _observed = iaa.blur_gaussian_(np.copy(image), sigma=1.0, eps=0, backend="scipy")
+        assert mock_gaussian_filter.call_count == 1
+
+    def test_backends_similar(self):
+        with self.subTest(nb_channels=None):
+            size = 10
+            image = np.arange(0, size*size).astype(np.uint8).reshape((size, size))
+            image_cv2 = iaa.blur_gaussian_(np.copy(image), sigma=3.0, ksize=20, backend="cv2")
+            image_scipy = iaa.blur_gaussian_(np.copy(image), sigma=3.0, backend="scipy")
+            diff = np.abs(image_cv2.astype(np.int32) - image_scipy.astype(np.int32))
+            assert np.average(diff) < 0.05 * (size * size)
+
+        with self.subTest(nb_channels=3):
+            size = 10
+            image = np.arange(0, size*size).astype(np.uint8).reshape((size, size))
+            image = np.tile(image[..., np.newaxis], (1, 1, 3))
+            image[1] += 1
+            image[2] += 2
+            image_cv2 = iaa.blur_gaussian_(np.copy(image), sigma=3.0, ksize=20, backend="cv2")
+            image_scipy = iaa.blur_gaussian_(np.copy(image), sigma=3.0, backend="scipy")
+            diff = np.abs(image_cv2.astype(np.int32) - image_scipy.astype(np.int32))
+            assert np.average(diff) < 0.05 * (size * size)
+            for c in sm.xrange(3):
+                diff = np.abs(image_cv2[..., c].astype(np.int32) - image_scipy[..., c].astype(np.int32))
+                assert np.average(diff) < 0.05 * (size * size)
+
+    def test_warnings(self):
+        # note that self.assertWarningRegex does not exist in python 2.7
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+            # Trigger a warning.
+            _ = iaa.blur_gaussian_(np.zeros((1, 1), dtype=np.uint32), sigma=3.0, ksize=11, backend="scipy")
+            # Verify
+            assert len(caught_warnings) == 1
+            assert "but also provided 'ksize' argument" in str(caught_warnings[-1].message)
+
+    def test_other_dtypes_sigma_0(self):
+        dtypes_to_test_list = [
+            ["bool",
+             "uint8", "uint16", "uint32", "uint64",
+             "int8", "int16", "int32", "int64",
+             "float16", "float32", "float64", "float128"],
+            ["bool",
+             "uint8", "uint16", "uint32", "uint64",
+             "int8", "int16", "int32", "int64",
+             "float16", "float32", "float64", "float128"]
+        ]
+        for backend, dtypes_to_test in zip(["scipy", "cv2"], dtypes_to_test_list):
+            # bool
+            if "bool" in dtypes_to_test:
+                with self.subTest(backend=backend, dtype="bool"):
+                    image = np.zeros((3, 3), dtype=bool)
+                    image[1, 1] = True
+                    image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0, backend=backend)
+                    assert image_aug.dtype.name == "bool"
+                    assert np.all(image_aug == image)
+
+            # uint, int
+            for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+                dtype = np.dtype(dtype)
+                if dtype.name in dtypes_to_test:
+                    with self.subTest(backend=backend, dtype=dtype.name):
+                        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
+                        image = np.zeros((3, 3), dtype=dtype)
+                        image[1, 1] = int(center_value)
+                        image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0, backend=backend)
+                        assert image_aug.dtype.name == dtype.name
+                        assert np.all(image_aug == image)
+
+            # float
+            for dtype in [np.float16, np.float32, np.float64, np.float128]:
+                dtype = np.dtype(dtype)
+                if dtype.name in dtypes_to_test:
+                    with self.subTest(backend=backend, dtype=dtype.name):
+                        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
+                        image = np.zeros((3, 3), dtype=dtype)
+                        image[1, 1] = center_value
+                        image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0, backend=backend)
+                        assert image_aug.dtype.name == dtype.name
+                        assert np.allclose(image_aug, image)
+
+    def test_other_dtypes_sigma_075(self):
+        # prototype kernel, generated via:
+        # mask = np.zeros((5, 5), dtype=np.int32)
+        # mask[2, 2] = 1000 * 1000
+        # kernel = ndimage.gaussian_filter(mask, 0.75)
+        mask = np.float64([
+           [   923,   6650,  16163,   6650,    923],
+           [  6650,  47896, 116408,  47896,   6650],
+           [ 16163, 116408, 282925, 116408,  16163],
+           [  6650,  47896, 116408,  47896,   6650],
+           [   923,   6650,  16163,   6650,    923]
+        ]) / (1000.0 * 1000.0)
+
+        dtypes_to_test_list = [
+            # scipy
+            ["bool",
+             "uint8", "uint16", "uint32", "uint64",
+             "int8", "int16", "int32", "int64",
+             "float16", "float32", "float64"],
+            # cv2
+            ["bool",
+             "uint8", "uint16",
+             "int8", "int16", "int32",
+             "float16", "float32", "float64"]
+        ]
+        for backend, dtypes_to_test in zip(["scipy", "cv2"], dtypes_to_test_list):
+            # bool
+            if "bool" in dtypes_to_test:
+                with self.subTest(backend=backend, dtype="bool"):
+                    image = np.zeros((5, 5), dtype=bool)
+                    image[2, 2] = True
+                    image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0.75, backend=backend)
+                    assert image_aug.dtype.name == "bool"
+                    assert np.all(image_aug == (mask > 0.5))
+
+            # uint, int
+            for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+                dtype = np.dtype(dtype)
+                if dtype.name in dtypes_to_test:
+                    with self.subTest(backend=backend, dtype=dtype.name):
+                        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
+                        dynamic_range = max_value - min_value
+
+                        value = int(center_value + 0.4 * max_value)
+                        image = np.zeros((5, 5), dtype=dtype)
+                        image[2, 2] = value
+                        image_aug = iaa.blur_gaussian_(image, sigma=0.75, backend=backend)
+                        expected = (mask * value).astype(dtype)
+                        diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+                        assert image_aug.shape == mask.shape
+                        assert image_aug.dtype.type == dtype
+                        if dtype.itemsize <= 1:
+                            assert np.max(diff) <= 4
+                        else:
+                            assert np.max(diff) <= 0.01 * dynamic_range
+
+            # float
+            values = [5000, 1000**1, 1000**2, 1000**3]
+            for dtype, value in zip([np.float16, np.float32, np.float64, np.float128], values):
+                dtype = np.dtype(dtype)
+                if dtype.name in dtypes_to_test:
+                    with self.subTest(backend=backend, dtype=dtype.name):
+                        image = np.zeros((5, 5), dtype=dtype)
+                        image[2, 2] = value
+                        image_aug = iaa.blur_gaussian_(image, sigma=0.75, backend=backend)
+                        expected = (mask * value).astype(dtype)
+                        diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
+                        assert image_aug.shape == mask.shape
+                        assert image_aug.dtype.type == dtype
+                        # accepts difference of 2.0, 4.0, 8.0, 16.0 (at 1, 2, 4, 8 bytes, i.e. 8, 16, 32, 64 bit)
+                        assert np.max(diff) < np.dtype(dtype).itemsize * 0.01 * np.float128(value)
+
+    def test_other_dtypes_bool_at_sigma_06(self):
+        # --
+        # blur of bool input at sigma=0.6
+        # --
+        # here we use a special mask and sigma as otherwise the only values ending up with >0.5 would be the ones that
+        # were before the blur already at >0.5
+        # prototype kernel, generated via:
+        #  mask = np.zeros((5, 5), dtype=np.float64)
+        #  mask[1, 0] = 255
+        #  mask[2, 0] = 255
+        #  mask[2, 2] = 255
+        #  mask[2, 4] = 255
+        #  mask[3, 0] = 255
+        #  mask = ndimage.gaussian_filter(mask, 1.0, mode="mirror")
+        mask_bool = np.float64([
+           [ 57,  14,   2,   1,   1],
+           [142,  42,  29,  14,  28],
+           [169,  69, 114,  56, 114],
+           [142,  42,  29,  14,  28],
+           [ 57,  14,   2,   1,   1]
+        ]) / 255.0
+
+        image = np.zeros((5, 5), dtype=bool)
+        image[1, 0] = True
+        image[2, 0] = True
+        image[2, 2] = True
+        image[2, 4] = True
+        image[3, 0] = True
+
+        for backend in ["scipy", "cv2"]:
+            image_aug = iaa.blur_gaussian_(np.copy(image), sigma=0.6, backend=backend)
+            expected = mask_bool > 0.5
+            assert image_aug.shape == mask_bool.shape
+            assert image_aug.dtype.type == np.bool_
+            assert np.all(image_aug == expected)
 
 
 def test_GaussianBlur():
@@ -117,8 +397,6 @@ def test_GaussianBlur():
 
     #############################
     # test other dtypes below
-    # ndimage.gaussian_filter() rejects: float16
-    # float64 implementation in gaussian_filter() was too inaccurate
     #############################
 
     # --
@@ -135,7 +413,7 @@ def test_GaussianBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = int(center_value)
         image_aug = aug.augment_image(image)
@@ -144,7 +422,7 @@ def test_GaussianBlur():
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        _min_value, center_value, _max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = center_value
         image_aug = aug.augment_image(image)
@@ -152,48 +430,81 @@ def test_GaussianBlur():
         assert np.allclose(image_aug, image)
 
     # --
-    # blur of various dtypes at sigma=1.0
-    # and using an example value of 100 for int/uint/float and True for bool
+    # blur of bool input at sigma=0.6
     # --
-    aug = iaa.GaussianBlur(sigma=1.0)
-
+    # here we use a special mask and sigma as otherwise the only values ending up with >0.5 would be the ones that
+    # were before the blur already at >0.5
     # prototype kernel, generated via:
-    #  mask = np.zeros((3, 3), dtype=np.float64)
-    #  mask[1, 1] = 1.0
-    #  mask = ndimage.gaussian_filter(mask, 1.0)
-    kernel = np.float64([
-        [0.08767308, 0.12075024, 0.08767308],
-        [0.12075024, 0.16630671, 0.12075024],
-        [0.08767308, 0.12075024, 0.08767308]
-    ])
+    #  mask = np.zeros((5, 5), dtype=np.float64)
+    #  mask[1, 0] = 255
+    #  mask[2, 0] = 255
+    #  mask[2, 2] = 255
+    #  mask[2, 4] = 255
+    #  mask[3, 0] = 255
+    #  mask = ndimage.gaussian_filter(mask, 1.0, mode="mirror")
+    aug = iaa.GaussianBlur(sigma=0.6)
 
-    # bool
-    image = np.zeros((3, 3), dtype=bool)
-    image[1, 1] = True
+    mask_bool = np.float64([
+       [ 57,  14,   2,   1,   1],
+       [142,  42,  29,  14,  28],
+       [169,  69, 114,  56, 114],
+       [142,  42,  29,  14,  28],
+       [ 57,  14,   2,   1,   1]
+    ]) / 255.0
+
+    image = np.zeros((5, 5), dtype=bool)
+    image[1, 0] = True
+    image[2, 0] = True
+    image[2, 2] = True
+    image[2, 4] = True
+    image[3, 0] = True
     image_aug = aug.augment_image(image)
-    expected = kernel > 0.5
+    expected = mask_bool > 0.5
+    assert image_aug.shape == mask_bool.shape
     assert image_aug.dtype.type == np.bool_
     assert np.all(image_aug == expected)
 
+    # --
+    # blur of various dtypes at sigma=1.0
+    # and using an example value of 100 for int/uint/float and True for bool
+    # --
+    # prototype kernel, generated via:
+    #  mask = np.zeros((5, 5), dtype=np.float64)
+    #  mask[2, 2] = 100
+    #  mask = ndimage.gaussian_filter(mask, 1.0, mode="mirror")
+    aug = iaa.GaussianBlur(sigma=1.0)
+
+    mask = np.float64([
+        [1, 2, 3, 2, 1],
+        [2, 5, 9, 5, 2],
+        [4, 9, 15, 9, 4],
+        [2, 5, 9, 5, 2],
+        [1, 2, 3, 2, 1]
+    ])
+
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100
+        image = np.zeros((5, 5), dtype=dtype)
+        image[2, 2] = 100
         image_aug = aug.augment_image(image)
-        expected = (kernel * 100).astype(dtype)
+        expected = mask.astype(dtype)
         diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+        assert image_aug.shape == mask.shape
         assert image_aug.dtype.type == dtype
-        assert np.max(diff) <= 2
+        assert np.max(diff) <= 4
+        assert np.average(diff) <= 2
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100.0
+        image = np.zeros((5, 5), dtype=dtype)
+        image[2, 2] = 100.0
         image_aug = aug.augment_image(image)
-        expected = (kernel * 100.0).astype(dtype)
+        expected = mask.astype(dtype)
         diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
+        assert image_aug.shape == mask.shape
         assert image_aug.dtype.type == dtype
-        assert np.max(diff) < 1.0
+        assert np.max(diff) < 4
+        assert np.average(diff) < 2.0
 
     # --
     # blur of various dtypes at sigma=0.4
@@ -202,89 +513,92 @@ def test_GaussianBlur():
     aug = iaa.GaussianBlur(sigma=0.4)
 
     # prototype kernel, generated via:
-    #  mask = np.zeros((3, 3), dtype=np.float64)
-    #  mask[1, 1] = 1.0
-    #  kernel = ndimage.gaussian_filter(mask, 0.4)
-    kernel = np.float64([
-        [0.00163144, 0.03712817, 0.00163144],
-        [0.03712817, 0.84496158, 0.03712817],
-        [0.00163144, 0.03712817, 0.00163144]
+    #  mask = np.zeros((5, 5), dtype=np.uint8)
+    #  mask[2, 2] = 100
+    #  kernel = ndimage.gaussian_filter(mask, 0.4, mode="mirror")
+    mask = np.float64([
+        [0,  0,  0,  0,  0],
+        [0,  0,  3,  0,  0],
+        [0,  3, 83,  3,  0],
+        [0,  0,  3,  0,  0],
+        [0,  0,  0,  0,  0]
     ])
-
-    # bool
-    image = np.zeros((3, 3), dtype=bool)
-    image[1, 1] = True
-    image_aug = aug.augment_image(image)
-    expected = kernel > 0.5
-    assert image_aug.dtype.type == np.bool_
-    assert np.all(image_aug == expected)
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100
+        image = np.zeros((5, 5), dtype=dtype)
+        image[2, 2] = 100
         image_aug = aug.augment_image(image)
-        expected = (kernel * 100).astype(dtype)
+        expected = mask.astype(dtype)
         diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+        assert image_aug.shape == mask.shape
         assert image_aug.dtype.type == dtype
-        assert np.max(diff) <= 2
+        assert np.max(diff) <= 4
 
     # float
     for dtype in [np.float16, np.float32, np.float64]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100.0
+        image = np.zeros((5, 5), dtype=dtype)
+        image[2, 2] = 100.0
         image_aug = aug.augment_image(image)
-        expected = (kernel * 100.0).astype(dtype)
+        expected = mask.astype(dtype)
         diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
+        assert image_aug.shape == mask.shape
         assert image_aug.dtype.type == dtype
-        assert np.max(diff) < 1.0
+        assert np.max(diff) < 4.0
 
     # --
     # blur of various dtypes at sigma=0.75
-    # and values being half-way between center and maximum for each dtype (bool is skipped as it doesnt make any
-    # sense here)
+    # and values being half-way between center and maximum for each dtype
     # The goal of this test is to verify that no major loss of resolution happens for large dtypes.
     # Such inaccuracies appear for float64 if used.
     # --
     aug = iaa.GaussianBlur(sigma=0.75)
 
     # prototype kernel, generated via:
-    # mask = np.zeros((3, 3), dtype=np.float64)
-    # mask[1, 1] = 1.0
+    # mask = np.zeros((5, 5), dtype=np.int32)
+    # mask[2, 2] = 1000 * 1000
     # kernel = ndimage.gaussian_filter(mask, 0.75)
-    kernel = np.float64([
-        [0.05469418, 0.12447951, 0.05469418],
-        [0.12447951, 0.28330525, 0.12447951],
-        [0.05469418, 0.12447951, 0.05469418]
-    ])
+    mask = np.float64([
+       [   923,   6650,  16163,   6650,    923],
+       [  6650,  47896, 116408,  47896,   6650],
+       [ 16163, 116408, 282925, 116408,  16163],
+       [  6650,  47896, 116408,  47896,   6650],
+       [   923,   6650,  16163,   6650,    923]
+    ]) / (1000.0 * 1000.0)
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
+        dynamic_range = max_value - min_value
+
         value = int(center_value + 0.4 * max_value)
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = value
+        image = np.zeros((5, 5), dtype=dtype)
+        image[2, 2] = value
         image_aug = aug.augment_image(image)
-        expected = (kernel * value).astype(dtype)
+        expected = (mask * value).astype(dtype)
         diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+        assert image_aug.shape == mask.shape
         assert image_aug.dtype.type == dtype
-        # accepts difference of 4, 8, 16 (at 1, 2, 4 bytes, i.e. 8, 16, 32 bit)
-        assert np.max(diff) <= 2**(1 + np.dtype(dtype).itemsize)
+        if np.dtype(dtype).itemsize <= 1:
+            assert np.max(diff) <= 4
+        else:
+            assert np.max(diff) <= 0.01 * dynamic_range
 
     # float
     for dtype, value in zip([np.float16, np.float32, np.float64], [5000, 1000*1000, 1000*1000*1000]):
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = value
+        image = np.zeros((5, 5), dtype=dtype)
+        image[2, 2] = value
         image_aug = aug.augment_image(image)
-        expected = (kernel * value).astype(dtype)
+        expected = (mask * value).astype(dtype)
         diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
+        assert image_aug.shape == mask.shape
         assert image_aug.dtype.type == dtype
         # accepts difference of 2.0, 4.0, 8.0, 16.0 (at 1, 2, 4, 8 bytes, i.e. 8, 16, 32, 64 bit)
-        assert np.max(diff) < 2**(1 + np.dtype(dtype).itemsize)
+        assert np.max(diff) < np.dtype(dtype).itemsize * 0.01 * np.float128(value)
 
     # assert failure on invalid dtypes
     aug = iaa.GaussianBlur(sigma=1.0)
-    for dt in [np.uint64, np.int64, np.float128]:
+    for dt in [np.float128]:
         got_exception = False
         try:
             _ = aug.augment_image(np.zeros((1, 1), dtype=dt))
@@ -471,7 +785,7 @@ def test_AverageBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = int(center_value + 0.4 * max_value)
         image[2, 2] = int(center_value + 0.4 * max_value)
@@ -558,7 +872,7 @@ def test_AverageBlur():
 
     # uint, int
     for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        _min_value, center_value, max_value = meta.get_value_range_of_dtype(dtype)
+        _min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
         value = int(center_value + 0.4 * max_value)
         image = np.zeros((3, 3), dtype=dtype)
         image[1, 1] = value

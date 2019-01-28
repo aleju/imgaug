@@ -31,9 +31,10 @@ import cv2
 import six.moves as sm
 
 from . import meta
-from . import arithmetic
+from . import overlay
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 # legacy support
@@ -109,25 +110,25 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        if hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             result = ChangeColorspace(
                 to_colorspace=self.to_colorspace,
-                from_colorspace=self.from_colorspace,
+                from_colorspace=self.from_colorspace
             ).augment_images(images=result)
             result = self.children.augment_images(
                 images=result,
                 parents=parents + [self],
-                hooks=hooks,
+                hooks=hooks
             )
             result = ChangeColorspace(
                 to_colorspace=self.from_colorspace,
-                from_colorspace=self.to_colorspace,
+                from_colorspace=self.to_colorspace
             ).augment_images(images=result)
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
-        if hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             result = self.children.augment_heatmaps(
                 result,
                 parents=parents + [self],
@@ -137,7 +138,7 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
-        if hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
             result = self.children.augment_keypoints(
                 result,
                 parents=parents + [self],
@@ -267,6 +268,9 @@ class AddToHueAndSaturation(meta.Augmenter):
     that channel).
 
     """
+
+    _LUT_CACHE = None
+
     def __init__(self, value=0, per_channel=False, from_colorspace="RGB", name=None, deterministic=False,
                  random_state=None):
         super(AddToHueAndSaturation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
@@ -280,37 +284,80 @@ class AddToHueAndSaturation(meta.Augmenter):
         self.colorspace_changer = ChangeColorspace(from_colorspace=from_colorspace, to_colorspace="HSV")
         self.colorspace_changer_inv = ChangeColorspace(from_colorspace="HSV", to_colorspace=from_colorspace)
 
+        self.backend = "cv2"
+
+        # precompute tables for cv2.LUT
+        if self.backend == "cv2" and self._LUT_CACHE is None:
+            self._LUT_CACHE = (np.zeros((256*2, 256), dtype=np.int8),
+                               np.zeros((256*2, 256), dtype=np.int8))
+            value_range = np.arange(0, 256, dtype=np.int16)
+            # this could be done slightly faster by vectorizing the loop
+            for i in sm.xrange(-255, 255+1):
+                table_hue = np.mod(value_range + i, 180)
+                table_saturation = np.clip(value_range + i, 0, 255)
+                self._LUT_CACHE[0][i, :] = table_hue
+                self._LUT_CACHE[1][i, :] = table_saturation
+
     def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = meta.copy_dtypes_for_restore(images, force_list=True)
+        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
-        images_hsv = self.colorspace_changer._augment_images(images, ia.derive_random_state(random_state),
-                                                             parents + [self], hooks)
-
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
-        for i in sm.xrange(nb_images):
-            image_hsv = images_hsv[i].astype(np.int32)
-            rs_image = ia.new_random_state(seeds[i])
-            per_channel = self.per_channel.draw_sample(random_state=rs_image)
-            if per_channel == 1:
-                nb_channels = 2
-                samples = self.value.draw_samples((nb_channels,), random_state=rs_image).astype(image_hsv.dtype)
-                sample_hue = (samples[0] / 255) * (360/2)
-                sample_saturation = samples[1]
-            else:
-                sample = self.value.draw_sample(random_state=rs_image).astype(image_hsv.dtype)
-                sample_hue = (sample / 255) * (360/2)
-                sample_saturation = sample
 
-            ia.do_assert(-180 <= sample_hue <= 180)
-            ia.do_assert(-255 <= sample_saturation <= 255)
-            # np.mod() works also as required here for negative values
-            image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
-            image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
+        # surprisingly, placing this here seems to be slightly slower than placing it inside the loop
+        # if isinstance(images_hsv, list):
+        #    images_hsv = [img.astype(np.int32) for img in images_hsv]
+        # else:
+        #    images_hsv = images_hsv.astype(np.int32)
+
+        rss = ia.derive_random_states(random_state, 3)
+        images_hsv = self.colorspace_changer._augment_images(images, rss[0], parents + [self], hooks)
+        samples = self.value.draw_samples((nb_images, 2), random_state=rss[1]).astype(np.int32)
+        samples_hue = ((samples.astype(np.float32) / 255.0) * (360/2)).astype(np.int32)
+        per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[2])
+        rs_inv = random_state
+
+        ia.do_assert(-255 <= samples[0, 0] <= 255)
+
+        # this is needed if no cache for LUT is used:
+        # value_range = np.arange(0, 256, dtype=np.int16)
+
+        gen = enumerate(zip(images_hsv, samples, samples_hue, per_channel))
+        for i, (image_hsv, samples_i, samples_hue_i, per_channel_i) in gen:
+            assert image_hsv.dtype.name == "uint8"
+
+            sample_saturation = samples_i[0]
+            if per_channel_i > 0.5:
+                sample_hue = samples_hue_i[1]
+            else:
+                sample_hue = samples_hue_i[0]
+
+            if self.backend == "cv2":
+                # this has roughly the same speed as the numpy backend for 64x64 and is about 25% faster for 224x224
+
+                # code without using cache:
+                # table_hue = np.mod(value_range + sample_hue, 180)
+                # table_saturation = np.clip(value_range + sample_saturation, 0, 255)
+
+                # table_hue = table_hue.astype(np.uint8, copy=False)
+                # table_saturation = table_saturation.astype(np.uint8, copy=False)
+
+                # image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], table_hue)
+                # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
+
+                # code with using cache (at best maybe 10% faster for 64x64):
+                image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], self._LUT_CACHE[0][int(sample_hue)])
+                image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], self._LUT_CACHE[1][int(sample_saturation)])
+            else:
+                image_hsv = image_hsv.astype(np.int16)  # int16 seems to be slightly faster than int32
+                # np.mod() works also as required here for negative values
+                image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
+                image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
 
             image_hsv = image_hsv.astype(input_dtypes[i])
-            image_rgb = self.colorspace_changer_inv._augment_images([image_hsv], rs_image, parents + [self], hooks)[0]
+            # the inverse colorspace changer has a deterministic output (always <from_colorspace>, so that can
+            # always provide it the same random state as input
+            image_rgb = self.colorspace_changer_inv._augment_images([image_hsv], rs_inv, parents + [self], hooks)[0]
             result[i] = image_rgb
 
         return result
@@ -532,13 +579,7 @@ class ChangeColorspace(meta.Augmenter):
                     img_to_cs = img_to_cs[:, :, np.newaxis]
                     img_to_cs = np.tile(img_to_cs, (1, 1, 3))
 
-                if alpha >= (1 - self.eps):
-                    result[i] = img_to_cs
-                elif alpha <= self.eps:
-                    result[i] = image
-                else:
-                    # TODO dont convert to uint8
-                    result[i] = (alpha * img_to_cs + (1 - alpha) * image).astype(np.uint8)
+                result[i] = overlay.blend_alpha(img_to_cs, image, alpha, self.eps)
 
         return images
 

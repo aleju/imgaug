@@ -35,6 +35,7 @@ import six.moves as sm
 from . import meta
 from .. import imgaug as ia
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 class Convolve(meta.Augmenter):
@@ -136,12 +137,12 @@ class Convolve(meta.Augmenter):
                 type(matrix),))
 
     def _augment_images(self, images, random_state, parents, hooks):
-        ia.gate_dtypes(images,
-                       allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
-                       disallowed=["uint32", "uint64", "uint128", "uint256",
-                                   "int32", "int64", "int128", "int256",
-                                   "float96", "float128", "float256"],
-                       augmenter=self)
+        iadt.gate_dtypes(images,
+                         allowed=["bool", "uint8", "uint16", "int8", "int16", "float16", "float32", "float64"],
+                         disallowed=["uint32", "uint64", "uint128", "uint256",
+                                     "int32", "int64", "int128", "int256",
+                                      "float96", "float128", "float256"],
+                         augmenter=self)
 
         seed = random_state.randint(0, 10**6, 1)[0]
         for i, image in enumerate(images):
@@ -188,7 +189,7 @@ class Convolve(meta.Augmenter):
             if input_dtype == np.bool_:
                 image_aug = image_aug > 0.5
             elif input_dtype in [np.int8, np.float16]:
-                image_aug = meta.restore_dtypes_(image_aug, input_dtype)
+                image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
             images[i] = image_aug
 

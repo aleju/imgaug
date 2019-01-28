@@ -70,6 +70,12 @@ def main():
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
 
 
+def _eps(arr):
+    if ia.is_np_array(arr) and arr.dtype.kind == "f":
+        return np.finfo(arr.dtype).eps
+    return 1e-4
+
+
 def test_parameters_handle_continuous_param():
     # value without value range
     got_exception = False
@@ -310,7 +316,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test1]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # value without value range as (None, None)
     got_exception = False
@@ -321,7 +327,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test1b]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # stochastic parameter
     got_exception = False
@@ -332,7 +338,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test2]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # value within value range
     got_exception = False
@@ -343,7 +349,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test3]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # value outside of value range
     got_exception = False
@@ -354,7 +360,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test4]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # value within value range (without lower bound)
     got_exception = False
@@ -365,7 +371,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test5]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # value outside of value range (without lower bound)
     got_exception = False
@@ -376,7 +382,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test6]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # value within value range (without upper bound)
     got_exception = False
@@ -387,7 +393,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test7]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # value outside of value range (without upper bound)
     got_exception = False
@@ -398,7 +404,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test8]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # tuple as value, but no tuples allowed
     got_exception = False
@@ -409,7 +415,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test9]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # tuple as value and tuple allowed
     got_exception = False
@@ -420,7 +426,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test10]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # tuple as value and tuple allowed and tuple within value range
     got_exception = False
@@ -431,7 +437,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test11]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # tuple as value and tuple allowed and tuple within value range with allow_floats=False
     got_exception = False
@@ -442,7 +448,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test11b]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # tuple as value and tuple allowed and tuple partially outside of value range
     got_exception = False
@@ -453,7 +459,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test12]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # tuple as value and tuple allowed and tuple fully outside of value range
     got_exception = False
@@ -464,7 +470,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test13]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # list as value, but no list allowed
     got_exception = False
@@ -475,7 +481,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test14]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # list as value and list allowed
     got_exception = False
@@ -486,7 +492,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test15]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # list as value and list allowed and list partially outside of value range
     got_exception = False
@@ -497,7 +503,7 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test16]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # list as value and list allowed and list fully outside of value range
     got_exception = False
@@ -508,27 +514,27 @@ def test_parameters_handle_discrete_param():
     except Exception as e:
         got_exception = True
         assert "[test17]" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
     # single value within value range given as callable
     got_exception = False
     try:
         _ = iap.handle_discrete_param(1, "[test18]", value_range=lambda x: -1 < x < 1, tuple_to_uniform=True,
-                                           list_to_choice=True)
+                                      list_to_choice=True)
     except Exception as e:
         got_exception = True
         assert "[test18]" in str(e)
-    assert got_exception == False
+    assert got_exception is False
 
     # bad datatype for value range
     got_exception = False
     try:
         _ = iap.handle_discrete_param(1, "[test19]", value_range=False, tuple_to_uniform=True,
-                                           list_to_choice=True)
+                                      list_to_choice=True)
     except Exception as e:
         got_exception = True
         assert "Unexpected input for value_range" in str(e)
-    assert got_exception == True
+    assert got_exception is True
 
 
 def test_parameters_handle_probability_param():
@@ -549,7 +555,7 @@ def test_parameters_handle_probability_param():
 
     got_exception = False
     try:
-        p = iap.handle_probability_param("test", "[test4]")
+        _p = iap.handle_probability_param("test", "[test4]")
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -557,14 +563,14 @@ def test_parameters_handle_probability_param():
 
     got_exception = False
     try:
-        p = iap.handle_probability_param(-0.01, "[test5]")
+        _p = iap.handle_probability_param(-0.01, "[test5]")
     except AssertionError:
         got_exception = True
     assert got_exception
 
     got_exception = False
     try:
-        p = iap.handle_probability_param(1.01, "[test6]")
+        _p = iap.handle_probability_param(1.01, "[test6]")
     except AssertionError:
         got_exception = True
     assert got_exception
@@ -719,7 +725,6 @@ def test_parameters_Biomial():
 
 def test_parameters_Choice():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.Choice([0, 1, 2])
     sample = param.draw_sample()
@@ -750,11 +755,11 @@ def test_parameters_Choice():
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.2 - eps < sample < -1.2 + eps or 1.7 - eps < sample < 1.7 + eps
+    assert -1.2 - _eps(sample) < sample < -1.2 + _eps(sample) or 1.7 - _eps(sample) < sample < 1.7 + _eps(sample)
     assert np.all(
         np.logical_or(
-            np.logical_and(-1.2 - eps < samples, samples < -1.2 + eps),
-            np.logical_and(1.7 - eps < samples, samples < 1.7 + eps)
+            np.logical_and(-1.2 - _eps(sample) < samples, samples < -1.2 + _eps(sample)),
+            np.logical_and(1.7 - _eps(sample) < samples, samples < 1.7 + _eps(sample))
         )
     )
 
@@ -967,7 +972,6 @@ def test_parameters_Normal():
 
 def test_parameters_Laplace():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.Laplace(0, 1)
     sample = param.draw_sample()
@@ -1013,8 +1017,8 @@ def test_parameters_Laplace():
     param1 = iap.Laplace(1, 0)
     samples = param1.draw_samples((100,))
     assert np.all(np.logical_and(
-        samples > 1 - eps,
-        samples < 1 + eps
+        samples > 1 - _eps(samples),
+        samples < 1 + _eps(samples)
     ))
 
     param = iap.Laplace(0, 1)
@@ -1137,15 +1141,14 @@ def test_parameters_Weibull():
 
 def test_parameters_Uniform():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.Uniform(0, 1.0)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert 0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(0 - eps < samples, samples < 1.0 + eps))
+    assert 0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
     assert param.__str__() == param.__repr__() == "Uniform(Deterministic(int 0), Deterministic(float 1.00000000))"
 
     samples = param.draw_samples((10000,))
@@ -1162,32 +1165,32 @@ def test_parameters_Uniform():
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert -1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(-1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(1.0, -1.0)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert -1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(-1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(-1, 1)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert -1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(-1.0 - eps < samples, samples < 1.0 + eps))
+    assert -1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(-1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(1, 1)
     sample = param.draw_sample()
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert 1.0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(1.0 - eps < samples, samples < 1.0 + eps))
+    assert 1.0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(1.0 - _eps(samples) < samples, samples < 1.0 + _eps(samples)))
 
     param = iap.Uniform(-1.0, 1.0)
     samples1 = param.draw_samples((10, 5), random_state=np.random.RandomState(1234))
@@ -1203,7 +1206,6 @@ def test_parameters_Beta():
         return (alpha * beta) / ((alpha + beta)**2 * (alpha + beta + 1))
 
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.Beta(0.5, 0.5)
     sample = param.draw_sample()
@@ -1211,8 +1213,8 @@ def test_parameters_Beta():
     samples_direct = np.random.RandomState(1234).beta(a=0.5, b=0.5, size=(100, 1000))
     assert sample.shape == tuple()
     assert samples.shape == (100, 1000)
-    assert 0 - eps < sample < 1.0 + eps
-    assert np.all(np.logical_and(0 - eps <= samples, samples <= 1.0 + eps))
+    assert 0 - _eps(sample) < sample < 1.0 + _eps(sample)
+    assert np.all(np.logical_and(0 - _eps(sample) <= samples, samples <= 1.0 + _eps(sample)))
     assert param.__str__() == param.__repr__() == \
         "Beta(Deterministic(float 0.50000000), Deterministic(float 0.50000000))"
 
@@ -1261,7 +1263,6 @@ def test_parameters_Beta():
 
 def test_parameters_Deterministic():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     values_int = [-100, -54, -1, 0, 1, 54, 100]
     values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
@@ -1314,7 +1315,7 @@ def test_parameters_Deterministic():
         sample1 = param.draw_sample()
         sample2 = param.draw_sample()
         assert sample1.shape == tuple()
-        assert sample1 - eps < sample2 < sample1 + eps
+        assert sample1 - _eps(sample1) < sample2 < sample1 + _eps(sample1)
 
         samples1 = param.draw_samples(10)
         samples2 = param.draw_samples(10)
@@ -1336,12 +1337,12 @@ def test_parameters_Deterministic():
         assert samples4.shape == (5, 3)
         assert samples5.shape == (4, 5, 3)
         assert samples6.shape == (4, 5, 3)
-        assert samples1_sorted[0] - eps < samples1_sorted[-1] < samples1_sorted[0] + eps
-        assert samples2_sorted[0] - eps < samples2_sorted[-1] < samples2_sorted[0] + eps
-        assert samples3_sorted[0] - eps < samples3_sorted[-1] < samples3_sorted[0] + eps
-        assert samples4_sorted[0] - eps < samples4_sorted[-1] < samples4_sorted[0] + eps
-        assert samples5_sorted[0] - eps < samples5_sorted[-1] < samples5_sorted[0] + eps
-        assert samples6_sorted[0] - eps < samples6_sorted[-1] < samples6_sorted[0] + eps
+        assert samples1_sorted[0] - _eps(samples1_sorted[0]) < samples1_sorted[-1] < samples1_sorted[0] + _eps(samples1_sorted[0])
+        assert samples2_sorted[0] - _eps(samples2_sorted[0]) < samples2_sorted[-1] < samples2_sorted[0] + _eps(samples2_sorted[0])
+        assert samples3_sorted[0] - _eps(samples3_sorted[0]) < samples3_sorted[-1] < samples3_sorted[0] + _eps(samples3_sorted[0])
+        assert samples4_sorted[0] - _eps(samples4_sorted[0]) < samples4_sorted[-1] < samples4_sorted[0] + _eps(samples4_sorted[0])
+        assert samples5_sorted[0] - _eps(samples5_sorted[0]) < samples5_sorted[-1] < samples5_sorted[0] + _eps(samples5_sorted[0])
+        assert samples6_sorted[0] - _eps(samples6_sorted[0]) < samples6_sorted[-1] < samples6_sorted[0] + _eps(samples6_sorted[0])
 
         rs1 = np.random.RandomState(123456)
         rs2 = np.random.RandomState(123456)
@@ -1568,7 +1569,6 @@ def test_parameters_FromLowerResolution():
 
 def test_parameters_Clip():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.Clip(iap.Deterministic(0), -1, 1)
     sample = param.draw_sample()
@@ -1600,8 +1600,8 @@ def test_parameters_Clip():
     samples = param.draw_samples((10, 5))
     assert sample.shape == tuple()
     assert samples.shape == (10, 5)
-    assert 0.5 - eps < sample < 0.5 + eps
-    assert np.all(np.logical_and(0.5 - eps < samples, samples < 0.5 + eps))
+    assert 0.5 - _eps(sample) < sample < 0.5 + _eps(sample)
+    assert np.all(np.logical_and(0.5 - _eps(sample) <= samples, samples <= 0.5 + _eps(sample)))
 
     param = iap.Clip(iap.Deterministic(2), -1, 1)
     sample = param.draw_sample()
@@ -1688,7 +1688,6 @@ def test_parameters_Discretize():
 
 def test_parameters_Multiply():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     values_int = [-100, -54, -1, 0, 1, 54, 100]
     values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
@@ -1698,7 +1697,7 @@ def test_parameters_Multiply():
             p = iap.Multiply(iap.Deterministic(v1), v2)
             assert p.draw_sample() == v1 * v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 * v2)
 
             p = iap.Multiply(iap.Deterministic(v1), iap.Deterministic(v2))
@@ -1710,48 +1709,50 @@ def test_parameters_Multiply():
     for v1 in values_float:
         for v2 in values_float:
             p = iap.Multiply(iap.Deterministic(v1), v2)
-            assert v1 * v2 - eps < p.draw_sample() < v1 * v2 + eps
+            sample = p.draw_sample()
+            assert v1 * v2 - _eps(sample) < sample < v1 * v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 * v2)
 
             p = iap.Multiply(iap.Deterministic(v1), iap.Deterministic(v2))
-            assert v1 * v2 - eps < p.draw_sample() < v1 * v2 + eps
+            sample = p.draw_sample()
+            assert v1 * v2 - _eps(sample) < sample < v1 * v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 * v2)
 
     param = iap.Multiply(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 * 1.0 - eps)
-    assert np.all(samples < 1.0 * 2.0 + eps)
+    assert np.all(samples > 1.0 * 1.0 - _eps(samples))
+    assert np.all(samples < 1.0 * 2.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+    assert samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0])
 
     param = iap.Multiply(iap.Deterministic(1.0), (1.0, 2.0), elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 * 1.0 - eps)
-    assert np.all(samples < 1.0 * 2.0 + eps)
+    assert np.all(samples > 1.0 * 1.0 - _eps(samples))
+    assert np.all(samples < 1.0 * 2.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Multiply(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 * 1.0 - eps)
-    assert np.all(samples < 2.0 * 1.0 + eps)
+    assert np.all(samples > 1.0 * 1.0 - _eps(samples))
+    assert np.all(samples < 2.0 * 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Multiply(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 * 1.0 - eps)
-    assert np.all(samples < 2.0 * 1.0 + eps)
+    assert np.all(samples > 1.0 * 1.0 - _eps(samples))
+    assert np.all(samples < 2.0 * 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Multiply(iap.Deterministic(0), 1, elementwise=False)
     assert param.__str__() == param.__repr__() == "Multiply(Deterministic(int 0), Deterministic(int 1), False)"
@@ -1759,7 +1760,6 @@ def test_parameters_Multiply():
 
 def test_parameters_Divide():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     values_int = [-100, -54, -1, 0, 1, 54, 100]
     values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
@@ -1770,16 +1770,16 @@ def test_parameters_Divide():
                 v2 = 1
 
             p = iap.Divide(iap.Deterministic(v1), v2)
-            assert p.draw_sample() == v1 / v2
+            assert p.draw_sample() == (v1 / v2)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
-            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+            assert samples.dtype.kind == "f"
+            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
             p = iap.Divide(iap.Deterministic(v1), iap.Deterministic(v2))
-            assert p.draw_sample() == v1 / v2
+            assert p.draw_sample() == (v1 / v2)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
-            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+            assert samples.dtype.kind == "f"
+            assert np.array_equal(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
     for v1 in values_float:
         for v2 in values_float:
@@ -1787,40 +1787,42 @@ def test_parameters_Divide():
                 v2 = 1
 
             p = iap.Divide(iap.Deterministic(v1), v2)
-            assert v1 / v2 - eps < p.draw_sample() < v1 / v2 + eps
+            sample = p.draw_sample()
+            assert (v1 / v2) - _eps(sample) <= sample <= (v1 / v2) + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
-            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+            assert samples.dtype.kind == "f"
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
             p = iap.Divide(iap.Deterministic(v1), iap.Deterministic(v2))
-            assert v1 / v2 - eps < p.draw_sample() < v1 / v2 + eps
+            sample = p.draw_sample()
+            assert (v1 / v2) - _eps(sample) <= sample <= (v1 / v2) + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
-            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 / v2)
+            assert samples.dtype.kind == "f"
+            assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + (v1 / v2))
 
     param = iap.Divide(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 / 2.0 - eps)
-    assert np.all(samples < 1.0 / 1.0 + eps)
+    assert np.all(samples > (1.0 / 2.0) - _eps(samples))
+    assert np.all(samples < (1.0 / 1.0) + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+    assert samples_sorted[0] - _eps(samples) < samples_sorted[-1] < samples_sorted[0] + _eps(samples)
 
     param = iap.Divide(iap.Deterministic(1.0), (1.0, 2.0), elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 / 2.0 - eps)
-    assert np.all(samples < 1.0 / 1.0 + eps)
+    assert np.all(samples > (1.0 / 2.0) - _eps(samples))
+    assert np.all(samples < (1.0 / 1.0) + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples) < samples_sorted[-1] < samples_sorted[0] + _eps(samples))
 
     param = iap.Divide(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 / 1.0 - eps)
-    assert np.all(samples < 2.0 / 1.0 + eps)
+    assert np.all(samples > (1.0 / 1.0) - _eps(samples))
+    assert np.all(samples < (2.0 / 1.0) + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples) < samples_sorted[-1] < samples_sorted[0] + _eps(samples))
 
     param = iap.Divide(iap.Deterministic(1), 0, elementwise=False)
     sample = param.draw_sample()
@@ -1829,10 +1831,11 @@ def test_parameters_Divide():
     param = iap.Divide(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 / 1.0 - eps)
-    assert np.all(samples < 2.0 / 1.0 + eps)
+    assert np.all(samples > (1.0 / 1.0) - _eps(samples))
+    assert np.all(samples < (2.0 / 1.0) + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted) < samples_sorted[-1]
+                < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted))
 
     # test division by zero automatically being converted to division by 1
     param = iap.Divide(2, iap.Choice([0, 2]), elementwise=True)
@@ -1846,7 +1849,6 @@ def test_parameters_Divide():
 
 def test_parameters_Add():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     values_int = [-100, -54, -1, 0, 1, 54, 100]
     values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
@@ -1856,60 +1858,61 @@ def test_parameters_Add():
             p = iap.Add(iap.Deterministic(v1), v2)
             assert p.draw_sample() == v1 + v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 + v2)
 
             p = iap.Add(iap.Deterministic(v1), iap.Deterministic(v2))
             assert p.draw_sample() == v1 + v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 + v2)
 
     for v1 in values_float:
         for v2 in values_float:
             p = iap.Add(iap.Deterministic(v1), v2)
-            assert v1 + v2 - eps < p.draw_sample() < v1 + v2 + eps
+            sample = p.draw_sample()
+            assert v1 + v2 - _eps(sample) < sample < v1 + v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 + v2)
 
             p = iap.Add(iap.Deterministic(v1), iap.Deterministic(v2))
-            assert v1 + v2 - eps < p.draw_sample() < v1 + v2 + eps
+            assert v1 + v2 - _eps(sample) < sample < v1 + v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 + v2)
 
     param = iap.Add(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 + 1.0 - eps)
-    assert np.all(samples < 1.0 + 2.0 + eps)
+    assert np.all(samples >= 1.0 + 1.0 - _eps(samples))
+    assert np.all(samples <= 1.0 + 2.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+    assert samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0])
 
     param = iap.Add(iap.Deterministic(1.0), (1.0, 2.0), elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 + 1.0 - eps)
-    assert np.all(samples < 1.0 + 2.0 + eps)
+    assert np.all(samples >= 1.0 + 1.0 - _eps(samples))
+    assert np.all(samples <= 1.0 + 2.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Add(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 + 1.0 - eps)
-    assert np.all(samples < 2.0 + 1.0 + eps)
+    assert np.all(samples >= 1.0 + 1.0 - _eps(samples))
+    assert np.all(samples <= 2.0 + 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Add(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 + 1.0 - eps)
-    assert np.all(samples < 2.0 + 1.0 + eps)
+    assert np.all(samples >= 1.0 + 1.0 - _eps(samples))
+    assert np.all(samples <= 2.0 + 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Add(iap.Deterministic(0), 1, elementwise=False)
     assert param.__str__() == param.__repr__() == "Add(Deterministic(int 0), Deterministic(int 1), False)"
@@ -1917,7 +1920,6 @@ def test_parameters_Add():
 
 def test_parameters_Subtract():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     values_int = [-100, -54, -1, 0, 1, 54, 100]
     values_float = [-100.0, -54.3, -1.0, 0.1, 0.0, 0.1, 1.0, 54.4, 100.0]
@@ -1927,60 +1929,62 @@ def test_parameters_Subtract():
             p = iap.Subtract(iap.Deterministic(v1), v2)
             assert p.draw_sample() == v1 - v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 - v2)
 
             p = iap.Subtract(iap.Deterministic(v1), iap.Deterministic(v2))
             assert p.draw_sample() == v1 - v2
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.int64
+            assert samples.dtype.kind == "i"
             assert np.array_equal(samples, np.zeros((2, 3), dtype=np.int64) + v1 - v2)
 
     for v1 in values_float:
         for v2 in values_float:
             p = iap.Subtract(iap.Deterministic(v1), v2)
-            assert v1 - v2 - eps < p.draw_sample() < v1 - v2 + eps
+            sample = p.draw_sample()
+            assert v1 - v2 - _eps(sample) < sample < v1 - v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 - v2)
 
             p = iap.Subtract(iap.Deterministic(v1), iap.Deterministic(v2))
-            assert v1 - v2 - eps < p.draw_sample() < v1 - v2 + eps
+            sample = p.draw_sample()
+            assert v1 - v2 - _eps(sample) < sample < v1 - v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 - v2)
 
     param = iap.Subtract(iap.Deterministic(1.0), (1.0, 2.0), elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 - 2.0 - eps)
-    assert np.all(samples < 1.0 - 1.0 + eps)
+    assert np.all(samples > 1.0 - 2.0 - _eps(samples))
+    assert np.all(samples < 1.0 - 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+    assert samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0])
 
     param = iap.Subtract(iap.Deterministic(1.0), (1.0, 2.0), elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 - 2.0 - eps)
-    assert np.all(samples < 1.0 - 1.0 + eps)
+    assert np.all(samples > 1.0 - 2.0 - _eps(samples))
+    assert np.all(samples < 1.0 - 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Subtract(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 - 1.0 - eps)
-    assert np.all(samples < 2.0 - 1.0 + eps)
+    assert np.all(samples > 1.0 - 1.0 - _eps(samples))
+    assert np.all(samples < 2.0 - 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Subtract(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 - 1.0 - eps)
-    assert np.all(samples < 2.0 - 1.0 + eps)
+    assert np.all(samples > 1.0 - 1.0 - _eps(samples))
+    assert np.all(samples < 2.0 - 1.0 + _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Subtract(iap.Deterministic(0), 1, elementwise=False)
     assert param.__str__() == param.__repr__() == "Subtract(Deterministic(int 0), Deterministic(int 1), False)"
@@ -1988,7 +1992,6 @@ def test_parameters_Subtract():
 
 def test_parameters_Power():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     values = [-100, -54, -1, 0, 1, 54, 100]
     values = values + [float(v) for v in values]
@@ -2001,48 +2004,50 @@ def test_parameters_Power():
             if v1 == 0 and v2 < 0:
                 continue
             p = iap.Power(iap.Deterministic(v1), v2)
-            assert v1 ** v2 - eps < p.draw_sample() < v1 ** v2 + eps
+            sample = p.draw_sample()
+            assert v1 ** v2 - _eps(sample) < sample < v1 ** v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 ** v2)
 
             p = iap.Power(iap.Deterministic(v1), iap.Deterministic(v2))
-            assert v1 ** v2 - eps < p.draw_sample() < v1 ** v2 + eps
+            sample = p.draw_sample()
+            assert v1 ** v2 - _eps(sample) < sample < v1 ** v2 + _eps(sample)
             samples = p.draw_samples((2, 3))
-            assert samples.dtype == np.float64
+            assert samples.dtype.kind == "f"
             assert np.allclose(samples, np.zeros((2, 3), dtype=np.float64) + v1 ** v2)
 
     param = iap.Power(iap.Deterministic(1.5), (1.0, 2.0), elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.5 ** 1.0 - eps)
-    assert np.all(samples < 1.5 ** 2.0 + eps)
+    assert np.all(samples > 1.5 ** 1.0 - 2 * _eps(samples))
+    assert np.all(samples < 1.5 ** 2.0 + 2 * _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps
+    assert samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0])
 
     param = iap.Power(iap.Deterministic(1.5), (1.0, 2.0), elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.5 ** 1.0 - eps)
-    assert np.all(samples < 1.5 ** 2.0 + eps)
+    assert np.all(samples > 1.5 ** 1.0 - 2 * _eps(samples))
+    assert np.all(samples < 1.5 ** 2.0 + 2 * _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Power(iap.Uniform(1.0, 2.0), 1.0, elementwise=False)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 ** 1.0 - eps)
-    assert np.all(samples < 2.0 ** 1.0 + eps)
+    assert np.all(samples > 1.0 ** 1.0 - 2 * _eps(samples))
+    assert np.all(samples < 2.0 ** 1.0 + 2 * _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Power(iap.Uniform(1.0, 2.0), 1.0, elementwise=True)
     samples = param.draw_samples((10, 20))
     assert samples.shape == (10, 20)
-    assert np.all(samples > 1.0 ** 1.0 - eps)
-    assert np.all(samples < 2.0 ** 1.0 + eps)
+    assert np.all(samples > 1.0 ** 1.0 - 2 * _eps(samples))
+    assert np.all(samples < 2.0 ** 1.0 + 2 * _eps(samples))
     samples_sorted = np.sort(samples.flatten())
-    assert not (samples_sorted[0] - eps < samples_sorted[-1] < samples_sorted[0] + eps)
+    assert not (samples_sorted[0] - _eps(samples_sorted[0]) < samples_sorted[-1] < samples_sorted[0] + _eps(samples_sorted[0]))
 
     param = iap.Power(iap.Deterministic(0), 1, elementwise=False)
     assert param.__str__() == param.__repr__() == "Power(Deterministic(int 0), Deterministic(int 1), False)"
@@ -2050,7 +2055,6 @@ def test_parameters_Power():
 
 def test_parameters_Absolute():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     simple_values = [-1.5, -1, -1.0, -0.1, 0, 0.0, 0.1, 1, 1.0, 1.5]
 
@@ -2061,9 +2065,9 @@ def test_parameters_Absolute():
         assert sample.shape == tuple()
         assert samples.shape == (10, 5)
         if ia.is_single_float(value):
-            assert abs(value) - eps < sample < abs(value) + eps
-            assert np.all(abs(value) - eps < samples)
-            assert np.all(samples < abs(value) + eps)
+            assert abs(value) - _eps(sample) < sample < abs(value) + _eps(sample)
+            assert np.all(abs(value) - _eps(samples) < samples)
+            assert np.all(samples < abs(value) + _eps(samples))
         else:
             assert sample == abs(value)
             assert np.all(samples == abs(value))
@@ -2220,7 +2224,6 @@ def test_parameters_Negative():
 
 def test_parameters_IterativeNoiseAggregator():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.IterativeNoiseAggregator(iap.Deterministic(1), iterations=1, aggregation_method="max")
     sample = param.draw_sample()
@@ -2263,9 +2266,9 @@ def test_parameters_IterativeNoiseAggregator():
         diff_50 = abs(50 - samples[0, 0])
         if diff_25 < 10.0:
             seen[0] += 1
-        elif diff_50 < eps:
+        elif diff_50 < _eps(samples):
             seen[1] += 1
-        elif diff_0 < eps:
+        elif diff_0 < _eps(samples):
             seen[2] += 1
         else:
             assert False
@@ -2293,9 +2296,9 @@ def test_parameters_IterativeNoiseAggregator():
         samples = param.draw_samples((1, 1))
         diff_0 = abs(0 - samples[0, 0])
         diff_50 = abs(50 - samples[0, 0])
-        if diff_50 < eps:
+        if diff_50 < _eps(samples):
             seen[0] += 1
-        elif diff_0 < eps:
+        elif diff_0 < _eps(samples):
             seen[1] += 1
         else:
             assert False
@@ -2353,7 +2356,6 @@ def test_parameters_IterativeNoiseAggregator():
 
 def test_parameters_Sigmoid():
     reseed()
-    eps = np.finfo(np.float32).eps
 
     param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=True)
     expected = 1 / (1 + np.exp(-(5 * 1 + 0 - 0.5)))
@@ -2361,8 +2363,8 @@ def test_parameters_Sigmoid():
     samples = param.draw_samples((5, 10))
     assert sample.shape == tuple()
     assert samples.shape == (5, 10)
-    assert expected - eps < sample < expected + eps
-    assert np.all(np.logical_and(expected - eps < samples, samples < expected + eps))
+    assert expected - _eps(sample) < sample < expected + _eps(sample)
+    assert np.all(np.logical_and(expected - _eps(samples) < samples, samples < expected + _eps(samples)))
 
     param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=False)
     expected = 5
@@ -2370,8 +2372,8 @@ def test_parameters_Sigmoid():
     samples = param.draw_samples((5, 10))
     assert sample.shape == tuple()
     assert samples.shape == (5, 10)
-    assert expected - eps < sample < expected + eps
-    assert np.all(np.logical_and(expected - eps < samples, samples < expected + eps))
+    assert expected - _eps(sample) < sample < expected + _eps(sample)
+    assert np.all(np.logical_and(expected - _eps(sample) < samples, samples < expected + _eps(sample)))
 
     param = iap.Sigmoid(iap.Deterministic(5), add=0, mul=1, threshold=0.5, activated=0.5)
     expected_first = 5
@@ -2381,9 +2383,9 @@ def test_parameters_Sigmoid():
         sample = param.draw_sample()
         diff_first = abs(sample - expected_first)
         diff_second = abs(sample - expected_second)
-        if diff_first < eps:
+        if diff_first < _eps(sample):
             seen[0] += 1
-        elif diff_second < eps:
+        elif diff_second < _eps(sample):
             seen[1] += 1
         else:
             assert False
@@ -2398,9 +2400,9 @@ def test_parameters_Sigmoid():
         sample = param.draw_sample()
         diff_first = abs(sample - expected_first)
         diff_second = abs(sample - expected_second)
-        if diff_first < eps:
+        if diff_first < _eps(sample):
             seen[0] += 1
-        elif diff_second < eps:
+        elif diff_second < _eps(sample):
             seen[1] += 1
         else:
             assert False
@@ -2420,9 +2422,14 @@ def test_parameters_Sigmoid():
                     samples = param.draw_samples((2, 3))
                     assert sample.shape == tuple()
                     assert samples.shape == (2, 3)
-                    expected = 1 / (1 + np.exp(-(val * mul + add - thresh)))
-                    assert expected - eps < sample < expected + eps
-                    assert np.all(np.logical_and(expected - eps < samples, samples < expected + eps))
+                    dt = sample.dtype
+                    val_ = np.array([val], dtype=dt)
+                    mul_ = np.array([mul], dtype=dt)
+                    add_ = np.array([add], dtype=dt)
+                    thresh_ = np.array([thresh], dtype=dt)
+                    expected = 1 / (1 + np.exp(-(val_ * mul_ + add_ - thresh_)))
+                    assert expected - 5*_eps(sample) < sample < expected + 5*_eps(sample)
+                    assert np.all(np.logical_and(expected - 5*_eps(sample) < samples, samples < expected + 5*_eps(sample)))
 
     param = iap.Sigmoid(iap.Choice([1, 10]), add=0, mul=1, threshold=0.5, activated=True)
     samples1 = param.draw_samples((100, 10), random_state=np.random.RandomState(1234))
