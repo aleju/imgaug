@@ -149,7 +149,7 @@ class WithColorspace(meta.Augmenter):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
         aug.deterministic = True
-        aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
         return aug
 
     def get_parameters(self):

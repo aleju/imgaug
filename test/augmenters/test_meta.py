@@ -3,6 +3,17 @@ from __future__ import print_function, division, absolute_import
 import time
 import copy
 import warnings
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -14,6 +25,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug.augmenters import meta
 from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
+import imgaug.multicore as multicore
 
 
 def main():
@@ -34,6 +46,7 @@ def main():
     test_Augmenter_hooks()
     test_Augmenter_copy_random_state()
     test_Augmenter_augment_batches()
+    test_Augmenter_pool()
     test_Sequential()
     test_SomeOf()
     test_OneOf()
@@ -3785,6 +3798,25 @@ def test_Augmenter_augment_batches():
         else:
             assert nb_changed == 0
     """
+
+def test_Augmenter_pool():
+    augseq = iaa.Noop()
+
+    mock_Pool = mock.MagicMock()
+    mock_Pool.return_value = mock_Pool
+    mock_Pool.__enter__.return_value = None
+    mock_Pool.__exit__.return_value = None
+    with mock.patch("imgaug.multicore.Pool", mock_Pool):
+        with augseq.pool(processes=2, maxtasksperchild=10, seed=17):
+            pass
+
+    assert mock_Pool.call_count == 1
+    assert mock_Pool.__enter__.call_count == 1
+    assert mock_Pool.__exit__.call_count == 1
+    assert mock_Pool.call_args[0][0] == augseq
+    assert mock_Pool.call_args[1]["processes"] == 2
+    assert mock_Pool.call_args[1]["maxtasksperchild"] == 10
+    assert mock_Pool.call_args[1]["seed"] == 17
 
 
 if __name__ == "__main__":

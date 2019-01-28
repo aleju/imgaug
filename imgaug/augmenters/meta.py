@@ -456,6 +456,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             return batch_unnormalized
 
         if not background:
+            # singlecore augmentation
+
             for batch_normalized in batches_normalized:
                 batch_augment_images = batch_normalized.images is not None
                 batch_augment_heatmaps = batch_normalized.heatmaps is not None
@@ -489,21 +491,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
                 yield batch_unnormalized
         else:
+            # multicore augmentation
+            import imgaug.multicore as multicore
+
             def load_batches():
                 for batch in batches_normalized:
                     yield batch
 
-            batch_loader = ia.BatchLoader(load_batches)
-            bg_augmenter = ia.BackgroundAugmenter(batch_loader, self)
-            while True:
-                batch_aug = bg_augmenter.get_batch()
-                if batch_aug is None:
-                    break
-                else:
-                    batch_unnormalized = unnormalize_batch(batch_aug)
-                    yield batch_unnormalized
-            batch_loader.terminate()
-            bg_augmenter.terminate()
+            with multicore.Pool(self) as pool:
+                for batch_aug in pool.imap_batches(load_batches()):
+                    yield unnormalize_batch(batch_aug)
 
     def augment_image(self, image, hooks=None):
         """
@@ -1069,6 +1066,73 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             )
         return result
 
+    def pool(self, processes=None, maxtasksperchild=None, seed=None):
+        """
+        Create a pool used for multicore augmentation from this augmenter.
+
+        Parameters
+        ----------
+        processes : None or int, optional
+            Same as for :func:`imgaug.multicore.Pool.__init__`.
+            The number of background workers, similar to the same parameter in multiprocessing.Pool.
+            If ``None``, the number of the machine's CPU cores will be used (this counts hyperthreads as CPU cores).
+            If this is set to a negative value ``p``, then ``P - abs(p)`` will be used, where ``P`` is the number
+            of CPU cores. E.g. ``-1`` would use all cores except one (this is useful to e.g. reserve one core to
+            feed batches to the GPU).
+
+        maxtasksperchild : None or int, optional
+            Same as for :func:`imgaug.multicore.Pool.__init__`.
+            The number of tasks done per worker process before the process is killed and restarted, similar to the
+            same parameter in multiprocessing.Pool. If ``None``, worker processes will not be automatically restarted.
+
+        seed : None or int, optional
+            Same as for :func:`imgaug.multicore.Pool.__init__`.
+            The seed to use for child processes. If ``None``, a random seed will be used.
+
+        Returns
+        -------
+        imgaug.multicore.Pool
+            Pool for multicore augmentation.
+
+        Examples
+        --------
+        >>> import imgaug as ia
+        >>> from imgaug import augmenters as iaa
+        >>> import numpy as np
+        >>> aug = iaa.Add(1)
+        >>> images = np.zeros((16, 128, 128, 3), dtype=np.uint8)
+        >>> batches = [ia.Batch(images=np.copy(images)) for _ in range(100)]
+        >>> with aug.pool(processes=-1, seed=2) as pool:
+        >>>     batches_aug = pool.map_batches(batches, chunksize=8)
+        >>> print(np.sum(batches_aug[0].images_aug[0]))
+        49152
+
+        Creates ``100`` batches of empty images. Each batch contains ``16`` images of size ``128x128``. The batches
+        are then augmented on all CPU cores except one (``processes=-1``). After augmentation, the sum of pixel values
+        from the first augmented image is printed.
+
+        >>> import imgaug as ia
+        >>> from imgaug import augmenters as iaa
+        >>> import numpy as np
+        >>> aug = iaa.Dropout(0.2)
+        >>> images = np.zeros((16, 128, 128, 3), dtype=np.uint8)
+        >>> def generate_batches():
+        >>>     for _ in range(100):
+        >>>         yield ia.Batch(images=np.copy(images))
+        >>>
+        >>> with aug.pool(processes=-1, seed=2) as pool:
+        >>>     batches_aug = pool.imap_batches(generate_batches(), chunksize=8)
+        >>>     batch_aug = next(batches_aug)
+        >>>     print(np.sum(batch_aug.images_aug[0]))
+        49152
+
+        Same as above. This time, a generator is used to generate batches of images. Again, the first augmented image's
+        sum of pixels is printed.
+
+        """
+        import imgaug.multicore as multicore
+        return multicore.Pool(self, processes=processes, maxtasksperchild=maxtasksperchild, seed=seed)
+
     # TODO most of the code of this function could be replaced with ia.draw_grid()
     # TODO add parameter for handling multiple images ((a) next to each other in each row or (b) multiply row count
     # by number of images and put each one in a new row)
@@ -1258,7 +1322,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         aug = self.copy()
-        aug.random_state = ia.new_random_state()
+
+        # This was changed for 0.2.8 from deriving a new random state based on the global random state to deriving
+        # it from the augmenter's local random state. This should reduce the risk that re-runs of scripts lead to
+        # different results upon small changes somewhere. It also decreases the likelihood of problems when using
+        # multiprocessing (the child processes might use the same global random state as the parent process).
+        # Note for the latter point that augment_batches() might call to_deterministic() if the batch contains
+        # multiply types of augmentables.
+        # aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
+
         aug.deterministic = True
         return aug
 
@@ -1269,9 +1342,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         This function is useful, when augmentations are run in the
         background (i.e. on multiple cores).
         It should be called before sending this Augmenter object to a
-        background worker (i.e., if ``N`` workers are used, the function
-        should be called ``N`` times). Otherwise, all background workers will
+        background worker or once within each worker with different seeds
+        (i.e., if ``N`` workers are used, the function should be called
+        ``N`` times). Otherwise, all background workers will
         use the same seeds and therefore apply the same augmentations.
+
+        If this augmenter or any child augmenter had a random state that
+        pointed to the global random state, it will automatically be
+        replaced with a local random state. This is similar to what
+        :func:`imgaug.augmenters.meta.Augmenter.localize_random_state`
+        does.
 
         Parameters
         ----------
@@ -1291,11 +1371,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if random_state is None:
             random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
-            pass # just use the provided random state without change
+            pass  # just use the provided random state without change
         else:
             random_state = ia.new_random_state(random_state)
 
         if not self.deterministic or deterministic_too:
+            # TODO replace by ia.derive_random_state()
             seed = random_state.randint(0, 10**6, 1)[0]
             self.random_state = ia.new_random_state(seed)
 
@@ -1331,7 +1412,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         A global random state exists exactly once. Many augmenters can point
         to it (and thereby use it to sample random numbers).
-        Local random usually exists for exactly one augmenter and are
+        Local random states usually exist for exactly one augmenter and are
         saved within that augmenter.
 
         Usually there is no need to change global into local random states.
@@ -1960,7 +2041,7 @@ class Sequential(Augmenter, list):
         augs = [aug.to_deterministic() for aug in self]
         seq = self.copy()
         seq[:] = augs
-        seq.random_state = ia.new_random_state()
+        seq.random_state = ia.derive_random_state(self.random_state)
         seq.deterministic = True
         return seq
 
@@ -2303,7 +2384,7 @@ class SomeOf(Augmenter, list):
         augs = [aug.to_deterministic() for aug in self]
         seq = self.copy()
         seq[:] = augs
-        seq.random_state = ia.new_random_state()
+        seq.random_state = ia.derive_random_state(self.random_state)
         seq.deterministic = True
         return seq
 
@@ -2580,7 +2661,7 @@ class Sometimes(Augmenter):
         aug.then_list = aug.then_list.to_deterministic()
         aug.else_list = aug.else_list.to_deterministic()
         aug.deterministic = True
-        aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
         return aug
 
     def get_parameters(self):
@@ -2753,7 +2834,7 @@ class WithChannels(Augmenter):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
         aug.deterministic = True
-        aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
         return aug
 
     def get_parameters(self):

@@ -429,7 +429,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         aug.first = aug.first.to_deterministic() if aug.first is not None else None
         aug.second = aug.second.to_deterministic() if aug.second is not None else None
         aug.deterministic = True
-        aug.random_state = ia.new_random_state()
+        aug.random_state = ia.derive_random_state(self.random_state)
         return aug
 
     def get_parameters(self):
