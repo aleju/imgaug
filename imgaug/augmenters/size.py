@@ -483,102 +483,105 @@ class CropAndPad(meta.Augmenter):
     Parameters
     ----------
     px : None or int or imgaug.parameters.StochasticParameter or tuple, optional
-        The number of pixels to crop (negative values) or
-        pad (positive values) on each side of the image.
-        Either this or the parameter `percent` may be set, not both at the
-        same time.
+        The number of pixels to crop (negative values) or pad (positive values)
+        on each side of the image. Either this or the parameter `percent` may
+        be set, not both at the same time.
 
-            * If None, then pixel-based cropping will not be used.
-            * If int, then that exact number of pixels will always be cropped.
+            * If None, then pixel-based cropping/padding will not be used.
+            * If int, then that exact number of pixels will always be
+              cropped/padded.
             * If StochasticParameter, then that parameter will be used for each
               image. Four samples will be drawn per image (top, right, bottom,
-              left).
-              If however `sample_independently` is set to False, only one value
-              will be sampled per image and used for all sides.
-            * If a tuple of two ints with values a and b, then each side will
-              be cropped by a random amount in the range ``a <= x <= b``.
-              x is sampled per image side.
+              left), unless `sample_independently` is set to False, as then
+              only one value will be sampled per image and used for all sides.
+            * If a tuple of two ints with values ``a`` and ``b``, then each
+              side will be cropped/padded by a random amount in the range
+              ``a <= x <= b``. ``x`` is sampled per image side. If however
+              `sample_independently` is set to False, only one value will be
+              sampled per image and used for all sides.
+            * If a tuple of four entries, then the entries represent top, right,
+              bottom, left. Each entry may be a single integer (always crop/pad
+              by exactly that value), a tuple of two ints ``a`` and ``b``
+              (crop/pad by an amount ``a <= x <= b``), a list of ints (crop/pad
+              by a random value that is contained in the list) or a
+              StochasticParameter (sample the amount to crop/pad from that
+              parameter).
+
+    percent : None or int or float or imgaug.parameters.StochasticParameter \
+              or tuple, optional
+        The number of pixels to crop (negative values) or pad (positive values)
+        on each side of the image given *in percent* of the image height/width.
+        E.g. if this is set to 0.1, the augmenter will always crop away 10
+        percent of the image's height at the top, 10 percent of the width on
+        the right, 10 percent of the height at the bottom and 10 percent of
+        the width on the left. Either this or the parameter `px` may be set,
+        not both at the same time.
+
+            * If None, then percent-based cropping/padding will not be used.
+            * If int, then expected to be 0 (no cropping/padding).
+            * If float, then that percentage will always be cropped/padded.
+            * If StochasticParameter, then that parameter will be used for each
+              image. Four samples will be drawn per image (top, right, bottom,
+              left). If however `sample_independently` is set to False, only
+              one value will be sampled per image and used for all sides.
+            * If a tuple of two floats with values ``a`` and ``b``, then each
+              side will be cropped/padded by a random percentage in the range
+              ``a <= x <= b``. ``x`` is sampled per image side.
               If however `sample_independently` is set to False, only one value
               will be sampled per image and used for all sides.
             * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single integer (always crop by
-              exactly that value), a tuple of two ints ``a`` and ``b`` (crop by an
-              amount ``a <= x <= b``), a list of ints (crop by a random value that
-              is contained in the list) or a StochasticParameter (sample the
-              amount to crop from that parameter).
+              bottom, left. Each entry may be a single float (always crop/pad
+              by exactly that percent value), a tuple of two floats ``a`` and
+              ``b`` (crop/pad by a percentage ``a <= x <= b``), a list of
+              floats (crop by a random value that is contained in the list) or
+              a StochasticParameter (sample the percentage to crop/pad from
+              that parameter).
 
-    percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
-        The number of pixels to crop (negative values) or
-        pad (positive values) on each side of the image given *in percent*
-        of the image height/width. E.g. if this is set to 0.1, the
-        augmenter will always crop away 10 percent of the image's height at
-        the top, 10 percent of the width on the right, 10 percent of the
-        height at the bottom and 10 percent of the width on the left.
-        Either this or the parameter `px` may be set, not both at the same
-        time.
+    pad_mode : imgaug.ALL or str or list of str or \
+               imgaug.parameters.StochasticParameter, optional
+        Padding mode to use. The available modes match the numpy padding modes,
+        i.e. ``constant``, ``edge``, ``linear_ramp``, ``maximum``, ``median``,
+        ``minimum``, ``reflect``, ``symmetric``, ``wrap``. The modes
+        ``constant`` and ``linear_ramp`` use extra values, which are provided
+        by ``pad_cval`` when necessary. See :func:`imgaug.imgaug.pad` for
+        more details.
 
-            * If None, then percent-based cropping will not be used.
-            * If int, then expected to be 0 (no padding/cropping).
-            * If float, then that percentage will always be cropped away.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left).
-              If however `sample_independently` is set to False, only one value
-              will be sampled per image and used for all sides.
-            * If a tuple of two floats with values a and b, then each side will
-              be cropped by a random percentage in the range ``a <= x <= b``.
-              x is sampled per image side.
-              If however `sample_independently` is set to False, only one value
-              will be sampled per image and used for all sides.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single float (always crop by
-              exactly that percent value), a tuple of two floats ``a`` and ``b`` (crop
-              by a percentage ``a <= x <= b``), a list of floats (crop by a random
-              value that is contained in the list) or a StochasticParameter
-              (sample the percentage to crop from that parameter).
-
-    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        Padding mode to use for numpy's pad function. The available modes
-        are ``constant``, ``edge``, ``linear_ramp``, ``maximum``, ``median``,
-        ``minimum``, ``reflect``, ``symmetric``, ``wrap``. Each one of these is
-        explained in the numpy documentation. The modes ``constant`` and
-        ``linear_ramp`` use extra values, which are provided by ``pad_cval``
-        when necessary.
-
-            * If imgaug.ALL, then a random mode from all available
-              modes will be sampled per image.
-            * If a string, it will be used as the pad mode for all
-              images.
-            * If a list of strings, a random one of these will be
-              sampled per image and used as the mode.
+            * If imgaug.ALL, then a random mode from all available modes will
+              be sampled per image.
+            * If a string, it will be used as the pad mode for all images.
+            * If a list of strings, a random one of these will be sampled per
+              image and used as the mode.
             * If StochasticParameter, a random mode will be sampled from this
               parameter per image.
 
-    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        The constant value to use (for numpy's pad function) if the pad
-        mode is ``constant`` or the end value to use if the mode
-        is ``linear_ramp``.
+    pad_cval : number or tuple of number list of number or \
+               imgaug.parameters.StochasticParameter, optional
+        The constant value to use if the pad mode is ``constant`` or the end
+        value to use if the mode is ``linear_ramp``.
+        See :func:`imgaug.imgaug.pad` for more details.
 
             * If number, then that value will be used.
-            * If a tuple of two numbers ``(a, b)``, a random value will be sampled
-              from the discrete range ``[a..b]``.
-            * If a list of numbers, then a random value will be sampled
-              from the list per image and used as the value.
+            * If a tuple of two numbers and at least one of them is a float,
+              then a random number will be sampled from the continuous range
+              ``a <= x <= b`` and used as the value. If both numbers are
+              integers, the range is discrete.
+            * If a list of number, then a random value will be chosen from the
+              elements of the list and used as the value.
             * If StochasticParameter, a random value will be sampled from that
               parameter per image.
 
     keep_size : bool, optional
-        After cropping, the result image has a different height/width than
-        the input image. If this parameter is set to True, then the cropped
-        image will be resized to the input image's size, i.e. the image size
-        is then not changed by the augmenter.
+        After cropping and padding, the result image will usually have a
+        different height/width compared to the original input image. If this
+        parameter is set to True, then the cropped/padded image will be resized
+        to the input image's size, i.e. the augmenter's output shape is always
+        identical to the input shape.
 
     sample_independently : bool, optional
         If False AND the values for `px`/`percent` result in exactly one
-        probability distribution for the amount to crop/pad, only one
-        single value will be sampled from that probability distribution
-        and used for all sides. I.e. the crop/pad amount then is the same
-        for all sides.
+        probability distribution for the amount to crop/pad, only one single
+        value will be sampled from that probability distribution and used for
+        all sides. I.e. the crop/pad amount then is the same for all sides.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
