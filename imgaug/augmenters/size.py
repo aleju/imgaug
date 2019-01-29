@@ -36,9 +36,10 @@ from .. import imgaug as ia
 from .. import parameters as iap
 
 
+# TODO somehow integrate this with ia.pad()
 def _handle_pad_mode_param(pad_mode):
-    pad_modes_available = {"constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric",
-                           "wrap"}
+    pad_modes_available = {"constant", "edge", "linear_ramp", "maximum", "mean", "median", "minimum", "reflect",
+                           "symmetric", "wrap"}
     if pad_mode == ia.ALL:
         return iap.Choice(list(pad_modes_available))
     elif ia.is_string(pad_mode):
