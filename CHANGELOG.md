@@ -281,6 +281,8 @@ were calculated based on a rather low number of 100 repetitions.
 ## imgaug.augmenters.size
 
 * Removed the restriction to `uint8` in `Scale`. The augmenter now supports the same dtypes as `imresize_many_images()`.
+* Fixed missing pad mode `mean` in `Pad` and `CropAndPad`.
+* Improved and fixed docstrings of `CropAndPad`, `Crop`, `Pad`.
 
 
 ## other
