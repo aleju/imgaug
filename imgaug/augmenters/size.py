@@ -700,7 +700,7 @@ class CropAndPad(meta.Augmenter):
 
                 if len(px) == 2:
                     self.all_sides = handle_param(px)
-                else: # len == 4
+                else:  # len == 4
                     self.top = handle_param(px[0])
                     self.right = handle_param(px[1])
                     self.bottom = handle_param(px[2])
