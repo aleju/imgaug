@@ -42,10 +42,17 @@ def _handle_pad_mode_param(pad_mode):
     if pad_mode == ia.ALL:
         return iap.Choice(list(pad_modes_available))
     elif ia.is_string(pad_mode):
-        ia.do_assert(pad_mode in pad_modes_available)
+        ia.do_assert(
+            pad_mode in pad_modes_available,
+            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (pad_mode, ", ".join(pad_modes_available))
+        )
         return iap.Deterministic(pad_mode)
     elif isinstance(pad_mode, list):
-        ia.do_assert(all([v in pad_modes_available for v in pad_mode]))
+        ia.do_assert(
+            all([v in pad_modes_available for v in pad_mode]),
+            "At least one in list %s is not a valid pad mode. Valid pad modes are: %s." % (
+                str(pad_mode), ", ".join(pad_modes_available))
+        )
         return iap.Choice(pad_mode)
     elif isinstance(pad_mode, iap.StochasticParameter):
         return pad_mode
