@@ -546,8 +546,8 @@ class CropAndPad(meta.Augmenter):
         by ``pad_cval`` when necessary. See :func:`imgaug.imgaug.pad` for
         more details.
 
-            * If imgaug.ALL, then a random mode from all available modes will
-              be sampled per image.
+            * If ``imgaug.ALL``, then a random mode from all available modes
+              will be sampled per image.
             * If a string, it will be used as the pad mode for all images.
             * If a list of strings, a random one of these will be sampled per
               image and used as the mode.
@@ -1005,8 +1005,8 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         by ``pad_cval`` when necessary. See :func:`imgaug.imgaug.pad` for
         more details.
 
-            * If imgaug.ALL, then a random mode from all available modes will
-              be sampled per image.
+            * If ``imgaug.ALL``, then a random mode from all available modes
+              will be sampled per image.
             * If a string, it will be used as the pad mode for all images.
             * If a list of strings, a random one of these will be sampled per
               image and used as the mode.
@@ -1162,25 +1162,25 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
             * If StochasticParameter, then that parameter will be used for each
               image. Four samples will be drawn per image (top, right, bottom,
               left).
-            * If a tuple of two ints with values a and b, then each side will
-              be cropped by a random amount in the range ``a <= x <= b``.
-              x is sampled per image side.
+            * If a tuple of two ints with values ``a`` and ``b``, then each
+              side will be cropped by a random amount in the range
+              ``a <= x <= b``. ``x`` is sampled per image side.
             * If a tuple of four entries, then the entries represent top, right,
               bottom, left. Each entry may be a single integer (always crop by
-              exactly that value), a tuple of two ints ``a`` and ``b`` (crop by an
-              amount ``a <= x <= b``), a list of ints (crop by a random value that
-              is contained in the list) or a StochasticParameter (sample the
-              amount to crop from that parameter).
+              exactly that value), a tuple of two ints ``a`` and ``b`` (crop by
+              an amount ``a <= x <= b``), a list of ints (crop by a random
+              value that is contained in the list) or a StochasticParameter
+              (sample the amount to crop from that parameter).
 
-    percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
+    percent : None or int or float or imgaug.parameters.StochasticParameter \
+              or tuple, optional
         The number of pixels to crop away (cut off) on each side of the image
         given *in percent* of the image height/width.
         E.g. if this is set to 0.1, the augmenter will always crop away
         10 percent of the image's height at the top, 10 percent of the width
         on the right, 10 percent of the height at the bottom and 10 percent
         of the width on the left.
-        Either this or the parameter `px` may be set, not both at the same
-        time.
+        Either this or the parameter `px` may be set, not both at the same time.
 
             * If None, then percent-based cropping will not be used.
             * If int, then expected to be 0 (no cropping).
@@ -1188,15 +1188,16 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
             * If StochasticParameter, then that parameter will be used for each
               image. Four samples will be drawn per image (top, right, bottom,
               left).
-            * If a tuple of two floats with values a and b, then each side will
-              be cropped by a random percentage in the range ``a <= x <= b``.
-              x is sampled per image side.
+            * If a tuple of two floats with values ``a`` and ``b``, then each
+              side will be cropped by a random percentage in the range
+              ``a <= x <= b``. ``x`` is sampled per image side.
             * If a tuple of four entries, then the entries represent top, right,
               bottom, left. Each entry may be a single float (always crop by
-              exactly that percent value), a tuple of two floats a and ``b`` (crop
-              by a percentage ``a <= x <= b``), a list of floats (crop by a random
-              value that is contained in the list) or a StochasticParameter
-              (sample the percentage to crop from that parameter).
+              exactly that percent value), a tuple of two floats a and ``b``
+              (crop by a percentage ``a <= x <= b``), a list of floats (crop by
+              a random value that is contained in the list) or a
+              StochasticParameter (sample the percentage to crop from that
+              parameter).
 
     keep_size : bool, optional
         After cropping, the result image has a different height/width than
@@ -1229,8 +1230,8 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
 
     >>> aug = iaa.Crop(px=(0, 10), sample_independently=False)
 
-    samples one value ``v`` from the discrete range ``[0..10]`` and crops all sides
-    by ``v`` pixels.
+    samples one value ``v`` from the discrete range ``[0..10]`` and crops all
+    sides by ``v`` pixels.
 
     >>> aug = iaa.Crop(px=(0, 10), keep_size=False)
 
