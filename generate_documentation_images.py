@@ -1018,7 +1018,7 @@ def chapter_examples_heatmaps_scaling():
         drawn = []
         for heatmap in heatmaps:
             if upscale:
-                drawn.append(heatmap.scale((128, 128), interpolation="nearest").draw()[0])
+                drawn.append(heatmap.resize((128, 128), interpolation="nearest").draw()[0])
             else:
                 size = heatmap.get_arr().shape[0]
                 pad_amount = (128-size)//2
@@ -1038,7 +1038,7 @@ def chapter_examples_heatmaps_scaling():
     # interpolation (cubic).
     avg_pooled = [heatmap, heatmap.avg_pool(2), heatmap.avg_pool(4), heatmap.avg_pool(8)]
     max_pooled = [heatmap, heatmap.max_pool(2), heatmap.max_pool(4), heatmap.max_pool(8)]
-    resized = [heatmap, heatmap.scale((64, 64)), heatmap.scale((32, 32)), heatmap.scale((16, 16))]
+    resized = [heatmap, heatmap.resize((64, 64)), heatmap.resize((32, 32)), heatmap.resize((16, 16))]
 
     # Draw an image of all scaled heatmaps.
     cells = draw_heatmaps(avg_pooled)\

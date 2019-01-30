@@ -2108,7 +2108,7 @@ class PerspectiveTransform(meta.Augmenter):
 
             if self.keep_size:
                 h, w = arr.shape[0:2]
-                heatmaps_i_aug = heatmaps_i_aug.scale((h, w))
+                heatmaps_i_aug = heatmaps_i_aug.resize((h, w))
             else:
                 heatmaps_i_aug.shape = (max_heights_imgs[i], max_widths_imgs[i]) + heatmaps_i_aug.shape[2:]
 
@@ -2535,7 +2535,7 @@ class ElasticTransformation(meta.Augmenter):
                 # To prevent this, we use the same image size as for the base images, but that
                 # requires resizing the heatmaps temporarily to the image sizes.
                 height_orig, width_orig = heatmaps_i.arr_0to1.shape[0:2]
-                heatmaps_i = heatmaps_i.scale(heatmaps_i.shape[0:2])
+                heatmaps_i = heatmaps_i.resize(heatmaps_i.shape[0:2])
                 arr_0to1 = heatmaps_i.arr_0to1
                 dx, dy = self.generate_shift_maps(
                     arr_0to1.shape[0:2],
@@ -2564,7 +2564,7 @@ class ElasticTransformation(meta.Augmenter):
                 heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(arr_0to1_warped, shape=heatmaps_i.shape,
                                                                  min_value=heatmaps_i.min_value,
                                                                  max_value=heatmaps_i.max_value)
-                heatmaps_i_warped = heatmaps_i_warped.scale((height_orig, width_orig))
+                heatmaps_i_warped = heatmaps_i_warped.resize((height_orig, width_orig))
                 heatmaps[i] = heatmaps_i_warped
 
         return heatmaps
@@ -2957,7 +2957,7 @@ class Rot90(meta.Augmenter):
             shape_orig = heatmaps_i.arr_0to1.shape
             heatmaps_i.arr_0to1 = arr_aug
             if self.keep_size:
-                heatmaps_i = heatmaps_i.scale(shape_orig[0:2])
+                heatmaps_i = heatmaps_i.resize(shape_orig[0:2])
             elif k_i % 2 == 1:
                 h, w = heatmaps_i.shape[0:2]
                 heatmaps_i.shape = tuple([w, h] + list(heatmaps_i.shape[2:]))

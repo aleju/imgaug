@@ -390,7 +390,7 @@ class Resize(meta.Augmenter):
             w = int(np.round(w_img * (heatmaps_i.arr_0to1.shape[1] / heatmaps_i.shape[1])))
             h = max(h, 1)
             w = max(w, 1)
-            heatmaps_i_resized = heatmaps_i.scale((h, w), interpolation=sample_ip)
+            heatmaps_i_resized = heatmaps_i.resize((h, w), interpolation=sample_ip)
             heatmaps_i_resized.shape = (h_img, w_img) + heatmaps_i.shape[2:]
             result.append(heatmaps_i_resized)
 
@@ -859,7 +859,7 @@ class CropAndPad(meta.Augmenter):
             heatmaps[i].arr_0to1 = arr_cr_pa
 
             if self.keep_size:
-                heatmaps[i] = heatmaps[i].scale((height_heatmaps, width_heatmaps))
+                heatmaps[i] = heatmaps[i].resize((height_heatmaps, width_heatmaps))
             else:
                 heatmaps[i].shape = (
                     heatmaps[i].shape[0] - crop_image_top - crop_image_bottom + pad_image_top + pad_image_bottom,
@@ -1927,7 +1927,7 @@ class KeepSizeByResize(meta.Augmenter):
                 if interpolation == "NO_RESIZE":
                     result.append(heatmap_aug)
                 else:
-                    heatmap_aug = heatmap_aug.scale(input_arr_shape[0:2], interpolation=interpolation)
+                    heatmap_aug = heatmap_aug.resize(input_arr_shape[0:2], interpolation=interpolation)
                     heatmap_aug.shape = heatmap.shape
                     result.append(heatmap_aug)
         else:

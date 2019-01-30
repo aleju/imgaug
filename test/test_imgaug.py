@@ -3391,7 +3391,7 @@ def test_HeatmapsOnImage_scale():
     ])
     heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
 
-    heatmaps_scaled = heatmaps.scale((4, 4), interpolation="nearest")
+    heatmaps_scaled = heatmaps.resize((4, 4), interpolation="nearest")
     assert heatmaps_scaled.arr_0to1.shape == (4, 4, 1)
     assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
     assert np.allclose(
@@ -3409,7 +3409,7 @@ def test_HeatmapsOnImage_scale():
     ])
     heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(4, 4, 3))
 
-    heatmaps_scaled = heatmaps.scale(2.0, interpolation="nearest")
+    heatmaps_scaled = heatmaps.resize(2.0, interpolation="nearest")
     assert heatmaps_scaled.arr_0to1.shape == (2, 4, 1)
     assert heatmaps_scaled.arr_0to1.dtype.type == np.float32
     assert np.allclose(
@@ -3882,7 +3882,7 @@ def test_SegmentationMapOnImage_scale():
     ])
     segmap = ia.SegmentationMapOnImage(arr, shape=(2, 2), nb_classes=3)
 
-    segmap_scaled = segmap.scale((4, 4))
+    segmap_scaled = segmap.resize((4, 4))
     observed = segmap_scaled.arr
     expected = np.clip(ia.imresize_single_image(segmap.arr, (4, 4), interpolation="cubic"), 0, 1.0)
     assert np.allclose(observed, expected)
@@ -3893,7 +3893,7 @@ def test_SegmentationMapOnImage_scale():
         [0, 0, 2, 2],
     ]))
 
-    segmap_scaled = segmap.scale((4, 4), interpolation="nearest")
+    segmap_scaled = segmap.resize((4, 4), interpolation="nearest")
     observed = segmap_scaled.arr
     expected = ia.imresize_single_image(segmap.arr, (4, 4), interpolation="nearest")
     assert np.allclose(observed, expected)
@@ -3904,7 +3904,7 @@ def test_SegmentationMapOnImage_scale():
         [0, 0, 2, 2],
     ]))
 
-    segmap_scaled = segmap.scale(2.0)
+    segmap_scaled = segmap.resize(2.0)
     observed = segmap_scaled.arr
     expected = np.clip(ia.imresize_single_image(segmap.arr, 2.0, interpolation="cubic"), 0, 1.0)
     assert np.allclose(observed, expected)

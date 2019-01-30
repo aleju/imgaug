@@ -2097,9 +2097,9 @@ def test_KeepSizeByResize():
     # heatmaps
     heatmaps = np.linspace(0.0, 1.0, 4*4*1).reshape((4, 4, 1)).astype(np.float32)
     heatmaps_oi = ia.HeatmapsOnImage(heatmaps, shape=(4, 4, 1))
-    heatmaps_oi_cubic = ia.HeatmapsOnImage(heatmaps[1:, :, :], shape=(3, 4, 3)).scale((4, 4), interpolation="cubic")
+    heatmaps_oi_cubic = ia.HeatmapsOnImage(heatmaps[1:, :, :], shape=(3, 4, 3)).resize((4, 4), interpolation="cubic")
     heatmaps_oi_cubic.shape = (4, 4, 3)
-    heatmaps_oi_nearest = ia.HeatmapsOnImage(heatmaps[1:, :, :], shape=(3, 4, 1)).scale((4, 4), interpolation="nearest")
+    heatmaps_oi_nearest = ia.HeatmapsOnImage(heatmaps[1:, :, :], shape=(3, 4, 1)).resize((4, 4), interpolation="nearest")
     heatmaps_oi_nearest.shape = (4, 4, 3)
 
     aug = iaa.KeepSizeByResize(children, interpolation="cubic", interpolation_heatmaps="nearest")

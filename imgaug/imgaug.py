@@ -682,7 +682,7 @@ def quokka_segmentation_map(size=None, extract=None):
 
     if size is not None:
         shape_resized = _compute_resized_shape(img_seg.shape, size)
-        segmap = segmap.scale(shape_resized[0:2])
+        segmap = segmap.resize(shape_resized[0:2])
         segmap.shape = tuple(shape_resized[0:2]) + (3,)
 
     return segmap
@@ -1432,7 +1432,7 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
 def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     """
-    Rescale an array by pooling values within blocks.
+    Resize an array by pooling values within blocks.
 
     dtype support::
 
@@ -1514,7 +1514,7 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
 
 def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
-    Rescale an array using average pooling.
+    Resize an array using average pooling.
 
     dtype support::
 
@@ -1545,7 +1545,7 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
 
 def max_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
-    Rescale an array using max-pooling.
+    Resize an array using max-pooling.
 
     dtype support::
 
@@ -4915,7 +4915,7 @@ class HeatmapsOnImage(object):
 
     def avg_pool(self, block_size):
         """
-        Rescale the heatmap(s) array using average pooling of a given block/kernel size.
+        Resize the heatmap(s) array using average pooling of a given block/kernel size.
 
         Parameters
         ----------
@@ -4934,7 +4934,7 @@ class HeatmapsOnImage(object):
 
     def max_pool(self, block_size):
         """
-        Rescale the heatmap(s) array using max-pooling of a given block/kernel size.
+        Resize the heatmap(s) array using max-pooling of a given block/kernel size.
 
         Parameters
         ----------
@@ -4951,9 +4951,15 @@ class HeatmapsOnImage(object):
         return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
                                          max_value=self.max_value)
 
-    def scale(self, sizes, interpolation="cubic"):
+    def scale(self, *args, **kwargs):
+        import warnings
+        warnings.warn(DeprecationWarning("HeatmapsOnImage.scale() is deprecated. Use HeatmapsOnImage.resize() instead. "
+                                         "It has the exactly same interface (simple renaming)."))
+        return self.resize(*args, **kwargs)
+
+    def resize(self, sizes, interpolation="cubic"):
         """
-        Rescale the heatmap(s) array to the provided size given the provided interpolation.
+        Resize the heatmap(s) array to the provided size given the provided interpolation.
 
         Parameters
         ----------
@@ -4968,17 +4974,17 @@ class HeatmapsOnImage(object):
         Returns
         -------
         imgaug.HeatmapsOnImage
-            Rescaled heatmaps object.
+            Resized heatmaps object.
 
         """
-        arr_0to1_rescaled = imresize_single_image(self.arr_0to1, sizes, interpolation=interpolation)
+        arr_0to1_resized = imresize_single_image(self.arr_0to1, sizes, interpolation=interpolation)
 
         # cubic interpolation can lead to values outside of [0.0, 1.0],
         # see https://github.com/opencv/opencv/issues/7195
         # TODO area interpolation too?
-        arr_0to1_rescaled = np.clip(arr_0to1_rescaled, 0.0, 1.0)
+        arr_0to1_resized = np.clip(arr_0to1_resized, 0.0, 1.0)
 
-        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value,
+        return HeatmapsOnImage.from_0to1(arr_0to1_resized, shape=self.shape, min_value=self.min_value,
                                          max_value=self.max_value)
 
     def to_uint8(self):
@@ -5562,9 +5568,16 @@ class SegmentationMapOnImage(object):
         else:
             return segmap
 
-    def scale(self, sizes, interpolation="cubic"):
+    def scale(self, *args, **kwargs):
+        import warnings
+        warnings.warn(DeprecationWarning("SegmentationMapOnImage.scale() is deprecated. "
+                                         "Use SegmentationMapOnImage.resize() instead. "
+                                         "It has the exactly same interface (simple renaming)."))
+        return self.resize(*args, **kwargs)
+
+    def resize(self, sizes, interpolation="cubic"):
         """
-        Rescale the segmentation map array to the provided size given the provided interpolation.
+        Resize the segmentation map array to the provided size given the provided interpolation.
 
         Parameters
         ----------
@@ -5582,16 +5595,16 @@ class SegmentationMapOnImage(object):
         Returns
         -------
         segmap : imgaug.SegmentationMapOnImage
-            Rescaled segmentation map object.
+            Resized segmentation map object.
 
         """
-        arr_rescaled = imresize_single_image(self.arr, sizes, interpolation=interpolation)
+        arr_resized = imresize_single_image(self.arr, sizes, interpolation=interpolation)
 
         # cubic interpolation can lead to values outside of [0.0, 1.0],
         # see https://github.com/opencv/opencv/issues/7195
         # TODO area interpolation too?
-        arr_rescaled = np.clip(arr_rescaled, 0.0, 1.0)
-        segmap = SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+        arr_resized = np.clip(arr_resized, 0.0, 1.0)
+        segmap = SegmentationMapOnImage(arr_resized, shape=self.shape)
         segmap.input_was = self.input_was
         return segmap
 
