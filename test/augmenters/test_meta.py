@@ -3788,7 +3788,7 @@ def test_Augmenter_augment_batches():
             check_keypoints=False,
             name="AssertShape-nochange"
         ),
-        iaa.Scale((0.5, 0.9)),
+        iaa.Resize((0.5, 0.9)),
         iaa.CropAndPad(px=(-50, 50)),
         iaa.Pad(px=(1, 50)),
         iaa.Crop(px=(1, 50)),

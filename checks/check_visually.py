@@ -81,7 +81,7 @@ def main():
         iaa.WithChannels([0], children=[iaa.Add(20)], name="WithChannels"),
         iaa.AddToHueAndSaturation((-20, 20), per_channel=True, name="AddToHueAndSaturation"),
         iaa.Noop(name="Noop"),
-        iaa.Scale({"width": 64, "height": 64}, name="Scale"),
+        iaa.Resize({"width": 64, "height": 64}, name="Resize"),
         iaa.CropAndPad(px=(-8, 8), name="CropAndPad-px"),
         iaa.Pad(px=(0, 8), name="Pad-px"),
         iaa.Crop(px=(0, 8), name="Crop-px"),
