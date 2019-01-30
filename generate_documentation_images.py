@@ -620,7 +620,7 @@ def chapter_examples_bounding_boxes_ooi():
     image_before = draw_bbs(image, bbs, 100)
     image_after1 = draw_bbs(image_aug, bbs_aug, 100)
     image_after2 = draw_bbs(image_aug, bbs_aug.remove_out_of_image(), 100)
-    image_after3 = draw_bbs(image_aug, bbs_aug.remove_out_of_image().cut_out_of_image(), 100)
+    image_after3 = draw_bbs(image_aug, bbs_aug.remove_out_of_image().clip_out_of_image(), 100)
 
     # ------------
 

@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import time
+import warnings
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -2618,25 +2619,25 @@ def test_BoundingBox():
     assert bb.is_out_of_image((1, 1, 3), partly=False, fully=True) is True
     assert bb.is_out_of_image((1, 1, 3), partly=True, fully=False) is False
 
-    # cut_out_of_image
+    # clip_out_of_image
     bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
-    bb_cut = bb.cut_out_of_image((100, 100, 3))
+    bb_cut = bb.clip_out_of_image((100, 100, 3))
     eps = np.finfo(np.float32).eps
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
     assert bb_cut.x2 == 40
-    bb_cut = bb.cut_out_of_image(np.zeros((100, 100, 3), dtype=np.uint8))
+    bb_cut = bb.clip_out_of_image(np.zeros((100, 100, 3), dtype=np.uint8))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
     assert bb_cut.x2 == 40
-    bb_cut = bb.cut_out_of_image((20, 100, 3))
+    bb_cut = bb.clip_out_of_image((20, 100, 3))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert 20 - 2*eps < bb_cut.y2 < 20
     assert bb_cut.x2 == 40
-    bb_cut = bb.cut_out_of_image((100, 30, 3))
+    bb_cut = bb.clip_out_of_image((100, 30, 3))
     assert bb_cut.y1 == 10
     assert bb_cut.x1 == 20
     assert bb_cut.y2 == 30
@@ -3049,28 +3050,28 @@ def test_BoundingBoxesOnImage():
     assert len(bbsoi_slim.bounding_boxes) == 1
     assert bbsoi_slim.bounding_boxes[0] == bb1
 
-    # cut_out_of_image()
+    # clip_out_of_image()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
     bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
     eps = np.finfo(np.float32).eps
-    bbsoi_cut = bbsoi.cut_out_of_image()
-    assert len(bbsoi_cut.bounding_boxes) == 2
-    assert bbsoi_cut.bounding_boxes[0].y1 == 10
-    assert bbsoi_cut.bounding_boxes[0].x1 == 20
-    assert bbsoi_cut.bounding_boxes[0].y2 == 30
-    assert bbsoi_cut.bounding_boxes[0].x2 == 40
-    assert bbsoi_cut.bounding_boxes[1].y1 == 15
-    assert bbsoi_cut.bounding_boxes[1].x1 == 25
-    assert bbsoi_cut.bounding_boxes[1].y2 == 35
-    assert 50 - 2*eps < bbsoi_cut.bounding_boxes[1].x2 < 50
+    bbsoi_clip = bbsoi.clip_out_of_image()
+    assert len(bbsoi_clip.bounding_boxes) == 2
+    assert bbsoi_clip.bounding_boxes[0].y1 == 10
+    assert bbsoi_clip.bounding_boxes[0].x1 == 20
+    assert bbsoi_clip.bounding_boxes[0].y2 == 30
+    assert bbsoi_clip.bounding_boxes[0].x2 == 40
+    assert bbsoi_clip.bounding_boxes[1].y1 == 15
+    assert bbsoi_clip.bounding_boxes[1].x1 == 25
+    assert bbsoi_clip.bounding_boxes[1].y2 == 35
+    assert 50 - 2*eps < bbsoi_clip.bounding_boxes[1].x2 < 50
 
     # shift()
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51, label=None)
     bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
     bbsoi_shifted = bbsoi.shift(right=1)
-    assert len(bbsoi_cut.bounding_boxes) == 2
+    assert len(bbsoi_shifted.bounding_boxes) == 2
     assert bbsoi_shifted.bounding_boxes[0].y1 == 10
     assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
     assert bbsoi_shifted.bounding_boxes[0].y2 == 30
@@ -4469,7 +4470,16 @@ def test_Polygon_is_out_of_image():
 
 
 def test_Polygon_cut_out_of_image():
-    _test_Polygon_cut_clip(lambda poly, image: poly.cut_out_of_image(image))
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        # Trigger a warning.
+        _test_Polygon_cut_clip(lambda poly, image: poly.cut_out_of_image(image))
+        # Verify
+        # get multiple warnings here, one for each function call
+        assert all([
+            "Use Polygon.clip_out_of_image() instead" in str(msg.message)
+            for msg in caught_warnings])
 
 
 def test_Polygon_clip_out_of_image():
