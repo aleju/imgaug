@@ -87,6 +87,15 @@ were calculated based on a rather low number of 100 repetitions.
   RandomState.
 * Moved BatchLoader to `multicore.py` and replaced the class with an alias pointing to `imgaug.multicore.BatchLoader`.
 * Moved BackgroundAugmenter to `multicore.py` and replaced the class with an alias pointing to `imgaug.multicore.BatchLoader`.
+* Renamed `HeatmapsOnImage.scale()` to `HeatmapsOnImage.resize()`.
+* Marked `HeatmapsOnImage.scale()` as deprecated.
+* Renamed `SegmentationMapOnImage.scale()` to `SegmentationMapOnImage.resize()`.
+* Marked `SegmentationMapOnImage.scale()` as deprecated.
+* Renamed `BoundingBox.cut_out_of_image()` to `BoundingBox.clip_out_of_image()`.
+* Marked `BoundingBox.cut_out_of_image()` as deprecated.
+* Renamed `BoundingBoxesOnImage.cut_out_of_image()` to `BoundingBoxesOnImage.clip_out_of_image()`.
+* Marked `BoundingBoxesOnImage.cut_out_of_image()` as deprecated.
+* Marked `Polygon.cut_out_of_image()` as deprecated. (The analogous clip function existed already.)
 
 
 ## imgaug.multicore
@@ -253,6 +262,8 @@ were calculated based on a rather low number of 100 repetitions.
 * Improved dtype support of `Flipud`
 * Refactored `Fliplr` main loop to be more elegant and tolerant
 * Refactored `Flipud` main loop to be more elegant and tolerant
+* Added alias `HorizontalFlip` for `Fliplr`.
+* Added alias `VerticalFlip` for `Flipud`.
 
 
 ## imgaug.augmenters.geometric
@@ -283,6 +294,8 @@ were calculated based on a rather low number of 100 repetitions.
 * Removed the restriction to `uint8` in `Scale`. The augmenter now supports the same dtypes as `imresize_many_images()`.
 * Fixed missing pad mode `mean` in `Pad` and `CropAndPad`.
 * Improved and fixed docstrings of `CropAndPad`, `Crop`, `Pad`.
+* Renamed `Scale` to `Resize`.
+* Marked `Scale` as deprecated.
 
 
 ## other
