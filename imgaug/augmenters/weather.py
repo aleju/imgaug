@@ -195,7 +195,7 @@ def Clouds(name=None, deterministic=False, random_state=None):
 
         - (1) Parameters of this augmenter are optimized for the value range of uint8.
               While other dtypes may be accepted, they will lead to images augmented in
-              ways inappropiate for the respective dtype.
+              ways inappropriate for the respective dtype.
 
     Parameters
     ----------
@@ -262,7 +262,7 @@ def Fog(name=None, deterministic=False, random_state=None):
 
         - (1) Parameters of this augmenter are optimized for the value range of uint8.
               While other dtypes may be accepted, they will lead to images augmented in
-              ways inappropiate for the respective dtype.
+              ways inappropriate for the respective dtype.
 
     Parameters
     ----------
@@ -551,7 +551,7 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9), flake_size
 
         - (1) Parameters of this augmenter are optimized for the value range of uint8.
               While other dtypes may be accepted, they will lead to images augmented in
-              ways inappropiate for the respective dtype.
+              ways inappropriate for the respective dtype.
 
     Parameters
     ----------

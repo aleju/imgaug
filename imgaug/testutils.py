@@ -1,6 +1,6 @@
 """
 Some utility functions that are only used for unittests.
-Placing them in test/ directory seems to be agains convention, so they are part of the library.
+Placing them in test/ directory seems to be against convention, so they are part of the library.
 
 """
 from __future__ import print_function, division
