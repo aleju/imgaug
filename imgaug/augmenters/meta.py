@@ -623,8 +623,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        heatmaps : list of imgaug.HeatmapsOnImage
-            Heatmaps to augment.
+        heatmaps : imgaug.HeatmapsOnImage or list of imgaug.HeatmapsOnImage
+            Heatmap(s) to augment. Either a single heatmap or a list of
+            heatmaps.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -636,8 +637,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        heatmap_result : list of imgaug.HeatmapsOnImage
-            Corresponding augmented heatmaps.
+        heatmap_result : imgaug.HeatmapsOnImage or list of imgaug.HeatmapsOnImage
+            Corresponding augmented heatmap(s).
 
         """
         if self.deterministic:
@@ -645,6 +646,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         if parents is None:
             parents = []
+
+        input_was_single_instance = False
+        if isinstance(heatmaps, ia.HeatmapsOnImage):
+            input_was_single_instance = True
+            heatmaps = [heatmaps]
 
         ia.do_assert(ia.is_iterable(heatmaps),
                      "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
@@ -683,6 +689,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
+        if input_was_single_instance:
+            return heatmaps_result[0]
         return heatmaps_result
 
     @abstractmethod

@@ -26,7 +26,6 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import meta
 from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
-import imgaug.multicore as multicore
 
 
 def main():
@@ -39,6 +38,7 @@ def main():
     test_reduce_to_nonempty()
     test_invert_reduce_to_nonempty()
     test_Augmenter()
+    test_Augmenter_augment_heatmaps()
     test_Augmenter_augment_keypoints()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_find()
@@ -1333,6 +1333,27 @@ def test_Augmenter():
     aug = DummyAugmenterRepr(name="Example", deterministic=True)
     assert aug.__repr__() == aug.__str__() == \
         "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=True)"
+
+
+def test_Augmenter_augment_heatmaps():
+    reseed()
+    heatmap = ia.HeatmapsOnImage(
+        np.linspace(0.0, 1.0, num=4*4).reshape((4, 4, 1)).astype(np.float32),
+        shape=(4, 4, 3)
+    )
+
+    aug = iaa.Noop()
+    heatmap_aug = aug.augment_heatmaps(heatmap)
+    assert np.allclose(heatmap_aug.arr_0to1, heatmap.arr_0to1)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    heatmap_aug = aug.augment_heatmaps(heatmap)
+    assert np.allclose(heatmap_aug.arr_0to1, np.rot90(heatmap.arr_0to1, -1))
+
+    aug = iaa.Rot90(1, keep_size=False)
+    heatmaps_aug = aug.augment_heatmaps([heatmap, heatmap, heatmap])
+    for i in range(3):
+        assert np.allclose(heatmaps_aug[i].arr_0to1, np.rot90(heatmap.arr_0to1, -1))
 
 
 def test_Augmenter_augment_keypoints():
