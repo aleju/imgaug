@@ -795,7 +795,8 @@ def test_Pad():
     assert all([100 - 50 < v < 100 + 50 for v in seen])
 
     aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=ia.ALL, pad_cval=0, keep_size=False)
-    expected = ["constant", "edge", "linear_ramp", "maximum", "median", "minimum", "reflect", "symmetric", "wrap"]
+    expected = ["constant", "edge", "linear_ramp", "maximum", "mean", "median", "minimum", "reflect",
+                "symmetric", "wrap"]
     assert isinstance(aug.pad_mode, iap.Choice)
     assert len(aug.pad_mode.a) == len(expected)
     assert all([v in aug.pad_mode.a for v in expected])
