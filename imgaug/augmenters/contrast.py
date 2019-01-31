@@ -63,7 +63,7 @@ def adjust_contrast_gamma(arr, gamma):
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
               e.g. ``result*255`` for ``uint8``.
         - (3) Integer-like values are not rounded after applying the contrast adjustment equation
-              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
+              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continuous
               space to discrete happens according to floor function.
         - (4) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
@@ -131,7 +131,7 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
               e.g. ``result*255`` for ``uint8``.
         - (3) Integer-like values are not rounded after applying the contrast adjustment equation
-              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
+              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continuous
               space to discrete happens according to floor function.
         - (4) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
@@ -207,7 +207,7 @@ def adjust_contrast_log(arr, gain):
               dtype, e.g. 255 for ``uint8``. The normalization is reversed afterwards,
               e.g. ``result*255`` for ``uint8``.
         - (3) Integer-like values are not rounded after applying the contrast adjustment equation
-              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continous
+              (before inverting the normalization to 0.0-1.0 space), i.e. projection from continuous
               space to discrete happens according to floor function.
         - (4) Note that scikit-image doc says that integers are converted to ``float64`` values before
               applying the contrast normalization method. This might lead to inaccuracies for large
@@ -900,7 +900,7 @@ class CLAHE(meta.Augmenter):
 
     >>> aug = iaa.CLAHE(tile_grid_size_px=(3, 21))
 
-    Creates a CLAHE augmenter with kernel sizes of ``SxS``, where ``S`` is uniformly sampled from from ``[3..21]``.
+    Creates a CLAHE augmenter with kernel sizes of ``SxS``, where ``S`` is uniformly sampled from ``[3..21]``.
     Sampling happens once per image.
 
     >>> aug = iaa.CLAHE(tile_grid_size_px=iap.Discretize(iap.Normal(loc=7, scale=2)), tile_grid_size_px_min=3)

@@ -1033,7 +1033,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     """
     # we just do nothing if the input contains zero images
-    # one could also argue that an exception would be appropiate here
+    # one could also argue that an exception would be appropriate here
     if len(images) == 0:
         return images
 
@@ -3846,7 +3846,7 @@ class Polygon(object):
             Index of the closest point.
 
         number
-            Euclidean distance to the the closest point.
+            Euclidean distance to the closest point.
             This value is only returned if `return_distance` was set to True.
 
         """

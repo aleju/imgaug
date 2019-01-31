@@ -132,7 +132,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
 
     ksize : None or int, optional
         Size in height/width of the gaussian kernel. This argument is only understood by the ``cv2`` backend.
-        If it is set to None, an appropiate value for `ksize` will automatically be derived from `sigma`.
+        If it is set to None, an appropriate value for `ksize` will automatically be derived from `sigma`.
         The value is chosen tighter for larger sigmas to avoid as much as possible very large kernel sizes
         and therey improve performance.
 
