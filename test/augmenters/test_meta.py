@@ -1424,6 +1424,36 @@ def test_Augmenter_augment_keypoints():
             translations_kps[8-1] -= 1
             assert np.array_equal(translations_imgs, translations_kps)
 
+    # single instance of KeypointsOnImage as input
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=5),
+                                 ia.Keypoint(x=3, y=3)], shape=(5, 10, 3))
+
+    aug = iaa.Noop()
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    for kp_aug, kp in zip(kpsoi_aug.keypoints, kpsoi.keypoints):
+        assert np.allclose(kp_aug.x, kp.x)
+        assert np.allclose(kp_aug.y, kp.y)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    # TODO -1 here added because that is done in Rot90, but will have to be fixed
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 5 - 2 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 1)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 5 - 5 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+    assert np.allclose(kpsoi_aug.keypoints[2].x, 5 - 3 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[2].y, 3)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    kpsoi_aug = aug.augment_keypoints([kpsoi, kpsoi, kpsoi])
+    for i in range(3):
+        assert np.allclose(kpsoi_aug[i].keypoints[0].x, 5 - 2 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[0].y, 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[1].x, 5 - 5 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[1].y, 2)
+        assert np.allclose(kpsoi_aug[i].keypoints[2].x, 5 - 3 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[2].y, 3)
+
 
 def test_Augmenter_augment_segmentation_maps():
     reseed()

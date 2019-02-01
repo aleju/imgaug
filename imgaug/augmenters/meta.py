@@ -823,10 +823,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        keypoints_on_images : list of imgaug.KeypointsOnImage
+        keypoints_on_images : imgaug.KeypointsOnImage or \
+                              list of imgaug.KeypointsOnImage
             The keypoints/landmarks to augment.
-            Expected is a list of imgaug.KeypointsOnImage objects,
-            each containing the keypoints of a single image.
+            Expected is an instance of imgaug.KeypointsOnImage or a list of
+            imgaug.KeypointsOnImage objects, with each such object containing
+            the keypoints of a single image.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -834,11 +836,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             It is set automatically for child augmenters.
 
         hooks : None or imgaug.HooksKeypoints, optional
-            HooksKeypoints object to dynamically interfere with the augmentation process.
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
 
         Returns
         -------
-        keypoints_on_images_result : list of imgaug.KeypointsOnImage
+        keypoints_on_images_result : imgaug.KeypointsOnImage or \
+                                     list of imgaug.KeypointsOnImage
             Augmented keypoints.
 
         """
@@ -847,6 +851,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         if parents is None:
             parents = []
+
+        input_was_single_instance = False
+        if isinstance(keypoints_on_images, ia.KeypointsOnImage):
+            input_was_single_instance = True
+            keypoints_on_images = [keypoints_on_images]
 
         ia.do_assert(ia.is_iterable(keypoints_on_images))
         ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage)
@@ -884,6 +893,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
+        if input_was_single_instance:
+            return keypoints_on_images_result[0]
         return keypoints_on_images_result
 
     @abstractmethod
