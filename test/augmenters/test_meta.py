@@ -3661,9 +3661,9 @@ def test_Augmenter_augment_batches():
         assert np.array_equal(batches_aug[0].images_aug[0], image_flipped)
         assert batches_aug[0].keypoints_aug[0].keypoints[0].x == kp_flipped.x
         assert batches_aug[0].keypoints_aug[0].keypoints[0].y == kp_flipped.y
-        assert np.array_equal(batches_aug[0].images[0], image)
-        assert batches_aug[0].keypoints[0].keypoints[0].x == keypoint.x
-        assert batches_aug[0].keypoints[0].keypoints[0].y == keypoint.y
+        assert np.array_equal(batches_aug[0].images_unaug[0], image)
+        assert batches_aug[0].keypoints_unaug[0].keypoints[0].x == keypoint.x
+        assert batches_aug[0].keypoints_unaug[0].keypoints[0].y == keypoint.y
 
     # basic functionality test (images as array)
     for bg in [True, False]:
@@ -3673,9 +3673,9 @@ def test_Augmenter_augment_batches():
         assert np.array_equal(batches_aug[0].images_aug, np.uint8([image_flipped]))
         assert batches_aug[0].keypoints_aug[0].keypoints[0].x == kp_flipped.x
         assert batches_aug[0].keypoints_aug[0].keypoints[0].y == kp_flipped.y
-        assert np.array_equal(batches_aug[0].images, np.uint8([image]))
-        assert batches_aug[0].keypoints[0].keypoints[0].x == keypoint.x
-        assert batches_aug[0].keypoints[0].keypoints[0].y == keypoint.y
+        assert np.array_equal(batches_aug[0].images_unaug, np.uint8([image]))
+        assert batches_aug[0].keypoints_unaug[0].keypoints[0].x == keypoint.x
+        assert batches_aug[0].keypoints_unaug[0].keypoints[0].y == keypoint.y
 
     """
     seq = iaa.Fliplr(0.5)
@@ -3753,6 +3753,7 @@ def test_Augmenter_augment_batches():
         batches = [[keypoints[0].deepcopy()] for _ in sm.xrange(nb_iterations)]
         batches_aug = list(seq.augment_batches(batches, background=bg))
         for batch_aug in batches_aug:
+            # TODO test seems to be geared here towards original data, but variable is named as "_aug"
             keypoint_aug = batch_aug[0].keypoints[0]
 
             assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \

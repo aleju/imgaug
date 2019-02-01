@@ -18,9 +18,9 @@ class PoolWithMarkedWorker(multicore.Pool):
     @classmethod
     def _worker(cls, batch_idx, batch):
         process_name = multiprocessing.current_process().name
-        # print("[_worker] called %s. images in batch: %d" % (process_name, len(batch.images),))
+        # print("[_worker] called %s. images in batch: %d" % (process_name, len(batch.images_unaug),))
         if "-1" in process_name:
-            for image in batch.images:
+            for image in batch.images_unaug:
                 image[::4, ::4, :] = [255, 255, 255]
         return multicore.Pool._worker(batch_idx, batch)
 

@@ -5765,17 +5765,55 @@ class Batch(object):
     """
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None,
                  data=None):
-        self.images = images
+        self.images_unaug = images
         self.images_aug = None
-        self.heatmaps = heatmaps
+        self.heatmaps_unaug = heatmaps
         self.heatmaps_aug = None
-        self.segmentation_maps = segmentation_maps
+        self.segmentation_maps_unaug = segmentation_maps
         self.segmentation_maps_aug = None
-        self.keypoints = keypoints
+        self.keypoints_unaug = keypoints
         self.keypoints_aug = None
-        self.bounding_boxes = bounding_boxes
+        self.bounding_boxes_unaug = bounding_boxes
         self.bounding_boxes_aug = None
         self.data = data
+
+    @property
+    def images(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.images is deprecated. Access instead "
+            "imgaug.Batch.images_unaug or imgaug.Batch.images_aug."))
+        return self.images_unaug
+
+    @property
+    def heatmaps(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.heatmaps is deprecated. Access instead "
+            "imgaug.Batch.heatmaps_unaug or imgaug.Batch.heatmaps_aug."))
+        return self.heatmaps_unaug
+
+    @property
+    def segmentation_maps(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.segmentation_maps is deprecated. Access "
+            "instead imgaug.Batch.segmentation_maps_unaug or "
+            "imgaug.Batch.segmentation_maps_aug."))
+        return self.segmentation_maps_unaug
+
+    @property
+    def keypoints(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.keypoints is deprecated. Access "
+            "instead imgaug.Batch.keypoints_unaug or "
+            "imgaug.Batch.keypoints_aug."))
+        return self.keypoints_unaug
+
+    @property
+    def bounding_boxes(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.bounding_boxes is deprecated. Access "
+            "instead imgaug.Batch.bounding_boxes_unaug or "
+            "imgaug.Batch.bounding_boxes_aug."))
+        return self.bounding_boxes_unaug
 
     def deepcopy(self):
         def _copy_images(images):
@@ -5799,11 +5837,11 @@ class Batch(object):
             return augmentables_copy
 
         batch = Batch(
-            images=_copy_images(self.images),
-            heatmaps=_copy_augmentable_objects(self.heatmaps, HeatmapsOnImage),
-            segmentation_maps=_copy_augmentable_objects(self.segmentation_maps, SegmentationMapOnImage),
-            keypoints=_copy_augmentable_objects(self.keypoints, KeypointsOnImage),
-            bounding_boxes=_copy_augmentable_objects(self.bounding_boxes, BoundingBoxesOnImage),
+            images=_copy_images(self.images_unaug),
+            heatmaps=_copy_augmentable_objects(self.heatmaps_unaug, HeatmapsOnImage),
+            segmentation_maps=_copy_augmentable_objects(self.segmentation_maps_unaug, SegmentationMapOnImage),
+            keypoints=_copy_augmentable_objects(self.keypoints_unaug, KeypointsOnImage),
+            bounding_boxes=_copy_augmentable_objects(self.bounding_boxes_unaug, BoundingBoxesOnImage),
             data=copy.deepcopy(self.data)
         )
         batch.images_aug = _copy_images(self.images_aug)

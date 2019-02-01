@@ -51,7 +51,7 @@ def main():
     print("augseq.augment_batches(batches, background=True) -> only images")
     print("------------------")
     batches = list(load_images())
-    batches = [batch.images for batch in batches]
+    batches = [batch.images_unaug for batch in batches]
     batches_aug = augseq.augment_batches(batches, background=True)
     images_aug = []
     keypoints_aug = None
