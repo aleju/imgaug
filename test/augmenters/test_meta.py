@@ -40,6 +40,7 @@ def main():
     test_Augmenter()
     test_Augmenter_augment_heatmaps()
     test_Augmenter_augment_keypoints()
+    test_Augmenter_augment_bounding_boxes()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_find()
     test_Augmenter_remove()
@@ -1453,6 +1454,48 @@ def test_Augmenter_augment_keypoints():
         assert np.allclose(kpsoi_aug[i].keypoints[1].y, 2)
         assert np.allclose(kpsoi_aug[i].keypoints[2].x, 5 - 3 - 1)
         assert np.allclose(kpsoi_aug[i].keypoints[2].y, 3)
+
+
+def test_Augmenter_augment_bounding_boxes():
+    # single instance of BoundingBoxesOnImage as input
+    bbsoi = ia.BoundingBoxesOnImage([
+        ia.BoundingBox(x1=1, x2=3, y1=4, y2=5),
+        ia.BoundingBox(x1=2.5, x2=3, y1=0, y2=2)
+    ], shape=(5, 10, 3))
+
+    aug = iaa.Noop()
+    bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+    for bb_aug, bb in zip(bbsoi_aug.bounding_boxes, bbsoi.bounding_boxes):
+        assert np.allclose(bb_aug.x1, bb.x1)
+        assert np.allclose(bb_aug.x2, bb.x2)
+        assert np.allclose(bb_aug.y1, bb.y1)
+        assert np.allclose(bb_aug.y2, bb.y2)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+    # TODO -1 here added because that is done in Rot90, but will have to be fixed
+    # Note here that the new coordinates are minima/maxima of the BB, so not as
+    # straight forward to compute the new coords as for keypoint augmentation
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].x1, 5 - 5 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].x2, 5 - 4 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].y1, 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].y2, 3)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].x1, 5 - 2 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].x2, 5 - 0 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].y1, 2.5)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].y2, 3)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi, bbsoi])
+    for i in range(3):
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x1, 5 - 5 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x2, 5 - 4 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].y1, 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].y2, 3)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x1, 5 - 2 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x2, 5 - 0 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y1, 2.5)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y2, 3)
 
 
 def test_Augmenter_augment_segmentation_maps():

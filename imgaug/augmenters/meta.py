@@ -961,10 +961,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        bounding_boxes_on_images : list of imgaug.BoundingBoxesOnImage
+        bounding_boxes_on_images : imgaug.BoundingBoxesOnImage or \
+                                   list of imgaug.BoundingBoxesOnImage
             The bounding boxes to augment.
-            Expected is a list of imgaug.BoundingBoxesOnImage objects,
-            each containing the bounding boxes of a single image.
+            Expected is an instance of imgaug.BoundingBoxesOnImage or a list of
+            imgaug.BoundingBoxesOnImage objects, witch each such object
+            containing the bounding boxes of a single image.
 
         hooks : None or imgaug.HooksKeypoints, optional
             HooksKeypoints object to dynamically interfere with the
@@ -972,10 +974,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        result : list of imgaug.BoundingBoxesOnImage
+        result : imgaug.BoundingBoxesOnImage or \
+                 list of imgaug.BoundingBoxesOnImage
             Augmented bounding boxes.
 
         """
+        input_was_single_instance = False
+        if isinstance(bounding_boxes_on_images, ia.BoundingBoxesOnImage):
+            input_was_single_instance = True
+            bounding_boxes_on_images = [bounding_boxes_on_images]
+
         kps_ois = []
         for bbs_oi in bounding_boxes_on_images:
             kps = []
@@ -1008,6 +1016,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     shape=kps_oi_aug.shape
                 )
             )
+        if input_was_single_instance:
+            return result[0]
         return result
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):
