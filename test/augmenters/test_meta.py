@@ -1624,6 +1624,26 @@ def test_Augmenter_augment_segmentation_maps():
     ], axis=2)
     assert np.allclose(segmap_aug.arr, expected)
 
+    # single instance of segmentation map as input
+    segmap = ia.SegmentationMapOnImage(
+        np.arange(0, 4*4).reshape((4, 4, 1)).astype(np.int32),
+        shape=(4, 4, 3),
+        nb_classes=4*4
+    )
+
+    aug = iaa.Noop()
+    segmap_aug = aug.augment_segmentation_maps(segmap)
+    assert np.allclose(segmap_aug.arr, segmap.arr)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    segmap_aug = aug.augment_segmentation_maps(segmap)
+    assert np.allclose(segmap_aug.arr, np.rot90(segmap.arr, -1))
+
+    aug = iaa.Rot90(1, keep_size=False)
+    segmaps_aug = aug.augment_segmentation_maps([segmap, segmap, segmap])
+    for i in range(3):
+        assert np.allclose(segmaps_aug[i].arr, np.rot90(segmap.arr, -1))
+
 
 def test_Augmenter_find():
     reseed()

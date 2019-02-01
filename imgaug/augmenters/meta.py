@@ -751,8 +751,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        segmaps : list of imgaug.SegmentationMapOnImage
-            The segmentation maps to augment.
+        segmaps : imgaug.SegmentationMapOnImage or \
+                  list of imgaug.SegmentationMapOnImage
+            Segmentation map(s) to augment. Either a single heatmap or a list of
+            segmentation maps.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -764,10 +766,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        segmaps_aug : list of imgaug.SegmentationMapOnImage
-            Corresponding augmented segmentation maps.
+        segmaps_aug : imgaug.SegmentationMapOnImage or \
+                      list of imgaug.SegmentationMapOnImage
+            Corresponding augmented segmentation map(s).
 
         """
+        input_was_single_instance = False
+        if isinstance(segmaps, ia.SegmentationMapOnImage):
+            input_was_single_instance = True
+            segmaps = [segmaps]
+
         heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True)
                                   for segmap in segmaps]
         heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
@@ -781,6 +789,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                                                                  nb_classes=segmap.nb_classes)
             segmap_aug.input_was = segmap.input_was
             segmaps_aug.append(segmap_aug)
+
+        if input_was_single_instance:
+            return segmaps_aug[0]
         return segmaps_aug
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
