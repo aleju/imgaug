@@ -11,7 +11,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
-from imgaug.augmenters import overlay
+from imgaug.augmenters import blend
 from imgaug.testutils import keypoints_equal, reseed
 
 
@@ -31,28 +31,28 @@ def main():
 def test_blend_alpha():
     img_fg = np.full((3, 3, 1), 0, dtype=bool)
     img_bg = np.full((3, 3, 1), 1, dtype=bool)
-    img_blend = overlay.blend_alpha(img_fg, img_bg, 1.0, eps=0)
+    img_blend = blend.blend_alpha(img_fg, img_bg, 1.0, eps=0)
     assert img_blend.dtype.name == np.dtype(np.bool_)
     assert img_blend.shape == (3, 3, 1)
     assert np.all(img_blend == 0)
 
     img_fg = np.full((3, 3, 1), 0, dtype=bool)
     img_bg = np.full((3, 3, 1), 1, dtype=bool)
-    img_blend = overlay.blend_alpha(img_fg, img_bg, 0.0, eps=0)
+    img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
     assert img_blend.dtype.name == np.dtype(np.bool_)
     assert img_blend.shape == (3, 3, 1)
     assert np.all(img_blend == 1)
 
     img_fg = np.full((3, 3, 1), 0, dtype=bool)
     img_bg = np.full((3, 3, 1), 1, dtype=bool)
-    img_blend = overlay.blend_alpha(img_fg, img_bg, 0.3, eps=0)
+    img_blend = blend.blend_alpha(img_fg, img_bg, 0.3, eps=0)
     assert img_blend.dtype.name == np.dtype(np.bool_)
     assert img_blend.shape == (3, 3, 1)
     assert np.all(img_blend == 1)
 
     img_fg = np.full((3, 3, 2), 0, dtype=bool)
     img_bg = np.full((3, 3, 2), 1, dtype=bool)
-    img_blend = overlay.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0)
+    img_blend = blend.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0)
     assert img_blend.dtype.name == np.dtype(np.bool_)
     assert img_blend.shape == (3, 3, 2)
     assert np.all(img_blend[:, :, 0] == 0)
@@ -80,21 +80,21 @@ def test_blend_alpha():
         for v1, v2 in values:
             img_fg = np.full((3, 3, 1), v1, dtype=dtype)
             img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 1.0, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 1.0, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 1)
             assert np.all(img_blend == dtype(v1))
 
             img_fg = np.full((3, 3, 1), v1, dtype=dtype)
             img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 0.99, eps=0.1)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 0.99, eps=0.1)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 1)
             assert np.all(img_blend == dtype(v1))
 
             img_fg = np.full((3, 3, 1), v1, dtype=dtype)
             img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 0.0, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 1)
             assert np.all(img_blend == dtype(v2))
@@ -103,7 +103,7 @@ def test_blend_alpha():
             for c in sm.xrange(3):
                 img_fg = np.full((3, 3, c), v1, dtype=dtype)
                 img_bg = np.full((3, 3, c), v2, dtype=dtype)
-                img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
+                img_blend = blend.blend_alpha(img_fg, img_bg, 0.75, eps=0)
                 assert img_blend.dtype.name == np.dtype(dtype)
                 assert img_blend.shape == (3, 3, c)
                 for ci in sm.xrange(c):
@@ -113,7 +113,7 @@ def test_blend_alpha():
 
             img_fg = np.full((3, 3, 2), v1, dtype=dtype)
             img_bg = np.full((3, 3, 2), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 0.75, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 2)
             v_blend = min(max(int(0.75 * np.float128(v1) + 0.25 * np.float128(v2)), min_value), max_value)
@@ -122,7 +122,7 @@ def test_blend_alpha():
 
             img_fg = np.full((3, 3, 2), v1, dtype=dtype)
             img_bg = np.full((3, 3, 2), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0.1)
+            img_blend = blend.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0.1)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 2)
             assert np.all(img_blend[:, :, 0] == dtype(v1))
@@ -133,7 +133,7 @@ def test_blend_alpha():
             img_bg = np.full((1, 2, 3), v2, dtype=dtype)
             alphas = np.zeros((1, 2), dtype=np.float64)
             alphas[:, :] = [1.0, 0.0]
-            img_blend = overlay.blend_alpha(img_fg, img_bg, alphas, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (1, 2, 3)
             assert np.all(img_blend[0, 0, :] == dtype(v1))
@@ -144,7 +144,7 @@ def test_blend_alpha():
             img_bg = np.full((1, 2, 3), v2, dtype=dtype)
             alphas = np.zeros((1, 2, 1), dtype=np.float64)
             alphas[:, :, 0] = [1.0, 0.0]
-            img_blend = overlay.blend_alpha(img_fg, img_bg, alphas, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (1, 2, 3)
             assert np.all(img_blend[0, 0, :] == dtype(v1))
@@ -157,7 +157,7 @@ def test_blend_alpha():
             alphas[:, :, 0] = [1.0, 0.0]
             alphas[:, :, 1] = [0.0, 1.0]
             alphas[:, :, 2] = [1.0, 0.0]
-            img_blend = overlay.blend_alpha(img_fg, img_bg, alphas, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (1, 2, 3)
             assert np.all(img_blend[0, 0, [0, 2]] == dtype(v1))
@@ -196,21 +196,21 @@ def test_blend_alpha():
         for v1, v2 in values:
             img_fg = np.full((3, 3, 1), v1, dtype=dtype)
             img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 1.0, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 1.0, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 1)
             assert _allclose(img_blend, max_float_dt(v1))
 
             img_fg = np.full((3, 3, 1), v1, dtype=dtype)
             img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 0.99, eps=0.1)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 0.99, eps=0.1)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 1)
             assert _allclose(img_blend, max_float_dt(v1))
 
             img_fg = np.full((3, 3, 1), v1, dtype=dtype)
             img_bg = np.full((3, 3, 1), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, 0.0, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 1)
             assert _allclose(img_blend, max_float_dt(v2))
@@ -218,14 +218,14 @@ def test_blend_alpha():
             for c in sm.xrange(3):
                 img_fg = np.full((3, 3, c), v1, dtype=dtype)
                 img_bg = np.full((3, 3, c), v2, dtype=dtype)
-                img_blend = overlay.blend_alpha(img_fg, img_bg, 0.75, eps=0)
+                img_blend = blend.blend_alpha(img_fg, img_bg, 0.75, eps=0)
                 assert img_blend.dtype.name == np.dtype(dtype)
                 assert img_blend.shape == (3, 3, c)
                 assert _allclose(img_blend, 0.75*max_float_dt(v1) + 0.25*max_float_dt(v2))
 
             img_fg = np.full((3, 3, 2), v1, dtype=dtype)
             img_bg = np.full((3, 3, 2), v2, dtype=dtype)
-            img_blend = overlay.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0.1)
+            img_blend = blend.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0.1)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (3, 3, 2)
             assert _allclose(img_blend[:, :, 0], max_float_dt(v1))
@@ -236,7 +236,7 @@ def test_blend_alpha():
             img_bg = np.full((1, 2, 3), v2, dtype=dtype)
             alphas = np.zeros((1, 2), dtype=np.float64)
             alphas[:, :] = [1.0, 0.0]
-            img_blend = overlay.blend_alpha(img_fg, img_bg, alphas, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (1, 2, 3)
             assert _allclose(img_blend[0, 0, :], dtype(v1))
@@ -247,7 +247,7 @@ def test_blend_alpha():
             img_bg = np.full((1, 2, 3), v2, dtype=dtype)
             alphas = np.zeros((1, 2, 1), dtype=np.float64)
             alphas[:, :, 0] = [1.0, 0.0]
-            img_blend = overlay.blend_alpha(img_fg, img_bg, alphas, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (1, 2, 3)
             assert _allclose(img_blend[0, 0, :], dtype(v1))
@@ -260,7 +260,7 @@ def test_blend_alpha():
             alphas[:, :, 0] = [1.0, 0.0]
             alphas[:, :, 1] = [0.0, 1.0]
             alphas[:, :, 2] = [1.0, 0.0]
-            img_blend = overlay.blend_alpha(img_fg, img_bg, alphas, eps=0)
+            img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
             assert img_blend.dtype.name == np.dtype(dtype)
             assert img_blend.shape == (1, 2, 3)
             assert _allclose(img_blend[0, 0, [0, 2]], dtype(v1))

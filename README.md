@@ -372,7 +372,7 @@ The images below show examples for most augmentation techniques (values written 
 <td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/rot90.gif" height="148" width="300" alt="Rot90"></td>
 <td>&nbsp;</td>
 </tr>
-<tr><td colspan="5"><strong>overlay</strong></td></tr>
+<tr><td colspan="5"><strong>blend</strong></td></tr>
 <tr>
 <td colspan="1"><sub>Alpha<br/>with EdgeDetect(1.0)</sub></td>
 <td colspan="1"><sub>Alpha<br/>with EdgeDetect(1.0)<br/>(per_channel=True)</sub></td>
@@ -961,14 +961,14 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | ChannelShuffle(P, C) | Permutes the order of the color channels for `P` percent of all images. Shuffles by default all channels, but may restrict to a subset using `C` (list of channel indices). |
 
 
-**overlay**
+**blend**
 
 | Augmenter | Description |
 | --- | --- |
-| Alpha(F, A, B, PCH) | Augments images using augmenters `A` and `B` independently, then overlays the result using alpha `F`. Both `A` and `B` default to doing nothing if not provided. E.g. use `Alpha(0.9, A)` to augment images via `A`, then blend the result, keeping 10% of the original image (before `A`). If `PCH` is set to true, the process happens channel-wise with possibly different `F` (`A` and `B` are computed once per image). |
-| AlphaElementwise(F, A, B, PCH) | Same as `Alpha`, but performs the blending pixel-wise using a continuous mask (values 0.0 to 1.0) sampled from `F`. If `PCH` is set to true, the process happens both pixel- and channel-wise. |
-| SimplexNoiseAlpha(A, B, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `Alpha`, but uses a mask to blend the results from augmenters `A` and `B`. The mask is sampled from simplex noise, which tends to be blobby. The mask is gathered in `I` iterations (default 1-3), each iteration is combined using aggregation method `AGG` (default max, i.e. maximum value from all iterations per pixel). Each mask is sampled in low resolution space with max resolution `SM` (default 2 to 16px) and upscaled to image size using method `UP` (default: linear or cubic or nearest neighbour upsampling). If `SIG` is true, a sigmoid is applied to the mask with threshold `SIGT`, which makes the blobs have values closer to 0.0 or 1.0. |
-| FrequencyNoiseAlpha(E, A, B, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `SimplexNoiseAlpha`, but generates noise masks from the frequency domain. Exponent `E` is used to increase/decrease frequency components. High values lead to more pronounced high frequency components. Use values in the range -4 to 4, with -2 roughly generated cloud-like patterns. |
+| Alpha(A, FG, BG, PCH) | Augments images using augmenters `FG` and `BG` independently, then blends the result using alpha `A`. Both `FG` and `BG` default to doing nothing if not provided. E.g. use `Alpha(0.9, FG)` to augment images via `FG`, then blend the result, keeping 10% of the original image (before `FG`). If `PCH` is set to true, the process happens channel-wise with possibly different `A` (`FG` and `BG` are computed once per image). |
+| AlphaElementwise(A, FG, BG, PCH) | Same as `Alpha`, but performs the blending pixel-wise using a continuous mask (values 0.0 to 1.0) sampled from `A`. If `PCH` is set to true, the process happens both pixel- and channel-wise. |
+| SimplexNoiseAlpha(FG, BG, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `Alpha`, but uses a mask to blend the results from augmenters `FG` and `BG`. The mask is sampled from simplex noise, which tends to be blobby. The mask is gathered in `I` iterations (default: `1 to 3`), each iteration is combined using aggregation method `AGG` (default `max`, i.e. maximum value from all iterations per pixel). Each mask is sampled in low resolution space with max resolution `SM` (default 2 to 16px) and upscaled to image size using method `UP` (default: linear or cubic or nearest neighbour upsampling). If `SIG` is true, a sigmoid is applied to the mask with threshold `SIGT`, which makes the blobs have values closer to 0.0 or 1.0. |
+| FrequencyNoiseAlpha(E, FG, BG, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `SimplexNoiseAlpha`, but generates noise masks from the frequency domain. Exponent `E` is used to increase/decrease frequency components. High values for `E` pronounce high frequency components. Use values in the range -4 to 4, with -2 roughly generated cloud-like patterns. |
 
 
 **segmentation**

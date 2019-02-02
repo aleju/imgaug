@@ -30,7 +30,7 @@ from augmenters import test_flip
 from augmenters import test_geometric
 from augmenters import test_meta
 from augmenters import test_mixed_files
-from augmenters import test_overlay
+from augmenters import test_blend
 from augmenters import test_segmentation
 from augmenters import test_size
 
@@ -49,7 +49,7 @@ def main():
     test_geometric.main()
     test_meta.main()
     test_mixed_files.main()
-    test_overlay.main()
+    test_blend.main()
     test_segmentation.main()
     test_size.main()
 

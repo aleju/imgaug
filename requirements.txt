@@ -1,5 +1,5 @@
 six
-# The test for imgaug.augmenters.overlay.blend_alpha() fails for numpy<1.15. All other tests seemed to work as of 2019/01/04.
+# The test for imgaug.augmenters.blend.blend_alpha() fails for numpy<1.15. All other tests seemed to work as of 2019/01/04.
 # <1.16 was here added temporarily as the initial release of 1.16 breaks the latest scikit-image version as of 2019/016/18.
 numpy>=1.15,<1.16
 scipy
