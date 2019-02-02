@@ -1293,8 +1293,8 @@ class ReplaceElementwise(meta.Augmenter):
         rss = ia.derive_random_states(random_state, 2*nb_images+1)
         per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[-1])
 
-        gen = enumerate(zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2]))
-        for i, (image, per_channel_i, rs_mask, rs_replacement) in gen:
+        gen = zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2])
+        for image, per_channel_i, rs_mask, rs_replacement in gen:
             height, width, nb_channels = image.shape
             sampling_shape = (height, width, nb_channels if per_channel_i > 0.5 else 1)
             mask_samples = self.mask.draw_samples(sampling_shape, random_state=rs_mask)
