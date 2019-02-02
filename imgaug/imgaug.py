@@ -20,14 +20,6 @@ import skimage.measure
 import collections
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
-if sys.version_info[0] == 2:
-    import cPickle as pickle
-    import socket
-    BrokenPipeError = socket.error
-elif sys.version_info[0] == 3:
-    import pickle
-    xrange = range
-
 ALL = "ALL"
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +40,7 @@ DEFAULT_FONT_FP = os.path.join(
 # here (and in all augmenters) instead of np.random.
 CURRENT_RANDOM_STATE = np.random.RandomState(42)
 SEED_MIN_VALUE = 0
-SEED_MAX_VALUE = 2**31-1
+SEED_MAX_VALUE = 2**31-1  # use 2**31 instead of 2**32 here because 2**31 errored on some systems
 
 
 # to check if a dtype instance is among these dtypes, use e.g. `dtype.type in NP_FLOAT_TYPES`
