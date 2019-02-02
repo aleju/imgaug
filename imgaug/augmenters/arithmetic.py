@@ -859,6 +859,7 @@ class MultiplyElementwise(meta.Augmenter):
 
     Examples
     --------
+    >>> from imgaug import augmenters as iaa
     >>> aug = iaa.MultiplyElementwise(2.0)
 
     multiply all images by a factor of 2.0, making them significantly
@@ -1144,30 +1145,30 @@ def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False, min_s
 
     Examples
     --------
-    >>> aug = iaa.Dropout(0.02, size_percent=0.5)
+    >>> aug = iaa.CoarseDropout(0.02, size_percent=0.5)
 
     drops 2 percent of all pixels on an lower-resolution image that has
     50 percent of the original image's size, leading to dropped areas that
     have roughly 2x2 pixels size.
 
 
-    >>> aug = iaa.Dropout((0.0, 0.05), size_percent=(0.05, 0.5))
+    >>> aug = iaa.CoarseDropout((0.0, 0.05), size_percent=(0.05, 0.5))
 
     generates a dropout mask at 5 to 50 percent of image's size. In that mask,
     0 to 5 percent of all pixels are dropped (random per image).
 
-    >>> aug = iaa.Dropout((0.0, 0.05), size_px=(2, 16))
+    >>> aug = iaa.CoarseDropout((0.0, 0.05), size_px=(2, 16))
 
     same as previous example, but the lower resolution image has 2 to 16 pixels
     size.
 
-    >>> aug = iaa.Dropout(0.02, size_percent=0.5, per_channel=True)
+    >>> aug = iaa.CoarseDropout(0.02, size_percent=0.5, per_channel=True)
 
     drops 2 percent of all pixels at 50 percent resolution (2x2 sizes)
     in a channel-wise fashion, i.e. it is unlikely
     for any pixel to have all channels set to zero (black pixels).
 
-    >>> aug = iaa.Dropout(0.02, size_percent=0.5, per_channel=0.5)
+    >>> aug = iaa.CoarseDropout(0.02, size_percent=0.5, per_channel=0.5)
 
     same as previous example, but the `per_channel` feature is only active
     for 50 percent of all images.

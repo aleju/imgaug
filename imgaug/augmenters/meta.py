@@ -791,6 +791,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         before augmenting images and their corresponding keypoints,
         e.g. by
 
+        >>> A = B = C = np.zeros((10, 10), dtype=np.uint8)
+        >>> Ak = Bk = Ck = ia.KeypointsOnImage([ia.Keypoint(2, 2)], (10, 10))
         >>> seq = iaa.Fliplr(0.5)
         >>> seq_det = seq.to_deterministic()
         >>> imgs_aug = seq_det.augment_images([A, B, C])
@@ -918,10 +920,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         before augmenting images and their corresponding bounding boxes,
         e.g. by
 
+        >>> A = B = C = np.ones((10, 10), dtype=np.uint8)
+        >>> Abb = Bbb = Cbb = ia.BoundingBoxesOnImage([ia.BoundingBox(1, 1, 9, 9)], (10, 10))
         >>> seq = iaa.Fliplr(0.5)
         >>> seq_det = seq.to_deterministic()
         >>> imgs_aug = seq_det.augment_images([A, B, C])
-        >>> bbs_aug = seq_det.augment_keypoints([Abb, Bbb, Cbb])
+        >>> bbs_aug = seq_det.augment_bounding_boxes([Abb, Bbb, Cbb])
 
         Otherwise, different random values will be sampled for the image
         and bounding box augmentations, resulting in different augmentations
@@ -1038,7 +1042,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         >>>     batches_aug = pool.imap_batches(generate_batches(), chunksize=8)
         >>>     batch_aug = next(batches_aug)
         >>>     print(np.sum(batch_aug.images_aug[0]))
-        49152
+        0
 
         Same as above. This time, a generator is used to generate batches of images. Again, the first augmented image's
         sum of pixels is printed.
@@ -1589,8 +1593,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Examples
         --------
         >>> aug = iaa.Sequential([
-        >>>     nn.Fliplr(0.5, name="fliplr"),
-        >>>     nn.Flipud(0.5, name="flipud")
+        >>>     iaa.Fliplr(0.5, name="fliplr"),
+        >>>     iaa.Flipud(0.5, name="flipud")
         >>> ])
         >>> print(aug.find_augmenters(lambda a, parents: a.name == "fliplr"))
 
@@ -1857,6 +1861,7 @@ class Sequential(Augmenter, list):
 
     Examples
     --------
+    >>> imgs = [np.random.rand(10, 10)]
     >>> seq = iaa.Sequential([
     >>>     iaa.Fliplr(0.5),
     >>>     iaa.Flipud(0.5)
@@ -2044,6 +2049,7 @@ class SomeOf(Augmenter, list):
 
     Examples
     --------
+    >>> imgs = [np.random.rand(10, 10)]
     >>> seq = iaa.SomeOf(1, [
     >>>     iaa.Fliplr(1.0),
     >>>     iaa.Flipud(1.0)
@@ -2350,6 +2356,7 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
 
     Examples
     --------
+    >>> imgs = [np.ones((10, 10))]
     >>> seq = iaa.OneOf([
     >>>     iaa.Fliplr(1.0),
     >>>     iaa.Flipud(1.0)
