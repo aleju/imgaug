@@ -104,7 +104,7 @@ def test_determinism():
         iaa.SomeOf(1, [iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
         iaa.OneOf([iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
         iaa.Sometimes(0.5, iaa.Fliplr(1.0)),
-        iaa.Scale((0.5, 0.9)),
+        iaa.Resize((0.5, 0.9)),
         iaa.CropAndPad(px=(-50, 50)),
         iaa.Pad(px=(1, 50)),
         iaa.Crop(px=(1, 50)),
