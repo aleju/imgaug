@@ -20,11 +20,6 @@ import skimage.measure
 import collections
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
-if sys.version_info[0] == 2:
-    pass
-elif sys.version_info[0] == 3:
-    xrange = range
-
 ALL = "ALL"
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
