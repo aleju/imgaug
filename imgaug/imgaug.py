@@ -21,11 +21,8 @@ import collections
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
 if sys.version_info[0] == 2:
-    import cPickle as pickle
-    import socket
-    BrokenPipeError = socket.error
+    pass
 elif sys.version_info[0] == 3:
-    import pickle
     xrange = range
 
 ALL = "ALL"
