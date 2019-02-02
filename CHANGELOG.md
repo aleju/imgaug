@@ -1,6 +1,6 @@
 # master (will be 0.2.8)
 
-This update focused on extending and documenting the library's dtype support and on improving the performance.
+This update focused on extending and documenting the library's dtype support, improving the performance and reworking multicore augmentation.
 
 
 # dtype support
@@ -66,6 +66,21 @@ were calculated based on a rather low number of 100 repetitions.
 * KeepSizeByResize (with CropToFixedSize as child) +58%
 * Snowflakes +44%
 * SnowflakesLayer +42%
+
+
+## multicore augmentation
+
+The implementation for multicore augmentation was completely rewritten and is now a wrapper around python's `multiprocessing.Pool`. Compared to the old version, it is by far less fragile and faster. It is also easier to use. Every augmenter now offers a simple `pool()` method, which can be used to quickly spawn a pool of child workers on multiple CPU cores. Example:
+```python
+aug = iaa.PiecewiseAffine(0.2)
+with aug.pool(processes=-1, seed=123) as pool:
+    batches_aug = pool.imap_batches(batches_generator, chunksize=32)
+    for batch_aug in batches_aug:
+        # do something
+```
+Here, `batches_generator` is a generator that yields instances of `imgaug.Batch`, e.g. something like `imgaug.Batch(images=<numpy array>, keypoints=[imgaug.KeypointsOnImage(...), imgaug.KeypointsOnImage(...), ...])`. The arguement `processes=-1` spawns `N-1` workers, where `N` is the number of CPU cores (includes hyperthreads).
+
+Note that `Augmenter.augment_batches(batches, background=True)` still works and now uses the above `pool()` method.
 
 
 ## imgaug.imgaug
@@ -207,6 +222,7 @@ were calculated based on a rather low number of 100 repetitions.
 * [critical] Fixed a bug in the augmentation of empty `KeypointsOnImage` instances that would lead image and keypoint
   augmentation to be un-aligned within a batch after the first empty `KeypointsOnImage` instance. (#231)
 * Added `pool()` to `Augmenter`. This is a helper to start a `imgaug.multicore.Pool` via `with augmenter.pool() as pool: ...`.
+* Refactored `Augmenter.augment_batches(..., background=True)` to use `imgaug.multicore.Pool`.
 * Changed `to_deterministic()` in `Augmenter` and various child classes to derive its new random state from the augmenter's local random state instead of the global random state.
 * Enabled support for non-list `HeatmapsOnImage` inputs in `Augmenter.augment_heatmaps()`. (Before, only lists were supported.)
 * Enabled support for non-list `SegmentationMapOnImage` inputs in `Augmenter.augment_segmentation_maps()`. (Before, only lists were supported.)
