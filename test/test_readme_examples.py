@@ -2,10 +2,18 @@
 Script to verify all examples in the readme.
 Simply execute
     python test_readme_examples.py
+
+
+The tests in this file are currently not unittests!
+They do plot images.
+
+TODO move this to checks/ ?
+
 """
 from __future__ import print_function, division
 
 import numpy as np
+
 
 def main():
     example_standard_situation()
@@ -19,7 +27,8 @@ def main():
     example_unusual_distributions()
     example_hooks()
     example_background_augment_batches()
-    example_background_classes()
+    example_background_pool()
+
 
 def example_standard_situation():
     print("Example: Standard Situation")
@@ -56,6 +65,7 @@ def example_standard_situation():
         # Make sure that the example really does something
         if batch_idx == 0:
             assert not np.array_equal(images, images_aug)
+
 
 def example_heavy_augmentations():
     print("Example: Heavy Augmentations")
@@ -104,6 +114,7 @@ def example_heavy_augmentations():
     # Make sure that the example really does something
     assert not np.array_equal(images, images_aug)
 
+
 def example_show():
     print("Example: Show")
     from imgaug import augmenters as iaa
@@ -118,6 +129,7 @@ def example_show():
     # versions of image 1. The identical augmentations will be applied to
     # image 0 and 1.
     seq.show_grid([images[0], images[1]], cols=8, rows=8)
+
 
 # this example is no longer necessary as the library can now handle 2D images
 """
@@ -134,6 +146,7 @@ def example_grayscale():
     # Make sure that the example really does something
     assert not np.array_equal(images, images_aug)
 """
+
 
 def example_determinism():
     print("Example: Determinism")
@@ -161,6 +174,7 @@ def example_determinism():
     for img_idx in range(len(images)):
         images_show.extend([images[img_idx], images_aug[img_idx], heatmaps[img_idx][..., 0:3], heatmaps_aug[img_idx][..., 0:3]])
     ia.show_grid(images_show, cols=4)
+
 
 def example_keypoints():
     print("Example: Keypoints")
@@ -199,6 +213,7 @@ def example_keypoints():
             x_new, y_new = keypoint.x, keypoint.y
             print("[Keypoints for image #%d] before aug: x=%d y=%d | after aug: x=%d y=%d" % (img_idx, x_old, y_old, x_new, y_new))
 
+
 def example_single_augmenters():
     print("Example: Single Augmenters")
     from imgaug import augmenters as iaa
@@ -220,6 +235,7 @@ def example_single_augmenters():
     scaler = iaa.Affine(scale={"y": (0.8, 1.2)}) # scale each input image to 80-120% on the y axis
     images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y axis
 
+
 def example_withchannels():
     print("Example: WithChannels")
     from imgaug import augmenters as iaa
@@ -236,6 +252,7 @@ def example_withchannels():
     )
 
     images_aug = aug.augment_images(images)
+
 
 def example_unusual_distributions():
     print("Example: Unusual Distributions")
@@ -268,6 +285,7 @@ def example_unusual_distributions():
     # i.e. sigma will have any of the following values: 1, 2, 3, 4, 5.
     blurer = iaa.GaussianBlur(iap.DiscreteUniform(1, 5))
     images_aug = blurer.augment_images(images)
+
 
 def example_hooks():
     print("Example: Hooks")
@@ -309,6 +327,7 @@ def example_hooks():
     ia.show_grid(images_aug)
     ia.show_grid(heatmaps_aug[..., 0:3])
 
+
 def example_background_augment_batches():
     print("Example: Background Augmentation via augment_batches()")
     import imgaug as ia
@@ -346,81 +365,55 @@ def example_background_augment_batches():
     for images_aug in augseq.augment_batches(batches, background=True):
         ia.imshow(ia.draw_grid(images_aug, cols=8))
 
-def example_background_classes():
-    print("Example: Background Augmentation via Classes")
-    import imgaug as ia
-    import imgaug.multicore as multicore
-    from imgaug import augmenters as iaa
-    import numpy as np
-    from skimage import data
 
-    # Example augmentation sequence to run in the background.
-    augseq = iaa.Sequential([
+def example_background_pool():
+    print("Example: Background Augmentation via pool()")
+
+    import numpy as np
+    import imgaug as ia
+    from imgaug import augmenters as iaa
+
+    # Basic augmentation sequence. PiecewiseAffine is slow and therefore well suited
+    # for augmentation on multiple CPU cores.
+    aug = iaa.Sequential([
         iaa.Fliplr(0.5),
-        iaa.CoarseDropout(p=0.1, size_percent=0.1)
+        iaa.PiecewiseAffine((0.0, 0.1))
     ])
 
-    # A generator that loads batches from the hard drive.
-    def load_batches():
-        # Here, load 10 batches of size 4 each.
-        # You can also load an infinite amount of batches, if you don't train
-        # in epochs.
-        batch_size = 4
-        nb_batches = 10
-
-        # Here, for simplicity we just always use the same image.
-        astronaut = data.astronaut()
-        astronaut = ia.imresize_single_image(astronaut, (64, 64))
-
-        for i in range(nb_batches):
-            # A list containing all images of the batch.
-            batch_images = []
-            # A list containing IDs per image. This is not necessary for the
-            # background augmentation and here just used to showcase that you
-            # can transfer additional information.
-            batch_data = []
-
-            # Add some images to the batch.
-            for b in range(batch_size):
-                batch_images.append(astronaut)
-                batch_data.append((i, b))
-
-            # Create the batch object to send to the background processes.
-            batch = ia.Batch(
-                images=np.array(batch_images, dtype=np.uint8),
-                data=batch_data
+    # generator that yields images
+    def create_image_generator(nb_batches, size):
+        for _ in range(nb_batches):
+            # Add e.g. keypoints=... or bounding_boxes=... here to also augment
+            # keypoints / bounding boxes on these images.
+            yield ia.Batch(
+                images=np.random.randint(0, 255, size=size).astype(np.uint8)
             )
 
-            yield batch
+    # 500 batches of images, each containing 10 images of size 128x128x3
+    my_generator = create_image_generator(500, (10, 128, 128, 3))
 
-    # background augmentation consists of two components:
-    #  (1) BatchLoader, which runs in a Thread and calls repeatedly a user-defined
-    #      function (here: load_batches) to load batches (optionally with keypoints
-    #      and additional information) and sends them to a queue of batches.
-    #  (2) BackgroundAugmenter, which runs several background processes (on other
-    #      CPU cores). Each process takes batches from the queue defined by (1),
-    #      augments images/keypoints and sends them to another queue.
-    # The main process can then read augmented batches from the queue defined
-    # by (2).
-    batch_loader = multicore.BatchLoader(load_batches)
-    bg_augmenter = multicore.BackgroundAugmenter(batch_loader, augseq)
+    # Start a pool to augment on multiple CPU cores.
+    #   * processes=-1 means that all CPU cores except one are used for the
+    #     augmentation, so one is kept free to move data to the GPU
+    #   * maxtasksperchild=20 restarts child workers every 20 tasks -- only use this
+    #     if you encounter problems such as memory leaks. Restarting child workers
+    #     decreases performance.
+    #   * seed=123 makes the result of the whole augmentation process deterministic
+    #     between runs of this script, i.e. reproducible results.
+    with aug.pool(processes=-1, maxtasksperchild=20, seed=123) as pool:
+        # Augment on multiple CPU cores.
+        #   * The result of imap_batches() is also a generator.
+        #   * Use map_batches() if your input is a list.
+        #   * chunksize=10 controls how much data to send to each child worker per
+        #     transfer, set it higher for better performance.
+        batches_aug_generator = pool.imap_batches(my_generator, chunksize=10)
 
-    # Run until load_batches() returns nothing anymore. This also allows infinite
-    # training.
-    while True:
-        print("Next batch...")
-        batch = bg_augmenter.get_batch()
-        if batch is None:
-            print("Finished epoch.")
-            break
-        images_aug = batch.images_aug
+        for i, batch_aug in enumerate(batches_aug_generator):
+            # show first augmented image in first batch
+            if i == 0:
+                ia.imshow(batch_aug.images_aug[0])
+            # do something else with the batch here
 
-        print("Image IDs: ", batch.data)
-
-        ia.imshow(np.hstack(list(images_aug)))
-
-    batch_loader.terminate()
-    bg_augmenter.terminate()
 
 if __name__ == "__main__":
     main()
