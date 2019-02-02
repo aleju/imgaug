@@ -624,8 +624,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        heatmaps : list of imgaug.HeatmapsOnImage
-            Heatmaps to augment.
+        heatmaps : imgaug.HeatmapsOnImage or list of imgaug.HeatmapsOnImage
+            Heatmap(s) to augment. Either a single heatmap or a list of
+            heatmaps.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -637,8 +638,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        heatmap_result : list of imgaug.HeatmapsOnImage
-            Corresponding augmented heatmaps.
+        heatmap_result : imgaug.HeatmapsOnImage or list of imgaug.HeatmapsOnImage
+            Corresponding augmented heatmap(s).
 
         """
         if self.deterministic:
@@ -646,6 +647,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         if parents is None:
             parents = []
+
+        input_was_single_instance = False
+        if isinstance(heatmaps, ia.HeatmapsOnImage):
+            input_was_single_instance = True
+            heatmaps = [heatmaps]
 
         ia.do_assert(ia.is_iterable(heatmaps),
                      "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
@@ -684,6 +690,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
+        if input_was_single_instance:
+            return heatmaps_result[0]
         return heatmaps_result
 
     @abstractmethod
@@ -744,8 +752,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        segmaps : list of imgaug.SegmentationMapOnImage
-            The segmentation maps to augment.
+        segmaps : imgaug.SegmentationMapOnImage or \
+                  list of imgaug.SegmentationMapOnImage
+            Segmentation map(s) to augment. Either a single heatmap or a list of
+            segmentation maps.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -757,10 +767,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        segmaps_aug : list of imgaug.SegmentationMapOnImage
-            Corresponding augmented segmentation maps.
+        segmaps_aug : imgaug.SegmentationMapOnImage or \
+                      list of imgaug.SegmentationMapOnImage
+            Corresponding augmented segmentation map(s).
 
         """
+        input_was_single_instance = False
+        if isinstance(segmaps, ia.SegmentationMapOnImage):
+            input_was_single_instance = True
+            segmaps = [segmaps]
+
         heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True)
                                   for segmap in segmaps]
         heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
@@ -774,6 +790,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                                                                  nb_classes=segmap.nb_classes)
             segmap_aug.input_was = segmap.input_was
             segmaps_aug.append(segmap_aug)
+
+        if input_was_single_instance:
+            return segmaps_aug[0]
         return segmaps_aug
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
@@ -807,10 +826,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        keypoints_on_images : list of imgaug.KeypointsOnImage
+        keypoints_on_images : imgaug.KeypointsOnImage or \
+                              list of imgaug.KeypointsOnImage
             The keypoints/landmarks to augment.
-            Expected is a list of imgaug.KeypointsOnImage objects,
-            each containing the keypoints of a single image.
+            Expected is an instance of imgaug.KeypointsOnImage or a list of
+            imgaug.KeypointsOnImage objects, with each such object containing
+            the keypoints of a single image.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
@@ -818,11 +839,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             It is set automatically for child augmenters.
 
         hooks : None or imgaug.HooksKeypoints, optional
-            HooksKeypoints object to dynamically interfere with the augmentation process.
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
 
         Returns
         -------
-        keypoints_on_images_result : list of imgaug.KeypointsOnImage
+        keypoints_on_images_result : imgaug.KeypointsOnImage or \
+                                     list of imgaug.KeypointsOnImage
             Augmented keypoints.
 
         """
@@ -831,6 +854,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         if parents is None:
             parents = []
+
+        input_was_single_instance = False
+        if isinstance(keypoints_on_images, ia.KeypointsOnImage):
+            input_was_single_instance = True
+            keypoints_on_images = [keypoints_on_images]
 
         ia.do_assert(ia.is_iterable(keypoints_on_images))
         ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage)
@@ -868,6 +896,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
+        if input_was_single_instance:
+            return keypoints_on_images_result[0]
         return keypoints_on_images_result
 
     @abstractmethod
@@ -936,10 +966,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        bounding_boxes_on_images : list of imgaug.BoundingBoxesOnImage
+        bounding_boxes_on_images : imgaug.BoundingBoxesOnImage or \
+                                   list of imgaug.BoundingBoxesOnImage
             The bounding boxes to augment.
-            Expected is a list of imgaug.BoundingBoxesOnImage objects,
-            each containing the bounding boxes of a single image.
+            Expected is an instance of imgaug.BoundingBoxesOnImage or a list of
+            imgaug.BoundingBoxesOnImage objects, witch each such object
+            containing the bounding boxes of a single image.
 
         hooks : None or imgaug.HooksKeypoints, optional
             HooksKeypoints object to dynamically interfere with the
@@ -947,10 +979,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        result : list of imgaug.BoundingBoxesOnImage
+        result : imgaug.BoundingBoxesOnImage or \
+                 list of imgaug.BoundingBoxesOnImage
             Augmented bounding boxes.
 
         """
+        input_was_single_instance = False
+        if isinstance(bounding_boxes_on_images, ia.BoundingBoxesOnImage):
+            input_was_single_instance = True
+            bounding_boxes_on_images = [bounding_boxes_on_images]
+
         kps_ois = []
         for bbs_oi in bounding_boxes_on_images:
             kps = []
@@ -983,6 +1021,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     shape=kps_oi_aug.shape
                 )
             )
+        if input_was_single_instance:
+            return result[0]
         return result
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):

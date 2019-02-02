@@ -2988,6 +2988,8 @@ class Rot90(meta.Augmenter):
                     yr, xr = y, x
                     wr, hr = w, h
                     for _ in sm.xrange(k_i):
+                        # FIXME using ((hr - 1) - yr) here seems wrong for float-based coordinates, should likely be
+                        #       (hr - yr). Same problem as in horizontal flipping.
                         xr, yr = (hr - 1) - yr, xr
                         wr, hr = hr, wr
                     kps_aug.append(ia.Keypoint(x=xr, y=yr))

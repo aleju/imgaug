@@ -26,7 +26,6 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import meta
 from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
-import imgaug.multicore as multicore
 
 
 def main():
@@ -39,7 +38,9 @@ def main():
     test_reduce_to_nonempty()
     test_invert_reduce_to_nonempty()
     test_Augmenter()
+    test_Augmenter_augment_heatmaps()
     test_Augmenter_augment_keypoints()
+    test_Augmenter_augment_bounding_boxes()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_find()
     test_Augmenter_remove()
@@ -1335,6 +1336,27 @@ def test_Augmenter():
         "DummyAugmenterRepr(name=Example, parameters=[A, B, C], deterministic=True)"
 
 
+def test_Augmenter_augment_heatmaps():
+    reseed()
+    heatmap = ia.HeatmapsOnImage(
+        np.linspace(0.0, 1.0, num=4*4).reshape((4, 4, 1)).astype(np.float32),
+        shape=(4, 4, 3)
+    )
+
+    aug = iaa.Noop()
+    heatmap_aug = aug.augment_heatmaps(heatmap)
+    assert np.allclose(heatmap_aug.arr_0to1, heatmap.arr_0to1)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    heatmap_aug = aug.augment_heatmaps(heatmap)
+    assert np.allclose(heatmap_aug.arr_0to1, np.rot90(heatmap.arr_0to1, -1))
+
+    aug = iaa.Rot90(1, keep_size=False)
+    heatmaps_aug = aug.augment_heatmaps([heatmap, heatmap, heatmap])
+    for i in range(3):
+        assert np.allclose(heatmaps_aug[i].arr_0to1, np.rot90(heatmap.arr_0to1, -1))
+
+
 def test_Augmenter_augment_keypoints():
     # most stuff was already tested in other tests, so not tested here again
     reseed()
@@ -1402,6 +1424,78 @@ def test_Augmenter_augment_keypoints():
             translations_kps[2] -= 1
             translations_kps[8-1] -= 1
             assert np.array_equal(translations_imgs, translations_kps)
+
+    # single instance of KeypointsOnImage as input
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=5),
+                                 ia.Keypoint(x=3, y=3)], shape=(5, 10, 3))
+
+    aug = iaa.Noop()
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    for kp_aug, kp in zip(kpsoi_aug.keypoints, kpsoi.keypoints):
+        assert np.allclose(kp_aug.x, kp.x)
+        assert np.allclose(kp_aug.y, kp.y)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    # TODO -1 here added because that is done in Rot90, but will have to be fixed
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 5 - 2 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[0].y, 1)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 5 - 5 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+    assert np.allclose(kpsoi_aug.keypoints[2].x, 5 - 3 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[2].y, 3)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    kpsoi_aug = aug.augment_keypoints([kpsoi, kpsoi, kpsoi])
+    for i in range(3):
+        assert np.allclose(kpsoi_aug[i].keypoints[0].x, 5 - 2 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[0].y, 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[1].x, 5 - 5 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[1].y, 2)
+        assert np.allclose(kpsoi_aug[i].keypoints[2].x, 5 - 3 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[2].y, 3)
+
+
+def test_Augmenter_augment_bounding_boxes():
+    # single instance of BoundingBoxesOnImage as input
+    bbsoi = ia.BoundingBoxesOnImage([
+        ia.BoundingBox(x1=1, x2=3, y1=4, y2=5),
+        ia.BoundingBox(x1=2.5, x2=3, y1=0, y2=2)
+    ], shape=(5, 10, 3))
+
+    aug = iaa.Noop()
+    bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+    for bb_aug, bb in zip(bbsoi_aug.bounding_boxes, bbsoi.bounding_boxes):
+        assert np.allclose(bb_aug.x1, bb.x1)
+        assert np.allclose(bb_aug.x2, bb.x2)
+        assert np.allclose(bb_aug.y1, bb.y1)
+        assert np.allclose(bb_aug.y2, bb.y2)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+    # TODO -1 here added because that is done in Rot90, but will have to be fixed
+    # Note here that the new coordinates are minima/maxima of the BB, so not as
+    # straight forward to compute the new coords as for keypoint augmentation
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].x1, 5 - 5 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].x2, 5 - 4 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].y1, 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].y2, 3)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].x1, 5 - 2 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].x2, 5 - 0 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].y1, 2.5)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].y2, 3)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi, bbsoi])
+    for i in range(3):
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x1, 5 - 5 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x2, 5 - 4 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].y1, 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].y2, 3)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x1, 5 - 2 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x2, 5 - 0 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y1, 2.5)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y2, 3)
 
 
 def test_Augmenter_augment_segmentation_maps():
@@ -1602,6 +1696,26 @@ def test_Augmenter_augment_segmentation_maps():
         expected_c3[..., np.newaxis]
     ], axis=2)
     assert np.allclose(segmap_aug.arr, expected)
+
+    # single instance of segmentation map as input
+    segmap = ia.SegmentationMapOnImage(
+        np.arange(0, 4*4).reshape((4, 4, 1)).astype(np.int32),
+        shape=(4, 4, 3),
+        nb_classes=4*4
+    )
+
+    aug = iaa.Noop()
+    segmap_aug = aug.augment_segmentation_maps(segmap)
+    assert np.allclose(segmap_aug.arr, segmap.arr)
+
+    aug = iaa.Rot90(1, keep_size=False)
+    segmap_aug = aug.augment_segmentation_maps(segmap)
+    assert np.allclose(segmap_aug.arr, np.rot90(segmap.arr, -1))
+
+    aug = iaa.Rot90(1, keep_size=False)
+    segmaps_aug = aug.augment_segmentation_maps([segmap, segmap, segmap])
+    for i in range(3):
+        assert np.allclose(segmaps_aug[i].arr, np.rot90(segmap.arr, -1))
 
 
 def test_Augmenter_find():
