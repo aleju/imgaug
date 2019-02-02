@@ -33,6 +33,7 @@ from augmenters import test_mixed_files
 from augmenters import test_blend
 from augmenters import test_segmentation
 from augmenters import test_size
+from augmenters import test_weather
 
 
 def main():
@@ -52,6 +53,7 @@ def main():
     test_blend.main()
     test_segmentation.main()
     test_size.main()
+    test_weather.main()
 
     time_end = time.time()
     print("Finished all tests without errors in %.4fs." % (time_end - time_start,))
