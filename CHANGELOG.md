@@ -96,6 +96,7 @@ were calculated based on a rather low number of 100 repetitions.
 * Renamed `BoundingBoxesOnImage.cut_out_of_image()` to `BoundingBoxesOnImage.clip_out_of_image()`.
 * Marked `BoundingBoxesOnImage.cut_out_of_image()` as deprecated.
 * Marked `Polygon.cut_out_of_image()` as deprecated. (The analogous clip function existed already.)
+* Renamed in `imgaug.Batch` the attributes storing input data `<attribute>_unaug`, e.g. `imgaug.Batch.images` to `imgaug.Batch.images_unaug` or `imgaug.Batch.keypoints` to `imgaug.Batch.keypoints_unaug`. The old attributes are still accessible, but will raise a DeprecatedWarning.
 
 
 ## imgaug.multicore
@@ -220,6 +221,15 @@ were calculated based on a rather low number of 100 repetitions.
 * Changed in `Add` the parameter `value` to be continuous and removed its `value_range`
 
 
+## imgaug.augmenters.blend
+
+* Renamed `imgaug.augmenters.overlay` to `imgaug.augmenters.blend`. Functions and classes in `imgaug.augmenters.overlay` are still accessible, but will now raise a DeprecatedWarning.
+* Added `blend_alpha()`.
+* Refactored `Alpha` to be simpler and use `blend_alpha()`.
+* Fixed `Alpha` not having its own `__str__` method.
+* Improved dtype support of `AlphaElementwise`.
+
+
 ## imgaug.augmenters.blur
 
 * Added function `blur_gaussian()`
@@ -278,14 +288,6 @@ were calculated based on a rather low number of 100 repetitions.
     * [breaking, mostly internal] `renamed generate_indices()` to `generate_shift_maps()`
     * [breaking, mostly internal] `map_coordinates()` now expects to get the pixelwise shift as its input, instead of
       the target coordinates
-
-
-## imgaug.augmenters.overlay
-
-* Added `blend_alpha()`
-* Refactored `Alpha` to be simpler and use `blend_alpha()`
-* Fixed `Alpha` not having its own `__str__` method
-* Improved dtype support of `AlphaElementwise`
 
 
 ## imgaug.augmenters.segmentation
