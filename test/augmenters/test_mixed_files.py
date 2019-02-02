@@ -33,52 +33,52 @@ def test_determinism():
         ia.quokka(size=(64, 64)),
         ia.imresize_single_image(skimage.data.astronaut(), (128, 256))
     ]
+    images.extend([ia.quokka(size=(16, 16))] * 20)
+
     keypoints = [
         ia.KeypointsOnImage([
-            ia.Keypoint(x=20, y=10), ia.Keypoint(x=5, y=5), ia.Keypoint(x=10, y=43)
-            ], shape=(50, 60, 3))
-    ]
+            ia.Keypoint(x=20, y=10), ia.Keypoint(x=5, y=5),
+            ia.Keypoint(x=10, y=43)], shape=(50, 60, 3))
+    ] * 20
 
     augs = [
-        iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
-        iaa.SomeOf(1, [iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
-        iaa.OneOf([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
-        iaa.Sometimes(1.0, iaa.Fliplr(1)),
+        iaa.Sequential([iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
+        iaa.SomeOf(1, [iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
+        iaa.OneOf([iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
+        iaa.Sometimes(0.5, iaa.Fliplr(1.0)),
         iaa.WithColorspace("HSV", children=iaa.Add((-50, 50))),
-        iaa.WithChannels([0], iaa.Add((-50, 50))),
-        iaa.Noop(name="Noop-nochange"),
-        iaa.Lambda(
-            func_images=lambda images, random_state, parents, hooks: images,
-            func_heatmaps=lambda heatmaps, random_state, parents, hooks: heatmaps,
-            func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: keypoints_on_images,
-            name="Lambda-nochange"
-        ),
-        iaa.AssertLambda(
-            func_images=lambda images, random_state, parents, hooks: True,
-            func_heatmaps=lambda heatmaps, random_state, parents, hooks: True,
-            func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: True,
-            name="AssertLambda-nochange"
-        ),
-        iaa.AssertShape(
-            (None, None, None, 3),
-            check_keypoints=False,
-            name="AssertShape-nochange"
-        ),
+        # iaa.WithChannels([0], iaa.Add((-50, 50))),
+        # iaa.Noop(name="Noop-nochange"),
+        # iaa.Lambda(
+        #     func_images=lambda images, random_state, parents, hooks: images,
+        #     func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: keypoints_on_images,
+        #     name="Lambda-nochange"
+        # ),
+        # iaa.AssertLambda(
+        #     func_images=lambda images, random_state, parents, hooks: True,
+        #     func_keypoints=lambda keypoints_on_images, random_state, parents, hooks: True,
+        #     name="AssertLambda-nochange"
+        # ),
+        # iaa.AssertShape(
+        #     (None, None, None, 3),
+        #     check_keypoints=False,
+        #     name="AssertShape-nochange"
+        # ),
         iaa.Scale((0.5, 0.9)),
         iaa.CropAndPad(px=(-50, 50)),
         iaa.Pad(px=(1, 50)),
         iaa.Crop(px=(1, 50)),
-        iaa.Fliplr(1.0),
-        iaa.Flipud(1.0),
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5),
         iaa.Superpixels(p_replace=(0.25, 1.0), n_segments=(16, 128)),
-        iaa.ChangeColorspace(to_colorspace="GRAY"),
+        # iaa.ChangeColorspace(to_colorspace="GRAY"),
         iaa.Grayscale(alpha=(0.1, 1.0)),
-        iaa.GaussianBlur(1.0),
-        iaa.AverageBlur(5),
-        iaa.MedianBlur(5),
-        iaa.Convolve(np.array([[0, 1, 0],
-                               [1, -4, 1],
-                               [0, 1, 0]])),
+        iaa.GaussianBlur((0.1, 3.0)),
+        iaa.AverageBlur((3, 11)),
+        iaa.MedianBlur((3, 11)),
+        # iaa.Convolve(np.array([[0, 1, 0],
+        #                       [1, -4, 1],
+        #                       [0, 1, 0]])),
         iaa.Sharpen(alpha=(0.1, 1.0), lightness=(0.8, 1.2)),
         iaa.Emboss(alpha=(0.1, 1.0), strength=(0.8, 1.2)),
         iaa.EdgeDetect(alpha=(0.1, 1.0)),
@@ -99,16 +99,59 @@ def test_determinism():
         iaa.ElasticTransformation(alpha=0.5)
     ]
 
+    augs_affect_geometry = [
+        iaa.Sequential([iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
+        iaa.SomeOf(1, [iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
+        iaa.OneOf([iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
+        iaa.Sometimes(0.5, iaa.Fliplr(1.0)),
+        iaa.Scale((0.5, 0.9)),
+        iaa.CropAndPad(px=(-50, 50)),
+        iaa.Pad(px=(1, 50)),
+        iaa.Crop(px=(1, 50)),
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5),
+        iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1),
+                   rotate=(-20, 20), shear=(-20, 20), order=ia.ALL,
+                   mode=ia.ALL, cval=(0, 255)),
+        iaa.PiecewiseAffine(scale=(0.1, 0.3)),
+        iaa.ElasticTransformation(alpha=(5, 100), sigma=(3, 5))
+    ]
+
     for aug in augs:
         aug_det = aug.to_deterministic()
         images_aug1 = aug_det.augment_images(images)
         images_aug2 = aug_det.augment_images(images)
+
+        aug_det = aug.to_deterministic()
+        images_aug3 = aug_det.augment_images(images)
+        images_aug4 = aug_det.augment_images(images)
+
+        assert array_equal_lists(images_aug1, images_aug2), \
+            "Images (1, 2) expected to be identical for %s" % (aug.name,)
+
+        assert array_equal_lists(images_aug3, images_aug4), \
+            "Images (3, 4) expected to be identical for %s" % (aug.name,)
+
+        assert not array_equal_lists(images_aug1, images_aug3), \
+            "Images (1, 3) expected to be different for %s" % (aug.name,)
+
+    for aug in augs_affect_geometry:
+        aug_det = aug.to_deterministic()
         kps_aug1 = aug_det.augment_keypoints(keypoints)
         kps_aug2 = aug_det.augment_keypoints(keypoints)
-        assert array_equal_lists(images_aug1, images_aug2), \
-            "Images not identical for %s" % (aug.name,)
+
+        aug_det = aug.to_deterministic()
+        kps_aug3 = aug_det.augment_keypoints(keypoints)
+        kps_aug4 = aug_det.augment_keypoints(keypoints)
+
         assert keypoints_equal(kps_aug1, kps_aug2), \
-            "Keypoints not identical for %s" % (aug.name,)
+            "Keypoints (1, 2) expected to be identical for %s" % (aug.name,)
+
+        assert keypoints_equal(kps_aug3, kps_aug4), \
+            "Keypoints (3, 4) expected to be identical for %s" % (aug.name,)
+
+        assert not keypoints_equal(kps_aug1, kps_aug3), \
+            "Keypoints (1, 3) expected to be different for %s" % (aug.name,)
 
 
 def test_keypoint_augmentation():
