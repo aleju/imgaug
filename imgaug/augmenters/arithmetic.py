@@ -1289,14 +1289,12 @@ class ReplaceElementwise(meta.Augmenter):
                                      "float96", "float128", "float256"],
                          augmenter=self)
 
-        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
-
         nb_images = len(images)
         rss = ia.derive_random_states(random_state, 2*nb_images+1)
         per_channel_samples = self.per_channel.draw_samples((nb_images,), random_state=rss[-1])
 
-        gen = enumerate(zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2], input_dtypes))
-        for i, (image, per_channel_i, rs_mask, rs_replacement, input_dtype) in gen:
+        gen = enumerate(zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2]))
+        for i, (image, per_channel_i, rs_mask, rs_replacement) in gen:
             height, width, nb_channels = image.shape
             sampling_shape = (height, width, nb_channels if per_channel_i > 0.5 else 1)
             mask_samples = self.mask.draw_samples(sampling_shape, random_state=rs_mask)
