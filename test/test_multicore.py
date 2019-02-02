@@ -116,11 +116,11 @@ class TestPool(unittest.TestCase):
             # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
             assert to_check.call_args[0][1][0][0] == 0
             # args, arg 1 (batches with ids), tuple 0, entry 1 in tuple (=> batch)
-            assert np.array_equal(to_check.call_args[0][1][0][1].images, batches[0].images)
+            assert np.array_equal(to_check.call_args[0][1][0][1].images_unaug, batches[0].images_unaug)
             # args, arg 1 (batches with ids), tuple 1, entry 0 in tuple (=> batch id)
             assert to_check.call_args[0][1][1][0] == 1
             # args, arg 1 (batches with ids), tuple 1, entry 1 in tuple (=> batch)
-            assert np.array_equal(to_check.call_args[0][1][1][1].images, batches[1].images)
+            assert np.array_equal(to_check.call_args[0][1][1][1].images_unaug, batches[1].images_unaug)
 
     def test_map_batches(self):
         self._test_map_batches_both(call_async=False)
@@ -159,11 +159,11 @@ class TestPool(unittest.TestCase):
             # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
             assert arg_batches[0][0] == 0
             # tuple 0, entry 1 in tuple (=> batch)
-            assert np.array_equal(arg_batches[0][1].images, batches[0].images)
+            assert np.array_equal(arg_batches[0][1].images_unaug, batches[0].images_unaug)
             # tuple 1, entry 0 in tuple (=> batch id)
             assert arg_batches[1][0] == 1
             # tuple 1, entry 1 in tuple (=> batch)
-            assert np.array_equal(arg_batches[1][1].images, batches[1].images)
+            assert np.array_equal(arg_batches[1][1].images_unaug, batches[1].images_unaug)
 
     def test_imap_batches(self):
         self._test_imap_batches_both(call_unordered=False)
@@ -206,14 +206,14 @@ class TestPool(unittest.TestCase):
 
         for b1, b2, b3 in zip(batches_aug1, batches_aug2, batches_aug3):
             # images were augmented
-            assert not np.array_equal(b1.images, b1.images_aug)
-            assert not np.array_equal(b2.images, b2.images_aug)
-            assert not np.array_equal(b3.images, b3.images_aug)
+            assert not np.array_equal(b1.images_unaug, b1.images_aug)
+            assert not np.array_equal(b2.images_unaug, b2.images_aug)
+            assert not np.array_equal(b3.images_unaug, b3.images_aug)
 
             # original images still the same
-            assert np.array_equal(b1.images, batch.images)
-            assert np.array_equal(b2.images, batch.images)
-            assert np.array_equal(b3.images, batch.images)
+            assert np.array_equal(b1.images_unaug, batch.images_unaug)
+            assert np.array_equal(b2.images_unaug, batch.images_unaug)
+            assert np.array_equal(b3.images_unaug, batch.images_unaug)
 
             # augmentations for same seed are the same
             assert np.array_equal(b1.images_aug, b2.images_aug)
@@ -257,14 +257,14 @@ class TestPool(unittest.TestCase):
 
         for b1, b2, b3 in zip(batches_aug1, batches_aug2, batches_aug3):
             # images were augmented
-            assert not np.array_equal(b1.images, b1.images_aug)
-            assert not np.array_equal(b2.images, b2.images_aug)
-            assert not np.array_equal(b3.images, b3.images_aug)
+            assert not np.array_equal(b1.images_unaug, b1.images_aug)
+            assert not np.array_equal(b2.images_unaug, b2.images_aug)
+            assert not np.array_equal(b3.images_unaug, b3.images_aug)
 
             # original images still the same
-            assert np.array_equal(b1.images, batch.images)
-            assert np.array_equal(b2.images, batch.images)
-            assert np.array_equal(b3.images, batch.images)
+            assert np.array_equal(b1.images_unaug, batch.images_unaug)
+            assert np.array_equal(b2.images_unaug, batch.images_unaug)
+            assert np.array_equal(b3.images_unaug, batch.images_unaug)
 
             # augmentations for same seed are the same
             assert np.array_equal(b1.images_aug, b2.images_aug)
@@ -316,11 +316,11 @@ class TestPool(unittest.TestCase):
     def test_inputs_not_lost(self):
         """Test to make sure that inputs (e.g. images) are never lost."""
         def _assert_contains_all_ids(batches_aug):
-            # batch.images
+            # batch.images_unaug
             ids = set()
             for batch_aug in batches_aug:
-                ids.add(int(batch_aug.images.flat[0]))
-                ids.add(int(batch_aug.images.flat[1]))
+                ids.add(int(batch_aug.images_unaug.flat[0]))
+                ids.add(int(batch_aug.images_unaug.flat[1]))
             for idx in sm.xrange(2*100):
                 assert idx in ids
             assert len(ids) == 200
@@ -454,10 +454,10 @@ def test_BackgroundAugmenter__augment_images_worker():
 
         batch_aug = pickle.loads(queue_target.get())
         assert isinstance(batch_aug, ia.Batch)
-        assert batch_aug.images is not None
-        assert batch_aug.images.dtype == np.uint8
-        assert batch_aug.images.shape == (1, 4, 8, 3)
-        assert np.array_equal(batch_aug.images, np.zeros((1, 4, 8, 3), dtype=np.uint8))
+        assert batch_aug.images_unaug is not None
+        assert batch_aug.images_unaug.dtype == np.uint8
+        assert batch_aug.images_unaug.shape == (1, 4, 8, 3)
+        assert np.array_equal(batch_aug.images_unaug, np.zeros((1, 4, 8, 3), dtype=np.uint8))
         assert batch_aug.images_aug is not None
         assert batch_aug.images_aug.dtype == np.uint8
         assert batch_aug.images_aug.shape == (1, 4, 8, 3)
@@ -479,13 +479,13 @@ def test_BackgroundAugmenter__augment_images_worker():
         bl.terminate()
         bgaug.terminate()
 
-
     assert len(caught_warnings) > 0
     for warning in caught_warnings:
         assert (
                 "BatchLoader is deprecated" in str(warning.message)
                 or "BackgroundAugmenter is deprecated" in str(warning.message)
         )
+
 
 if __name__ == "__main__":
     main()

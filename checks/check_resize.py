@@ -10,11 +10,11 @@ from imgaug import augmenters as iaa
 
 def main():
     # test 2d image
-    ia.imshow(iaa.Scale(64).augment_image(data.camera()))
+    ia.imshow(iaa.Resize(64).augment_image(data.camera()))
 
     # test many images
     images = [ia.quokka(size=0.5), ia.quokka(size=0.5)]
-    images_aug = iaa.Scale(64).augment_images(images)
+    images_aug = iaa.Resize(64).augment_images(images)
     ia.imshow(np.hstack(images_aug))
 
     image = ia.quokka(size=0.5)
@@ -26,26 +26,26 @@ def main():
     print("image shape:", image.shape)
 
     augs = [
-        iaa.Scale("keep", name="keep"),
-        iaa.Scale(32, name="i32"),
-        iaa.Scale(0.5, name="f05"),
+        iaa.Resize("keep", name="keep"),
+        iaa.Resize(32, name="i32"),
+        iaa.Resize(0.5, name="f05"),
 
-        iaa.Scale({"height": 32}, name="height32"),
-        iaa.Scale({"width": 32}, name="width32"),
-        iaa.Scale({"height": "keep", "width": 32}, name="keep-width32"),
-        iaa.Scale({"height": 32, "width": "keep"}, name="height32-keep"),
-        iaa.Scale({"height": "keep", "width": "keep"}, name="keep-keep"),
-        iaa.Scale({"height": 32, "width": 64}, name="height32width64"),
-        iaa.Scale({"height": 64, "width": "keep-aspect-ratio"}, name="height64width-kar"),
-        iaa.Scale({"height": "keep-aspect-ratio", "width": 64}, name="height-kar_width64")
+        iaa.Resize({"height": 32}, name="height32"),
+        iaa.Resize({"width": 32}, name="width32"),
+        iaa.Resize({"height": "keep", "width": 32}, name="keep-width32"),
+        iaa.Resize({"height": 32, "width": "keep"}, name="height32-keep"),
+        iaa.Resize({"height": "keep", "width": "keep"}, name="keep-keep"),
+        iaa.Resize({"height": 32, "width": 64}, name="height32width64"),
+        iaa.Resize({"height": 64, "width": "keep-aspect-ratio"}, name="height64width-kar"),
+        iaa.Resize({"height": "keep-aspect-ratio", "width": 64}, name="height-kar_width64")
     ]
 
     augs_many = [
-        iaa.Scale((32, 128), name="tuple-32-128"),
-        iaa.Scale([32, 64, 128], name="list-32-64-128"),
-        iaa.Scale({"height": (32, 128), "width": "keep"}, name="height-32-64_width-keep"),
-        iaa.Scale({"height": (32, 128), "width": "keep-aspect-ratio"}, name="height-32-128_width-kar"),
-        iaa.Scale({"height": (32, 128), "width": (32, 128)}, name="height-32-128_width-32-128")
+        iaa.Resize((32, 128), name="tuple-32-128"),
+        iaa.Resize([32, 64, 128], name="list-32-64-128"),
+        iaa.Resize({"height": (32, 128), "width": "keep"}, name="height-32-64_width-keep"),
+        iaa.Resize({"height": (32, 128), "width": "keep-aspect-ratio"}, name="height-32-128_width-kar"),
+        iaa.Resize({"height": (32, 128), "width": (32, 128)}, name="height-32-128_width-32-128")
     ]
 
     print("original", image.shape)
@@ -77,13 +77,13 @@ def main():
 
     print("nearest/cv2.INTER_NEAREST/cubic")
     ia.imshow(np.hstack([
-        iaa.Scale(64, interpolation="nearest").augment_image(image),
-        iaa.Scale(64, interpolation=cv2.INTER_NEAREST).augment_image(image),
-        iaa.Scale(64, interpolation="cubic").augment_image(image)
+        iaa.Resize(64, interpolation="nearest").augment_image(image),
+        iaa.Resize(64, interpolation=cv2.INTER_NEAREST).augment_image(image),
+        iaa.Resize(64, interpolation="cubic").augment_image(image)
     ]))
 
     print("random nearest/cubic")
-    iaa.Scale(64, interpolation=["nearest", "cubic"]).show_grid([image], 8, 8)
+    iaa.Resize(64, interpolation=["nearest", "cubic"]).show_grid([image], 8, 8)
 
 
 if __name__ == "__main__":

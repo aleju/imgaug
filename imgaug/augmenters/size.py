@@ -9,13 +9,13 @@ Use instead ::
 and then e.g. ::
 
     seq = iaa.Sequential([
-        iaa.Scale({"height": 32, "width": 64})
+        iaa.Resize({"height": 32, "width": 64})
         iaa.Crop((0, 20))
     ])
 
 List of augmenters:
 
-    * Scale
+    * Resize
     * CropAndPad
     * Crop
     * Pad
@@ -161,10 +161,16 @@ def _handle_position_parameter(position):
         )
 
 
-# TODO rename to Resize to avoid confusion with Affine's scale
-class Scale(meta.Augmenter):
+def Scale(*args, **kwargs):
+    import warnings
+    warnings.warn(DeprecationWarning("'Scale' is deprecated. Use 'Resize' instead. It has the exactly same interface "
+                                     "(simple renaming)."))
+    return Resize(*args, **kwargs)
+
+
+class Resize(meta.Augmenter):
     """
-    Augmenter that scales/resizes images to specified heights and widths.
+    Augmenter that resizes images to specified heights and widths.
 
     dtype support::
 
@@ -177,7 +183,7 @@ class Scale(meta.Augmenter):
         The new size of the images.
 
             * If this has the string value "keep", the original height and
-              width values will be kept (image is not scaled).
+              width values will be kept (image is not resized).
             * If this is an integer, this value will always be used as the new
               height and width of the images.
             * If this is a float v, then per image the image's height H and
@@ -233,57 +239,57 @@ class Scale(meta.Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.Scale(32)
+    >>> aug = iaa.Resize(32)
 
-    scales all images to ``32x32`` pixels.
+    resizes all images to ``32x32`` pixels.
 
-    >>> aug = iaa.Scale(0.5)
+    >>> aug = iaa.Resize(0.5)
 
-    scales all images to 50 percent of their original size.
+    resizes all images to 50 percent of their original size.
 
-    >>> aug = iaa.Scale((16, 22))
+    >>> aug = iaa.Resize((16, 22))
 
-    scales all images to a random height and width within the
+    resizes all images to a random height and width within the
     discrete range ``16<=x<=22``.
 
-    >>> aug = iaa.Scale((0.5, 0.75))
+    >>> aug = iaa.Resize((0.5, 0.75))
 
-    scales all image's height and width to ``H*v`` and ``W*v``,
+    resizes all image's height and width to ``H*v`` and ``W*v``,
     where ``v`` is randomly sampled from the range ``0.5<=x<=0.75``.
 
-    >>> aug = iaa.Scale([16, 32, 64])
+    >>> aug = iaa.Resize([16, 32, 64])
 
-    scales all images either to ``16x16``, ``32x32`` or ``64x64`` pixels.
+    resizes all images either to ``16x16``, ``32x32`` or ``64x64`` pixels.
 
-    >>> aug = iaa.Scale({"height": 32})
+    >>> aug = iaa.Resize({"height": 32})
 
-    scales all images to a height of 32 pixels and keeps the original
+    resizes all images to a height of 32 pixels and keeps the original
     width.
 
-    >>> aug = iaa.Scale({"height": 32, "width": 48})
+    >>> aug = iaa.Resize({"height": 32, "width": 48})
 
-    scales all images to a height of 32 pixels and a width of 48.
+    resizes all images to a height of 32 pixels and a width of 48.
 
-    >>> aug = iaa.Scale({"height": 32, "width": "keep-aspect-ratio"})
+    >>> aug = iaa.Resize({"height": 32, "width": "keep-aspect-ratio"})
 
-    scales all images to a height of 32 pixels and resizes the x-axis
+    resizes all images to a height of 32 pixels and resizes the x-axis
     (width) so that the aspect ratio is maintained.
 
-    >>> aug = iaa.Scale({"height": (0.5, 0.75), "width": [16, 32, 64]})
+    >>> aug = iaa.Resize({"height": (0.5, 0.75), "width": [16, 32, 64]})
 
-    scales all images to a height of ``H*v``, where ``H`` is the original height
+    resizes all images to a height of ``H*v``, where ``H`` is the original height
     and v is a random value sampled from the range ``0.5<=x<=0.75``.
     The width/x-axis of each image is resized to either 16 or 32 or
     64 pixels.
 
-    >>> aug = iaa.Scale(32, interpolation=["linear", "cubic"])
+    >>> aug = iaa.Resize(32, interpolation=["linear", "cubic"])
 
-    scales all images to ``32x32`` pixels. Randomly uses either ``linear``
+    resizes all images to ``32x32`` pixels. Randomly uses either ``linear``
     or ``cubic`` interpolation.
 
     """
     def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
-        super(Scale, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(Resize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         def handle(val, allow_dict):
             if val == "keep":
@@ -384,9 +390,9 @@ class Scale(meta.Augmenter):
             w = int(np.round(w_img * (heatmaps_i.arr_0to1.shape[1] / heatmaps_i.shape[1])))
             h = max(h, 1)
             w = max(w, 1)
-            heatmaps_i_scaled = heatmaps_i.scale((h, w), interpolation=sample_ip)
-            heatmaps_i_scaled.shape = (h_img, w_img) + heatmaps_i.shape[2:]
-            result.append(heatmaps_i_scaled)
+            heatmaps_i_resized = heatmaps_i.resize((h, w), interpolation=sample_ip)
+            heatmaps_i_resized.shape = (h_img, w_img) + heatmaps_i.shape[2:]
+            result.append(heatmaps_i_resized)
 
         return result
 
@@ -853,7 +859,7 @@ class CropAndPad(meta.Augmenter):
             heatmaps[i].arr_0to1 = arr_cr_pa
 
             if self.keep_size:
-                heatmaps[i] = heatmaps[i].scale((height_heatmaps, width_heatmaps))
+                heatmaps[i] = heatmaps[i].resize((height_heatmaps, width_heatmaps))
             else:
                 heatmaps[i].shape = (
                     heatmaps[i].shape[0] - crop_image_top - crop_image_bottom + pad_image_top + pad_image_bottom,
@@ -1921,7 +1927,7 @@ class KeepSizeByResize(meta.Augmenter):
                 if interpolation == "NO_RESIZE":
                     result.append(heatmap_aug)
                 else:
-                    heatmap_aug = heatmap_aug.scale(input_arr_shape[0:2], interpolation=interpolation)
+                    heatmap_aug = heatmap_aug.resize(input_arr_shape[0:2], interpolation=interpolation)
                     heatmap_aug.shape = heatmap.shape
                     result.append(heatmap_aug)
         else:

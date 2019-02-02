@@ -682,7 +682,7 @@ def quokka_segmentation_map(size=None, extract=None):
 
     if size is not None:
         shape_resized = _compute_resized_shape(img_seg.shape, size)
-        segmap = segmap.scale(shape_resized[0:2])
+        segmap = segmap.resize(shape_resized[0:2])
         segmap.shape = tuple(shape_resized[0:2]) + (3,)
 
     return segmap
@@ -1432,7 +1432,7 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
 def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     """
-    Rescale an array by pooling values within blocks.
+    Resize an array by pooling values within blocks.
 
     dtype support::
 
@@ -1514,7 +1514,7 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
 
 def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
-    Rescale an array using average pooling.
+    Resize an array using average pooling.
 
     dtype support::
 
@@ -1545,7 +1545,7 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
 
 def max_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
-    Rescale an array using max-pooling.
+    Resize an array using max-pooling.
 
     dtype support::
 
@@ -3033,10 +3033,15 @@ class BoundingBox(object):
         else:
             return fully
 
-    # TODO rename to clip_*()
-    def cut_out_of_image(self, image):
+    def cut_out_of_image(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("BoundingBox.cut_out_of_image() is deprecated. Use "
+                                         "BoundingBox.clip_out_of_image() instead. It has the "
+                                         "exactly same interface (simple renaming)."))
+        return self.clip_out_of_image(*args, **kwargs)
+
+    def clip_out_of_image(self, image):
         """
-        Cut off all parts of the bounding box that are outside of the image.
+        Clip off all parts of the bounding box that are outside of the image.
 
         Parameters
         ----------
@@ -3578,8 +3583,14 @@ class BoundingBoxesOnImage(object):
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
     def cut_out_of_image(self):
+        warnings.warn(DeprecationWarning("BoundingBoxesOnImage.cut_out_of_image() is deprecated."
+                                         "Use BoundingBoxesOnImage.clip_out_of_image() instead. It "
+                                         "has the exactly same interface (simple renaming)."))
+        return self.clip_out_of_image()
+
+    def clip_out_of_image(self):
         """
-        Cut off all parts from all bounding boxes that are outside of the image.
+        Clip off all parts from all bounding boxes that are outside of the image.
 
         Returns
         -------
@@ -3587,7 +3598,7 @@ class BoundingBoxesOnImage(object):
             Bounding boxes, clipped to fall within the image dimensions.
 
         """
-        bbs_cut = [bb.cut_out_of_image(self.shape)
+        bbs_cut = [bb.clip_out_of_image(self.shape)
                    for bb in self.bounding_boxes if bb.is_partly_within_image(self.shape)]
         return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
 
@@ -3948,9 +3959,10 @@ class Polygon(object):
         else:
             return fully
 
-    # TODO mark as deprecated
-    # TODO rename cut_* to clip_* in BoundingBox
     def cut_out_of_image(self, image):
+        warnings.warn(DeprecationWarning("Polygon.cut_out_of_image() is deprecated. Use "
+                                         "Polygon.clip_out_of_image() instead. It has the exactly "
+                                         "same interface (simple renaming)."))
         return self.clip_out_of_image(image)
 
     def clip_out_of_image(self, image):
@@ -4915,7 +4927,7 @@ class HeatmapsOnImage(object):
 
     def avg_pool(self, block_size):
         """
-        Rescale the heatmap(s) array using average pooling of a given block/kernel size.
+        Resize the heatmap(s) array using average pooling of a given block/kernel size.
 
         Parameters
         ----------
@@ -4934,7 +4946,7 @@ class HeatmapsOnImage(object):
 
     def max_pool(self, block_size):
         """
-        Rescale the heatmap(s) array using max-pooling of a given block/kernel size.
+        Resize the heatmap(s) array using max-pooling of a given block/kernel size.
 
         Parameters
         ----------
@@ -4951,9 +4963,16 @@ class HeatmapsOnImage(object):
         return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
                                          max_value=self.max_value)
 
-    def scale(self, sizes, interpolation="cubic"):
+    def scale(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("HeatmapsOnImage.scale() is deprecated. "
+                                         "Use HeatmapsOnImage.resize() instead. "
+                                         "It has the exactly same interface "
+                                         "(simple renaming)."))
+        return self.resize(*args, **kwargs)
+
+    def resize(self, sizes, interpolation="cubic"):
         """
-        Rescale the heatmap(s) array to the provided size given the provided interpolation.
+        Resize the heatmap(s) array to the provided size given the provided interpolation.
 
         Parameters
         ----------
@@ -4968,17 +4987,17 @@ class HeatmapsOnImage(object):
         Returns
         -------
         imgaug.HeatmapsOnImage
-            Rescaled heatmaps object.
+            Resized heatmaps object.
 
         """
-        arr_0to1_rescaled = imresize_single_image(self.arr_0to1, sizes, interpolation=interpolation)
+        arr_0to1_resized = imresize_single_image(self.arr_0to1, sizes, interpolation=interpolation)
 
         # cubic interpolation can lead to values outside of [0.0, 1.0],
         # see https://github.com/opencv/opencv/issues/7195
         # TODO area interpolation too?
-        arr_0to1_rescaled = np.clip(arr_0to1_rescaled, 0.0, 1.0)
+        arr_0to1_resized = np.clip(arr_0to1_resized, 0.0, 1.0)
 
-        return HeatmapsOnImage.from_0to1(arr_0to1_rescaled, shape=self.shape, min_value=self.min_value,
+        return HeatmapsOnImage.from_0to1(arr_0to1_resized, shape=self.shape, min_value=self.min_value,
                                          max_value=self.max_value)
 
     def to_uint8(self):
@@ -5562,9 +5581,15 @@ class SegmentationMapOnImage(object):
         else:
             return segmap
 
-    def scale(self, sizes, interpolation="cubic"):
+    def scale(self, *args, **kwargs):
+        warnings.warn(DeprecationWarning("SegmentationMapOnImage.scale() is deprecated. "
+                                         "Use SegmentationMapOnImage.resize() instead. "
+                                         "It has the exactly same interface (simple renaming)."))
+        return self.resize(*args, **kwargs)
+
+    def resize(self, sizes, interpolation="cubic"):
         """
-        Rescale the segmentation map array to the provided size given the provided interpolation.
+        Resize the segmentation map array to the provided size given the provided interpolation.
 
         Parameters
         ----------
@@ -5582,16 +5607,16 @@ class SegmentationMapOnImage(object):
         Returns
         -------
         segmap : imgaug.SegmentationMapOnImage
-            Rescaled segmentation map object.
+            Resized segmentation map object.
 
         """
-        arr_rescaled = imresize_single_image(self.arr, sizes, interpolation=interpolation)
+        arr_resized = imresize_single_image(self.arr, sizes, interpolation=interpolation)
 
         # cubic interpolation can lead to values outside of [0.0, 1.0],
         # see https://github.com/opencv/opencv/issues/7195
         # TODO area interpolation too?
-        arr_rescaled = np.clip(arr_rescaled, 0.0, 1.0)
-        segmap = SegmentationMapOnImage(arr_rescaled, shape=self.shape)
+        arr_resized = np.clip(arr_resized, 0.0, 1.0)
+        segmap = SegmentationMapOnImage(arr_resized, shape=self.shape)
         segmap.input_was = self.input_was
         return segmap
 
@@ -5740,17 +5765,55 @@ class Batch(object):
     """
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None,
                  data=None):
-        self.images = images
+        self.images_unaug = images
         self.images_aug = None
-        self.heatmaps = heatmaps
+        self.heatmaps_unaug = heatmaps
         self.heatmaps_aug = None
-        self.segmentation_maps = segmentation_maps
+        self.segmentation_maps_unaug = segmentation_maps
         self.segmentation_maps_aug = None
-        self.keypoints = keypoints
+        self.keypoints_unaug = keypoints
         self.keypoints_aug = None
-        self.bounding_boxes = bounding_boxes
+        self.bounding_boxes_unaug = bounding_boxes
         self.bounding_boxes_aug = None
         self.data = data
+
+    @property
+    def images(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.images is deprecated. Access instead "
+            "imgaug.Batch.images_unaug or imgaug.Batch.images_aug."))
+        return self.images_unaug
+
+    @property
+    def heatmaps(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.heatmaps is deprecated. Access instead "
+            "imgaug.Batch.heatmaps_unaug or imgaug.Batch.heatmaps_aug."))
+        return self.heatmaps_unaug
+
+    @property
+    def segmentation_maps(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.segmentation_maps is deprecated. Access "
+            "instead imgaug.Batch.segmentation_maps_unaug or "
+            "imgaug.Batch.segmentation_maps_aug."))
+        return self.segmentation_maps_unaug
+
+    @property
+    def keypoints(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.keypoints is deprecated. Access "
+            "instead imgaug.Batch.keypoints_unaug or "
+            "imgaug.Batch.keypoints_aug."))
+        return self.keypoints_unaug
+
+    @property
+    def bounding_boxes(self):
+        warnings.warn(DeprecationWarning(
+            "Accessing imgaug.Batch.bounding_boxes is deprecated. Access "
+            "instead imgaug.Batch.bounding_boxes_unaug or "
+            "imgaug.Batch.bounding_boxes_aug."))
+        return self.bounding_boxes_unaug
 
     def deepcopy(self):
         def _copy_images(images):
@@ -5774,11 +5837,11 @@ class Batch(object):
             return augmentables_copy
 
         batch = Batch(
-            images=_copy_images(self.images),
-            heatmaps=_copy_augmentable_objects(self.heatmaps, HeatmapsOnImage),
-            segmentation_maps=_copy_augmentable_objects(self.segmentation_maps, SegmentationMapOnImage),
-            keypoints=_copy_augmentable_objects(self.keypoints, KeypointsOnImage),
-            bounding_boxes=_copy_augmentable_objects(self.bounding_boxes, BoundingBoxesOnImage),
+            images=_copy_images(self.images_unaug),
+            heatmaps=_copy_augmentable_objects(self.heatmaps_unaug, HeatmapsOnImage),
+            segmentation_maps=_copy_augmentable_objects(self.segmentation_maps_unaug, SegmentationMapOnImage),
+            keypoints=_copy_augmentable_objects(self.keypoints_unaug, KeypointsOnImage),
+            bounding_boxes=_copy_augmentable_objects(self.bounding_boxes_unaug, BoundingBoxesOnImage),
             data=copy.deepcopy(self.data)
         )
         batch.images_aug = _copy_images(self.images_aug)

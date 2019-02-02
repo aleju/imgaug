@@ -620,7 +620,7 @@ def chapter_examples_bounding_boxes_ooi():
     image_before = draw_bbs(image, bbs, 100)
     image_after1 = draw_bbs(image_aug, bbs_aug, 100)
     image_after2 = draw_bbs(image_aug, bbs_aug.remove_out_of_image(), 100)
-    image_after3 = draw_bbs(image_aug, bbs_aug.remove_out_of_image().cut_out_of_image(), 100)
+    image_after3 = draw_bbs(image_aug, bbs_aug.remove_out_of_image().clip_out_of_image(), 100)
 
     # ------------
 
@@ -1018,7 +1018,7 @@ def chapter_examples_heatmaps_scaling():
         drawn = []
         for heatmap in heatmaps:
             if upscale:
-                drawn.append(heatmap.scale((128, 128), interpolation="nearest").draw()[0])
+                drawn.append(heatmap.resize((128, 128), interpolation="nearest").draw()[0])
             else:
                 size = heatmap.get_arr().shape[0]
                 pad_amount = (128-size)//2
@@ -1038,7 +1038,7 @@ def chapter_examples_heatmaps_scaling():
     # interpolation (cubic).
     avg_pooled = [heatmap, heatmap.avg_pool(2), heatmap.avg_pool(4), heatmap.avg_pool(8)]
     max_pooled = [heatmap, heatmap.max_pool(2), heatmap.max_pool(4), heatmap.max_pool(8)]
-    resized = [heatmap, heatmap.scale((64, 64)), heatmap.scale((32, 32)), heatmap.scale((16, 16))]
+    resized = [heatmap, heatmap.resize((64, 64)), heatmap.resize((32, 32)), heatmap.resize((16, 16))]
 
     # Draw an image of all scaled heatmaps.
     cells = draw_heatmaps(avg_pooled)\
@@ -1352,7 +1352,7 @@ def chapter_augmenters():
     chapter_augmenters_lambda()
     chapter_augmenters_assertlambda()
     chapter_augmenters_assertshape()
-    chapter_augmenters_scale()
+    chapter_augmenters_resize()
     chapter_augmenters_cropandpad()
     chapter_augmenters_pad()
     chapter_augmenters_crop()
@@ -1517,28 +1517,28 @@ def chapter_augmenters_assertlambda():
 def chapter_augmenters_assertshape():
     pass
 
-def chapter_augmenters_scale():
-    aug = iaa.Scale({"height": 32, "width": 64})
+def chapter_augmenters_resize():
+    aug = iaa.Resize({"height": 32, "width": 64})
     run_and_save_augseq(
-        "scale_32x64.jpg", aug,
+        "resize_32x64.jpg", aug,
         [ia.quokka(size=(128, 128)) for _ in range(8)], cols=4, rows=2
     )
 
-    aug = iaa.Scale({"height": 32, "width": "keep-aspect-ratio"})
+    aug = iaa.Resize({"height": 32, "width": "keep-aspect-ratio"})
     run_and_save_augseq(
-        "scale_32xkar.jpg", aug,
+        "resize_32xkar.jpg", aug,
         [ia.quokka(size=(128, 128)) for _ in range(8)], cols=4, rows=2
     )
 
-    aug = iaa.Scale((0.5, 1.0))
+    aug = iaa.Resize((0.5, 1.0))
     run_and_save_augseq(
-        "scale_50_to_100_percent.jpg", aug,
+        "resize_50_to_100_percent.jpg", aug,
         [ia.quokka(size=(128, 128)) for _ in range(8)], cols=4, rows=2
     )
 
-    aug = iaa.Scale({"height": (0.5, 0.75), "width": [16, 32, 64]})
+    aug = iaa.Resize({"height": (0.5, 0.75), "width": [16, 32, 64]})
     run_and_save_augseq(
-        "scale_h_uniform_w_choice.jpg", aug,
+        "resize_h_uniform_w_choice.jpg", aug,
         [ia.quokka(size=(128, 128)) for _ in range(8)], cols=4, rows=2
     )
 

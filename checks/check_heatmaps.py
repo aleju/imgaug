@@ -150,8 +150,8 @@ def main():
         ])
     )
 
-    print("Scale...")
-    aug = iaa.Scale(0.5, interpolation="nearest")
+    print("Resize...")
+    aug = iaa.Resize(0.5, interpolation="nearest")
     aug_det = aug.to_deterministic()
     quokka_aug = aug_det.augment_image(quokka)
     heatmaps_aug = aug_det.augment_heatmaps([heatmaps])[0]

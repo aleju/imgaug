@@ -17,11 +17,25 @@ from imgaug.testutils import keypoints_equal, reseed
 def main():
     time_start = time.time()
 
+    test_HorizontalFlip()
+    test_VerticalFlip()
     test_Fliplr()
     test_Flipud()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+
+
+def test_HorizontalFlip():
+    aug = iaa.HorizontalFlip(0.5)
+    assert isinstance(aug, iaa.Fliplr)
+    assert np.allclose(aug.p.p.value, 0.5)
+
+
+def test_VerticalFlip():
+    aug = iaa.VerticalFlip(0.5)
+    assert isinstance(aug, iaa.Flipud)
+    assert np.allclose(aug.p.p.value, 0.5)
 
 
 def test_Fliplr():

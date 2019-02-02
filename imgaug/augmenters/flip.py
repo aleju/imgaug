@@ -27,6 +27,16 @@ from . import meta
 from .. import parameters as iap
 
 
+def HorizontalFlip(*args, **kwargs):
+    """Alias for Fliplr."""
+    return Fliplr(*args, **kwargs)
+
+
+def VerticalFlip(*args, **kwargs):
+    """Alias for Flipud."""
+    return Flipud(*args, **kwargs)
+
+
 class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images horizontally.

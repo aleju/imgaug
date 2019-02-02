@@ -64,7 +64,7 @@ def test_determinism():
         #     check_keypoints=False,
         #     name="AssertShape-nochange"
         # ),
-        iaa.Scale((0.5, 0.9)),
+        iaa.Resize((0.5, 0.9)),
         iaa.CropAndPad(px=(-50, 50)),
         iaa.Pad(px=(1, 50)),
         iaa.Crop(px=(1, 50)),
@@ -104,7 +104,7 @@ def test_determinism():
         iaa.SomeOf(1, [iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
         iaa.OneOf([iaa.Fliplr(0.5), iaa.Flipud(0.5)]),
         iaa.Sometimes(0.5, iaa.Fliplr(1.0)),
-        iaa.Scale((0.5, 0.9)),
+        iaa.Resize((0.5, 0.9)),
         iaa.CropAndPad(px=(-50, 50)),
         iaa.Pad(px=(1, 50)),
         iaa.Crop(px=(1, 50)),
@@ -212,7 +212,7 @@ def test_keypoint_augmentation():
         iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10),
                                 name="SimplexNoiseAlpha"),
         iaa.Superpixels(p_replace=0.01, n_segments=64),
-        iaa.Scale(0.5, name="Scale"),
+        iaa.Resize(0.5, name="Resize"),
         iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
         iaa.Pad(px=(0, 10), name="Pad"),
         iaa.Crop(px=(0, 10), name="Crop")
@@ -320,7 +320,7 @@ def test_unusual_channel_numbers():
         iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10),
                                 name="SimplexNoiseAlpha"),
         iaa.Superpixels(p_replace=0.01, n_segments=64),
-        iaa.Scale({"height": 4, "width": 4}, name="Scale"),
+        iaa.Resize({"height": 4, "width": 4}, name="Resize"),
         iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
         iaa.Pad(px=(0, 10), name="Pad"),
         iaa.Crop(px=(0, 10), name="Crop")
@@ -328,7 +328,7 @@ def test_unusual_channel_numbers():
 
     for aug in augs:
         for (nb_channels, images_c) in images:
-            if aug.name != "Scale":
+            if aug.name != "Resize":
                 images_aug = aug.augment_images(images_c)
                 assert images_aug.shape == images_c.shape
                 image_aug = aug.augment_image(images_c[0])
@@ -432,7 +432,7 @@ def test_dtype_preservation():
         (iaa.SimplexNoiseAlpha(iaa.Add(10), name="SimplexNoiseAlpha"), _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.FrequencyNoiseAlpha(exponent=(-2, 2), first=iaa.Add(10), name="SimplexNoiseAlpha"), _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.Superpixels(p_replace=0.01, n_segments=64), _not_dts([np.float16, np.float32, np.float64])),
-        (iaa.Scale({"height": 4, "width": 4}, name="Scale"),
+        (iaa.Resize({"height": 4, "width": 4}, name="Resize"),
          _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),
         (iaa.CropAndPad(px=(-10, 10), name="CropAndPad"),
          _not_dts([np.uint16, np.uint32, np.int16, np.int32, np.float32, np.float16, np.float64])),

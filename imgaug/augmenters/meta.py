@@ -333,11 +333,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             # singlecore augmentation
 
             for batch_normalized in batches_normalized:
-                batch_augment_images = batch_normalized.images is not None
-                batch_augment_heatmaps = batch_normalized.heatmaps is not None
-                batch_augment_segmaps = batch_normalized.segmentation_maps is not None
-                batch_augment_keypoints = batch_normalized.keypoints is not None
-                batch_augment_bounding_boxes = batch_normalized.bounding_boxes is not None
+                batch_augment_images = batch_normalized.images_unaug is not None
+                batch_augment_heatmaps = batch_normalized.heatmaps_unaug is not None
+                batch_augment_segmaps = batch_normalized.segmentation_maps_unaug is not None
+                batch_augment_keypoints = batch_normalized.keypoints_unaug is not None
+                batch_augment_bounding_boxes = batch_normalized.bounding_boxes_unaug is not None
 
                 nb_to_aug = sum([1 if to_aug else 0
                                  for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps,
@@ -349,17 +349,20 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     augseq = self
 
                 if batch_augment_images:
-                    batch_normalized.images_aug = augseq.augment_images(batch_normalized.images, hooks=hooks)
+                    batch_normalized.images_aug = augseq.augment_images(
+                        batch_normalized.images_unaug, hooks=hooks)
                 if batch_augment_heatmaps:
-                    batch_normalized.heatmaps_aug = augseq.augment_heatmaps(batch_normalized.heatmaps, hooks=hooks)
+                    batch_normalized.heatmaps_aug = augseq.augment_heatmaps(
+                        batch_normalized.heatmaps_unaug, hooks=hooks)
                 if batch_augment_segmaps:
                     batch_normalized.segmentation_maps_aug = augseq.augment_segmentation_maps(
-                        batch_normalized.segmentation_maps, hooks=hooks)
+                        batch_normalized.segmentation_maps_unaug, hooks=hooks)
                 if batch_augment_keypoints:
-                    batch_normalized.keypoints_aug = augseq.augment_keypoints(batch_normalized.keypoints, hooks=hooks)
+                    batch_normalized.keypoints_aug = augseq.augment_keypoints(
+                        batch_normalized.keypoints_unaug, hooks=hooks)
                 if batch_augment_bounding_boxes:
                     batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
-                        batch_normalized.bounding_boxes, hooks=hooks)
+                        batch_normalized.bounding_boxes_unaug, hooks=hooks)
 
                 batch_unnormalized = unnormalize_batch(batch_normalized)
 
