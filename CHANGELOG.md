@@ -207,6 +207,10 @@ were calculated based on a rather low number of 100 repetitions.
   augmentation to be un-aligned within a batch after the first empty `KeypointsOnImage` instance. (#231)
 * Added `pool()` to `Augmenter`. This is a helper to start a `imgaug.multicore.Pool` via `with augmenter.pool() as pool: ...`.
 * Changed `to_deterministic()` in `Augmenter` and various child classes to derive its new random state from the augmenter's local random state instead of the global random state.
+* Enabled support for non-list `HeatmapsOnImage` inputs in `Augmenter.augment_heatmaps()`. (Before, only lists were supported.)
+* Enabled support for non-list `SegmentationMapOnImage` inputs in `Augmenter.augment_segmentation_maps()`. (Before, only lists were supported.)
+* Enabled support for non-list `KeypointsOnImage` inputs in `Augmenter.augment_keypoints()`. (Before, only lists were supported.)
+* Enabled support for non-list `BoundingBoxesOnImage` inputs in `Augmenter.augment_bounding_boxes()`. (Before, only lists were supported.)
 
 
 ## imgaug.augmenters.arithmetic
