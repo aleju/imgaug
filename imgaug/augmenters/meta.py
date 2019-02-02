@@ -368,6 +368,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             # multicore augmentation
             import imgaug.multicore as multicore
 
+            # TODO skip this if the input is already a generator
             def load_batches():
                 for batch in batches_normalized:
                     yield batch
