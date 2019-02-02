@@ -1,4 +1,4 @@
 pytest>=3.0.5
 mock; python_version < '3.3'  # unittest.mock does not exist in older versions
 unittest2; python_version < '3.4'  # in 3.4, self.subTest was added
-xdoctest >= 0.7.1
+xdoctest >= 0.7.2
