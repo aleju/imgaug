@@ -2228,8 +2228,10 @@ class JpegCompression(meta.Augmenter):
     ----------
     compression : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Degree of compression used during jpeg compression within value range ``[0, 100]``. Higher values denote
-        stronger compression and will cause low-frequency components to disappear. Standard values used when saving
-        images are at around 75 and will usually not degrade image quality very much.
+        stronger compression and will cause low-frequency components to disappear. Note that JPEG's compression
+        strength is also often set as a *quality*, which is the inverse of this parameter. Common choices for
+        the *quality* setting are around 80 to 95, depending on the image. This translates here to a
+        *compression* parameter of around 20 to 5.
 
             * If a single number, then that value will be used for the compression degree.
             * If a tuple of two number ``(a, b)``, then the compression will be a
@@ -2253,8 +2255,8 @@ class JpegCompression(meta.Augmenter):
     --------
     >>> aug = iaa.JpegCompression(compression=(80, 95))
 
-    Removes high frquency components in images based on JPEG compression with a compression strength between
-    80 and 95 (randomly sampled per image).
+    Removes high frequency components in images based on JPEG compression with a *compression strength* between
+    80 and 95 (randomly sampled per image). This corresponds to a (very low) *quality* setting of 5 to 20.
 
     """
     def __init__(self, compression=50, name=None, deterministic=False, random_state=None):
