@@ -97,10 +97,17 @@ It converts a set of input images into a new, much larger set of slightly altere
 * Supports augmentation on multiple CPU cores.
 
 ## Documentation
+
 * [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code to use the library.
 * [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for each augmentation technique.
 * [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
-* This README contains more examples. See further below.
+* For tutorial jupyter notebooks, see [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks)
+  * E.g. [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/01%20-%20Load%20and%20Augment%20an%20Image.ipynb),
+    [Multicore Support](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/03%20-%20Multicore%20Augmentation.ipynb),
+    or working with [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/04%20-%20Augment%20Keypoints.ipynb),
+    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/05%20-%20Augment%20Bounding%20Boxes.ipynb),
+    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/06%20-%20Augment%20Heatmaps.ipynb),
+    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/07%20-%20Augment%20Segmentation%20Maps.ipynb)
 
 ## Installation
 
