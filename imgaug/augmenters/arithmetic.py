@@ -2200,13 +2200,15 @@ class JpegCompression(meta.Augmenter):
     """
     Degrade image quality by applying JPEG compression to it.
 
-    During JPEG compression, high frequency components (e.g. edges) are removed. With low compression (strength)
-    only the highest frequency components are removed, while very high compression (strength) will lead to only the
-    lowest frequency components "surviving". This lowers the image quality. For more details,
-    see https://en.wikipedia.org/wiki/Compression_artifact.
+    During JPEG compression, high frequency components (e.g. edges) are removed.
+    With low compression (strength) only the highest frequency components are
+    removed, while very high compression (strength) will lead to only the lowest
+    frequency components "surviving". This lowers the image quality. For more
+    details, see https://en.wikipedia.org/wiki/Compression_artifact.
 
-    Note that this augmenter still returns images as numpy arrays (i.e. saves the images with JPEG compression and
-    then reloads them into arrays). It does not return the raw JPEG file content.
+    Note that this augmenter still returns images as numpy arrays (i.e. saves
+    the images with JPEG compression and then reloads them into arrays). It
+    does not return the raw JPEG file content.
 
     dtype support::
 
@@ -2226,19 +2228,25 @@ class JpegCompression(meta.Augmenter):
 
     Parameters
     ----------
-    compression : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Degree of compression used during jpeg compression within value range ``[0, 100]``. Higher values denote
-        stronger compression and will cause low-frequency components to disappear. Standard values used when saving
-        images are at around 75 and will usually not degrade image quality very much.
+    compression : number or tuple of number or list of number or \
+                  imgaug.parameters.StochasticParameter, optional
+        Degree of compression used during jpeg compression within value range
+        ``[0, 100]``. Higher values denote stronger compression and will cause
+        low-frequency components to disappear. Note that JPEG's compression
+        strength is also often set as a *quality*, which is the inverse of this
+        parameter. Common choices for the *quality* setting are around 80 to 95,
+        depending on the image. This translates here to a *compression*
+        parameter of around 20 to 5.
 
-            * If a single number, then that value will be used for the compression degree.
-            * If a tuple of two number ``(a, b)``, then the compression will be a
-              value sampled from the interval ``[a..b]``.
+            * If a single number, then that value will be used for the
+              compression degree.
+            * If a tuple of two number ``(a, b)``, then the compression will be
+              a value sampled from the interval ``[a..b]``.
             * If a list, then a random value will be sampled and used as the
               compression per image.
             * If a StochasticParameter, then ``N`` samples will be drawn from
-              that parameter per ``N`` input images, each representing the compression
-              for the nth image. Expected to be discrete.
+              that parameter per ``N`` input images, each representing the
+              compression for the nth image. Expected to be discrete.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2253,8 +2261,9 @@ class JpegCompression(meta.Augmenter):
     --------
     >>> aug = iaa.JpegCompression(compression=(80, 95))
 
-    Removes high frquency components in images based on JPEG compression with a compression strength between
-    80 and 95 (randomly sampled per image).
+    Removes high frequency components in images based on JPEG compression with
+    a *compression strength* between 80 and 95 (randomly sampled per image).
+    This corresponds to a (very low) *quality* setting of 5 to 20.
 
     """
     def __init__(self, compression=50, name=None, deterministic=False, random_state=None):

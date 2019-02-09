@@ -3079,6 +3079,7 @@ class BoundingBox(object):
             label=self.label
         )
 
+    # TODO convert this to x/y params?
     def shift(self, top=None, right=None, bottom=None, left=None):
         """
         Shift the bounding box from one or more image sides, i.e. move it on the x/y-axis.
