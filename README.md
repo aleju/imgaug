@@ -133,6 +133,12 @@ via `cd imgaug && python setup.py install`.
 
 To deinstall the library, just execute `pip uninstall imgaug`.
 
+## Recent Changes
+
+* **0.2.8**: Improved performance, dtype support and multicore augmentation.
+
+See [changelog](CHANGELOG.md) for more details.
+
 ## Overview of most augmenters
 
 The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):

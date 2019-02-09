@@ -1,9 +1,14 @@
-# master (will be 0.2.8)
+# master (will probably be 0.2.9)
+
+TODO.
+
+
+# 0.2.8
 
 This update focused on extending and documenting the library's dtype support, improving the performance and reworking multicore augmentation.
 
 
-# dtype support
+## dtype support
 
 Previous versions of `imgaug` were primarily geared towards `uint8`.
 In this version, all augmenters and helper functions were refactored to be more tolerant towards non-uint8 dtypes.
