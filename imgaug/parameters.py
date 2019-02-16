@@ -483,44 +483,51 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
         return data
 
 
-class Binomial(StochasticParameter):
+class Deterministic(StochasticParameter):
     """
-    Binomial distribution.
+    Parameter that is a constant value.
+
+    If ``N`` values are sampled from this parameter, it will return ``N`` times
+    ``V``, where ``V`` is the constant value.
 
     Parameters
     ----------
-    p : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        Probability of the binomial distribution. Expected to be in the
-        range [0, 1].
-
-            * If this is a number, then that number will always be used as the probability.
-            * If this is a tuple (a, b), a random value will be sampled from the range a<=x<b per call
-              to :func:`imgaug.parameters.Binomial._draw_samples`.
-            * If this is a list of numbers, a random value will be picked from that list per call.
-            * If this is a StochasticParameter, the value will be sampled once per call.
+    value : number or str or imgaug.parameters.StochasticParameter
+        A constant value to use.
+        A string may be provided to generate arrays of strings.
+        If this is a StochasticParameter, a single value will be sampled
+        from it exactly once and then used as the constant value.
 
     Examples
     --------
-    >>> param = Binomial(Uniform(0.01, 0.2))
+    >>> param = Deterministic(10)
 
-    Uses a varying probability `p` between 0.01 and 0.2 per sampling.
+    Will always sample the value 10.
 
     """
+    def __init__(self, value):
+        super(Deterministic, self).__init__()
 
-    def __init__(self, p):
-        super(Binomial, self).__init__()
-        self.p = handle_continuous_param(p, "p")
+        if isinstance(value, StochasticParameter):
+            self.value = value.draw_sample()
+        elif ia.is_single_number(value) or ia.is_string(value):
+            self.value = value
+        else:
+            raise Exception("Expected StochasticParameter object or number or string, got %s." % (type(value),))
 
     def _draw_samples(self, size, random_state):
-        p = self.p.draw_sample(random_state=random_state)
-        ia.do_assert(0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,))
-        return random_state.binomial(1, p, size)
+        return np.full(size, self.value)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return "Binomial(%s)" % (self.p,)
+        if ia.is_single_integer(self.value):
+            return "Deterministic(int %d)" % (self.value,)
+        elif ia.is_single_float(self.value):
+            return "Deterministic(float %.8f)" % (self.value,)
+        else:
+            return "Deterministic(%s)" % (str(self.value),)
 
 
 class Choice(StochasticParameter):
@@ -608,6 +615,46 @@ class Choice(StochasticParameter):
 
     def __str__(self):
         return "Choice(a=%s, replace=%s, p=%s)" % (str(self.a), str(self.replace), str(self.p),)
+
+
+class Binomial(StochasticParameter):
+    """
+    Binomial distribution.
+
+    Parameters
+    ----------
+    p : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Probability of the binomial distribution. Expected to be in the
+        range [0, 1].
+
+            * If this is a number, then that number will always be used as the probability.
+            * If this is a tuple (a, b), a random value will be sampled from the range a<=x<b per call
+              to :func:`imgaug.parameters.Binomial._draw_samples`.
+            * If this is a list of numbers, a random value will be picked from that list per call.
+            * If this is a StochasticParameter, the value will be sampled once per call.
+
+    Examples
+    --------
+    >>> param = Binomial(Uniform(0.01, 0.2))
+
+    Uses a varying probability `p` between 0.01 and 0.2 per sampling.
+
+    """
+
+    def __init__(self, p):
+        super(Binomial, self).__init__()
+        self.p = handle_continuous_param(p, "p")
+
+    def _draw_samples(self, size, random_state):
+        p = self.p.draw_sample(random_state=random_state)
+        ia.do_assert(0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,))
+        return random_state.binomial(1, p, size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "Binomial(%s)" % (self.p,)
 
 
 class DiscreteUniform(StochasticParameter):
@@ -1076,53 +1123,6 @@ class Beta(StochasticParameter):
 
     def __str__(self):
         return "Beta(%s, %s)" % (self.alpha, self.beta)
-
-
-class Deterministic(StochasticParameter):
-    """
-    Parameter that is a constant value.
-
-    If ``N`` values are sampled from this parameter, it will return ``N`` times
-    ``V``, where ``V`` is the constant value.
-
-    Parameters
-    ----------
-    value : number or str or imgaug.parameters.StochasticParameter
-        A constant value to use.
-        A string may be provided to generate arrays of strings.
-        If this is a StochasticParameter, a single value will be sampled
-        from it exactly once and then used as the constant value.
-
-    Examples
-    --------
-    >>> param = Deterministic(10)
-
-    Will always sample the value 10.
-
-    """
-    def __init__(self, value):
-        super(Deterministic, self).__init__()
-
-        if isinstance(value, StochasticParameter):
-            self.value = value.draw_sample()
-        elif ia.is_single_number(value) or ia.is_string(value):
-            self.value = value
-        else:
-            raise Exception("Expected StochasticParameter object or number or string, got %s." % (type(value),))
-
-    def _draw_samples(self, size, random_state):
-        return np.full(size, self.value)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        if ia.is_single_integer(self.value):
-            return "Deterministic(int %d)" % (self.value,)
-        elif ia.is_single_float(self.value):
-            return "Deterministic(float %.8f)" % (self.value,)
-        else:
-            return "Deterministic(%s)" % (str(self.value),)
 
 
 class FromLowerResolution(StochasticParameter):
