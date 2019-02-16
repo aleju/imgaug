@@ -1622,9 +1622,9 @@ class Subtract(StochasticParameter):
 
     Examples
     --------
-    >>> param = Add(Uniform(0.0, 1.0), 1.0)
+    >>> param = Subtract(Uniform(0.0, 1.0), 1.0)
 
-    Converts a uniform range ``[0.0, 1.0)`` to ``[1.0, 2.0)``.
+    Converts a uniform range ``[0.0, 1.0)`` to ``[-1.0, 0.0)``.
 
     """
     def __init__(self, other_param, val, elementwise=False):
