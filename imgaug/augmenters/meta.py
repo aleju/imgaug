@@ -1076,7 +1076,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         >>> import imgaug as ia
         >>> from imgaug import augmenters as iaa
         >>> import numpy as np
-        >>> aug = iaa.Dropout(0.2)
+        >>> aug = iaa.Add(1)
         >>> images = np.zeros((16, 128, 128, 3), dtype=np.uint8)
         >>> def generate_batches():
         >>>     for _ in range(100):
@@ -1086,7 +1086,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         >>>     batches_aug = pool.imap_batches(generate_batches(), chunksize=8)
         >>>     batch_aug = next(batches_aug)
         >>>     print(np.sum(batch_aug.images_aug[0]))
-        0
+        49152
 
         Same as above. This time, a generator is used to generate batches of images. Again, the first augmented image's
         sum of pixels is printed.
