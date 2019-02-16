@@ -1321,8 +1321,19 @@ class ReplaceElementwise(meta.Augmenter):
             if sampling_shape[2] == 1:
                 mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
             mask_thresh = mask_samples > 0.5
-            replacement_samples = self.replacement.draw_samples((int(np.sum(mask_thresh)),),
-                                                                random_state=rs_replacement)
+
+            # TODO add separate per_channels for mask and replacement
+            # TODO add test that replacement with per_channel=False is not sampled per channel
+            if per_channel_i <= 0.5:
+                replacement_samples = self.replacement.draw_samples((int(np.sum(mask_thresh[:, :, 0])),),
+                                                                    random_state=rs_replacement)
+                # important here to use repeat instead of tile. repeat converts e.g. [0, 1, 2] to [0, 0, 1, 1, 2, 2],
+                # while tile leads to [0, 1, 2, 0, 1, 2]. The assignment below iterates over each channel and pixel
+                # simultaneously, *not* first over all pixels of channel 0, then all pixels in channel 1, ...
+                replacement_samples = np.repeat(replacement_samples, mask_thresh.shape[2])
+            else:
+                replacement_samples = self.replacement.draw_samples((int(np.sum(mask_thresh)),),
+                                                                    random_state=rs_replacement)
 
             # round, this makes 0.2 e.g. become 0 in case of boolean image (otherwise replacing values with 0.2 would
             # lead to True instead of False).
