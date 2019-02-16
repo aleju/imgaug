@@ -4298,7 +4298,7 @@ class Polygon(object):
         Returns
         -------
         imgaug.BoundingBox
-            The bounding box tightly containing the polygon.
+            Tight bounding box around the polygon.
 
         """
         xx = self.xx
@@ -4335,6 +4335,74 @@ class Polygon(object):
             return Polygon([], label=label)
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
+
+    @staticmethod
+    def from_augmented_exterior(old_polygon, new_exterior):
+        """
+        Parameters
+        ----------
+        old_polygon : imgaug.Polygon
+        new_exterior : (N,2) ndarray
+
+        Returns
+        -------
+        imgaug.Polygon
+            New concave polygon.
+
+        """
+        if len(new_exterior) < 3:
+            return old_polygon.deepcopy(exterior=new_exterior)
+        #assert len(new_exterior) >= 3, ("Expected exterior of polygon after augmentation to contain at least 3 points "
+        #                                + "but got %d." % (len(new_exterior),))
+
+        # create Polygon instance, if it is already valid then just return immediately
+        polygon = old_polygon.deepcopy(exterior=new_exterior)
+        if polygon.is_valid:
+            return polygon
+
+        # check that points are not all identical or on a line
+        rs = np.random.RandomState(1)
+        first = True
+        is_degenerate = False
+        noise_strength = 0.0001
+
+        while first or is_degenerate:
+            p1 = new_exterior[0]
+            angles = set()
+            for p2 in new_exterior[1:]:
+                distance = (p1[0] - p2[0]) ** 2 + (p1[1] + p2[1]) ** 2
+                angle = angle_between_vectors(p1, p2) if distance > 0 else None
+                if angle is not None:
+                    angles.add(int(angle * 1000))
+
+            is_degenerate = len(angles) <= 1
+            if is_degenerate:
+                noise = rs.uniform(-noise_strength, noise_strength, size=new_exterior.shape).astype(np.float32)
+                new_exterior = new_exterior + noise
+                noise_strength *= 10
+            first = False
+
+        # remove duplicate points
+        # TODO
+
+        # generate intersection points
+        # https://github.com/ideasman42/isect_segments-bentley_ottmann
+        intersections = isect_polygon_include_points(new_exterior)
+
+        # integrate intersection points into input exterior points
+        new_exterior_extended = []
+
+
+        # find maximal length chain along exterior+intersections that results in valid polygon
+
+        # if that does not lead to valid polygon, add small gaussian noise and repeat the process,
+        # with the aim of removing parallel lines that essentially or really overlap
+        # TODO there might be some risk here that the polygon is split into multiple polygons,
+        # of which only one polygon is actually returned
+
+        # if adding gaussian noise doesn't help, force a solution by returning the convex hull
+
+        return old_polygon.deepcopy(exterior=new_exterior_concave)
 
     def exterior_almost_equals(self, other_polygon, max_distance=1e-6, interpolate=8):
         """
