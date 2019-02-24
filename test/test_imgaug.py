@@ -2,6 +2,17 @@ from __future__ import print_function, division, absolute_import
 
 import time
 import warnings
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -15,7 +26,8 @@ import imgaug as ia
 from imgaug.imgaug import (
     _quokka_normalize_extract, _compute_resized_shape,
     _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
-    _interpolate_points, _interpolate_points_by_max_distance
+    _interpolate_points, _interpolate_points_by_max_distance,
+    _ConcavePolygonRecoverer
 )
 from imgaug import dtypes as iadt
 from imgaug.testutils import reseed
@@ -5551,6 +5563,417 @@ def test__interpolate_points_by_max_distance():
             [0, 0]
         ])
     )
+
+
+class Test_ConcavePolygonRecoverer(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @classmethod
+    def _assert_points_are_identical(cls, observed, expected, atol=1e-8, rtol=0):
+        assert len(observed) == len(expected)
+        for i, (ps_obs, ps_exp) in enumerate(zip(observed, expected)):
+            assert len(ps_obs) == len(ps_exp), "Failed at point %d" % (i,)
+            for p_obs, p_exp in zip(ps_obs, ps_exp):
+                assert len(p_obs) == 2
+                assert len(p_exp) == 2
+                assert np.allclose(p_obs, p_exp, atol=atol, rtol=rtol), "Unexpected coords at %d" % (i,)
+
+    def test_recover_from(self):
+        # TODO
+        assert False
+
+    def test__remove_consecutive_duplicate_points(self):
+        recoverer = _ConcavePolygonRecoverer()
+        points = [(0, 0), (1, 1)]
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            points
+        )
+
+        points = [(0.0, 0.5), (1.0, 1.0)]
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            np.float32(points)
+        )
+
+        points = np.float32([(0.0, 0.5), (1.0, 1.0)])
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            np.float32(points)
+        )
+
+        points = [(0, 0), (0, 0)]
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            [(0, 0)],
+            atol=1e-8, rtol=0
+        )
+
+        points = [(0, 0), (0, 0), (1, 0)]
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            [(0, 0), (1, 0)],
+            atol=1e-8, rtol=0
+        )
+
+        points = [(0, 0), (1, 0), (1, 0)]
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            [(0, 0), (1, 0)],
+            atol=1e-8, rtol=0
+        )
+
+        points = [(0, 0), (1, 0), (1, 0), (2, 0), (0, 0)]
+        assert np.allclose(
+            recoverer._remove_consecutive_duplicate_points(points),
+            [(0, 0), (1, 0), (2, 0)],
+            atol=1e-8, rtol=0
+        )
+
+    def test__jitter_duplicate_points(self):
+        cpr = _ConcavePolygonRecoverer(threshold_duplicate_points=1e-4)
+        points = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(points, points_jittered, rtol=0, atol=1e-4)
+
+        points = [(0, 0), (1, 0), (0, 1)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(points, points_jittered, rtol=0, atol=1e-4)
+
+        points = [(0, 0), (0.01, 0), (0.01, 0.01), (0, 0.01)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(points, points_jittered, rtol=0, atol=1e-4)
+
+        points = [(0, 0), (1, 0), (1 + 1e-6, 0), (1, 1), (0, 1)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(
+            [point for i, point in enumerate(points_jittered) if i in [0, 1, 3, 4]],
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0,
+            atol=1e-5
+        )
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[2])) >= 1e-4
+
+        points = [(0, 0), (1, 0), (1, 1), (1 + 1e-6, 0), (0, 1)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(
+            [point for i, point in enumerate(points_jittered) if i in [0, 1, 2, 4]],
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0,
+            atol=1e-5
+        )
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[3])) >= 1e-4
+
+        points = [(0, 0), (1, 0), (1, 1), (0, 1), (1 + 1e-6, 0)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(
+            [point for i, point in enumerate(points_jittered) if i in [0, 1, 2, 3]],
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0,
+            atol=1e-5
+        )
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[4])) >= 1e-4
+
+        points = [(0, 0), (1, 0), (1 + 1e-6, 0), (1, 1), (1 + 1e-6, 0), (0, 1),
+                  (1 + 1e-6, 0), (1 + 1e-6, 0 + 1e-6), (1 + 1e-6, 0 + 2e-6)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(
+            [point for i, point in enumerate(points_jittered) if i in [0, 1, 3, 5]],
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0,
+            atol=1e-5
+        )
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[2])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[4])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[6])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[7])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[8])) >= 1e-4
+
+        points = [(0, 0), (1, 0), (0 + 1e-6, 0 - 1e-6), (1 + 1e-6, 0), (1, 1),
+                  (1 + 1e-6, 0), (0, 1), (1 + 1e-6, 0), (1 + 1e-6, 0 + 1e-6),
+                  (1 + 1e-6, 0 + 2e-6)]
+        points_jittered = cpr._jitter_duplicate_points(points, np.random.RandomState(0))
+        assert np.allclose(
+            [point for i, point in enumerate(points_jittered) if i in [0, 1, 4, 6]],
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0,
+            atol=1e-5
+        )
+        assert np.linalg.norm(np.float32([0, 0]) - np.float32(points_jittered[2])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[3])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[5])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[7])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[8])) >= 1e-4
+        assert np.linalg.norm(np.float32([1, 0]) - np.float32(points_jittered[9])) >= 1e-4
+
+    def test__calculate_circumference(self):
+        points = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        circ = _ConcavePolygonRecoverer._calculate_circumference(points)
+        assert np.allclose(circ, 4)
+
+        points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        circ = _ConcavePolygonRecoverer._calculate_circumference(points)
+        assert np.allclose(circ, 4)
+
+        points = np.float32([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
+        circ = _ConcavePolygonRecoverer._calculate_circumference(points)
+        assert np.allclose(circ, 4)
+
+        points = [(0, 0), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0)]
+        circ = _ConcavePolygonRecoverer._calculate_circumference(points)
+        assert np.allclose(circ, 6)
+
+    def test__fit_best_valid_polygon(self):
+        def _assert_ids_match(observed, expected):
+            assert len(observed) == len(expected), "len mismatch: %d vs %d" % (len(observed), len(expected))
+
+            max_count = 0
+            for i in range(len(observed)):
+                counter = 0
+                for j in range(i, i+len(expected)):
+                    if observed[(i+j) % len(observed)] == expected[j % len(expected)]:
+                        counter += 1
+                    else:
+                        break
+
+                max_count = max(max_count, counter)
+
+            assert max_count == len(expected), "count mismatch: %d vs %d" % (max_count, len(expected))
+
+        cpr = _ConcavePolygonRecoverer()
+        points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        points_fit = cpr._fit_best_valid_polygon(points)
+        assert np.allclose(points, points_fit)
+        assert ia.Polygon(points_fit).is_valid
+
+        # square-like, but top line has one point in its center which's
+        # y-coordinate is below the bottom line
+        points = [(0.0, 0.0), (0.45, 0.0), (0.5, 1.5), (0.55, 0.0), (1.0, 0.0),
+                  (1.0, 1.0), (0.0, 1.0)]
+        points_fit = cpr._fit_best_valid_polygon(points)
+        _assert_ids_match(points_fit, [0, 1, 3, 4, 5, 2, 6])
+        assert ia.Polygon([points[idx] for idx in points_fit]).is_valid
+
+        # |--|  |--|
+        # |  |  |  |
+        # |  |  |  |
+        # |--|--|--|
+        #    |  |
+        #    ----
+        # the intersection points on the bottom line are not provided,
+        # hence the result is expected to have triangles at the bottom left
+        # and right
+        points = [(0.0, 0), (0.25, 0), (0.25, 1.25),
+                  (0.75, 1.25), (0.75, 0), (1.0, 0),
+                  (1.0, 1.0), (0.0, 1.0)]
+        points_fit = cpr._fit_best_valid_polygon(points)
+        _assert_ids_match(points_fit, [0, 1, 4, 5, 6, 3, 2, 7])
+        poly_observed = ia.Polygon([points[idx] for idx in points_fit])
+        assert poly_observed.is_valid
+
+        # same as above, but intersection points at the bottom line are provided
+        # without oversampling, i.e. incorporating these points would lead to an
+        # invalid polygon
+        points = [(0.0, 0), (0.25, 0), (0.25, 1.0), (0.25, 1.25),
+                  (0.75, 1.25), (0.75, 1.0), (0.75, 0), (1.0, 0),
+                  (1.0, 1.0), (0.0, 1.0)]
+        points_fit = cpr._fit_best_valid_polygon(points)
+        assert len(points_fit) >= len(points) - 2  # TODO add IoU check here
+        poly_observed = ia.Polygon([points[idx] for idx in points_fit])
+        assert poly_observed.is_valid
+
+    def test__fix_polygon_is_line(self):
+        cpr = _ConcavePolygonRecoverer()
+
+        points = [(0, 0), (1, 0), (1, 1)]
+        points_fixed = cpr._fix_polygon_is_line(points, np.random.RandomState(0))
+        assert np.allclose(points_fixed, points, atol=0, rtol=0)
+
+        points = [(0, 0), (1, 0), (2, 0)]
+        points_fixed = cpr._fix_polygon_is_line(points, np.random.RandomState(0))
+        assert not np.allclose(points_fixed, points, atol=0, rtol=0)
+        assert not cpr._is_polygon_line(points_fixed)
+        assert np.allclose(points_fixed, points, rtol=0, atol=1e-2)
+
+        points = [(0, 0), (0, 1), (0, 2)]
+        points_fixed = cpr._fix_polygon_is_line(points, np.random.RandomState(0))
+        assert not np.allclose(points_fixed, points, atol=0, rtol=0)
+        assert not cpr._is_polygon_line(points_fixed)
+        assert np.allclose(points_fixed, points, rtol=0, atol=1e-2)
+
+        points = [(0, 0), (1, 1), (2, 2)]
+        points_fixed = cpr._fix_polygon_is_line(points, np.random.RandomState(0))
+        assert not np.allclose(points_fixed, points, atol=0, rtol=0)
+        assert not cpr._is_polygon_line(points_fixed)
+        assert np.allclose(points_fixed, points, rtol=0, atol=1e-2)
+
+    def test__is_polygon_line(self):
+        points = [(0, 0), (1, 0), (1, 1)]
+        assert not _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        assert not _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        assert not _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = np.float32([(0, 0), (1, 0), (1, 1), (0, 1)])
+        assert not _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0)]
+        assert _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0), (2, 0)]
+        assert _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0), (1, 0)]
+        assert _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0), (1, 0), (2, 0)]
+        assert _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0), (1, 0), (2, 0), (0.5, 0)]
+        assert _ConcavePolygonRecoverer._is_polygon_line(points)
+
+        points = [(0, 0), (1, 0), (1, 0), (2, 0), (1, 1)]
+        assert not _ConcavePolygonRecoverer._is_polygon_line(points)
+
+    def test__generate_intersection_points(self):
+        cpr = _ConcavePolygonRecoverer()
+
+        # triangle
+        points = [(0.5, 0), (1, 1), (0, 1)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        assert points_inter == [[], [], []]
+
+        # rotated square
+        points = [(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        assert points_inter == [[], [], [], []]
+
+        # square
+        points = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        assert points_inter == [[], [], [], []]
+
+        # |--|  |--|
+        # |  |__|  |
+        # |        |
+        # |--------|
+        points = [(0.0, 0), (0.25, 0), (0.25, 0.25),
+                  (0.75, 0.25), (0.75, 0), (1.0, 0),
+                  (1.0, 1.0), (0.0, 1.0)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        assert points_inter == [[], [], [], [], [], [], [], []]
+
+        # same as above, but middle part goes much further down,
+        # crossing the bottom line
+        points = [(0.0, 0), (0.25, 0), (0.25, 1.25),
+                  (0.75, 1.25), (0.75, 0), (1.0, 0),
+                  (1.0, 1.0), (0.0, 1.0)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        self._assert_points_are_identical(
+            points_inter,
+            [[], [(0.25, 1.0)], [], [(0.75, 1.0)], [], [], [(0.75, 1.0), (0.25, 1.0)], []])
+
+        # square-like structure with intersections in top right area
+        points = [(0, 0), (0.5, 0), (1.01, 0.5), (1.0, 0), (1, 1), (0, 1), (0, 0)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        self._assert_points_are_identical(
+            points_inter,
+            [[], [(1.0, 0.4902)], [], [(1.0, 0.4902)], [], [], []],
+            atol=1e-2)
+
+        # same as above, but with a second intersection in bottom left
+        points = [(0, 0), (0.5, 0), (1.01, 0.5), (1.0, 0), (1, 1), (-0.25, 1),
+                  (0, 1.25)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        self._assert_points_are_identical(
+            points_inter,
+            [[], [(1.0, 0.4902)], [], [(1.0, 0.4902)], [(0, 1.0)], [], [(0, 1.0)]],
+            atol=1e-2)
+
+        # double triangle with point in center that is shared by both triangles
+        points = [(0, 0), (0.5, 0.5), (1.0, 0), (1.0, 1.0), (0.5, 0.5), (0, 1.0)]
+        points_inter = cpr._generate_intersection_points(points, one_point_per_intersection=False)
+        self._assert_points_are_identical(
+            points_inter,
+            [[], [], [], [], [], []])
+
+    def test__oversample_intersection_points(self):
+        cpr = _ConcavePolygonRecoverer()
+        cpr.oversampling = 0.1
+        #cpr.oversample_startpoint = [0.9]
+        #cpr.oversample_endpoint = [0.2]
+        #cpr.oversample_both = [0.3, 0.6]
+
+        points = [(0.0, 0.0), (1.0, 0.0)]
+        segment_add_points_sorted = [[(0.5, 0.0)], []]
+        points_oversampled = cpr._oversample_intersection_points(points, segment_add_points_sorted)
+        self._assert_points_are_identical(
+            points_oversampled,
+            [[(0.45, 0.0), (0.5, 0.0), (0.55, 0.0)], []],
+            atol=1e-4
+        )
+
+        points = [(0.0, 0.0), (2.0, 0.0)]
+        segment_add_points_sorted = [[(0.5, 0.0)], []]
+        points_oversampled = cpr._oversample_intersection_points(points, segment_add_points_sorted)
+        self._assert_points_are_identical(
+            points_oversampled,
+            [[(0.45, 0.0), (0.5, 0.0), (0.65, 0.0)], []],
+            atol=1e-4
+        )
+
+        points = [(0.0, 0.0), (1.0, 0.0)]
+        segment_add_points_sorted = [[(0.5, 0.0), (0.6, 0.0)], []]
+        points_oversampled = cpr._oversample_intersection_points(points, segment_add_points_sorted)
+        self._assert_points_are_identical(
+            points_oversampled,
+            [[(0.45, 0.0), (0.5, 0.0), (0.51, 0.0), (0.59, 0.0), (0.6, 0.0), (0.64, 0.0)], []],
+            atol=1e-4
+        )
+
+        points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        segment_add_points_sorted = [[(0.5, 0.0)], [], [(0.8, 1.0)], [(0.0, 0.7)]]
+        points_oversampled = cpr._oversample_intersection_points(points, segment_add_points_sorted)
+        self._assert_points_are_identical(
+            points_oversampled,
+            [[(0.45, 0.0), (0.5, 0.0), (0.55, 0.0)],
+             [],
+             [(0.82, 1.0), (0.8, 1.0), (0.72, 1.0)],
+             [(0.0, 0.73), (0.0, 0.7), (0.0, 0.63)]],
+            atol=1e-4
+        )
+
+    def test__insert_intersection_points(self):
+        points = [(0, 0), (1, 0), (2, 0)]
+        segments_add_point_sorted = [[], [], []]
+        points_inserted = _ConcavePolygonRecoverer._insert_intersection_points(
+            points, segments_add_point_sorted)
+        assert points_inserted == points
+
+        segments_add_point_sorted = [[(0.5, 0)], [], []]
+        points_inserted = _ConcavePolygonRecoverer._insert_intersection_points(
+            points, segments_add_point_sorted)
+        assert points_inserted == [(0, 0), (0.5, 0), (1, 0), (2, 0)]
+
+        segments_add_point_sorted = [[(0.5, 0), (0.75, 0)], [], []]
+        points_inserted = _ConcavePolygonRecoverer._insert_intersection_points(
+            points, segments_add_point_sorted)
+        assert points_inserted == [(0, 0), (0.5, 0), (0.75, 0), (1, 0), (2, 0)]
+
+        segments_add_point_sorted = [[(0.5, 0)], [(1.5, 0)], []]
+        points_inserted = _ConcavePolygonRecoverer._insert_intersection_points(
+            points, segments_add_point_sorted)
+        assert points_inserted == [(0, 0), (0.5, 0), (1, 0), (1.5, 0), (2, 0)]
+
+        segments_add_point_sorted = [[(0.5, 0)], [(1.5, 0)], [(2.5, 0)]]
+        points_inserted = _ConcavePolygonRecoverer._insert_intersection_points(
+            points, segments_add_point_sorted)
+        assert points_inserted == [(0, 0), (0.5, 0), (1, 0), (1.5, 0), (2, 0),
+                                   (2.5, 0)]
 
 
 if __name__ == "__main__":
