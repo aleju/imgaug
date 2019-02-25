@@ -1,6 +1,6 @@
 # master (will probably be 0.2.9)
 
-TODO.
+* Fix possible crash in `blend.blend_alpha()` if dtype numpy.float128 does not exist.
 
 
 # 0.2.8
