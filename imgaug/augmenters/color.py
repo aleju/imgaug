@@ -483,8 +483,8 @@ class ChangeColorspace(meta.Augmenter):
         "HLS2RGB": cv2.COLOR_HLS2RGB,
         "HLS2BGR": cv2.COLOR_HLS2BGR,
         # Lab
-        "Lab2RGB": cv2.COLOR_LAB2RGB,
-        "Lab2BGR": cv2.COLOR_LAB2BGR
+        "Lab2RGB": cv2.COLOR_Lab2RGB if hasattr(cv2, "COLOR_Lab2RGB") else cv2.COLOR_LAB2RGB,
+        "Lab2BGR": cv2.COLOR_Lab2BGR if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR
     }
 
     def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False,
