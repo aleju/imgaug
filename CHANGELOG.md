@@ -5,6 +5,9 @@
 * Fixed `ReplaceElementwise` always sampling replacement per channel.
 * Re-allowed numpy 1.16 in `requirements.txt`.
 * Fixed an error in `draw_text()` due to arrays that could not be set to writeable after drawing the text via PIL.  
+* Fixed errors in docstring of `parameters.Subtract`.
+* Improved docstring of `multicore.Pool`.
+* Reordered classes in `parameters.py`.
 
 
 # 0.2.8
