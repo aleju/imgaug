@@ -940,7 +940,15 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     context = PIL_ImageDraw.Draw(img)
     context.text((x, y), text, fill=tuple(color), font=font)
     img_np = np.asarray(img)
-    img_np.setflags(write=True)  # PIL/asarray returns read only array
+
+    # PIL/asarray returns read only array
+    if not img_np.flags["WRITEABLE"]:
+        try:
+            # this seems to no longer work with np 1.16 (or was pillow updated?)
+            img_np.setflags(write=True)
+        except ValueError as ex:
+            if "cannot set WRITEABLE flag to True of this array" in str(ex):
+                img_np = np.copy(img_np)
 
     if img_np.dtype != input_dtype:
         img_np = img_np.astype(input_dtype)
