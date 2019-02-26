@@ -1,6 +1,7 @@
 # master (will probably be 0.2.9)
 
 * Fix possible crash in `blend.blend_alpha()` if dtype numpy.float128 does not exist.
+* Fixed a crash in `ChangeColorspace` when `cv2.COLOR_Lab2RGB` was actually called `cv2.COLOR_LAB2RGB` in the local OpenCV installation (analogous for BGR). (PR #263)
 
 
 # 0.2.8
