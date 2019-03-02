@@ -5579,9 +5579,117 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
                 assert len(p_exp) == 2
                 assert np.allclose(p_obs, p_exp, atol=atol, rtol=rtol), "Unexpected coords at %d" % (i,)
 
-    def test_recover_from(self):
-        # TODO
-        assert False
+    def test_recover_from_fails_for_less_than_three_points(self):
+        old_polygon = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        cpr = _ConcavePolygonRecoverer()
+        with self.assertRaises(AssertionError):
+            _poly = cpr.recover_from([], old_polygon)
+
+        with self.assertRaises(AssertionError):
+            _poly = cpr.recover_from([(0, 0)], old_polygon)
+
+        with self.assertRaises(AssertionError):
+            _poly = cpr.recover_from([(0, 0), (1, 0)], old_polygon)
+
+        _poly = cpr.recover_from([(0, 0), (1, 0), (1, 1)], old_polygon)
+
+    def test_recover_from_predefined_polygons(self):
+        cpr = _ConcavePolygonRecoverer()
+
+        # concave input
+        polys = [
+            [(0, 0), (1, 0), (1, 1)],
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            [(0, 0), (0.5, 0), (1, 0), (1, 0.5), (1, 1), (0.5, 1.0), (0, 1)],
+        ]
+
+        for poly in polys:
+            old_polygon = ia.Polygon(poly)
+            poly_concave = cpr.recover_from(poly, old_polygon)
+            assert poly_concave.is_valid
+            found = [False] * len(poly)
+            for i, point in enumerate(poly):
+                for point_ext in poly_concave.exterior:
+                    dist = np.sqrt(
+                        (point[0] - point_ext[0])**2
+                        + (point[1] - point_ext[1])**2
+                    )
+                    if dist < 0.01:
+                        found[i] = True
+            assert all(found)
+
+        # line
+        poly = [(0, 0), (1, 0), (2, 0)]
+        old_polygon = ia.Polygon(poly)
+        poly_concave = cpr.recover_from(poly, old_polygon)
+        assert poly_concave.is_valid
+        found = [False] * len(poly)
+        for i, point in enumerate(poly):
+            for point_ext in poly_concave.exterior:
+                dist = np.sqrt(
+                    (point[0] - point_ext[0])**2
+                    + (point[1] - point_ext[1])**2
+                )
+                if dist < 0.025:
+                    found[i] = True
+        assert all(found)
+
+        # duplicate points
+        poly = [(0, 0), (1, 0), (1, 0), (1, 1)]
+        old_polygon = ia.Polygon(poly)
+        poly_concave = cpr.recover_from(poly, old_polygon)
+        assert poly_concave.is_valid
+        found = [False] * len(poly)
+        for i, point in enumerate(poly):
+            for point_ext in poly_concave.exterior:
+                dist = np.sqrt(
+                    (point[0] - point_ext[0])**2
+                    + (point[1] - point_ext[1])**2
+                )
+                if dist < 0.01:
+                    found[i] = True
+        assert all(found)
+
+        # other broken poly
+        poly = [(0, 0), (0.5, 0), (0.5, 1.2), (1, 0), (1, 1), (0, 1)]
+        old_polygon = ia.Polygon(poly)
+        poly_concave = cpr.recover_from(poly, old_polygon)
+        assert poly_concave.is_valid
+        found = [False] * len(poly)
+        for i, point in enumerate(poly):
+            for point_ext in poly_concave.exterior:
+                dist = np.sqrt(
+                    (point[0] - point_ext[0])**2
+                    + (point[1] - point_ext[1])**2
+                )
+                if dist < 0.025:
+                    found[i] = True
+        assert all(found)
+
+    def test_recover_from_random_polygons(self):
+        cpr = _ConcavePolygonRecoverer()
+        nb_iterations = 10
+        height, width = 10, 20
+        nb_points_matrix = np.random.randint(3, 30, size=(nb_iterations,))
+        for nb_points in nb_points_matrix:
+            points = np.random.random(size=(nb_points, 2))
+            points[:, 0] *= width
+            points[:, 1] *= height
+            # currently mainly used to copy the label, so not a significant
+            # issue that it is not concave
+            old_polygon = ia.Polygon(points)
+            poly_concave = cpr.recover_from(points, old_polygon)
+            assert poly_concave.is_valid
+            # test if all points are in BB around returned polygon
+            # would be better to directly call a polygon.contains(point) method
+            # but that does not yet exist
+            xx = poly_concave.exterior[:, 0]
+            yy = poly_concave.exterior[:, 1]
+            bb_x1, bb_x2 = min(xx), max(xx)
+            bb_y1, bb_y2 = min(yy), max(yy)
+            bb = ia.BoundingBox(x1=bb_x1-1e-4, y1=bb_y1-1e-4, x2=bb_x2+1e-4, y2=bb_y2+1e-4)
+            for point in points:
+                assert bb.contains(ia.Keypoint(x=point[0], y=point[1]))
 
     def test__remove_consecutive_duplicate_points(self):
         recoverer = _ConcavePolygonRecoverer()
@@ -5743,15 +5851,14 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
 
         cpr = _ConcavePolygonRecoverer()
         points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
-        points_fit = cpr._fit_best_valid_polygon(points)
-        assert np.allclose(points, points_fit)
-        assert ia.Polygon(points_fit).is_valid
+        points_fit = cpr._fit_best_valid_polygon(points, random_state=np.random.RandomState(0))
+        assert points_fit == sm.xrange(len(points))
 
         # square-like, but top line has one point in its center which's
         # y-coordinate is below the bottom line
         points = [(0.0, 0.0), (0.45, 0.0), (0.5, 1.5), (0.55, 0.0), (1.0, 0.0),
                   (1.0, 1.0), (0.0, 1.0)]
-        points_fit = cpr._fit_best_valid_polygon(points)
+        points_fit = cpr._fit_best_valid_polygon(points, random_state=np.random.RandomState(0))
         _assert_ids_match(points_fit, [0, 1, 3, 4, 5, 2, 6])
         assert ia.Polygon([points[idx] for idx in points_fit]).is_valid
 
@@ -5767,7 +5874,7 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
         points = [(0.0, 0), (0.25, 0), (0.25, 1.25),
                   (0.75, 1.25), (0.75, 0), (1.0, 0),
                   (1.0, 1.0), (0.0, 1.0)]
-        points_fit = cpr._fit_best_valid_polygon(points)
+        points_fit = cpr._fit_best_valid_polygon(points, random_state=np.random.RandomState(0))
         _assert_ids_match(points_fit, [0, 1, 4, 5, 6, 3, 2, 7])
         poly_observed = ia.Polygon([points[idx] for idx in points_fit])
         assert poly_observed.is_valid
@@ -5778,7 +5885,7 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
         points = [(0.0, 0), (0.25, 0), (0.25, 1.0), (0.25, 1.25),
                   (0.75, 1.25), (0.75, 1.0), (0.75, 0), (1.0, 0),
                   (1.0, 1.0), (0.0, 1.0)]
-        points_fit = cpr._fit_best_valid_polygon(points)
+        points_fit = cpr._fit_best_valid_polygon(points, random_state=np.random.RandomState(0))
         assert len(points_fit) >= len(points) - 2  # TODO add IoU check here
         poly_observed = ia.Polygon([points[idx] for idx in points_fit])
         assert poly_observed.is_valid
@@ -5904,9 +6011,6 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
     def test__oversample_intersection_points(self):
         cpr = _ConcavePolygonRecoverer()
         cpr.oversampling = 0.1
-        #cpr.oversample_startpoint = [0.9]
-        #cpr.oversample_endpoint = [0.2]
-        #cpr.oversample_both = [0.3, 0.6]
 
         points = [(0.0, 0.0), (1.0, 0.0)]
         segment_add_points_sorted = [[(0.5, 0.0)], []]
