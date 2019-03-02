@@ -4589,8 +4589,38 @@ class _ConcavePolygonRecoverer(object):
         self.oversampling = oversampling
         self.max_segment_difference = max_segment_difference
 
+        # this limits the maximum amount of points after oversampling, i.e.
+        # if N points are input into oversampling, then M oversampled points are
+        # generated such that N+M <= this value
+        self.oversample_up_to_n_points_max = 75
+
+        # ----
+        # parameters for _fit_best_valid_polygon()
+        # ----
+        # how many changes may be done max to the initial (convex hull) polygon
+        # before simply returning the result
+        self.fit_n_changes_max = 100
+        # for how many iterations the optimization loop may run max
+        # before simply returning the result
+        self.fit_n_iters_max = 3
+        # how far (wrt. to their position in the input list) two points may be
+        # apart max to consider adding an edge between them (in the first loop
+        # iteration and the ones after that)
+        self.fit_max_dist_first_iter = 1
+        self.fit_max_dist_other_iters = 2
+        # The fit loop first generates candidate edges and then modifies the
+        # polygon based on these candidates. This limits the maximum amount
+        # of considered candidates. If the number is less than the possible
+        # number of candidates, they are randomly subsampled. Values beyond
+        # 100 significantly increase runtime (for polygons that reach that
+        # number).
+        self.fit_n_candidates_before_sort_max = 100
+
     def recover_from(self, new_exterior, old_polygon, random_state=0):
-        assert isinstance(new_exterior, list)
+        assert isinstance(new_exterior, list) or (
+                is_np_array(new_exterior)
+                and new_exterior.ndim == 2
+                and new_exterior.shape[1] == 2)
         assert len(new_exterior) >= 3, \
             "Cannot recover a concave polygon from less than three points."
 
@@ -4602,7 +4632,7 @@ class _ConcavePolygonRecoverer(object):
 
         if not isinstance(random_state, np.random.RandomState):
             random_state = np.random.RandomState(random_state)
-        rss = derive_random_states(random_state, 2)
+        rss = derive_random_states(random_state, 3)
 
         # remove consecutive duplicate points
         new_exterior = self._remove_consecutive_duplicate_points(new_exterior)
@@ -4626,7 +4656,7 @@ class _ConcavePolygonRecoverer(object):
             new_exterior, segment_add_points)
 
         # find best fit polygon, starting from convext polygon
-        new_exterior_concave_ids = self._fit_best_valid_polygon(new_exterior_inter)
+        new_exterior_concave_ids = self._fit_best_valid_polygon(new_exterior_inter, rss[2])
         new_exterior_concave = [new_exterior_inter[idx] for idx in new_exterior_concave_ids]
 
         return old_polygon.deepcopy(exterior=new_exterior_concave)
@@ -4741,13 +4771,20 @@ class _ConcavePolygonRecoverer(object):
 
     def _generate_intersection_points(self, exterior, one_point_per_intersection=True):
         assert isinstance(exterior, list)
-        assert all([isinstance(point, tuple) and len(point) == 2
-                    for point in exterior])
+        assert all([len(point) == 2 for point in exterior])
         if len(exterior) <= 0:
             return []
 
-        segments = [(exterior[i], exterior[(i + 1) % len(exterior)])
-                    for i in range(len(exterior))]
+        # use (*[i][0], *[i][1]) formulation here imnstead of just *[i],
+        # because this way we convert numpy arrays to tuples of floats, which
+        # is required by isect_segments_include_segments
+        segments = [
+            (
+                (exterior[i][0], exterior[i][1]),
+                (exterior[(i + 1) % len(exterior)][0], exterior[(i + 1) % len(exterior)][1])
+            )
+            for i in range(len(exterior))
+        ]
 
         # returns [(point, [(segment_p0, segment_p1), ..]), ...]
         from imgaug.external.poly_point_isect_py2py3 import isect_segments_include_segments
@@ -4808,6 +4845,7 @@ class _ConcavePolygonRecoverer(object):
 
         segment_add_points_sorted_overs = [[] for _ in range(len(segment_add_points))]
 
+        n_points = len(exterior)
         for i in range(len(exterior)):
             last = exterior[i]
             for j, p_inter in enumerate(segment_add_points[i]):
@@ -4840,6 +4878,10 @@ class _ConcavePolygonRecoverer(object):
                     )
                     last = segment_add_points_sorted_overs[i][-1]
 
+                n_points += len(segment_add_points_sorted_overs[i])
+                if n_points > self.oversample_up_to_n_points_max:
+                    return segment_add_points_sorted_overs
+
         return segment_add_points_sorted_overs
 
     @classmethod
@@ -4855,8 +4897,7 @@ class _ConcavePolygonRecoverer(object):
                 exterior_interp.append(p_inter)
         return exterior_interp
 
-    @classmethod
-    def _fit_best_valid_polygon(cls, points):
+    def _fit_best_valid_polygon(self, points, random_state):
         if len(points) < 2:
             return None
 
@@ -4874,12 +4915,14 @@ class _ConcavePolygonRecoverer(object):
 
         poly = Polygon(points)
         if poly.is_valid:
-            return poly.exterior
+            return sm.xrange(len(points))
 
         hull = scipy.spatial.ConvexHull(points)
         points_kept = list(hull.vertices)
         points_left = [i for i in range(len(points)) if i not in hull.vertices]
 
+        iteration = 0
+        n_changes = 0
         converged = False
         while not converged:
             candidates = []
@@ -4898,29 +4941,59 @@ class _ConcavePolygonRecoverer(object):
             #      where the points are sampled on the edges (not edge vertices
             #      themselves). Maybe something based on drawing the perimeter
             #      on images or based on distance maps.
-            for in_points_left_idx, point_left_idx in enumerate(points_left):
-                for in_points_kept_idx, point_kept_idx in enumerate(points_kept):
-                    segment_start_idx = point_kept_idx
-                    segment_end_idx = points_kept[(in_points_kept_idx+1) % len(points_kept)]
-                    segment_start = points[segment_start_idx]
-                    segment_end = points[segment_end_idx]
+            point_kept_idx_to_pos = {point_idx: i for i, point_idx in enumerate(points_kept)}
+
+            # generate all possible combinations from <points_kept> and <points_left>
+            combos = np.transpose([np.tile(np.int32(points_left), len(np.int32(points_kept))),
+                                   np.repeat(np.int32(points_kept), len(np.int32(points_left)))])
+            combos = np.concatenate(
+                (combos, np.zeros((combos.shape[0], 3), dtype=np.int32)),
+                axis=1)
+
+            # copy columns 0, 1 into 2, 3 so that 2 is always the lower value
+            mask = combos[:, 0] < combos[:, 1]
+            combos[:, 2:4] = combos[:, 0:2]
+            combos[mask, 2] = combos[mask, 1]
+            combos[mask, 3] = combos[mask, 0]
+
+            # distance (in indices) between each pair of <point_kept> and <point_left>
+            combos[:, 4] = np.minimum(
+                combos[:, 3] - combos[:, 2],
+                len(points) - combos[:, 3] + combos[:, 2]
+            )
+
+            # limit candidates
+            max_dist = self.fit_max_dist_other_iters
+            if iteration > 0:
+                max_dist = self.fit_max_dist_first_iter
+            candidate_rows = combos[combos[:, 4] <= max_dist]
+            if self.fit_n_candidates_before_sort_max is not None \
+                    and len(candidate_rows) > self.fit_n_candidates_before_sort_max:
+                random_state.shuffle(candidate_rows)
+                candidate_rows = candidate_rows[0:self.fit_n_candidates_before_sort_max]
+
+            for row in candidate_rows:
+                point_left_idx = row[0]
+                point_kept_idx = row[1]
+                in_points_kept_pos = point_kept_idx_to_pos[point_kept_idx]
+                segment_start_idx = point_kept_idx
+                segment_end_idx = points_kept[(in_points_kept_pos+1) % len(points_kept)]
+                segment_start = points[segment_start_idx]
+                segment_end = points[segment_end_idx]
+                if iteration == 0:
+                    dist_eucl = 0
+                else:
                     dist_eucl = _compute_distance_point_to_line(
                         points[point_left_idx], segment_start, segment_end)
-                    a, b = point_left_idx, point_kept_idx
-                    if a > b:
-                        a, b = b, a
-                    dist_indices = min(
-                        b - a,
-                        len(points) - b + a
-                    )
-                    assert dist_indices >= 1
-                    candidates.append((point_left_idx, point_kept_idx, dist_indices, dist_eucl))
+                candidates.append((point_left_idx, point_kept_idx, row[4], dist_eucl))
 
             # Sort computed distances first by minimal vertex-distance (see
             # above, metric 1) (ASC), then by euclidean distance
             # (metric 2) (ASC).
             candidate_ids = np.arange(len(candidates))
             candidate_ids = sorted(candidate_ids, key=lambda idx: (candidates[idx][2], candidates[idx][3]))
+            if self.fit_n_changes_max is not None:
+                candidate_ids = candidate_ids[:self.fit_n_changes_max]
 
             # Iterate over point-segment pairs in sorted order. For each such
             # candidate: Add the point to the already collected points,
@@ -4928,24 +5001,37 @@ class _ConcavePolygonRecoverer(object):
             # If it is, add the point to the output list and recalculate
             # distance metrics. If it isn't valid, proceed with the next
             # candidate until no more candidates are left.
+            #
+            # small change: this now no longer breaks upon the first found point
+            # that leads to a valid polygon, but checks all candidates instead
             is_valid = False
-            while len(candidate_ids) > 0 and not is_valid:
-                min_idx = candidate_ids.pop(0)
-                point_left_idx = candidates[min_idx][0]
-                point_kept_idx = candidates[min_idx][1]
-                in_points_kept_idx = [i for i, point_idx in enumerate(points_kept) if point_idx == point_kept_idx][0]
-                points_kept_hypothesis = points_kept[:]
-                points_kept_hypothesis.insert(in_points_kept_idx+1, point_left_idx)
-                poly_hypothesis = Polygon([points[idx] for idx in points_kept_hypothesis])
-                if poly_hypothesis.is_valid:
-                    is_valid = True
-                    points_kept = points_kept_hypothesis
-                    points_left = [point_idx for point_idx in points_left if point_idx != point_left_idx]
+            done = set()
+            for candidate_idx in candidate_ids:
+                point_left_idx = candidates[candidate_idx][0]
+                point_kept_idx = candidates[candidate_idx][1]
+                if (point_left_idx, point_kept_idx) not in done:
+                    in_points_kept_idx = [i for i, point_idx in enumerate(points_kept) if point_idx == point_kept_idx][0]
+                    points_kept_hypothesis = points_kept[:]
+                    points_kept_hypothesis.insert(in_points_kept_idx+1, point_left_idx)
+                    poly_hypothesis = Polygon([points[idx] for idx in points_kept_hypothesis])
+                    if poly_hypothesis.is_valid:
+                        is_valid = True
+                        points_kept = points_kept_hypothesis
+                        points_left = [point_idx for point_idx in points_left if point_idx != point_left_idx]
+                        n_changes += 1
+                        if n_changes >= self.fit_n_changes_max:
+                            return points_kept
+                    done.add((point_left_idx, point_kept_idx))
+                    done.add((point_kept_idx, point_left_idx))
 
             # none of the left points could be used to create a valid polygon?
             # (this automatically covers the case of no points being left)
-            if not is_valid:
+            if not is_valid and iteration > 0:
                 converged = True
+
+            iteration += 1
+            if self.fit_n_iters_max is not None and iteration > self.fit_n_iters_max:
+                break
 
         return points_kept
 
