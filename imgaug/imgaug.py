@@ -5700,12 +5700,8 @@ class SegmentationMapOnImage(object):
             do_assert(len(class_indices) == heatmaps.arr_0to1.shape[2])
             arr_0to1 = heatmaps.arr_0to1
             arr_0to1_full = np.zeros((arr_0to1.shape[0], arr_0to1.shape[1], nb_classes), dtype=np.float32)
-            class_indices_set = set(class_indices)
-            heatmap_channel = 0
-            for c in sm.xrange(nb_classes):
-                if c in class_indices_set:
-                    arr_0to1_full[:, :, c] = arr_0to1[:, :, heatmap_channel]
-                    heatmap_channel += 1
+            for heatmap_channel, mapped_channel in enumerate(class_indices):
+                arr_0to1_full[:, :, mapped_channel] = arr_0to1[:, :, heatmap_channel]
             return SegmentationMapOnImage(arr_0to1_full, shape=heatmaps.shape)
 
     def copy(self):
