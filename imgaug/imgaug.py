@@ -3976,6 +3976,8 @@ class Polygon(object):
                                          "same interface (simple renaming)."))
         return self.clip_out_of_image(image)
 
+    # TODO this currently can mess up the order of points - change somehow to
+    #      keep the order
     def clip_out_of_image(self, image):
         """
         Cut off all parts of the polygon that are outside of the image.
