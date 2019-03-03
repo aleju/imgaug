@@ -5852,7 +5852,8 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
         cpr = _ConcavePolygonRecoverer()
         points = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
         points_fit = cpr._fit_best_valid_polygon(points, random_state=np.random.RandomState(0))
-        assert points_fit == sm.xrange(len(points))
+        # doing this without the list(.) wrappers fails on python2.7
+        assert list(points_fit) == list(sm.xrange(len(points)))
 
         # square-like, but top line has one point in its center which's
         # y-coordinate is below the bottom line
