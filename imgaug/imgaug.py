@@ -4596,7 +4596,7 @@ class PolygonsOnImage(object):
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_perimeter=(0, 128, 0),
-                      alpha=1.0, alpha_perimeter=1.0,
+                      alpha=0.5, alpha_perimeter=1.0,
                       raise_if_out_of_image=False):
         """
         Draw all polygons onto a given image.
