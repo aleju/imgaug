@@ -5565,6 +5565,421 @@ def test__interpolate_points_by_max_distance():
     )
 
 
+class TestPolygonsOnImage(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test__init__(self):
+        # standard case with one polygon
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])],
+            shape=(10, 10, 3)
+        )
+        assert len(poly_oi.polygons) == 1
+        assert np.allclose(
+            poly_oi.polygons[0].exterior,
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0, atol=1e-4)
+        assert poly_oi.shape == (10, 10, 3)
+
+        # standard case with multiple polygons
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
+             ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)])],
+            shape=(10, 10, 3)
+        )
+        assert len(poly_oi.polygons) == 3
+        assert np.allclose(
+            poly_oi.polygons[0].exterior,
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0, atol=1e-4)
+        assert np.allclose(
+            poly_oi.polygons[1].exterior,
+            [(0, 0), (1, 0), (1, 1)],
+            rtol=0, atol=1e-4)
+        assert np.allclose(
+            poly_oi.polygons[2].exterior,
+            [(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)],
+            rtol=0, atol=1e-4)
+        assert poly_oi.shape == (10, 10, 3)
+
+        # list of polygons is empty
+        poly_oi = ia.PolygonsOnImage(
+            [],
+            shape=(10, 10, 3)
+        )
+        assert len(poly_oi.polygons) == 0
+
+        # invalid polygon
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (0.5, 0), (0.5, 1.5), (0, 1), (1, 1), (0, 1)])],
+            shape=(10, 10, 3)
+        )
+        assert len(poly_oi.polygons) == 1
+        assert np.allclose(
+            poly_oi.polygons[0].exterior,
+            [(0, 0), (0.5, 0), (0.5, 1.5), (0, 1), (1, 1), (0, 1)],
+            rtol=0, atol=1e-4)
+
+        # shape given as numpy array
+        poly_oi = ia.PolygonsOnImage(
+            [],
+            shape=np.zeros((10, 10, 3), dtype=np.uint8)
+        )
+        assert poly_oi.shape == (10, 10, 3)
+
+        # 2D shape
+        poly_oi = ia.PolygonsOnImage(
+            [],
+            shape=(10, 11)
+        )
+        assert poly_oi.shape == (10, 11)
+
+    def test_empty(self):
+        # standard case with multiple polygons
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
+             ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)])],
+            shape=(10, 10, 3)
+        )
+        assert poly_oi.empty is False
+
+        # list of polygons is empty
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 10, 3))
+        assert poly_oi.empty is True
+
+    def test_on(self):
+        # size unchanged
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
+             ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)])],
+            shape=(1, 1, 3)
+        )
+        poly_oi_proj = poly_oi.on((1, 1, 3))
+        assert np.allclose(
+            poly_oi_proj.polygons[0].exterior,
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0, atol=1e-4)
+        assert np.allclose(
+            poly_oi_proj.polygons[1].exterior,
+            [(0, 0), (1, 0), (1, 1)],
+            rtol=0, atol=1e-4)
+        assert np.allclose(
+            poly_oi_proj.polygons[2].exterior,
+            [(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)],
+            rtol=0, atol=1e-4)
+        assert poly_oi_proj.shape == (1, 1, 3)
+
+        # 10x decrease in size
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (10, 0), (10, 10), (0, 10)]),
+             ia.Polygon([(0, 0), (10, 0), (10, 10)]),
+             ia.Polygon([(5, 0), (10, 5), (5, 10), (0, 5)])],
+            shape=(10, 10, 3)
+        )
+        poly_oi_proj = poly_oi.on((1, 1, 3))
+        assert np.allclose(
+            poly_oi_proj.polygons[0].exterior,
+            [(0, 0), (1, 0), (1, 1), (0, 1)],
+            rtol=0, atol=1e-4)
+        assert np.allclose(
+            poly_oi_proj.polygons[1].exterior,
+            [(0, 0), (1, 0), (1, 1)],
+            rtol=0, atol=1e-4)
+        assert np.allclose(
+            poly_oi_proj.polygons[2].exterior,
+            [(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)],
+            rtol=0, atol=1e-4)
+        assert poly_oi_proj.shape == (1, 1, 3)
+
+        # 2x increase in width, 10x decrease in height
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (50, 0), (50, 100), (0, 100)])],
+            shape=(100, 100, 3)
+        )
+        poly_oi_proj = poly_oi.on((10, 200, 3))
+        assert np.allclose(
+            poly_oi_proj.polygons[0].exterior,
+            [(0, 0), (100, 0), (100, 10), (0, 10)],
+            rtol=0, atol=1e-4)
+        assert poly_oi_proj.shape == (10, 200, 3)
+
+    def test_draw_on_image(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+
+        # no polygons, nothing changed
+        poly_oi = ia.PolygonsOnImage([], shape=image.shape)
+        image_drawn = poly_oi.draw_on_image(image)
+        assert np.sum(image) == 0
+        assert np.sum(image_drawn) == 0
+
+        # draw two polygons
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (9, 1), (9, 9), (1, 9)]),
+             ia.Polygon([(3, 3), (7, 3), (7, 7), (3, 7)])],
+            shape=image.shape)
+        image_expected = np.copy(image)
+        image_expected = poly_oi.polygons[0].draw_on_image(image_expected)
+        image_expected = poly_oi.polygons[1].draw_on_image(image_expected)
+        image_drawn = poly_oi.draw_on_image(image)
+
+        assert np.sum(image) == 0
+        assert np.sum(image_drawn) > 0
+        assert np.sum(image_expected) > 0
+        assert np.allclose(image_drawn, image_expected)
+
+    def test_remove_out_of_image(self):
+        # no polygons, nothing to remove
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        for fully, partly in [(False, False), (False, True),
+                              (True, False), (True, True)]:
+            poly_oi_rm = poly_oi.remove_out_of_image(fully=fully, partly=partly)
+            assert len(poly_oi_rm.polygons) == 0
+            assert poly_oi_rm.shape == (10, 11, 3)
+
+        # one polygon, fully inside the image
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (9, 1), (9, 9), (1, 9)])],
+            shape=(10, 11, 3))
+        for fully, partly in [(False, False), (False, True),
+                              (True, False), (True, True)]:
+            poly_oi_rm = poly_oi.remove_out_of_image(fully=fully, partly=partly)
+            assert len(poly_oi_rm.polygons) == 1
+            assert np.allclose(poly_oi_rm.polygons[0].exterior,
+                               [(1, 1), (9, 1), (9, 9), (1, 9)],
+                               rtol=0, atol=1e-4)
+            assert poly_oi_rm.shape == (10, 11, 3)
+
+        # two polygons, one partly outside, one fully outside
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (11, 1), (11, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 10, 3))
+
+        poly_oi_rm = poly_oi.remove_out_of_image(fully=False, partly=False)
+        assert len(poly_oi.polygons) == 2
+        assert len(poly_oi_rm.polygons) == 2
+        assert np.allclose(poly_oi_rm.polygons[0].exterior,
+                           [(1, 1), (11, 1), (11, 9), (1, 9)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_rm.polygons[1].exterior,
+                           [(100, 100), (200, 100), (200, 200), (100, 200)],
+                           rtol=0, atol=1e-4)
+        assert poly_oi_rm.shape == (10, 10, 3)
+
+        poly_oi_rm = poly_oi.remove_out_of_image(fully=True, partly=False)
+        assert len(poly_oi.polygons) == 2
+        assert len(poly_oi_rm.polygons) == 1
+        assert np.allclose(poly_oi_rm.polygons[0].exterior,
+                           [(1, 1), (11, 1), (11, 9), (1, 9)],
+                           rtol=0, atol=1e-4)
+        assert poly_oi_rm.shape == (10, 10, 3)
+
+        poly_oi_rm = poly_oi.remove_out_of_image(fully=False, partly=True)
+        assert len(poly_oi.polygons) == 2
+        assert len(poly_oi_rm.polygons) == 1
+        assert np.allclose(poly_oi_rm.polygons[0].exterior,
+                           [(100, 100), (200, 100), (200, 200), (100, 200)],
+                           rtol=0, atol=1e-4)
+        assert poly_oi_rm.shape == (10, 10, 3)
+
+        poly_oi_rm = poly_oi.remove_out_of_image(fully=True, partly=True)
+        assert len(poly_oi.polygons) == 2
+        assert len(poly_oi_rm.polygons) == 0
+        assert poly_oi_rm.shape == (10, 10, 3)
+
+    def test_clip_out_of_image(self):
+        # NOTE: clip_out_of_image() can change the order of points,
+        # hence we check here for each expected point whether it appears
+        # somewhere in the list of points
+
+        def _any_point_close(points, point_search):
+            found = False
+            for point in points:
+                if np.allclose(point, point_search, atol=1e-4, rtol=0):
+                    found = True
+            return found
+
+        # no polygons
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        poly_oi_clip = poly_oi.clip_out_of_image()
+        assert len(poly_oi_clip.polygons) == 0
+        assert poly_oi_clip.shape == (10, 11, 3)
+
+        # one polygon, fully inside
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)])],
+            shape=(10, 11, 3))
+        poly_oi_clip = poly_oi.clip_out_of_image()
+        assert len(poly_oi_clip.polygons) == 1
+        for point_search in [(1, 1), (8, 1), (8, 9), (1, 9)]:
+            assert _any_point_close(poly_oi_clip.polygons[0].exterior,
+                                    point_search)
+        assert poly_oi_clip.shape == (10, 11, 3)
+
+        # one polygon, partially outside
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)])],
+            shape=(10, 11, 3))
+        poly_oi_clip = poly_oi.clip_out_of_image()
+        assert len(poly_oi_clip.polygons) == 1
+        for point_search in [(1, 1), (11, 1), (11, 9), (1, 9)]:
+            assert _any_point_close(poly_oi_clip.polygons[0].exterior,
+                                    point_search)
+        assert poly_oi_clip.shape == (10, 11, 3)
+
+        # one polygon, fully outside
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 11, 3))
+        poly_oi_clip = poly_oi.clip_out_of_image()
+        assert len(poly_oi_clip.polygons) == 0
+        assert poly_oi_clip.shape == (10, 11, 3)
+
+        # three polygons, one fully inside, one partially outside,
+        # one fully outside
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 11, 3))
+        poly_oi_clip = poly_oi.clip_out_of_image()
+        assert len(poly_oi_clip.polygons) == 2
+        for point_search in [(1, 1), (8, 1), (8, 9), (1, 9)]:
+            assert _any_point_close(poly_oi_clip.polygons[0].exterior,
+                                    point_search)
+        for point_search in [(1, 1), (11, 1), (11, 9), (1, 9)]:
+            assert _any_point_close(poly_oi_clip.polygons[1].exterior,
+                                    point_search)
+        assert poly_oi_clip.shape == (10, 11, 3)
+
+    def test_shift(self):
+        # no polygons
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        poly_oi_shifted = poly_oi.shift(top=3, right=0, bottom=1, left=-3)
+        assert len(poly_oi_shifted.polygons) == 0
+        assert poly_oi_shifted.shape == (10, 11, 3)
+
+        # three polygons
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 11, 3))
+        poly_oi_shifted = poly_oi.shift(top=3, right=0, bottom=1, left=-3)
+        assert len(poly_oi_shifted.polygons) == 3
+        assert np.allclose(poly_oi_shifted.polygons[0].exterior,
+                           [(1-3, 1+2), (8-3, 1+2), (8-3, 9+2), (1-3, 9+2)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_shifted.polygons[1].exterior,
+                           [(1-3, 1+2), (15-3, 1+2), (15-3, 9+2), (1-3, 9+2)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_shifted.polygons[2].exterior,
+                           [(100-3, 100+2), (200-3, 100+2),
+                            (200-3, 200+2), (100-3, 200+2)],
+                           rtol=0, atol=1e-4)
+        assert poly_oi_shifted.shape == (10, 11, 3)
+
+    def test_copy(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(2, 2), (16, 2), (16, 10), (2, 10)])],
+            shape=(10, 11, 3))
+        poly_oi_copy = poly_oi.copy()
+        assert len(poly_oi_copy.polygons) == 2
+        assert np.allclose(poly_oi_copy.polygons[0].exterior,
+                           [(1, 1), (8, 1), (8, 9), (1, 9)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_copy.polygons[1].exterior,
+                           [(2, 2), (16, 2), (16, 10), (2, 10)],
+                           rtol=0, atol=1e-4)
+
+        poly_oi_copy.polygons = [ia.Polygon([(0, 0), (1, 0), (1, 1)])]
+        assert np.allclose(poly_oi.polygons[0].exterior,
+                           [(1, 1), (8, 1), (8, 9), (1, 9)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_copy.polygons[0].exterior,
+                           [(0, 0), (1, 0), (1, 1)],
+                           rtol=0, atol=1e-4)
+
+        poly_oi_copy.shape = (20, 30, 3)
+        assert poly_oi.shape == (10, 11, 3)
+        assert poly_oi_copy.shape == (20, 30, 3)
+
+    def test_deepcopy(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(2, 2), (16, 2), (16, 10), (2, 10)])],
+            shape=(10, 11, 3))
+        poly_oi_copy = poly_oi.deepcopy()
+        assert len(poly_oi_copy.polygons) == 2
+        assert np.allclose(poly_oi_copy.polygons[0].exterior,
+                           [(1, 1), (8, 1), (8, 9), (1, 9)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_copy.polygons[1].exterior,
+                           [(2, 2), (16, 2), (16, 10), (2, 10)],
+                           rtol=0, atol=1e-4)
+
+        poly_oi_copy.polygons[0] = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        assert np.allclose(poly_oi.polygons[0].exterior,
+                           [(1, 1), (8, 1), (8, 9), (1, 9)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_copy.polygons[0].exterior,
+                           [(0, 0), (1, 0), (1, 1)],
+                           rtol=0, atol=1e-4)
+
+        poly_oi_copy.polygons[1].exterior[0][0] = 100
+        assert np.allclose(poly_oi.polygons[1].exterior,
+                           [(2, 2), (16, 2), (16, 10), (2, 10)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_copy.polygons[1].exterior,
+                           [(100, 2), (16, 2), (16, 10), (2, 10)],
+                           rtol=0, atol=1e-4)
+
+        poly_oi_copy.shape = (20, 30, 3)
+        assert poly_oi.shape == (10, 11, 3)
+        assert poly_oi_copy.shape == (20, 30, 3)
+
+    def test__repr__(self):
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        assert poly_oi.__repr__() == "PolygonsOnImage([], shape=(10, 11, 3))"
+
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(2, 2), (16, 2), (16, 10), (2, 10)])],
+            shape=(10, 11, 3))
+        assert poly_oi.__repr__() == (
+            "PolygonsOnImage(["
+            + "Polygon([(x=1.000, y=1.000), (x=8.000, y=1.000), "
+            + "(x=8.000, y=9.000), (x=1.000, y=9.000)] "
+            + "(4 points), label=None), "
+            + "Polygon([(x=2.000, y=2.000), (x=16.000, y=2.000), "
+            + "(x=16.000, y=10.000), (x=2.000, y=10.000)] "
+            + "(4 points), label=None)"
+            + "], shape=(10, 11, 3))")
+
+    def test__str__(self):
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        assert poly_oi.__repr__() == "PolygonsOnImage([], shape=(10, 11, 3))"
+
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(2, 2), (16, 2), (16, 10), (2, 10)])],
+            shape=(10, 11, 3))
+        assert poly_oi.__repr__() == (
+            "PolygonsOnImage(["
+            + "Polygon([(x=1.000, y=1.000), (x=8.000, y=1.000), "
+            + "(x=8.000, y=9.000), (x=1.000, y=9.000)] "
+            + "(4 points), label=None), "
+            + "Polygon([(x=2.000, y=2.000), (x=16.000, y=2.000), "
+            + "(x=16.000, y=10.000), (x=2.000, y=10.000)] "
+            + "(4 points), label=None)"
+            + "], shape=(10, 11, 3))")
+
+
 class Test_ConcavePolygonRecoverer(unittest.TestCase):
     def setUp(self):
         reseed()
