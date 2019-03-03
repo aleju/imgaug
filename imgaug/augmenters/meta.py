@@ -940,7 +940,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
     def augment_bounding_boxes(self, bounding_boxes_on_images, hooks=None):
         """
-        Augment image bounding boxes.
+        Augment bounding boxes.
 
         This is the corresponding function to ``augment_keypoints()``, just for
         bounding boxes.
@@ -964,8 +964,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Otherwise, different random values will be sampled for the image
         and bounding box augmentations, resulting in different augmentations
         (e.g. images might be rotated by ``30deg`` and bounding boxes by
-        ``-10deg``). Also make sure to call ``to_deterministic()`` again for each
-        new batch, otherwise you would augment all batches in the same way.
+        ``-10deg``). Also make sure to call ``to_deterministic()`` again for
+        each new batch, otherwise you would augment all batches in the same
+        way.
 
         Parameters
         ----------
@@ -973,7 +974,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                                    list of imgaug.BoundingBoxesOnImage
             The bounding boxes to augment.
             Expected is an instance of imgaug.BoundingBoxesOnImage or a list of
-            imgaug.BoundingBoxesOnImage objects, witch each such object
+            imgaug.BoundingBoxesOnImage objects, with each such object
             containing the bounding boxes of a single image.
 
         hooks : None or imgaug.HooksKeypoints, optional
@@ -1026,6 +1027,142 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             )
         if input_was_single_instance:
             return result[0]
+        return result
+
+    # TODO add hooks
+    def augment_polygons(self, polygons_on_images, parents=None):
+        """
+        Augment polygons.
+
+        This is the corresponding function to ``augment_keypoints()``, just for
+        polygons.
+        Usually you will want to call ``augment_images()`` with a list of images,
+        e.g. ``augment_images([A, B, C])`` and then ``augment_polygons()``
+        with the corresponding list of polygons on these images, e.g.
+        ``augment_polygons([Apoly, Bpoly, Cpoly])``, where ``Abb`` are the
+        bounding boxes on image ``A``.
+
+        Make sure to first convert the augmenter(s) to deterministic states
+        before augmenting images and their corresponding polygons,
+        e.g. by
+
+        >>> A = B = C = np.ones((10, 10), dtype=np.uint8)
+        >>> Apoly = Bpoly = Cpoly = ia.PolygonOnImage(
+        >>>     [(0, 0), (1, 0), (1, 1), (0, 1)],
+        >>>     (10, 10))
+        >>> seq = iaa.Fliplr(0.5)
+        >>> seq_det = seq.to_deterministic()
+        >>> imgs_aug = seq_det.augment_images([A, B, C])
+        >>> polys_aug = seq_det.augment_bounding_boxes([Apoly, Bpoly, Cpoly])
+
+        Otherwise, different random values will be sampled for the image
+        and polygon augmentations, resulting in different augmentations
+        (e.g. images might be rotated by ``30deg`` and polygons by
+        ``-10deg``). Also make sure to call ``to_deterministic()`` again for
+        each new batch, otherwise you would augment all batches in the same
+        way.
+
+        Parameters
+        ----------
+        polygons_on_images : imgaug.PolygonsOnImage or \
+                             list of imgaug.PolygonsOnImage
+            The polygons to augment.
+            Expected is an instance of imgaug.PolygonsOnImage or a list of
+            imgaug.PolygonsOnImage objects, with each such object
+            containing the polygons of a single image.
+
+        parents : None or list of imgaug.augmenters.meta.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
+
+        Returns
+        -------
+        result : imgaug.MultiPolygonsOnImage \
+                 or list of imgaug.MultiPolygonsOnImage
+            Augmented polygons.
+
+        """
+        if self.deterministic:
+            state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
+        input_was_single_instance = False
+        if isinstance(polygons_on_images, ia.PolygonsOnImage):
+            input_was_single_instance = True
+            polygons_on_images = [polygons_on_images]
+
+        ia.do_assert(ia.is_iterable(polygons_on_images))
+        ia.do_assert(all([isinstance(polygons_on_image, ia.PolygonsOnImage)
+                          for polygons_on_image in polygons_on_images]))
+
+        # copy, but only if topmost call
+        polygons_on_images_copy = polygons_on_images
+        if len(parents) == 0:
+            polygons_on_images_copy = [polygons_on_image.deepcopy() for polygons_on_image in polygons_on_images]
+
+        polygons_on_images_result = polygons_on_images_copy
+        if self.activated and len(polygons_on_images) > 0:
+            polygons_on_images_result = self._augment_polygons(
+                polygons_on_images_copy,
+                random_state=ia.copy_random_state(self.random_state),
+                parents=parents,
+                hooks=None
+            )
+            ia.forward_random_state(self.random_state)
+
+        if self.deterministic:
+            self.random_state.set_state(state_orig)
+
+        if input_was_single_instance:
+            return polygons_on_images_result[0]
+        return polygons_on_images_result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
+    def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
+                                       parents, hooks, recoverer=None):
+        rss = [random_state]
+        if recoverer is not None:
+            rss = ia.derive_random_states(random_state, 2)
+
+        kps_ois = []
+        kp_counts = []
+        for polys_oi in polygons_on_images:
+            kps = []
+            kp_counts_image = []
+            for poly in polys_oi.polygons:
+                poly_kps = poly.to_keypoints()
+                kps.extend(poly_kps)
+                kp_counts_image.append(len(poly_kps))
+            kps_ois.append(ia.KeypointsOnImage(kps, shape=polys_oi.shape))
+            kp_counts.append(kp_counts_image)
+
+        kps_ois_aug = self._augment_keypoints(kps_ois, rss[0], parents, hooks)
+
+        result = []
+        gen = enumerate(zip(kps_ois_aug, kp_counts))
+        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
+            polys_aug = []
+            counter = 0
+            for i, count in enumerate(kp_counts_image):
+                poly_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
+                poly_old = polygons_on_images[img_idx].polygons[i]
+                if recoverer is not None:
+                    poly_kps_aug = recoverer.recover_from(
+                        [(kp.x, kp.y) for kp in poly_kps_aug],
+                        poly_old,
+                        random_state=rss[1])
+                poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
+                polys_aug.append(poly_aug)
+                counter += count
+            result.append(ia.PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
+
         return result
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):

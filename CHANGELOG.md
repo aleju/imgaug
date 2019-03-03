@@ -12,6 +12,10 @@
 * Fixed a division by zero bug in `angle_between_vectors()`.
 * Add `PolygonsOnImage` to `imgaug.py`.
 * Fixed `Polygon.clip_out_of_image(image)` not handling `image` being a tuple.
+* `Augmenter` offers now methods for polygon augmentation.
+    * Added `augment_polygons()` to `Augmenter`.
+    * Added `_augment_polygons()` to `Augmenter`.
+    * Added `_augment_polygons_as_keypoints()` to `Augmenter`.
 
 
 # 0.2.8
