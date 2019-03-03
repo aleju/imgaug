@@ -35,8 +35,14 @@ install:
 
 before_script:
   - pip install flake8
-  # stop the build if there are Python syntax errors or undefined names
-  - flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+  # Stop the build if there are Python syntax errors or undefined names.
+  #
+  # We exclude poly_point_isect.py because it is incompatible with python2
+  # and poly_point_isect_py2py3.py is actually used instead. The incompatible
+  # file exists in the repo only for comparison. There are some other patterns
+  # added to --exclude, which are the default values for flake8's exclude
+  # option.
+  - flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics --exclude=".svn,CVS,.bzr,.hg,.git,__pycache__,poly_point_isect.py"
   # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
   # currently deactivated as style guidelines are not yet kept in the project
   # TODO change this

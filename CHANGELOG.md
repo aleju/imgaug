@@ -8,6 +8,8 @@
 * Fixed errors in docstring of `parameters.Subtract`.
 * Improved docstring of `multicore.Pool`.
 * Reordered classes in `parameters.py`.
+* Add `_ConcavePolygonRecoverer` to `imgaug.py`.
+* Fixed a division by zero bug in `angle_between_vectors()`.
 
 
 # 0.2.8
