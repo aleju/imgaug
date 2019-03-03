@@ -10,6 +10,7 @@
 * Reordered classes in `parameters.py`.
 * Add `_ConcavePolygonRecoverer` to `imgaug.py`.
 * Fixed a division by zero bug in `angle_between_vectors()`.
+* Add `PolygonsOnImage` to `imgaug.py`.
 
 
 # 0.2.8

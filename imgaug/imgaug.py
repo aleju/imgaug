@@ -3662,7 +3662,7 @@ class BoundingBoxesOnImage(object):
             Deep copy.
 
         """
-        # Manual copy is far faster than deepcopy for KeypointsOnImage,
+        # Manual copy is far faster than deepcopy for BoundingBoxesOnImage,
         # so use manual copy here too
         bbs = [bb.deepcopy() for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs, tuple(self.shape))
@@ -4076,29 +4076,29 @@ class Polygon(object):
         Parameters
         ----------
         image : (H,W,C) ndarray
-            The image onto which to draw the polygon. Usually expected to be of dtype uint8, though other dtypes
-            are also handled.
+            The image onto which to draw the polygon. Usually expected to be
+            of dtype ``uint8``, though other dtypes are also handled.
 
         color : iterable of int, optional
-            The color to use for the polygon (excluding perimeter). Must correspond to the channel layout of the
-            image. Usually RGB.
+            The color to use for the polygon (excluding perimeter).
+            Must correspond to the channel layout of the image. Usually RGB.
 
         color_perimeter : iterable of int, optional
-            The color to use for the perimeter/border of the polygon. Must correspond to the channel layout of the
-            image. Usually RGB.
+            The color to use for the perimeter (aka border) of the polygon.
+            Must correspond to the channel layout of the image. Usually RGB.
 
         alpha : float, optional
-            The transparency of the polygon (excluding the perimeter), where 1.0 denotes no transparency and 0.0 is
-            invisible.
+            The transparency of the polygon (excluding the perimeter),
+            where 1.0 denotes no transparency and 0.0 is invisible.
 
         alpha_perimeter : float, optional
-            The transparency of the polygon's perimeter/border, where 1.0 denotes no transparency and 0.0 is
-            invisible.
+            The transparency of the polygon's perimeter (aka border),
+            where 1.0 denotes no transparency and 0.0 is invisible.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an error if the polygon is partially/fully outside of the
-            image. If set to False, no error will be raised and only the parts inside the image
-            will be drawn.
+            Whether to raise an error if the polygon is partially/fully
+            outside of the image. If set to False, no error will be raised and
+            only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -4516,6 +4516,251 @@ class Polygon(object):
     def __str__(self):
         points_str = ", ".join(["(x=%.3f, y=%.3f)" % (point[0], point[1]) for point in self.exterior])
         return "Polygon([%s] (%d points), label=%s)" % (points_str, len(self.exterior), self.label)
+
+
+class PolygonsOnImage(object):
+    """
+    Object that represents all polygons on a single image.
+
+    Parameters
+    ----------
+    polygons : list of imgaug.Polygon
+        List of polygons on the image.
+
+    shape : tuple of int
+        The shape of the image on which the polygons are placed.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug as ia
+    >>> image = np.zeros((100, 100))
+    >>> polys = [
+    >>>     ia.Polygon([(0, 0), (100, 0), (100, 100), (0, 100)]),
+    >>>     ia.Polygon([(50, 0), (100, 50), (50, 100), (0, 50)])
+    >>> ]
+    >>> polys_oi = ia.PolygonsOnImage(polys, shape=image.shape)
+
+    """
+
+    def __init__(self, polygons, shape):
+        self.polygons = polygons
+        if is_np_array(shape):
+            self.shape = shape.shape
+        else:
+            do_assert(isinstance(shape, (tuple, list)))
+            self.shape = tuple(shape)
+
+    @property
+    def empty(self):
+        """
+        Returns whether this object contains zero polygons.
+
+        Returns
+        -------
+        bool
+            True if this object contains zero polygons.
+
+        """
+        return len(self.polygons) == 0
+
+    def on(self, image):
+        """
+        Project polygons from one image to a new one.
+
+        Parameters
+        ----------
+        image : ndarray or tuple of int
+            New image onto which the polygons are to be projected.
+            May also simply be that new image's shape tuple.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Object containing all projected polygons.
+
+        """
+        if is_np_array(image):
+            shape = image.shape
+        else:
+            shape = image
+
+        if shape[0:2] == self.shape[0:2]:
+            return self.deepcopy()
+        else:
+            polygons = [poly.project(self.shape, shape) for poly in self.polygons]
+            return PolygonsOnImage(polygons, shape)
+
+    def draw_on_image(self,
+                      image,
+                      color=(0, 255, 0), color_perimeter=(0, 128, 0),
+                      alpha=1.0, alpha_perimeter=1.0,
+                      raise_if_out_of_image=False):
+        """
+        Draw all polygons onto a given image.
+
+        Parameters
+        ----------
+        image : (H,W,C) ndarray
+            The image onto which to draw the bounding boxes.
+            This image should usually have the same shape as set in
+            ``PolygonsOnImage.shape``.
+
+        color : iterable of int, optional
+            The color to use for all polygons (excluding their perimeters).
+            Must correspond to the channel layout of the image. Usually RGB.
+
+        color_perimeter : iterable of int, optional
+            The color to use for all perimeters (aka borders) of the polygons.
+            Must correspond to the channel layout of the image. Usually RGB.
+
+        alpha : float, optional
+            The transparency of all polygons (excluding their perimeters),
+            where 1.0 denotes no transparency and 0.0 is invisible.
+
+        alpha_perimeter : float, optional
+            The transparency of all polygon perimeters (aka borders), where 1.0
+            denotes no transparency and 0.0 is invisible.
+
+        raise_if_out_of_image : bool, optional
+            Whether to raise an error if any polygon is partially/fully
+            outside of the image. If set to False, no error will be raised and
+            only the parts inside the image will be drawn.
+
+        Returns
+        -------
+        image : (H,W,C) ndarray
+            Image with drawn polygons.
+
+        """
+        for poly in self.polygons:
+            image = poly.draw_on_image(
+                image,
+                color=color,
+                color_perimeter=color_perimeter,
+                alpha=alpha,
+                alpha_perimeter=alpha_perimeter,
+                raise_if_out_of_image=raise_if_out_of_image
+            )
+        return image
+
+    def remove_out_of_image(self, fully=True, partly=False):
+        """
+        Remove all polygons that are fully or partially outside of the image.
+
+        Parameters
+        ----------
+        fully : bool, optional
+            Whether to remove polygons that are fully outside of the image.
+
+        partly : bool, optional
+            Whether to remove polygons that are partially outside of the image.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Reduced set of polygons, with those that were fully/partially
+            outside of the image removed.
+
+        """
+        polys_clean = [
+            poly for poly in self.polygons
+            if not poly.is_out_of_image(self.shape, fully=fully, partly=partly)
+        ]
+        return PolygonsOnImage(polys_clean, shape=self.shape)
+
+    def clip_out_of_image(self):
+        """
+        Clip off all parts from all polygons that are outside of the image.
+
+        NOTE: The result can contain less polygons than the input did. That
+        happens when a polygon is fully outside of the image plane.
+
+        NOTE: The result can also contain *more* polygons than the input
+        did. That happens when distinct parts of a polygon are only
+        connected by areas that are outside of the image plane and hence will
+        be clipped off, resulting in two or more unconnected polygon parts that
+        are left in the image plane.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Polygons, clipped to fall within the image dimensions. Count of
+            output polygons may differ from the input count.
+
+        """
+        polys_cut = [
+            poly.clip_out_of_image(self.shape).geoms
+            for poly
+            in self.polygons
+            if poly.is_partly_within_image(self.shape)
+        ]
+        polys_cut_flat = [poly for poly_lst in polys_cut for poly in poly_lst]
+        return PolygonsOnImage(polys_cut_flat, shape=self.shape)
+
+    def shift(self, top=None, right=None, bottom=None, left=None):
+        """
+        Shift all polygons from one or more image sides, i.e. move them on the x/y-axis.
+
+        Parameters
+        ----------
+        top : None or int, optional
+            Amount of pixels by which to shift all polygons from the top.
+
+        right : None or int, optional
+            Amount of pixels by which to shift all polygons from the right.
+
+        bottom : None or int, optional
+            Amount of pixels by which to shift all polygons from the bottom.
+
+        left : None or int, optional
+            Amount of pixels by which to shift all polygons from the left.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Shifted polygons.
+
+        """
+        polys_new = [
+            poly.shift(top=top, right=right, bottom=bottom, left=left)
+            for poly
+            in self.polygons
+        ]
+        return PolygonsOnImage(polys_new, shape=self.shape)
+
+    def copy(self):
+        """
+        Create a shallow copy of the PolygonsOnImage object.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Shallow copy.
+
+        """
+        return copy.copy(self)
+
+    def deepcopy(self):
+        """
+        Create a deep copy of the PolygonsOnImage object.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Deep copy.
+
+        """
+        # Manual copy is far faster than deepcopy for PolygonsOnImage,
+        # so use manual copy here too
+        polys = [poly.deepcopy() for poly in self.polygons]
+        return PolygonsOnImage(polys, tuple(self.shape))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "PolygonsOnImage(%s, shape=%s)" % (str(self.polygons), self.shape)
 
 
 def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
