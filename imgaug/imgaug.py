@@ -4004,7 +4004,7 @@ class Polygon(object):
         if self.is_out_of_image(image, fully=True, partly=False):
             return MultiPolygon([])
 
-        h, w = image.shape[0:2]
+        h, w = image.shape[0:2] if is_np_array(image) else image[0:2]
         poly_shapely = self.to_shapely_polygon()
         poly_image = shapely.geometry.Polygon([(0, 0), (w, 0), (w, h), (0, h)])
         multipoly_inter_shapely = poly_shapely.intersection(poly_image)

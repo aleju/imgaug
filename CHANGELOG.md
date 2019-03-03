@@ -11,6 +11,7 @@
 * Add `_ConcavePolygonRecoverer` to `imgaug.py`.
 * Fixed a division by zero bug in `angle_between_vectors()`.
 * Add `PolygonsOnImage` to `imgaug.py`.
+* Fixed `Polygon.clip_out_of_image(image)` not handling `image` being a tuple.
 
 
 # 0.2.8
