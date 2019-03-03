@@ -41,6 +41,7 @@ def main():
     test_Augmenter_augment_heatmaps()
     test_Augmenter_augment_keypoints()
     test_Augmenter_augment_bounding_boxes()
+    test_Augmenter_augment_polygons()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_find()
     test_Augmenter_remove()
@@ -1498,6 +1499,143 @@ def test_Augmenter_augment_bounding_boxes():
         assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y2, 3)
 
 
+def test_Augmenter_augment_polygons():
+    reseed()
+
+    # single instance of PolygonsOnImage with 0 polygons
+    aug = iaa.Rot90(1)
+    poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+    poly_oi_aug = aug.augment_polygons(poly_oi)
+    assert isinstance(poly_oi_aug, ia.PolygonsOnImage)
+    assert len(poly_oi_aug.polygons) == 0
+    assert poly_oi_aug.shape == (11, 10, 3)
+
+    # list of PolygonsOnImage with 0 polygons
+    aug = iaa.Rot90(1)
+    poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+    poly_oi_aug = aug.augment_polygons([poly_oi])
+    assert isinstance(poly_oi_aug, list)
+    assert isinstance(poly_oi_aug[0], ia.PolygonsOnImage)
+    assert len(poly_oi_aug[0].polygons) == 0
+    assert poly_oi_aug[0].shape == (10, 11, 3)
+
+    # 2 PolygonsOnImage, each 2 polygons
+    aug = iaa.Rot90(1)
+    poly_ois = [
+        ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (5, 0), (5, 5)]),
+             ia.Polygon([(1, 1), (6, 1), (6, 6)])],
+            shape=(10, 10, 3)),
+        ia.PolygonsOnImage(
+            [ia.Polygon([(2, 2), (7, 2), (7, 7)]),
+             ia.Polygon([(3, 3), (8, 3), (8, 8)])],
+            shape=(10, 10, 3)),
+    ]
+    poly_ois_aug = aug.augment_polygons(poly_ois)
+    assert isinstance(poly_ois_aug, list)
+    assert isinstance(poly_ois_aug[0], ia.PolygonsOnImage)
+    assert isinstance(poly_ois_aug[0], ia.PolygonsOnImage)
+    assert len(poly_ois_aug[0].polygons) == 2
+    assert len(poly_ois_aug[1].polygons) == 2
+    assert np.allclose(
+        poly_ois_aug[0].polygons[0].exterior,
+        [(5, 5), (0, 5), (5, 5)],
+        atol=1e-4, rtol=0
+    )
+    assert np.allclose(
+        poly_ois_aug[0].polygons[1].exterior,
+        [(6, 6), (1, 6), (6, 6)],
+        atol=1e-4, rtol=0
+    )
+    assert np.allclose(
+        poly_ois_aug[1].polygons[0].exterior,
+        [(7, 7), (2, 7), (7, 7)],
+        atol=1e-4, rtol=0
+    )
+    assert np.allclose(
+        poly_ois_aug[1].polygons[1].exterior,
+        [(8, 8), (3, 8), (8, 8)],
+        atol=1e-4, rtol=0
+    )
+    assert poly_ois_aug[0].shape == (10, 10, 3)
+    assert poly_ois_aug[1].shape == (10, 10, 3)
+
+    # test whether there is randomness within each batch and between batches
+    aug = iaa.Rot90((0, 3))
+    poly = ia.Polygon([(0, 0), (5, 0), (5, 5)])
+    poly_oi = ia.PolygonsOnImage(
+        [poly.deepcopy() for _ in sm.xrange(100)],
+        shape=(10, 11, 3)
+    )
+    poly_ois = [poly_oi, poly_oi.deepcopy()]
+    polys_ois_aug1 = aug.augment_polygons(poly_ois)
+    polys_ois_aug2 = aug.augment_polygons(poly_ois)
+
+    # --> different between runs
+    points1 = [poly.exterior for poly_oi in polys_ois_aug1 for poly in poly_oi.polygons]
+    points2 = [poly.exterior for poly_oi in polys_ois_aug2 for poly in poly_oi.polygons]
+    points1 = np.float32(points1)
+    points2 = np.float32(points2)
+    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+
+    # --> different between PolygonOnImages
+    points1 = [poly.exterior for poly in polys_ois_aug1[0].polygons]
+    points2 = [poly.exterior for poly in polys_ois_aug1[1].polygons]  # aug1 is correct here
+    points1 = np.float32(points1)
+    points2 = np.float32(points2)
+    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+
+    # --> different between polygons
+    points1 = set([tuple(poly.exterior) for poly in polys_ois_aug1[0].polygons])
+    assert len(points1) > 1
+
+    # test determinism
+    aug_det = aug.to_deterministic()
+    poly = ia.Polygon([(0, 0), (5, 0), (5, 5)])
+    poly_oi = ia.PolygonsOnImage(
+        [poly.deepcopy() for _ in sm.xrange(100)],
+        shape=(10, 11, 3)
+    )
+    poly_ois = [poly_oi, poly_oi.deepcopy()]
+    polys_ois_aug1 = aug_det.augment_polygons(poly_ois)
+    polys_ois_aug2 = aug_det.augment_polygons(poly_ois)
+    points1 = [poly.exterior for poly_oi in polys_ois_aug1 for poly in poly_oi.polygons]
+    points2 = [poly.exterior for poly_oi in polys_ois_aug2 for poly in poly_oi.polygons]
+    points1 = np.float32(points1)
+    points2 = np.float32(points2)
+    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+
+    # test if augmentation aligned with images
+    aug = iaa.Rot90((0, 3))
+    image = np.zeros((10, 20), dtype=np.uint8)
+    image[5, :] = 255
+    image[2:5, 10] = 255
+    poly = ia.Polygon([(0, 0), (10, 0), (10, 20)])
+    image_rots = [iaa.Rot90(k).augment_image(image) for k in [0, 1, 2, 3]]
+    polys_rots = [
+        [(0, 0), (10, 0), (10, 20)],
+        [(10, 0), (10, 20), (0, 0)],
+        [(10, 20), (0, 20), (10, 0)],
+        [(0, 20), (0, 0), (10, 20)]
+    ]
+
+    poly_ois = [ia.PolygonsOnImage([poly]) for _ in sm.xrange(50)]
+    aug_det = aug.to_deterministic()
+    images_aug = aug_det.augment_images([image] * 50)
+    poly_ois_aug = aug_det.augment_polygons(poly_ois)
+    seen = set()
+    for image_aug, poly_oi_aug in zip(images_aug, poly_ois_aug):
+        for img_rot_idx, img_rot in enumerate(image_rots):
+            if np.allclose(image_aug, img_rot):
+                break
+        for poly_rot_idx, poly_rot in enumerate(polys_rots):
+            if np.allclose(poly_oi_aug.polygons[0], poly_rot):
+                break
+        assert img_rot_idx == poly_rot_idx
+        seen.add((img_rot_idx, poly_rot_idx))
+    assert 2 <= len(seen) <= 4  # assert not always the same rot
+
+
 def test_Augmenter_augment_segmentation_maps():
     reseed()
 
@@ -1512,7 +1650,7 @@ def test_Augmenter_augment_segmentation_maps():
     segmap_aug = iaa.Add(10).augment_segmentation_maps([segmap])[0]
     assert np.allclose(segmap_aug.arr, segmap.arr)
 
-    segmap_aug = iaa.Affine(translate_px={"x":1}).augment_segmentation_maps([segmap])[0]
+    segmap_aug = iaa.Affine(translate_px={"x": 1}).augment_segmentation_maps([segmap])[0]
     expected_c0 = np.float32([
         [0, 1.0, 0],
         [0, 1.0, 0],
