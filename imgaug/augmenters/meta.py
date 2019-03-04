@@ -1143,10 +1143,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             augmentation.
 
         parents : list of imgaug.augmenters.meta.Augmenter
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
-        hooks : imgaug.HooksImages
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
+        hooks : imgaug.HooksKeypoints
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
         Returns
         ----------
