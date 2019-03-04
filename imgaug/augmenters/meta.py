@@ -927,7 +927,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
 
-        hooks : imgaug.HooksImages
+        hooks : imgaug.HooksKeypoints
             See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
 
         Returns
