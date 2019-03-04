@@ -1122,6 +1122,38 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
+        """
+        Augment polygons on images.
+
+        This is the internal version of ``augment_polygons()``.
+        It is called from ``augment_polygons()`` and should usually not be
+        called directly.
+        This method may transform the polygons in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        random_state : numpy.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
+
+        hooks : imgaug.HooksImages
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
+
+        Returns
+        ----------
+        list of imgaug.PolygonsOnImage
+            The augmented polygons.
+
+        """
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
