@@ -909,8 +909,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Augment keypoints on multiple images.
 
         This is the internal variation of ``augment_keypoints()``.
-        It is called from ``augment_keypoints()`` and should usually not be called directly.
-        It has to be implemented by every augmenter.
+        It is called from ``augment_keypoints()`` and should usually not be
+        called directly. It has to be implemented by every augmenter.
         This method may transform the keypoints in-place.
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
@@ -932,7 +932,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         ----------
-        images : list of imgaug.KeypointsOnImage
+        list of imgaug.KeypointsOnImage
             The augmented keypoints.
 
         """
