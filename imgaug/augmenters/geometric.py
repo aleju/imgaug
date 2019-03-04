@@ -1646,7 +1646,7 @@ class PiecewiseAffine(meta.Augmenter):
     """
 
     def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant", absolute_scale=False,
-                 name=None, deterministic=False, random_state=None):
+                 polygon_recoverer=None, name=None, deterministic=False, random_state=None):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -1713,6 +1713,9 @@ class PiecewiseAffine(meta.Augmenter):
                             + "got %s." % (type(mode),))
 
         self.absolute_scale = absolute_scale
+        self.polygon_recoverer = polygon_recoverer
+        if polygon_recoverer is None:
+            self.polygon_recoverer = ia._ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
@@ -1887,6 +1890,12 @@ class PiecewiseAffine(meta.Augmenter):
                 result.append(kps_aug)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks,
+            recoverer=self.polygon_recoverer)
 
     def _get_transformer(self, h, w, nb_rows, nb_cols, random_state):
         # get coords on y and x axis of points to move around
