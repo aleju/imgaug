@@ -3035,5 +3035,10 @@ class Rot90(meta.Augmenter):
                 result.append(kpsoi_i_aug)
         return result
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.k, self.keep_size]
