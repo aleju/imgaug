@@ -1159,6 +1159,36 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
     def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
                                        parents, hooks, recoverer=None):
+        """
+        Augment polygons by applying keypoint augmentation to their vertices.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        random_state : numpy.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.HooksKeypoints
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        recoverer : None or imgaug._ConcavePolygonRecoverer
+            An instance used to repair invalid polygons after augmentation.
+            Must offer the method
+            ``recover_from(new_exterior, old_polygon, random_state=0)``.
+            If ``None`` then invalid polygons are not repaired.
+
+        Returns
+        ----------
+        list of imgaug.PolygonsOnImage
+            The augmented polygons.
+
+        """
         rss = [random_state]
         if recoverer is not None:
             rss = ia.derive_random_states(random_state, 2)
