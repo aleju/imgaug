@@ -2439,7 +2439,8 @@ class ElasticTransformation(meta.Augmenter):
     }
 
     def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
-                 name=None, deterministic=False, random_state=None):
+                 polygon_recoverer=None, name=None, deterministic=False,
+                 random_state=None):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
@@ -2472,6 +2473,10 @@ class ElasticTransformation(meta.Augmenter):
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, "
                             + "got %s." % (type(mode),))
+
+        self.polygon_recoverer = polygon_recoverer
+        if polygon_recoverer is None:
+            self.polygon_recoverer = ia._ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
         # seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
@@ -2652,6 +2657,12 @@ class ElasticTransformation(meta.Augmenter):
             result[i] = ia.KeypointsOnImage(kps_aug, shape=kpsoi.shape)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks,
+            recoverer=self.polygon_recoverer)
 
     def get_parameters(self):
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
