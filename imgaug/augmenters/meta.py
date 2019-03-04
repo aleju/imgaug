@@ -1154,8 +1154,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             The augmented polygons.
 
         """
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+        return polygons_on_images
 
     def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
                                        parents, hooks, recoverer=None):
