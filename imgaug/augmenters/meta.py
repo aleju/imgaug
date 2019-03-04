@@ -718,7 +718,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_heatmaps`.
 
-        hooks : imgaug.HooksHeatmaps
+        hooks : imgaug.HooksHeatmaps or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_heatmaps`.
 
         Returns
@@ -927,7 +927,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
 
-        hooks : imgaug.HooksKeypoints
+        hooks : imgaug.HooksKeypoints or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
 
         Returns
@@ -1145,7 +1145,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
-        hooks : imgaug.HooksKeypoints
+        hooks : imgaug.HooksKeypoints or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
         Returns
@@ -1174,7 +1174,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
-        hooks : imgaug.HooksKeypoints
+        hooks : imgaug.HooksKeypoints or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
         recoverer : None or imgaug._ConcavePolygonRecoverer
