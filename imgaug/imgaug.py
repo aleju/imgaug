@@ -4309,6 +4309,18 @@ class Polygon(object):
         yy = self.yy
         return BoundingBox(x1=min(xx), x2=max(xx), y1=min(yy), y2=max(yy), label=self.label)
 
+    def to_keypoints(self):
+        """
+        Convert this polygon's `exterior` to ``Keypoint`` instances.
+
+        Returns
+        -------
+        list of imgaug.Keypoint
+            Exterior vertices as ``Keypoint`` instances.
+
+        """
+        return [Keypoint(x=point[0], y=point[1]) for point in self.exterior]
+
     @staticmethod
     def from_shapely(polygon_shapely, label=None):
         """

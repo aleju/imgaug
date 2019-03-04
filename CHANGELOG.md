@@ -17,6 +17,7 @@
     * Added `_augment_polygons()` to `Augmenter`.
     * Added `_augment_polygons_as_keypoints()` to `Augmenter`.
 * Fix `Rot90` not changing `KeypointsOnImage.shape` if `.keypoints` is empty.
+* Added method `Polygon.to_keypoints()`.
 
 # 0.2.8
 
