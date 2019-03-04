@@ -1503,7 +1503,7 @@ def test_Augmenter_augment_polygons():
     reseed()
 
     # single instance of PolygonsOnImage with 0 polygons
-    aug = iaa.Rot90(1)
+    aug = iaa.Rot90(1, keep_size=False)
     poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
     poly_oi_aug = aug.augment_polygons(poly_oi)
     assert isinstance(poly_oi_aug, ia.PolygonsOnImage)
@@ -1511,16 +1511,16 @@ def test_Augmenter_augment_polygons():
     assert poly_oi_aug.shape == (11, 10, 3)
 
     # list of PolygonsOnImage with 0 polygons
-    aug = iaa.Rot90(1)
+    aug = iaa.Rot90(1, keep_size=False)
     poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
     poly_oi_aug = aug.augment_polygons([poly_oi])
     assert isinstance(poly_oi_aug, list)
     assert isinstance(poly_oi_aug[0], ia.PolygonsOnImage)
     assert len(poly_oi_aug[0].polygons) == 0
-    assert poly_oi_aug[0].shape == (10, 11, 3)
+    assert poly_oi_aug[0].shape == (11, 10, 3)
 
     # 2 PolygonsOnImage, each 2 polygons
-    aug = iaa.Rot90(1)
+    aug = iaa.Rot90(1, keep_size=False)
     poly_ois = [
         ia.PolygonsOnImage(
             [ia.Polygon([(0, 0), (5, 0), (5, 5)]),
@@ -1539,29 +1539,29 @@ def test_Augmenter_augment_polygons():
     assert len(poly_ois_aug[1].polygons) == 2
     assert np.allclose(
         poly_ois_aug[0].polygons[0].exterior,
-        [(5, 5), (0, 5), (5, 5)],
+        [(9, 0), (9, 5), (4, 5)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         poly_ois_aug[0].polygons[1].exterior,
-        [(6, 6), (1, 6), (6, 6)],
+        [(8, 1), (8, 6), (3, 6)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         poly_ois_aug[1].polygons[0].exterior,
-        [(7, 7), (2, 7), (7, 7)],
+        [(7, 2), (7, 7), (2, 7)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         poly_ois_aug[1].polygons[1].exterior,
-        [(8, 8), (3, 8), (8, 8)],
+        [(6, 3), (6, 8), (1, 8)],
         atol=1e-4, rtol=0
     )
     assert poly_ois_aug[0].shape == (10, 10, 3)
     assert poly_ois_aug[1].shape == (10, 10, 3)
 
     # test whether there is randomness within each batch and between batches
-    aug = iaa.Rot90((0, 3))
+    aug = iaa.Rot90((0, 3), keep_size=False)
     poly = ia.Polygon([(0, 0), (5, 0), (5, 5)])
     poly_oi = ia.PolygonsOnImage(
         [poly.deepcopy() for _ in sm.xrange(100)],
@@ -1586,7 +1586,12 @@ def test_Augmenter_augment_polygons():
     assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
 
     # --> different between polygons
-    points1 = set([tuple(poly.exterior) for poly in polys_ois_aug1[0].polygons])
+    points1 = set()
+    for poly in polys_ois_aug1[0].polygons:
+        for point in poly.exterior:
+            points1.add(tuple(
+                [int(point[0]*10), int(point[1]*10)]
+            ))
     assert len(points1) > 1
 
     # test determinism
@@ -1599,37 +1604,48 @@ def test_Augmenter_augment_polygons():
     poly_ois = [poly_oi, poly_oi.deepcopy()]
     polys_ois_aug1 = aug_det.augment_polygons(poly_ois)
     polys_ois_aug2 = aug_det.augment_polygons(poly_ois)
+
+    # --> different within the same run
+    points1 = set()
+    for poly in polys_ois_aug1[0].polygons:
+        for point in poly.exterior:
+            points1.add(tuple(
+                [int(point[0]*10), int(point[1]*10)]
+            ))
+    assert len(points1) > 1
+
+    # --> similar between augmentation runs
     points1 = [poly.exterior for poly_oi in polys_ois_aug1 for poly in poly_oi.polygons]
     points2 = [poly.exterior for poly_oi in polys_ois_aug2 for poly in poly_oi.polygons]
     points1 = np.float32(points1)
     points2 = np.float32(points2)
-    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+    assert np.allclose(points1, points2, atol=1e-2, rtol=0)
 
     # test if augmentation aligned with images
-    aug = iaa.Rot90((0, 3))
+    aug = iaa.Rot90((0, 3), keep_size=False)
     image = np.zeros((10, 20), dtype=np.uint8)
     image[5, :] = 255
     image[2:5, 10] = 255
     poly = ia.Polygon([(0, 0), (10, 0), (10, 20)])
-    image_rots = [iaa.Rot90(k).augment_image(image) for k in [0, 1, 2, 3]]
+    image_rots = [iaa.Rot90(k, keep_size=False).augment_image(image) for k in [0, 1, 2, 3]]
     polys_rots = [
         [(0, 0), (10, 0), (10, 20)],
-        [(10, 0), (10, 20), (0, 0)],
-        [(10, 20), (0, 20), (10, 0)],
-        [(0, 20), (0, 0), (10, 20)]
+        [(9, 0), (9, 10), (-11, 10)],
+        [(19, 9), (9, 9), (9, -11)],
+        [(0, 19), (0, 9), (20, 9)]
     ]
 
-    poly_ois = [ia.PolygonsOnImage([poly]) for _ in sm.xrange(50)]
+    poly_ois = [ia.PolygonsOnImage([poly], shape=image.shape) for _ in sm.xrange(50)]
     aug_det = aug.to_deterministic()
     images_aug = aug_det.augment_images([image] * 50)
     poly_ois_aug = aug_det.augment_polygons(poly_ois)
     seen = set()
     for image_aug, poly_oi_aug in zip(images_aug, poly_ois_aug):
         for img_rot_idx, img_rot in enumerate(image_rots):
-            if np.allclose(image_aug, img_rot):
+            if image_aug.shape == img_rot.shape and np.allclose(image_aug, img_rot):
                 break
         for poly_rot_idx, poly_rot in enumerate(polys_rots):
-            if np.allclose(poly_oi_aug.polygons[0], poly_rot):
+            if np.allclose(poly_oi_aug.polygons[0].exterior, poly_rot):
                 break
         assert img_rot_idx == poly_rot_idx
         seen.add((img_rot_idx, poly_rot_idx))
