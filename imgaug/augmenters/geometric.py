@@ -1496,6 +1496,11 @@ class AffineCv2(meta.Augmenter):
                 result.append(keypoints_on_image)
         return result
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
 
