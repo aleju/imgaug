@@ -2972,10 +2972,7 @@ class Rot90(meta.Augmenter):
         ks = self._draw_samples(nb_images, random_state)
         result = []
         for kpsoi_i, k_i in zip(keypoints_on_images, ks):
-            if not kpsoi_i.keypoints:
-                result.append(kpsoi_i)
-                continue
-            elif (k_i % 4) == 0:
+            if (k_i % 4) == 0:
                 result.append(kpsoi_i)
             else:
                 k_i = int(k_i) % 4  # this is also correct when k_i is negative
