@@ -2160,6 +2160,11 @@ class PerspectiveTransform(meta.Augmenter):
 
         return result
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def _create_matrices(self, shapes, random_state):
         matrices = []
         max_heights = []
