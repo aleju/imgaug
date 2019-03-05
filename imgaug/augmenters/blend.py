@@ -376,46 +376,50 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        nb_images = len(keypoints_on_images)
-        if nb_images == 0:
-            return keypoints_on_images
+        def _augfunc(augs_, keypoints_on_images_, parents_, hooks_):
+            return augs_.augment_keypoints(
+                keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images_],
+                parents=parents_,
+                hooks=hooks_
+            )
 
-        nb_channels = meta.estimate_max_number_of_channels(keypoints_on_images)
+        return self._augment_coordinate_based(
+            keypoints_on_images, random_state, parents, hooks, _augfunc
+        )
+
+    def _augment_coordinate_based(self, inputs, random_state, parents, hooks, func):
+        nb_images = len(inputs)
+        if nb_images == 0:
+            return inputs
+
+        nb_channels = meta.estimate_max_number_of_channels(inputs)
         rss = ia.derive_random_states(random_state, 2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
-        result = keypoints_on_images
+        result = inputs
 
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             if self.first is None:
-                kps_ois_first = keypoints_on_images
+                outputs_first = inputs
             else:
-                kps_ois_first = self.first.augment_keypoints(
-                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+                outputs_first = func(self.first, inputs, parents + [self], hooks)
 
             if self.second is None:
-                kps_ois_second = keypoints_on_images
+                outputs_second = inputs
             else:
-                kps_ois_second = self.second.augment_keypoints(
-                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+                outputs_second = func(self.second, inputs, parents + [self], hooks)
         else:
-            kps_ois_first = keypoints_on_images
-            kps_ois_second = keypoints_on_images
+            outputs_first = inputs
+            outputs_second = inputs
 
-        for i, (kps_oi_first, kps_oi_second) in enumerate(zip(kps_ois_first, kps_ois_second)):
-            # keypoint augmentation also works channel-wise, even though
-            # keypoints do not have channels, in order to keep the random
+        for i, (outputs_first_i, outputs_second_i) in enumerate(zip(outputs_first, outputs_second)):
+            # coordinate augmentation also works channel-wise -- even though
+            # e.g. keypoints do not have channels -- in order to keep the random
             # values properly synchronized with the image augmentation
             # per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel[i] > 0.5:
-                nb_channels_i = keypoints_on_images[i].shape[2] if len(keypoints_on_images[i].shape) >= 3 else 1
+                nb_channels_i = inputs[i].shape[2] if len(inputs[i].shape) >= 3 else 1
                 alpha = np.average(alphas[i, 0:nb_channels_i])
             else:
                 alpha = alphas[i, 0]
@@ -427,9 +431,9 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             # so if the alpha is >= 0.5 (branch A is more visible than
             # branch B), the result of branch A, otherwise branch B.
             if alpha >= 0.5:
-                result[i] = kps_oi_first
+                result[i] = outputs_first_i
             else:
-                result[i] = kps_oi_second
+                result[i] = outputs_second_i
 
         return result
 
