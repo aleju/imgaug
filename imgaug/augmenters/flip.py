@@ -213,5 +213,11 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
                     keypoint.y = (height - 1) - keypoint.y
         return keypoints_on_images
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        # TODO how does flipping affect the point order?
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.p]
