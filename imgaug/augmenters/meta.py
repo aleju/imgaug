@@ -2762,6 +2762,12 @@ class Sometimes(Augmenter):
         return self._augment_non_images(keypoints_on_images, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_polygons(inputs_, parents_, hooks_)
+        return self._augment_non_images(polygons_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_non_images(self, inputs, random_state, parents, hooks, func):
         result = inputs
         if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
