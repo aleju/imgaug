@@ -2942,44 +2942,37 @@ class WithChannels(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = heatmaps
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
-            # Augment heatmaps in the style of the children if all channels or the majority of
-            # them are selected by this layer, otherwise don't change the heatmaps.
-            heatmaps_to_aug = []
-            indices = []
-
-            for i, heatmaps_i in enumerate(heatmaps):
-                nb_channels = heatmaps_i.shape[2] if len(heatmaps_i.shape) >= 3 else 1
-                if self.channels is None or len(self.channels) > nb_channels*0.5:
-                    heatmaps_to_aug.append(heatmaps_i)
-                    indices.append(i)
-
-            if len(heatmaps_to_aug) > 0:
-                heatmaps_aug = self.children.augment_heatmaps(
-                    heatmaps_to_aug,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-                for idx_orig, heatmaps_i_aug in zip(indices, heatmaps_aug):
-                    result[idx_orig] = heatmaps_i_aug
-
-        return result
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_heatmaps(inputs_, parents_, hooks_)
+        return self._augment_non_images(heatmaps, parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        result = keypoints_on_images
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
-            # Augment keypoints in the style of the children if all channels or the majority of
-            # them are selected by this layer, otherwise don't change the heatmaps.
-            # We expect here the images channel number to be 3, but actually can't be fully sure
-            # about that.
-            if self.channels is None or len(self.channels) > 1:
-                result = self.children.augment_keypoints(
-                    keypoints_on_images,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_keypoints(inputs_, parents_, hooks_)
+        return self._augment_non_images(keypoints_on_images, parents, hooks,
+                                        _augfunc)
+
+    def _augment_non_images(self, inputs, parents, hooks, func):
+        result = inputs
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
+            # Augment the non-images in the style of the children if all
+            # channels or the majority of them are selected by this layer,
+            # otherwise don't change the non-images.
+            inputs_to_aug = []
+            indices = []
+
+            for i, inputs_i in enumerate(inputs):
+                nb_channels = inputs_i.shape[2] if len(inputs_i.shape) >= 3 else 1
+                if self.channels is None or len(self.channels) > nb_channels*0.5:
+                    inputs_to_aug.append(inputs_i)
+                    indices.append(i)
+
+            if len(inputs_to_aug) > 0:
+                inputs_aug = func(self.children, inputs_to_aug,
+                                  parents + [self], hooks)
+
+                for idx_orig, inputs_i_aug in zip(indices, inputs_aug):
+                    result[idx_orig] = inputs_i_aug
 
         return result
 
