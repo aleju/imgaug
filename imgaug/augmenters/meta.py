@@ -2495,6 +2495,12 @@ class SomeOf(Augmenter, list):
         return self._augment_non_images(keypoints_on_images, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
+            return augmenter_.augment_polygons(polys_to_aug_, parents_, hooks_)
+        return self._augment_non_images(polygons_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_non_images(self, inputs, random_state, parents, hooks, func):
         if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             # This must happen before creating the augmenter_active array,
