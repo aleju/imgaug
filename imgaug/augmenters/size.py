@@ -1981,6 +1981,11 @@ class KeepSizeByResize(meta.Augmenter):
 
         return result
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def _to_deterministic(self):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
