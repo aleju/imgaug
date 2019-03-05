@@ -2484,47 +2484,19 @@ class SomeOf(Augmenter, list):
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
-            # This must happen before creating the augmenter_active array,
-            # otherwise in case of determinism the number of augmented images
-            # would change the random_state's state, resulting in the order
-            # being dependent on the number of augmented images (and not be
-            # constant). By doing this first, the random state is always the
-            # same (when determinism is active), so the order is always the
-            # same.
-            augmenter_order = self._get_augmenter_order(random_state)
-
-            # create an array of active augmenters per image
-            # e.g.
-            #  [[0, 0, 1],
-            #   [1, 0, 1],
-            #   [1, 0, 0]]
-            # would signal, that augmenter 3 is active for the first image,
-            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(heatmaps), random_state)
-
-            for augmenter_index in augmenter_order:
-                active = augmenter_active[:, augmenter_index].nonzero()[0]
-                if len(active) > 0:
-                    # pick images to augment, i.e. images for which
-                    # augmenter at current index is active
-                    heatmaps_to_aug = [heatmaps[idx] for idx in active]
-
-                    # augment the images
-                    heatmaps_aug = self[augmenter_index].augment_heatmaps(
-                        heatmaps_to_aug,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-
-                    # Map them back to their position in the images array/list
-                    for aug_idx, original_idx in enumerate(active):
-                        heatmaps[original_idx] = heatmaps_aug[aug_idx]
-
-        return heatmaps
+        def _augfunc(augmenter_, heatmaps_to_aug_, parents_, hooks_):
+            return augmenter_.augment_heatmaps(heatmaps_to_aug_, parents_, hooks_)
+        return self._augment_non_images(heatmaps, random_state,
+                                        parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
+            return augmenter_.augment_keypoints(koi_to_aug_, parents_, hooks_)
+        return self._augment_non_images(keypoints_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             # This must happen before creating the augmenter_active array,
             # otherwise in case of determinism the number of augmented images
             # would change the random_state's state, resulting in the order
@@ -2541,27 +2513,25 @@ class SomeOf(Augmenter, list):
             #   [1, 0, 0]]
             # would signal, that augmenter 3 is active for the first image,
             # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(keypoints_on_images), random_state)
+            augmenter_active = self._get_augmenter_active(len(inputs), random_state)
 
             for augmenter_index in augmenter_order:
                 active = augmenter_active[:, augmenter_index].nonzero()[0]
                 if len(active) > 0:
                     # pick images to augment, i.e. images for which
                     # augmenter at current index is active
-                    koi_to_aug = [keypoints_on_images[idx] for idx in active]
+                    koi_to_aug = [inputs[idx] for idx in active]
 
-                    # augment the images
-                    koi_to_aug = self[augmenter_index].augment_keypoints(
-                        keypoints_on_images=koi_to_aug,
-                        parents=parents + [self],
-                        hooks=hooks
+                    # augment the image-related objects
+                    koi_to_aug = func(
+                        self[augmenter_index], koi_to_aug, parents + [self],
+                        hooks
                     )
 
                     # map them back to their position in the images array/list
                     for aug_idx, original_idx in enumerate(active):
-                        keypoints_on_images[original_idx] = koi_to_aug[aug_idx]
-
-        return keypoints_on_images
+                        inputs[original_idx] = koi_to_aug[aug_idx]
+        return inputs
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
