@@ -2144,6 +2144,7 @@ class Sequential(Augmenter, list):
                      "Expected random_order to be boolean, got %s." % (type(random_order),))
         self.random_order = random_order
 
+    # TODO make the below functions more DRY
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.random_order:
@@ -2182,7 +2183,7 @@ class Sequential(Augmenter, list):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(keypoints_on_images,
-                                                     augmenter=self, parents=parents, default=True):
+                                                 augmenter=self, parents=parents, default=True):
             if self.random_order:
                 for index in random_state.permutation(len(self)):
                     keypoints_on_images = self[index].augment_keypoints(
@@ -2198,6 +2199,25 @@ class Sequential(Augmenter, list):
                         hooks=hooks
                     )
         return keypoints_on_images
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        if hooks is None or hooks.is_propagating(polygons_on_images,
+                                                 augmenter=self, parents=parents, default=True):
+            if self.random_order:
+                for index in random_state.permutation(len(self)):
+                    polygons_on_images = self[index].augment_polygons(
+                        polygons_on_images=polygons_on_images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                for augmenter in self:
+                    polygons_on_images = augmenter.augment_polygons(
+                        polygons_on_images=polygons_on_images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+        return polygons_on_images
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
