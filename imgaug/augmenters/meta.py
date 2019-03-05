@@ -3325,7 +3325,8 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
-def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=True,
+def AssertShape(shape, check_images=True, check_heatmaps=True,
+                check_keypoints=True, check_polygons=True,
                 name=None, deterministic=False, random_state=None):
     """
     Augmenter to make assumptions about the shape of input image(s), heatmaps and keypoints.
@@ -3376,8 +3377,15 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
 
     check_keypoints : bool, optional
         Whether to validate input keypoints via the given shape.
-        The number of keypoints will be checked and for each KeypointsOnImage
-        instance its image's shape, i.e. KeypointsOnImage.shape.
+        This will check (a) the number of keypoints and (b) for each
+        KeypointsOnImage instance the ``.shape``, i.e. the shape of the
+        corresponding image.
+
+    check_polygons : bool, optional
+        Whether to validate input keypoints via the given shape.
+        This will check (a) the number of polygons and (b) for each
+        PolygonsOnImage instance the ``.shape``, i.e. the shape of the
+        corresponding image.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3481,11 +3489,25 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
                     compare(observed, expected, j, i)
         return keypoints_on_images
 
+    def func_polygons(polygons_on_images, _random_state, _parents, _hooks):
+        if check_polygons:
+            if shape[0] is not None:
+                compare(len(polygons_on_images), shape[0], 0, "ALL")
+
+            for i in sm.xrange(len(polygons_on_images)):
+                polygons_on_image = polygons_on_images[i]
+                for j in sm.xrange(len(shape[0:2])):
+                    expected = shape[j+1]
+                    observed = polygons_on_image.shape[j]
+                    compare(observed, expected, j, i)
+        return polygons_on_images
+
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return Lambda(func_images, func_heatmaps, func_keypoints,
-                  name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images, func_heatmaps, func_keypoints, func_polygons,
+                  name=name, deterministic=deterministic,
+                  random_state=random_state)
 
 
 class ChannelShuffle(Augmenter):
