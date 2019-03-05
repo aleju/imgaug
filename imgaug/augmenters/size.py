@@ -1718,6 +1718,11 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_images = len(heatmaps)
         w, h = self.size
