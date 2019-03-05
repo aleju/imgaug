@@ -2751,76 +2751,42 @@ class Sometimes(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
-            nb_heatmaps = len(heatmaps)
-            samples = self.p.draw_samples((nb_heatmaps,), random_state=random_state)
-
-            # create lists of heatmaps for if and else lists (one for each)
-            # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
-            indices_then_list = np.where(samples == 1)[0]
-            indices_else_list = np.where(samples == 0)[0]
-            heatmaps_then_list = [heatmaps[i] for i in indices_then_list]
-            heatmaps_else_list = [heatmaps[i] for i in indices_else_list]
-
-            # augment according to if and else list
-            result_then_list = heatmaps_then_list
-            result_else_list = heatmaps_else_list
-            if self.then_list is not None and len(heatmaps_then_list) > 0:
-                result_then_list = self.then_list.augment_heatmaps(
-                    heatmaps_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-            if self.else_list is not None and len(heatmaps_else_list) > 0:
-                result_else_list = self.else_list.augment_heatmaps(
-                    heatmaps_else_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            # map results of if/else lists back to their initial positions (in "heatmaps" variable)
-            result = [None] * len(heatmaps)
-            for idx_result_then_list, idx_heatmaps in enumerate(indices_then_list):
-                result[idx_heatmaps] = result_then_list[idx_result_then_list]
-            for idx_result_else_list, idx_heatmaps in enumerate(indices_else_list):
-                result[idx_heatmaps] = result_else_list[idx_result_else_list]
-        else:
-            result = heatmaps
-
-        return result
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_heatmaps(inputs_, parents_, hooks_)
+        return self._augment_non_images(heatmaps, random_state,
+                                        parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        # TODO this is mostly copy pasted from _augment_images, make dry
-        result = keypoints_on_images
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
-            nb_images = len(keypoints_on_images)
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_keypoints(inputs_, parents_, hooks_)
+        return self._augment_non_images(keypoints_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
+        result = inputs
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
+            nb_images = len(inputs)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)
             # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
             indices_then_list = np.where(samples == 1)[0]
             indices_else_list = np.where(samples == 0)[0]
-            images_then_list = [keypoints_on_images[i] for i in indices_then_list]
-            images_else_list = [keypoints_on_images[i] for i in indices_else_list]
+            images_then_list = [inputs[i] for i in indices_then_list]
+            images_else_list = [inputs[i] for i in indices_else_list]
 
             # augment according to if and else list
             result_then_list = images_then_list
             result_else_list = images_else_list
             if self.then_list is not None and len(images_then_list) > 0:
-                result_then_list = self.then_list.augment_keypoints(
-                    keypoints_on_images=images_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+                result_then_list = func(self.then_list, images_then_list,
+                                        parents + [self], hooks)
             if self.else_list is not None and len(images_else_list) > 0:
-                result_else_list = self.else_list.augment_keypoints(
-                    keypoints_on_images=images_else_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+                result_else_list = func(self.else_list, images_else_list,
+                                        parents + [self], hooks)
 
             # map results of if/else lists back to their initial positions (in "images" variable)
-            result = [None] * len(keypoints_on_images)
+            result = [None] * len(inputs)
             for idx_result_then_list, idx_images in enumerate(indices_then_list):
                 result[idx_images] = result_then_list[idx_result_then_list]
             for idx_result_else_list, idx_images in enumerate(indices_else_list):
