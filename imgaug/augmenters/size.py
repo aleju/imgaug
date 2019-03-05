@@ -1501,6 +1501,11 @@ class PadToFixedSize(meta.Augmenter):
 
         return heatmaps
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
 
