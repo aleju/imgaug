@@ -704,37 +704,53 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        result = keypoints_on_images
-        nb_images = len(keypoints_on_images)
+        def _augfunc(augs_, keypoints_on_images_, parents_, hooks_):
+            return augs_.augment_keypoints(
+                keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images_],
+                parents=parents_,
+                hooks=hooks_
+            )
+
+        return self._augment_coordinate_based(
+            keypoints_on_images, random_state, parents, hooks, _augfunc
+        )
+
+    def _augment_coordinate_based(self, inputs, random_state, parents, hooks, func):
+        result = inputs
+        nb_images = len(inputs)
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             if self.first is None:
-                kps_ois_first = keypoints_on_images
+                outputs_first = inputs
             else:
-                kps_ois_first = self.first.augment_keypoints(
-                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
+                outputs_first = func(self.first, inputs, parents + [self], hooks)
+                """outputs_first = self.first.augment_keypoints(
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in inputs],
                     parents=parents + [self],
                     hooks=hooks
-                )
+                )"""
 
             if self.second is None:
-                kps_ois_second = keypoints_on_images
+                outputs_second = inputs
             else:
-                kps_ois_second = self.second.augment_keypoints(
-                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images],
+                outputs_second = func(self.second, inputs, parents + [self], hooks)
+                """
+                outputs_second = self.second.augment_keypoints(
+                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in inputs],
                     parents=parents + [self],
                     hooks=hooks
                 )
+                """
         else:
-            kps_ois_first = keypoints_on_images
-            kps_ois_second = keypoints_on_images
+            outputs_first = inputs
+            outputs_second = inputs
 
         # FIXME this is essentially the same behaviour as Alpha, requires inclusion of (x, y) coordinates to estimate
         # new keypoint coordinates
         for i in sm.xrange(nb_images):
-            kps_oi_first = kps_ois_first[i]
-            kps_oi_second = kps_ois_second[i]
+            kps_oi_first = outputs_first[i]
+            kps_oi_second = outputs_second[i]
             ia.do_assert(
                 len(kps_oi_first.shape) == 3,
                 ("Keypoint augmentation in AlphaElementwise requires KeypointsOnImage.shape to have channel "
@@ -743,8 +759,8 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             )
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
-            # keypoint augmentation also works channel-wise, even though
-            # keypoints do not have channels, in order to keep the random
+            # coordinate augmentation also works channel-wise, even though
+            # coordinates do not have channels, in order to keep the random
             # values properly synchronized with the image augmentation
             per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
             if per_channel > 0.5:
