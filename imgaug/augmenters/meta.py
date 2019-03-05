@@ -3230,7 +3230,8 @@ class Lambda(Augmenter):
         return []
 
 
-def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name=None, deterministic=False,
+def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
+                 func_polygons=None, name=None, deterministic=False,
                  random_state=None):
     """
     Augmenter that runs an assert on each batch of input images
@@ -3278,6 +3279,13 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints`.
 
+    func_polygons : None or callable, optional
+        The function to call for each batch of polygons.
+        It must follow the form ``function(polygons_on_images, random_state, parents, hooks)``
+        and return either True (valid input) or False (invalid input).
+        It essentially reuses the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_polygons`.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -3303,11 +3311,17 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name
                      "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
         return keypoints_on_images
 
+    def func_polygons_assert(polygons_on_images, random_state, parents, hooks):
+        ia.do_assert(func_polygons(polygons_on_images, random_state, parents, hooks),
+                     "Input polygons did not fulfill user-defined assertion in AssertLambda.")
+        return polygons_on_images
+
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
     return Lambda(func_images_assert if func_images is not None else None,
                   func_heatmaps_assert if func_heatmaps is not None else None,
                   func_keypoints_assert if func_keypoints is not None else None,
+                  func_polygons_assert if func_polygons is not None else None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
