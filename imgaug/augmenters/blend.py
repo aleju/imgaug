@@ -737,23 +737,11 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 outputs_first = inputs
             else:
                 outputs_first = func(self.first, inputs, parents + [self], hooks)
-                """outputs_first = self.first.augment_keypoints(
-                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in inputs],
-                    parents=parents + [self],
-                    hooks=hooks
-                )"""
 
             if self.second is None:
                 outputs_second = inputs
             else:
                 outputs_second = func(self.second, inputs, parents + [self], hooks)
-                """
-                outputs_second = self.second.augment_keypoints(
-                    keypoints_on_images=[kpsoi_i.deepcopy() for kpsoi_i in inputs],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-                """
         else:
             outputs_first = inputs
             outputs_second = inputs
