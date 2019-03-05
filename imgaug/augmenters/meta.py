@@ -3086,7 +3086,8 @@ class Lambda(Augmenter):
         and return the changed images (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_images`.
-        If this is None instead of a function, the images will not be altered.
+        If this is ``None`` instead of a function, the images will not be
+        altered.
 
     func_heatmaps : None or callable, optional
         The function to call for each batch of heatmaps.
@@ -3097,7 +3098,8 @@ class Lambda(Augmenter):
         and return the changed heatmaps (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
-        If this is None instead of a function, the heatmaps will not be altered.
+        If this is ``None`` instead of a function, the heatmaps will not be
+        altered.
 
     func_keypoints : None or callable, optional
         The function to call for each batch of image keypoints.
@@ -3108,7 +3110,23 @@ class Lambda(Augmenter):
         and return the changed keypoints (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints`.
-        If this is None instead of a function, the keypoints will not be altered.
+        If this is ``None`` instead of a function, the keypoints will not be
+        altered.
+
+    func_polygons : "keypoints" or None or callable, optional
+        The function to call for each batch of image polygons.
+        It must follow the form
+
+            ``function(polygons_on_images, random_state, parents, hooks)``
+
+        and return the changed polygons (may be transformed in-place).
+        This is essentially the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_polygons`.
+        If this is ``None`` instead of a function, the polygons will not be
+        altered.
+        If this is the string ``"keypoints"`` instead of a function, the
+        polygons will automatically be augmented by transforming their corner
+        vertices to keypoint and calling `func_keypoints`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3150,16 +3168,18 @@ class Lambda(Augmenter):
     >>> )
 
     Replaces every second row in images with black pixels, sets every second row in heatmapps to
-    zero and leaves keypoints unchanged.
+    zero and leaves keypoints unchanged (same for bounding boxes and polygons).
 
     """
 
-    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None,
+                 func_polygons="keypoints",
+                 name=None, deterministic=False, random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
         self.func_keypoints = func_keypoints
+        self.func_polygons = func_polygons
 
     def _augment_images(self, images, random_state, parents, hooks):
         if self.func_images is not None:
@@ -3189,6 +3209,22 @@ class Lambda(Augmenter):
                          + "instances, got %s." % ([type(el) for el in result],))
             return result
         return keypoints_on_images
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        if self.func_polygons == "keypoints":
+            return self._augment_polygons_as_keypoints(
+                polygons_on_images, random_state, parents, hooks,
+                recoverer=ia._ConcavePolygonRecoverer())
+        elif self.func_polygons is not None:
+            result = self.func_polygons(polygons_on_images, random_state, parents, hooks)
+            ia.do_assert(ia.is_iterable(result),
+                         "Expected callback function for polygons to return list of imgaug.PolygonsOnImage() "
+                         + "instances, got %s." % (type(result),))
+            ia.do_assert(all([isinstance(el, ia.PolygonsOnImage) for el in result]),
+                         "Expected callback function for polygons to return list of imgaug.PolygonsOnImage() "
+                         + "instances, got %s." % ([type(el) for el in result],))
+            return result
+        return polygons_on_images
 
     def get_parameters(self):
         return []
