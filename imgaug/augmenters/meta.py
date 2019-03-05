@@ -2952,6 +2952,12 @@ class WithChannels(Augmenter):
         return self._augment_non_images(keypoints_on_images, parents, hooks,
                                         _augfunc)
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_polygons(inputs_, parents_, hooks_)
+        return self._augment_non_images(polygons_on_images, parents, hooks,
+                                        _augfunc)
+
     def _augment_non_images(self, inputs, parents, hooks, func):
         result = inputs
         if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
