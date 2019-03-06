@@ -21,6 +21,7 @@
     * Added polygon handling to `Augmenter.augment_batches()`.
 * Fixed `Rot90` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
 * Fixed `Affine` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `PerspectiveTransform` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
 * Added method `Polygon.to_keypoints()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.deepcopy()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.

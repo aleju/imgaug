@@ -2160,16 +2160,17 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             keypoints_on_image = keypoints_on_images[i]
+            new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
             if not keypoints_on_image.keypoints:
-                continue
-            kps_arr = keypoints_on_image.get_coords_array()
-
-            warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
-            warped = warped[0]
-            warped_kps = ia.KeypointsOnImage.from_coords_array(
-                warped,
-                shape=(max_height, max_width) + keypoints_on_image.shape[2:]
-            )
+                warped_kps = keypoints_on_image.deepcopy(shape=new_shape)
+            else:
+                kps_arr = keypoints_on_image.get_coords_array()
+                warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
+                warped = warped[0]
+                warped_kps = ia.KeypointsOnImage.from_coords_array(
+                    warped,
+                    shape=new_shape
+                )
             if self.keep_size:
                 warped_kps = warped_kps.on(keypoints_on_image.shape)
             result[i] = warped_kps
