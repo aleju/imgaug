@@ -377,7 +377,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 if batch_augment_polygons:
                     # TODO enable hooks for polygons
                     batch_normalized.polygons_aug = augseq.augment_polygons(
-                        batch_normalized.polygons_unaug)
+                        batch_normalized.polygons_unaug, hooks=hooks)
 
                 batch_unnormalized = unnormalize_batch(batch_normalized)
 
@@ -1044,8 +1044,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             return result[0]
         return result
 
-    # TODO add hooks
-    def augment_polygons(self, polygons_on_images, parents=None):
+    def augment_polygons(self, polygons_on_images, parents=None, hooks=None):
         """
         Augment polygons.
 
@@ -1091,6 +1090,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             call to this function. Usually you can leave this parameter as None.
             It is set automatically for child augmenters.
 
+        hooks : None or imgaug.HooksKeypoints, optional
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
+
         Returns
         -------
         result : imgaug.MultiPolygonsOnImage \
@@ -1113,20 +1116,38 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         ia.do_assert(all([isinstance(polygons_on_image, ia.PolygonsOnImage)
                           for polygons_on_image in polygons_on_images]))
 
-        # copy, but only if topmost call
+        # copy, but only if topmost call or hooks are provided
         polygons_on_images_copy = polygons_on_images
-        if len(parents) == 0:
-            polygons_on_images_copy = [polygons_on_image.deepcopy() for polygons_on_image in polygons_on_images]
+        if len(parents) == 0 or hooks is not None:
+            polygons_on_images_copy = [polygons_on_image.deepcopy()
+                                       for polygons_on_image
+                                       in polygons_on_images]
+
+        if hooks is not None:
+            polygons_on_images_copy = hooks.preprocess(
+                polygons_on_images_copy, augmenter=self, parents=parents)
 
         polygons_on_images_result = polygons_on_images_copy
-        if self.activated and len(polygons_on_images) > 0:
-            polygons_on_images_result = self._augment_polygons(
-                polygons_on_images_copy,
-                random_state=ia.copy_random_state(self.random_state),
-                parents=parents,
-                hooks=None
-            )
-            ia.forward_random_state(self.random_state)
+        is_activated = (hooks is None and self.activated)
+        is_activated_hooks = (is_activated is False) and (
+            hooks is not None
+            and hooks.is_activated(polygons_on_images_copy,
+                                   augmenter=self, parents=parents,
+                                   default=self.activated)
+        )
+        if is_activated or is_activated_hooks:
+            if len(polygons_on_images) > 0:
+                polygons_on_images_result = self._augment_polygons(
+                    polygons_on_images_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=None
+                )
+                ia.forward_random_state(self.random_state)
+
+        if hooks is not None:
+            polygons_on_images_result = hooks.postprocess(
+                polygons_on_images_result, augmenter=self, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
