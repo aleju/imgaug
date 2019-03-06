@@ -27,6 +27,7 @@
 * Added method `Keypoint.copy()`.
 * Added method `Keypoint.deepcopy()`.
 * `KeypointsOnImage.deepcopy()` now uses `Keypoint.deepcopy()` to create Keypoint copies, making it more flexible.
+* Refactor `Affine` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 
 
 # 0.2.8

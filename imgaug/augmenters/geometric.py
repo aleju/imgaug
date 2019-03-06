@@ -770,7 +770,13 @@ class Affine(meta.Augmenter):
                 else:
                     coords = keypoints_on_image.get_coords_array()
                     coords_aug = tf.matrix_transform(coords, matrix.params)
-                    result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=output_shape))
+                    kps_new = [kp.deepcopy(x=coords[0], y=coords[1])
+                               for kp, coords
+                               in zip(keypoints_on_image.keypoints, coords_aug)]
+                    result.append(keypoints_on_image.deepcopy(
+                        keypoints=kps_new,
+                        shape=output_shape
+                    ))
             else:
                 result.append(keypoints_on_image)
         return result
