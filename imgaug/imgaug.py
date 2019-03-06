@@ -6476,6 +6476,9 @@ class Batch(object):
     bounding_boxes : None or list of BoundingBoxesOnImage
         The bounding boxes to augment.
 
+    polygons : None or list of PolygonsOnImage
+        The polygons to augment.
+
     data
         Additional data that is saved in the batch and may be read out
         after augmentation. This could e.g. contain filepaths to each image
@@ -6484,7 +6487,8 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
-    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None,
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
+                 keypoints=None, bounding_boxes=None, polygons=None,
                  data=None):
         self.images_unaug = images
         self.images_aug = None
@@ -6496,6 +6500,8 @@ class Batch(object):
         self.keypoints_aug = None
         self.bounding_boxes_unaug = bounding_boxes
         self.bounding_boxes_aug = None
+        self.polygons_unaug = polygons
+        self.polygons_aug = None
         self.data = data
 
     @property
@@ -6563,6 +6569,7 @@ class Batch(object):
             segmentation_maps=_copy_augmentable_objects(self.segmentation_maps_unaug, SegmentationMapOnImage),
             keypoints=_copy_augmentable_objects(self.keypoints_unaug, KeypointsOnImage),
             bounding_boxes=_copy_augmentable_objects(self.bounding_boxes_unaug, BoundingBoxesOnImage),
+            polygons=_copy_augmentable_objects(self.polygons_unaug, PolygonsOnImage),
             data=copy.deepcopy(self.data)
         )
         batch.images_aug = _copy_images(self.images_aug)
@@ -6570,6 +6577,7 @@ class Batch(object):
         batch.segmentation_maps_aug = _copy_augmentable_objects(self.segmentation_maps_aug, SegmentationMapOnImage)
         batch.keypoints_aug = _copy_augmentable_objects(self.keypoints_aug, KeypointsOnImage)
         batch.bounding_boxes_aug = _copy_augmentable_objects(self.bounding_boxes_aug, BoundingBoxesOnImage)
+        batch.polygons_aug = _copy_augmentable_objects(self.polygons_aug, PolygonsOnImage)
 
         return batch
 

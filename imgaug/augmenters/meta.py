@@ -213,6 +213,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         ----------
         batches : imgaug.Batch or list of imgaug.Batch or list of imgaug.HeatmapsOnImage\
                   or list of imgaug.SegmentationMapOnImage or list of imgaug.KeypointsOnImage\
+                  or list of imgaug.BoundingBoxesOnImage or list of imgaug.PolygonsOnImage\
                   or list of ([N],H,W,[C]) ndarray
             List of batches to augment.
             The expected input is a list, with each entry having one of the following datatypes:
@@ -223,6 +224,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 * list of imgaug.SegmentationMapOnImage
                 * list of imgaug.KeypointsOnImage
                 * list of imgaug.BoundingBoxesOnImage
+                * list of imgaug.PolygonsOnImage
                 * list of (H,W,C) ndarray
                 * list of (H,W) ndarray
                 * (N,H,W,C) ndarray
@@ -246,6 +248,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                           or list of ia.SegmentationMapOnImage\
                           or list of ia.KeypointsOnImage\
                           or list of ia.BoundingBoxesOnImage\
+                          or list of ia.PolygonsOnImage\
                           or list of (H,W,C) ndarray\
                           or list of (H,W) ndarray\
                           or list of (N,H,W,C) ndarray\
@@ -290,16 +293,20 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 elif isinstance(batch[0], ia.BoundingBoxesOnImage):
                     batches_normalized.append(ia.Batch(bounding_boxes=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.BoundingBoxesOnImage")
+                elif isinstance(batch[0], ia.PolygonsOnImage):
+                    batches_normalized.append(ia.Batch(polygons=batch, data=i))
+                    batches_original_dts.append("list_of_imgaug.PolygonsOnImage")
                 else:
                     raise Exception(
                         "Unknown datatype in batch[0]. Expected numpy array or imgaug.HeatmapsOnImage or "
                         + "imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage, "
+                        + "or imgaug.PolygonsOnImage, "
                         + "got %s." % (type(batch[0]),))
             else:
                 raise Exception(
                     "Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of (numpy array or "
                     + "imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or "
-                    + "imgaug.BoundingBoxesOnImage). "
+                    + "imgaug.BoundingBoxesOnImage or imgaug.PolygonsOnImage). "
                     + "Got %s." % (type(batch),))
 
         def unnormalize_batch(batch_aug):
@@ -324,9 +331,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_unnormalized = batch_aug.segmentation_maps_aug
             elif dt_orig == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
-            else:  # only option left
-                ia.do_assert(dt_orig == "list_of_imgaug.BoundingBoxesOnImage")
+            elif dt_orig == "list_of_imgaug.BoundingBoxesOnImage":
                 batch_unnormalized = batch_aug.bounding_boxes_aug
+            else:  # only option left
+                ia.do_assert(dt_orig == "list_of_imgaug.PolygonsOnImage")
+                batch_unnormalized = batch_aug.polygons_aug
             return batch_unnormalized
 
         if not background:
@@ -338,10 +347,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_augment_segmaps = batch_normalized.segmentation_maps_unaug is not None
                 batch_augment_keypoints = batch_normalized.keypoints_unaug is not None
                 batch_augment_bounding_boxes = batch_normalized.bounding_boxes_unaug is not None
+                batch_augment_polygons = batch_normalized.polygons_unaug is not None
 
                 nb_to_aug = sum([1 if to_aug else 0
                                  for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps,
-                                                batch_augment_keypoints, batch_augment_bounding_boxes]])
+                                                batch_augment_keypoints, batch_augment_bounding_boxes,
+                                                batch_augment_polygons]])
 
                 if nb_to_aug > 1:
                     augseq = self.to_deterministic() if not self.deterministic else self
@@ -363,6 +374,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 if batch_augment_bounding_boxes:
                     batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
                         batch_normalized.bounding_boxes_unaug, hooks=hooks)
+                if batch_augment_polygons:
+                    # TODO enable hooks for polygons
+                    batch_normalized.polygons_aug = augseq.augment_polygons(
+                        batch_normalized.polygons_unaug)
 
                 batch_unnormalized = unnormalize_batch(batch_normalized)
 
