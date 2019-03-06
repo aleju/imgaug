@@ -1835,6 +1835,8 @@ class PiecewiseAffine(meta.Augmenter):
 
         for i in sm.xrange(nb_images):
             if not keypoints_on_images[i].keypoints:
+                # PiecewiseAffine does not change the image shape, so we can
+                # just reuse the old keypoints
                 result.append(keypoints_on_images[i])
                 continue
             rs_image = rss[i]
@@ -1883,25 +1885,25 @@ class PiecewiseAffine(meta.Augmenter):
                     nb_channels=None if len(kpsoi.shape) < 3 else kpsoi.shape[2]
                 )
 
-                # TODO is this still necessary after nb_channels was added to from_keypoint_image() ?
-                if len(kpsoi.shape) > 2:
-                    kps_aug.shape = (
-                        kps_aug.shape[0],
-                        kps_aug.shape[1],
-                        kpsoi.shape[2]
-                    )
+                # use deepcopy() to copy old instance states as much as
+                # possible
+                kps_aug_post = kpsoi.deepcopy(
+                    keypoints=[kp.deepcopy(x=kp_aug.x, y=kp_aug.y)
+                               for kp, kp_aug
+                               in zip(kpsoi.keypoints, kps_aug.keypoints)]
+                )
 
                 # Keypoints that were outside of the image plane before the
                 # augmentation will be replaced with (-1, -1) by default (as
                 # they can't be drawn on the keypoint images). They are now
                 # replaced by their old coordinates values.
                 ooi = [not 0 <= kp.x < w or not 0 <= kp.y < h for kp in kpsoi.keypoints]
-                for kp_idx in sm.xrange(len(kps_aug.keypoints)):
+                for kp_idx in sm.xrange(len(kps_aug_post.keypoints)):
                     if ooi[kp_idx]:
                         kp_unaug = kpsoi.keypoints[kp_idx]
-                        kps_aug.keypoints[kp_idx] = kp_unaug
+                        kps_aug_post.keypoints[kp_idx] = kp_unaug
 
-                result.append(kps_aug)
+                result.append(kps_aug_post)
 
         return result
 
