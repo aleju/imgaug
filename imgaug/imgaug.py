@@ -2053,13 +2053,13 @@ class Keypoint(object):
 
         """
         if from_shape[0:2] == to_shape[0:2]:
-            return Keypoint(x=self.x, y=self.y)
+            return self.deepcopy(x=self.x, y=self.y)
         else:
             from_height, from_width = from_shape[0:2]
             to_height, to_width = to_shape[0:2]
             x = (self.x / from_width) * to_width
             y = (self.y / from_height) * to_height
-            return Keypoint(x=x, y=y)
+            return self.deepcopy(x=x, y=y)
 
     def shift(self, x=0, y=0):
         """
@@ -2079,7 +2079,7 @@ class Keypoint(object):
             Keypoint object with new coordinates.
 
         """
-        return Keypoint(self.x + x, self.y + y)
+        return self.deepcopy(self.x + x, self.y + y)
 
     def generate_similar_points_manhattan(self, nb_steps, step_size, return_array=False):
         """
@@ -2144,7 +2144,7 @@ class Keypoint(object):
 
         if return_array:
             return points
-        return [Keypoint(x=points[i, 0], y=points[i, 1]) for i in sm.xrange(points.shape[0])]
+        return [self.deepcopy(x=points[i, 0], y=points[i, 1]) for i in sm.xrange(points.shape[0])]
 
     def copy(self, x=None, y=None):
         """
