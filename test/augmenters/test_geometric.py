@@ -847,6 +847,26 @@ def test_Affine():
         same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
         assert (same / img_aug_mask.size) >= 0.95
 
+        # verify that shape in KeypointsOnImages changes
+        kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(100, 200, 3))
+        kps_aug = iaa.Affine(rotate=90).augment_keypoints(kps)
+        assert kps_aug.shape == (100, 200, 3)
+        assert not np.allclose([kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
+                               [kps.keypoints[0].x, kps.keypoints[0].y],
+                               atol=1e-1, rtol=0)
+
+        kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(100, 200, 3))
+        kps_aug = iaa.Affine(rotate=90, fit_output=True).augment_keypoints(kps)
+        assert kps_aug.shape == (200, 100, 3)
+        assert not np.allclose([kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
+                               [kps.keypoints[0].x, kps.keypoints[0].y],
+                               atol=1e-1, rtol=0)
+
+        kps = ia.KeypointsOnImage([], shape=(100, 200, 3))
+        kps_aug = iaa.Affine(rotate=90, fit_output=True).augment_keypoints(kps)
+        assert kps_aug.shape == (200, 100, 3)
+        assert len(kps_aug.keypoints) == 0
+
     # ------------
     # exceptions for bad inputs
     # ------------

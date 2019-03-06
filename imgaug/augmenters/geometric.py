@@ -734,9 +734,6 @@ class Affine(meta.Augmenter):
             _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             height, width = keypoints_on_image.height, keypoints_on_image.width
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
@@ -768,9 +765,12 @@ class Affine(meta.Augmenter):
                 else:
                     output_shape = keypoints_on_image.shape
 
-                coords = keypoints_on_image.get_coords_array()
-                coords_aug = tf.matrix_transform(coords, matrix.params)
-                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=output_shape))
+                if len(keypoints_on_image.keypoints) == 0:
+                    result.append(keypoints_on_image.deepcopy(shape=output_shape))
+                else:
+                    coords = keypoints_on_image.get_coords_array()
+                    coords_aug = tf.matrix_transform(coords, matrix.params)
+                    result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=output_shape))
             else:
                 result.append(keypoints_on_image)
         return result

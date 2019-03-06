@@ -19,7 +19,8 @@
     * Added argument `polygons` to `imgaug.Batch`.
     * Added attributes `polygons_aug` and `polygons_unaug` to `imgaug.Batch`.
     * Added polygon handling to `Augmenter.augment_batches()`.
-* Fix `Rot90` not changing `KeypointsOnImage.shape` if `.keypoints` is empty.
+* Fixed `Rot90` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `Affine` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
 * Added method `Polygon.to_keypoints()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.deepcopy()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
