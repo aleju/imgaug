@@ -2583,7 +2583,7 @@ class KeypointsOnImage(object):
             out_shape += (nb_channels,)
         return KeypointsOnImage(keypoints, shape=out_shape)
 
-    def copy(self):
+    def copy(self, keypoints=None, shape=None):
         """
         Create a shallow copy of the KeypointsOnImage object.
 
@@ -2595,9 +2595,19 @@ class KeypointsOnImage(object):
         """
         return copy.copy(self)
 
-    def deepcopy(self):
+    def deepcopy(self, keypoints=None, shape=None):
         """
         Create a deep copy of the KeypointsOnImage object.
+
+        Parameters
+        ----------
+        keypoints : None or list of imgaug.Keypoint, optional
+            List of keypoints on the image. If ``None``, the instance's
+            keypoints will be copied.
+
+        shape : tuple of int, optional
+            The shape of the image on which the keypoints are placed.
+            If ``None``, the instance's shape will be copied.
 
         Returns
         -------
@@ -2606,8 +2616,11 @@ class KeypointsOnImage(object):
 
         """
         # for some reason deepcopy is way slower here than manual copy
-        kps = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
-        return KeypointsOnImage(kps, tuple(self.shape))
+        if keypoints is None:
+            keypoints = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
+        if shape is None:
+            shape = tuple(self.shape)
+        return KeypointsOnImage(keypoints, shape)
 
     def __repr__(self):
         return self.__str__()
