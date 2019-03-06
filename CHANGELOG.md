@@ -19,6 +19,7 @@
 * Fix `Rot90` not changing `KeypointsOnImage.shape` if `.keypoints` is empty.
 * Added method `Polygon.to_keypoints()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.deepcopy()`.
+* Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
 
 
 # 0.2.8
