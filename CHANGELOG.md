@@ -32,8 +32,9 @@
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
 * Added method `Keypoint.copy()`.
 * Added method `Keypoint.deepcopy()`.
-    * All methods in `Keypoint` now use `deepcopy()` to create copies of the keypoint instance -- instead of calling `Keypoint(...)`.
+    * Refactored methods in `Keypoint` to use `deepcopy()` to create copies of itself (instead of instantiating new instances via `Keypoint(...)`).
 * `KeypointsOnImage.deepcopy()` now uses `Keypoint.deepcopy()` to create Keypoint copies, making it more flexible.
+* Refactored `KeypointsOnImage` to use `KeypointsOnImage.deepcopy()` in as many methods as possible to create copies of itself.
 * Refactored `Affine` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 * Refactored `AffineCv2` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 * Refactored `PiecewiseAffine` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.

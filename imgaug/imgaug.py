@@ -2272,7 +2272,7 @@ class KeypointsOnImage(object):
             return self.deepcopy()
         else:
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
-            return KeypointsOnImage(keypoints, shape)
+            return self.deepcopy(keypoints, shape)
 
     def draw_on_image(self, image, color=(0, 255, 0), size=3, copy=True, raise_if_out_of_image=False):
         """
@@ -2342,7 +2342,7 @@ class KeypointsOnImage(object):
 
         """
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
-        return KeypointsOnImage(keypoints, self.shape)
+        return self.deepcopy(keypoints)
 
     def get_coords_array(self):
         """
