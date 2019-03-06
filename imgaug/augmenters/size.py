@@ -402,9 +402,6 @@ class Resize(meta.Augmenter):
         samples_h, samples_w, _samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             sample_h, sample_w = samples_h[i], samples_w[i]
             h, w = self._compute_height_width(keypoints_on_image.shape, sample_h, sample_w)
             new_shape = (h, w) + keypoints_on_image.shape[2:]
