@@ -1683,9 +1683,6 @@ class CropToFixedSize(meta.Augmenter):
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             height_image, width_image = keypoints_on_image.shape[0:2]
 
             crop_image_top, crop_image_bottom = 0, 0
