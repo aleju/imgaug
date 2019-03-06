@@ -2167,10 +2167,11 @@ class PerspectiveTransform(meta.Augmenter):
                 kps_arr = keypoints_on_image.get_coords_array()
                 warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
                 warped = warped[0]
-                warped_kps = ia.KeypointsOnImage.from_coords_array(
-                    warped,
-                    shape=new_shape
-                )
+                warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
+                              for kp, coords
+                              in zip(keypoints_on_image.keypoints, warped)]
+                warped_kps = keypoints_on_image.deepcopy(keypoints=warped_kps,
+                                                         shape=new_shape)
             if self.keep_size:
                 warped_kps = warped_kps.on(keypoints_on_image.shape)
             result[i] = warped_kps
