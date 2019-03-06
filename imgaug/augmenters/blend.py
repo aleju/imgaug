@@ -754,8 +754,8 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             ia.do_assert(
                 len(kps_oi_first.shape) == 3,
                 ("Keypoint augmentation in AlphaElementwise requires KeypointsOnImage.shape to have channel "
-                 + "information (i.e. tuple with 3 entries), which you did not provide (input shape: %s). The"
-                   "channels must match the corresponding image channels.") % (kps_oi_first.shape,)
+                 + "information (i.e. tuple with 3 entries), which you did not provide (input shape: %s). The "
+                 + "channels must match the corresponding image channels.") % (kps_oi_first.shape,)
             )
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
