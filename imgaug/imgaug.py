@@ -2678,7 +2678,7 @@ class KeypointsOnImage(object):
         """
         # for some reason deepcopy is way slower here than manual copy
         if keypoints is None:
-            keypoints = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
+            keypoints = [kp.deepcopy() for kp in self.keypoints]
         if shape is None:
             shape = tuple(self.shape)
         return KeypointsOnImage(keypoints, shape)

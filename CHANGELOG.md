@@ -25,6 +25,7 @@
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
 * Added method `Keypoint.copy()`.
 * Added method `Keypoint.deepcopy()`.
+* `KeypointsOnImage.deepcopy()` now uses `Keypoint.deepcopy()` to create Keypoint copies, making it more flexible.
 
 
 # 0.2.8
