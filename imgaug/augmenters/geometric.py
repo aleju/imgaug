@@ -1466,6 +1466,8 @@ class AffineCv2(meta.Augmenter):
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if not keypoints_on_image.keypoints:
+                # AffineCv2 does not change the image shape, hence we can skip
+                # all steps below if there are no keypoints
                 result.append(keypoints_on_image)
                 continue
             height, width = keypoints_on_image.height, keypoints_on_image.width
@@ -1497,7 +1499,13 @@ class AffineCv2(meta.Augmenter):
 
                 coords = keypoints_on_image.get_coords_array()
                 coords_aug = tf.matrix_transform(coords, matrix.params)
-                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=keypoints_on_image.shape))
+                kps_new = [kp.deepcopy(x=coords[0], y=coords[1])
+                           for kp, coords
+                           in zip(keypoints_on_image.keypoints, coords_aug)]
+                result.append(keypoints_on_image.deepcopy(
+                    keypoints=kps_new,
+                    shape=keypoints_on_image.shape
+                ))
             else:
                 result.append(keypoints_on_image)
         return result
