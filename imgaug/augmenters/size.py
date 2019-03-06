@@ -877,9 +877,6 @@ class CropAndPad(meta.Augmenter):
         nb_images = len(keypoints_on_images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             seed = seeds[i]
             height, width = keypoints_on_image.shape[0:2]
             crop_top, crop_right, crop_bottom, crop_left, \
