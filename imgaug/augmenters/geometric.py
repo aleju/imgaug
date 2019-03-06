@@ -2623,6 +2623,8 @@ class ElasticTransformation(meta.Augmenter):
         for i in sm.xrange(nb_images):
             kpsoi = keypoints_on_images[i]
             if not kpsoi.keypoints:
+                # ElasticTransformation does not change the shape, hence we can
+                # skip the below steps
                 continue
             h, w = kpsoi.shape[0:2]
             dx, dy = self.generate_shift_maps(
@@ -2670,9 +2672,9 @@ class ElasticTransformation(meta.Augmenter):
 
                     med = ia.compute_geometric_median(xxyy_aug)
                     # med = np.average(xxyy_aug, 0)  # uncomment to use average instead of median
-                    kps_aug.append(ia.Keypoint(x=med[0], y=med[1]))
+                    kps_aug.append(kp.deepcopy(x=med[0], y=med[1]))
 
-            result[i] = ia.KeypointsOnImage(kps_aug, shape=kpsoi.shape)
+            result[i] = kpsoi.deepcopy(keypoints=kps_aug)
 
         return result
 

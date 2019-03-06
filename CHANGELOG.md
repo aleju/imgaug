@@ -32,6 +32,7 @@
 * Refactored `AffineCv2` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 * Refactored `PiecewiseAffine` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 * Refactored `PerspectiveTransform` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Refactored `ElasticTransformation` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 
 
 # 0.2.8
