@@ -2146,6 +2146,30 @@ class Keypoint(object):
             return points
         return [Keypoint(x=points[i, 0], y=points[i, 1]) for i in sm.xrange(points.shape[0])]
 
+    def copy(self, x=None, y=None):
+        """
+        Create a shallow copy of the Keypoint object.
+
+        Parameters
+        ----------
+        x : None or number, optional
+            Coordinate of the keypoint on the x axis.
+            If ``None``, the instance's value will be copied.
+
+        y : None or number, optional
+            Coordinate of the keypoint on the y axis.
+            If ``None``, the instance's value will be copied.
+
+        Returns
+        -------
+        imgaug.Keypoint
+            Shallow copy.
+
+        """
+        x = self.x if x is None else x
+        y = self.y if y is None else y
+        return Keypoint(x=x, y=y)
+
     def __repr__(self):
         return self.__str__()
 

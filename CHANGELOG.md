@@ -23,6 +23,7 @@
 * Added method `Polygon.to_keypoints()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.deepcopy()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
+* Added method `Keypoint.copy()`.
 
 
 # 0.2.8
