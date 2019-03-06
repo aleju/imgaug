@@ -3044,10 +3044,10 @@ class Rot90(meta.Augmenter):
                         #       (hr - yr). Same problem as in horizontal flipping.
                         xr, yr = (hr - 1) - yr, xr
                         wr, hr = hr, wr
-                    kps_aug.append(ia.Keypoint(x=xr, y=yr))
+                    kps_aug.append(kp.deepcopy(x=xr, y=yr))
 
                 shape_aug = tuple([h_aug, w_aug] + list(kpsoi_i.shape[2:]))
-                kpsoi_i_aug = ia.KeypointsOnImage(kps_aug, shape=shape_aug)
+                kpsoi_i_aug = kpsoi_i.deepcopy(keypoints=kps_aug, shape=shape_aug)
                 if self.keep_size and (h, w) != (h_aug, w_aug):
                     kpsoi_i_aug = kpsoi_i_aug.on(kpsoi_i.shape)
                     kpsoi_i_aug.shape = kpsoi_i.shape
