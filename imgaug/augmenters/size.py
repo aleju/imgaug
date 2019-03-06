@@ -1958,9 +1958,7 @@ class KeepSizeByResize(meta.Augmenter):
             result = []
             gen = zip(keypoints_on_images, kps_aug, interpolations, input_shapes)
             for kps, kps_aug, interpolation, input_shape in gen:
-                if not kps.keypoints:
-                    result.append(kps_aug)
-                elif interpolation == KeepSizeByResize.NO_RESIZE:
+                if interpolation == KeepSizeByResize.NO_RESIZE:
                     result.append(kps_aug)
                 else:
                     result.append(kps_aug.on(input_shape))

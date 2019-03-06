@@ -26,6 +26,7 @@
 * Fixed `CropAndPad` not changing `KeypointsOnImage.shape` if `.keypoints` was empty. (Same for `Crop`, `Pad`.)
 * Fixed `PadToFixedSize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
 * Fixed `CropToFixedSize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `KeepSizeByResize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
 * Added method `Polygon.to_keypoints()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.deepcopy()`.
 * Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
