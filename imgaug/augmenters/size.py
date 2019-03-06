@@ -1446,9 +1446,6 @@ class PadToFixedSize(meta.Augmenter):
         pad_xs, pad_ys, _, _ = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             ih, iw = keypoints_on_image.shape[:2]
             pad_x0, _pad_x1, pad_y0, _pad_y1 = self._calculate_paddings(h, w, ih, iw, pad_xs[i], pad_ys[i])
             keypoints_padded = keypoints_on_image.shift(x=pad_x0, y=pad_y0)
