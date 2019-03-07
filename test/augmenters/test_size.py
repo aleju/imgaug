@@ -848,8 +848,7 @@ def test_Pad():
         ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
     ], shape=(4, 4, 3))
     psoi_aug = aug.augment_polygons([psoi, psoi])
-    assert kpsoi_aug.shape == (4, 4, 3)
-    assert len(kpsoi_aug.keypoints) == 2
+    assert len(psoi_aug) == 2
     for psoi_aug_i in psoi_aug:
         assert psoi_aug_i.shape == (4, 4, 3)
         assert len(psoi_aug_i.polygons) == 2
@@ -1131,8 +1130,7 @@ def test_Pad():
         ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
     ], shape=(4, 4, 3))
     psoi_aug = aug.augment_polygons([psoi, psoi])
-    assert kpsoi_aug.shape == (4, 4, 3)
-    assert len(kpsoi_aug.keypoints) == 2
+    assert len(psoi_aug) == 2
     for psoi_aug_i in psoi_aug:
         assert psoi_aug_i.shape == (4, 4, 3)
         assert len(psoi_aug_i.polygons) == 2
