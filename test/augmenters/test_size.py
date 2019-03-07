@@ -165,7 +165,7 @@ def test_Resize():
     assert 0.8 < np.average(heatmaps_aug.get_arr()[2:6, 2:10]) < 1 + 1e-6
 
     # heatmaps with different sizes than image
-    aug = iaa.Resize({"height": 16, "width": 2.0})
+    aug = iaa.Resize({"width": 2.0, "height": 16})
     heatmaps_arr = (base_img2d / 255.0).astype(np.float32)
     heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2*base_img3d.shape[0], 2*base_img3d.shape[1], 3))
     heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
@@ -189,9 +189,25 @@ def test_Resize():
     assert np.allclose(kpsoi_aug.keypoints[1].x, 6)
     assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
 
+    # polygons on 3d image
+    aug = iaa.Resize({"width": 12, "height": 8})
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (8, 0), (8, 4)]),
+        ia.Polygon([(1, 1), (7, 1), (7, 3), (1, 3)]),
+    ], shape=(4, 8, 3))
+    psoi_aug = aug.augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 2
+    assert psoi_aug.shape == (8, 12, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(
+        ia.Polygon([(0, 0), (12, 0), (12, 8)])
+    )
+    assert psoi_aug.polygons[1].exterior_almost_equals(
+        ia.Polygon([(1.5, 2), (10.5, 2), (10.5, 6), (1.5, 6)])
+    )
+
     # keypoints on 2d image,
     # different resize factors per axis
-    aug = iaa.Resize({"height": 8, "width": 3.0})
+    aug = iaa.Resize({"width": 3.0, "height": 8})
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=4, y=1)], shape=base_img2d.shape)
     kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
     assert len(kpsoi_aug.keypoints) == 2
@@ -200,6 +216,37 @@ def test_Resize():
     assert np.allclose(kpsoi_aug.keypoints[0].y, 4)
     assert np.allclose(kpsoi_aug.keypoints[1].x, 12)
     assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
+
+    # polygons on 2d image
+    # with float resize factor
+    aug = iaa.Resize({"width": 3.0, "height": 8})
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (8, 0), (8, 4)]),
+        ia.Polygon([(1, 1), (7, 1), (7, 3), (1, 3)]),
+    ], shape=(4, 8))
+    psoi_aug = aug.augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 2
+    assert psoi_aug.shape == (8, 24)
+    assert psoi_aug.polygons[0].exterior_almost_equals(
+        ia.Polygon([(3*0, 0), (3*8, 0), (3*8, 8)])
+    )
+    assert psoi_aug.polygons[1].exterior_almost_equals(
+        ia.Polygon([(3*1, 2), (3*7, 2), (3*7, 6), (3*1, 6)])
+    )
+
+    # empty keypoints
+    aug = iaa.Resize({"height": 8, "width": 12})
+    kpsoi = ia.KeypointsOnImage([], shape=(4, 8, 3))
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 0
+    assert kpsoi_aug.shape == (8, 12, 3)
+
+    # empty polygons
+    aug = iaa.Resize({"height": 8, "width": 12})
+    psoi = ia.PolygonsOnImage([], shape=(4, 8, 3))
+    psoi_aug = aug.augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 0
+    assert psoi_aug.shape == (8, 12, 3)
 
     # images with stochastic parameter (choice)
     aug = iaa.Resize([12, 14])
