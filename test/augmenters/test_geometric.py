@@ -848,24 +848,153 @@ def test_Affine():
         assert (same / img_aug_mask.size) >= 0.95
 
         # verify that shape in KeypointsOnImages changes
+        aug = iaa.Affine(rotate=90, backend=backend)
         kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(100, 200, 3))
-        kps_aug = iaa.Affine(rotate=90).augment_keypoints(kps)
+        kps_aug = aug.augment_keypoints(kps)
         assert kps_aug.shape == (100, 200, 3)
         assert not np.allclose([kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
                                [kps.keypoints[0].x, kps.keypoints[0].y],
                                atol=1e-1, rtol=0)
 
+        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
         kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(100, 200, 3))
-        kps_aug = iaa.Affine(rotate=90, fit_output=True).augment_keypoints(kps)
+        kps_aug = aug.augment_keypoints(kps)
         assert kps_aug.shape == (200, 100, 3)
         assert not np.allclose([kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
                                [kps.keypoints[0].x, kps.keypoints[0].y],
                                atol=1e-1, rtol=0)
 
+        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
         kps = ia.KeypointsOnImage([], shape=(100, 200, 3))
-        kps_aug = iaa.Affine(rotate=90, fit_output=True).augment_keypoints(kps)
+        kps_aug = aug.augment_keypoints(kps)
         assert kps_aug.shape == (200, 100, 3)
         assert len(kps_aug.keypoints) == 0
+
+        # verify that shape in PolygonsOnImages changes
+        aug = iaa.Affine(rotate=90, backend=backend)
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(10, 10), (20, 10), (20, 20)])], shape=(100, 200, 3))
+        psoi_aug = aug.augment_polygons([psoi, psoi])
+        assert len(psoi_aug) == 2
+        for psoi_aug_i in psoi_aug:
+            assert psoi_aug_i.shape == (100, 200, 3)
+            assert not psoi_aug_i.polygons[0].exterior_almost_equals(
+                psoi.polygons[0].exterior, max_distance=1e-1)
+            assert psoi_aug_i.polygons[0].is_valid
+
+        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(10, 10), (20, 10), (20, 20)])], shape=(100, 200, 3))
+        psoi_aug = aug.augment_polygons([psoi, psoi])
+        assert len(psoi_aug) == 2
+        for psoi_aug_i in psoi_aug:
+            assert psoi_aug_i.shape == (200, 100, 3)
+            assert psoi_aug_i.polygons[0].exterior_almost_equals(
+                ia.Polygon([(100-10-1, 10), (100-10-1, 20), (100-20-1, 20)])
+            )
+            assert psoi_aug_i.polygons[0].is_valid
+
+        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+        psoi = ia.PolygonsOnImage([], shape=(100, 200, 3))
+        psoi_aug = aug.augment_polygons(psoi)
+        assert psoi_aug.shape == (200, 100, 3)
+        assert len(psoi_aug.polygons) == 0
+
+    # ------------
+    # image-keypoint alignment
+    # ------------
+    aug = iaa.Affine(rotate=[0, 180], order=0)
+    img = np.zeros((10, 10), dtype=np.uint8)
+    img[0:5, 5] = 255
+    img[2, 4:6] = 255
+    img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=2)], shape=img.shape)
+    kpsoi_rot = [(5, 2), (5-1, 10-2-1)]
+    img_aug_indices = []
+    kpsois_aug_indices = []
+    for _ in sm.xrange(40):
+        aug_det = aug.to_deterministic()
+        imgs_aug = aug_det.augment_images([img, img])
+        kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
+        assert kpsois_aug[0].shape == img.shape
+        assert kpsois_aug[1].shape == img.shape
+
+        for img_aug in imgs_aug:
+            if np.array_equal(img_aug, img_rot[0]):
+                img_aug_indices.append(0)
+            elif np.array_equal(img_aug, img_rot[1]):
+                img_aug_indices.append(1)
+            else:
+                assert False
+        for kpsoi_aug in kpsois_aug:
+            if np.allclose([kpsoi_aug.keypoints[0].x, kpsoi_aug.keypoints[0].y], kpsoi_rot[0]):
+                kpsois_aug_indices.append(0)
+            elif np.allclose([kpsoi_aug.keypoints[0].x, kpsoi_aug.keypoints[0].y], kpsoi_rot[1]):
+                kpsois_aug_indices.append(1)
+            else:
+                assert False
+    assert np.array_equal(img_aug_indices, kpsois_aug_indices)
+    assert len(set(img_aug_indices)) == 2
+    assert len(set(kpsois_aug_indices)) == 2
+
+    # ------------
+    # image-polygon alignment
+    # ------------
+    aug = iaa.Affine(rotate=[0, 180], order=0)
+    img = np.zeros((10, 10), dtype=np.uint8)
+    img[0:5, 5] = 255
+    img[2, 4:6] = 255
+    img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
+    psoi = ia.PolygonsOnImage([ia.Polygon([(1, 1), (9, 1), (5, 5)])], shape=img.shape)
+    psoi_rot = [
+        psoi.polygons[0].deepcopy(),
+        ia.Polygon([(10-1-1, 10-1-1), (10-9-1, 10-1-1), (10-5-1, 10-5-1)])
+    ]
+    img_aug_indices = []
+    psois_aug_indices = []
+    for _ in sm.xrange(40):
+        aug_det = aug.to_deterministic()
+        imgs_aug = aug_det.augment_images([img, img])
+        psois_aug = aug_det.augment_polygons([psoi, psoi])
+        assert psois_aug[0].shape == img.shape
+        assert psois_aug[1].shape == img.shape
+        assert psois_aug[0].polygons[0].is_valid
+        assert psois_aug[1].polygons[0].is_valid
+
+        for img_aug in imgs_aug:
+            if np.array_equal(img_aug, img_rot[0]):
+                img_aug_indices.append(0)
+            elif np.array_equal(img_aug, img_rot[1]):
+                img_aug_indices.append(1)
+            else:
+                assert False
+        for psoi_aug in psois_aug:
+            if psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[0]):
+                psois_aug_indices.append(0)
+            elif psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[1]):
+                psois_aug_indices.append(1)
+            else:
+                assert False
+    assert np.array_equal(img_aug_indices, psois_aug_indices)
+    assert len(set(img_aug_indices)) == 2
+    assert len(set(psois_aug_indices)) == 2
+
+    # ------------
+    # make sure that polygons stay valid upon extreme scaling
+    # ------------
+    scales = [1e-4, 1e-2, 1e2, 1e4]
+    backends = ["auto", "cv2", "skimage"]
+    orders = [0, 1, 3]
+    for scale, backend, order in zip(scales, backends, orders):
+        aug = iaa.Affine(scale=scale, order=order)
+        psoi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (10, 0), (5, 5)])], shape=(10, 10))
+        psoi_aug = aug.augment_polygons(psoi)
+        poly = psoi_aug.polygons[0]
+        ext = poly.exterior
+        assert poly.is_valid
+        assert ext[0][0] < ext[2][0] < ext[1][0]
+        assert ext[0][1] < ext[2][1]
+        assert np.allclose(ext[0][1], ext[1][1])
 
     # ------------
     # exceptions for bad inputs
