@@ -823,6 +823,49 @@ def test_Pad():
     assert np.allclose(kpsoi_aug.keypoints[1].x, ((4+3)/8)*4)
     assert np.allclose(kpsoi_aug.keypoints[1].y, ((2+0)/10)*4)
 
+    # polygons
+    aug = iaa.Pad((2, 0, 4, 4), keep_size=False)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(4, 4, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert len(psoi_aug) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (10, 8, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(4, 2), (8, 2), (8, 6), (4, 6)])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(5, 3), (9, 3), (9, 7), (5, 7)])
+        )
+
+    # polygons, with keep_size=True
+    aug = iaa.Pad((2, 0, 4, 4), keep_size=True)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(4, 4, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert kpsoi_aug.shape == (4, 4, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (4, 4, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(4*(4/8), 4*(2/10)),
+                        (4*(8/8), 4*(2/10)),
+                        (4*(8/8), 4*(6/10)),
+                        (4*(4/8), 4*(6/10))])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(4*(5/8), 4*(3/10)),
+                        (4*(9/8), 4*(3/10)),
+                        (4*(9/8), 4*(7/10)),
+                        (4*(5/8), 4*(7/10))])
+        )
+
     # pad modes
     image = np.zeros((1, 2), dtype=np.uint8)
     image[0, 0] = 100
@@ -1062,6 +1105,49 @@ def test_Pad():
     assert np.allclose(kpsoi_aug.keypoints[0].y, ((2+2)/10)*4)
     assert np.allclose(kpsoi_aug.keypoints[1].x, ((4+3)/8)*4)
     assert np.allclose(kpsoi_aug.keypoints[1].y, ((2+0)/10)*4)
+
+    # polygons
+    aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=False)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(4, 4, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert len(psoi_aug) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (10, 8, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(4, 2), (8, 2), (8, 6), (4, 6)])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(5, 3), (9, 3), (9, 7), (5, 7)])
+        )
+
+    # polygons, with keep_size=True
+    aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=True)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(4, 4, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert kpsoi_aug.shape == (4, 4, 3)
+    assert len(kpsoi_aug.keypoints) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (4, 4, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(4*(4/8), 4*(2/10)),
+                        (4*(8/8), 4*(2/10)),
+                        (4*(8/8), 4*(6/10)),
+                        (4*(4/8), 4*(6/10))])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(4*(5/8), 4*(3/10)),
+                        (4*(9/8), 4*(3/10)),
+                        (4*(9/8), 4*(7/10)),
+                        (4*(5/8), 4*(7/10))])
+        )
 
     # test pad by range of percentages
     aug = iaa.Pad(percent=((0, 1.0), 0, 0, 0), keep_size=False)
