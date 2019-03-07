@@ -1096,8 +1096,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        result : imgaug.MultiPolygonsOnImage \
-                 or list of imgaug.MultiPolygonsOnImage
+        result : imgaug.PolygonsOnImage or list of imgaug.PolygonsOnImage
             Augmented polygons.
 
         """
