@@ -1477,6 +1477,48 @@ def test_Crop():
     assert np.allclose(kpsoi_aug.keypoints[1].x, ((8-4)/10)*14)
     assert np.allclose(kpsoi_aug.keypoints[1].y, ((5-1)/9)*14)
 
+    # polygons
+    aug = iaa.Crop((1, 0, 4, 4), keep_size=False)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(10, 10, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert len(psoi_aug) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (5, 6, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(0-4, 0-1), (4-4, 0-1), (4-4, 4-1), (0-4, 4-1)])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(1-4, 1-1), (5-4, 1-1), (5-4, 5-1), (1-4, 5-1)])
+        )
+
+    # polygons, with keep_size=True
+    aug = iaa.Crop((1, 0, 4, 4), keep_size=True)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(10, 10, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert len(psoi_aug) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (10, 10, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(10*(-4/6), 10*(-1/5)),
+                        (10*(0/6), 10*(-1/5)),
+                        (10*(0/6), 10*(3/5)),
+                        (10*(-4/6), 10*(3/5))])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(10*(-3/6), 10*(0/5)),
+                        (10*(1/6), 10*(0/5)),
+                        (10*(1/6), 10*(4/5)),
+                        (10*(-3/6), 10*(4/5))])
+        )
+
     # ------------------
     # crop by percentages
     # ------------------
@@ -1596,6 +1638,48 @@ def test_Crop():
     assert np.allclose(kpsoi_aug.keypoints[0].y, ((10-4)/4)*16)
     assert np.allclose(kpsoi_aug.keypoints[1].x, ((8-2)/18)*20)
     assert np.allclose(kpsoi_aug.keypoints[1].y, ((12-4)/4)*16)
+
+    # polygons
+    aug = iaa.Crop(percent=(0.2, 0, 0.5, 0.1), keep_size=False)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(10, 10, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert len(psoi_aug) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (3, 9, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(0-1, 0-2), (4-1, 0-2), (4-1, 4-2), (0-1, 4-2)])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(1-1, 1-2), (5-1, 1-2), (5-1, 5-2), (1-1, 5-2)])
+        )
+
+    # polygons, with keep_size=True
+    aug = iaa.Crop(percent=(0.2, 0, 0.5, 0.1), keep_size=True)
+    psoi = ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
+        ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
+    ], shape=(10, 10, 3))
+    psoi_aug = aug.augment_polygons([psoi, psoi])
+    assert len(psoi_aug) == 2
+    for psoi_aug_i in psoi_aug:
+        assert psoi_aug_i.shape == (10, 10, 3)
+        assert len(psoi_aug_i.polygons) == 2
+        assert psoi_aug_i.polygons[0].exterior_almost_equals(
+            ia.Polygon([(10*(-1/9), 10*(-2/3)),
+                        (10*(3/9), 10*(-2/3)),
+                        (10*(3/9), 10*(2/3)),
+                        (10*(-1/9), 10*(2/3))])
+        )
+        assert psoi_aug_i.polygons[1].exterior_almost_equals(
+            ia.Polygon([(10*(0/9), 10*(-1/3)),
+                        (10*(4/9), 10*(-1/3)),
+                        (10*(4/9), 10*(3/3)),
+                        (10*(0/9), 10*(3/3))])
+        )
 
     # test crop by range of percentages
     aug = iaa.Crop(percent=((0, 0.1), 0, 0, 0), keep_size=False)
