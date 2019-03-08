@@ -1250,11 +1250,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 poly_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
                 poly_old = polygons_on_images[img_idx].polygons[i]
                 if recoverer is not None:
-                    poly_kps_aug = recoverer.recover_from(
+                    poly_aug = recoverer.recover_from(
                         [(kp.x, kp.y) for kp in poly_kps_aug],
                         poly_old,
                         random_state=rss[1])
-                poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
+                else:
+                    poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
                 polys_aug.append(poly_aug)
                 counter += count
             result.append(ia.PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
