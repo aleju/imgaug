@@ -2054,6 +2054,12 @@ class PerspectiveTransform(meta.Augmenter):
         self.jitter = iap.Normal(loc=0, scale=self.scale)
         self.keep_size = keep_size
 
+        # setting these to 1x1 caused problems for large scales and polygon
+        # augmentation
+        self.min_width = 2
+        self.min_height = 2
+        self.shift_step_size = 0.5
+
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
                          allowed=["bool", "uint8", "uint16", "int8", "int16",
@@ -2220,16 +2226,32 @@ class PerspectiveTransform(meta.Augmenter):
             # compute the width of the new image, which will be the
             # maximum distance between bottom-right and bottom-left
             # x-coordiates or the top-right and top-left x-coordinates
-            width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-            width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-            max_width = max(int(width_a), int(width_b))
+            min_width = None
+            while min_width is None or min_width < self.min_width:
+                width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+                width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+                max_width = max(int(width_a), int(width_b))
+                min_width = min(int(width_a), int(width_b))
+                if min_width < self.min_width:
+                    tl[0] -= self.shift_step_size
+                    tr[0] += self.shift_step_size
+                    bl[0] -= self.shift_step_size
+                    br[0] += self.shift_step_size
 
             # compute the height of the new image, which will be the
             # maximum distance between the top-right and bottom-right
             # y-coordinates or the top-left and bottom-left y-coordinates
-            height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-            height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-            max_height = max(int(height_a), int(height_b))
+            min_height = None
+            while min_height is None or min_height < self.min_height:
+                height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+                height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+                max_height = max(int(height_a), int(height_b))
+                min_height = min(int(height_a), int(height_b))
+                if min_height < self.min_height:
+                    tl[1] -= self.shift_step_size
+                    tr[1] -= self.shift_step_size
+                    bl[1] += self.shift_step_size
+                    br[1] += self.shift_step_size
 
             # now that we have the dimensions of the new image, construct
             # the set of destination points to obtain a "birds eye view",
