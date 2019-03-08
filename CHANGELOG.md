@@ -41,6 +41,8 @@
 * Refactored `PerspectiveTransform` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 * Refactored `ElasticTransformation` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
 * Refactored `Rot90` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Changed `Keypoint.project()` to raise an exception if `from_shape[0:2]` contains zeros.
+* Changed `Keypoint.project()` to raise a warning if `to_shape[0:2]` contains zeros.
 
 
 # 0.2.8

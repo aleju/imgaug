@@ -2054,12 +2054,22 @@ class Keypoint(object):
         """
         if from_shape[0:2] == to_shape[0:2]:
             return self.deepcopy(x=self.x, y=self.y)
-        else:
-            from_height, from_width = from_shape[0:2]
-            to_height, to_width = to_shape[0:2]
-            x = (self.x / from_width) * to_width
-            y = (self.y / from_height) * to_height
-            return self.deepcopy(x=x, y=y)
+
+        # avoid division by zeros
+        # TODO add this to other project() functions too
+        assert all([v > 0 for v in from_shape[0:2]]), \
+            "Got invalid from_shape %s in Keypoint.project()" % (
+                str(from_shape),)
+        if any([v <= 0 for v in to_shape[0:2]]):
+            import warnings
+            warnings.warn("Got invalid to_shape %s in Keypoint.project()" % (
+                str(to_shape),))
+
+        from_height, from_width = from_shape[0:2]
+        to_height, to_width = to_shape[0:2]
+        x = (self.x / from_width) * to_width
+        y = (self.y / from_height) * to_height
+        return self.deepcopy(x=x, y=y)
 
     def shift(self, x=0, y=0):
         """
