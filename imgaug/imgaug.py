@@ -3787,9 +3787,13 @@ class Polygon(object):
                 # list of tuples (x, y)
                 self.exterior = np.float32([[point[0], point[1]] for point in exterior])
         else:
-            do_assert(is_np_array(exterior))
-            do_assert(exterior.ndim == 2)
-            do_assert(exterior.shape[1] == 2)
+            do_assert(is_np_array(exterior),
+                      ("Expected exterior to be a list of tuples (x, y) or "
+                       + "an (N, 2) array, got type %s") % (exterior,))
+            do_assert(exterior.ndim == 2 and exterior.shape[1] == 2,
+                      ("Expected exterior to be a list of tuples (x, y) or "
+                       + "an (N, 2) array, got an array of shape %s") % (
+                          exterior.shape,))
             self.exterior = np.float32(exterior)
 
         # Remove last point if it is essentially the same as the first point (polygons are always assumed to be
