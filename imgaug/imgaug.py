@@ -4453,10 +4453,12 @@ class Polygon(object):
 
         Parameters
         ----------
-        other_polygon : imgaug.Polygon or (N,2) ndarray
+        other_polygon : imgaug.Polygon or (N,2) ndarray or list of tuple
             The other polygon with which to compare the exterior.
             If this is an ndarray, it is assumed to represent an exterior.
             It must then have dtype float32 and shape (N,2) with the second dimension denoting xy-coordinates.
+            If this is a list of tuples, it is assumed to represent an exterior.
+            Each tuple then must contain exactly two numbers, denoting xy-coordinates.
 
         max_distance : number
             The maximum euclidean distance between a point on one polygon and the closest point on the other polygon.
@@ -4481,7 +4483,13 @@ class Polygon(object):
         atol = max_distance
 
         ext_a = self.exterior
-        ext_b = other_polygon.exterior if not is_np_array(other_polygon) else other_polygon
+        if isinstance(other_polygon, list):
+            ext_b = np.float32(other_polygon)
+        elif is_np_array(other_polygon):
+            ext_b = other_polygon
+        else:
+            assert isinstance(other_polygon, Polygon)
+            ext_b = other_polygon.exterior
         len_a = len(ext_a)
         len_b = len(ext_b)
 
@@ -4515,9 +4523,12 @@ class Polygon(object):
         # After this point, both polygons have at least 2 points, i.e. LineStrings can be used.
         # We can also safely go back to the original exteriors (before close points were merged).
         ls_a = self.to_shapely_line_string(closed=True, interpolate=interpolate)
-        ls_b = other_polygon.to_shapely_line_string(closed=True, interpolate=interpolate) \
-            if not is_np_array(other_polygon) \
-            else _convert_points_to_shapely_line_string(other_polygon, closed=True, interpolate=interpolate)
+        if isinstance(other_polygon, list) or is_np_array(other_polygon):
+            ls_b = _convert_points_to_shapely_line_string(
+                other_polygon, closed=True, interpolate=interpolate)
+        else:
+            ls_b = other_polygon.to_shapely_line_string(
+                closed=True, interpolate=interpolate)
 
         # Measure the distance from each point in A to LineString B and vice versa.
         # Make sure that no point violates the tolerance.

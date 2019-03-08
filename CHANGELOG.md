@@ -45,6 +45,7 @@
 * Changed `Keypoint.project()` to raise a warning if `to_shape[0:2]` contains zeros.
 * Changed `PerspectiveTransform` to ensure minimum height and width of output images (by default `2x2`).
   This prevents errors in polygon augmentation (possibly also in keypoint augmentation).
+* Changed `Polygon.exterior_almost_equals()` to accept lists of tuples as argument `other_polygon`.
 
 
 # 0.2.8
