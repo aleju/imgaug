@@ -3409,7 +3409,9 @@ def test_ElasticTransformation():
         got_exception = True
     assert got_exception
 
+    # -----------
     # keypoints
+    # -----------
     # for small alpha, should not move if below threshold
     alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
     sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
@@ -3453,6 +3455,7 @@ def test_ElasticTransformation():
     iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
 
     # for small alpha (at sigma 1.0), should barely move
+    # if thresholds set to zero
     alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
     sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
     iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0
@@ -3473,6 +3476,137 @@ def test_ElasticTransformation():
     iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
     iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
 
+    # test alignment between between images and keypoints
+    image = np.zeros((120, 70), dtype=np.uint8)
+    s = 3
+    image[:, 35-s:35+s+1] = 255
+    kps = [ia.Keypoint(x=35, y=20),
+           ia.Keypoint(x=35, y=40),
+           ia.Keypoint(x=35, y=60),
+           ia.Keypoint(x=35, y=80),
+           ia.Keypoint(x=35, y=100)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=image.shape)
+    aug = iaa.ElasticTransformation(alpha=70, sigma=5)
+    aug_det = aug.to_deterministic()
+    images_aug = aug_det.augment_images([image, image])
+    kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
+    count_bad = 0
+    for image_aug, kpsoi_aug in zip(images_aug, kpsois_aug):
+        assert kpsoi_aug.shape == (120, 70)
+        assert len(kpsoi_aug.keypoints) == 5
+        for kp_aug in kpsoi_aug.keypoints:
+            x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
+            bb = ia.BoundingBox(x1=x-2, x2=x+2+1, y1=y-2, y2=y+2+1)
+            img_ex = bb.extract_from_image(image_aug)
+            if np.any(img_ex > 10):
+                pass  # close to expected location
+            else:
+                count_bad += 1
+    assert count_bad <= 1
+
+    # test empty keypoints
+    aug = iaa.ElasticTransformation(alpha=10, sigma=10)
+    kpsoi_aug = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(10, 10, 3)))
+    assert len(kpsoi_aug.keypoints) == 0
+    assert kpsoi_aug.shape == (10, 10, 3)
+
+    # -----------
+    # polygons
+    # -----------
+    # for small alpha, should not move if below threshold
+    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 1.0
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
+    poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
+    psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == (50, 50)
+    assert len(observed.polygons) == 1
+    assert observed.polygons[0].exterior_almost_equals(poly)
+    assert observed.polygons[0].is_valid
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+
+    # for small sigma, should not move if below threshold
+    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0.0
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 1.0
+    poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
+    psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+    aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == (50, 50)
+    assert len(observed.polygons) == 1
+    assert observed.polygons[0].exterior_almost_equals(poly)
+    assert observed.polygons[0].is_valid
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+
+    # for small alpha (at sigma 1.0), should barely move
+    # if thresholds set to zero
+    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
+    poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
+    psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == (50, 50)
+    assert len(observed.polygons) == 1
+    assert observed.polygons[0].exterior_almost_equals(poly, max_distance=0.5)
+    assert observed.polygons[0].is_valid
+    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
+    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+
+    # test alignment between between images and polygons
+    image = np.zeros((100, 100), dtype=np.uint8)
+    s = 3
+    image[15-s:15+s+1, 10-s:10+s+1] = 255
+    image[15-s:15+s+1, 30-s:30+s+1] = 255
+    image[15-s:15+s+1, 60-s:60+s+1] = 255
+    image[15-s:15+s+1, 80-s:80+s+1] = 255
+
+    image[75-s:75+s+1, 10-s:10+s+1] = 255
+    image[75-s:75+s+1, 30-s:30+s+1] = 255
+    image[75-s:75+s+1, 60-s:60+s+1] = 255
+    image[75-s:75+s+1, 80-s:80+s+1] = 255
+
+    poly = ia.Polygon([(10, 15), (30, 15), (60, 15), (80, 15),
+                       (80, 75), (60, 75), (40, 75), (10, 75)])
+    psoi = ia.PolygonsOnImage([poly], shape=image.shape)
+    aug = iaa.ElasticTransformation(alpha=70, sigma=5)
+    aug_det = aug.to_deterministic()
+    images_aug = aug_det.augment_images([image, image])
+    psois_aug = aug_det.augment_polygons([psoi, psoi])
+    count_bad = 0
+    for image_aug, psoi_aug in zip(images_aug, psois_aug):
+        assert psoi_aug.shape == (100, 100)
+        assert len(psoi_aug.polygons) == 1
+        for poly_aug in psoi_aug.polygons:
+            assert poly_aug.is_valid
+            for point_aug in poly_aug.exterior:
+                x, y = int(np.round(point_aug[0])), int(np.round(point_aug[1]))
+                bb = ia.BoundingBox(x1=x-2, x2=x+2+1, y1=y-2, y2=y+2+1)
+                img_ex = bb.extract_from_image(image_aug)
+                if np.any(img_ex > 10):
+                    pass  # close to expected location
+                else:
+                    count_bad += 1
+    assert count_bad <= 2
+
+    # test empty polygons
+    aug = iaa.ElasticTransformation(alpha=10, sigma=10)
+    psoi_aug = aug.augment_polygons(ia.PolygonsOnImage([], shape=(10, 10, 3)))
+    assert len(psoi_aug.polygons) == 0
+    assert psoi_aug.shape == (10, 10, 3)
+
+    # -----------
+    # heatmaps
+    # -----------
     # test alignment between images and heatmaps
     img = np.zeros((80, 80), dtype=np.uint8)
     img[:, 30:50] = 255
@@ -3507,7 +3641,9 @@ def test_ElasticTransformation():
     same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
     assert (same / img_aug_mask.size) >= 0.94
 
-    # get_parameters()
+    # -----------
+    # get_parameters
+    # -----------
     aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Deterministic)
