@@ -1223,10 +1223,6 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             The augmented polygons.
 
         """
-        rss = [random_state]
-        if recoverer is not None:
-            rss = ia.derive_random_states(random_state, 2)
-
         kps_ois = []
         kp_counts = []
         for polys_oi in polygons_on_images:
@@ -1239,7 +1235,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             kps_ois.append(ia.KeypointsOnImage(kps, shape=polys_oi.shape))
             kp_counts.append(kp_counts_image)
 
-        kps_ois_aug = self._augment_keypoints(kps_ois, rss[0], parents, hooks)
+        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents, hooks)
 
         result = []
         gen = enumerate(zip(kps_ois_aug, kp_counts))
@@ -1250,10 +1246,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 poly_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
                 poly_old = polygons_on_images[img_idx].polygons[i]
                 if recoverer is not None:
+                    # make sure to not derive random state from random_state
+                    # at the start of this function, otherwise random_state
+                    # in _augment_keypoints() will be unaligned with images
                     poly_aug = recoverer.recover_from(
                         [(kp.x, kp.y) for kp in poly_kps_aug],
                         poly_old,
-                        random_state=rss[1])
+                        random_state=random_state)
                 else:
                     poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
                 polys_aug.append(poly_aug)
