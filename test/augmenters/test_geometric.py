@@ -3770,6 +3770,10 @@ def test_Rot90():
     hms = ia.HeatmapsOnImage(img[..., 0:1].astype(np.float32) / 255, shape=(4, 4, 3))
     hms_smaller = ia.HeatmapsOnImage(np.float32([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]), shape=(4, 8, 3))
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=3)], shape=(4, 8, 3))
+    psoi = ia.PolygonsOnImage(
+        [ia.Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])],
+        shape=(4, 8, 3)
+    )
 
     # k=0, k=4
     for k in [0, 4]:
@@ -3788,6 +3792,13 @@ def test_Rot90():
         assert kpsoi_aug.shape == kpsoi.shape
         for kp_aug, kp in zip(kpsoi_aug.keypoints, kpsoi.keypoints):
             assert np.allclose([kp_aug.x, kp_aug.y], [kp.x, kp.y])
+
+        psoi_aug = aug.augment_polygons(psoi)
+        assert psoi_aug.shape == psoi.shape
+        assert len(psoi_aug.polygons) == 1
+        assert psoi_aug.polygons[0].is_valid
+        for poly_aug, poly in zip(psoi_aug.polygons, psoi.polygons):
+            assert np.allclose(poly_aug.exterior, poly.exterior)
 
     # k=1, k=5
     for k in [1, 5]:
@@ -3813,6 +3824,13 @@ def test_Rot90():
         for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
             assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
 
+        psoi_aug = aug.augment_polygons(psoi)
+        assert psoi_aug.shape == (8, 4, 3)
+        assert len(psoi_aug.polygons) == 1
+        assert psoi_aug.polygons[0].is_valid
+        expected = [(4-1-1, 1), (4-1-1, 3), (4-3-1, 3), (4-1-3, 1)]
+        assert psoi_aug.polygons[0].exterior_almost_equals(expected)
+
     # k=2
     aug = iaa.Rot90(2, keep_size=False)
 
@@ -3835,6 +3853,13 @@ def test_Rot90():
     expected = [(6, 1), (5, 0)]
     for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
         assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    psoi_aug = aug.augment_polygons(psoi)
+    assert psoi_aug.shape == (4, 8, 3)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.polygons[0].is_valid
+    expected = [(8-1-1, 2), (8-1-3, 2), (8-1-3, 0), (8-1-1, 0)]
+    assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
     # k=3, k=-1
     for k in [3, -1]:
@@ -3860,6 +3885,13 @@ def test_Rot90():
         for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
             assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
 
+        psoi_aug = aug.augment_polygons(psoi)
+        assert psoi_aug.shape == (8, 4, 3)
+        assert len(psoi_aug.polygons) == 1
+        assert psoi_aug.polygons[0].is_valid
+        expected = [(4-1-2, 6), (4-1-2, 4), (4-1-0, 4), (4-1-0, 6)]
+        assert psoi_aug.polygons[0].exterior_almost_equals(expected)
+
     # verify once without np.rot90
     img_aug = iaa.Rot90(k=1, keep_size=False).augment_image(
         np.uint8([[1, 0, 0],
@@ -3868,7 +3900,7 @@ def test_Rot90():
     expected = np.uint8([[0, 1], [2, 0], [0, 0]])
     assert np.array_equal(img_aug, expected)
 
-    # keep_size=True
+    # keep_size=True, k=1
     aug = iaa.Rot90(1, keep_size=True)
 
     img_nonsquare = np.arange(5*4*3).reshape((5, 4, 3)).astype(np.uint8)
@@ -3896,6 +3928,14 @@ def test_Rot90():
     expected = [(8*x/4, 4*y/8) for x, y in expected]
     for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
         assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    psoi_aug = aug.augment_polygons(psoi)
+    assert psoi_aug.shape == (4, 8, 3)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.polygons[0].is_valid
+    expected = [(4-1-1, 1), (4-1-1, 3), (4-3-1, 3), (4-1-3, 1)]
+    expected = [(8*x/4, 4*y/8) for x, y in expected]
+    assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
     # test parameter stochasticity
     aug = iaa.Rot90([1, 3])
@@ -3945,6 +3985,30 @@ def test_Rot90():
     assert np.allclose([kpsoi_aug[2].keypoints[1].x, kpsoi_aug[2].keypoints[1].y], [0, 2])
     assert np.allclose([kpsoi_aug[3].keypoints[0].x, kpsoi_aug[3].keypoints[0].y], [6, 1])
     assert np.allclose([kpsoi_aug[3].keypoints[1].x, kpsoi_aug[3].keypoints[1].y], [5, 0])
+
+    psoi_aug = aug.augment_polygons([psoi] * 4)
+    assert psoi_aug[0].shape == (8, 4, 3)
+    assert psoi_aug[1].shape == (4, 8, 3)
+    assert psoi_aug[2].shape == (8, 4, 3)
+    assert psoi_aug[3].shape == (4, 8, 3)
+    expected_rot1 = [(4-1-1, 1), (4-1-1, 3), (4-3-1, 3), (4-1-3, 1)]
+    expected_rot2 = [(8-1-1, 2), (8-1-3, 2), (8-1-3, 0), (8-1-1, 0)]
+    assert psoi_aug[0].polygons[0].exterior_almost_equals(expected_rot1)
+    assert psoi_aug[1].polygons[0].exterior_almost_equals(expected_rot2)
+    assert psoi_aug[2].polygons[0].exterior_almost_equals(expected_rot1)
+    assert psoi_aug[3].polygons[0].exterior_almost_equals(expected_rot2)
+
+    # test empty keypoints
+    aug = iaa.Rot90(k=1, keep_size=False)
+    kpsoi_aug = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(4, 8, 3)))
+    assert len(kpsoi_aug.keypoints) == 0
+    assert kpsoi_aug.shape == (8, 4, 3)
+
+    # test empty polygons
+    aug = iaa.Rot90(k=1, keep_size=False)
+    psoi_aug = aug.augment_polygons(ia.PolygonsOnImage([], shape=(4, 8, 3)))
+    assert len(psoi_aug.polygons) == 0
+    assert psoi_aug.shape == (8, 4, 3)
 
     # get_parameters()
     aug = iaa.Rot90([1, 3], keep_size=False)
