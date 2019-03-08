@@ -2606,15 +2606,14 @@ def test_PiecewiseAffine():
     # ---------
     # keypoints
     # ---------
-    # basic test
     img = np.zeros((100, 80), dtype=np.uint8)
     img[:, 9:11+1] = 255
     img[:, 69:71+1] = 255
-    mask = img > 0
     kps = [ia.Keypoint(x=10, y=20), ia.Keypoint(x=10, y=40),
            ia.Keypoint(x=70, y=20), ia.Keypoint(x=70, y=40)]
     kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
 
+    # alignment
     aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
     aug_det = aug.to_deterministic()
     observed_img = aug_det.augment_image(img)
@@ -2634,6 +2633,68 @@ def test_PiecewiseAffine():
     kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
     observed = aug.augment_keypoints([kpsoi])
     assert keypoints_equal([kpsoi], observed)
+
+    # empty keypoints
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+    kpsoi = ia.KeypointsOnImage([], shape=img.shape)
+    observed = aug.augment_keypoints(kpsoi)
+    assert observed.shape == img.shape
+    assert len(observed.keypoints) == 0
+
+    # ---------
+    # polygons
+    # ---------
+    img = np.zeros((100, 80), dtype=np.uint8)
+    img[:, 10-5:10+5] = 255
+    img[:, 70-5:70+5] = 255
+    exterior = [(10, 10),
+                (70, 10), (70, 20), (70, 30), (70, 40),
+                (70, 50), (70, 60), (70, 70), (70, 80),
+                (70, 90),
+                (10, 90),
+                (10, 80), (10, 70), (10, 60), (10, 50),
+                (10, 40), (10, 30), (10, 20), (10, 10)]
+    poly = ia.Polygon(exterior)
+    psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)], shape=img.shape)
+
+    # alignment
+    aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
+    aug_det = aug.to_deterministic()
+    observed_imgs = aug_det.augment_images([img, img])
+    observed_psois = aug_det.augment_polygons([psoi, psoi])
+    for observed_img, observed_psoi in zip(observed_imgs, observed_psois):
+        assert observed_psoi.shape == img.shape
+        for poly_aug in observed_psoi.polygons:
+            assert poly_aug.is_valid
+            for point_aug in poly_aug.exterior:
+                x, y = int(np.round(point_aug[0])), int(np.round(point_aug[1]))
+                assert observed_img[y, x] > 0
+
+    # scale 0
+    aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == img.shape
+    assert observed.polygons[0].exterior_almost_equals(psoi.polygons[0])
+    assert observed.polygons[1].exterior_almost_equals(psoi.polygons[1])
+    assert observed.polygons[0].is_valid
+    assert observed.polygons[1].is_valid
+
+    # points outside of image
+    aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
+    exterior = [(-10, -10), (110, -10), (110, 90), (-10, 90)]
+    poly = ia.Polygon(exterior)
+    psoi = ia.PolygonsOnImage([poly], shape=img.shape)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == img.shape
+    assert observed.polygons[0].exterior_almost_equals(poly)
+    assert observed.polygons[0].is_valid
+
+    # empty PolygonsOnImage
+    aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+    psoi = ia.PolygonsOnImage([], shape=img.shape)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == img.shape
+    assert len(observed.polygons) == 0
 
     # ---------
     # get_parameters
