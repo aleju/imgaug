@@ -4996,6 +4996,8 @@ class _ConcavePolygonRecoverer(object):
         new_exterior_concave_ids = self._fit_best_valid_polygon(new_exterior_inter, rss[2])
         new_exterior_concave = [new_exterior_inter[idx] for idx in new_exterior_concave_ids]
 
+        # TODO return new_exterior_concave here instead of polygon, leave it to
+        #      caller to decide what to do with it
         return old_polygon.deepcopy(exterior=new_exterior_concave)
 
     def _remove_consecutive_duplicate_points(self, points):
