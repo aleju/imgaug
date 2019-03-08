@@ -2903,6 +2903,9 @@ def test_PerspectiveTransform():
         got_exception = True
     assert got_exception
 
+    # --------
+    # keypoints
+    # --------
     # keypoint augmentation without keep_size
     # TODO deviations of around 0.4-0.7 in this and the next test (between expected and observed
     # coordinates) -- why?
@@ -2933,7 +2936,145 @@ def test_PerspectiveTransform():
         assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
         assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
 
+    # random state alignment
+    img = np.zeros((100, 100), dtype=np.uint8)
+    img[25-3:25+3, 25-3:25+3] = 255
+    img[50-3:50+3, 25-3:25+3] = 255
+    img[75-3:75+3, 25-3:25+3] = 255
+    img[25-3:25+3, 75-3:75+3] = 255
+    img[50-3:50+3, 75-3:75+3] = 255
+    img[75-3:75+3, 75-3:75+3] = 255
+    img[50-3:75+3, 50-3:75+3] = 255
+    kps = [
+        ia.Keypoint(y=25, x=25), ia.Keypoint(y=50, x=25), ia.Keypoint(y=75, x=25),
+        ia.Keypoint(y=25, x=75), ia.Keypoint(y=50, x=75), ia.Keypoint(y=75, x=75),
+        ia.Keypoint(y=50, x=50)
+    ]
+    kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
+    aug = iaa.PerspectiveTransform(scale=(0.1, 0.3), keep_size=True)
+    aug_det = aug.to_deterministic()
+    imgs_aug = aug_det.augment_images([img, img])
+    kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
+    for img_aug, kpsoi_aug in zip(imgs_aug, kpsois_aug):
+        assert kpsoi_aug.shape == img.shape
+        for kp_aug in kpsoi_aug.keypoints:
+            x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
+            if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+                assert img_aug[y, x] > 10
+
+    # test empty keypoints
+    kpsoi = ia.KeypointsOnImage([], shape=img.shape)
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    observed = aug.augment_keypoints(kpsoi)
+    assert observed.shape == img.shape
+    assert len(observed.keypoints) == 0
+
+    # --------
+    # polygons
+    # --------
+    exterior = np.float32([
+        [10, 10],
+        [25, 10],
+        [25, 25],
+        [10, 25]
+    ])
+    psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == (30 - 12, 30 - 12, 3)
+    assert len(observed.polygons) == 1
+    assert observed.polygons[0].is_valid
+
+    exterior_expected = np.copy(exterior)
+    exterior_expected[:, 0] -= 0.2 * 30
+    exterior_expected[:, 1] -= 0.2 * 30
+    observed.polygons[0].exterior_almost_equals(exterior_expected)
+
+    # keypoint augmentation with keep_size
+    exterior = np.float32([
+        [10, 10],
+        [25, 10],
+        [25, 25],
+        [10, 25]
+    ])
+    psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == (30, 30, 3)
+    assert len(observed.polygons) == 1
+    assert observed.polygons[0].is_valid
+
+    exterior_expected = np.copy(exterior)
+    exterior_expected[:, 0] = ((exterior_expected[:, 0] - 0.2 * 30) / (30 * 0.6)) * 30
+    exterior_expected[:, 1] = ((exterior_expected[:, 1] - 0.2 * 30) / (30 * 0.6)) * 30
+    observed.polygons[0].exterior_almost_equals(exterior_expected)
+
+    # random state alignment
+    img = np.zeros((100, 100), dtype=np.uint8)
+    img[25-3:25+3, 25-3:25+3] = 255
+    img[50-3:50+3, 25-3:25+3] = 255
+    img[75-3:75+3, 25-3:25+3] = 255
+    img[25-3:25+3, 75-3:75+3] = 255
+    img[50-3:50+3, 75-3:75+3] = 255
+    img[75-3:75+3, 75-3:75+3] = 255
+    exterior = [
+        [25, 25],
+        [75, 25],
+        [75, 50],
+        [75, 75],
+        [25, 75],
+        [25, 50]
+    ]
+    psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=img.shape)
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug_det = aug.to_deterministic()
+    imgs_aug = aug_det.augment_images([img, img])
+    psois_aug = aug_det.augment_polygons([psoi, psoi])
+    for img_aug, psoi_aug in zip(imgs_aug, psois_aug):
+        assert psoi_aug.shape == img.shape
+        for poly_aug in psoi_aug.polygons:
+            assert poly_aug.is_valid
+            for x, y in poly_aug.exterior:
+                x, y = int(np.round(x)), int(np.round(y))
+                if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+                    assert img_aug[y, x] > 10
+
+    # test empty polygons
+    psoi = ia.PolygonsOnImage([], shape=img.shape)
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == img.shape
+    assert len(observed.polygons) == 0
+
+    # test extreme scales
+    # TODO when setting .min_height and .min_width in PerspectiveTransform to
+    # 1x1, at least one of the output polygons was invalid and had only 3
+    # instead of the expected 4 points - why?
+    for scale in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+        exterior = np.float32([
+            [10, 10],
+            [25, 10],
+            [25, 25],
+            [10, 25]
+        ])
+        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+        aug = iaa.PerspectiveTransform(scale=scale, keep_size=True)
+        aug.jitter = iap.Deterministic(scale)
+        observed = aug.augment_polygons(psoi)
+        assert observed.shape == (30, 30, 3)
+        assert len(observed.polygons) == 1
+        assert observed.polygons[0].is_valid
+
+        exterior_expected = np.copy(exterior)
+        exterior_expected[:, 0] = ((exterior_expected[:, 0] - scale * 30) / (30 * (1-scale))) * 30
+        exterior_expected[:, 1] = ((exterior_expected[:, 1] - scale * 30) / (30 * (1-scale))) * 30
+        observed.polygons[0].exterior_almost_equals(exterior_expected)
+
+    # --------
     # get_parameters
+    # --------
     aug = iaa.PerspectiveTransform(scale=0.1, keep_size=False)
     params = aug.get_parameters()
     assert isinstance(params[0], iap.Normal)
