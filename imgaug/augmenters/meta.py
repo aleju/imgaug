@@ -1060,14 +1060,16 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         before augmenting images and their corresponding polygons,
         e.g. by
 
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
         >>> A = B = C = np.ones((10, 10), dtype=np.uint8)
-        >>> Apoly = Bpoly = Cpoly = ia.PolygonOnImage(
-        >>>     [(0, 0), (1, 0), (1, 1), (0, 1)],
-        >>>     (10, 10))
+        >>> Apoly = Bpoly = Cpoly = ia.PolygonsOnImage(
+        >>>     [ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])],
+        >>>     shape=(10, 10))
         >>> seq = iaa.Fliplr(0.5)
         >>> seq_det = seq.to_deterministic()
         >>> imgs_aug = seq_det.augment_images([A, B, C])
-        >>> polys_aug = seq_det.augment_bounding_boxes([Apoly, Bpoly, Cpoly])
+        >>> polys_aug = seq_det.augment_polygons([Apoly, Bpoly, Cpoly])
 
         Otherwise, different random values will be sampled for the image
         and polygon augmentations, resulting in different augmentations
