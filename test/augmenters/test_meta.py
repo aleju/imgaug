@@ -4072,6 +4072,13 @@ def test_ChannelShuffle():
     assert np.allclose(kpsoi_aug.keypoints[1].x, 2)
     assert np.allclose(kpsoi_aug.keypoints[1].y, 4)
 
+    # polygons may not change
+    aug = iaa.ChannelShuffle(p=1.0)
+    psoi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (5, 0), (5, 5)])], shape=(10, 10, 3))
+    psoi_aug = aug.augment_polygons(psoi)
+    assert psoi_aug.shape == (10, 10, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi.polygons[0])
+
     ###################
     # test other dtypes
     ###################
