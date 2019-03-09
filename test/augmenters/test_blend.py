@@ -457,6 +457,12 @@ def test_Alpha():
     assert 100 - 50 < seen[0] < 100 + 50
     assert 100 - 50 < seen[1] < 100 + 50
 
+    # empty keypoints
+    aug = iaa.Alpha(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(1, 2, 3)))
+    assert len(observed.keypoints) == 0
+    assert observed.shape == (1, 2, 3)
+
     # propagating
     aug = iaa.Alpha(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaTest")
 
@@ -469,6 +475,98 @@ def test_Alpha():
     hooks = ia.HooksKeypoints(propagator=propagator)
     observed = aug.augment_keypoints([kpsoi], hooks=hooks)[0]
     assert keypoints_equal([observed], [kpsoi])
+
+    # -----
+    # polygons
+    # -----
+    ps = [ia.Polygon([(5, 5), (10, 5), (10, 10)])]
+    psoi = ia.PolygonsOnImage(ps, shape=(20, 20, 3))
+
+    aug = iaa.Alpha(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_polygons([psoi])
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == psoi.shape
+    assert observed[0].polygons[0].exterior_almost_equals(psoi.polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    aug = iaa.Alpha(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_polygons([psoi])
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == psoi.shape
+    assert observed[0].polygons[0].exterior_almost_equals(psoi.polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    aug = iaa.Alpha(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_polygons([psoi])
+    expected = psoi.shift(left=1)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == psoi.shape
+    assert observed[0].polygons[0].exterior_almost_equals(expected.polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    aug = iaa.Alpha(0.499, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_polygons([psoi])
+    expected = psoi.shift(left=1)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == psoi.shape
+    assert observed[0].polygons[0].exterior_almost_equals(expected.polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    # per_channel
+    aug = iaa.Alpha(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    observed = aug.augment_polygons([psoi])
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == psoi.shape
+    assert observed[0].polygons[0].exterior_almost_equals(psoi.polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    aug = iaa.Alpha(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    observed = aug.augment_polygons([psoi])
+    expected = psoi.shift(left=1)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == psoi.shape
+    assert observed[0].polygons[0].exterior_almost_equals(expected.polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    aug = iaa.Alpha(iap.Choice([0.49, 0.51]), iaa.Noop(), iaa.Affine(translate_px={"x": 1}), per_channel=True)
+    expected_same = psoi.deepcopy()
+    expected_shifted = psoi.shift(left=1)
+    seen = [0, 0]
+    for _ in sm.xrange(200):
+        observed = aug.augment_polygons([psoi])[0]
+        if observed.polygons[0].exterior_almost_equals(expected_same.polygons[0]):
+            seen[0] += 1
+        elif observed.polygons[0].exterior_almost_equals(expected_shifted.polygons[0]):
+            seen[1] += 1
+        else:
+            assert False
+    assert 100 - 50 < seen[0] < 100 + 50
+    assert 100 - 50 < seen[1] < 100 + 50
+
+    # empty polygons
+    aug = iaa.Alpha(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+    observed = aug.augment_polygons(ia.PolygonsOnImage([], shape=(1, 2, 3)))
+    assert len(observed.polygons) == 0
+    assert observed.shape == (1, 2, 3)
+
+    # propagating
+    aug = iaa.Alpha(0.0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1}), name="AlphaTest")
+
+    def propagator(psoi_to_aug, augmenter, parents, default):
+        if "Alpha" in augmenter.name:
+            return False
+        else:
+            return default
+
+    hooks = ia.HooksKeypoints(propagator=propagator)  # no hooks for polygons yet, so we use HooksKeypoints
+    observed = aug.augment_polygons([psoi], hooks=hooks)[0]
+    assert observed.polygons[0].exterior_almost_equals(psoi.polygons[0])
 
     # -----
     # get_parameters()
