@@ -46,6 +46,7 @@
 * Changed `PerspectiveTransform` to ensure minimum height and width of output images (by default `2x2`).
   This prevents errors in polygon augmentation (possibly also in keypoint augmentation).
 * Changed `Polygon.exterior_almost_equals()` to accept lists of tuples as argument `other_polygon`.
+* Added optional drawing of corner points to `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`.
 
 
 # 0.2.8

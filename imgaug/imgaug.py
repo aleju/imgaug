@@ -4154,11 +4154,13 @@ class Polygon(object):
         exterior[:, 1] += (top - bottom)
         return self.deepcopy(exterior=exterior)
 
-    # TODO add boundary thickness
+    # TODO add perimeter thickness
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_perimeter=(0, 128, 0),
-                      alpha=0.5, alpha_perimeter=1.0,
+                      color_points=(0, 128, 0),
+                      alpha=0.5, alpha_perimeter=1.0, alpha_points=0.0,
+                      size_points=3,
                       raise_if_out_of_image=False):
         """
         Draw the polygon on an image.
@@ -4177,6 +4179,10 @@ class Polygon(object):
             The color to use for the perimeter (aka border) of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
 
+        color_points : iterable of int, optional
+            The color to use for the corner points of the polygon.
+            Must correspond to the channel layout of the image. Usually RGB.
+
         alpha : float, optional
             The transparency of the polygon (excluding the perimeter),
             where 1.0 denotes no transparency and 0.0 is invisible.
@@ -4184,6 +4190,16 @@ class Polygon(object):
         alpha_perimeter : float, optional
             The transparency of the polygon's perimeter (aka border),
             where 1.0 denotes no transparency and 0.0 is invisible.
+
+        alpha_points : 0 or 1 or 0.0 or 1.0, optional
+            The transparency of the polygon's corner points,
+            where 1.0 denotes no transparency and 0.0 is invisible.
+            Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
+            are allowed. Transparency will be implemented later on.
+
+        size_points : int, optional
+            The size of each corner point. If set to ``C``, each corner point
+            will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the polygon is partially/fully
@@ -4196,6 +4212,13 @@ class Polygon(object):
             Image with polygon drawn on it. Result dtype is the same as the input dtype.
 
         """
+        assert (
+            np.isclose(alpha_points, 0.0, rtol=0, atol=1e-2)
+            or np.isclose(alpha_points, 1.0, rtol=0, atol=1e-2)
+        ), ("Got alpha_points of %.2f, but currently only 0.0 (point drawing "
+            + "completely off) or 1.0 (point drawing completely on) are "
+            + "implemented.") % (alpha_points,)
+
         # TODO separate this into draw_face_on_image() and draw_border_on_image()
 
         if raise_if_out_of_image and self.is_out_of_image(image):
@@ -4230,6 +4253,13 @@ class Polygon(object):
                 pass  # invisible, do nothing
             else:
                 result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
+
+        if alpha_points > 0:
+            kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
+                                                       shape=image.shape)
+            result = kpsoi.draw_on_image(
+                result, color=color_points, size=size_points, copy=False,
+                raise_if_out_of_image=raise_if_out_of_image)
 
         if input_dtype.type == np.uint8:
             result = np.clip(result, 0, 255).astype(input_dtype)  # TODO make clipping more flexible
@@ -4707,7 +4737,9 @@ class PolygonsOnImage(object):
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_perimeter=(0, 128, 0),
-                      alpha=0.5, alpha_perimeter=1.0,
+                      color_points=(0, 128, 0),
+                      alpha=0.5, alpha_perimeter=1.0, alpha_points=0.0,
+                      size_points=3,
                       raise_if_out_of_image=False):
         """
         Draw all polygons onto a given image.
@@ -4727,6 +4759,10 @@ class PolygonsOnImage(object):
             The color to use for all perimeters (aka borders) of the polygons.
             Must correspond to the channel layout of the image. Usually RGB.
 
+        color_points : iterable of int, optional
+            The color to use for the corner points of the polygond.
+            Must correspond to the channel layout of the image. Usually RGB.
+
         alpha : float, optional
             The transparency of all polygons (excluding their perimeters),
             where 1.0 denotes no transparency and 0.0 is invisible.
@@ -4734,6 +4770,16 @@ class PolygonsOnImage(object):
         alpha_perimeter : float, optional
             The transparency of all polygon perimeters (aka borders), where 1.0
             denotes no transparency and 0.0 is invisible.
+
+        alpha_points : 0 or 1 or 0.0 or 1.0, optional
+            The transparency of all polygon corner points,
+            where 1.0 denotes no transparency and 0.0 is invisible.
+            Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
+            are allowed. Transparency will be implemented later on.
+
+        size_points : int, optional
+            The size of all corner points. If set to ``C``, each corner point
+            will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if any polygon is partially/fully
@@ -4751,8 +4797,11 @@ class PolygonsOnImage(object):
                 image,
                 color=color,
                 color_perimeter=color_perimeter,
+                color_points=color_points,
                 alpha=alpha,
                 alpha_perimeter=alpha_perimeter,
+                alpha_points=alpha_points,
+                size_points=size_points,
                 raise_if_out_of_image=raise_if_out_of_image
             )
         return image
