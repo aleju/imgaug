@@ -47,6 +47,7 @@
   This prevents errors in polygon augmentation (possibly also in keypoint augmentation).
 * Changed `Polygon.exterior_almost_equals()` to accept lists of tuples as argument `other_polygon`.
 * Added optional drawing of corner points to `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`.
+* Added `imgaug.quokka_polygons()` function to generate example polygon data.
 
 
 # 0.2.8
