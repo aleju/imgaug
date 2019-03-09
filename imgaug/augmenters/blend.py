@@ -390,7 +390,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
     def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
         def _augfunc(augs_, polygons_on_images_, parents_, hooks_):
             return augs_.augment_polygons(
-                keypoints_on_images=[polysoi_i.deepcopy() for polysoi_i in polygons_on_images_],
+                polygons_on_images=[polysoi_i.deepcopy() for polysoi_i in polygons_on_images_],
                 parents=parents_,
                 hooks=hooks_
             )
