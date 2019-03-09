@@ -3280,6 +3280,16 @@ def test_Sometimes():
     keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2),
                                          ia.Keypoint(x=2, y=1)], shape=image.shape)]
 
+    polygons = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (2, 0), (2, 2)])],
+        shape=image.shape)]
+    polygons_lr = [ia.PolygonsOnImage(
+        [ia.Polygon([(2, 0), (0, 0), (0, 2)])],
+        shape=image.shape)]
+    polygons_ud = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 2), (2, 2), (2, 0)])],
+        shape=image.shape)]
+
     heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
                                [0.0, 0.0, 1.0],
                                [0.0, 1.0, 1.0]])
@@ -3308,6 +3318,22 @@ def test_Sometimes():
 
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_lr)
+
+    observed = aug.augment_polygons(polygons)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == polygons[0].shape
+    assert observed[0].polygons[0].exterior_almost_equals(
+        polygons_lr[0].polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    observed = aug_det.augment_polygons(polygons)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == polygons[0].shape
+    assert observed[0].polygons[0].exterior_almost_equals(
+        polygons_lr[0].polygons[0])
+    assert observed[0].polygons[0].is_valid
 
     # 100% chance of if-branch, heatmaps
     aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -3339,6 +3365,22 @@ def test_Sometimes():
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_ud)
 
+    observed = aug.augment_polygons(polygons)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == polygons[0].shape
+    assert observed[0].polygons[0].exterior_almost_equals(
+        polygons_ud[0].polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    observed = aug_det.augment_polygons(polygons)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == polygons[0].shape
+    assert observed[0].polygons[0].exterior_almost_equals(
+        polygons_ud[0].polygons[0])
+    assert observed[0].polygons[0].is_valid
+
     # 100% chance of else-branch, heatmaps
     aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
     observed = aug.augment_heatmaps([heatmaps])[0]
@@ -3359,10 +3401,13 @@ def test_Sometimes():
     nb_images_else_branch = 0
     nb_keypoints_if_branch = 0
     nb_keypoints_else_branch = 0
+    nb_polygons_if_branch = 0
+    nb_polygons_else_branch = 0
     for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         keypoints_aug = aug.augment_keypoints(keypoints)
+        polygons_aug = aug.augment_polygons(polygons)
         if i == 0:
             last_aug = observed_aug
             last_aug_det = observed_aug_det
@@ -3388,10 +3433,21 @@ def test_Sometimes():
         else:
             raise Exception("Received output doesnt match any expected output.")
 
+        if polygons_aug[0].polygons[0].exterior_almost_equals(
+                polygons_lr[0].polygons[0]):
+            nb_polygons_if_branch += 1
+        elif polygons_aug[0].polygons[0].exterior_almost_equals(
+                polygons_ud[0].polygons[0]):
+            nb_polygons_else_branch += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
     assert (0.50 - 0.10) <= nb_images_if_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_images_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_keypoints_if_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_polygons_if_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_polygons_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10) # should be the same in roughly 50% of all cases
     assert nb_changed_aug_det == 0
 
@@ -3407,10 +3463,13 @@ def test_Sometimes():
     nb_images_else_branch = 0
     nb_keypoints_if_branch = 0
     nb_keypoints_else_branch = 0
+    nb_polygons_if_branch = 0
+    nb_polygons_else_branch = 0
     for i in sm.xrange(nb_iterations):
         observed_aug = aug.augment_images(images)
         observed_aug_det = aug_det.augment_images(images)
         keypoints_aug = aug.augment_keypoints(keypoints)
+        polygons_aug = aug.augment_polygons(polygons)
         if i == 0:
             last_aug = observed_aug
             last_aug_det = observed_aug_det
@@ -3436,13 +3495,34 @@ def test_Sometimes():
         else:
             raise Exception("Received output doesnt match any expected output.")
 
+        if polygons_aug[0].polygons[0].exterior_almost_equals(
+                polygons_lr[0].polygons[0]):
+            nb_polygons_if_branch += 1
+        elif polygons_aug[0].polygons[0].exterior_almost_equals(
+                polygons[0].polygons[0]):
+            nb_polygons_else_branch += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
     assert (0.50 - 0.10) <= nb_images_if_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_images_else_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_keypoints_if_branch / nb_iterations <= (0.50 + 0.10)
     assert (0.50 - 0.10) <= nb_keypoints_else_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_polygons_if_branch / nb_iterations <= (0.50 + 0.10)
+    assert (0.50 - 0.10) <= nb_polygons_else_branch / nb_iterations <= (0.50 + 0.10)
     # should be the same in roughly 50% of all cases
     assert (0.50 - 0.10) <= (1 - (nb_changed_aug / nb_iterations)) <= (0.50 + 0.10)
     assert nb_changed_aug_det == 0
+
+    # test empty keypoints
+    observed = iaa.Sometimes(0.5, iaa.Noop()).augment_keypoints(ia.KeypointsOnImage([], shape=(1, 2, 3)))
+    assert len(observed.keypoints) == 0
+    assert observed.shape == (1, 2, 3)
+
+    # test empty polygons
+    observed = iaa.Sometimes(0.5, iaa.Noop()).augment_polygons(ia.PolygonsOnImage([], shape=(1, 2, 3)))
+    assert len(observed.polygons) == 0
+    assert observed.shape == (1, 2, 3)
 
     # p as stochastic parameter
     image = np.zeros((1, 1), dtype=np.uint8) + 100
