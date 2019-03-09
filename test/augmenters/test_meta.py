@@ -589,6 +589,10 @@ def test_AssertShape():
     heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 4, 3))
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
+    polygons = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])],
+        shape=base_img.shape
+    )]
 
     base_img_h4 = np.array([[0, 0, 1, 0],
                             [0, 0, 1, 0],
@@ -603,6 +607,10 @@ def test_AssertShape():
     heatmaps_h4 = ia.HeatmapsOnImage(heatmaps_arr_h4, shape=(4, 4, 3))
     keypoints_h4 = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                          ia.Keypoint(x=2, y=2)], shape=base_img_h4.shape)]
+    polygons_h4 = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])],
+        shape=base_img_h4.shape
+    )]
 
     # image must have exactly shape (1, 3, 4, 1)
     aug = iaa.AssertShape((1, 3, 4, 1))
@@ -646,6 +654,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        observed = aug.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
+
+        observed = aug_det.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
+
         errored = False
         try:
             _ = aug.augment_images(images_h4)
@@ -663,6 +689,13 @@ def test_AssertShape():
         errored = False
         try:
             _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
+            errored = True
+        assert errored
+
+        errored = False
+        try:
+            _ = aug.augment_polygons(polygons_h4)
         except AssertionError:
             errored = True
         assert errored
@@ -691,13 +724,23 @@ def test_AssertShape():
         assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
         assert np.allclose(observed.get_arr(), heatmaps.get_arr())
 
-        observed = aug.augment_keypoints(keypoints)
-        expected = keypoints
-        assert keypoints_equal(observed, expected)
+        observed = aug.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
 
-        observed = aug_det.augment_keypoints(keypoints)
-        expected = keypoints
-        assert keypoints_equal(observed, expected)
+        observed = aug_det.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
 
         errored = False
         try:
@@ -716,6 +759,13 @@ def test_AssertShape():
         errored = False
         try:
             _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
+            errored = True
+        assert errored
+
+        errored = False
+        try:
+            _ = aug.augment_polygons(polygons_h4)
         except AssertionError:
             errored = True
         assert errored
@@ -752,6 +802,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        observed = aug.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
+
+        observed = aug_det.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
+
         errored = False
         try:
             _ = aug.augment_images(images_h4)
@@ -769,6 +837,13 @@ def test_AssertShape():
         errored = False
         try:
             _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
+            errored = True
+        assert errored
+
+        errored = False
+        try:
+            _ = aug.augment_polygons(polygons_h4)
         except AssertionError:
             errored = True
         assert errored
@@ -805,6 +880,24 @@ def test_AssertShape():
         expected = keypoints
         assert keypoints_equal(observed, expected)
 
+        observed = aug.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
+
+        observed = aug_det.augment_polygons(polygons)
+        expected = polygons
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0].exterior)
+        assert observed[0].polygons[0].is_valid
+
         errored = False
         try:
             _ = aug.augment_images(images_h4)
@@ -822,6 +915,13 @@ def test_AssertShape():
         errored = False
         try:
             _ = aug.augment_keypoints(keypoints_h4)
+        except AssertionError:
+            errored = True
+        assert errored
+
+        errored = False
+        try:
+            _ = aug.augment_polygons(polygons_h4)
         except AssertionError:
             errored = True
         assert errored
