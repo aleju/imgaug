@@ -2974,6 +2974,44 @@ def test_SomeOf():
     assert len(kpsoi_aug.keypoints) == 0
     assert kpsoi_aug.shape == (5, 6, 3)
 
+    # basic polygon test
+    augs = [iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1})]
+    ps = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
+    psoi = ia.PolygonsOnImage(ps, shape=(5, 6, 3))
+    psoi_x = psoi.shift(left=1)
+    psoi_y = psoi.shift(top=1)
+    psoi_xy = psoi.shift(left=1, top=1)
+
+    psoi_aug = iaa.SomeOf(n=0, children=augs).augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi.polygons[0])
+    assert psoi_aug.polygons[0].is_valid
+
+    psoi_aug = iaa.SomeOf(n=1, children=augs).augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert (psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
+            or psoi_aug.polygons[0].exterior_almost_equals(psoi_y.polygons[0]))
+    assert psoi_aug.polygons[0].is_valid
+
+    psoi_aug = iaa.SomeOf(n=2, children=augs).augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi_xy.polygons[0])
+    assert psoi_aug.polygons[0].is_valid
+
+    psoi_aug = iaa.SomeOf(n=None, children=augs).augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi_xy.polygons[0])
+    assert psoi_aug.polygons[0].is_valid
+
+    psoi_aug = iaa.SomeOf(n=2, children=augs).augment_polygons(
+        ia.PolygonsOnImage([], shape=(5, 6, 3)))
+    assert len(psoi_aug.polygons) == 0
+    assert psoi_aug.shape == (5, 6, 3)
+
     # basic heatmaps test
     augs = [iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":1})]
     heatmaps_arr = np.float32([[1.0, 0.0, 0.0],
@@ -3083,6 +3121,50 @@ def test_SomeOf():
             seen[2] = True
         elif np.array_equal(img_aug, img_xy):
             assert keypoints_equal([kpsoi_aug], [kpsoi_xy])
+            seen[3] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
+
+    # images and polygons aligned?
+    img = np.zeros((3, 3), dtype=np.uint8)
+    img_x = np.copy(img)
+    img_y = np.copy(img)
+    img_xy = np.copy(img)
+    img[1, 1] = 255
+    img_x[1, 2] = 255
+    img_y[2, 1] = 255
+    img_xy[2, 2] = 255
+
+    augs = [
+        iaa.Affine(translate_px={"x": 1}, order=0),
+        iaa.Affine(translate_px={"y": 1}, order=0)
+    ]
+    ps = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
+    psoi = ia.PolygonsOnImage(ps, shape=(5, 6, 3))
+    psoi_x = psoi.shift(left=1)
+    psoi_y = psoi.shift(top=1)
+    psoi_xy = psoi.shift(left=1, top=1)
+
+    aug = iaa.SomeOf((0, 2), children=augs)
+    seen = [False, False, False, False]
+    for _ in sm.xrange(100):
+        aug_det = aug.to_deterministic()
+        img_aug = aug_det.augment_image(img)
+        psoi_aug = aug_det.augment_polygons(psoi)
+        if np.array_equal(img_aug, img):
+            assert psoi_aug.polygons[0].exterior_almost_equals(psoi.polygons[0])
+            seen[0] = True
+        elif np.array_equal(img_aug, img_x):
+            assert psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
+            seen[1] = True
+        elif np.array_equal(img_aug, img_y):
+            assert psoi_aug.polygons[0].exterior_almost_equals(psoi_y.polygons[0])
+            seen[2] = True
+        elif np.array_equal(img_aug, img_xy):
+            assert psoi_aug.polygons[0].exterior_almost_equals(psoi_xy.polygons[0])
             seen[3] = True
         else:
             assert False
