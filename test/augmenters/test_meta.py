@@ -4077,6 +4077,32 @@ def test_WithChannels():
     assert kpsoi_aug.shape == (5, 6, 3)
     assert keypoints_equal([kpsoi_aug], [kpsoi_x])
 
+    # test polygon aug
+    psoi = ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])],
+        shape=(5, 6, 3))
+    psoi_x = psoi.shift(left=1)
+    aug = iaa.WithChannels(1, children=[iaa.Affine(translate_px={"x": 1})])
+    psoi_aug = aug.augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi.polygons[0])
+    assert psoi_aug.polygons[0].is_valid
+
+    aug = iaa.WithChannels([0, 1, 2], children=[iaa.Affine(translate_px={"x": 1})])
+    psoi_aug = aug.augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
+    assert psoi_aug.polygons[0].is_valid
+
+    aug = iaa.WithChannels([0, 1], children=[iaa.Affine(translate_px={"x": 1})])
+    psoi_aug = aug.augment_polygons(psoi)
+    assert len(psoi_aug.polygons) == 1
+    assert psoi_aug.shape == (5, 6, 3)
+    assert psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
+    assert psoi_aug.polygons[0].is_valid
+
     # invalid datatype for channels
     got_exception = False
     try:
