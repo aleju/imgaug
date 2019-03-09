@@ -2941,6 +2941,39 @@ def test_SomeOf():
     observed = iaa.SomeOf(n=4, children=augs).augment_image(zeros)
     assert np.sum(observed) in [9*1+9*2+9*3]
 
+    # basic keypoints test
+    augs = [iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"y": 1})]
+    kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
+    kpsoi_x = kpsoi.shift(x=1)
+    kpsoi_y = kpsoi.shift(y=1)
+    kpsoi_xy = kpsoi.shift(x=1, y=1)
+
+    kpsoi_aug = iaa.SomeOf(n=0, children=augs).augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi])
+
+    kpsoi_aug = iaa.SomeOf(n=1, children=augs).augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi_x]) or keypoints_equal([kpsoi_aug], [kpsoi_y])
+
+    kpsoi_aug = iaa.SomeOf(n=2, children=augs).augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi_xy])
+
+    kpsoi_aug = iaa.SomeOf(n=None, children=augs).augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi_xy])
+
+    kpsoi_aug = iaa.SomeOf(n=2, children=augs).augment_keypoints(
+        ia.KeypointsOnImage([], shape=(5, 6, 3)))
+    assert len(kpsoi_aug.keypoints) == 0
+    assert kpsoi_aug.shape == (5, 6, 3)
+
     # basic heatmaps test
     augs = [iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":1}), iaa.Affine(translate_px={"x":1})]
     heatmaps_arr = np.float32([[1.0, 0.0, 0.0],
@@ -3012,6 +3045,50 @@ def test_SomeOf():
     p_observed = [n/nb_iterations for n in nb_observed]
     assert 0.5-0.1 <= p_observed[0] <= 0.5+0.1
     assert 0.5-0.1 <= p_observed[1] <= 0.5+0.1
+
+    # images and keypoints aligned?
+    img = np.zeros((3, 3), dtype=np.uint8)
+    img_x = np.copy(img)
+    img_y = np.copy(img)
+    img_xy = np.copy(img)
+    img[1, 1] = 255
+    img_x[1, 2] = 255
+    img_y[2, 1] = 255
+    img_xy[2, 2] = 255
+
+    augs = [
+        iaa.Affine(translate_px={"x": 1}, order=0),
+        iaa.Affine(translate_px={"y": 1}, order=0)
+    ]
+    kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1)]
+    kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
+    kpsoi_x = kpsoi.shift(x=1)
+    kpsoi_y = kpsoi.shift(y=1)
+    kpsoi_xy = kpsoi.shift(x=1, y=1)
+
+    aug = iaa.SomeOf((0, 2), children=augs)
+    seen = [False, False, False, False]
+    for _ in sm.xrange(100):
+        aug_det = aug.to_deterministic()
+        img_aug = aug_det.augment_image(img)
+        kpsoi_aug = aug_det.augment_keypoints(kpsoi)
+        if np.array_equal(img_aug, img):
+            assert keypoints_equal([kpsoi_aug], [kpsoi])
+            seen[0] = True
+        elif np.array_equal(img_aug, img_x):
+            assert keypoints_equal([kpsoi_aug], [kpsoi_x])
+            seen[1] = True
+        elif np.array_equal(img_aug, img_y):
+            assert keypoints_equal([kpsoi_aug], [kpsoi_y])
+            seen[2] = True
+        elif np.array_equal(img_aug, img_xy):
+            assert keypoints_equal([kpsoi_aug], [kpsoi_xy])
+            seen[3] = True
+        else:
+            assert False
+        if all(seen):
+            break
+    assert all(seen)
 
     # invalid argument for children
     got_exception = False
