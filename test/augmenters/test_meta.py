@@ -341,6 +341,10 @@ def test_AssertLambda():
     keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                                       ia.Keypoint(x=2, y=2)], shape=base_img.shape)]
 
+    polygons = [ia.PolygonsOnImage([
+        ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])],
+        shape=base_img.shape)]
+
     def func_images_succeeds(images, random_state, parents, hooks):
         return images[0][0, 0] == 0 and images[0][2, 2] == 1
 
@@ -359,13 +363,22 @@ def test_AssertLambda():
     def func_keypoints_fails(keypoints_on_images, random_state, parents, hooks):
         return keypoints_on_images[0].keypoints[0].x == 2
 
+    def func_polygons_succeeds(polygons_on_images, random_state, parents, hooks):
+        return (polygons_on_images[0].polygons[0].exterior[0][0] == 0
+                and polygons_on_images[0].polygons[0].exterior[2][1] == 2)
+
+    def func_polygons_fails(polygons_on_images, random_state, parents, hooks):
+        return polygons_on_images[0].polygons[0].exterior[0][0] == 2
+
     aug_succeeds = iaa.AssertLambda(func_images=func_images_succeeds,
                                     func_heatmaps=func_heatmaps_succeeds,
-                                    func_keypoints=func_keypoints_succeeds)
+                                    func_keypoints=func_keypoints_succeeds,
+                                    func_polygons=func_polygons_succeeds)
     aug_succeeds_det = aug_succeeds.to_deterministic()
     aug_fails = iaa.AssertLambda(func_images=func_images_fails,
                                  func_heatmaps=func_heatmaps_fails,
-                                 func_keypoints=func_keypoints_fails)
+                                 func_keypoints=func_keypoints_fails,
+                                 func_polygons=func_polygons_fails,)
 
     # images as numpy array
     observed = aug_succeeds.augment_images(images)
@@ -459,6 +472,39 @@ def test_AssertLambda():
     errored = False
     try:
         _ = aug_fails.augment_keypoints(keypoints)
+    except AssertionError as e:
+        errored = True
+    assert errored
+
+    # polygons
+    observed = aug_succeeds.augment_polygons(polygons)
+    expected = polygons
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].polygons[0].exterior_almost_equals(
+        expected[0].polygons[0])
+    assert observed[0].shape == expected[0].shape
+    assert observed[0].polygons[0].is_valid
+
+    errored = False
+    try:
+        _ = aug_fails.augment_polygons(polygons)
+    except AssertionError as e:
+        errored = True
+    assert errored
+
+    observed = aug_succeeds_det.augment_polygons(polygons)
+    expected = polygons
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].polygons[0].exterior_almost_equals(
+        expected[0].polygons[0])
+    assert observed[0].shape == expected[0].shape
+    assert observed[0].polygons[0].is_valid
+
+    errored = False
+    try:
+        _ = aug_fails.augment_polygons(polygons)
     except AssertionError as e:
         errored = True
     assert errored
