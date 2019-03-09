@@ -781,6 +781,54 @@ def quokka_bounding_boxes(size=None, extract=None):
     return bbsoi
 
 
+def quokka_polygons(size=None, extract=None):
+    """
+    Returns example polygons on the standard example quokke image.
+
+    The result contains one polygon, covering the quokka's outline.
+
+    Parameters
+    ----------
+    size : None or float or tuple of int or tuple of float, optional
+        Size of the output image on which the polygons are placed. If None,
+        then the polygons are not projected to any new size (positions on the
+        original image are used). Floats lead to relative size changes, ints
+        to absolute sizes in pixels.
+
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or \
+              imgaug.BoundingBoxesOnImage
+        Subarea to extract from the image. See :func:`imgaug.quokka`.
+
+    Returns
+    -------
+    psoi : imgaug.PolygonsOnImage
+        Example polygons on the quokka image.
+
+    """
+    left, top = 0, 0
+    if extract is not None:
+        bb_extract = _quokka_normalize_extract(extract)
+        left = bb_extract.x1
+        top = bb_extract.y1
+    with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
+        json_dict = json.load(f)
+    polygons = []
+    for poly_json in json_dict["polygons"]:
+        polygons.append(
+            Polygon([(point["x"] - left, point["y"] - top)
+                    for point in poly_json["keypoints"]])
+        )
+    if extract is not None:
+        shape = (bb_extract.height, bb_extract.width, 3)
+    else:
+        shape = (643, 960, 3)
+    psoi = PolygonsOnImage(polygons, shape=shape)
+    if size is not None:
+        shape_resized = _compute_resized_shape(shape, size)
+        psoi = psoi.on(shape_resized)
+    return psoi
+
+
 def angle_between_vectors(v1, v2):
     """
     Returns the angle in radians between vectors `v1` and `v2`.
@@ -2053,13 +2101,23 @@ class Keypoint(object):
 
         """
         if from_shape[0:2] == to_shape[0:2]:
-            return Keypoint(x=self.x, y=self.y)
-        else:
-            from_height, from_width = from_shape[0:2]
-            to_height, to_width = to_shape[0:2]
-            x = (self.x / from_width) * to_width
-            y = (self.y / from_height) * to_height
-            return Keypoint(x=x, y=y)
+            return self.deepcopy(x=self.x, y=self.y)
+
+        # avoid division by zeros
+        # TODO add this to other project() functions too
+        assert all([v > 0 for v in from_shape[0:2]]), \
+            "Got invalid from_shape %s in Keypoint.project()" % (
+                str(from_shape),)
+        if any([v <= 0 for v in to_shape[0:2]]):
+            import warnings
+            warnings.warn("Got invalid to_shape %s in Keypoint.project()" % (
+                str(to_shape),))
+
+        from_height, from_width = from_shape[0:2]
+        to_height, to_width = to_shape[0:2]
+        x = (self.x / from_width) * to_width
+        y = (self.y / from_height) * to_height
+        return self.deepcopy(x=x, y=y)
 
     def shift(self, x=0, y=0):
         """
@@ -2079,7 +2137,7 @@ class Keypoint(object):
             Keypoint object with new coordinates.
 
         """
-        return Keypoint(self.x + x, self.y + y)
+        return self.deepcopy(self.x + x, self.y + y)
 
     def generate_similar_points_manhattan(self, nb_steps, step_size, return_array=False):
         """
@@ -2144,7 +2202,53 @@ class Keypoint(object):
 
         if return_array:
             return points
-        return [Keypoint(x=points[i, 0], y=points[i, 1]) for i in sm.xrange(points.shape[0])]
+        return [self.deepcopy(x=points[i, 0], y=points[i, 1]) for i in sm.xrange(points.shape[0])]
+
+    def copy(self, x=None, y=None):
+        """
+        Create a shallow copy of the Keypoint object.
+
+        Parameters
+        ----------
+        x : None or number, optional
+            Coordinate of the keypoint on the x axis.
+            If ``None``, the instance's value will be copied.
+
+        y : None or number, optional
+            Coordinate of the keypoint on the y axis.
+            If ``None``, the instance's value will be copied.
+
+        Returns
+        -------
+        imgaug.Keypoint
+            Shallow copy.
+
+        """
+        return self.deepcopy(x=x, y=y)
+
+    def deepcopy(self, x=None, y=None):
+        """
+        Create a deep copy of the Keypoint object.
+
+        Parameters
+        ----------
+        x : None or number, optional
+            Coordinate of the keypoint on the x axis.
+            If ``None``, the instance's value will be copied.
+
+        y : None or number, optional
+            Coordinate of the keypoint on the y axis.
+            If ``None``, the instance's value will be copied.
+
+        Returns
+        -------
+        imgaug.Keypoint
+            Deep copy.
+
+        """
+        x = self.x if x is None else x
+        y = self.y if y is None else y
+        return Keypoint(x=x, y=y)
 
     def __repr__(self):
         return self.__str__()
@@ -2226,7 +2330,7 @@ class KeypointsOnImage(object):
             return self.deepcopy()
         else:
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
-            return KeypointsOnImage(keypoints, shape)
+            return self.deepcopy(keypoints, shape)
 
     def draw_on_image(self, image, color=(0, 255, 0), size=3, copy=True, raise_if_out_of_image=False):
         """
@@ -2296,7 +2400,7 @@ class KeypointsOnImage(object):
 
         """
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
-        return KeypointsOnImage(keypoints, self.shape)
+        return self.deepcopy(keypoints)
 
     def get_coords_array(self):
         """
@@ -2583,9 +2687,19 @@ class KeypointsOnImage(object):
             out_shape += (nb_channels,)
         return KeypointsOnImage(keypoints, shape=out_shape)
 
-    def copy(self):
+    def copy(self, keypoints=None, shape=None):
         """
         Create a shallow copy of the KeypointsOnImage object.
+
+        Parameters
+        ----------
+        keypoints : None or list of imgaug.Keypoint, optional
+            List of keypoints on the image. If ``None``, the instance's
+            keypoints will be copied.
+
+        shape : tuple of int, optional
+            The shape of the image on which the keypoints are placed.
+            If ``None``, the instance's shape will be copied.
 
         Returns
         -------
@@ -2593,11 +2707,26 @@ class KeypointsOnImage(object):
             Shallow copy.
 
         """
-        return copy.copy(self)
+        result = copy.copy(self)
+        if keypoints is not None:
+            result.keypoints = keypoints
+        if shape is not None:
+            result.shape = shape
+        return result
 
-    def deepcopy(self):
+    def deepcopy(self, keypoints=None, shape=None):
         """
         Create a deep copy of the KeypointsOnImage object.
+
+        Parameters
+        ----------
+        keypoints : None or list of imgaug.Keypoint, optional
+            List of keypoints on the image. If ``None``, the instance's
+            keypoints will be copied.
+
+        shape : tuple of int, optional
+            The shape of the image on which the keypoints are placed.
+            If ``None``, the instance's shape will be copied.
 
         Returns
         -------
@@ -2606,8 +2735,11 @@ class KeypointsOnImage(object):
 
         """
         # for some reason deepcopy is way slower here than manual copy
-        kps = [Keypoint(x=kp.x, y=kp.y) for kp in self.keypoints]
-        return KeypointsOnImage(kps, tuple(self.shape))
+        if keypoints is None:
+            keypoints = [kp.deepcopy() for kp in self.keypoints]
+        if shape is None:
+            shape = tuple(self.shape)
+        return KeypointsOnImage(keypoints, shape)
 
     def __repr__(self):
         return self.__str__()
@@ -3662,7 +3794,7 @@ class BoundingBoxesOnImage(object):
             Deep copy.
 
         """
-        # Manual copy is far faster than deepcopy for KeypointsOnImage,
+        # Manual copy is far faster than deepcopy for BoundingBoxesOnImage,
         # so use manual copy here too
         bbs = [bb.deepcopy() for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs, tuple(self.shape))
@@ -3713,9 +3845,13 @@ class Polygon(object):
                 # list of tuples (x, y)
                 self.exterior = np.float32([[point[0], point[1]] for point in exterior])
         else:
-            do_assert(is_np_array(exterior))
-            do_assert(exterior.ndim == 2)
-            do_assert(exterior.shape[1] == 2)
+            do_assert(is_np_array(exterior),
+                      ("Expected exterior to be a list of tuples (x, y) or "
+                       + "an (N, 2) array, got type %s") % (exterior,))
+            do_assert(exterior.ndim == 2 and exterior.shape[1] == 2,
+                      ("Expected exterior to be a list of tuples (x, y) or "
+                       + "an (N, 2) array, got an array of shape %s") % (
+                          exterior.shape,))
             self.exterior = np.float32(exterior)
 
         # Remove last point if it is essentially the same as the first point (polygons are always assumed to be
@@ -3976,6 +4112,8 @@ class Polygon(object):
                                          "same interface (simple renaming)."))
         return self.clip_out_of_image(image)
 
+    # TODO this currently can mess up the order of points - change somehow to
+    #      keep the order
     def clip_out_of_image(self, image):
         """
         Cut off all parts of the polygon that are outside of the image.
@@ -4004,7 +4142,7 @@ class Polygon(object):
         if self.is_out_of_image(image, fully=True, partly=False):
             return MultiPolygon([])
 
-        h, w = image.shape[0:2]
+        h, w = image.shape[0:2] if is_np_array(image) else image[0:2]
         poly_shapely = self.to_shapely_polygon()
         poly_image = shapely.geometry.Polygon([(0, 0), (w, 0), (w, h), (0, h)])
         multipoly_inter_shapely = poly_shapely.intersection(poly_image)
@@ -4064,11 +4202,13 @@ class Polygon(object):
         exterior[:, 1] += (top - bottom)
         return self.deepcopy(exterior=exterior)
 
-    # TODO add boundary thickness
+    # TODO add perimeter thickness
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_perimeter=(0, 128, 0),
-                      alpha=0.5, alpha_perimeter=1.0,
+                      color_points=(0, 128, 0),
+                      alpha=0.5, alpha_perimeter=1.0, alpha_points=0.0,
+                      size_points=3,
                       raise_if_out_of_image=False):
         """
         Draw the polygon on an image.
@@ -4076,29 +4216,43 @@ class Polygon(object):
         Parameters
         ----------
         image : (H,W,C) ndarray
-            The image onto which to draw the polygon. Usually expected to be of dtype uint8, though other dtypes
-            are also handled.
+            The image onto which to draw the polygon. Usually expected to be
+            of dtype ``uint8``, though other dtypes are also handled.
 
         color : iterable of int, optional
-            The color to use for the polygon (excluding perimeter). Must correspond to the channel layout of the
-            image. Usually RGB.
+            The color to use for the polygon (excluding perimeter).
+            Must correspond to the channel layout of the image. Usually RGB.
 
         color_perimeter : iterable of int, optional
-            The color to use for the perimeter/border of the polygon. Must correspond to the channel layout of the
-            image. Usually RGB.
+            The color to use for the perimeter (aka border) of the polygon.
+            Must correspond to the channel layout of the image. Usually RGB.
+
+        color_points : iterable of int, optional
+            The color to use for the corner points of the polygon.
+            Must correspond to the channel layout of the image. Usually RGB.
 
         alpha : float, optional
-            The transparency of the polygon (excluding the perimeter), where 1.0 denotes no transparency and 0.0 is
-            invisible.
+            The transparency of the polygon (excluding the perimeter),
+            where 1.0 denotes no transparency and 0.0 is invisible.
 
         alpha_perimeter : float, optional
-            The transparency of the polygon's perimeter/border, where 1.0 denotes no transparency and 0.0 is
-            invisible.
+            The transparency of the polygon's perimeter (aka border),
+            where 1.0 denotes no transparency and 0.0 is invisible.
+
+        alpha_points : 0 or 1 or 0.0 or 1.0, optional
+            The transparency of the polygon's corner points,
+            where 1.0 denotes no transparency and 0.0 is invisible.
+            Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
+            are allowed. Transparency will be implemented later on.
+
+        size_points : int, optional
+            The size of each corner point. If set to ``C``, each corner point
+            will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an error if the polygon is partially/fully outside of the
-            image. If set to False, no error will be raised and only the parts inside the image
-            will be drawn.
+            Whether to raise an error if the polygon is partially/fully
+            outside of the image. If set to False, no error will be raised and
+            only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -4106,6 +4260,13 @@ class Polygon(object):
             Image with polygon drawn on it. Result dtype is the same as the input dtype.
 
         """
+        assert (
+            np.isclose(alpha_points, 0.0, rtol=0, atol=1e-2)
+            or np.isclose(alpha_points, 1.0, rtol=0, atol=1e-2)
+        ), ("Got alpha_points of %.2f, but currently only 0.0 (point drawing "
+            + "completely off) or 1.0 (point drawing completely on) are "
+            + "implemented.") % (alpha_points,)
+
         # TODO separate this into draw_face_on_image() and draw_border_on_image()
 
         if raise_if_out_of_image and self.is_out_of_image(image):
@@ -4140,6 +4301,13 @@ class Polygon(object):
                 pass  # invisible, do nothing
             else:
                 result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
+
+        if alpha_points > 0:
+            kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
+                                                       shape=image.shape)
+            result = kpsoi.draw_on_image(
+                result, color=color_points, size=size_points, copy=False,
+                raise_if_out_of_image=raise_if_out_of_image)
 
         if input_dtype.type == np.uint8:
             result = np.clip(result, 0, 255).astype(input_dtype)  # TODO make clipping more flexible
@@ -4307,6 +4475,18 @@ class Polygon(object):
         yy = self.yy
         return BoundingBox(x1=min(xx), x2=max(xx), y1=min(yy), y2=max(yy), label=self.label)
 
+    def to_keypoints(self):
+        """
+        Convert this polygon's `exterior` to ``Keypoint`` instances.
+
+        Returns
+        -------
+        list of imgaug.Keypoint
+            Exterior vertices as ``Keypoint`` instances.
+
+        """
+        return [Keypoint(x=point[0], y=point[1]) for point in self.exterior]
+
     @staticmethod
     def from_shapely(polygon_shapely, label=None):
         """
@@ -4351,10 +4531,12 @@ class Polygon(object):
 
         Parameters
         ----------
-        other_polygon : imgaug.Polygon or (N,2) ndarray
+        other_polygon : imgaug.Polygon or (N,2) ndarray or list of tuple
             The other polygon with which to compare the exterior.
             If this is an ndarray, it is assumed to represent an exterior.
             It must then have dtype float32 and shape (N,2) with the second dimension denoting xy-coordinates.
+            If this is a list of tuples, it is assumed to represent an exterior.
+            Each tuple then must contain exactly two numbers, denoting xy-coordinates.
 
         max_distance : number
             The maximum euclidean distance between a point on one polygon and the closest point on the other polygon.
@@ -4379,7 +4561,13 @@ class Polygon(object):
         atol = max_distance
 
         ext_a = self.exterior
-        ext_b = other_polygon.exterior if not is_np_array(other_polygon) else other_polygon
+        if isinstance(other_polygon, list):
+            ext_b = np.float32(other_polygon)
+        elif is_np_array(other_polygon):
+            ext_b = other_polygon
+        else:
+            assert isinstance(other_polygon, Polygon)
+            ext_b = other_polygon.exterior
         len_a = len(ext_a)
         len_b = len(ext_b)
 
@@ -4413,9 +4601,12 @@ class Polygon(object):
         # After this point, both polygons have at least 2 points, i.e. LineStrings can be used.
         # We can also safely go back to the original exteriors (before close points were merged).
         ls_a = self.to_shapely_line_string(closed=True, interpolate=interpolate)
-        ls_b = other_polygon.to_shapely_line_string(closed=True, interpolate=interpolate) \
-            if not is_np_array(other_polygon) \
-            else _convert_points_to_shapely_line_string(other_polygon, closed=True, interpolate=interpolate)
+        if isinstance(other_polygon, list) or is_np_array(other_polygon):
+            ls_b = _convert_points_to_shapely_line_string(
+                other_polygon, closed=True, interpolate=interpolate)
+        else:
+            ls_b = other_polygon.to_shapely_line_string(
+                closed=True, interpolate=interpolate)
 
         # Measure the distance from each point in A to LineString B and vice versa.
         # Make sure that no point violates the tolerance.
@@ -4516,6 +4707,270 @@ class Polygon(object):
     def __str__(self):
         points_str = ", ".join(["(x=%.3f, y=%.3f)" % (point[0], point[1]) for point in self.exterior])
         return "Polygon([%s] (%d points), label=%s)" % (points_str, len(self.exterior), self.label)
+
+
+class PolygonsOnImage(object):
+    """
+    Object that represents all polygons on a single image.
+
+    Parameters
+    ----------
+    polygons : list of imgaug.Polygon
+        List of polygons on the image.
+
+    shape : tuple of int
+        The shape of the image on which the polygons are placed.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug as ia
+    >>> image = np.zeros((100, 100))
+    >>> polys = [
+    >>>     ia.Polygon([(0, 0), (100, 0), (100, 100), (0, 100)]),
+    >>>     ia.Polygon([(50, 0), (100, 50), (50, 100), (0, 50)])
+    >>> ]
+    >>> polys_oi = ia.PolygonsOnImage(polys, shape=image.shape)
+
+    """
+
+    def __init__(self, polygons, shape):
+        self.polygons = polygons
+        if is_np_array(shape):
+            self.shape = shape.shape
+        else:
+            do_assert(isinstance(shape, (tuple, list)))
+            self.shape = tuple(shape)
+
+    @property
+    def empty(self):
+        """
+        Returns whether this object contains zero polygons.
+
+        Returns
+        -------
+        bool
+            True if this object contains zero polygons.
+
+        """
+        return len(self.polygons) == 0
+
+    def on(self, image):
+        """
+        Project polygons from one image to a new one.
+
+        Parameters
+        ----------
+        image : ndarray or tuple of int
+            New image onto which the polygons are to be projected.
+            May also simply be that new image's shape tuple.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Object containing all projected polygons.
+
+        """
+        if is_np_array(image):
+            shape = image.shape
+        else:
+            shape = image
+
+        if shape[0:2] == self.shape[0:2]:
+            return self.deepcopy()
+        else:
+            polygons = [poly.project(self.shape, shape) for poly in self.polygons]
+            return PolygonsOnImage(polygons, shape)
+
+    def draw_on_image(self,
+                      image,
+                      color=(0, 255, 0), color_perimeter=(0, 128, 0),
+                      color_points=(0, 128, 0),
+                      alpha=0.5, alpha_perimeter=1.0, alpha_points=0.0,
+                      size_points=3,
+                      raise_if_out_of_image=False):
+        """
+        Draw all polygons onto a given image.
+
+        Parameters
+        ----------
+        image : (H,W,C) ndarray
+            The image onto which to draw the bounding boxes.
+            This image should usually have the same shape as set in
+            ``PolygonsOnImage.shape``.
+
+        color : iterable of int, optional
+            The color to use for all polygons (excluding their perimeters).
+            Must correspond to the channel layout of the image. Usually RGB.
+
+        color_perimeter : iterable of int, optional
+            The color to use for all perimeters (aka borders) of the polygons.
+            Must correspond to the channel layout of the image. Usually RGB.
+
+        color_points : iterable of int, optional
+            The color to use for the corner points of the polygond.
+            Must correspond to the channel layout of the image. Usually RGB.
+
+        alpha : float, optional
+            The transparency of all polygons (excluding their perimeters),
+            where 1.0 denotes no transparency and 0.0 is invisible.
+
+        alpha_perimeter : float, optional
+            The transparency of all polygon perimeters (aka borders), where 1.0
+            denotes no transparency and 0.0 is invisible.
+
+        alpha_points : 0 or 1 or 0.0 or 1.0, optional
+            The transparency of all polygon corner points,
+            where 1.0 denotes no transparency and 0.0 is invisible.
+            Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
+            are allowed. Transparency will be implemented later on.
+
+        size_points : int, optional
+            The size of all corner points. If set to ``C``, each corner point
+            will be drawn as a square of size ``C x C``.
+
+        raise_if_out_of_image : bool, optional
+            Whether to raise an error if any polygon is partially/fully
+            outside of the image. If set to False, no error will be raised and
+            only the parts inside the image will be drawn.
+
+        Returns
+        -------
+        image : (H,W,C) ndarray
+            Image with drawn polygons.
+
+        """
+        for poly in self.polygons:
+            image = poly.draw_on_image(
+                image,
+                color=color,
+                color_perimeter=color_perimeter,
+                color_points=color_points,
+                alpha=alpha,
+                alpha_perimeter=alpha_perimeter,
+                alpha_points=alpha_points,
+                size_points=size_points,
+                raise_if_out_of_image=raise_if_out_of_image
+            )
+        return image
+
+    def remove_out_of_image(self, fully=True, partly=False):
+        """
+        Remove all polygons that are fully or partially outside of the image.
+
+        Parameters
+        ----------
+        fully : bool, optional
+            Whether to remove polygons that are fully outside of the image.
+
+        partly : bool, optional
+            Whether to remove polygons that are partially outside of the image.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Reduced set of polygons, with those that were fully/partially
+            outside of the image removed.
+
+        """
+        polys_clean = [
+            poly for poly in self.polygons
+            if not poly.is_out_of_image(self.shape, fully=fully, partly=partly)
+        ]
+        return PolygonsOnImage(polys_clean, shape=self.shape)
+
+    def clip_out_of_image(self):
+        """
+        Clip off all parts from all polygons that are outside of the image.
+
+        NOTE: The result can contain less polygons than the input did. That
+        happens when a polygon is fully outside of the image plane.
+
+        NOTE: The result can also contain *more* polygons than the input
+        did. That happens when distinct parts of a polygon are only
+        connected by areas that are outside of the image plane and hence will
+        be clipped off, resulting in two or more unconnected polygon parts that
+        are left in the image plane.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Polygons, clipped to fall within the image dimensions. Count of
+            output polygons may differ from the input count.
+
+        """
+        polys_cut = [
+            poly.clip_out_of_image(self.shape).geoms
+            for poly
+            in self.polygons
+            if poly.is_partly_within_image(self.shape)
+        ]
+        polys_cut_flat = [poly for poly_lst in polys_cut for poly in poly_lst]
+        return PolygonsOnImage(polys_cut_flat, shape=self.shape)
+
+    def shift(self, top=None, right=None, bottom=None, left=None):
+        """
+        Shift all polygons from one or more image sides, i.e. move them on the x/y-axis.
+
+        Parameters
+        ----------
+        top : None or int, optional
+            Amount of pixels by which to shift all polygons from the top.
+
+        right : None or int, optional
+            Amount of pixels by which to shift all polygons from the right.
+
+        bottom : None or int, optional
+            Amount of pixels by which to shift all polygons from the bottom.
+
+        left : None or int, optional
+            Amount of pixels by which to shift all polygons from the left.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Shifted polygons.
+
+        """
+        polys_new = [
+            poly.shift(top=top, right=right, bottom=bottom, left=left)
+            for poly
+            in self.polygons
+        ]
+        return PolygonsOnImage(polys_new, shape=self.shape)
+
+    def copy(self):
+        """
+        Create a shallow copy of the PolygonsOnImage object.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Shallow copy.
+
+        """
+        return copy.copy(self)
+
+    def deepcopy(self):
+        """
+        Create a deep copy of the PolygonsOnImage object.
+
+        Returns
+        -------
+        imgaug.PolygonsOnImage
+            Deep copy.
+
+        """
+        # Manual copy is far faster than deepcopy for PolygonsOnImage,
+        # so use manual copy here too
+        polys = [poly.deepcopy() for poly in self.polygons]
+        return PolygonsOnImage(polys, tuple(self.shape))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "PolygonsOnImage(%s, shape=%s)" % (str(self.polygons), self.shape)
 
 
 def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
@@ -4659,6 +5114,8 @@ class _ConcavePolygonRecoverer(object):
         new_exterior_concave_ids = self._fit_best_valid_polygon(new_exterior_inter, rss[2])
         new_exterior_concave = [new_exterior_inter[idx] for idx in new_exterior_concave_ids]
 
+        # TODO return new_exterior_concave here instead of polygon, leave it to
+        #      caller to decide what to do with it
         return old_polygon.deepcopy(exterior=new_exterior_concave)
 
     def _remove_consecutive_duplicate_points(self, points):
@@ -6217,6 +6674,9 @@ class Batch(object):
     bounding_boxes : None or list of BoundingBoxesOnImage
         The bounding boxes to augment.
 
+    polygons : None or list of PolygonsOnImage
+        The polygons to augment.
+
     data
         Additional data that is saved in the batch and may be read out
         after augmentation. This could e.g. contain filepaths to each image
@@ -6225,7 +6685,8 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
-    def __init__(self, images=None, heatmaps=None, segmentation_maps=None, keypoints=None, bounding_boxes=None,
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
+                 keypoints=None, bounding_boxes=None, polygons=None,
                  data=None):
         self.images_unaug = images
         self.images_aug = None
@@ -6237,6 +6698,8 @@ class Batch(object):
         self.keypoints_aug = None
         self.bounding_boxes_unaug = bounding_boxes
         self.bounding_boxes_aug = None
+        self.polygons_unaug = polygons
+        self.polygons_aug = None
         self.data = data
 
     @property
@@ -6304,6 +6767,7 @@ class Batch(object):
             segmentation_maps=_copy_augmentable_objects(self.segmentation_maps_unaug, SegmentationMapOnImage),
             keypoints=_copy_augmentable_objects(self.keypoints_unaug, KeypointsOnImage),
             bounding_boxes=_copy_augmentable_objects(self.bounding_boxes_unaug, BoundingBoxesOnImage),
+            polygons=_copy_augmentable_objects(self.polygons_unaug, PolygonsOnImage),
             data=copy.deepcopy(self.data)
         )
         batch.images_aug = _copy_images(self.images_aug)
@@ -6311,6 +6775,7 @@ class Batch(object):
         batch.segmentation_maps_aug = _copy_augmentable_objects(self.segmentation_maps_aug, SegmentationMapOnImage)
         batch.keypoints_aug = _copy_augmentable_objects(self.keypoints_aug, KeypointsOnImage)
         batch.bounding_boxes_aug = _copy_augmentable_objects(self.bounding_boxes_aug, BoundingBoxesOnImage)
+        batch.polygons_aug = _copy_augmentable_objects(self.polygons_aug, PolygonsOnImage)
 
         return batch
 

@@ -120,6 +120,12 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
                     keypoint.x = (width - 1) - keypoint.x
         return keypoints_on_images
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        # TODO maybe reverse the order of points afterwards? the flip probably inverts them
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.p]
 
@@ -206,6 +212,12 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
                     # TODO is this still correct with float keypoints? seems like the -1 should be dropped
                     keypoint.y = (height - 1) - keypoint.y
         return keypoints_on_images
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        # TODO how does flipping affect the point order?
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.p]

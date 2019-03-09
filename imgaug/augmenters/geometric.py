@@ -734,9 +734,6 @@ class Affine(meta.Augmenter):
             _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             height, width = keypoints_on_image.height, keypoints_on_image.width
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
@@ -768,12 +765,26 @@ class Affine(meta.Augmenter):
                 else:
                     output_shape = keypoints_on_image.shape
 
-                coords = keypoints_on_image.get_coords_array()
-                coords_aug = tf.matrix_transform(coords, matrix.params)
-                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=output_shape))
+                if len(keypoints_on_image.keypoints) == 0:
+                    result.append(keypoints_on_image.deepcopy(shape=output_shape))
+                else:
+                    coords = keypoints_on_image.get_coords_array()
+                    coords_aug = tf.matrix_transform(coords, matrix.params)
+                    kps_new = [kp.deepcopy(x=coords[0], y=coords[1])
+                               for kp, coords
+                               in zip(keypoints_on_image.keypoints, coords_aug)]
+                    result.append(keypoints_on_image.deepcopy(
+                        keypoints=kps_new,
+                        shape=output_shape
+                    ))
             else:
                 result.append(keypoints_on_image)
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode, self.backend,
@@ -1455,6 +1466,8 @@ class AffineCv2(meta.Augmenter):
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if not keypoints_on_image.keypoints:
+                # AffineCv2 does not change the image shape, hence we can skip
+                # all steps below if there are no keypoints
                 result.append(keypoints_on_image)
                 continue
             height, width = keypoints_on_image.height, keypoints_on_image.width
@@ -1486,10 +1499,21 @@ class AffineCv2(meta.Augmenter):
 
                 coords = keypoints_on_image.get_coords_array()
                 coords_aug = tf.matrix_transform(coords, matrix.params)
-                result.append(ia.KeypointsOnImage.from_coords_array(coords_aug, shape=keypoints_on_image.shape))
+                kps_new = [kp.deepcopy(x=coords[0], y=coords[1])
+                           for kp, coords
+                           in zip(keypoints_on_image.keypoints, coords_aug)]
+                result.append(keypoints_on_image.deepcopy(
+                    keypoints=kps_new,
+                    shape=keypoints_on_image.shape
+                ))
             else:
                 result.append(keypoints_on_image)
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
@@ -1636,7 +1660,7 @@ class PiecewiseAffine(meta.Augmenter):
     """
 
     def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant", absolute_scale=False,
-                 name=None, deterministic=False, random_state=None):
+                 polygon_recoverer=None, name=None, deterministic=False, random_state=None):
         super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -1703,6 +1727,9 @@ class PiecewiseAffine(meta.Augmenter):
                             + "got %s." % (type(mode),))
 
         self.absolute_scale = absolute_scale
+        self.polygon_recoverer = polygon_recoverer
+        if polygon_recoverer is None:
+            self.polygon_recoverer = ia._ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
@@ -1808,6 +1835,8 @@ class PiecewiseAffine(meta.Augmenter):
 
         for i in sm.xrange(nb_images):
             if not keypoints_on_images[i].keypoints:
+                # PiecewiseAffine does not change the image shape, so we can
+                # just reuse the old keypoints
                 result.append(keypoints_on_images[i])
                 continue
             rs_image = rss[i]
@@ -1856,27 +1885,33 @@ class PiecewiseAffine(meta.Augmenter):
                     nb_channels=None if len(kpsoi.shape) < 3 else kpsoi.shape[2]
                 )
 
-                # TODO is this still necessary after nb_channels was added to from_keypoint_image() ?
-                if len(kpsoi.shape) > 2:
-                    kps_aug.shape = (
-                        kps_aug.shape[0],
-                        kps_aug.shape[1],
-                        kpsoi.shape[2]
-                    )
+                # use deepcopy() to copy old instance states as much as
+                # possible
+                kps_aug_post = kpsoi.deepcopy(
+                    keypoints=[kp.deepcopy(x=kp_aug.x, y=kp_aug.y)
+                               for kp, kp_aug
+                               in zip(kpsoi.keypoints, kps_aug.keypoints)]
+                )
 
                 # Keypoints that were outside of the image plane before the
                 # augmentation will be replaced with (-1, -1) by default (as
                 # they can't be drawn on the keypoint images). They are now
                 # replaced by their old coordinates values.
                 ooi = [not 0 <= kp.x < w or not 0 <= kp.y < h for kp in kpsoi.keypoints]
-                for kp_idx in sm.xrange(len(kps_aug.keypoints)):
+                for kp_idx in sm.xrange(len(kps_aug_post.keypoints)):
                     if ooi[kp_idx]:
                         kp_unaug = kpsoi.keypoints[kp_idx]
-                        kps_aug.keypoints[kp_idx] = kp_unaug
+                        kps_aug_post.keypoints[kp_idx] = kp_unaug
 
-                result.append(kps_aug)
+                result.append(kps_aug_post)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks,
+            recoverer=self.polygon_recoverer)
 
     def _get_transformer(self, h, w, nb_rows, nb_cols, random_state):
         # get coords on y and x axis of points to move around
@@ -2019,6 +2054,12 @@ class PerspectiveTransform(meta.Augmenter):
         self.jitter = iap.Normal(loc=0, scale=self.scale)
         self.keep_size = keep_size
 
+        # setting these to 1x1 caused problems for large scales and polygon
+        # augmentation
+        self.min_width = 2
+        self.min_height = 2
+        self.shift_step_size = 0.5
+
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
                          allowed=["bool", "uint8", "uint16", "int8", "int16",
@@ -2125,21 +2166,28 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
             keypoints_on_image = keypoints_on_images[i]
+            new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
             if not keypoints_on_image.keypoints:
-                continue
-            kps_arr = keypoints_on_image.get_coords_array()
-
-            warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
-            warped = warped[0]
-            warped_kps = ia.KeypointsOnImage.from_coords_array(
-                warped,
-                shape=(max_height, max_width) + keypoints_on_image.shape[2:]
-            )
+                warped_kps = keypoints_on_image.deepcopy(shape=new_shape)
+            else:
+                kps_arr = keypoints_on_image.get_coords_array()
+                warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
+                warped = warped[0]
+                warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
+                              for kp, coords
+                              in zip(keypoints_on_image.keypoints, warped)]
+                warped_kps = keypoints_on_image.deepcopy(keypoints=warped_kps,
+                                                         shape=new_shape)
             if self.keep_size:
                 warped_kps = warped_kps.on(keypoints_on_image.shape)
             result[i] = warped_kps
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def _create_matrices(self, shapes, random_state):
         matrices = []
@@ -2178,16 +2226,32 @@ class PerspectiveTransform(meta.Augmenter):
             # compute the width of the new image, which will be the
             # maximum distance between bottom-right and bottom-left
             # x-coordiates or the top-right and top-left x-coordinates
-            width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-            width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-            max_width = max(int(width_a), int(width_b))
+            min_width = None
+            while min_width is None or min_width < self.min_width:
+                width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+                width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+                max_width = max(int(width_a), int(width_b))
+                min_width = min(int(width_a), int(width_b))
+                if min_width < self.min_width:
+                    tl[0] -= self.shift_step_size
+                    tr[0] += self.shift_step_size
+                    bl[0] -= self.shift_step_size
+                    br[0] += self.shift_step_size
 
             # compute the height of the new image, which will be the
             # maximum distance between the top-right and bottom-right
             # y-coordinates or the top-left and bottom-left y-coordinates
-            height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-            height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-            max_height = max(int(height_a), int(height_b))
+            min_height = None
+            while min_height is None or min_height < self.min_height:
+                height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+                height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+                max_height = max(int(height_a), int(height_b))
+                min_height = min(int(height_a), int(height_b))
+                if min_height < self.min_height:
+                    tl[1] -= self.shift_step_size
+                    tr[1] -= self.shift_step_size
+                    bl[1] += self.shift_step_size
+                    br[1] += self.shift_step_size
 
             # now that we have the dimensions of the new image, construct
             # the set of destination points to obtain a "birds eye view",
@@ -2415,7 +2479,8 @@ class ElasticTransformation(meta.Augmenter):
     }
 
     def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
-                 name=None, deterministic=False, random_state=None):
+                 polygon_recoverer=None, name=None, deterministic=False,
+                 random_state=None):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
@@ -2448,6 +2513,10 @@ class ElasticTransformation(meta.Augmenter):
         else:
             raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, "
                             + "got %s." % (type(mode),))
+
+        self.polygon_recoverer = polygon_recoverer
+        if polygon_recoverer is None:
+            self.polygon_recoverer = ia._ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
         # seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
@@ -2576,6 +2645,8 @@ class ElasticTransformation(meta.Augmenter):
         for i in sm.xrange(nb_images):
             kpsoi = keypoints_on_images[i]
             if not kpsoi.keypoints:
+                # ElasticTransformation does not change the shape, hence we can
+                # skip the below steps
                 continue
             h, w = kpsoi.shape[0:2]
             dx, dy = self.generate_shift_maps(
@@ -2623,11 +2694,17 @@ class ElasticTransformation(meta.Augmenter):
 
                     med = ia.compute_geometric_median(xxyy_aug)
                     # med = np.average(xxyy_aug, 0)  # uncomment to use average instead of median
-                    kps_aug.append(ia.Keypoint(x=med[0], y=med[1]))
+                    kps_aug.append(kp.deepcopy(x=med[0], y=med[1]))
 
-            result[i] = ia.KeypointsOnImage(kps_aug, shape=kpsoi.shape)
+            result[i] = kpsoi.deepcopy(keypoints=kps_aug)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks,
+            recoverer=self.polygon_recoverer)
 
     def get_parameters(self):
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
@@ -2972,10 +3049,7 @@ class Rot90(meta.Augmenter):
         ks = self._draw_samples(nb_images, random_state)
         result = []
         for kpsoi_i, k_i in zip(keypoints_on_images, ks):
-            if not kpsoi_i.keypoints:
-                result.append(kpsoi_i)
-                continue
-            elif (k_i % 4) == 0:
+            if (k_i % 4) == 0:
                 result.append(kpsoi_i)
             else:
                 k_i = int(k_i) % 4  # this is also correct when k_i is negative
@@ -2992,16 +3066,21 @@ class Rot90(meta.Augmenter):
                         #       (hr - yr). Same problem as in horizontal flipping.
                         xr, yr = (hr - 1) - yr, xr
                         wr, hr = hr, wr
-                    kps_aug.append(ia.Keypoint(x=xr, y=yr))
+                    kps_aug.append(kp.deepcopy(x=xr, y=yr))
 
                 shape_aug = tuple([h_aug, w_aug] + list(kpsoi_i.shape[2:]))
-                kpsoi_i_aug = ia.KeypointsOnImage(kps_aug, shape=shape_aug)
+                kpsoi_i_aug = kpsoi_i.deepcopy(keypoints=kps_aug, shape=shape_aug)
                 if self.keep_size and (h, w) != (h_aug, w_aug):
                     kpsoi_i_aug = kpsoi_i_aug.on(kpsoi_i.shape)
                     kpsoi_i_aug.shape = kpsoi_i.shape
 
                 result.append(kpsoi_i_aug)
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.k, self.keep_size]

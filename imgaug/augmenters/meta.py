@@ -213,6 +213,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         ----------
         batches : imgaug.Batch or list of imgaug.Batch or list of imgaug.HeatmapsOnImage\
                   or list of imgaug.SegmentationMapOnImage or list of imgaug.KeypointsOnImage\
+                  or list of imgaug.BoundingBoxesOnImage or list of imgaug.PolygonsOnImage\
                   or list of ([N],H,W,[C]) ndarray
             List of batches to augment.
             The expected input is a list, with each entry having one of the following datatypes:
@@ -223,6 +224,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 * list of imgaug.SegmentationMapOnImage
                 * list of imgaug.KeypointsOnImage
                 * list of imgaug.BoundingBoxesOnImage
+                * list of imgaug.PolygonsOnImage
                 * list of (H,W,C) ndarray
                 * list of (H,W) ndarray
                 * (N,H,W,C) ndarray
@@ -246,6 +248,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                           or list of ia.SegmentationMapOnImage\
                           or list of ia.KeypointsOnImage\
                           or list of ia.BoundingBoxesOnImage\
+                          or list of ia.PolygonsOnImage\
                           or list of (H,W,C) ndarray\
                           or list of (H,W) ndarray\
                           or list of (N,H,W,C) ndarray\
@@ -290,16 +293,20 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 elif isinstance(batch[0], ia.BoundingBoxesOnImage):
                     batches_normalized.append(ia.Batch(bounding_boxes=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.BoundingBoxesOnImage")
+                elif isinstance(batch[0], ia.PolygonsOnImage):
+                    batches_normalized.append(ia.Batch(polygons=batch, data=i))
+                    batches_original_dts.append("list_of_imgaug.PolygonsOnImage")
                 else:
                     raise Exception(
                         "Unknown datatype in batch[0]. Expected numpy array or imgaug.HeatmapsOnImage or "
                         + "imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage, "
+                        + "or imgaug.PolygonsOnImage, "
                         + "got %s." % (type(batch[0]),))
             else:
                 raise Exception(
                     "Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of (numpy array or "
                     + "imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or "
-                    + "imgaug.BoundingBoxesOnImage). "
+                    + "imgaug.BoundingBoxesOnImage or imgaug.PolygonsOnImage). "
                     + "Got %s." % (type(batch),))
 
         def unnormalize_batch(batch_aug):
@@ -324,9 +331,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_unnormalized = batch_aug.segmentation_maps_aug
             elif dt_orig == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
-            else:  # only option left
-                ia.do_assert(dt_orig == "list_of_imgaug.BoundingBoxesOnImage")
+            elif dt_orig == "list_of_imgaug.BoundingBoxesOnImage":
                 batch_unnormalized = batch_aug.bounding_boxes_aug
+            else:  # only option left
+                ia.do_assert(dt_orig == "list_of_imgaug.PolygonsOnImage")
+                batch_unnormalized = batch_aug.polygons_aug
             return batch_unnormalized
 
         if not background:
@@ -338,10 +347,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_augment_segmaps = batch_normalized.segmentation_maps_unaug is not None
                 batch_augment_keypoints = batch_normalized.keypoints_unaug is not None
                 batch_augment_bounding_boxes = batch_normalized.bounding_boxes_unaug is not None
+                batch_augment_polygons = batch_normalized.polygons_unaug is not None
 
                 nb_to_aug = sum([1 if to_aug else 0
                                  for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps,
-                                                batch_augment_keypoints, batch_augment_bounding_boxes]])
+                                                batch_augment_keypoints, batch_augment_bounding_boxes,
+                                                batch_augment_polygons]])
 
                 if nb_to_aug > 1:
                     augseq = self.to_deterministic() if not self.deterministic else self
@@ -363,6 +374,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 if batch_augment_bounding_boxes:
                     batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
                         batch_normalized.bounding_boxes_unaug, hooks=hooks)
+                if batch_augment_polygons:
+                    # TODO enable hooks for polygons
+                    batch_normalized.polygons_aug = augseq.augment_polygons(
+                        batch_normalized.polygons_unaug, hooks=hooks)
 
                 batch_unnormalized = unnormalize_batch(batch_normalized)
 
@@ -718,7 +733,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_heatmaps`.
 
-        hooks : imgaug.HooksHeatmaps
+        hooks : imgaug.HooksHeatmaps or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_heatmaps`.
 
         Returns
@@ -909,8 +924,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Augment keypoints on multiple images.
 
         This is the internal variation of ``augment_keypoints()``.
-        It is called from ``augment_keypoints()`` and should usually not be called directly.
-        It has to be implemented by every augmenter.
+        It is called from ``augment_keypoints()`` and should usually not be
+        called directly. It has to be implemented by every augmenter.
         This method may transform the keypoints in-place.
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
@@ -927,12 +942,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         parents : list of imgaug.augmenters.meta.Augmenter
             See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
 
-        hooks : imgaug.HooksImages
+        hooks : imgaug.HooksKeypoints or None
             See :func:`imgaug.augmenters.meta.Augmenter.augment_keypoints`.
 
         Returns
         ----------
-        images : list of imgaug.KeypointsOnImage
+        list of imgaug.KeypointsOnImage
             The augmented keypoints.
 
         """
@@ -940,7 +955,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
     def augment_bounding_boxes(self, bounding_boxes_on_images, hooks=None):
         """
-        Augment image bounding boxes.
+        Augment bounding boxes.
 
         This is the corresponding function to ``augment_keypoints()``, just for
         bounding boxes.
@@ -964,8 +979,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Otherwise, different random values will be sampled for the image
         and bounding box augmentations, resulting in different augmentations
         (e.g. images might be rotated by ``30deg`` and bounding boxes by
-        ``-10deg``). Also make sure to call ``to_deterministic()`` again for each
-        new batch, otherwise you would augment all batches in the same way.
+        ``-10deg``). Also make sure to call ``to_deterministic()`` again for
+        each new batch, otherwise you would augment all batches in the same
+        way.
 
         Parameters
         ----------
@@ -973,7 +989,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                                    list of imgaug.BoundingBoxesOnImage
             The bounding boxes to augment.
             Expected is an instance of imgaug.BoundingBoxesOnImage or a list of
-            imgaug.BoundingBoxesOnImage objects, witch each such object
+            imgaug.BoundingBoxesOnImage objects, with each such object
             containing the bounding boxes of a single image.
 
         hooks : None or imgaug.HooksKeypoints, optional
@@ -1026,6 +1042,225 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             )
         if input_was_single_instance:
             return result[0]
+        return result
+
+    def augment_polygons(self, polygons_on_images, parents=None, hooks=None):
+        """
+        Augment polygons.
+
+        This is the corresponding function to ``augment_keypoints()``, just for
+        polygons.
+        Usually you will want to call ``augment_images()`` with a list of images,
+        e.g. ``augment_images([A, B, C])`` and then ``augment_polygons()``
+        with the corresponding list of polygons on these images, e.g.
+        ``augment_polygons([Apoly, Bpoly, Cpoly])``, where ``Abb`` are the
+        bounding boxes on image ``A``.
+
+        Make sure to first convert the augmenter(s) to deterministic states
+        before augmenting images and their corresponding polygons,
+        e.g. by
+
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
+        >>> A = B = C = np.ones((10, 10), dtype=np.uint8)
+        >>> Apoly = Bpoly = Cpoly = ia.PolygonsOnImage(
+        >>>     [ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])],
+        >>>     shape=(10, 10))
+        >>> seq = iaa.Fliplr(0.5)
+        >>> seq_det = seq.to_deterministic()
+        >>> imgs_aug = seq_det.augment_images([A, B, C])
+        >>> polys_aug = seq_det.augment_polygons([Apoly, Bpoly, Cpoly])
+
+        Otherwise, different random values will be sampled for the image
+        and polygon augmentations, resulting in different augmentations
+        (e.g. images might be rotated by ``30deg`` and polygons by
+        ``-10deg``). Also make sure to call ``to_deterministic()`` again for
+        each new batch, otherwise you would augment all batches in the same
+        way.
+
+        Parameters
+        ----------
+        polygons_on_images : imgaug.PolygonsOnImage or \
+                             list of imgaug.PolygonsOnImage
+            The polygons to augment.
+            Expected is an instance of imgaug.PolygonsOnImage or a list of
+            imgaug.PolygonsOnImage objects, with each such object
+            containing the polygons of a single image.
+
+        parents : None or list of imgaug.augmenters.meta.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
+
+        hooks : None or imgaug.HooksKeypoints, optional
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
+
+        Returns
+        -------
+        result : imgaug.PolygonsOnImage or list of imgaug.PolygonsOnImage
+            Augmented polygons.
+
+        """
+        if self.deterministic:
+            state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
+        input_was_single_instance = False
+        if isinstance(polygons_on_images, ia.PolygonsOnImage):
+            input_was_single_instance = True
+            polygons_on_images = [polygons_on_images]
+
+        ia.do_assert(ia.is_iterable(polygons_on_images))
+        ia.do_assert(all([isinstance(polygons_on_image, ia.PolygonsOnImage)
+                          for polygons_on_image in polygons_on_images]))
+
+        # copy, but only if topmost call or hooks are provided
+        polygons_on_images_copy = polygons_on_images
+        if len(parents) == 0 or hooks is not None:
+            polygons_on_images_copy = [polygons_on_image.deepcopy()
+                                       for polygons_on_image
+                                       in polygons_on_images]
+
+        if hooks is not None:
+            polygons_on_images_copy = hooks.preprocess(
+                polygons_on_images_copy, augmenter=self, parents=parents)
+
+        polygons_on_images_result = polygons_on_images_copy
+        is_activated = (hooks is None and self.activated)
+        is_activated_hooks = (is_activated is False) and (
+            hooks is not None
+            and hooks.is_activated(polygons_on_images_copy,
+                                   augmenter=self, parents=parents,
+                                   default=self.activated)
+        )
+        if is_activated or is_activated_hooks:
+            if len(polygons_on_images) > 0:
+                polygons_on_images_result = self._augment_polygons(
+                    polygons_on_images_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
+                ia.forward_random_state(self.random_state)
+
+        if hooks is not None:
+            polygons_on_images_result = hooks.postprocess(
+                polygons_on_images_result, augmenter=self, parents=parents)
+
+        if self.deterministic:
+            self.random_state.set_state(state_orig)
+
+        if input_was_single_instance:
+            return polygons_on_images_result[0]
+        return polygons_on_images_result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        """
+        Augment polygons on images.
+
+        This is the internal version of ``augment_polygons()``.
+        It is called from ``augment_polygons()`` and should usually not be
+        called directly.
+        This method may transform the polygons in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        random_state : numpy.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        Returns
+        ----------
+        list of imgaug.PolygonsOnImage
+            The augmented polygons.
+
+        """
+        return polygons_on_images
+
+    def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
+                                       parents, hooks, recoverer=None):
+        """
+        Augment polygons by applying keypoint augmentation to their vertices.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        random_state : numpy.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        recoverer : None or imgaug._ConcavePolygonRecoverer
+            An instance used to repair invalid polygons after augmentation.
+            Must offer the method
+            ``recover_from(new_exterior, old_polygon, random_state=0)``.
+            If ``None`` then invalid polygons are not repaired.
+
+        Returns
+        ----------
+        list of imgaug.PolygonsOnImage
+            The augmented polygons.
+
+        """
+        kps_ois = []
+        kp_counts = []
+        for polys_oi in polygons_on_images:
+            kps = []
+            kp_counts_image = []
+            for poly in polys_oi.polygons:
+                poly_kps = poly.to_keypoints()
+                kps.extend(poly_kps)
+                kp_counts_image.append(len(poly_kps))
+            kps_ois.append(ia.KeypointsOnImage(kps, shape=polys_oi.shape))
+            kp_counts.append(kp_counts_image)
+
+        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents, hooks)
+
+        result = []
+        gen = enumerate(zip(kps_ois_aug, kp_counts))
+        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
+            polys_aug = []
+            counter = 0
+            for i, count in enumerate(kp_counts_image):
+                poly_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
+                poly_old = polygons_on_images[img_idx].polygons[i]
+                if recoverer is not None:
+                    # make sure to not derive random state from random_state
+                    # at the start of this function, otherwise random_state
+                    # in _augment_keypoints() will be unaligned with images
+                    poly_aug = recoverer.recover_from(
+                        [(kp.x, kp.y) for kp in poly_kps_aug],
+                        poly_old,
+                        random_state=random_state)
+                else:
+                    poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
+                polys_aug.append(poly_aug)
+                counter += count
+            result.append(ia.PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
+
         return result
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):
@@ -1946,6 +2181,7 @@ class Sequential(Augmenter, list):
                      "Expected random_order to be boolean, got %s." % (type(random_order),))
         self.random_order = random_order
 
+    # TODO make the below functions more DRY
     def _augment_images(self, images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.random_order:
@@ -1984,7 +2220,7 @@ class Sequential(Augmenter, list):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(keypoints_on_images,
-                                                     augmenter=self, parents=parents, default=True):
+                                                 augmenter=self, parents=parents, default=True):
             if self.random_order:
                 for index in random_state.permutation(len(self)):
                     keypoints_on_images = self[index].augment_keypoints(
@@ -2000,6 +2236,25 @@ class Sequential(Augmenter, list):
                         hooks=hooks
                     )
         return keypoints_on_images
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        if hooks is None or hooks.is_propagating(polygons_on_images,
+                                                 augmenter=self, parents=parents, default=True):
+            if self.random_order:
+                for index in random_state.permutation(len(self)):
+                    polygons_on_images = self[index].augment_polygons(
+                        polygons_on_images=polygons_on_images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                for augmenter in self:
+                    polygons_on_images = augmenter.augment_polygons(
+                        polygons_on_images=polygons_on_images,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+        return polygons_on_images
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
@@ -2266,47 +2521,25 @@ class SomeOf(Augmenter, list):
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
-            # This must happen before creating the augmenter_active array,
-            # otherwise in case of determinism the number of augmented images
-            # would change the random_state's state, resulting in the order
-            # being dependent on the number of augmented images (and not be
-            # constant). By doing this first, the random state is always the
-            # same (when determinism is active), so the order is always the
-            # same.
-            augmenter_order = self._get_augmenter_order(random_state)
-
-            # create an array of active augmenters per image
-            # e.g.
-            #  [[0, 0, 1],
-            #   [1, 0, 1],
-            #   [1, 0, 0]]
-            # would signal, that augmenter 3 is active for the first image,
-            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(heatmaps), random_state)
-
-            for augmenter_index in augmenter_order:
-                active = augmenter_active[:, augmenter_index].nonzero()[0]
-                if len(active) > 0:
-                    # pick images to augment, i.e. images for which
-                    # augmenter at current index is active
-                    heatmaps_to_aug = [heatmaps[idx] for idx in active]
-
-                    # augment the images
-                    heatmaps_aug = self[augmenter_index].augment_heatmaps(
-                        heatmaps_to_aug,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-
-                    # Map them back to their position in the images array/list
-                    for aug_idx, original_idx in enumerate(active):
-                        heatmaps[original_idx] = heatmaps_aug[aug_idx]
-
-        return heatmaps
+        def _augfunc(augmenter_, heatmaps_to_aug_, parents_, hooks_):
+            return augmenter_.augment_heatmaps(heatmaps_to_aug_, parents_, hooks_)
+        return self._augment_non_images(heatmaps, random_state,
+                                        parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
+            return augmenter_.augment_keypoints(koi_to_aug_, parents_, hooks_)
+        return self._augment_non_images(keypoints_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
+            return augmenter_.augment_polygons(polys_to_aug_, parents_, hooks_)
+        return self._augment_non_images(polygons_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             # This must happen before creating the augmenter_active array,
             # otherwise in case of determinism the number of augmented images
             # would change the random_state's state, resulting in the order
@@ -2323,27 +2556,25 @@ class SomeOf(Augmenter, list):
             #   [1, 0, 0]]
             # would signal, that augmenter 3 is active for the first image,
             # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(keypoints_on_images), random_state)
+            augmenter_active = self._get_augmenter_active(len(inputs), random_state)
 
             for augmenter_index in augmenter_order:
                 active = augmenter_active[:, augmenter_index].nonzero()[0]
                 if len(active) > 0:
                     # pick images to augment, i.e. images for which
                     # augmenter at current index is active
-                    koi_to_aug = [keypoints_on_images[idx] for idx in active]
+                    koi_to_aug = [inputs[idx] for idx in active]
 
-                    # augment the images
-                    koi_to_aug = self[augmenter_index].augment_keypoints(
-                        keypoints_on_images=koi_to_aug,
-                        parents=parents + [self],
-                        hooks=hooks
+                    # augment the image-related objects
+                    koi_to_aug = func(
+                        self[augmenter_index], koi_to_aug, parents + [self],
+                        hooks
                     )
 
                     # map them back to their position in the images array/list
                     for aug_idx, original_idx in enumerate(active):
-                        keypoints_on_images[original_idx] = koi_to_aug[aug_idx]
-
-        return keypoints_on_images
+                        inputs[original_idx] = koi_to_aug[aug_idx]
+        return inputs
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
@@ -2557,76 +2788,48 @@ class Sometimes(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
-            nb_heatmaps = len(heatmaps)
-            samples = self.p.draw_samples((nb_heatmaps,), random_state=random_state)
-
-            # create lists of heatmaps for if and else lists (one for each)
-            # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
-            indices_then_list = np.where(samples == 1)[0]
-            indices_else_list = np.where(samples == 0)[0]
-            heatmaps_then_list = [heatmaps[i] for i in indices_then_list]
-            heatmaps_else_list = [heatmaps[i] for i in indices_else_list]
-
-            # augment according to if and else list
-            result_then_list = heatmaps_then_list
-            result_else_list = heatmaps_else_list
-            if self.then_list is not None and len(heatmaps_then_list) > 0:
-                result_then_list = self.then_list.augment_heatmaps(
-                    heatmaps_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-            if self.else_list is not None and len(heatmaps_else_list) > 0:
-                result_else_list = self.else_list.augment_heatmaps(
-                    heatmaps_else_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            # map results of if/else lists back to their initial positions (in "heatmaps" variable)
-            result = [None] * len(heatmaps)
-            for idx_result_then_list, idx_heatmaps in enumerate(indices_then_list):
-                result[idx_heatmaps] = result_then_list[idx_result_then_list]
-            for idx_result_else_list, idx_heatmaps in enumerate(indices_else_list):
-                result[idx_heatmaps] = result_else_list[idx_result_else_list]
-        else:
-            result = heatmaps
-
-        return result
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_heatmaps(inputs_, parents_, hooks_)
+        return self._augment_non_images(heatmaps, random_state,
+                                        parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        # TODO this is mostly copy pasted from _augment_images, make dry
-        result = keypoints_on_images
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
-            nb_images = len(keypoints_on_images)
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_keypoints(inputs_, parents_, hooks_)
+        return self._augment_non_images(keypoints_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_polygons(inputs_, parents_, hooks_)
+        return self._augment_non_images(polygons_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
+        result = inputs
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
+            nb_images = len(inputs)
             samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)
             # note that np.where returns tuple(array([0, 5, 9, ...])) or tuple(array([]))
             indices_then_list = np.where(samples == 1)[0]
             indices_else_list = np.where(samples == 0)[0]
-            images_then_list = [keypoints_on_images[i] for i in indices_then_list]
-            images_else_list = [keypoints_on_images[i] for i in indices_else_list]
+            images_then_list = [inputs[i] for i in indices_then_list]
+            images_else_list = [inputs[i] for i in indices_else_list]
 
             # augment according to if and else list
             result_then_list = images_then_list
             result_else_list = images_else_list
             if self.then_list is not None and len(images_then_list) > 0:
-                result_then_list = self.then_list.augment_keypoints(
-                    keypoints_on_images=images_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+                result_then_list = func(self.then_list, images_then_list,
+                                        parents + [self], hooks)
             if self.else_list is not None and len(images_else_list) > 0:
-                result_else_list = self.else_list.augment_keypoints(
-                    keypoints_on_images=images_else_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+                result_else_list = func(self.else_list, images_else_list,
+                                        parents + [self], hooks)
 
             # map results of if/else lists back to their initial positions (in "images" variable)
-            result = [None] * len(keypoints_on_images)
+            result = [None] * len(inputs)
             for idx_result_then_list, idx_images in enumerate(indices_then_list):
                 result[idx_images] = result_then_list[idx_result_then_list]
             for idx_result_else_list, idx_images in enumerate(indices_else_list):
@@ -2776,44 +2979,43 @@ class WithChannels(Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = heatmaps
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
-            # Augment heatmaps in the style of the children if all channels or the majority of
-            # them are selected by this layer, otherwise don't change the heatmaps.
-            heatmaps_to_aug = []
-            indices = []
-
-            for i, heatmaps_i in enumerate(heatmaps):
-                nb_channels = heatmaps_i.shape[2] if len(heatmaps_i.shape) >= 3 else 1
-                if self.channels is None or len(self.channels) > nb_channels*0.5:
-                    heatmaps_to_aug.append(heatmaps_i)
-                    indices.append(i)
-
-            if len(heatmaps_to_aug) > 0:
-                heatmaps_aug = self.children.augment_heatmaps(
-                    heatmaps_to_aug,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-                for idx_orig, heatmaps_i_aug in zip(indices, heatmaps_aug):
-                    result[idx_orig] = heatmaps_i_aug
-
-        return result
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_heatmaps(inputs_, parents_, hooks_)
+        return self._augment_non_images(heatmaps, parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        result = keypoints_on_images
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
-            # Augment keypoints in the style of the children if all channels or the majority of
-            # them are selected by this layer, otherwise don't change the heatmaps.
-            # We expect here the images channel number to be 3, but actually can't be fully sure
-            # about that.
-            if self.channels is None or len(self.channels) > 1:
-                result = self.children.augment_keypoints(
-                    keypoints_on_images,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_keypoints(inputs_, parents_, hooks_)
+        return self._augment_non_images(keypoints_on_images, parents, hooks,
+                                        _augfunc)
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_polygons(inputs_, parents_, hooks_)
+        return self._augment_non_images(polygons_on_images, parents, hooks,
+                                        _augfunc)
+
+    def _augment_non_images(self, inputs, parents, hooks, func):
+        result = inputs
+        if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
+            # Augment the non-images in the style of the children if all
+            # channels or the majority of them are selected by this layer,
+            # otherwise don't change the non-images.
+            inputs_to_aug = []
+            indices = []
+
+            for i, inputs_i in enumerate(inputs):
+                nb_channels = inputs_i.shape[2] if len(inputs_i.shape) >= 3 else 1
+                if self.channels is None or len(self.channels) > nb_channels*0.5:
+                    inputs_to_aug.append(inputs_i)
+                    indices.append(i)
+
+            if len(inputs_to_aug) > 0:
+                inputs_aug = func(self.children, inputs_to_aug,
+                                  parents + [self], hooks)
+
+                for idx_orig, inputs_i_aug in zip(indices, inputs_aug):
+                    result[idx_orig] = inputs_i_aug
 
         return result
 
@@ -2921,7 +3123,8 @@ class Lambda(Augmenter):
         and return the changed images (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_images`.
-        If this is None instead of a function, the images will not be altered.
+        If this is ``None`` instead of a function, the images will not be
+        altered.
 
     func_heatmaps : None or callable, optional
         The function to call for each batch of heatmaps.
@@ -2932,7 +3135,8 @@ class Lambda(Augmenter):
         and return the changed heatmaps (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
-        If this is None instead of a function, the heatmaps will not be altered.
+        If this is ``None`` instead of a function, the heatmaps will not be
+        altered.
 
     func_keypoints : None or callable, optional
         The function to call for each batch of image keypoints.
@@ -2943,7 +3147,23 @@ class Lambda(Augmenter):
         and return the changed keypoints (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints`.
-        If this is None instead of a function, the keypoints will not be altered.
+        If this is ``None`` instead of a function, the keypoints will not be
+        altered.
+
+    func_polygons : "keypoints" or None or callable, optional
+        The function to call for each batch of image polygons.
+        It must follow the form
+
+            ``function(polygons_on_images, random_state, parents, hooks)``
+
+        and return the changed polygons (may be transformed in-place).
+        This is essentially the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_polygons`.
+        If this is ``None`` instead of a function, the polygons will not be
+        altered.
+        If this is the string ``"keypoints"`` instead of a function, the
+        polygons will automatically be augmented by transforming their corner
+        vertices to keypoint and calling `func_keypoints`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2985,16 +3205,18 @@ class Lambda(Augmenter):
     >>> )
 
     Replaces every second row in images with black pixels, sets every second row in heatmapps to
-    zero and leaves keypoints unchanged.
+    zero and leaves keypoints unchanged (same for bounding boxes and polygons).
 
     """
 
-    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None,
+                 func_polygons="keypoints",
+                 name=None, deterministic=False, random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
         self.func_keypoints = func_keypoints
+        self.func_polygons = func_polygons
 
     def _augment_images(self, images, random_state, parents, hooks):
         if self.func_images is not None:
@@ -3025,11 +3247,28 @@ class Lambda(Augmenter):
             return result
         return keypoints_on_images
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+        if self.func_polygons == "keypoints":
+            return self._augment_polygons_as_keypoints(
+                polygons_on_images, random_state, parents, hooks,
+                recoverer=ia._ConcavePolygonRecoverer())
+        elif self.func_polygons is not None:
+            result = self.func_polygons(polygons_on_images, random_state, parents, hooks)
+            ia.do_assert(ia.is_iterable(result),
+                         "Expected callback function for polygons to return list of imgaug.PolygonsOnImage() "
+                         + "instances, got %s." % (type(result),))
+            ia.do_assert(all([isinstance(el, ia.PolygonsOnImage) for el in result]),
+                         "Expected callback function for polygons to return list of imgaug.PolygonsOnImage() "
+                         + "instances, got %s." % ([type(el) for el in result],))
+            return result
+        return polygons_on_images
+
     def get_parameters(self):
         return []
 
 
-def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name=None, deterministic=False,
+def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
+                 func_polygons=None, name=None, deterministic=False,
                  random_state=None):
     """
     Augmenter that runs an assert on each batch of input images
@@ -3077,6 +3316,13 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints`.
 
+    func_polygons : None or callable, optional
+        The function to call for each batch of polygons.
+        It must follow the form ``function(polygons_on_images, random_state, parents, hooks)``
+        and return either True (valid input) or False (invalid input).
+        It essentially reuses the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_polygons`.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -3102,15 +3348,22 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None, name
                      "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
         return keypoints_on_images
 
+    def func_polygons_assert(polygons_on_images, random_state, parents, hooks):
+        ia.do_assert(func_polygons(polygons_on_images, random_state, parents, hooks),
+                     "Input polygons did not fulfill user-defined assertion in AssertLambda.")
+        return polygons_on_images
+
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
     return Lambda(func_images_assert if func_images is not None else None,
                   func_heatmaps_assert if func_heatmaps is not None else None,
                   func_keypoints_assert if func_keypoints is not None else None,
+                  func_polygons_assert if func_polygons is not None else None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
-def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=True,
+def AssertShape(shape, check_images=True, check_heatmaps=True,
+                check_keypoints=True, check_polygons=True,
                 name=None, deterministic=False, random_state=None):
     """
     Augmenter to make assumptions about the shape of input image(s), heatmaps and keypoints.
@@ -3161,8 +3414,15 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
 
     check_keypoints : bool, optional
         Whether to validate input keypoints via the given shape.
-        The number of keypoints will be checked and for each KeypointsOnImage
-        instance its image's shape, i.e. KeypointsOnImage.shape.
+        This will check (a) the number of keypoints and (b) for each
+        KeypointsOnImage instance the ``.shape``, i.e. the shape of the
+        corresponding image.
+
+    check_polygons : bool, optional
+        Whether to validate input keypoints via the given shape.
+        This will check (a) the number of polygons and (b) for each
+        PolygonsOnImage instance the ``.shape``, i.e. the shape of the
+        corresponding image.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3266,11 +3526,25 @@ def AssertShape(shape, check_images=True, check_heatmaps=True, check_keypoints=T
                     compare(observed, expected, j, i)
         return keypoints_on_images
 
+    def func_polygons(polygons_on_images, _random_state, _parents, _hooks):
+        if check_polygons:
+            if shape[0] is not None:
+                compare(len(polygons_on_images), shape[0], 0, "ALL")
+
+            for i in sm.xrange(len(polygons_on_images)):
+                polygons_on_image = polygons_on_images[i]
+                for j in sm.xrange(len(shape[0:2])):
+                    expected = shape[j+1]
+                    observed = polygons_on_image.shape[j]
+                    compare(observed, expected, j, i)
+        return polygons_on_images
+
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return Lambda(func_images, func_heatmaps, func_keypoints,
-                  name=name, deterministic=deterministic, random_state=random_state)
+    return Lambda(func_images, func_heatmaps, func_keypoints, func_polygons,
+                  name=name, deterministic=deterministic,
+                  random_state=random_state)
 
 
 class ChannelShuffle(Augmenter):

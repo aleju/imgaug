@@ -402,9 +402,6 @@ class Resize(meta.Augmenter):
         samples_h, samples_w, _samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             sample_h, sample_w = samples_h[i], samples_w[i]
             h, w = self._compute_height_width(keypoints_on_image.shape, sample_h, sample_w)
             new_shape = (h, w) + keypoints_on_image.shape[2:]
@@ -413,6 +410,11 @@ class Resize(meta.Augmenter):
             result.append(keypoints_on_image_rs)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -875,9 +877,6 @@ class CropAndPad(meta.Augmenter):
         nb_images = len(keypoints_on_images)
         seeds = random_state.randint(0, 10**6, (nb_images,))
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             seed = seeds[i]
             height, width = keypoints_on_image.shape[0:2]
             crop_top, crop_right, crop_bottom, crop_left, \
@@ -894,6 +893,11 @@ class CropAndPad(meta.Augmenter):
                 result.append(shifted)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples_image(self, seed, height, width):
         random_state = ia.new_random_state(seed)
@@ -1442,9 +1446,6 @@ class PadToFixedSize(meta.Augmenter):
         pad_xs, pad_ys, _, _ = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             ih, iw = keypoints_on_image.shape[:2]
             pad_x0, _pad_x1, pad_y0, _pad_y1 = self._calculate_paddings(h, w, ih, iw, pad_xs[i], pad_ys[i])
             keypoints_padded = keypoints_on_image.shift(x=pad_x0, y=pad_y0)
@@ -1490,6 +1491,11 @@ class PadToFixedSize(meta.Augmenter):
             ) + heatmaps[i].shape[2:]
 
         return heatmaps
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state):
         seed = random_state.randint(0, 10**6, 1)[0]
@@ -1677,9 +1683,6 @@ class CropToFixedSize(meta.Augmenter):
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            if not keypoints_on_image.keypoints:
-                result.append(keypoints_on_image)
-                continue
             height_image, width_image = keypoints_on_image.shape[0:2]
 
             crop_image_top, crop_image_bottom = 0, 0
@@ -1702,6 +1705,11 @@ class CropToFixedSize(meta.Augmenter):
             result.append(keypoints_cropped)
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_images = len(heatmaps)
@@ -1950,9 +1958,7 @@ class KeepSizeByResize(meta.Augmenter):
             result = []
             gen = zip(keypoints_on_images, kps_aug, interpolations, input_shapes)
             for kps, kps_aug, interpolation, input_shape in gen:
-                if not kps.keypoints:
-                    result.append(kps_aug)
-                elif interpolation == KeepSizeByResize.NO_RESIZE:
+                if interpolation == KeepSizeByResize.NO_RESIZE:
                     result.append(kps_aug)
                 else:
                     result.append(kps_aug.on(input_shape))
@@ -1960,6 +1966,11 @@ class KeepSizeByResize(meta.Augmenter):
             result = keypoints_on_images
 
         return result
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def _to_deterministic(self):
         aug = self.copy()

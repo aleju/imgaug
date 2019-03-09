@@ -10,6 +10,44 @@
 * Reordered classes in `parameters.py`.
 * Add `_ConcavePolygonRecoverer` to `imgaug.py`.
 * Fixed a division by zero bug in `angle_between_vectors()`.
+* Add `PolygonsOnImage` to `imgaug.py`.
+* Fixed `Polygon.clip_out_of_image(image)` not handling `image` being a tuple.
+* `Augmenter` offers now methods for polygon augmentation.
+    * Added `augment_polygons()` to `Augmenter`.
+    * Added `_augment_polygons()` to `Augmenter`.
+    * Added `_augment_polygons_as_keypoints()` to `Augmenter`.
+    * Added argument `polygons` to `imgaug.Batch`.
+    * Added attributes `polygons_aug` and `polygons_unaug` to `imgaug.Batch`.
+    * Added polygon handling to `Augmenter.augment_batches()`.
+* Fixed `Rot90` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `Affine` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `PerspectiveTransform` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `Resize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `CropAndPad` not changing `KeypointsOnImage.shape` if `.keypoints` was empty. (Same for `Crop`, `Pad`.)
+* Fixed `PadToFixedSize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `CropToFixedSize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Fixed `KeepSizeByResize` not changing `KeypointsOnImage.shape` if `.keypoints` was empty.
+* Added method `Polygon.to_keypoints()`.
+* Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.deepcopy()`.
+* Added optional arguments `keypoints` and `shape` to `KeypointsOnImage.copy()`.
+* Added method `Keypoint.copy()`.
+* Added method `Keypoint.deepcopy()`.
+    * Refactored methods in `Keypoint` to use `deepcopy()` to create copies of itself (instead of instantiating new instances via `Keypoint(...)`).
+* `KeypointsOnImage.deepcopy()` now uses `Keypoint.deepcopy()` to create Keypoint copies, making it more flexible.
+* Refactored `KeypointsOnImage` to use `KeypointsOnImage.deepcopy()` in as many methods as possible to create copies of itself.
+* Refactored `Affine` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Refactored `AffineCv2` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Refactored `PiecewiseAffine` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Refactored `PerspectiveTransform` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Refactored `ElasticTransformation` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Refactored `Rot90` to use `KeypointsOnImage.deepcopy()` and `Keypoint.deepcopy()` during keypoint augmentation.
+* Changed `Keypoint.project()` to raise an exception if `from_shape[0:2]` contains zeros.
+* Changed `Keypoint.project()` to raise a warning if `to_shape[0:2]` contains zeros.
+* Changed `PerspectiveTransform` to ensure minimum height and width of output images (by default `2x2`).
+  This prevents errors in polygon augmentation (possibly also in keypoint augmentation).
+* Changed `Polygon.exterior_almost_equals()` to accept lists of tuples as argument `other_polygon`.
+* Added optional drawing of corner points to `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`.
+* Added `imgaug.quokka_polygons()` function to generate example polygon data.
 
 
 # 0.2.8
