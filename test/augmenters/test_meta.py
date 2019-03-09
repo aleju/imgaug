@@ -1878,6 +1878,64 @@ def test_Augmenter_augment_polygons():
         seen.add((img_rot_idx, poly_rot_idx))
     assert 2 <= len(seen) <= 4  # assert not always the same rot
 
+    # Test if augmenting lists of PolygonsOnImage is still aligned with image
+    # augmentation when one PolygonsOnImage instance is empty (no polygons)
+    poly = ia.Polygon([(0, 0), (5, 0), (5, 5), (0, 5)])
+    psoi_lst = [
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.shift(left=1)], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([], shape=(1, 8)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.shift(left=1)], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20)),
+        ia.PolygonsOnImage([poly.deepcopy()], shape=(10, 20))
+    ]
+    image = np.zeros((10, 20), dtype=np.uint8)
+    image[0, 0] = 255
+    image[0, 5] = 255
+    image[5, 5] = 255
+    image[5, 0] = 255
+    images = np.tile(image[np.newaxis, :, :], (len(psoi_lst), 1, 1))
+
+    aug = iaa.Affine(translate_px={"x": (0, 8)}, order=0, mode="constant", cval=0)
+
+    for _ in sm.xrange(10):
+        for is_list in [False, True]:
+            aug_det = aug.to_deterministic()
+            if is_list:
+                images_aug = aug_det.augment_images(list(images))
+            else:
+                images_aug = aug_det.augment_images(images)
+            psoi_lst_aug = aug_det.augment_polygons(psoi_lst)
+
+            if is_list:
+                translations_imgs = np.argmax(np.array(images_aug, dtype=np.uint8)[:, 0, :], axis=1)
+            else:
+                translations_imgs = np.argmax(images_aug[:, 0, :], axis=1)
+            translations_points = [
+                psoi.polygons[0].exterior[0][0] if len(psoi.polygons) > 0 else None
+                for psoi
+                in psoi_lst_aug]
+
+            assert len([
+                pointresult
+                for pointresult
+                in translations_points
+                if pointresult is None
+            ]) == 1
+            assert translations_points[5] is None
+            translations_imgs = np.concatenate([translations_imgs[0:5], translations_imgs[6:]])
+            translations_points = np.array(
+                translations_points[0:5] + translations_points[6:],
+                dtype=translations_imgs.dtype)
+            translations_points[2] -= 1
+            translations_points[8-1] -= 1
+            assert np.array_equal(translations_imgs, translations_points)
+
 
 def test_Augmenter_augment_segmentation_maps():
     reseed()
