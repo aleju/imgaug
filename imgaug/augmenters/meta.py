@@ -1140,7 +1140,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     polygons_on_images_copy,
                     random_state=ia.copy_random_state(self.random_state),
                     parents=parents,
-                    hooks=None
+                    hooks=hooks
                 )
                 ia.forward_random_state(self.random_state)
 
