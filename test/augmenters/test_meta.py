@@ -171,6 +171,15 @@ def test_Lambda():
     keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=1),
                                           ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
 
+    psois = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])],
+        shape=base_img.shape
+    )]
+    psois_aug = [ia.PolygonsOnImage(
+        [ia.Polygon([(1, 2), (3, 2), (3, 4), (1, 4)])],
+        shape=base_img.shape
+    )]
+
     def func_images(images, random_state, parents, hooks):
         if isinstance(images, list):
             images = [image + 1 for image in images]
@@ -188,7 +197,23 @@ def test_Lambda():
                 kp.x = (kp.x + 1) % 3
         return keypoints_on_images
 
-    aug = iaa.Lambda(func_images, func_heatmaps, func_keypoints)
+    def func_polygons(polygons_on_images, random_state, parents, hooks):
+        if len(polygons_on_images[0].polygons) == 0:
+            return [ia.PolygonsOnImage([], shape=polygons_on_images[0].shape)]
+        new_exterior = np.copy(polygons_on_images[0].polygons[0].exterior)
+        new_exterior[:, 0] += 1
+        new_exterior[:, 1] += 2
+        return [
+            ia.PolygonsOnImage([ia.Polygon(new_exterior)],
+                               shape=polygons_on_images[0].shape)
+        ]
+
+    aug = iaa.Lambda(
+        func_images=func_images,
+        func_heatmaps=func_heatmaps,
+        func_keypoints=func_keypoints,
+        func_polygons=func_polygons
+    )
     aug_det = aug.to_deterministic()
 
     # check once that the augmenter can handle lists correctly
@@ -228,6 +253,36 @@ def test_Lambda():
         observed = aug_det.augment_keypoints(keypoints)
         expected = keypoints_aug
         assert keypoints_equal(observed, expected)
+
+        observed = aug.augment_polygons(psois)
+        expected = psois_aug
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0])
+        assert observed[0].polygons[0].is_valid
+
+        observed = aug_det.augment_polygons(psois)
+        expected = psois_aug
+        assert len(observed) == 1
+        assert len(observed[0].polygons) == 1
+        assert observed[0].shape == expected[0].shape
+        assert observed[0].polygons[0].exterior_almost_equals(
+            expected[0].polygons[0])
+        assert observed[0].polygons[0].is_valid
+
+    # test empty keypoints
+    observed = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(1, 2, 3)))
+    assert len(observed.keypoints) == 0
+    assert observed.shape == (1, 2, 3)
+
+    # test empty polygons
+    observed = aug.augment_polygons(ia.PolygonsOnImage([], shape=(1, 2, 3)))
+    assert len(observed.polygons) == 0
+    assert observed.shape == (1, 2, 3)
+
+    # TODO add tests when funcs are not set in Lambda
 
     ###################
     # test other dtypes
