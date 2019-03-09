@@ -2415,6 +2415,17 @@ def test_Sequential():
     keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=0, y=2),
                                           ia.Keypoint(x=0, y=1)], shape=image.shape)]
 
+    polygons = [
+        ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])],
+            shape=image.shape)
+    ]
+    polygons_aug = [
+        ia.PolygonsOnImage(
+            [ia.Polygon([(2, 2), (0, 2), (0, 0), (2, 0)])],
+            shape=image.shape)
+    ]
+
     aug = iaa.Sequential([
         iaa.Fliplr(1.0),
         iaa.Flipud(1.0)
@@ -2438,6 +2449,22 @@ def test_Sequential():
 
     observed = aug_det.augment_keypoints(keypoints)
     assert keypoints_equal(observed, keypoints_aug)
+
+    observed = aug.augment_polygons(polygons)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == polygons[0].shape
+    assert observed[0].polygons[0].exterior_almost_equals(
+        polygons_aug[0].polygons[0])
+    assert observed[0].polygons[0].is_valid
+
+    observed = aug_det.augment_polygons(polygons)
+    assert len(observed) == 1
+    assert len(observed[0].polygons) == 1
+    assert observed[0].shape == polygons[0].shape
+    assert observed[0].polygons[0].exterior_almost_equals(
+        polygons_aug[0].polygons[0])
+    assert observed[0].polygons[0].is_valid
 
     # heatmaps
     heatmaps_arr = np.float32([[0, 0, 1.0],
@@ -2511,6 +2538,16 @@ def test_Sequential():
     keypoints_first_second = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=image.shape)]
     keypoints_second_first = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0)], shape=image.shape)]
 
+    polygons = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (1, 0), (1, 1)])],
+        shape=image.shape)]
+    polygons_first_second = [ia.PolygonsOnImage(
+        [ia.Polygon([(1, 1), (2, 2), (2, 3)])],
+        shape=image.shape)]
+    polygons_second_first = [ia.PolygonsOnImage(
+        [ia.Polygon([(1, 0), (2, 1), (2, 2)])],
+        shape=image.shape)]
+
     def images_first(images, random_state, parents, hooks):
         return images + 10
 
@@ -2539,14 +2576,42 @@ def test_Sequential():
                 keypoint.y = keypoint.y + keypoint.x
         return keypoints_on_images
 
+    def polygons_first(polygons_on_images, random_state, parents, hooks):
+        for psoi in polygons_on_images:
+            for poly in psoi.polygons:
+                poly.exterior[:, 0] += 1
+        return polygons_on_images
+
+    def polygons_second(polygons_on_images, random_state, parents, hooks):
+        for psoi in polygons_on_images:
+            for poly in psoi.polygons:
+                poly.exterior[:, 1] += poly.exterior[:, 0]
+        return polygons_on_images
+
     aug_unrandom = iaa.Sequential([
-        iaa.Lambda(images_first, heatmaps_first, keypoints_first),
-        iaa.Lambda(images_second, heatmaps_second, keypoints_second)
+        iaa.Lambda(
+            func_images=images_first,
+            func_heatmaps=heatmaps_first,
+            func_keypoints=keypoints_first,
+            func_polygons=polygons_first),
+        iaa.Lambda(
+            func_images=images_second,
+            func_heatmaps=heatmaps_second,
+            func_keypoints=keypoints_second,
+            func_polygons=polygons_second)
     ], random_order=False)
     aug_unrandom_det = aug_unrandom.to_deterministic()
     aug_random = iaa.Sequential([
-        iaa.Lambda(images_first, heatmaps_first, keypoints_first),
-        iaa.Lambda(images_second, heatmaps_second, keypoints_second)
+        iaa.Lambda(
+            func_images=images_first,
+            func_heatmaps=heatmaps_first,
+            func_keypoints=keypoints_first,
+            func_polygons=polygons_first),
+        iaa.Lambda(
+            func_images=images_second,
+            func_heatmaps=heatmaps_second,
+            func_keypoints=keypoints_second,
+            func_polygons=polygons_second)
     ], random_order=True)
     aug_random_det = aug_random.to_deterministic()
 
@@ -2572,6 +2637,10 @@ def test_Sequential():
     nb_keypoints_second_first_unrandom = 0
     nb_keypoints_first_second_random = 0
     nb_keypoints_second_first_random = 0
+    nb_polygons_first_second_unrandom = 0
+    nb_polygons_second_first_unrandom = 0
+    nb_polygons_first_second_random = 0
+    nb_polygons_second_first_random = 0
 
     for i in sm.xrange(nb_iterations):
         observed_aug_unrandom = aug_unrandom.augment_images(images)
@@ -2584,6 +2653,9 @@ def test_Sequential():
 
         keypoints_aug_unrandom = aug_unrandom.augment_keypoints(keypoints)
         keypoints_aug_random = aug_random.augment_keypoints(keypoints)
+
+        polygons_aug_unrandom = aug_unrandom.augment_polygons(polygons)
+        polygons_aug_random = aug_random.augment_polygons(polygons)
 
         if i == 0:
             last_aug = observed_aug_unrandom
@@ -2643,6 +2715,24 @@ def test_Sequential():
             nb_keypoints_first_second_random += 1
         elif keypoints_equal(keypoints_aug_random, keypoints_second_first):
             nb_keypoints_second_first_random += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if polygons_aug_unrandom[0].polygons[0].exterior_almost_equals(
+                polygons_first_second[0].polygons[0]):
+            nb_polygons_first_second_unrandom += 1
+        elif polygons_aug_unrandom[0].polygons[0].exterior_almost_equals(
+                polygons_second_first[0].polygons[0]):
+            nb_polygons_second_first_unrandom += 1
+        else:
+            raise Exception("Received output doesnt match any expected output.")
+
+        if polygons_aug_random[0].polygons[0].exterior_almost_equals(
+                polygons_first_second[0].polygons[0]):
+            nb_polygons_first_second_random += 1
+        elif polygons_aug_random[0].polygons[0].exterior_almost_equals(
+                polygons_second_first[0].polygons[0]):
+            nb_polygons_second_first_random += 1
         else:
             raise Exception("Received output doesnt match any expected output.")
 
