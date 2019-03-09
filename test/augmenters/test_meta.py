@@ -4077,6 +4077,10 @@ def test_WithChannels():
     assert kpsoi_aug.shape == (5, 6, 3)
     assert keypoints_equal([kpsoi_aug], [kpsoi_x])
 
+    kpsoi_aug = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(5, 6, 3)))
+    assert len(kpsoi_aug.keypoints) == 0
+    assert kpsoi_aug.shape == (5, 6, 3)
+
     # test polygon aug
     psoi = ia.PolygonsOnImage(
         [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])],
@@ -4102,6 +4106,10 @@ def test_WithChannels():
     assert psoi_aug.shape == (5, 6, 3)
     assert psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
     assert psoi_aug.polygons[0].is_valid
+
+    psoi_aug = aug.augment_polygons(ia.PolygonsOnImage([], shape=(5, 6, 3)))
+    assert len(psoi_aug.polygons) == 0
+    assert psoi_aug.shape == (5, 6, 3)
 
     # invalid datatype for channels
     got_exception = False
