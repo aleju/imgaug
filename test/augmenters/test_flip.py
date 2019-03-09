@@ -59,6 +59,13 @@ def test_Fliplr():
     keypoints_flipped = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=0), ia.Keypoint(x=1, y=1),
                                               ia.Keypoint(x=0, y=2)], shape=base_img.shape)]
 
+    polygons = [ia.PolygonsOnImage(
+        [ia.Polygon([(0, 0), (2, 0), (2, 2)])],
+        shape=base_img.shape)]
+    polygons_flipped = [ia.PolygonsOnImage(
+        [ia.Polygon([(2, 0), (0, 0), (0, 2)])],
+        shape=base_img.shape)]
+
     # 0% chance of flip
     aug = iaa.Fliplr(0)
     aug_det = aug.to_deterministic()
@@ -79,6 +86,15 @@ def test_Fliplr():
         observed = aug_det.augment_keypoints(keypoints)
         expected = keypoints
         assert keypoints_equal(observed, expected)
+
+        for aug_ in [aug, aug_det]:
+            observed = aug_.augment_polygons(polygons)
+            assert len(observed) == 1
+            assert len(observed[0].polygons) == 1
+            assert observed[0].shape == polygons[0].shape
+            assert observed[0].polygons[0].exterior_almost_equals(
+                polygons[0].polygons[0])
+            assert observed[0].polygons[0].is_valid
 
     # 0% chance of flip, heatmaps
     aug = iaa.Fliplr(0)
@@ -118,6 +134,15 @@ def test_Fliplr():
         expected = keypoints_flipped
         assert keypoints_equal(observed, expected)
 
+        for aug_ in [aug, aug_det]:
+            observed = aug_.augment_polygons(polygons)
+            assert len(observed) == 1
+            assert len(observed[0].polygons) == 1
+            assert observed[0].shape == polygons[0].shape
+            assert observed[0].polygons[0].exterior_almost_equals(
+                polygons_flipped[0].polygons[0])
+            assert observed[0].polygons[0].is_valid
+
     # 100% chance of flip, heatmaps
     aug = iaa.Fliplr(1.0)
     heatmaps = ia.HeatmapsOnImage(
@@ -144,6 +169,8 @@ def test_Fliplr():
     nb_images_flipped_det = 0
     nb_keypoints_flipped = 0
     nb_keypoints_flipped_det = 0
+    nb_polygons_flipped = 0
+    nb_polygons_flipped_det = 0
     for _ in sm.xrange(nb_iterations):
         observed = aug.augment_images(images)
         if np.array_equal(observed, images_flipped):
@@ -161,10 +188,22 @@ def test_Fliplr():
         if keypoints_equal(observed, keypoints_flipped):
             nb_keypoints_flipped_det += 1
 
+        observed = aug.augment_polygons(polygons)
+        if observed[0].polygons[0].exterior_almost_equals(
+                polygons_flipped[0].polygons[0]):
+            nb_polygons_flipped += 1
+
+        observed = aug_det.augment_polygons(polygons)
+        if observed[0].polygons[0].exterior_almost_equals(
+                polygons_flipped[0].polygons[0]):
+            nb_polygons_flipped_det += 1
+
     assert int(nb_iterations * 0.3) <= nb_images_flipped <= int(nb_iterations * 0.7)
     assert int(nb_iterations * 0.3) <= nb_keypoints_flipped <= int(nb_iterations * 0.7)
+    assert int(nb_iterations * 0.3) <= nb_polygons_flipped <= int(nb_iterations * 0.7)
     assert nb_images_flipped_det in [0, nb_iterations]
     assert nb_keypoints_flipped_det in [0, nb_iterations]
+    assert nb_polygons_flipped_det in [0, nb_iterations]
 
     # 50% chance of flipped, multiple images, list as input
     images_multi = [base_img, base_img]
