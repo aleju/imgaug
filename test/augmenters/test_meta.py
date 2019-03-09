@@ -70,6 +70,11 @@ def test_Noop():
 
     images = create_random_images((16, 70, 50, 3))
     keypoints = create_random_keypoints((16, 70, 50, 3), 4)
+    psoi = ia.PolygonsOnImage(
+        [ia.Polygon([(10, 10), (30, 10), (30, 50), (10, 50)])],
+        shape=images[0].shape
+    )
+
     aug = iaa.Noop()
     aug_det = aug.to_deterministic()
 
@@ -89,6 +94,27 @@ def test_Noop():
     expected = keypoints
     assert keypoints_equal(observed, expected)
 
+    observed = aug.augment_polygons(psoi)
+    assert observed.shape == psoi.shape
+    assert len(observed.polygons) == 1
+    assert np.allclose(observed.polygons[0].exterior, psoi.polygons[0].exterior)
+
+    observed = aug_det.augment_polygons(psoi)
+    assert observed.shape == psoi.shape
+    assert len(observed.polygons) == 1
+    assert np.allclose(observed.polygons[0].exterior, psoi.polygons[0].exterior)
+
+    # test empty keypoints
+    observed = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(4, 5, 3)))
+    assert observed.shape == (4, 5, 3)
+    assert len(observed.keypoints) == 0
+
+    # test empty polygons
+    observed = aug.augment_polygons(ia.PolygonsOnImage([], shape=(4, 5, 3)))
+    assert observed.shape == (4, 5, 3)
+    assert len(observed.polygons) == 0
+
+    # get_parameters
     assert iaa.Noop().get_parameters() == []
 
     ###################
