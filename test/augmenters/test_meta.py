@@ -3995,11 +3995,6 @@ def test_WithChannels():
     base_img[..., 0] += 100
     base_img[..., 1] += 200
 
-    aug = iaa.WithChannels(None, iaa.Add(10))
-    observed = aug.augment_image(base_img)
-    expected = base_img + 10
-    assert np.allclose(observed, expected)
-
     aug = iaa.WithChannels(0, iaa.Add(10))
     observed = aug.augment_image(base_img)
     expected = np.copy(base_img)
@@ -4010,6 +4005,16 @@ def test_WithChannels():
     observed = aug.augment_image(base_img)
     expected = np.copy(base_img)
     expected[..., 1] += 10
+    assert np.allclose(observed, expected)
+
+    aug = iaa.WithChannels(None, iaa.Add(10))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 10
+    assert np.allclose(observed, expected)
+
+    aug = iaa.WithChannels([0, 1], iaa.Add(10))
+    observed = aug.augment_image(base_img)
+    expected = base_img + 10
     assert np.allclose(observed, expected)
 
     base_img = np.zeros((3, 3, 2), dtype=np.uint8)
@@ -4050,6 +4055,27 @@ def test_WithChannels():
     observed = aug.augment_image(base_img)
     expected = np.copy(base_img)
     assert np.array_equal(observed, expected)
+
+    # test keypoint aug
+    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)], shape=(5, 6, 3))
+    kpsoi_x = kpsoi.shift(x=1)
+    aug = iaa.WithChannels(1, children=[iaa.Affine(translate_px={"x": 1})])
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi])
+
+    aug = iaa.WithChannels([0, 1, 2], children=[iaa.Affine(translate_px={"x": 1})])
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi_x])
+
+    aug = iaa.WithChannels([0, 1], children=[iaa.Affine(translate_px={"x": 1})])
+    kpsoi_aug = aug.augment_keypoints(kpsoi)
+    assert len(kpsoi_aug.keypoints) == 2
+    assert kpsoi_aug.shape == (5, 6, 3)
+    assert keypoints_equal([kpsoi_aug], [kpsoi_x])
 
     # invalid datatype for channels
     got_exception = False
