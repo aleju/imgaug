@@ -4459,8 +4459,9 @@ class Polygon(object):
         y : number
             Y-coordinate of the point.
 
-        max_distance : number
+        max_distance : None or number
             Maximum distance past which possible matches are ignored.
+            If ``None`` the distance limit is deactivated.
 
         Returns
         -------
