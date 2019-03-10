@@ -2332,7 +2332,7 @@ class KeypointsOnImage(object):
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
             return self.deepcopy(keypoints, shape)
 
-    def draw_on_image(self, image, color=(0, 255, 0), size=3, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3, copy=True, raise_if_out_of_image=False):
         """
         Draw all keypoints onto a given image. Each keypoint is marked by a square of a chosen color and size.
 
@@ -2347,8 +2347,13 @@ class KeypointsOnImage(object):
             The RGB color of all keypoints. If a single int ``C``, then that is
             equivalent to ``(C,C,C)``.
 
+        alpha : float, optional
+            The opacity of the drawn keypoint, where ``1.0`` denotes a fully
+            visible keypoint and ``0.0`` an invisible one.
+
         size : int, optional
-            The size of each point. If set to ``C``, each square will have size ``C x C``.
+            The size of each point. If set to ``C``, each square will have
+            size ``C x C``.
 
         copy : bool, optional
             Whether to copy the image before drawing the points.
@@ -2365,6 +2370,17 @@ class KeypointsOnImage(object):
         if copy:
             image = np.copy(image)
 
+        input_dtype = image.dtype
+        alpha_color = color
+        if alpha < 0.01:
+            # keypoints all invisible, nothing to do
+            return image
+        elif alpha > 0.99:
+            alpha = 1
+        else:
+            image = image.astype(np.float32, copy=False)
+            alpha_color = alpha * np.array(color)
+
         height, width = image.shape[0:2]
 
         for keypoint in self.keypoints:
@@ -2374,11 +2390,21 @@ class KeypointsOnImage(object):
                 x2 = min(x + 1 + size//2, width)
                 y1 = max(y - size//2, 0)
                 y2 = min(y + 1 + size//2, height)
-                image[y1:y2, x1:x2] = color
+                if alpha == 1:
+                    image[y1:y2, x1:x2] = color
+                else:
+                    image[y1:y2, x1:x2] = (
+                            (1 - alpha) * image[y1:y2, x1:x2]
+                            + alpha_color
+                    )
             else:
                 if raise_if_out_of_image:
                     raise Exception("Cannot draw keypoint x=%.8f, y=%.8f on image with shape %s." % (y, x, image.shape))
 
+        if image.dtype.name != input_dtype.name:
+            if input_dtype.name == "uint8":
+                image = np.clip(image, 0, 255, out=image)
+            image = image.astype(input_dtype, copy=False)
         return image
 
     def shift(self, x=0, y=0):

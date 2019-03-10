@@ -51,6 +51,8 @@
   the general color and alpha of the polygon. The colors/alphas of the inner area, perimeter and points are derived from
   `color` and `alpha` (unless `color_inner`, `color_perimeter` or `color_points` are set (analogous for alpha)).  
 * Added `imgaug.quokka_polygons()` function to generate example polygon data.
+* [mildly breaking] Added an `alpha` argument to `KeypointsOnImage.draw_on_image()`. This can break code that relied on
+  the order of arguments of the method (though will usually only have visual consequences).
 
 
 # 0.2.8

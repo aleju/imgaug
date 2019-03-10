@@ -2106,6 +2106,10 @@ def test_KeypointsOnImage():
     assert np.all(image_kps[kps_mask] == [0, 255, 0])
     assert np.all(image_kps[~kps_mask] == [10, 10, 10])
 
+    image_kps = kpi.draw_on_image(image, color=[0, 255, 0], alpha=0.5, size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [int(0.5*10+0), int(0.5*10+0.5*255), int(10*0.5+0)])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
     image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False)
     kps_mask_size3 = np.copy(kps_mask)
     kps_mask_size3[2-1:2+1+1, 1-1:1+1+1] = 1
