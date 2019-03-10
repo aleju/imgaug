@@ -15,7 +15,7 @@ It converts a set of input images into a new, much larger set of slightly altere
 <th>Heatmaps</th>
 <th>Seg. Maps</th>
 <th>Keypoints</th>
-<th>Bounding Boxes</th>
+<th>Bounding Boxes,<br>Polygons</th>
 </tr>
 
 <!-- Line 1: Original Input -->
