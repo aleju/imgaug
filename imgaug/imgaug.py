@@ -4442,7 +4442,8 @@ class Polygon(object):
 
         return bb_area * mask
 
-    def change_first_point_by_coords(self, x, y, max_distance=1e-4):
+    def change_first_point_by_coords(self, x, y, max_distance=1e-4,
+                                     raise_if_too_far_away=True):
         """
         Set the first point of the exterior to the given point based on its coordinates.
 
@@ -4459,9 +4460,14 @@ class Polygon(object):
         y : number
             Y-coordinate of the point.
 
-        max_distance : None or number
+        max_distance : None or number, optional
             Maximum distance past which possible matches are ignored.
             If ``None`` the distance limit is deactivated.
+
+        raise_if_too_far_away : bool, optional
+            Whether to raise an exception if the closest found point is too
+            far away (``True``) or simply return an unchanged copy if this
+            object (``False``).
 
         Returns
         -------
@@ -4474,6 +4480,9 @@ class Polygon(object):
 
         closest_idx, closest_dist = self.find_closest_point_index(x=x, y=y, return_distance=True)
         if max_distance is not None and closest_dist > max_distance:
+            if not raise_if_too_far_away:
+                return self.deepcopy()
+
             closest_point = self.exterior[closest_idx, :]
             raise Exception(
                 "Closest found point (%.9f, %.9f) exceeds max_distance of %.9f exceeded" % (
