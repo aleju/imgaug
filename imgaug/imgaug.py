@@ -3975,6 +3975,20 @@ class Polygon(object):
         poly = self.to_shapely_polygon()
         return poly.area
 
+    @property
+    def height(self):
+        """
+        Estimate the height of the polygon.
+
+        Returns
+        -------
+        number
+            Height of the polygon.
+
+        """
+        yy = self.yy
+        return max(yy) - min(yy)
+
     def project(self, from_shape, to_shape):
         """
         Project the polygon onto an image with different shape.
