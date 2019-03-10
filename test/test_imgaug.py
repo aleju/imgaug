@@ -4294,11 +4294,9 @@ def test_Polygon_is_valid():
 
 def test_Polygon_area():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    assert poly.area == 1
     assert 1.0 - 1e-8 < poly.area < 1.0 + 1e-8
 
     poly = ia.Polygon([(0, 0), (2, 0), (2, 1), (0, 1)])
-    assert poly.area == 2
     assert 2.0 - 1e-8 < poly.area < 2.0 + 1e-8
 
     poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
