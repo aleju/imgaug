@@ -1635,6 +1635,16 @@ class PiecewiseAffine(meta.Augmenter):
     absolute_scale : bool, optional
         Take `scale` as an absolute value rather than a relative value.
 
+    polygon_recoverer : 'auto' or None or
+                        imgaug.imgaug._ConcavePolygonRecoverer, optional
+        The class to use to repair invalid polygons.
+        If ``"auto"``, a new instance of ``imgaug._ConcavePolygonRecoverer``
+        will be created.
+        If ``None``, no polygon recoverer will be used.
+        If an object, then that object will be used and must provide a
+        ``recover_from()`` method, similar to
+        ``imgaug.imgaug._ConcavePolygonRecoverer``.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -1728,7 +1738,7 @@ class PiecewiseAffine(meta.Augmenter):
 
         self.absolute_scale = absolute_scale
         self.polygon_recoverer = polygon_recoverer
-        if polygon_recoverer is None:
+        if polygon_recoverer == "auto":
             self.polygon_recoverer = ia._ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -2430,6 +2440,16 @@ class ElasticTransformation(meta.Augmenter):
               parameter per image, i.e. it must return only the above mentioned
               strings.
 
+    polygon_recoverer : 'auto' or None or
+                        imgaug.imgaug._ConcavePolygonRecoverer, optional
+        The class to use to repair invalid polygons.
+        If ``"auto"``, a new instance of ``imgaug._ConcavePolygonRecoverer``
+        will be created.
+        If ``None``, no polygon recoverer will be used.
+        If an object, then that object will be used and must provide a
+        ``recover_from()`` method, similar to
+        ``imgaug.imgaug._ConcavePolygonRecoverer``.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -2479,7 +2499,7 @@ class ElasticTransformation(meta.Augmenter):
     }
 
     def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
-                 polygon_recoverer=None, name=None, deterministic=False,
+                 polygon_recoverer="auto", name=None, deterministic=False,
                  random_state=None):
         super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
@@ -2515,7 +2535,7 @@ class ElasticTransformation(meta.Augmenter):
                             + "got %s." % (type(mode),))
 
         self.polygon_recoverer = polygon_recoverer
-        if polygon_recoverer is None:
+        if polygon_recoverer == "auto":
             self.polygon_recoverer = ia._ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
