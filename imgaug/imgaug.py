@@ -4205,9 +4205,10 @@ class Polygon(object):
     # TODO add perimeter thickness
     def draw_on_image(self,
                       image,
-                      color=(0, 255, 0), color_perimeter=(0, 128, 0),
-                      color_points=(0, 128, 0),
-                      alpha=0.5, alpha_perimeter=1.0, alpha_points=0.0,
+                      color=(0, 255, 0), color_fill=None,
+                      color_perimeter=None, color_points=None,
+                      alpha=1.0, alpha_fill=None,
+                      alpha_perimeter=None, alpha_points=None,
                       size_points=3,
                       raise_if_out_of_image=False):
         """
@@ -4220,30 +4221,54 @@ class Polygon(object):
             of dtype ``uint8``, though other dtypes are also handled.
 
         color : iterable of int, optional
-            The color to use for the polygon (excluding perimeter).
+            The color to use for the whole polygon.
             Must correspond to the channel layout of the image. Usually RGB.
+            The values for `color_fill`, `color_perimeter` and `color_points`
+            will be derived from this color if they are set to ``None``.
+            This argument has no effect if `color_fill`, `color_perimeter`
+            and `color_points` are all set anything other than ``None``.
 
-        color_perimeter : iterable of int, optional
+        color_fill : None or iterable of int, optional
+            The color to use for the inner polygon area (excluding perimeter).
+            Must correspond to the channel layout of the image. Usually RGB.
+            If this is ``None``, it will be derived from``color * 1.0``.
+
+        color_perimeter : None or iterable of int, optional
             The color to use for the perimeter (aka border) of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
+            If this is ``None``, it will be derived from``color * 0.5``.
 
-        color_points : iterable of int, optional
+        color_points : None or iterable of int, optional
             The color to use for the corner points of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
+            If this is ``None``, it will be derived from``color * 0.5``.
 
         alpha : float, optional
-            The transparency of the polygon (excluding the perimeter),
-            where 1.0 denotes no transparency and 0.0 is invisible.
+            The opacity of the whole polygon, where ``1.0`` denotes a completely
+            visible polygon and ``0.0`` an invisible one.
+            The values for `alpha_fill`, `alpha_perimeter` and `alpha_points`
+            will be derived from this alpha value if they are set to ``None``.
+            This argument has no effect if `alpha_fill`, `alpha_perimeter`
+            and `alpha_points` are all set anything other than ``None``.
 
-        alpha_perimeter : float, optional
-            The transparency of the polygon's perimeter (aka border),
-            where 1.0 denotes no transparency and 0.0 is invisible.
+        alpha_fill : None or number, optional
+            The opacity of the polygon's inner area (excluding the perimeter),
+            where ``1.0`` denotes a completely visible inner area and ``0.0``
+            an invisible one.
+            If this is ``None``, it will be derived from``alpha * 0.5``.
 
-        alpha_points : 0 or 1 or 0.0 or 1.0, optional
-            The transparency of the polygon's corner points,
-            where 1.0 denotes no transparency and 0.0 is invisible.
+        alpha_perimeter : None or number, optional
+            The opacity of the polygon's perimeter (aka border),
+            where ``1.0`` denotes a completely visible perimeter and ``0.0`` an
+            invisible one.
+            If this is ``None``, it will be derived from``alpha * 1.0``.
+
+        alpha_points : None or number, optional
+            The opacity of the polygon's corner points, where ``1.0`` denotes
+            completely visible corners and ``0.0`` invisible ones.
             Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
-            are allowed. Transparency will be implemented later on.
+            are allowed.
+            If this is ``None``, it will be derived from``alpha * 1.0``.
 
         size_points : int, optional
             The size of each corner point. If set to ``C``, each corner point
@@ -4260,12 +4285,34 @@ class Polygon(object):
             Image with polygon drawn on it. Result dtype is the same as the input dtype.
 
         """
-        assert (
-            np.isclose(alpha_points, 0.0, rtol=0, atol=1e-2)
-            or np.isclose(alpha_points, 1.0, rtol=0, atol=1e-2)
-        ), ("Got alpha_points of %.2f, but currently only 0.0 (point drawing "
-            + "completely off) or 1.0 (point drawing completely on) are "
-            + "implemented.") % (alpha_points,)
+        assert color is not None
+        assert alpha is not None
+
+        color_fill = color_fill if color_fill is not None else np.array(color)
+        color_perimeter = color_perimeter if color_perimeter is not None else np.array(color) * 0.5
+        color_points = color_points if color_points is not None else np.array(color) * 0.5
+
+        alpha_fill = alpha_fill if alpha_fill is not None else alpha * 0.5
+        alpha_perimeter = alpha_perimeter if alpha_perimeter is not None else alpha
+        alpha_points = alpha_points if alpha_points is not None else alpha
+
+        if alpha_fill < 0.01:
+            alpha_fill = 0
+        elif alpha_fill > 0.99:
+            alpha_fill = 1
+        if alpha_perimeter < 0.01:
+            alpha_perimeter = 0
+        elif alpha_perimeter > 0.99:
+            alpha_perimeter = 1
+        if alpha_points < 0.01:
+            alpha_points = 0
+        elif alpha_points > 0.99:
+            alpha_points = 1
+
+        assert alpha_points in [0, 1], \
+            ("Got alpha_points of %.2f, but currently only 0.0 (point drawing "
+             + "completely off) or 1.0 (point drawing completely on) are "
+             + "implemented.") % (alpha_points,)
 
         # TODO separate this into draw_face_on_image() and draw_border_on_image()
 
@@ -4283,24 +4330,36 @@ class Polygon(object):
         # TODO for a rectangular polygon, the face coordinates include the top/left boundary but not the right/bottom
         # boundary. This may be unintuitive when not drawing the boundary. Maybe somehow remove the boundary
         # coordinates from the face coordinates after generating both?
-        rr, cc = skimage.draw.polygon(yy, xx, shape=image.shape)
-        rr_perimeter, cc_perimeter = skimage.draw.polygon_perimeter(yy, xx, shape=image.shape)
-
-        params = (rr, cc, color, alpha)
-        params_perimeter = (rr_perimeter, cc_perimeter, color_perimeter, alpha_perimeter)
+        params = []
+        if alpha_fill > 0:
+            rr, cc = skimage.draw.polygon(yy, xx, shape=image.shape)
+            params.append(
+                (rr, cc, color_fill, alpha_fill)
+            )
+        if alpha_perimeter > 0:
+            rr, cc = skimage.draw.polygon_perimeter(yy, xx, shape=image.shape)
+            params.append(
+                (rr, cc, color_perimeter, alpha_perimeter)
+            )
 
         input_dtype = image.dtype
         result = image.astype(np.float32)
 
-        for rr, cc, color, alpha in [params, params_perimeter]:
-            color = np.float32(color)
+        c = 0
+        for rr, cc, color_this, alpha_this in params:
+            c += 1
+            color_this = np.float32(color_this)
 
-            if alpha >= 0.99:
-                result[rr, cc, :] = color
-            elif alpha < 1e-4:
-                pass  # invisible, do nothing
+            # don't have to check here for alpha<=0.01, as then these
+            # parameters wouldn't have been added to params
+            if alpha_this >= 0.99:
+                result[rr, cc, :] = color_this
             else:
-                result[rr, cc, :] = (1 - alpha) * result[rr, cc, :] + alpha * color
+                # TODO replace with blend_alpha()
+                result[rr, cc, :] = (
+                        (1 - alpha_this) * result[rr, cc, :]
+                        + alpha_this * color_this
+                )
 
         if alpha_points > 0:
             kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
@@ -4784,9 +4843,10 @@ class PolygonsOnImage(object):
 
     def draw_on_image(self,
                       image,
-                      color=(0, 255, 0), color_perimeter=(0, 128, 0),
-                      color_points=(0, 128, 0),
-                      alpha=0.5, alpha_perimeter=1.0, alpha_points=0.0,
+                      color=(0, 255, 0), color_fill=None,
+                      color_perimeter=None, color_points=None,
+                      alpha=1.0, alpha_fill=None,
+                      alpha_perimeter=None, alpha_points=None,
                       size_points=3,
                       raise_if_out_of_image=False):
         """
@@ -4800,30 +4860,54 @@ class PolygonsOnImage(object):
             ``PolygonsOnImage.shape``.
 
         color : iterable of int, optional
-            The color to use for all polygons (excluding their perimeters).
+            The color to use for the whole polygons.
             Must correspond to the channel layout of the image. Usually RGB.
+            The values for `color_fill`, `color_perimeter` and `color_points`
+            will be derived from this color if they are set to ``None``.
+            This argument has no effect if `color_fill`, `color_perimeter`
+            and `color_points` are all set anything other than ``None``.
 
-        color_perimeter : iterable of int, optional
-            The color to use for all perimeters (aka borders) of the polygons.
+        color_fill : None or iterable of int, optional
+            The color to use for the inner polygon areas (excluding perimeters).
             Must correspond to the channel layout of the image. Usually RGB.
+            If this is ``None``, it will be derived from``color * 1.0``.
 
-        color_points : iterable of int, optional
-            The color to use for the corner points of the polygond.
+        color_perimeter : None or iterable of int, optional
+            The color to use for the perimeters (aka borders) of the polygons.
             Must correspond to the channel layout of the image. Usually RGB.
+            If this is ``None``, it will be derived from``color * 0.5``.
+
+        color_points : None or iterable of int, optional
+            The color to use for the corner points of the polygons.
+            Must correspond to the channel layout of the image. Usually RGB.
+            If this is ``None``, it will be derived from``color * 0.5``.
 
         alpha : float, optional
-            The transparency of all polygons (excluding their perimeters),
-            where 1.0 denotes no transparency and 0.0 is invisible.
+            The opacity of the whole polygons, where ``1.0`` denotes
+            completely visible polygons and ``0.0`` invisible ones.
+            The values for `alpha_fill`, `alpha_perimeter` and `alpha_points`
+            will be derived from this alpha value if they are set to ``None``.
+            This argument has no effect if `alpha_fill`, `alpha_perimeter`
+            and `alpha_points` are all set anything other than ``None``.
 
-        alpha_perimeter : float, optional
-            The transparency of all polygon perimeters (aka borders), where 1.0
-            denotes no transparency and 0.0 is invisible.
+        alpha_fill : None or number, optional
+            The opacity of the polygon's inner areas (excluding the perimeters),
+            where ``1.0`` denotes completely visible inner areas and ``0.0``
+            invisible ones.
+            If this is ``None``, it will be derived from``alpha * 0.5``.
 
-        alpha_points : 0 or 1 or 0.0 or 1.0, optional
-            The transparency of all polygon corner points,
-            where 1.0 denotes no transparency and 0.0 is invisible.
+        alpha_perimeter : None or number, optional
+            The opacity of the polygon's perimeters (aka borders),
+            where ``1.0`` denotes completely visible perimeters and ``0.0``
+            invisible ones.
+            If this is ``None``, it will be derived from``alpha * 1.0``.
+
+        alpha_points : None or number, optional
+            The opacity of the polygon's corner points, where ``1.0`` denotes
+            completely visible corners and ``0.0`` invisible ones.
             Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
-            are allowed. Transparency will be implemented later on.
+            are allowed.
+            If this is ``None``, it will be derived from``alpha * 1.0``.
 
         size_points : int, optional
             The size of all corner points. If set to ``C``, each corner point
@@ -4844,9 +4928,11 @@ class PolygonsOnImage(object):
             image = poly.draw_on_image(
                 image,
                 color=color,
+                color_fill=color_fill,
                 color_perimeter=color_perimeter,
                 color_points=color_points,
                 alpha=alpha,
+                alpha_fill=alpha_fill,
                 alpha_perimeter=alpha_perimeter,
                 alpha_points=alpha_points,
                 size_points=size_points,

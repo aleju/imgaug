@@ -47,6 +47,9 @@
   This prevents errors in polygon augmentation (possibly also in keypoint augmentation).
 * Changed `Polygon.exterior_almost_equals()` to accept lists of tuples as argument `other_polygon`.
 * Added optional drawing of corner points to `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`.
+* Changed arguments `color` and `alpha` in `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()` to represent
+  the general color and alpha of the polygon. The colors/alphas of the inner area, perimeter and points are derived from
+  `color` and `alpha` (unless `color_inner`, `color_perimeter` or `color_points` are set (analogous for alpha)).  
 * Added `imgaug.quokka_polygons()` function to generate example polygon data.
 
 
