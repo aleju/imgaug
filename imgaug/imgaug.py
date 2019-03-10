@@ -4292,8 +4292,6 @@ class Polygon(object):
         alpha_points : None or number, optional
             The opacity of the polygon's corner points, where ``1.0`` denotes
             completely visible corners and ``0.0`` invisible ones.
-            Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
-            are allowed.
             If this is ``None``, it will be derived from``alpha * 1.0``.
 
         size_points : int, optional
@@ -4326,19 +4324,16 @@ class Polygon(object):
             alpha_fill = 0
         elif alpha_fill > 0.99:
             alpha_fill = 1
+
         if alpha_perimeter < 0.01:
             alpha_perimeter = 0
         elif alpha_perimeter > 0.99:
             alpha_perimeter = 1
+
         if alpha_points < 0.01:
             alpha_points = 0
         elif alpha_points > 0.99:
             alpha_points = 1
-
-        assert alpha_points in [0, 1], \
-            ("Got alpha_points of %.2f, but currently only 0.0 (point drawing "
-             + "completely off) or 1.0 (point drawing completely on) are "
-             + "implemented.") % (alpha_points,)
 
         # TODO separate this into draw_face_on_image() and draw_border_on_image()
 
@@ -4391,7 +4386,8 @@ class Polygon(object):
             kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
                                                        shape=image.shape)
             result = kpsoi.draw_on_image(
-                result, color=color_points, size=size_points, copy=False,
+                result, color=color_points, alpha=alpha_points,
+                size=size_points, copy=False,
                 raise_if_out_of_image=raise_if_out_of_image)
 
         if input_dtype.type == np.uint8:
