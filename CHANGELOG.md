@@ -55,6 +55,7 @@
   the order of arguments of the method (though will usually only have visual consequences).
 * Added argument `raise_if_too_far_away=True` to `Polygon.change_first_point_by_coords()`.
 * Added property `Polygon.height`.
+* Added property `Polygon.width`.
 
 
 # 0.2.8

@@ -3989,6 +3989,20 @@ class Polygon(object):
         yy = self.yy
         return max(yy) - min(yy)
 
+    @property
+    def width(self):
+        """
+        Estimate the width of the polygon.
+
+        Returns
+        -------
+        number
+            Width of the polygon.
+
+        """
+        xx = self.xx
+        return max(xx) - min(xx)
+
     def project(self, from_shape, to_shape):
         """
         Project the polygon onto an image with different shape.

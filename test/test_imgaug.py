@@ -121,6 +121,7 @@ def main():
     test_Polygon_is_valid()
     test_Polygon_area()
     test_Polygon_height()
+    test_Polygon_width()
     test_Polygon_project()
     test_Polygon_find_closest_point_idx()
     test_Polygon__compute_inside_image_point_mask()
@@ -4328,6 +4329,23 @@ def test_Polygon_height():
 
     poly = ia.Polygon([(0, 0)])
     assert np.allclose(poly.height, 0.0, atol=1e-8, rtol=0)
+
+
+def test_Polygon_width():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert np.allclose(poly.width, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (2, 0), (2, 1), (0, 1)])
+    assert np.allclose(poly.width, 2.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
+    assert np.allclose(poly.width, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    assert np.allclose(poly.width, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0)])
+    assert np.allclose(poly.width, 0.0, atol=1e-8, rtol=0)
 
 
 def test_Polygon_project():
