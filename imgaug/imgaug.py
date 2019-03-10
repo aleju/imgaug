@@ -4327,7 +4327,7 @@ class Polygon(object):
             will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an error if the polygon is partially/fully
+            Whether to raise an error if the polygon is fully
             outside of the image. If set to False, no error will be raised and
             only the parts inside the image will be drawn.
 
@@ -4974,7 +4974,7 @@ class PolygonsOnImage(object):
             will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an error if any polygon is partially/fully
+            Whether to raise an error if any polygon is fully
             outside of the image. If set to False, no error will be raised and
             only the parts inside the image will be drawn.
 
