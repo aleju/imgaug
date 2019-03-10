@@ -4893,13 +4893,14 @@ def test_Polygon_change_first_point_by_coords():
     assert np.allclose(poly_reordered.exterior, np.float32([[0, 0]]))
 
     # invalid polygon
-    git_exception = False
+    got_exception = False
     poly = ia.Polygon([])
     try:
         _ = poly.change_first_point_by_coords(x=0, y=0)
     except Exception as exc:
         assert "Cannot reorder polygon points" in str(exc)
         got_exception = True
+    assert got_exception
 
 
 def test_Polygon_change_first_point_by_index():
