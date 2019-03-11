@@ -120,6 +120,8 @@ def main():
     test_Polygon_yy_int()
     test_Polygon_is_valid()
     test_Polygon_area()
+    test_Polygon_height()
+    test_Polygon_width()
     test_Polygon_project()
     test_Polygon_find_closest_point_idx()
     test_Polygon__compute_inside_image_point_mask()
@@ -2104,6 +2106,10 @@ def test_KeypointsOnImage():
     kps_mask[4, 3] = 1
     image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=1, copy=True, raise_if_out_of_image=False)
     assert np.all(image_kps[kps_mask] == [0, 255, 0])
+    assert np.all(image_kps[~kps_mask] == [10, 10, 10])
+
+    image_kps = kpi.draw_on_image(image, color=[0, 255, 0], alpha=0.5, size=1, copy=True, raise_if_out_of_image=False)
+    assert np.all(image_kps[kps_mask] == [int(0.5*10+0), int(0.5*10+0.5*255), int(10*0.5+0)])
     assert np.all(image_kps[~kps_mask] == [10, 10, 10])
 
     image_kps = kpi.draw_on_image(image, color=[0, 255, 0], size=3, copy=True, raise_if_out_of_image=False)
@@ -4288,11 +4294,9 @@ def test_Polygon_is_valid():
 
 def test_Polygon_area():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    assert poly.area == 1
     assert 1.0 - 1e-8 < poly.area < 1.0 + 1e-8
 
     poly = ia.Polygon([(0, 0), (2, 0), (2, 1), (0, 1)])
-    assert poly.area == 2
     assert 2.0 - 1e-8 < poly.area < 2.0 + 1e-8
 
     poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
@@ -4306,6 +4310,40 @@ def test_Polygon_area():
         assert "Cannot compute the polygon's area because" in str(exc)
         got_exception = True
     assert got_exception
+
+
+def test_Polygon_height():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert np.allclose(poly.height, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 2), (0, 2)])
+    assert np.allclose(poly.height, 2.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
+    assert np.allclose(poly.height, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    assert np.allclose(poly.height, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0)])
+    assert np.allclose(poly.height, 0.0, atol=1e-8, rtol=0)
+
+
+def test_Polygon_width():
+    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    assert np.allclose(poly.width, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (2, 0), (2, 1), (0, 1)])
+    assert np.allclose(poly.width, 2.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 1), (0, 1)])
+    assert np.allclose(poly.width, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    assert np.allclose(poly.width, 1.0, atol=1e-8, rtol=0)
+
+    poly = ia.Polygon([(0, 0)])
+    assert np.allclose(poly.width, 0.0, atol=1e-8, rtol=0)
 
 
 def test_Polygon_project():

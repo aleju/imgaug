@@ -2332,7 +2332,7 @@ class KeypointsOnImage(object):
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
             return self.deepcopy(keypoints, shape)
 
-    def draw_on_image(self, image, color=(0, 255, 0), size=3, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3, copy=True, raise_if_out_of_image=False):
         """
         Draw all keypoints onto a given image. Each keypoint is marked by a square of a chosen color and size.
 
@@ -2347,8 +2347,13 @@ class KeypointsOnImage(object):
             The RGB color of all keypoints. If a single int ``C``, then that is
             equivalent to ``(C,C,C)``.
 
+        alpha : float, optional
+            The opacity of the drawn keypoint, where ``1.0`` denotes a fully
+            visible keypoint and ``0.0`` an invisible one.
+
         size : int, optional
-            The size of each point. If set to ``C``, each square will have size ``C x C``.
+            The size of each point. If set to ``C``, each square will have
+            size ``C x C``.
 
         copy : bool, optional
             Whether to copy the image before drawing the points.
@@ -2365,6 +2370,17 @@ class KeypointsOnImage(object):
         if copy:
             image = np.copy(image)
 
+        input_dtype = image.dtype
+        alpha_color = color
+        if alpha < 0.01:
+            # keypoints all invisible, nothing to do
+            return image
+        elif alpha > 0.99:
+            alpha = 1
+        else:
+            image = image.astype(np.float32, copy=False)
+            alpha_color = alpha * np.array(color)
+
         height, width = image.shape[0:2]
 
         for keypoint in self.keypoints:
@@ -2374,11 +2390,21 @@ class KeypointsOnImage(object):
                 x2 = min(x + 1 + size//2, width)
                 y1 = max(y - size//2, 0)
                 y2 = min(y + 1 + size//2, height)
-                image[y1:y2, x1:x2] = color
+                if alpha == 1:
+                    image[y1:y2, x1:x2] = color
+                else:
+                    image[y1:y2, x1:x2] = (
+                            (1 - alpha) * image[y1:y2, x1:x2]
+                            + alpha_color
+                    )
             else:
                 if raise_if_out_of_image:
                     raise Exception("Cannot draw keypoint x=%.8f, y=%.8f on image with shape %s." % (y, x, image.shape))
 
+        if image.dtype.name != input_dtype.name:
+            if input_dtype.name == "uint8":
+                image = np.clip(image, 0, 255, out=image)
+            image = image.astype(input_dtype, copy=False)
         return image
 
     def shift(self, x=0, y=0):
@@ -3949,6 +3975,34 @@ class Polygon(object):
         poly = self.to_shapely_polygon()
         return poly.area
 
+    @property
+    def height(self):
+        """
+        Estimate the height of the polygon.
+
+        Returns
+        -------
+        number
+            Height of the polygon.
+
+        """
+        yy = self.yy
+        return max(yy) - min(yy)
+
+    @property
+    def width(self):
+        """
+        Estimate the width of the polygon.
+
+        Returns
+        -------
+        number
+            Width of the polygon.
+
+        """
+        xx = self.xx
+        return max(xx) - min(xx)
+
     def project(self, from_shape, to_shape):
         """
         Project the polygon onto an image with different shape.
@@ -4266,8 +4320,6 @@ class Polygon(object):
         alpha_points : None or number, optional
             The opacity of the polygon's corner points, where ``1.0`` denotes
             completely visible corners and ``0.0`` invisible ones.
-            Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
-            are allowed.
             If this is ``None``, it will be derived from``alpha * 1.0``.
 
         size_points : int, optional
@@ -4275,7 +4327,7 @@ class Polygon(object):
             will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an error if the polygon is partially/fully
+            Whether to raise an error if the polygon is fully
             outside of the image. If set to False, no error will be raised and
             only the parts inside the image will be drawn.
 
@@ -4300,19 +4352,16 @@ class Polygon(object):
             alpha_fill = 0
         elif alpha_fill > 0.99:
             alpha_fill = 1
+
         if alpha_perimeter < 0.01:
             alpha_perimeter = 0
         elif alpha_perimeter > 0.99:
             alpha_perimeter = 1
+
         if alpha_points < 0.01:
             alpha_points = 0
         elif alpha_points > 0.99:
             alpha_points = 1
-
-        assert alpha_points in [0, 1], \
-            ("Got alpha_points of %.2f, but currently only 0.0 (point drawing "
-             + "completely off) or 1.0 (point drawing completely on) are "
-             + "implemented.") % (alpha_points,)
 
         # TODO separate this into draw_face_on_image() and draw_border_on_image()
 
@@ -4365,7 +4414,8 @@ class Polygon(object):
             kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
                                                        shape=image.shape)
             result = kpsoi.draw_on_image(
-                result, color=color_points, size=size_points, copy=False,
+                result, color=color_points, alpha=alpha_points,
+                size=size_points, copy=False,
                 raise_if_out_of_image=raise_if_out_of_image)
 
         if input_dtype.type == np.uint8:
@@ -4420,7 +4470,8 @@ class Polygon(object):
 
         return bb_area * mask
 
-    def change_first_point_by_coords(self, x, y, max_distance=1e-4):
+    def change_first_point_by_coords(self, x, y, max_distance=1e-4,
+                                     raise_if_too_far_away=True):
         """
         Set the first point of the exterior to the given point based on its coordinates.
 
@@ -4437,8 +4488,14 @@ class Polygon(object):
         y : number
             Y-coordinate of the point.
 
-        max_distance : number
+        max_distance : None or number, optional
             Maximum distance past which possible matches are ignored.
+            If ``None`` the distance limit is deactivated.
+
+        raise_if_too_far_away : bool, optional
+            Whether to raise an exception if the closest found point is too
+            far away (``True``) or simply return an unchanged copy if this
+            object (``False``).
 
         Returns
         -------
@@ -4451,6 +4508,9 @@ class Polygon(object):
 
         closest_idx, closest_dist = self.find_closest_point_index(x=x, y=y, return_distance=True)
         if max_distance is not None and closest_dist > max_distance:
+            if not raise_if_too_far_away:
+                return self.deepcopy()
+
             closest_point = self.exterior[closest_idx, :]
             raise Exception(
                 "Closest found point (%.9f, %.9f) exceeds max_distance of %.9f exceeded" % (
@@ -4914,7 +4974,7 @@ class PolygonsOnImage(object):
             will be drawn as a square of size ``C x C``.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an error if any polygon is partially/fully
+            Whether to raise an error if any polygon is fully
             outside of the image. If set to False, no error will be raised and
             only the parts inside the image will be drawn.
 
