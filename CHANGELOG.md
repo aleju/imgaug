@@ -56,6 +56,8 @@
 * Added argument `raise_if_too_far_away=True` to `Polygon.change_first_point_by_coords()`.
 * Added property `Polygon.height`.
 * Added property `Polygon.width`.
+* [mildly breaking] Changed the output of `Polygon.clip_out_of_image()` from `MultiPolygon` to `list` of `Polygon`.
+  This breaks for anybody who has already used `Polygon.clip_out_of_image()`. 
 
 
 # 0.2.8
