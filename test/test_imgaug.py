@@ -6634,5 +6634,737 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
                                    (2.5, 0)]
 
 
+class TestBatch(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_init(self):
+        attr_names = ["images", "heatmaps", "segmentation_maps", "keypoints",
+                      "bounding_boxes", "polygons"]
+        batch = ia.Batch()
+        for attr_name in attr_names:
+            assert getattr(batch, "%s_unaug" % (attr_name,)) is None
+            assert getattr(batch, "%s_aug" % (attr_name,)) is None
+        assert batch.data is None
+
+        # we exploit here that Batch() init does not verify its inputs
+        batch = ia.Batch(
+            images=0,
+            heatmaps=1,
+            segmentation_maps=2,
+            keypoints=3,
+            bounding_boxes=4,
+            polygons=5,
+            data=6
+        )
+        for i, attr_name in enumerate(attr_names):
+            assert getattr(batch, "%s_unaug" % (attr_name,)) == i
+            assert getattr(batch, "%s_aug" % (attr_name,)) is None
+        assert batch.data == 6
+
+    def get_images_unaug_normalized(self):
+        batch = ia.Batch()
+        assert batch.get_images_unaug_normalized() is None
+
+        batch = ia.Batch(images=None)
+        assert batch.get_images_unaug_normalized() is None
+
+        arr = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+        batch = ia.Batch(images=arr)
+        observed = batch.get_images_unaug_normalized()
+        assert ia.is_np_array(observed)
+        assert observed.shape == (1, 4, 4, 3)
+        assert observed.dtype.name == "uint8"
+
+        arr = np.zeros((1, 4, 4), dtype=np.uint8)
+        batch = ia.Batch(images=arr)
+        observed = batch.get_images_unaug_normalized()
+        assert ia.is_np_array(observed)
+        assert observed.shape == (1, 4, 4, 3)
+        assert observed.dtype.name == "uint8"
+
+        arr = np.zeros((4, 4), dtype=np.uint8)
+        batch = ia.Batch(images=arr)
+        observed = batch.get_images_unaug_normalized()
+        assert ia.is_np_array(observed)
+        assert observed.shape == (1, 4, 4, 1)
+        assert observed.dtype.name == "uint8"
+
+        batch = ia.Batch(images=[])
+        assert isinstance(batch.get_images_unaug_normalized(), list)
+        assert len(batch.get_images_unaug_normalized()) == 0
+
+        arr1 = np.zeros((4, 4), dtype=np.uint8)
+        arr2 = np.zeros((5, 5, 3), dtype=np.uint8)
+        batch = ia.Batch(images=[arr1, arr2])
+        observed = batch.get_images_unaug_normalized()
+        assert isinstance(observed, list)
+        assert len(observed) == 2
+        assert ia.is_np_array(observed[0])
+        assert ia.is_np_array(observed[1])
+        assert observed[0].shape == (4, 4)
+        assert observed[1].shape == (5, 5, 3)
+        assert observed[0].dtype.name == "uint8"
+        assert observed[1].dtype.name == "uint8"
+
+        batch = ia.Batch(images=False)
+        with self.assertRaises(ValueError):
+            batch.get_images_unaug_normalized()
+
+    def get_heatmaps_unaug_normalized(self):
+        assert False
+
+    def get_segmentation_maps_unaug_normalized(self):
+        assert False
+
+    def get_keypoints_unaug_normalized(self):
+        assert False
+
+    def get_bounding_boxes_unaug_normalized(self):
+        assert False
+
+    def get_polygons_unaug_normalized(self):
+        assert False
+
+    def test__get_heatmaps_unaug_normalization_type(self):
+        batch = ia.Batch(heatmaps=None)
+        ntype = batch._get_heatmaps_unaug_normalization_type()
+        assert ntype == "None"
+
+        batch = ia.Batch(heatmaps=np.zeros((1, 1, 1, 1), dtype=np.float32))
+        ntype = batch._get_heatmaps_unaug_normalization_type()
+        assert ntype == "array[float]"
+
+        batch = ia.Batch(heatmaps=ia.HeatmapsOnImage(
+            np.zeros((1, 1, 1), dtype=np.float32),
+            shape=(1, 1, 1)
+        ))
+        ntype = batch._get_heatmaps_unaug_normalization_type()
+        assert ntype == "HeatmapsOnImage"
+
+        batch = ia.Batch(heatmaps=[])
+        ntype = batch._get_heatmaps_unaug_normalization_type()
+        assert ntype == "iterable[empty]"
+
+        batch = ia.Batch(heatmaps=[np.zeros((1, 1, 1), dtype=np.float32)])
+        ntype = batch._get_heatmaps_unaug_normalization_type()
+        assert ntype == "iterable-array[float]"
+
+        batch = ia.Batch(heatmaps=[
+            ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
+                               shape=(1, 1, 1))
+        ])
+        ntype = batch._get_heatmaps_unaug_normalization_type()
+        assert ntype == "iterable-HeatmapsOnImage"
+
+        # --
+        # error cases
+        # --
+        batch = ia.Batch(heatmaps=1)
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+        batch = ia.Batch(heatmaps="foo")
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+        batch = ia.Batch(heatmaps=np.zeros((1, 1, 1), dtype=np.int32))
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+        batch = ia.Batch(heatmaps=[1])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+        # wrong class
+        batch = ia.Batch(heatmaps=ia.KeypointsOnImage([], shape=(1, 1, 1)))
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+        batch = ia.Batch(heatmaps=[[]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+        # list of list of Heatmaps, only list of Heatmaps is max
+        batch = ia.Batch(
+            heatmaps=[
+                [ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
+                                    shape=(1, 1, 1))]
+            ]
+        )
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_heatmaps_unaug_normalization_type()
+
+    def test__get_segmentation_maps_unaug_normalization_type(self):
+        batch = ia.Batch(segmentation_maps=None)
+        ntype = batch._get_segmentation_maps_unaug_normalization_type()
+        assert ntype == "None"
+
+        for name, dt in zip(["int", "uint", "bool"],
+                            [np.int32, np.uint16, bool]):
+            batch = ia.Batch(segmentation_maps=np.zeros((1, 1, 1, 1), dtype=dt))
+            ntype = batch._get_segmentation_maps_unaug_normalization_type()
+            assert ntype == "array[%s]" % (name,)
+
+        batch = ia.Batch(segmentation_maps=ia.SegmentationMapOnImage(
+            np.zeros((1, 1, 1), dtype=np.int32),
+            shape=(1, 1, 1),
+            nb_classes=1
+        ))
+        ntype = batch._get_segmentation_maps_unaug_normalization_type()
+        assert ntype == "SegmentationMapOnImage"
+
+        batch = ia.Batch(segmentation_maps=[])
+        ntype = batch._get_segmentation_maps_unaug_normalization_type()
+        assert ntype == "iterable[empty]"
+
+        batch = ia.Batch(
+            segmentation_maps=[np.zeros((1, 1, 1), dtype=np.int32)]
+        )
+        ntype = batch._get_segmentation_maps_unaug_normalization_type()
+        assert ntype == "iterable-array[int]"
+
+        batch = ia.Batch(segmentation_maps=[
+            ia.SegmentationMapOnImage(np.zeros((1, 1, 1), dtype=np.int32),
+                                      shape=(1, 1, 1),
+                                      nb_classes=1)
+        ])
+        ntype = batch._get_segmentation_maps_unaug_normalization_type()
+        assert ntype == "iterable-SegmentationMapOnImage"
+
+        # --
+        # error cases
+        # --
+        batch = ia.Batch(segmentation_maps=1)
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_segmentation_maps_unaug_normalization_type()
+
+        batch = ia.Batch(segmentation_maps="foo")
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_segmentation_maps_unaug_normalization_type()
+
+        batch = ia.Batch(segmentation_maps=[1])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_segmentation_maps_unaug_normalization_type()
+
+        # wrong class
+        batch = ia.Batch(
+            segmentation_maps=ia.KeypointsOnImage([], shape=(1, 1, 1))
+        )
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_segmentation_maps_unaug_normalization_type()
+
+        batch = ia.Batch(segmentation_maps=[[]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_segmentation_maps_unaug_normalization_type()
+
+        # list of list of SegMap, only list of SegMap is max
+        batch = ia.Batch(
+            segmentation_maps=[
+                [ia.SegmentationMapOnImage(
+                    np.zeros((1, 1, 1), dtype=np.int32),
+                    shape=(1, 1, 1),
+                    nb_classes=1)]
+            ]
+        )
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_segmentation_maps_unaug_normalization_type()
+
+    def test__get_keypoints_unaug_normalization_type(self):
+        batch = ia.Batch(keypoints=None)
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "None"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(keypoints=np.zeros((1, 5, 2), dtype=dt))
+            ntype = batch._get_keypoints_unaug_normalization_type()
+            assert ntype == "array[%s]" % (name,)
+
+        batch = ia.Batch(keypoints=(1, 2))
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "(x,y)"
+
+        batch = ia.Batch(keypoints=ia.Keypoint(x=1, y=2))
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "Keypoint"
+
+        batch = ia.Batch(keypoints=ia.KeypointsOnImage(
+            [ia.Keypoint(x=1, y=2)], shape=(1, 1, 3)))
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "KeypointsOnImage"
+
+        batch = ia.Batch(keypoints=[])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable[empty]"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(keypoints=[np.zeros((5, 2), dtype=dt)])
+            ntype = batch._get_keypoints_unaug_normalization_type()
+            assert ntype == "iterable-array[%s]" % (name,)
+
+        batch = ia.Batch(keypoints=[(1, 2)])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable-(x,y)"
+
+        batch = ia.Batch(keypoints=[ia.Keypoint(x=1, y=2)])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable-Keypoint"
+
+        batch = ia.Batch(keypoints=[
+            ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3))])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable-KeypointsOnImage"
+
+        batch = ia.Batch(keypoints=[[]])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable-iterable[empty]"
+
+        batch = ia.Batch(keypoints=[[(1, 2)]])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable-iterable-(x,y)"
+
+        batch = ia.Batch(keypoints=[[ia.Keypoint(x=1, y=2)]])
+        ntype = batch._get_keypoints_unaug_normalization_type()
+        assert ntype == "iterable-iterable-Keypoint"
+
+        # --
+        # error cases
+        # --
+        batch = ia.Batch(keypoints=1)
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_keypoints_unaug_normalization_type()
+
+        batch = ia.Batch(keypoints="foo")
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_keypoints_unaug_normalization_type()
+
+        batch = ia.Batch(keypoints=[1])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_keypoints_unaug_normalization_type()
+
+        # wrong class
+        batch = ia.Batch(
+            keypoints=ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
+                                         shape=(1, 1, 1))
+        )
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_keypoints_unaug_normalization_type()
+
+        batch = ia.Batch(keypoints=[[[]]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_keypoints_unaug_normalization_type()
+
+        # list of list of of list of keypoints,
+        # only list of list of keypoints is max
+        batch = ia.Batch(keypoints=[[[ia.Keypoint(x=1, y=2)]]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_keypoints_unaug_normalization_type()
+
+    def test__get_bounding_boxes_unaug_normalization_type(self):
+        batch = ia.Batch(bounding_boxes=None)
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "None"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(bounding_boxes=np.zeros((1, 5, 4), dtype=dt))
+            ntype = batch._get_bounding_boxes_unaug_normalization_type()
+            assert ntype == "array[%s]" % (name,)
+
+        batch = ia.Batch(bounding_boxes=(1, 2, 3, 4))
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "(x1,y1,x2,y2)"
+
+        batch = ia.Batch(bounding_boxes=ia.BoundingBox(x1=1, y1=2, x2=3, y2=4))
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "BoundingBox"
+
+        batch = ia.Batch(bounding_boxes=ia.BoundingBoxesOnImage(
+            [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)], shape=(1, 1, 3)))
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "BoundingBoxesOnImage"
+
+        batch = ia.Batch(bounding_boxes=[])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable[empty]"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(bounding_boxes=[np.zeros((5, 4), dtype=dt)])
+            ntype = batch._get_bounding_boxes_unaug_normalization_type()
+            assert ntype == "iterable-array[%s]" % (name,)
+
+        batch = ia.Batch(bounding_boxes=[(1, 2, 3, 4)])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable-(x1,y1,x2,y2)"
+
+        batch = ia.Batch(bounding_boxes=[
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable-BoundingBox"
+
+        batch = ia.Batch(bounding_boxes=[
+            ia.BoundingBoxesOnImage([ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
+                                     shape=(1, 1, 3))])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable-BoundingBoxesOnImage"
+
+        batch = ia.Batch(bounding_boxes=[[]])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable-iterable[empty]"
+
+        batch = ia.Batch(bounding_boxes=[[(1, 2, 3, 4)]])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable-iterable-(x1,y1,x2,y2)"
+
+        batch = ia.Batch(bounding_boxes=[[ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]])
+        ntype = batch._get_bounding_boxes_unaug_normalization_type()
+        assert ntype == "iterable-iterable-BoundingBox"
+
+        # --
+        # error cases
+        # --
+        batch = ia.Batch(bounding_boxes=1)
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_bounding_boxes_unaug_normalization_type()
+
+        batch = ia.Batch(bounding_boxes="foo")
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_bounding_boxes_unaug_normalization_type()
+
+        batch = ia.Batch(bounding_boxes=[1])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_bounding_boxes_unaug_normalization_type()
+
+        # wrong class
+        batch = ia.Batch(
+            bounding_boxes=ia.HeatmapsOnImage(
+                np.zeros((1, 1, 1), dtype=np.float32),
+                shape=(1, 1, 1))
+        )
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_bounding_boxes_unaug_normalization_type()
+
+        batch = ia.Batch(bounding_boxes=[[[]]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_bounding_boxes_unaug_normalization_type()
+
+        # list of list of of list of bounding boxes,
+        # only list of list of bounding boxes is max
+        batch = ia.Batch(bounding_boxes=[[[
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_bounding_boxes_unaug_normalization_type()
+
+    def test__get_polygons_unaug_normalization_type(self):
+        points = [(0, 0), (10, 0), (10, 10)]
+
+        batch = ia.Batch(polygons=None)
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "None"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(polygons=np.zeros((1, 2, 5, 2), dtype=dt))
+            ntype = batch._get_polygons_unaug_normalization_type()
+            assert ntype == "array[%s]" % (name,)
+
+        batch = ia.Batch(polygons=ia.Polygon(points))
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "Polygon"
+
+        batch = ia.Batch(polygons=ia.PolygonsOnImage(
+            [ia.Polygon(points)], shape=(1, 1, 3)))
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "PolygonsOnImage"
+
+        batch = ia.Batch(polygons=[])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable[empty]"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(polygons=[np.zeros((5, 4), dtype=dt)])
+            ntype = batch._get_polygons_unaug_normalization_type()
+            assert ntype == "iterable-array[%s]" % (name,)
+
+        batch = ia.Batch(polygons=points)
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-(x,y)"
+
+        batch = ia.Batch(polygons=[ia.Keypoint(x=x, y=y) for x, y in points])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-Keypoint"
+
+        batch = ia.Batch(polygons=[
+            ia.Polygon(points)])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-Polygon"
+
+        batch = ia.Batch(polygons=[
+            ia.PolygonsOnImage([ia.Polygon(points)],
+                               shape=(1, 1, 3))])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-PolygonsOnImage"
+
+        batch = ia.Batch(polygons=[[]])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable[empty]"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            batch = ia.Batch(polygons=[[np.zeros((5, 4), dtype=dt)]])
+            ntype = batch._get_polygons_unaug_normalization_type()
+            assert ntype == "iterable-iterable-array[%s]" % (name,)
+
+        batch = ia.Batch(polygons=[points])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable-(x,y)"
+
+        batch = ia.Batch(polygons=[[
+            ia.Keypoint(x=x, y=y) for x, y in points
+        ]])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable-Keypoint"
+
+        batch = ia.Batch(polygons=[[ia.Polygon(points)]])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable-Polygon"
+
+        batch = ia.Batch(polygons=[[[]]])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable-iterable[empty]"
+
+        batch = ia.Batch(polygons=[[points]])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable-iterable-(x,y)"
+
+        batch = ia.Batch(polygons=[[[
+            ia.Keypoint(x=x, y=y) for x, y in points
+        ]]])
+        ntype = batch._get_polygons_unaug_normalization_type()
+        assert ntype == "iterable-iterable-iterable-Keypoint"
+
+        # --
+        # error cases
+        # --
+        batch = ia.Batch(polygons=1)
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_polygons_unaug_normalization_type()
+
+        batch = ia.Batch(polygons="foo")
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_polygons_unaug_normalization_type()
+
+        batch = ia.Batch(polygons=[1])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_polygons_unaug_normalization_type()
+
+        # wrong class
+        batch = ia.Batch(
+            polygons=ia.HeatmapsOnImage(
+                np.zeros((1, 1, 1), dtype=np.float32),
+                shape=(1, 1, 1))
+        )
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_polygons_unaug_normalization_type()
+
+        batch = ia.Batch(polygons=[[[[]]]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_polygons_unaug_normalization_type()
+
+        # list of list of of list of polygons,
+        # only list of list of polygons is max
+        batch = ia.Batch(polygons=[[[
+            ia.Polygon(points)]]])
+        with self.assertRaises(AssertionError):
+            _ntype = batch._get_polygons_unaug_normalization_type()
+
+    def test__find_first_nonempty(self):
+        # None
+        observed = ia.Batch._find_first_nonempty(None)
+        assert observed[0] is None
+        assert observed[1] is True
+        assert len(observed[2]) == 0
+
+        # None with parents
+        observed = ia.Batch._find_first_nonempty(None, parents=["foo"])
+        assert observed[0] is None
+        assert observed[1] is True
+        assert len(observed[2]) == 1
+        assert observed[2][0] == "foo"
+
+        # array
+        observed = ia.Batch._find_first_nonempty(np.zeros((4, 4, 3)))
+        assert ia.is_np_array(observed[0])
+        assert observed[0].shape == (4, 4, 3)
+        assert observed[1] is True
+        assert len(observed[2]) == 0
+
+        # int
+        observed = ia.Batch._find_first_nonempty(0)
+        assert observed[0] == 0
+        assert observed[1] is True
+        assert len(observed[2]) == 0
+
+        # str
+        observed = ia.Batch._find_first_nonempty("foo")
+        assert observed[0] == "foo"
+        assert observed[1] is True
+        assert len(observed[2]) == 0
+
+        # empty list
+        observed = ia.Batch._find_first_nonempty([])
+        assert observed[0] is None
+        assert observed[1] is False
+        assert len(observed[2]) == 0
+
+        # empty list of empty lists
+        observed = ia.Batch._find_first_nonempty([[], [], []])
+        assert observed[0] is None
+        assert observed[1] is False
+        assert len(observed[2]) == 1
+
+        # empty list of empty lists of empty lists
+        observed = ia.Batch._find_first_nonempty([[], [[]], []])
+        assert observed[0] is None
+        assert observed[1] is False
+        assert len(observed[2]) == 2
+
+        # list of None
+        observed = ia.Batch._find_first_nonempty([None, None])
+        assert observed[0] is None
+        assert observed[1] is True
+        assert len(observed[2]) == 1
+
+        # list of array
+        observed = ia.Batch._find_first_nonempty([
+            np.zeros((4, 4, 3)), np.zeros((5, 5, 3))])
+        assert ia.is_np_array(observed[0])
+        assert observed[0].shape == (4, 4, 3)
+        assert observed[1] is True
+        assert len(observed[2]) == 1
+
+        # list of list of array
+        observed = ia.Batch._find_first_nonempty(
+            [[np.zeros((4, 4, 3))], [np.zeros((5, 5, 3))]]
+        )
+        assert ia.is_np_array(observed[0])
+        assert observed[0].shape == (4, 4, 3)
+        assert observed[1] is True
+        assert len(observed[2]) == 2
+
+        # list of tuple of array
+        observed = ia.Batch._find_first_nonempty(
+            [
+                (
+                    np.zeros((4, 4, 3)), np.zeros((5, 5, 3))
+                ), (
+                    np.zeros((6, 6, 3)), np.zeros((7, 7, 3))
+                )
+            ]
+        )
+        assert ia.is_np_array(observed[0])
+        assert observed[0].shape == (4, 4, 3)
+        assert observed[1] is True
+        assert len(observed[2]) == 2
+
+    def test__nonempty_info_to_type_str(self):
+        ntype = ia.Batch._nonempty_info_to_type_str(None, True, [])
+        assert ntype == "None"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(None, False, [])
+        assert ntype == "iterable[empty]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(None, False, [[]])
+        assert ntype == "iterable-iterable[empty]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(None, False, [[], []])
+        assert ntype == "iterable-iterable-iterable[empty]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(None, False, [tuple(), []])
+        assert ntype == "iterable-iterable-iterable[empty]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(1, True, [tuple([1, 2])],
+                                                    tuple_size=2)
+        assert ntype == "(x,y)"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(1, True, [[], tuple([1, 2])],
+                                                    tuple_size=2)
+        assert ntype == "iterable-(x,y)"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(1, True, [tuple([1, 2, 3, 4])],
+                                                    tuple_size=4)
+        assert ntype == "(x1,y1,x2,y2)"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(1, True, [[], tuple([1, 2, 3, 4])],
+                                                    tuple_size=4)
+        assert ntype == "iterable-(x1,y1,x2,y2)"
+
+        with self.assertRaises(AssertionError):
+            ntype = ia.Batch._nonempty_info_to_type_str(1, True, [tuple([1, 2, 3])],
+                                                        tuple_size=2)
+            assert ntype == "(x1,y1,x2,y2)"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=np.uint8), True, [])
+        assert ntype == "array[uint]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=np.float32), True, [])
+        assert ntype == "array[float]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=np.int32), True, [])
+        assert ntype == "array[int]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=bool), True, [])
+        assert ntype == "array[bool]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=np.dtype("complex")), True, [])
+        assert ntype == "array[c]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=np.uint8), True, [[]])
+        assert ntype == "iterable-array[uint]"
+
+        ntype = ia.Batch._nonempty_info_to_type_str(
+            np.zeros((4, 4, 3), dtype=np.uint8), True, [[], []])
+        assert ntype == "iterable-iterable-array[uint]"
+
+        cls_names = ["Keypoint", "KeypointsOnImage",
+                     "BoundingBox", "BoundingBoxesOnImage",
+                     "Polygon", "PolygonsOnImage",
+                     "HeatmapsOnImage", "SegmentationMapOnImage"]
+        clss = [
+            ia.Keypoint(x=1, y=1),
+            ia.KeypointsOnImage([], shape=(1, 1, 3)),
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+            ia.BoundingBoxesOnImage([], shape=(1, 1, 3)),
+            ia.Polygon([(1, 1), (1, 2), (2, 2)]),
+            ia.PolygonsOnImage([], shape=(1,)),
+            ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
+                               shape=(1, 1, 3)),
+            ia.SegmentationMapOnImage(np.zeros((1, 1, 1), dtype=np.int32),
+                                      shape=(1, 1, 3), nb_classes=1)
+        ]
+        for cls_name, cls in zip(cls_names, clss):
+            ntype = ia.Batch._nonempty_info_to_type_str(
+                cls, True, [])
+            assert ntype == cls_name
+
+            ntype = ia.Batch._nonempty_info_to_type_str(
+                cls, True, [[]])
+            assert ntype == "iterable-%s" % (cls_name,)
+
+            ntype = ia.Batch._nonempty_info_to_type_str(
+                cls, True, [[], tuple()])
+            assert ntype == "iterable-iterable-%s" % (cls_name,)
+
+
 if __name__ == "__main__":
     main()

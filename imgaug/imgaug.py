@@ -6867,6 +6867,548 @@ class Batch(object):
         self.polygons_aug = None
         self.data = data
 
+    def get_images_unaug_normalized(self):
+        attr = self.images_unaug
+        if attr is None:
+            return None
+        elif is_np_array(attr):
+            if attr.ndim == 2:
+                return attr[np.newaxis, ..., np.newaxis]
+            elif attr.ndim == 3:
+                return attr[..., np.newaxis]
+            else:
+                return attr
+        elif is_iterable(attr):
+            return list(attr)
+        raise ValueError(
+            ("Expected argument 'images' for Batch to be any of the following: "
+             + "None or array or iterable of array. Got type: %s.") % (
+                type(self.images_unaug),)
+        )
+
+    def get_heatmaps_unaug_normalized(self):
+        attr = self.heatmaps_unaug
+        ntype = self._get_heatmaps_unaug_normalization_type()
+        images = self.get_images_unaug_normalized()
+        if ntype == "None":
+            return None
+        elif ntype == "array[float]":
+            # TODO how to handle array with N=0?
+            assert images is not None
+            assert attr.ndim == 4  # always (N,H,W,C)
+            assert len(attr) == len(images)
+            return [HeatmapsOnImage(attr_i, shape=image_i.shape)
+                    for attr_i, image_i in zip(attr, images)]
+        elif ntype == "HeatmapsOnImage":
+            return [attr]
+        elif ntype == "iterable[empty]":
+            return None
+        elif ntype == "iterable-array[float]":
+            assert images is not None
+            assert len(attr) == len(images)
+            assert all([attr_i.ndim == 3 for attr_i in attr])  # all (H,W,C)
+            return [HeatmapsOnImage(attr_i, shape=image_i.shape)
+                    for attr_i, image_i in zip(attr, images)]
+        else:
+            assert ntype == "iterable-HeatmapsOnImage"
+            return attr  # len allowed to differ from len of images
+
+    def get_segmentation_maps_unaug_normalized(self):
+        attr = self.segmentation_maps_unaug
+        ntype = self._get_segmentation_maps_unaug_normalization_type()
+        images = self.get_images_unaug_normalized()
+
+        if ntype == "None":
+            return None
+        elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
+            # TODO how to handle array with N=0?
+            assert images is not None
+            assert attr.ndim == 4  # always (N,H,W,C)
+            assert len(attr) == len(images)
+            if ntype == "array[bool]":
+                return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
+                        for attr_i, image_i in zip(attr, images)]
+            return [SegmentationMapOnImage(
+                        attr_i, shape=image_i.shape, nb_classes=np.max(attr_i))
+                    for attr_i, image_i in zip(attr, images)]
+        elif ntype == "SegmentationMapOnImage":
+            return [attr]
+        elif ntype == "iterable[empty]":
+            return None
+        elif ntype in ["iterable-array[int]", "iterable-array[uint]", "iterable-array[bool]"]:
+            assert images is not None
+            assert len(attr) == len(images)
+            assert all([attr_i.ndim == 3 for attr_i in attr])  # all (H,W,C)
+            if ntype == "iterable-array[bool]":
+                return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
+                        for attr_i, image_i in zip(attr, images)]
+            return [SegmentationMapOnImage(
+                        attr_i, shape=image_i.shape, nb_classes=np.max(attr_i))
+                    for attr_i, image_i in zip(attr, images)]
+        else:
+            assert ntype == "iterable-SegmentationMapOnImage"
+            return attr  # len allowed to differ from len of images
+
+    def get_keypoints_unaug_normalized(self):
+        attr = self.keypoints_unaug
+        ntype = self._get_keypoints_unaug_normalization_type()
+        images = self.get_images_unaug_normalized()
+
+        if ntype == "None":
+            return attr
+        elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+            assert images is not None
+            assert attr.ndim == 3  # (N,K,2)
+            assert attr.shape[2] == 2
+            assert len(attr) == len(images)
+            return [
+                KeypointsOnImage.from_coords_array(attr_i, shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        elif ntype == "(x,y)":
+            assert images is not None
+            assert len(images) == 1
+            return [KeypointsOnImage([Keypoint(x=attr[0], y=attr[1])],
+                                     shape=images[0].shape)]
+        elif ntype == "Keypoint":
+            assert images is not None
+            assert len(images) == 1
+            return [KeypointsOnImage([attr], shape=images[0].shape)]
+        elif ntype == "KeypointsOnImage":
+            return [attr]
+        elif ntype == "iterable[empty]":
+            return None
+        elif ntype in ["iterable-array[float]", "iterable-array[int]", "iterable-array[uint]"]:
+            assert images is not None
+            assert all([attr_i.ndim == 2 for attr_i in attr])  # (K,2)
+            assert all([attr_i.shape[1] == 2 for attr_i in attr])
+            assert len(attr) == len(images)
+            return [
+                KeypointsOnImage.from_coords_array(attr_i, shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        elif ntype == "iterable-(x,y)":
+            assert images is not None
+            assert len(images) == 1
+            return [KeypointsOnImage([Keypoint(x=x, y=y) for x, y in attr],
+                                     shape=images[0].shape)]
+        elif ntype == "iterable-Keypoint":
+            assert images is not None
+            assert len(images) == 1
+            return [KeypointsOnImage(attr, shape=images[0].shape)]
+        elif ntype == "iterable-KeypointsOnImage":
+            return attr
+        elif ntype == "iterable-iterable[empty]":
+            return None
+        elif ntype == "iterable-iterable-(x,y)":
+            assert images is not None
+            assert len(attr) == len(images)
+            return [
+                KeypointsOnImage.from_coords_array(
+                    np.array(attr_i, dtype=np.float32),
+                    shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        else:
+            assert ntype == "iterable-iterable-Keypoint"
+            assert images is not None
+            assert len(attr) == len(images)
+            return [KeypointsOnImage(attr_i, shape=image_i.shape)
+                    for attr_i, image_i
+                    in zip(attr, images)]
+
+    def get_bounding_boxes_unaug_normalized(self):
+        attr = self.bounding_boxes_unaug
+        ntype = self._get_bounding_boxes_unaug_normalization_type()
+        images = self.get_images_unaug_normalized()
+
+        if ntype == "None":
+            return None
+        elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+            assert images is not None
+            assert attr.ndim == 3  # (N,B,4)
+            assert attr.shape[2] == 4
+            assert len(attr) == len(images)
+            return [
+                BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        elif ntype == "(x1,y1,x2,y2)":
+            assert images is not None
+            assert len(images) == 1
+            return [
+                BoundingBoxesOnImage(
+                    [BoundingBox(
+                        x1=attr[0], y1=attr[1], x2=attr[2], y2=attr[3])],
+                    shape=images[0].shape)
+            ]
+        elif ntype == "BoundingBox":
+            assert images is not None
+            assert len(images) == 1
+            return [BoundingBoxesOnImage([attr], shape=images[0].shape)]
+        elif ntype == "BoundingBoxesOnImage":
+            return [attr]
+        elif ntype == "iterable[empty]":
+            return None
+        elif ntype in ["iterable-array[float]", "iterable-array[int]", "iterable-array[uint]"]:
+            assert images is not None
+            assert all([attr_i.ndim == 2 for attr_i in attr])  # (B,4)
+            assert all([attr_i.shape[1] == 4 for attr_i in attr])
+            assert len(attr) == len(images)
+            return [
+                BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        elif ntype == "iterable-(x1,y1,x2,y2)":
+            assert images is not None
+            assert len(images) == 1
+            return [
+                BoundingBoxesOnImage(
+                    [BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2) for x1, y1, x2, y2 in attr],
+                    shape=images[0].shape)
+            ]
+        elif ntype == "iterable-BoundingBox":
+            assert images is not None
+            assert len(images) == 1
+            return [BoundingBoxesOnImage(attr, shape=images[0].shape)]
+        elif ntype == "iterable-BoundingBoxesOnImage":
+            return attr
+        elif ntype == "iterable-iterable[empty]":
+            return None
+        elif ntype == "iterable-iterable-(x1,y1,x2,y2)":
+            assert images is not None
+            assert len(attr) == len(images)
+            return [
+                BoundingBoxesOnImage.from_xyxy_array(
+                    np.array(attr_i, dtype=np.float32),
+                    shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        else:
+            assert ntype == "iterable-iterable-BoundingBox"
+            assert images is not None
+            assert len(attr) == len(images)
+            return [BoundingBoxesOnImage(attr_i, shape=image_i.shape)
+                    for attr_i, image_i
+                    in zip(attr, images)]
+
+    def get_polygons_unaug_normalized(self):
+        attr = self.bounding_boxes_unaug
+        ntype = self._get_bounding_boxes_unaug_normalization_type()
+        images = self.get_images_unaug_normalized()
+
+        if ntype == "None":
+            return None
+        elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+            assert images is not None
+            assert attr.ndim == 4  # (N,#polys,#points,2)
+            assert attr.shape[-1] == 2
+            assert len(attr) == len(images)
+            return [
+                PolygonsOnImage(
+                    [Polygon(poly_points) for poly_points in attr_i],
+                    shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        elif ntype == "Polygon":
+            assert images is not None
+            assert len(images) == 1
+            return [PolygonsOnImage([attr], shape=images[0].shape)]
+        elif ntype == "PolygonsOnImage":
+            return [attr]
+        elif ntype == "iterable[empty]":
+            return None
+        elif ntype in ["iterable-array[float]", "iterable-array[int]", "iterable-array[uint]"]:
+            assert images is not None
+            assert all([attr_i.ndim == 3 for attr_i in attr])  # (#polys,#points,2)
+            assert all([attr_i.shape[-1] == 2 for attr_i in attr])
+            assert len(attr) == len(images)
+            return [
+                PolygonsOnImage([Polygon([poly_points for poly_points in attr_i])],
+                                shape=image_i.shape)
+                for attr_i, image_i
+                in zip(attr, images)
+            ]
+        elif ntype == "iterable-(x,y)":
+            assert images is not None
+            assert len(images) == 1
+            return [PolygonsOnImage([Polygon(attr)], shape=images[0].shape)]
+        elif ntype == "iterable-Keypoint":
+            assert images is not None
+            assert len(images) == 1
+            return [PolygonsOnImage([Polygon(attr)], shape=images[0].shape)]
+        elif ntype == "iterable-Polygon":
+            assert images is not None
+            assert len(images) == 1
+            return [PolygonsOnImage(attr, shape=images[0].shape)]
+        elif ntype == "iterable-PolygonsOnImage":
+            return attr
+        elif ntype == "iterable-iterable[empty]":
+            return None
+        elif ntype in ["iterable-iterable-array[float]", "iterable-iterable-array[int]", "iterable-iterable-array[uint]"]:
+            assert images is not None
+            assert len(attr) == len(images)
+            assert all([poly_points.ndim == 2 and poly_points.shape[-1] == 2
+                        for attr_i in attr
+                        for poly_points in attr_i])
+            return [
+                PolygonsOnImage(
+                    [Polygon(poly_points) for poly_points in attr_i],
+                    shape=image_i.shape)
+                for attr_i, image_i in zip(attr, images)
+            ]
+        elif ntype == "iterable-iterable-(x,y)":
+            assert images is not None
+            assert len(images) == 1
+            return [
+                PolygonsOnImage([Polygon(attr_i) for attr_i in attr],
+                                shape=images[0].shape)
+            ]
+        elif ntype == "iterable-iterable-Keypoint":
+            assert images is not None
+            assert len(images) == 1
+            return [
+                PolygonsOnImage([Polygon(attr_i) for attr_i in attr],
+                                shape=images[0].shape)
+            ]
+        elif ntype == "iterable-iterable-Polygon":
+            assert images is not None
+            assert len(attr) == len(images)
+            return [
+                PolygonsOnImage(attr_i, shape=images[0].shape)
+                for attr_i, image_i in zip(attr, images)
+            ]
+        elif ntype == "iterable-iterable-iterable[empty]":
+            return None
+        else:
+            assert ntype in ["iterable-iterable-iterable-(x,y)",
+                             "iterable-iterable-iterable-Keypoint"]
+            assert images is not None
+            assert len(attr) == len(images)
+            return [
+                PolygonsOnImage(
+                    [Polygon(poly_points) for poly_points in attr_i],
+                    shape=image_i.shape)
+                for attr_i, image_i in zip(attr, images)
+            ]
+
+    def _get_heatmaps_unaug_normalization_type(self):
+        nonempty, success, parents = self._find_first_nonempty(self.heatmaps_unaug)
+        type_str = self._nonempty_info_to_type_str(nonempty, success, parents)
+        valid_type_strs = [
+            "None",
+            "array[float]",
+            "HeatmapsOnImage",
+            "iterable[empty]",
+            "iterable-array[float]",
+            "iterable-HeatmapsOnImage"
+        ]
+        assert type_str in valid_type_strs, (
+            "Got an unknown datatype for argument 'heatmaps' in Batch. "
+            "Expected datatypes were: %s. Got: %s." % (
+                ", ".join(valid_type_strs), type_str))
+
+        return type_str
+
+    def _get_segmentation_maps_unaug_normalization_type(self):
+        nonempty, success, parents = self._find_first_nonempty(self.segmentation_maps_unaug)
+        type_str = self._nonempty_info_to_type_str(nonempty, success, parents)
+        valid_type_strs = [
+            "None",
+            "array[int]",
+            "array[uint]",
+            "array[bool]",
+            "SegmentationMapOnImage",
+            "iterable[empty]",
+            "iterable-array[int]",
+            "iterable-array[uint]",
+            "iterable-array[bool]",
+            "iterable-SegmentationMapOnImage"
+        ]
+        assert type_str in valid_type_strs, (
+            "Got an unknown datatype for argument 'segmentation_maps' in Batch. "
+            "Expected datatypes were: %s. Got: %s." % (
+                ", ".join(valid_type_strs), type_str))
+
+        return type_str
+
+    def _get_keypoints_unaug_normalization_type(self):
+        nonempty, success, parents = self._find_first_nonempty(self.keypoints_unaug)
+        type_str = self._nonempty_info_to_type_str(nonempty, success, parents)
+        valid_type_strs = [
+            "None",
+            "array[float]",
+            "array[int]",
+            "array[uint]",
+            "(x,y)",
+            "Keypoint",
+            "KeypointsOnImage",
+            "iterable[empty]",
+            "iterable-array[float]",
+            "iterable-array[int]",
+            "iterable-array[uint]",
+            "iterable-(x,y)",
+            "iterable-Keypoint",
+            "iterable-KeypointsOnImage",
+            "iterable-iterable[empty]",
+            "iterable-iterable-(x,y)",
+            "iterable-iterable-Keypoint"
+        ]
+        assert type_str in valid_type_strs, (
+            "Got an unknown datatype for argument 'keypoints' in Batch. "
+            "Expected datatypes were: %s. Got: %s." % (
+                ", ".join(valid_type_strs), type_str))
+
+        return type_str
+
+    def _get_bounding_boxes_unaug_normalization_type(self):
+        nonempty, success, parents = self._find_first_nonempty(self.bounding_boxes_unaug)
+        type_str = self._nonempty_info_to_type_str(nonempty, success, parents, tuple_size=4)
+        valid_type_strs = [
+            "None",
+            "array[float]",
+            "array[int]",
+            "array[uint]",
+            "(x1,y1,x2,y2)",
+            "BoundingBox",
+            "BoundingBoxesOnImage",
+            "iterable[empty]",
+            "iterable-array[float]",
+            "iterable-array[int]",
+            "iterable-array[uint]",
+            "iterable-(x1,y1,x2,y2)",
+            "iterable-BoundingBox",
+            "iterable-BoundingBoxesOnImage",
+            "iterable-iterable[empty]",
+            "iterable-iterable-(x1,y1,x2,y2)",
+            "iterable-iterable-BoundingBox"
+        ]
+        assert type_str in valid_type_strs, (
+            "Got an unknown datatype for argument 'bounding_boxes' in Batch. "
+            "Expected datatypes were: %s. Got: %s." % (
+                ", ".join(valid_type_strs), type_str))
+
+        return type_str
+
+    def _get_polygons_unaug_normalization_type(self):
+        nonempty, success, parents = self._find_first_nonempty(self.polygons_unaug)
+        type_str = self._nonempty_info_to_type_str(nonempty, success, parents)
+        valid_type_strs = [
+            "None",
+            "array[float]",
+            "array[int]",
+            "array[uint]",
+            "Polygon",
+            "PolygonsOnImage",
+            "iterable[empty]",
+            "iterable-array[float]",
+            "iterable-array[int]",
+            "iterable-array[uint]",
+            "iterable-(x,y)",
+            "iterable-Keypoint",
+            "iterable-Polygon",
+            "iterable-PolygonsOnImage",
+            "iterable-iterable[empty]",
+            "iterable-iterable-array[float]",
+            "iterable-iterable-array[int]",
+            "iterable-iterable-array[uint]",
+            "iterable-iterable-(x,y)",
+            "iterable-iterable-Keypoint",
+            "iterable-iterable-Polygon",
+            "iterable-iterable-iterable[empty]",
+            "iterable-iterable-iterable-(x,y)",
+            "iterable-iterable-iterable-Keypoint"
+        ]
+        assert type_str in valid_type_strs, (
+            "Got an unknown datatype for argument 'polygons' in Batch. "
+            "Expected datatypes were: %s. Got: %s." % (
+                ", ".join(valid_type_strs), type_str))
+
+        return type_str
+
+    @classmethod
+    def _find_first_nonempty(cls, attr, parents=None):
+        if parents is None:
+            parents = []
+
+        if attr is None or is_np_array(attr):
+            return attr, True, parents
+        # we exclude strings here, as otherwise we would get the first
+        # character, while we want to get the whole string
+        elif is_iterable(attr) and not is_string(attr):
+            if len(attr) == 0:
+                return None, False, parents
+
+            # this prevents the loop below from becoming infinite if the
+            # element in the iterable is identical with the iterable,
+            # as is the case for e.g. strings
+            if attr[0] is attr:
+                return attr, True, parents
+
+            # Usually in case of empty lists, all lists should have similar
+            # depth. We are a bit more tolerant here and pick the deepest one.
+            # Only parents would really need to be tracked here, we could
+            # ignore nonempty and success as they will always have the same
+            # values (if only empty lists exist).
+            nonempty_deepest = None
+            success_deepest = False
+            parents_deepest = parents
+            for attr_i in attr:
+                nonempty, success, parents_found = cls._find_first_nonempty(
+                    attr_i, parents=parents+[attr])
+                if success:
+                    # on any nonempty hit we return immediately as we assume
+                    # that the datatypes do not change between child branches
+                    return nonempty, success, parents_found
+                elif len(parents_found) > len(parents_deepest):
+                    nonempty_deepest = nonempty
+                    success_deepest = success
+                    parents_deepest = parents_found
+
+            return nonempty_deepest, success_deepest, parents_deepest
+
+        return attr, True, parents
+
+    @classmethod
+    def _nonempty_info_to_type_str(cls, nonempty, success, parents, tuple_size=2):
+        assert len(parents) <= 4
+        parent_iters = ""
+        if len(parents) > 0:
+            parent_iters = "%s-" % ("-".join(["iterable"] * len(parents)),)
+
+        if not success:
+            return "%siterable[empty]" % (parent_iters,)
+
+        # check if this is an (x, y) tuple
+        # if tuple_size=4 (i.e. for BBs) check if it is (x1, y1, x2, y2)
+        assert tuple_size in [2, 4]
+        if len(parents) >= 1 and isinstance(parents[-1], tuple) \
+                and len(parents[-1]) == tuple_size \
+                and all([is_single_number(val) for val in parents[-1]]):
+            parent_iters = "-".join(["iterable"] * (len(parents)-1))
+            if tuple_size == 4:
+                return "-".join([parent_iters, "(x1,y1,x2,y2)"]).lstrip("-")
+            return "-".join([parent_iters, "(x,y)"]).lstrip("-")
+
+        if nonempty is None:
+            return "None"
+        elif is_np_array(nonempty):
+            kind = nonempty.dtype.kind
+            kind_map = {"f": "float", "u": "uint", "i": "int", "b": "bool"}
+            return "%sarray[%s]" % (parent_iters, kind_map[kind] if kind in kind_map else kind)
+
+        # even int, str etc. are objects in python, so anything left should
+        # offer a __class__ attribute
+        assert isinstance(nonempty, object)
+        return "%s%s" % (parent_iters, nonempty.__class__.__name__)
+
     @property
     def images(self):
         warnings.warn(DeprecationWarning(
