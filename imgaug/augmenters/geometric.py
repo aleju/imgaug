@@ -1837,6 +1837,13 @@ class PiecewiseAffine(meta.Augmenter):
                 # skimage converts to float64
                 arr_0to1_warped = arr_0to1_warped.astype(np.float32)
 
+                # TODO not entirely clear whether this breaks the value range -- Affine does
+                # TODO add test for this
+                # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
+                # not clear whether 4+ also do that
+                if order_samples[i] >= 3:
+                    arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+
                 heatmaps_i.arr_0to1 = arr_0to1_warped
 
         return result
