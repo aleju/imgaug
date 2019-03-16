@@ -713,6 +713,7 @@ class Affine(meta.Augmenter):
             cval_samples, mode_samples, order_samples = self._draw_samples(nb_heatmaps, random_state)
         cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
         mode_samples = ["constant"] * len(mode_samples)
+        order_samples = [3] * len(order_samples)
 
         arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
         arrs_aug, matrices = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,

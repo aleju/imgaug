@@ -59,6 +59,7 @@
 * [mildly breaking] Changed the output of `Polygon.clip_out_of_image()` from `MultiPolygon` to `list` of `Polygon`.
   This breaks for anybody who has already used `Polygon.clip_out_of_image()`. 
 * Fixed `Affine` heatmap augmentation producing arrays with values outside the range `[0.0, 1.0]` when `order` was set to `3`.
+* Changed `Affine` to always use `order=3` for heatmap augmentation.
 
 
 # 0.2.8
