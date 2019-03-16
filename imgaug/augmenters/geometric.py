@@ -718,7 +718,13 @@ class Affine(meta.Augmenter):
         arrs_aug, matrices = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,
                                                              shear_samples, cval_samples, mode_samples, order_samples,
                                                              return_matrices=True)
-        for heatmaps_i, arr_aug, matrix in zip(heatmaps, arrs_aug, matrices):
+        for heatmaps_i, arr_aug, matrix, order in zip(heatmaps, arrs_aug, matrices, order_samples):
+            # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
+            # not clear whether 4+ also do that
+            # TODO add test for this
+            if order >= 3:
+                arr_aug = np.clip(arr_aug, 0.0, 1.0, out=arr_aug)
+
             heatmaps_i.arr_0to1 = arr_aug
             if self.fit_output:
                 _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
