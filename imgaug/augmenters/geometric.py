@@ -2605,7 +2605,7 @@ class ElasticTransformation(meta.Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_heatmaps = len(heatmaps)
-        rss, alphas, sigmas, orders, _cvals, _modes = self._draw_samples(nb_heatmaps, random_state)
+        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_heatmaps, random_state)
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
             if heatmaps_i.arr_0to1.shape[0:2] == heatmaps_i.shape[0:2]:
@@ -2620,7 +2620,7 @@ class ElasticTransformation(meta.Augmenter):
                     heatmaps_i.arr_0to1,
                     dx,
                     dy,
-                    order=orders[i],
+                    order=3,
                     cval=0,
                     mode="constant"
                 )
@@ -2653,7 +2653,7 @@ class ElasticTransformation(meta.Augmenter):
                     arr_0to1,
                     dx,
                     dy,
-                    order=orders[i],
+                    order=3,
                     cval=0,
                     mode="constant"
                 )
