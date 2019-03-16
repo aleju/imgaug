@@ -61,6 +61,7 @@
 * Fixed `Affine` heatmap augmentation producing arrays with values outside the range `[0.0, 1.0]` when `order` was set to `3`.
 * Changed `Affine` to always use `order=3` for heatmap augmentation.
 * Fixed `PiecewiseAffine` heatmap augmentation producing arrays with values outside the range `[0.0, 1.0]` when `order` was set to `3`.
+* Changed `PiecewiseAffine` to always use `order=3` for heatmap augmentation.
 
 
 # 0.2.8

@@ -1809,11 +1809,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = heatmaps
         nb_images = len(heatmaps)
 
-        rss = ia.derive_random_states(random_state, nb_images+3)
+        rss = ia.derive_random_states(random_state, nb_images+2)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-3])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-2])
-        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-1])
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
 
         for i in sm.xrange(nb_images):
             heatmaps_i = heatmaps[i]
@@ -1827,7 +1826,7 @@ class PiecewiseAffine(meta.Augmenter):
                 arr_0to1_warped = tf.warp(
                     arr_0to1,
                     transformer,
-                    order=order_samples[i],
+                    order=3,
                     mode="constant",
                     cval=0,
                     preserve_range=True,
@@ -1841,8 +1840,7 @@ class PiecewiseAffine(meta.Augmenter):
                 # TODO add test for this
                 # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
                 # not clear whether 4+ also do that
-                if order_samples[i] >= 3:
-                    arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
 
                 heatmaps_i.arr_0to1 = arr_0to1_warped
 
