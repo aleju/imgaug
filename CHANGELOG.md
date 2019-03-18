@@ -65,6 +65,7 @@
 * Changed `ElasticTransformation` to always use `order=3` for heatmap augmentation.
 * Changed check in `HeatmapsOnImage` that validates whether the input array is within the desired value range `[min_value, max_value]` 
   from a hard exception to a soft warning (with clipping). Also improved the error message a bit.
+* Fixed assert in `SegmentationMapOnImage` falsely checking if max class index is `<= nb_classes` instead of `< nb_classes`. 
 
 
 # 0.2.8

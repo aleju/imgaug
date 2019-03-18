@@ -6299,7 +6299,7 @@ class SegmentationMapOnImage(object):
 
     nb_classes : int or None
         Total number of unique classes that may appear in an segmentation map, i.e. the max
-        class index. This may be None if the input array is of type bool or float. The number
+        class index plus 1. This may be None if the input array is of type bool or float. The number
         of classes however must be provided if the input array is of type int, as then the
         number of classes cannot be guessed.
 
@@ -6365,7 +6365,7 @@ class SegmentationMapOnImage(object):
             do_assert(nb_classes is not None)
             do_assert(nb_classes > 0)
             do_assert(np.min(arr.flat[0:100]) >= 0)
-            do_assert(np.max(arr.flat[0:100]) <= nb_classes)
+            do_assert(np.max(arr.flat[0:100]) < nb_classes)
             self.input_was = ("int", arr.dtype.type, arr.ndim)
             if arr.ndim == 3:
                 arr = arr[..., 0]
@@ -6920,7 +6920,6 @@ class Batch(object):
         if ntype == "None":
             return None
         elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
-            # TODO how to handle array with N=0?
             assert images is not None
             assert attr.ndim == 4  # always (N,H,W,C)
             assert len(attr) == len(images)
@@ -6928,7 +6927,7 @@ class Batch(object):
                 return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
                         for attr_i, image_i in zip(attr, images)]
             return [SegmentationMapOnImage(
-                        attr_i, shape=image_i.shape, nb_classes=np.max(attr_i))
+                        attr_i, shape=image_i.shape, nb_classes=1+np.max(attr_i))
                     for attr_i, image_i in zip(attr, images)]
         elif ntype == "SegmentationMapOnImage":
             return [attr]
@@ -6942,7 +6941,7 @@ class Batch(object):
                 return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
                         for attr_i, image_i in zip(attr, images)]
             return [SegmentationMapOnImage(
-                        attr_i, shape=image_i.shape, nb_classes=np.max(attr_i))
+                        attr_i, shape=image_i.shape, nb_classes=1+np.max(attr_i))
                     for attr_i, image_i in zip(attr, images)]
         else:
             assert ntype == "iterable-SegmentationMapOnImage"
