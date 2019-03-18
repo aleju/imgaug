@@ -6711,20 +6711,159 @@ class TestBatch(unittest.TestCase):
         with self.assertRaises(ValueError):
             batch.get_images_unaug_normalized()
 
-    def get_heatmaps_unaug_normalized(self):
-        assert False
+    def test_get_heatmaps_unaug_normalized(self):
+        # ----
+        # None
+        # ----
+        batch = ia.Batch(heatmaps=None)
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert heatmaps_norm is None
 
-    def get_segmentation_maps_unaug_normalized(self):
-        assert False
+        # ----
+        # array
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            heatmaps=np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1)
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert isinstance(heatmaps_norm, list)
+        assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
+        assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
 
-    def get_keypoints_unaug_normalized(self):
-        assert False
+        batch = ia.Batch(
+            images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+            heatmaps=np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1)
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert isinstance(heatmaps_norm, list)
+        assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
+        assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
 
-    def get_bounding_boxes_unaug_normalized(self):
-        assert False
+        # --> heatmaps for too many images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                heatmaps=np.zeros((2, 1, 1, 1), dtype=np.float32) + 0.1)
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
 
-    def get_polygons_unaug_normalized(self):
-        assert False
+        # --> too few heatmaps
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                heatmaps=np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1)
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # --> wrong channel number
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                heatmaps=np.zeros((1, 1, 1), dtype=np.float32) + 0.1)
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                heatmaps=np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1)
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # ----
+        # single HeatmapsOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            heatmaps=ia.HeatmapsOnImage(
+                np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
+                shape=(1, 1, 3)))
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert isinstance(heatmaps_norm, list)
+        assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
+        assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
+
+        # ----
+        # empty iterable
+        # ----
+        batch = ia.Batch(images=None, heatmaps=[])
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert heatmaps_norm is None
+
+        # ----
+        # iterable of arrays
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            heatmaps=[np.zeros((1, 1, 1), dtype=np.float32) + 0.1])
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert isinstance(heatmaps_norm, list)
+        assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
+        assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
+
+        batch = ia.Batch(
+            images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+            heatmaps=[np.zeros((1, 1, 1), dtype=np.float32) + 0.1])
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert isinstance(heatmaps_norm, list)
+        assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
+        assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
+
+        # --> heatmaps for too many images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                heatmaps=[
+                    np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
+                    np.zeros((1, 1, 1), dtype=np.float32) + 0.1
+                ])
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # --> too few heatmaps
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                heatmaps=[np.zeros((1, 1, 1), dtype=np.float32) + 0.1])
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                heatmaps=[np.zeros((1, 1, 1), dtype=np.float32) + 0.1])
+            heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # --> wrong number of dimensions
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                heatmaps=[np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1])
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+
+        # ----
+        # iterable of HeatmapsOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            heatmaps=[ia.HeatmapsOnImage(
+                np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
+                shape=(1, 1, 3))])
+        heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+        assert isinstance(heatmaps_norm, list)
+        assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
+        assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
+
+    def test_get_segmentation_maps_unaug_normalized(self):
+        # TODO
+        pass
+
+    def test_get_keypoints_unaug_normalized(self):
+        # TODO
+        pass
+
+    def test_get_bounding_boxes_unaug_normalized(self):
+        # TODO
+        pass
+
+    def test_get_polygons_unaug_normalized(self):
+        # TODO
+        pass
 
     def test__get_heatmaps_unaug_normalization_type(self):
         batch = ia.Batch(heatmaps=None)
@@ -7364,6 +7503,14 @@ class TestBatch(unittest.TestCase):
             ntype = ia.Batch._nonempty_info_to_type_str(
                 cls, True, [[], tuple()])
             assert ntype == "iterable-iterable-%s" % (cls_name,)
+
+    def test_property_warnings(self):
+        # TODO
+        pass
+
+    def test_deepcopy(self):
+        # TODO
+        pass
 
 
 if __name__ == "__main__":
