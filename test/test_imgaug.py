@@ -6827,7 +6827,7 @@ class TestBatch(unittest.TestCase):
             batch = ia.Batch(
                 images=None,
                 heatmaps=[np.zeros((1, 1, 1), dtype=np.float32) + 0.1])
-            heatmaps_norm = batch.get_heatmaps_unaug_normalized()
+            _heatmaps_norm = batch.get_heatmaps_unaug_normalized()
 
         # --> wrong number of dimensions
         with self.assertRaises(AssertionError):
@@ -6850,8 +6850,149 @@ class TestBatch(unittest.TestCase):
         assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
 
     def test_get_segmentation_maps_unaug_normalized(self):
-        # TODO
-        pass
+        # ----
+        # None
+        # ----
+        batch = ia.Batch(segmentation_maps=None)
+        segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+        assert segmaps_norm is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("int32"), np.dtype("uint32"), np.dtype(bool)]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                segmentation_maps=np.zeros((1, 1, 1, 1), dtype=dt) + 1)
+            segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+            assert isinstance(segmaps_norm, list)
+            assert isinstance(segmaps_norm[0], ia.SegmentationMapOnImage)
+            assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                segmentation_maps=np.zeros((1, 1, 1, 1), dtype=dt) + 1)
+            segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+            assert isinstance(segmaps_norm, list)
+            assert isinstance(segmaps_norm[0], ia.SegmentationMapOnImage)
+            assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
+
+            # --> heatmaps for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    segmentation_maps=np.zeros((2, 1, 1, 1), dtype=dt) + 1)
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+            # --> too few heatmaps
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    segmentation_maps=np.zeros((1, 1, 1, 1), dtype=dt) + 1)
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+            # --> wrong channel number
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    segmentation_maps=np.zeros((1, 1, 1), dtype=dt) + 1)
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    segmentation_maps=np.zeros((1, 1, 1, 1), dtype=dt) + 1)
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+        # ----
+        # single SegmentationMapOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            segmentation_maps=ia.SegmentationMapOnImage(
+                np.zeros((1, 1, 1), dtype=np.int32) + 1,
+                shape=(1, 1, 3),
+                nb_classes=2))
+        segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+        assert isinstance(segmaps_norm, list)
+        assert isinstance(segmaps_norm[0], ia.SegmentationMapOnImage)
+        assert np.allclose(segmaps_norm[0].arr[..., 1], 0 + 1)
+
+        # ----
+        # empty iterable
+        # ----
+        batch = ia.Batch(images=None, segmentation_maps=[])
+        segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+        assert segmaps_norm is None
+
+        # ----
+        # iterable of arrays
+        # ----
+        for dt in [np.dtype("int32"), np.dtype("uint32"), np.dtype(bool)]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                segmentation_maps=[np.zeros((1, 1, 1), dtype=dt) + 1])
+            segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+            assert isinstance(segmaps_norm, list)
+            assert isinstance(segmaps_norm[0], ia.SegmentationMapOnImage)
+            assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                segmentation_maps=[np.zeros((1, 1, 1), dtype=dt) + 1])
+            segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+            assert isinstance(segmaps_norm, list)
+            assert isinstance(segmaps_norm[0], ia.SegmentationMapOnImage)
+            assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
+
+            # --> heatmaps for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    segmentation_maps=[
+                        np.zeros((1, 1, 1), dtype=np.int32) + 1,
+                        np.zeros((1, 1, 1), dtype=np.int32) + 1
+                    ])
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+            # --> too few heatmaps
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    segmentation_maps=[
+                        np.zeros((1, 1, 1), dtype=np.int32) + 1])
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    segmentation_maps=[
+                        np.zeros((1, 1, 1), dtype=np.int32) + 1])
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+            # --> wrong number of dimensions
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    segmentation_maps=[
+                        np.zeros((1, 1, 1, 1), dtype=np.int32) + 1])
+                _segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+
+        # ----
+        # iterable of SegmentationMapOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            segmentation_maps=[ia.SegmentationMapOnImage(
+                np.zeros((1, 1, 1), dtype=np.int32) + 1,
+                shape=(1, 1, 3),
+                nb_classes=2)])
+        segmaps_norm = batch.get_segmentation_maps_unaug_normalized()
+        assert isinstance(segmaps_norm, list)
+        assert isinstance(segmaps_norm[0], ia.SegmentationMapOnImage)
+        assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
 
     def test_get_keypoints_unaug_normalized(self):
         # TODO
