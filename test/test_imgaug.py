@@ -6995,8 +6995,365 @@ class TestBatch(unittest.TestCase):
         assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
 
     def test_get_keypoints_unaug_normalized(self):
-        # TODO
-        pass
+        def _assert_single_image_expected(inputs):
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    keypoints=inputs)
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    keypoints=inputs)
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                            np.zeros((1, 1, 3), dtype=np.uint8)],
+                    keypoints=inputs)
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        batch = ia.Batch(keypoints=None)
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert keypoints_norm is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                keypoints=np.zeros((1, 1, 2), dtype=dt) + 1)
+            keypoints_norm = batch.get_keypoints_unaug_normalized()
+            assert isinstance(keypoints_norm, list)
+            assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+            assert len(keypoints_norm[0].keypoints) == 1
+            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                keypoints=np.zeros((1, 5, 2), dtype=dt) + 1)
+            keypoints_norm = batch.get_keypoints_unaug_normalized()
+            assert isinstance(keypoints_norm, list)
+            assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+            assert len(keypoints_norm[0].keypoints) == 5
+            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+
+            # --> keypoints for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    keypoints=np.zeros((2, 1, 2), dtype=dt) + 1)
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> too few keypoints
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    keypoints=np.zeros((1, 1, 2), dtype=dt) + 1)
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> wrong keypoints shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    keypoints=np.zeros((1, 1, 100), dtype=dt) + 1)
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            _assert_single_image_expected(np.zeros((1, 1, 2), dtype=dt) + 1)
+
+        # ----
+        # (x,y)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=(1, 2))
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 1
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+
+        _assert_single_image_expected((1, 2))
+
+        # ----
+        # single Keypoint instance
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=ia.Keypoint(x=1, y=2))
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 1
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+
+        _assert_single_image_expected(ia.Keypoint(x=1, y=2))
+
+        # ----
+        # single KeypointsOnImage instance
+        # ----
+        batch = ia.Batch(
+            images=None,
+            keypoints=ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3))
+        )
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 1
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+
+        # ----
+        # empty iterable
+        # ----
+        batch = ia.Batch(
+            images=None,
+            keypoints=[]
+        )
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert keypoints_norm is None
+
+        # ----
+        # iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                keypoints=[np.zeros((1, 2), dtype=dt) + 1])
+            keypoints_norm = batch.get_keypoints_unaug_normalized()
+            assert isinstance(keypoints_norm, list)
+            assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+            assert len(keypoints_norm[0].keypoints) == 1
+            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                keypoints=[np.zeros((5, 2), dtype=dt) + 1])
+            keypoints_norm = batch.get_keypoints_unaug_normalized()
+            assert isinstance(keypoints_norm, list)
+            assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+            assert len(keypoints_norm[0].keypoints) == 5
+            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+
+            # --> keypoints for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    keypoints=[
+                        np.zeros((1, 2), dtype=dt) + 1,
+                        np.zeros((1, 2), dtype=dt) + 1
+                    ])
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> too few keypoints
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    keypoints=[
+                        np.zeros((1, 2), dtype=dt) + 1])
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    keypoints=[
+                        np.zeros((1, 2), dtype=dt) + 1])
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+            # --> wrong shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    keypoints=[
+                        np.zeros((1, 100), dtype=dt) + 1])
+                _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        # ----
+        # iterable of (x,y)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=[(1, 2), (3, 4)])
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 2
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+        assert keypoints_norm[0].keypoints[1].x == 3
+        assert keypoints_norm[0].keypoints[1].y == 4
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                keypoints=[(1, 2)])
+            _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        # ----
+        # iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=[ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)])
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 2
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+        assert keypoints_norm[0].keypoints[1].x == 3
+        assert keypoints_norm[0].keypoints[1].y == 4
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                keypoints=[ia.Keypoint(x=1, y=2)])
+            _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        # ----
+        # iterable of KeypointsOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            keypoints=[
+                ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3)),
+                ia.KeypointsOnImage([ia.Keypoint(x=3, y=4)], shape=(1, 1, 3)),
+            ]
+        )
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 1
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+
+        assert isinstance(keypoints_norm[1], ia.KeypointsOnImage)
+        assert len(keypoints_norm[1].keypoints) == 1
+        assert keypoints_norm[1].keypoints[0].x == 3
+        assert keypoints_norm[1].keypoints[0].y == 4
+
+        # ----
+        # iterable of empty interables
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=[[]])
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert keypoints_norm is None
+
+        # ----
+        # iterable of iterable of (x,y)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=[
+                [(1, 2), (3, 4)],
+                [(5, 6), (7, 8)]
+            ]
+        )
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 2
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+        assert keypoints_norm[0].keypoints[1].x == 3
+        assert keypoints_norm[0].keypoints[1].y == 4
+
+        assert len(keypoints_norm[1].keypoints) == 2
+        assert keypoints_norm[1].keypoints[0].x == 5
+        assert keypoints_norm[1].keypoints[0].y == 6
+        assert keypoints_norm[1].keypoints[1].x == 7
+        assert keypoints_norm[1].keypoints[1].y == 8
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                keypoints=[
+                    [(1, 2), (3, 4)],
+                    [(5, 6), (7, 8)]
+                ]
+            )
+            _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                keypoints=[
+                    [(1, 2), (3, 4)],
+                    [(5, 6), (7, 8)]
+                ]
+            )
+            _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        # ----
+        # iterable of iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            keypoints=[
+                [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
+                [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
+            ]
+        )
+        keypoints_norm = batch.get_keypoints_unaug_normalized()
+        assert isinstance(keypoints_norm, list)
+        assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
+        assert len(keypoints_norm[0].keypoints) == 2
+        assert keypoints_norm[0].keypoints[0].x == 1
+        assert keypoints_norm[0].keypoints[0].y == 2
+        assert keypoints_norm[0].keypoints[1].x == 3
+        assert keypoints_norm[0].keypoints[1].y == 4
+
+        assert len(keypoints_norm[1].keypoints) == 2
+        assert keypoints_norm[1].keypoints[0].x == 5
+        assert keypoints_norm[1].keypoints[0].y == 6
+        assert keypoints_norm[1].keypoints[1].x == 7
+        assert keypoints_norm[1].keypoints[1].y == 8
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                keypoints=[
+                    [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
+                    [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
+                ]
+            )
+            _keypoints_norm = batch.get_keypoints_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                keypoints=[
+                    [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
+                    [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
+                ]
+            )
+            _keypoints_norm = batch.get_keypoints_unaug_normalized()
 
     def test_get_bounding_boxes_unaug_normalized(self):
         # TODO
