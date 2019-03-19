@@ -7356,8 +7356,411 @@ class TestBatch(unittest.TestCase):
             _keypoints_norm = batch.get_keypoints_unaug_normalized()
 
     def test_get_bounding_boxes_unaug_normalized(self):
-        # TODO
-        pass
+        def _assert_single_image_expected(inputs):
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    bounding_boxes=inputs)
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    bounding_boxes=inputs)
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                            np.zeros((1, 1, 3), dtype=np.uint8)],
+                    bounding_boxes=inputs)
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        batch = ia.Batch(bounding_boxes=None)
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert bbs_norm is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                bounding_boxes=np.zeros((1, 1, 4), dtype=dt) + 1)
+            bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+            assert isinstance(bbs_norm, list)
+            assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+            assert len(bbs_norm[0].bounding_boxes) == 1
+            assert np.allclose(bbs_norm[0].to_xyxy_array(), 1)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                bounding_boxes=np.zeros((1, 5, 4), dtype=dt) + 1)
+            bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+            assert isinstance(bbs_norm, list)
+            assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+            assert len(bbs_norm[0].bounding_boxes) == 5
+            assert np.allclose(bbs_norm[0].to_xyxy_array(), 1)
+
+            # --> bounding boxes for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    bounding_boxes=np.zeros((2, 1, 4), dtype=dt) + 1)
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> too few bounding boxes
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    bounding_boxes=np.zeros((1, 1, 4), dtype=dt) + 1)
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> wrong keypoints shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    bounding_boxes=np.zeros((1, 1, 100), dtype=dt) + 1)
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            _assert_single_image_expected(np.zeros((1, 1, 4), dtype=dt) + 1)
+
+        # ----
+        # (x1,y1,x2,y2)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=(1, 2, 3, 4))
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 1
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+
+        _assert_single_image_expected((1, 4))
+
+        # ----
+        # single BoundingBox instance
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=ia.BoundingBox(x1=1, y1=2, x2=3, y2=4))
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 1
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+
+        _assert_single_image_expected(ia.BoundingBox(x1=1, y1=2, x2=3, y2=4))
+
+        # ----
+        # single BoundingBoxesOnImage instance
+        # ----
+        batch = ia.Batch(
+            images=None,
+            bounding_boxes=ia.BoundingBoxesOnImage(
+                [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
+                shape=(1, 1, 3))
+        )
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 1
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+
+        # ----
+        # empty iterable
+        # ----
+        batch = ia.Batch(
+            images=None,
+            bounding_boxes=[]
+        )
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert bbs_norm is None
+
+        # ----
+        # iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                bounding_boxes=[np.zeros((1, 4), dtype=dt) + 1])
+            bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+            assert isinstance(bbs_norm, list)
+            assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+            assert len(bbs_norm[0].bounding_boxes) == 1
+            assert np.allclose(bbs_norm[0].to_xyxy_array(), 1)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                bounding_boxes=[np.zeros((5, 4), dtype=dt) + 1])
+            bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+            assert isinstance(bbs_norm, list)
+            assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+            assert len(bbs_norm[0].bounding_boxes) == 5
+            assert np.allclose(bbs_norm[0].to_xyxy_array(), 1)
+
+            # --> bounding boxes for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    bounding_boxes=[
+                        np.zeros((1, 4), dtype=dt) + 1,
+                        np.zeros((1, 4), dtype=dt) + 1
+                    ])
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> too few bounding boxes
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    bounding_boxes=[
+                        np.zeros((1, 4), dtype=dt) + 1])
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    bounding_boxes=[
+                        np.zeros((1, 4), dtype=dt) + 1])
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+            # --> wrong shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    bounding_boxes=[
+                        np.zeros((1, 100), dtype=dt) + 1])
+                _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        # ----
+        # iterable of (x1,y1,x2,y2)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=[(1, 2, 3, 4), (5, 6, 7, 8)])
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 2
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+        assert bbs_norm[0].bounding_boxes[1].x1 == 5
+        assert bbs_norm[0].bounding_boxes[1].y1 == 6
+        assert bbs_norm[0].bounding_boxes[1].x2 == 7
+        assert bbs_norm[0].bounding_boxes[1].y2 == 8
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                bounding_boxes=[(1, 4)])
+            _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        # ----
+        # iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=[
+                ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+                ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)
+            ])
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 2
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+        assert bbs_norm[0].bounding_boxes[1].x1 == 5
+        assert bbs_norm[0].bounding_boxes[1].y1 == 6
+        assert bbs_norm[0].bounding_boxes[1].x2 == 7
+        assert bbs_norm[0].bounding_boxes[1].y2 == 8
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                bounding_boxes=[ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)])
+            _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        # ----
+        # iterable of BoundingBoxesOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            bounding_boxes=[
+                ia.BoundingBoxesOnImage(
+                    [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
+                    shape=(1, 1, 3)),
+                ia.BoundingBoxesOnImage(
+                    [ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
+                    shape=(1, 1, 3))
+            ]
+        )
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 1
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+
+        assert isinstance(bbs_norm[1], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[1].bounding_boxes) == 1
+        assert bbs_norm[1].bounding_boxes[0].x1 == 5
+        assert bbs_norm[1].bounding_boxes[0].y1 == 6
+        assert bbs_norm[1].bounding_boxes[0].x2 == 7
+        assert bbs_norm[1].bounding_boxes[0].y2 == 8
+
+        # ----
+        # iterable of empty interables
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=[[]])
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert bbs_norm is None
+
+        # ----
+        # iterable of iterable of (x1,y1,x2,y2)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=[
+                [(1, 2, 3, 4)],
+                [(5, 6, 7, 8), (9, 10, 11, 12)]
+            ]
+        )
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 1
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+
+        assert len(bbs_norm[1].bounding_boxes) == 2
+        assert bbs_norm[1].bounding_boxes[0].x1 == 5
+        assert bbs_norm[1].bounding_boxes[0].y1 == 6
+        assert bbs_norm[1].bounding_boxes[0].x2 == 7
+        assert bbs_norm[1].bounding_boxes[0].y2 == 8
+
+        assert bbs_norm[1].bounding_boxes[1].x1 == 9
+        assert bbs_norm[1].bounding_boxes[1].y1 == 10
+        assert bbs_norm[1].bounding_boxes[1].x2 == 11
+        assert bbs_norm[1].bounding_boxes[1].y2 == 12
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                bounding_boxes=[
+                    [(1, 4), (3, 4)],
+                    [(5, 6), (7, 8)]
+                ]
+            )
+            _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                bounding_boxes=[
+                    [(1, 2, 3, 4)],
+                    [(5, 6, 7, 8)]
+                ]
+            )
+            _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        # ----
+        # iterable of iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            bounding_boxes=[
+                [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+                 ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
+                [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
+                 ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
+            ]
+        )
+        bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+        assert isinstance(bbs_norm, list)
+        assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
+        assert len(bbs_norm[0].bounding_boxes) == 2
+        assert bbs_norm[0].bounding_boxes[0].x1 == 1
+        assert bbs_norm[0].bounding_boxes[0].y1 == 2
+        assert bbs_norm[0].bounding_boxes[0].x2 == 3
+        assert bbs_norm[0].bounding_boxes[0].y2 == 4
+        assert bbs_norm[0].bounding_boxes[1].x1 == 5
+        assert bbs_norm[0].bounding_boxes[1].y1 == 6
+        assert bbs_norm[0].bounding_boxes[1].x2 == 7
+        assert bbs_norm[0].bounding_boxes[1].y2 == 8
+
+        assert len(bbs_norm[1].bounding_boxes) == 2
+        assert bbs_norm[1].bounding_boxes[0].x1 == 9
+        assert bbs_norm[1].bounding_boxes[0].y1 == 10
+        assert bbs_norm[1].bounding_boxes[0].x2 == 11
+        assert bbs_norm[1].bounding_boxes[0].y2 == 12
+        assert bbs_norm[1].bounding_boxes[1].x1 == 13
+        assert bbs_norm[1].bounding_boxes[1].y1 == 14
+        assert bbs_norm[1].bounding_boxes[1].x2 == 15
+        assert bbs_norm[1].bounding_boxes[1].y2 == 16
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                bounding_boxes=[
+                    [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+                     ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
+                    [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
+                     ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
+                ]
+            )
+            _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                bounding_boxes=[
+                    [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+                     ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
+                    [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
+                     ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
+                ]
+            )
+            _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
 
     def test_get_polygons_unaug_normalized(self):
         # TODO
