@@ -2428,6 +2428,7 @@ class KeypointsOnImage(object):
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
         return self.deepcopy(keypoints)
 
+    # TODO align naming with BoundingBoxesOnImage.to_xyxy_array()
     def get_coords_array(self):
         """
         Convert the coordinates of all keypoints in this object to an array of shape (N,2).
