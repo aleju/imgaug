@@ -7098,8 +7098,8 @@ class Batch(object):
                     in zip(attr, images)]
 
     def get_polygons_unaug_normalized(self):
-        attr = self.bounding_boxes_unaug
-        ntype = self._get_bounding_boxes_unaug_normalization_type()
+        attr = self.polygons_unaug
+        ntype = self._get_polygons_unaug_normalization_type()
         images = self.get_images_unaug_normalized()
 
         if ntype == "None":
@@ -7130,7 +7130,7 @@ class Batch(object):
             assert all([attr_i.shape[-1] == 2 for attr_i in attr])
             assert len(attr) == len(images)
             return [
-                PolygonsOnImage([Polygon([poly_points for poly_points in attr_i])],
+                PolygonsOnImage([Polygon(poly_points) for poly_points in attr_i],
                                 shape=image_i.shape)
                 for attr_i, image_i
                 in zip(attr, images)
