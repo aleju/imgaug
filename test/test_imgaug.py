@@ -7018,6 +7018,9 @@ class TestBatch(unittest.TestCase):
                     keypoints=inputs)
                 _keypoints_norm = batch.get_keypoints_unaug_normalized()
 
+        # ----
+        # None
+        # ----
         batch = ia.Batch(keypoints=None)
         keypoints_norm = batch.get_keypoints_unaug_normalized()
         assert keypoints_norm is None
@@ -7379,6 +7382,9 @@ class TestBatch(unittest.TestCase):
                     bounding_boxes=inputs)
                 _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
 
+        # ----
+        # None
+        # ----
         batch = ia.Batch(bounding_boxes=None)
         bbs_norm = batch.get_bounding_boxes_unaug_normalized()
         assert bbs_norm is None
@@ -7763,8 +7769,546 @@ class TestBatch(unittest.TestCase):
             _bbs_norm = batch.get_bounding_boxes_unaug_normalized()
 
     def test_get_polygons_unaug_normalized(self):
-        # TODO
-        pass
+        def _assert_single_image_expected(inputs):
+            # --> images None
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=None,
+                    polygons=inputs)
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    polygons=inputs)
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                            np.zeros((1, 1, 3), dtype=np.uint8)],
+                    polygons=inputs)
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        coords1 = [(0, 0), (10, 0), (10, 10)]
+        coords2 = [(5, 5), (15, 5), (15, 15)]
+        coords3 = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        coords4 = [(5, 5), (15, 5), (15, 15), (5, 15)]
+
+        coords1_kps = [ia.Keypoint(x=x, y=y) for x, y in coords1]
+        coords2_kps = [ia.Keypoint(x=x, y=y) for x, y in coords2]
+        coords3_kps = [ia.Keypoint(x=x, y=y) for x, y in coords3]
+        coords4_kps = [ia.Keypoint(x=x, y=y) for x, y in coords4]
+
+        coords1_arr = np.float32(coords1)
+        coords2_arr = np.float32(coords2)
+        coords3_arr = np.float32(coords3)
+        coords4_arr = np.float32(coords4)
+
+        # ----
+        # None
+        # ----
+        batch = ia.Batch(polygons=None)
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert polygons_norm is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=coords1_arr[np.newaxis, np.newaxis, ...].astype(dt))
+            polygons_norm = batch.get_polygons_unaug_normalized()
+            assert isinstance(polygons_norm, list)
+            assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+            assert len(polygons_norm[0].polygons) == 1
+            assert np.allclose(polygons_norm[0].polygons[0].exterior,
+                               coords1_arr)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                polygons=np.tile(
+                    coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
+                    (1, 5, 1, 1)
+                ))
+            polygons_norm = batch.get_polygons_unaug_normalized()
+            assert isinstance(polygons_norm, list)
+            assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+            assert len(polygons_norm[0].polygons) == 5
+            assert np.allclose(polygons_norm[0].polygons[0].exterior,
+                               coords1_arr)
+
+            # --> polygons for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    polygons=np.tile(
+                        coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
+                        (2, 1, 1, 1)
+                    ))
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> too few polygons
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    polygons=np.tile(
+                        coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
+                        (1, 1, 1, 1)
+                    ))
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> wrong polygons shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    polygons=np.tile(
+                        coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
+                        (1, 1, 1, 10)
+                    ))
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            _assert_single_image_expected(
+                coords1_arr[np.newaxis, np.newaxis, ...].astype(dt))
+
+        # ----
+        # single Polygon instance
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=ia.Polygon(coords1))
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 1
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+
+        _assert_single_image_expected(ia.Polygon(coords1))
+
+        # ----
+        # single PolygonsOnImage instance
+        # ----
+        batch = ia.Batch(
+            images=None,
+            polygons=ia.PolygonsOnImage([ia.Polygon(coords1)], shape=(1, 1, 3))
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 1
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+
+        # ----
+        # empty iterable
+        # ----
+        batch = ia.Batch(
+            images=None,
+            polygons=[]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert polygons_norm is None
+
+        # ----
+        # iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[coords1_arr[np.newaxis, ...].astype(dt)])
+            polygons_norm = batch.get_polygons_unaug_normalized()
+            assert isinstance(polygons_norm, list)
+            assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+            assert len(polygons_norm[0].polygons) == 1
+            assert np.allclose(polygons_norm[0].polygons[0].exterior,
+                               coords1_arr)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                polygons=[np.tile(
+                    coords1_arr[np.newaxis, ...].astype(dt),
+                    (5, 1, 1)
+                )])
+            polygons_norm = batch.get_polygons_unaug_normalized()
+            assert isinstance(polygons_norm, list)
+            assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+            assert len(polygons_norm[0].polygons) == 5
+            assert np.allclose(polygons_norm[0].polygons[0].exterior,
+                               coords1_arr)
+
+            # --> polygons for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    polygons=[coords1_arr[np.newaxis, ...].astype(dt),
+                              coords2_arr[np.newaxis, ...].astype(dt)])
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> too few polygons
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    polygons=[coords1_arr[np.newaxis, ...].astype(dt)])
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> wrong polygons shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    polygons=[np.tile(
+                        coords1_arr[np.newaxis, ...].astype(dt),
+                        (1, 1, 10)
+                    )])
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            _assert_single_image_expected(
+                [coords1_arr[np.newaxis, ...].astype(dt)]
+            )
+
+        # ----
+        # iterable of (x,y)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=coords1)
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 1
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=coords1)
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=coords1_kps)
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 1
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=coords1_kps)
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of Polygon
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[ia.Polygon(coords1), ia.Polygon(coords2)])
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+        assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
+
+        # may only be used for single images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[ia.Polygon(coords1)])
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of PolygonsOnImage
+        # ----
+        batch = ia.Batch(
+            images=None,
+            polygons=[
+                ia.PolygonsOnImage([ia.Polygon(coords1)], shape=(1, 1, 3)),
+                ia.PolygonsOnImage([ia.Polygon(coords2)], shape=(1, 1, 3))
+            ]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 1
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+
+        assert isinstance(polygons_norm[1], ia.PolygonsOnImage)
+        assert len(polygons_norm[1].polygons) == 1
+        assert polygons_norm[1].polygons[0].exterior_almost_equals(coords2)
+
+        # ----
+        # iterable of empty interables
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[[]])
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert polygons_norm is None
+
+        # ----
+        # iterable of iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[[coords1_arr.astype(dt)]])
+            polygons_norm = batch.get_polygons_unaug_normalized()
+            assert isinstance(polygons_norm, list)
+            assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+            assert len(polygons_norm[0].polygons) == 1
+            assert np.allclose(polygons_norm[0].polygons[0].exterior,
+                               coords1_arr)
+
+            batch = ia.Batch(
+                images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                polygons=[[
+                    np.copy(coords1_arr).astype(dt) for _ in sm.xrange(5)
+                ]])
+            polygons_norm = batch.get_polygons_unaug_normalized()
+            assert isinstance(polygons_norm, list)
+            assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+            assert len(polygons_norm[0].polygons) == 5
+            assert np.allclose(polygons_norm[0].polygons[0].exterior,
+                               coords1_arr)
+
+            # --> polygons for too many images
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+                    polygons=[[coords1_arr.astype(dt)],
+                              [coords2_arr.astype(dt)]])
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> too few polygons
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8),
+                    polygons=[[coords1_arr.astype(dt)]])
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            # --> wrong polygons shape
+            with self.assertRaises(AssertionError):
+                batch = ia.Batch(
+                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8),
+                    polygons=[[np.tile(
+                        coords1_arr.astype(dt),
+                        (1, 1, 10)
+                    )]])
+                _polygons_norm = batch.get_polygons_unaug_normalized()
+
+            _assert_single_image_expected(
+                [[coords1_arr.astype(dt)]]
+            )
+
+        # ----
+        # iterable of iterable of (x,y)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[coords1, coords2]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+        assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                polygons=[coords1, coords2]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[coords1, coords2]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[coords1_kps, coords2_kps]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+        assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                polygons=[coords1_kps, coords2_kps]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[coords1_kps, coords2_kps]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of iterable of Polygon
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[
+                [ia.Polygon(coords1), ia.Polygon(coords2)],
+                [ia.Polygon(coords3), ia.Polygon(coords4)]
+            ]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+        assert isinstance(polygons_norm[1], ia.PolygonsOnImage)
+
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+        assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
+
+        assert len(polygons_norm[1].polygons) == 2
+        assert polygons_norm[1].polygons[0].exterior_almost_equals(coords3)
+        assert polygons_norm[1].polygons[1].exterior_almost_equals(coords4)
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                polygons=[
+                    [ia.Polygon(coords1), ia.Polygon(coords2)],
+                    [ia.Polygon(coords3), ia.Polygon(coords4)]
+                ]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[
+                    [ia.Polygon(coords1), ia.Polygon(coords2)],
+                    [ia.Polygon(coords3), ia.Polygon(coords4)]
+                ]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of iterable of empty iterable
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[[[]]])
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert polygons_norm is None
+
+        # ----
+        # iterable of iterable of iterable of (x,y)
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[[coords1, coords2], [coords3, coords4]]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+        assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
+
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[1].polygons[0].exterior_almost_equals(coords3)
+        assert polygons_norm[1].polygons[1].exterior_almost_equals(coords4)
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                polygons=[[coords1, coords2]]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[[coords1, coords2], [coords3]]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # ----
+        # iterable of iterable of iterable of Keypoint
+        # ----
+        batch = ia.Batch(
+            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            polygons=[[coords1_kps, coords2_kps], [coords3_kps, coords4_kps]]
+        )
+        polygons_norm = batch.get_polygons_unaug_normalized()
+        assert isinstance(polygons_norm, list)
+        assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
+
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
+        assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
+
+        assert len(polygons_norm[0].polygons) == 2
+        assert polygons_norm[1].polygons[0].exterior_almost_equals(coords3)
+        assert polygons_norm[1].polygons[1].exterior_almost_equals(coords4)
+
+        # --> images None
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=None,
+                polygons=[[coords1_kps, coords2_kps]]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
+
+        # --> different number of images
+        with self.assertRaises(AssertionError):
+            batch = ia.Batch(
+                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8),
+                        np.zeros((1, 1, 3), dtype=np.uint8)],
+                polygons=[[coords1_kps, coords2_kps], [coords3_kps]]
+            )
+            _polygons_norm = batch.get_polygons_unaug_normalized()
 
     def test__get_heatmaps_unaug_normalization_type(self):
         batch = ia.Batch(heatmaps=None)
