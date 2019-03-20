@@ -7446,42 +7446,39 @@ class Batch(object):
             "imgaug.Batch.bounding_boxes_aug."))
         return self.bounding_boxes_unaug
 
+    @classmethod
+    def _deepcopy_obj(cls, obj):
+        if obj is None:
+            return None
+        elif is_single_number(obj) or is_string(obj):
+            return obj
+        elif isinstance(obj, list):
+            return [cls._deepcopy_obj(el) for el in obj]
+        elif isinstance(obj, tuple):
+            return tuple([cls._deepcopy_obj(el) for el in obj])
+        elif is_np_array(obj):
+            return np.copy(obj)
+        elif hasattr(obj, "deepcopy"):
+            return obj.deepcopy()
+        else:
+            return copy.deepcopy(obj)
+
     def deepcopy(self):
-        def _copy_images(images):
-            if images is None:
-                images_copy = None
-            elif is_np_array(images):
-                images_copy = np.copy(images)
-            else:
-                do_assert(is_iterable(images))
-                do_assert(all([is_np_array(image) for image in images]))
-                images_copy = list([np.copy(image) for image in images])
-            return images_copy
-
-        def _copy_augmentable_objects(augmentables, clazz):
-            if augmentables is None:
-                augmentables_copy = None
-            else:
-                do_assert(is_iterable(augmentables))
-                do_assert(all([isinstance(augmentable, clazz) for augmentable in augmentables]))
-                augmentables_copy = [augmentable.deepcopy() for augmentable in augmentables]
-            return augmentables_copy
-
         batch = Batch(
-            images=_copy_images(self.images_unaug),
-            heatmaps=_copy_augmentable_objects(self.heatmaps_unaug, HeatmapsOnImage),
-            segmentation_maps=_copy_augmentable_objects(self.segmentation_maps_unaug, SegmentationMapOnImage),
-            keypoints=_copy_augmentable_objects(self.keypoints_unaug, KeypointsOnImage),
-            bounding_boxes=_copy_augmentable_objects(self.bounding_boxes_unaug, BoundingBoxesOnImage),
-            polygons=_copy_augmentable_objects(self.polygons_unaug, PolygonsOnImage),
+            images=self._deepcopy_obj(self.images_unaug),
+            heatmaps=self._deepcopy_obj(self.heatmaps_unaug),
+            segmentation_maps=self._deepcopy_obj(self.segmentation_maps_unaug),
+            keypoints=self._deepcopy_obj(self.keypoints_unaug),
+            bounding_boxes=self._deepcopy_obj(self.bounding_boxes_unaug),
+            polygons=self._deepcopy_obj(self.polygons_unaug),
             data=copy.deepcopy(self.data)
         )
-        batch.images_aug = _copy_images(self.images_aug)
-        batch.heatmaps_aug = _copy_augmentable_objects(self.heatmaps_aug, HeatmapsOnImage)
-        batch.segmentation_maps_aug = _copy_augmentable_objects(self.segmentation_maps_aug, SegmentationMapOnImage)
-        batch.keypoints_aug = _copy_augmentable_objects(self.keypoints_aug, KeypointsOnImage)
-        batch.bounding_boxes_aug = _copy_augmentable_objects(self.bounding_boxes_aug, BoundingBoxesOnImage)
-        batch.polygons_aug = _copy_augmentable_objects(self.polygons_aug, PolygonsOnImage)
+        batch.images_aug = self._deepcopy_obj(self.images_aug)
+        batch.heatmaps_aug = self._deepcopy_obj(self.heatmaps_aug)
+        batch.segmentation_maps_aug = self._deepcopy_obj(self.segmentation_maps_aug)
+        batch.keypoints_aug = self._deepcopy_obj(self.keypoints_aug)
+        batch.bounding_boxes_aug = self._deepcopy_obj(self.bounding_boxes_aug)
+        batch.polygons_aug = self._deepcopy_obj(self.polygons_aug)
 
         return batch
 
