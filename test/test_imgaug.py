@@ -8950,8 +8950,30 @@ class TestBatch(unittest.TestCase):
             assert ntype == "iterable-iterable-%s" % (cls_name,)
 
     def test_property_warnings(self):
-        # TODO
-        pass
+        batch = ia.Batch()
+        # self.assertWarns does not exist in py2.7
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+
+            _ = batch.images
+            assert len(caught_warnings) == 1
+            assert "is deprecated" in str(caught_warnings[-1].message)
+
+            _ = batch.heatmaps
+            assert len(caught_warnings) == 2
+            assert "is deprecated" in str(caught_warnings[-1].message)
+
+            _ = batch.segmentation_maps
+            assert len(caught_warnings) == 3
+            assert "is deprecated" in str(caught_warnings[-1].message)
+
+            _ = batch.keypoints
+            assert len(caught_warnings) == 4
+            assert "is deprecated" in str(caught_warnings[-1].message)
+
+            _ = batch.bounding_boxes
+            assert len(caught_warnings) == 5
+            assert "is deprecated" in str(caught_warnings[-1].message)
 
     def test_deepcopy(self):
         batch = ia.Batch()
@@ -9034,6 +9056,7 @@ class TestBatch(unittest.TestCase):
         assert observed.data["test"] == 123
         assert observed.data["foo"] == "bar"
         assert observed.data["test2"] == [1, 2, 3]
+
 
 if __name__ == "__main__":
     main()
