@@ -40,7 +40,7 @@ import numpy as np
 import six
 import six.moves as sm
 
-from .. import imgaug as ia
+import imgaug as ia
 from .. import parameters as iap
 
 

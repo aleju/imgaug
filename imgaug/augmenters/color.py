@@ -32,7 +32,7 @@ import six.moves as sm
 
 from . import meta
 from . import blend
-from .. import imgaug as ia
+import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 

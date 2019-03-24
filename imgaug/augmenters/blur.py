@@ -33,7 +33,7 @@ import six.moves as sm
 
 from . import meta
 from . import convolutional as iaa_convolutional
-from .. import imgaug as ia
+import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 

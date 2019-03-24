@@ -32,7 +32,7 @@ import warnings
 
 from . import meta
 from . import color as color_lib
-from .. import imgaug as ia
+import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 
