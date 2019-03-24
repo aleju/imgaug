@@ -3,3 +3,4 @@ from imgaug.augmentables.kps import *
 from imgaug.augmentables.bbs import *
 from imgaug.augmentables.polys import *
 from imgaug.augmentables.heatmaps import *
+from imgaug.augmentables.segmaps import *
