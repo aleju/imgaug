@@ -36,7 +36,7 @@ import six.moves as sm
 from . import meta
 from . import blur as blur_lib
 import imgaug as ia
-from imgaug.imgaug import _ConcavePolygonRecoverer
+from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from .. import parameters as iap
 from .. import dtypes as iadt
 
