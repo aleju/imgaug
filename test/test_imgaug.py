@@ -74,6 +74,7 @@ def main():
     # test_HooksImages_is_propagating()
     # test_HooksImages_preprocess()
     # test_HooksImages_postprocess()
+    test_classes_and_functions_marked_deprecated()
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
@@ -1920,6 +1921,30 @@ def test_draw_grid():
         ])
         assert grid.dtype == np.dtype(dtype)
         assert _allclose(grid, expected)
+
+
+def test_classes_and_functions_marked_deprecated():
+    import imgaug.imgaug as iia
+
+    # class
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _kp = iia.Keypoint(x=1, y=2)
+        assert len(caught_warnings) == 1
+        assert "is deprecated" in str(caught_warnings[-1].message)
+
+    # function
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _result = iia.compute_geometric_median(np.float32([[0, 0]]))
+        assert len(caught_warnings) == 1
+        assert "is deprecated" in str(caught_warnings[-1].message)
+
+    # no deprecated warning for calls to imgaug.<name>
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _kp = ia.Keypoint(x=1, y=2)
+        assert len(caught_warnings) == 0
 
 
 if __name__ == "__main__":

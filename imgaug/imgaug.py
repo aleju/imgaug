@@ -1999,17 +1999,47 @@ class HooksKeypoints(HooksImages):
     pass
 
 
-def BatchLoader(*args, **kwargs):
-    warnings.warn(DeprecationWarning("Using imgaug.imgaug.BatchLoader is depcrecated. "
-                                     "Use imgaug.multicore.BatchLoader instead."))
+#####################################################################
+# Create classes/functions that were moved to other files and create
+# DeprecatedWarnings when they are called.
+#####################################################################
 
-    from . import multicore
-    return multicore.BatchLoader(*args, **kwargs)
+def _mark_moved_class_or_function(class_name_old, module_name_new, class_name_new):
+    class_name_new = class_name_new if class_name_new is not None else class_name_old
+
+    def _func(*args, **kwargs):
+        import importlib
+        warnings.warn(DeprecationWarning(
+            "Using imgaug.imgaug.%s is deprecated. Use %s.%s instead." % (
+                class_name_old, module_name_new, class_name_new
+            )))
+        module = importlib.import_module(module_name_new)
+        return getattr(module, class_name_new)(*args, **kwargs)
+
+    return _func
 
 
-def BackgroundAugmenter(*args, **kwargs):
-    warnings.warn(DeprecationWarning("Using imgaug.imgaug.BackgroundAugmenter is depcrecated. "
-                                     "Use imgaug.multicore.BackgroundAugmenter instead."))
+MOVED = [
+    ("Keypoint", "imgaug.augmentables.kps", None),
+    ("KeypointsOnImage", "imgaug.augmentables.kps", None),
+    ("BoundingBox", "imgaug.augmentables.bbs", None),
+    ("BoundingBoxesOnImage", "imgaug.augmentables.bbs", None),
+    ("Polygon", "imgaug.augmentables.polys", None),
+    ("PolygonsOnImage", "imgaug.augmentables.polys", None),
+    ("MultiPolygon", "imgaug.augmentables.polys", None),
+    ("_ConcavePolygonRecoverer", "imgaug.augmentables.polys", None),
+    ("HeatmapsOnImage", "imgaug.augmentables.heatmaps", None),
+    ("SegmentationMapOnImage", "imgaug.augmentables.segmaps", None),
+    ("Batch", "imgaug.augmentables.batches", None),
+    ("BatchLoader", "imgaug.multicore", None),
+    ("BackgroundAugmenter", "imgaug.multicore", None),
+    ("compute_geometric_median", "imgaug.augmentables.kps", None),
+    ("_convert_points_to_shapely_line_string", "imgaug.augmentables.polys", None),
+    ("_interpolate_point_pair", "imgaug.augmentables.polys", None),
+    ("_interpolate_points", "imgaug.augmentables.polys", None),
+    ("_interpolate_points_by_max_distance", "imgaug.augmentables.polys", None)
+]
 
-    from . import multicore
-    return multicore.BackgroundAugmenter(*args, **kwargs)
+for class_name_old, module_name_new, class_name_new in MOVED:
+    locals()[class_name_old] = _mark_moved_class_or_function(
+        class_name_old, module_name_new, class_name_new)
