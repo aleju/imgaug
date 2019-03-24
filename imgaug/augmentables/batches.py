@@ -6,7 +6,9 @@ import warnings
 import numpy as np
 
 import imgaug.imgaug as ia
-import imgaug.augmentables.normalization as normalization
+import imgaug.augmentables.normalization as nlib
+
+DEFAULT = "DEFAULT"
 
 
 class Batch(object):
@@ -58,51 +60,115 @@ class Batch(object):
         self.polygons_aug = None
         self.data = data
 
+    def to_normalized_batch(self):
+        images_unaug = nlib.normalize_images(self.images_unaug)
+        images_aug = nlib.normalize_images(self.images_aug)
+        heatmaps_unaug = nlib.normalize_heatmaps(self.heatmaps_unaug, images_unaug)
+        heatmaps_aug = nlib.normalize_heatmaps(self.heatmaps_aug, images_aug)
+        segmaps_unaug = nlib.normalize_segmentation_maps(self.segmentation_maps_unaug, images_unaug)
+        segmaps_aug = nlib.normalize_segmentation_maps(self.segmentation_maps_aug, images_aug)
+        keypoints_unaug = nlib.normalize_keypoints(self.keypoints_unaug, images_unaug)
+        keypoints_aug = nlib.normalize_keypoints(self.keypoints_aug, images_aug)
+        bounding_boxes_unaug = nlib.normalize_bounding_boxes(self.bounding_boxes_unaug, images_unaug)
+        bounding_boxes_aug = nlib.normalize_bounding_boxes(self.bounding_boxes_aug, images_aug)
+        polygons_unaug = nlib.normalize_polygons(self.polygons_unaug, images_unaug)
+        polygons_aug = nlib.normalize_keypoints(self.polygons_aug, images_aug)
+
+        return self.deepcopy(
+            images_unaug=images_unaug,
+            images_aug=images_aug,
+            heatmaps_unaug=heatmaps_unaug,
+            heatmaps_aug=heatmaps_aug,
+            segmentation_maps_unaug=segmaps_unaug,
+            segmentation_maps_aug=segmaps_aug,
+            keypoints_unaug=keypoints_unaug,
+            keypoints_aug=keypoints_aug,
+            bounding_boxes_unaug=bounding_boxes_unaug,
+            bounding_boxes_aug=bounding_boxes_aug,
+            polygons_unaug=polygons_unaug,
+            polygons_aug=polygons_aug
+        )
+
+    @classmethod
+    def from_normalized_batch(cls, batch_normalized, batch_old):
+        bnorm = batch_normalized
+        bold = batch_old
+
+        images_unaug = nlib.invert_normalize_images(bnorm.images_unaug, bold.images_unaug)
+        images_aug = nlib.invert_normalize_images(bnorm.images_aug, bold.images_aug)
+        heatmaps_unaug = nlib.invert_normalize_heatmaps(bnorm.heatmaps_unaug, bold.heatmaps_unaug)
+        heatmaps_aug = nlib.invert_normalize_heatmaps(bnorm.heatmaps_aug, bold.heatmaps_aug)
+        segmaps_unaug = nlib.invert_normalize_segmentation_maps(bnorm.segmentation_maps_unaug,
+                                                                bold.segmentation_maps_unaug)
+        segmaps_aug = nlib.invert_normalize_segmentation_maps(bnorm.segmentation_maps_aug,
+                                                              bold.segmentation_maps_aug)
+        keypoints_unaug = nlib.invert_normalize_keypoints(bnorm.keypoints_unaug, bold.keypoints_unaug)
+        keypoints_aug = nlib.invert_normalize_keypoints(bnorm.keypoints_aug, bold.keypoints_aug)
+        bbs_unaug = nlib.invert_normalize_bounding_boxes(bnorm.bounding_boxes_unaug, bold.bounding_boxes_unaug)
+        bbs_aug = nlib.invert_normalize_bounding_boxes(bnorm.bounding_boxes_aug, bold.bounding_boxes_aug)
+        polygons_unaug = nlib.invert_normalize_polygons(bnorm.polygons_unaug, bold.polygons_unaug)
+        polygons_aug = nlib.invert_normalize_keypoints(bnorm.polygons_aug, bold.polygons_aug)
+        
+        return batch_old.deepcopy(
+            images_unaug=images_unaug,
+            images_aug=images_aug,
+            heatmaps_unaug=heatmaps_unaug,
+            heatmaps_aug=heatmaps_aug,
+            segmentation_maps_unaug=segmaps_unaug,
+            segmentation_maps_aug=segmaps_aug,
+            keypoints_unaug=keypoints_unaug,
+            keypoints_aug=keypoints_aug,
+            bounding_boxes_unaug=bbs_unaug,
+            bounding_boxes_aug=bbs_aug,
+            polygons_unaug=polygons_unaug,
+            polygons_aug=polygons_aug
+        )
+
     def set_images_aug_normalized(self, images):
-        self.images_aug = normalization.invert_normalize_images(
+        self.images_aug = nlib.invert_normalize_images(
             images, self.images_unaug)
 
     def set_heatmaps_aug_normalized(self, heatmaps):
-        self.heatmaps_aug = normalization.invert_normalize_heatmaps(
+        self.heatmaps_aug = nlib.invert_normalize_heatmaps(
             heatmaps, self.heatmaps_unaug)
 
     def set_segmentation_maps_aug_normalized(self, segmentation_maps):
-        self.segmentation_maps_aug = normalization.invert_normalize_segmentation_maps(
+        self.segmentation_maps_aug = nlib.invert_normalize_segmentation_maps(
             segmentation_maps, self.segmentation_maps_unaug)
 
     def set_keypoints_aug_normalized(self, keypoints):
-        self.keypoints_aug = normalization.invert_normalize_keypoints(
+        self.keypoints_aug = nlib.invert_normalize_keypoints(
             keypoints, self.keypoints_unaug)
 
     def set_bounding_boxes_aug_normalized(self, bounding_boxes):
-        self.bounding_boxes_aug = normalization.invert_normalize_bounding_boxes(
+        self.bounding_boxes_aug = nlib.invert_normalize_bounding_boxes(
             bounding_boxes, self.bounding_boxes_unaug)
 
     def set_polygons_aug_normalized(self, polygons):
-        self.polygons_aug = normalization.invert_normalize_polygons(
+        self.polygons_aug = nlib.invert_normalize_polygons(
             polygons, self.polygons_unaug)
 
     def get_images_unaug_normalized(self):
-        return normalization.normalize_images(self.images_unaug)
+        return nlib.normalize_images(self.images_unaug)
 
     def get_heatmaps_unaug_normalized(self):
-        return normalization.normalize_heatmaps(
+        return nlib.normalize_heatmaps(
             self.heatmaps_unaug, self.get_images_unaug_normalized())
 
     def get_segmentation_maps_unaug_normalized(self):
-        return normalization.normalize_segmentation_maps(
+        return nlib.normalize_segmentation_maps(
             self.segmentation_maps_unaug, self.get_images_unaug_normalized())
 
     def get_keypoints_unaug_normalized(self):
-        return normalization.normalize_keypoints(
+        return nlib.normalize_keypoints(
             self.keypoints_unaug, self.get_images_unaug_normalized())
 
     def get_bounding_boxes_unaug_normalized(self):
-        return normalization.normalize_bounding_boxes(
+        return nlib.normalize_bounding_boxes(
             self.bounding_boxes_unaug, self.get_images_unaug_normalized())
 
     def get_polygons_unaug_normalized(self):
-        return normalization.normalize_polygons(
+        return nlib.normalize_polygons(
             self.polygons_unaug, self.get_images_unaug_normalized())
 
     @property
@@ -160,21 +226,36 @@ class Batch(object):
         else:
             return copy.deepcopy(obj)
 
-    def deepcopy(self):
+    def deepcopy(self,
+                 images_unaug=DEFAULT,
+                 images_aug=DEFAULT,
+                 heatmaps_unaug=DEFAULT,
+                 heatmaps_aug=DEFAULT,
+                 segmentation_maps_unaug=DEFAULT,
+                 segmentation_maps_aug=DEFAULT,
+                 keypoints_unaug=DEFAULT,
+                 keypoints_aug=DEFAULT,
+                 bounding_boxes_unaug=DEFAULT,
+                 bounding_boxes_aug=DEFAULT,
+                 polygons_unaug=DEFAULT,
+                 polygons_aug=DEFAULT):
+        def _copy_optional(var, arg):
+            return self._deepcopy_obj(var) if arg is not DEFAULT else arg
+
         batch = Batch(
-            images=self._deepcopy_obj(self.images_unaug),
-            heatmaps=self._deepcopy_obj(self.heatmaps_unaug),
-            segmentation_maps=self._deepcopy_obj(self.segmentation_maps_unaug),
-            keypoints=self._deepcopy_obj(self.keypoints_unaug),
-            bounding_boxes=self._deepcopy_obj(self.bounding_boxes_unaug),
-            polygons=self._deepcopy_obj(self.polygons_unaug),
+            images=_copy_optional(self.images_unaug, images_unaug),
+            heatmaps=_copy_optional(self.heatmaps_unaug, heatmaps_unaug),
+            segmentation_maps=_copy_optional(self.segmentation_maps_unaug, segmentation_maps_unaug),
+            keypoints=_copy_optional(self.keypoints_unaug, keypoints_unaug),
+            bounding_boxes=_copy_optional(self.bounding_boxes_unaug, bounding_boxes_unaug),
+            polygons=_copy_optional(self.polygons_unaug, polygons_unaug),
             data=copy.deepcopy(self.data)
         )
-        batch.images_aug = self._deepcopy_obj(self.images_aug)
-        batch.heatmaps_aug = self._deepcopy_obj(self.heatmaps_aug)
-        batch.segmentation_maps_aug = self._deepcopy_obj(self.segmentation_maps_aug)
-        batch.keypoints_aug = self._deepcopy_obj(self.keypoints_aug)
-        batch.bounding_boxes_aug = self._deepcopy_obj(self.bounding_boxes_aug)
-        batch.polygons_aug = self._deepcopy_obj(self.polygons_aug)
+        batch.images_aug = _copy_optional(self.images_aug, images_aug)
+        batch.heatmaps_aug = _copy_optional(self.heatmaps_aug, heatmaps_aug)
+        batch.segmentation_maps_aug = _copy_optional(self.segmentation_maps_aug, segmentation_maps_aug)
+        batch.keypoints_aug = _copy_optional(self.keypoints_aug, keypoints_aug)
+        batch.bounding_boxes_aug = _copy_optional(self.bounding_boxes_aug, bounding_boxes_aug)
+        batch.polygons_aug = _copy_optional(self.polygons_aug, polygons_aug)
 
         return batch
