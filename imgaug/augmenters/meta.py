@@ -42,6 +42,7 @@ import six.moves as sm
 
 import imgaug as ia
 from .. import parameters as iap
+from imgaug.augmentables.batches import Batch
 
 
 def clip_augmented_image_(image, min_value, max_value):
@@ -211,20 +212,24 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        batches : imgaug.Batch or list of imgaug.Batch or list of imgaug.HeatmapsOnImage\
-                  or list of imgaug.SegmentationMapOnImage or list of imgaug.KeypointsOnImage\
-                  or list of imgaug.BoundingBoxesOnImage or list of imgaug.PolygonsOnImage\
+        batches : imgaug.augmentables.batches.Batch\
+                  or list of imgaug.augmentables.batches.Batch\
+                  or list of imgaug.augmentables.heatmaps..HeatmapsOnImage\
+                  or list of imgaug.augmentables.segmaps.SegmentationMapOnImage\
+                  or list of imgaug.augmentables.kps.KeypointsOnImage\
+                  or list of imgaug.augmentables.bbs.BoundingBoxesOnImage\
+                  or list of imgaug.augmentables.polys.PolygonsOnImage\
                   or list of ([N],H,W,[C]) ndarray
             List of batches to augment.
             The expected input is a list, with each entry having one of the following datatypes:
 
-                * imgaug.Batch
+                * imgaug.augmentables.batches.Batch
                 * []
-                * list of imgaug.HeatmapsOnImage
-                * list of imgaug.SegmentationMapOnImage
-                * list of imgaug.KeypointsOnImage
-                * list of imgaug.BoundingBoxesOnImage
-                * list of imgaug.PolygonsOnImage
+                * list of imgaug.augmentables.heatmaps.HeatmapsOnImage
+                * list of imgaug.augmentables.segmaps.SegmentationMapOnImage
+                * list of imgaug.augmentables.kps.KeypointsOnImage
+                * list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+                * list of imgaug.augmentables.polys.PolygonsOnImage
                 * list of (H,W,C) ndarray
                 * list of (H,W) ndarray
                 * (N,H,W,C) ndarray
@@ -243,12 +248,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Yields
         -------
-        augmented_batch : ia.Batch\
-                          or list of ia.HeatmapsOnImage\
-                          or list of ia.SegmentationMapOnImage\
-                          or list of ia.KeypointsOnImage\
-                          or list of ia.BoundingBoxesOnImage\
-                          or list of ia.PolygonsOnImage\
+        augmented_batch : imgaug.augmentables.batches.Batch\
+                          or list of imgaug.augmentables.heatmaps.HeatmapsOnImage\
+                          or list of imgaug.augmentables.segmaps.SegmentationMapOnImage\
+                          or list of imgaug.augmentables.kps.KeypointsOnImage\
+                          or list of imgaug.augmentables.bbs.BoundingBoxesOnImage\
+                          or list of imgaug.augmentables.polys.PolygonsOnImage\
                           or list of (H,W,C) ndarray\
                           or list of (H,W) ndarray\
                           or list of (N,H,W,C) ndarray\
@@ -264,7 +269,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         batches_normalized = []
         batches_original_dts = []
         for i, batch in enumerate(batches):
-            if isinstance(batch, ia.Batch):
+            if isinstance(batch, Batch):
                 batch_copy = batch.deepcopy()
                 batch_copy.data = (i, batch_copy.data)
                 batches_normalized.append(batch_copy)
@@ -272,29 +277,29 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             elif ia.is_np_array(batch):
                 ia.do_assert(batch.ndim in (3, 4),
                              "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,))
-                batches_normalized.append(ia.Batch(images=batch, data=i))
+                batches_normalized.append(Batch(images=batch, data=i))
                 batches_original_dts.append("numpy_array")
             elif isinstance(batch, list):
                 if len(batch) == 0:
-                    batches_normalized.append(ia.Batch(data=i))
+                    batches_normalized.append(Batch(data=i))
                     batches_original_dts.append("empty_list")
                 elif ia.is_np_array(batch[0]):
-                    batches_normalized.append(ia.Batch(images=batch, data=i))
+                    batches_normalized.append(Batch(images=batch, data=i))
                     batches_original_dts.append("list_of_numpy_arrays")
                 elif isinstance(batch[0], ia.HeatmapsOnImage):
-                    batches_normalized.append(ia.Batch(heatmaps=batch, data=i))
+                    batches_normalized.append(Batch(heatmaps=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.HeatmapsOnImage")
                 elif isinstance(batch[0], ia.SegmentationMapOnImage):
-                    batches_normalized.append(ia.Batch(segmentation_maps=batch, data=i))
+                    batches_normalized.append(Batch(segmentation_maps=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.SegmentationMapOnImage")
                 elif isinstance(batch[0], ia.KeypointsOnImage):
-                    batches_normalized.append(ia.Batch(keypoints=batch, data=i))
+                    batches_normalized.append(Batch(keypoints=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.KeypointsOnImage")
                 elif isinstance(batch[0], ia.BoundingBoxesOnImage):
-                    batches_normalized.append(ia.Batch(bounding_boxes=batch, data=i))
+                    batches_normalized.append(Batch(bounding_boxes=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.BoundingBoxesOnImage")
                 elif isinstance(batch[0], ia.PolygonsOnImage):
-                    batches_normalized.append(ia.Batch(polygons=batch, data=i))
+                    batches_normalized.append(Batch(polygons=batch, data=i))
                     batches_original_dts.append("list_of_imgaug.PolygonsOnImage")
                 else:
                     raise Exception(
@@ -311,7 +316,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         def unnormalize_batch(batch_aug):
             i = batch_aug.data
-            # if input was ia.Batch, then .data has content (i, .data)
+            # if input was Batch, then .data has content (i, .data)
             if isinstance(i, tuple):
                 i = i[0]
             dt_orig = batches_original_dts[i]
