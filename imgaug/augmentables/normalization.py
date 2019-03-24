@@ -584,7 +584,7 @@ def invert_normalize_polygons(polygons, polygons_old):
         return polygons
     elif ntype == "iterable-iterable[empty]":
         assert polygons is None
-        return polygons_unaug[:]
+        return polygons[:]
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
