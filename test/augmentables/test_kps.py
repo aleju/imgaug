@@ -19,6 +19,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import imgaug as ia
 
+
 def main():
     time_start = time.time()
 
