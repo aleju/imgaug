@@ -6868,6 +6868,287 @@ class Batch(object):
         self.polygons_aug = None
         self.data = data
 
+    # TODO replace partially with dtypes.restore_dtypes_()
+    @classmethod
+    def _restore_dtype_and_merge(cls, arr, input_dtype):
+        if isinstance(arr, list):
+            arr = [cls._restore_dtype_and_merge(arr_i, input_dtype)
+                   for arr_i in arr]
+            shapes = [arr_i.shape for arr_i in arr]
+            if len(set(shapes)) == 1:
+                arr = np.array(arr)
+
+        if is_np_array(arr):
+            if input_dtype.kind == "i":
+                arr = np.round(arr).astype(input_dtype)
+            elif input_dtype.kind == "u":
+                arr = np.round(arr)
+                arr = np.clip(arr, 0, np.iinfo(input_dtype).max)
+                arr = arr.astype(input_dtype)
+        return arr
+
+    def set_images_aug_normalized(self, images):
+        attr = self.images_unaug
+        if attr is None:
+            assert images is None
+            self.images_aug = None
+        elif is_np_array(attr):
+            if attr.ndim == 2:
+                self.images_aug = images[0, ..., 0]
+            elif attr.ndim == 3:
+                self.images_aug = images[..., 0]
+            else:
+                self.images_aug = images
+        elif is_iterable(attr):
+            if isinstance(attr, tuple):
+                self.images_aug = tuple(images)
+            else:
+                self.images_aug = list(images)
+        raise ValueError(
+            ("Expected argument 'images' for Batch to be any of the following: "
+             + "None or array or iterable of array. Got type: %s.") % (
+                type(self.images_unaug),)
+        )
+
+    def set_heatmaps_aug_normalized(self, heatmaps):
+        ntype = self._get_heatmaps_unaug_normalization_type()
+        if ntype == "None":
+            assert heatmaps is None
+            self.heatmaps_aug = heatmaps
+        elif ntype == "array[float]":
+            assert len(heatmaps) == 1
+            self.heatmaps_aug = heatmaps[0].arr_0to1
+        elif ntype == "HeatmapsOnImage":
+            assert len(heatmaps) == 1
+            self.heatmaps_aug = heatmaps[0]
+        elif ntype == "iterable[empty]":
+            assert heatmaps is None
+            self.heatmaps_aug = []
+        elif ntype == "iterable-array[float]":
+            self.heatmaps_aug = [hm_i.arr_0to1 for hm_i in heatmaps]
+        else:
+            assert ntype == "iterable-HeatmapsOnImage"
+            self.heatmaps_aug = heatmaps
+
+    def set_segmentation_maps_aug_normalized(self, segmentation_maps):
+        ntype = self._get_segmentation_maps_unaug_normalization_type()
+        if ntype == "None":
+            assert segmentation_maps is None
+            self.segmentation_maps_aug = segmentation_maps
+        elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
+            assert len(segmentation_maps) == 1
+            self.segmentation_maps_aug = segmentation_maps[0].arr
+        elif ntype == "SegmentationMapOnImage":
+            assert len(segmentation_maps) == 1
+            self.segmentation_maps_aug = segmentation_maps[0]
+        elif ntype == "iterable[empty]":
+            assert segmentation_maps is None
+            self.segmentation_maps_aug = []
+        elif ntype in ["iterable-array[int]", "iterable-array[uint]", "iterable-array[bool]"]:
+            self.segmentation_maps_aug = [
+                segmap_i.arr for segmap_i in segmentation_maps]
+        else:
+            assert ntype == "iterable-SegmentationMapOnImage"
+            self.segmentation_maps_aug = segmentation_maps
+
+    def set_keypoints_aug_normalized(self, keypoints):
+        ntype = self._get_keypoints_unaug_normalization_type()
+        if ntype == "None":
+            assert keypoints is None
+            self.keypoints_aug = keypoints
+        elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+            assert len(keypoints) == 1
+            input_dtype = self.keypoints_unaug.dtype
+            self.keypoints_aug = self._restore_dtype_and_merge(
+                [kpsoi.get_coords_array() for kpsoi in keypoints],
+                input_dtype)
+        elif ntype == "(x,y)":
+            assert len(keypoints) == 1
+            assert len(keypoints[0].keypoints) == 1
+            self.keypoints_aug = (keypoints[0].keypoints[0].x,
+                                  keypoints[0].keypoints[0].y)
+        elif ntype == "Keypoint":
+            assert len(keypoints) == 1
+            assert len(keypoints[0].keypoints) == 1
+            self.keypoints_aug = keypoints[0].keypoints[0]
+        elif ntype == "KeypointsOnImage":
+            assert len(keypoints) == 1
+            self.keypoints_aug = keypoints[0]
+        elif ntype == "iterable[empty]":
+            assert keypoints is None
+            self.keypoints_aug = []
+        elif ntype in ["iterable-array[float]", "iterable-array[int]", "iterable-array[uint]"]:
+            nonempty, _, _ = self._find_first_nonempty(self.keypoints_unaug)
+            input_dtype = nonempty.dtype
+            self.keypoints_aug = [
+                self._restore_dtype_and_merge(kps_i.get_coords_array(),
+                                              input_dtype)
+                for kps_i in keypoints]
+        elif ntype == "iterable-(x,y)":
+            assert len(keypoints) == 1
+            self.keypoints_aug = [
+                (kp.x, kp.y) for kp in keypoints[0].keypoints]
+        elif ntype == "iterable-KeypointsOnImage":
+            self.keypoints_aug = keypoints
+        elif ntype == "iterable-iterable[empty]":
+            assert keypoints is None
+            self.keypoints_aug = self.keypoints_unaug[:]
+        elif ntype == "iterable-iterable-(x,y)":
+            self.keypoints_aug = [
+                [(kp.x, kp.y) for kp in kpsoi.keypoints]
+                for kpsoi in keypoints]
+        else:
+            assert ntype == "iterable-iterable-Keypoint"
+            self.keypoints_aug = [
+                [kp for kp in kpsoi.keypoints]
+                for kpsoi in keypoints]
+
+    def set_bounding_boxes_aug_normalized(self, bounding_boxes):
+        ntype = self._get_bounding_boxes_unaug_normalization_type()
+        if ntype == "None":
+            assert bounding_boxes is None
+            self.bounding_boxes_aug = bounding_boxes
+        elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+            assert len(bounding_boxes) == 1
+            input_dtype = self.bounding_boxes_unaug.dtype
+            self.bounding_boxes_aug = self._restore_dtype_and_merge([
+                bbsoi.to_xyxy_array() for bbsoi in bounding_boxes
+            ], input_dtype)
+        elif ntype == "(x1,y1,x2,y2)":
+            assert len(bounding_boxes) == 1
+            assert len(bounding_boxes[0].bounding_boxes) == 1
+            bb = bounding_boxes[0].bounding_boxes[0]
+            self.bounding_boxes_aug = (bb.x1, bb.y1, bb.x2, bb.y2)
+        elif ntype == "BoundingBox":
+            assert len(bounding_boxes) == 1
+            assert len(bounding_boxes[0].bounding_boxes) == 1
+            self.bounding_boxes_aug = bounding_boxes[0].bounding_boxes[0]
+        elif ntype == "BoundingBoxesOnImage":
+            assert len(bounding_boxes) == 1
+            self.bounding_boxes_aug = bounding_boxes[0]
+        elif ntype == "iterable[empty]":
+            assert bounding_boxes is None
+            self.bounding_boxes_aug = []
+        elif ntype in ["iterable-array[float]", "iterable-array[int]", "iterable-array[uint]"]:
+            nonempty, _, _ = self._find_first_nonempty(self.bounding_boxes_unaug)
+            input_dtype = nonempty.dtype
+            self.bounding_boxes_aug = [
+                self._restore_dtype_and_merge(bbsoi.to_xyxy_array(), input_dtype)
+                for bbsoi in bounding_boxes]
+        elif ntype == "iterable-(x1,y1,x2,y2)":
+            assert len(bounding_boxes) == 1
+            self.bounding_boxes_aug = [
+                (bb.x1, bb.y1, bb.x2, bb.y2)
+                for bb in bounding_boxes[0].bounding_boxes]
+        elif ntype == "iterable-BoundingBoxesOnImage":
+            self.bounding_boxes_aug = bounding_boxes
+        elif ntype == "iterable-iterable[empty]":
+            assert bounding_boxes is None
+            self.bounding_boxes_aug = self.bounding_boxes_unaug[:]
+        elif ntype == "iterable-iterable-(x1,y1,x2,y2)":
+            self.bounding_boxes_aug = [
+                [(bb.x1, bb.y1, bb.x2, bb.y2) for bb in bbsoi.bounding_boxes]
+                for bbsoi in bounding_boxes]
+        else:
+            assert ntype == "iterable-iterable-BoundingBox"
+            self.bounding_boxes_aug = [
+                [bb for bb in bbsoi.bounding_boxes]
+                for bbsoi in bounding_boxes]
+
+    def set_polygons_aug_normalized(self, polygons):
+        ntype = self._get_polygons_unaug_normalization_type()
+        if ntype == "None":
+            assert polygons is None
+            self.polygons_aug = polygons
+        elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+            input_dtype = self.polygons_unaug.dtype
+            self.polygons_aug = self._restore_dtype_and_merge([
+                [poly.exterior for poly in psoi.polygons]
+                for psoi in polygons
+            ], input_dtype)
+        elif ntype == "Polygon":
+            assert len(polygons) == 1
+            assert len(polygons[0].polygons) == 1
+            self.polygons_aug = polygons[0].polygons[0]
+        elif ntype == "PolygonsOnImage":
+            assert len(polygons) == 1
+            self.polygons_aug = polygons[0]
+        elif ntype == "iterable[empty]":
+            assert polygons is None
+            self.polygons_aug = []
+        elif ntype in ["iterable-array[float]", "iterable-array[int]", "iterable-array[uint]"]:
+            nonempty, _, _ = self._find_first_nonempty(self.polygons_unaug)
+            input_dtype = nonempty.dtype
+            self.polygons_aug = [
+                self._restore_dtype_and_merge(
+                    [poly.exterior for poly in psoi.poylgons],
+                    input_dtype)
+                for psoi in polygons
+            ]
+        elif ntype == "iterable-(x,y)":
+            assert len(polygons) == 1
+            assert len(polygons[0].polygons) == 1
+            self.polygons_aug = [(point.x, point.y)
+                                 for point in polygons[0].polygons[0].exterior]
+        elif ntype == "iterable-Keypoint":
+            assert len(polygons) == 1
+            assert len(polygons[0].polygons) == 1
+            self.polygons_aug = [Keypoint(x=point.x, y=point.y)
+                                 for point in polygons[0].polygons[0].exterior]
+        elif ntype == "iterable-Polygon":
+            assert len(polygons) == 1
+            assert len(polygons[0].polygons) == len(self.polygons_unaug[0].polygons)
+            self.polygons_aug = polygons[0].polygons
+        elif ntype == "iterable-PolygonsOnImage":
+            self.polygons_aug = polygons
+        elif ntype == "iterable-iterable[empty]":
+            assert polygons is None
+            self.polygons_aug = self.polygons_unaug[:]
+        elif ntype in ["iterable-iterable-array[float]", "iterable-iterable-array[int]", "iterable-iterable-array[uint]"]:
+            nonempty, _, _ = self._find_first_nonempty(self.polygons_unaug)
+            input_dtype = nonempty.dtype
+            self.polygons_aug = [
+                [self._restore_dtype_and_merge(poly.exterior, input_dtype)
+                 for poly in psoi.polygons]
+                for psoi in polygons
+            ]
+        elif ntype == "iterable-iterable-(x,y)":
+            assert len(polygons) == 1
+            self.polygons_aug = [
+                [(point[0], point[1]) for point in polygon.exterior]
+                for polygon in polygons[0].polygons]
+        elif ntype == "iterable-iterable-Keypoint":
+            assert len(polygons) == 1
+            self.polygons_aug = [
+                [Keypoint(x=point[0], y=point[1]) for point in polygon.exterior]
+                for polygon in polygons[0].polygons]
+        elif ntype == "iterable-iterable-Polygon":
+            assert len(polygons) == 1
+            self.polygons_aug = polygons[0].polygons
+        elif ntype == "iterable-iterable-iterable[empty]":
+            self.polygons_aug = self.polygons_unaug[:]
+        elif ntype == "iterable-iterable-iterable-(x,y)":
+            self.polygons_aug = [
+                [
+                    [
+                        (point[0], point[1])
+                        for point in polygon.exterior
+                    ]
+                    for polygon in psoi.polygons
+                ]
+                for psoi in polygons]
+        else:
+            assert ntype == "iterable-iterable-iterable-Keypoint"
+            self.polygons_aug = [
+                [
+                    [
+                        Keypoint(x=point[0], y=point[1])
+                        for point in polygon.exterior
+                    ]
+                    for polygon in psoi.polygons
+                ]
+                for psoi in polygons]
+
     def get_images_unaug_normalized(self):
         attr = self.images_unaug
         if attr is None:
