@@ -72,7 +72,7 @@ class Batch(object):
         bounding_boxes_unaug = nlib.normalize_bounding_boxes(self.bounding_boxes_unaug, images_unaug)
         bounding_boxes_aug = nlib.normalize_bounding_boxes(self.bounding_boxes_aug, images_aug)
         polygons_unaug = nlib.normalize_polygons(self.polygons_unaug, images_unaug)
-        polygons_aug = nlib.normalize_keypoints(self.polygons_aug, images_aug)
+        polygons_aug = nlib.normalize_polygons(self.polygons_aug, images_aug)
 
         return self.deepcopy(
             images_unaug=images_unaug,
@@ -89,27 +89,25 @@ class Batch(object):
             polygons_aug=polygons_aug
         )
 
-    @classmethod
-    def from_normalized_batch(cls, batch_normalized, batch_old):
+    def fill_from_augmented_normalized_batch(self, batch_normalized):
         bnorm = batch_normalized
-        bold = batch_old
 
-        images_unaug = nlib.invert_normalize_images(bnorm.images_unaug, bold.images_unaug)
-        images_aug = nlib.invert_normalize_images(bnorm.images_aug, bold.images_aug)
-        heatmaps_unaug = nlib.invert_normalize_heatmaps(bnorm.heatmaps_unaug, bold.heatmaps_unaug)
-        heatmaps_aug = nlib.invert_normalize_heatmaps(bnorm.heatmaps_aug, bold.heatmaps_aug)
+        images_unaug = nlib.invert_normalize_images(bnorm.images_unaug, self.images_unaug)
+        images_aug = nlib.invert_normalize_images(bnorm.images_aug, self.images_unaug)
+        heatmaps_unaug = nlib.invert_normalize_heatmaps(bnorm.heatmaps_unaug, self.heatmaps_unaug)
+        heatmaps_aug = nlib.invert_normalize_heatmaps(bnorm.heatmaps_aug, self.heatmaps_unaug)
         segmaps_unaug = nlib.invert_normalize_segmentation_maps(bnorm.segmentation_maps_unaug,
-                                                                bold.segmentation_maps_unaug)
+                                                                self.segmentation_maps_unaug)
         segmaps_aug = nlib.invert_normalize_segmentation_maps(bnorm.segmentation_maps_aug,
-                                                              bold.segmentation_maps_aug)
-        keypoints_unaug = nlib.invert_normalize_keypoints(bnorm.keypoints_unaug, bold.keypoints_unaug)
-        keypoints_aug = nlib.invert_normalize_keypoints(bnorm.keypoints_aug, bold.keypoints_aug)
-        bbs_unaug = nlib.invert_normalize_bounding_boxes(bnorm.bounding_boxes_unaug, bold.bounding_boxes_unaug)
-        bbs_aug = nlib.invert_normalize_bounding_boxes(bnorm.bounding_boxes_aug, bold.bounding_boxes_aug)
-        polygons_unaug = nlib.invert_normalize_polygons(bnorm.polygons_unaug, bold.polygons_unaug)
-        polygons_aug = nlib.invert_normalize_keypoints(bnorm.polygons_aug, bold.polygons_aug)
+                                                              self.segmentation_maps_unaug)
+        keypoints_unaug = nlib.invert_normalize_keypoints(bnorm.keypoints_unaug, self.keypoints_unaug)
+        keypoints_aug = nlib.invert_normalize_keypoints(bnorm.keypoints_aug, self.keypoints_unaug)
+        bbs_unaug = nlib.invert_normalize_bounding_boxes(bnorm.bounding_boxes_unaug, self.bounding_boxes_unaug)
+        bbs_aug = nlib.invert_normalize_bounding_boxes(bnorm.bounding_boxes_aug, self.bounding_boxes_unaug)
+        polygons_unaug = nlib.invert_normalize_polygons(bnorm.polygons_unaug, self.polygons_unaug)
+        polygons_aug = nlib.invert_normalize_polygons(bnorm.polygons_aug, self.polygons_unaug)
         
-        return batch_old.deepcopy(
+        return self.deepcopy(
             images_unaug=images_unaug,
             images_aug=images_aug,
             heatmaps_unaug=heatmaps_unaug,
@@ -239,8 +237,8 @@ class Batch(object):
                  bounding_boxes_aug=DEFAULT,
                  polygons_unaug=DEFAULT,
                  polygons_aug=DEFAULT):
-        def _copy_optional(var, arg):
-            return self._deepcopy_obj(var) if arg is not DEFAULT else arg
+        def _copy_optional(self_attr, arg):
+            return self._deepcopy_obj(arg if arg is not DEFAULT else self_attr)
 
         batch = Batch(
             images=_copy_optional(self.images_unaug, images_unaug),

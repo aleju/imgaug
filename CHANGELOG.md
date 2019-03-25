@@ -72,6 +72,12 @@
 * Moved `HeatmapsOnImage` to `augmentables/heatmaps.py`.
 * Moved `SegmentationMapOnImage` to `augmentables/segmaps.py`.
 * Moved `Batch` to `augmentables/batches.py`.
+* Added module `imgaug.augmentables.normalization` for data normalization routines.
+* Added normalization routines to `imgaug.augmentables.batches.Batch`.
+* Changed `augment_batches()` to now normalize batches before augmentation.
+  This allows to use `Batch` instances with non-standard datatypes.
+* Marked support for non-`Batch` inputs to `augment_batches()` as deprecated.
+* Added `Augmenter.augment()` method.
 
 
 # 0.2.8

@@ -35,6 +35,7 @@ from abc import ABCMeta, abstractmethod
 import copy as copy_module
 import re
 import itertools
+import sys
 
 import numpy as np
 import six
@@ -214,29 +215,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         ----------
         batches : imgaug.augmentables.batches.Batch\
                   or list of imgaug.augmentables.batches.Batch\
-                  or list of imgaug.augmentables.heatmaps..HeatmapsOnImage\
-                  or list of imgaug.augmentables.segmaps.SegmentationMapOnImage\
-                  or list of imgaug.augmentables.kps.KeypointsOnImage\
-                  or list of imgaug.augmentables.bbs.BoundingBoxesOnImage\
-                  or list of imgaug.augmentables.polys.PolygonsOnImage\
-                  or list of ([N],H,W,[C]) ndarray
-            List of batches to augment.
-            The expected input is a list, with each entry having one of the following datatypes:
-
-                * imgaug.augmentables.batches.Batch
-                * []
-                * list of imgaug.augmentables.heatmaps.HeatmapsOnImage
-                * list of imgaug.augmentables.segmaps.SegmentationMapOnImage
-                * list of imgaug.augmentables.kps.KeypointsOnImage
-                * list of imgaug.augmentables.bbs.BoundingBoxesOnImage
-                * list of imgaug.augmentables.polys.PolygonsOnImage
-                * list of (H,W,C) ndarray
-                * list of (H,W) ndarray
-                * (N,H,W,C) ndarray
-                * (N,H,W) ndarray
-
-            where ``N`` is the number of images, ``H`` is the height, ``W`` is the width, ``C`` is the number of
-            channels. Each image is recommended to have dtype uint8 (range 0-255).
+            A single batch or a list of batches to augment.
 
         hooks : None or imgaug.HooksImages, optional
             HooksImages object to dynamically interfere with the augmentation process.
@@ -248,16 +227,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Yields
         -------
-        augmented_batch : imgaug.augmentables.batches.Batch\
-                          or list of imgaug.augmentables.heatmaps.HeatmapsOnImage\
-                          or list of imgaug.augmentables.segmaps.SegmentationMapOnImage\
-                          or list of imgaug.augmentables.kps.KeypointsOnImage\
-                          or list of imgaug.augmentables.bbs.BoundingBoxesOnImage\
-                          or list of imgaug.augmentables.polys.PolygonsOnImage\
-                          or list of (H,W,C) ndarray\
-                          or list of (H,W) ndarray\
-                          or list of (N,H,W,C) ndarray\
-                          or list of (N,H,W) ndarray
+        augmented_batch : imgaug.augmentables.batches.Batch
             Augmented objects.
 
         """
@@ -314,6 +284,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     + "imgaug.BoundingBoxesOnImage or imgaug.PolygonsOnImage). "
                     + "Got %s." % (type(batch),))
 
+            if batches_original_dts[-1] != "imgaug.Batch":
+                warnings.warn(DeprecationWarning(
+                    ("Received an input in augment_batches() that was not an "
+                     + "instance of imgaug.augmentables.batches.Batch, but "
+                     + "instead %s. This is outdated. Use augment() for such "
+                     + "data or wrap it in a Batch instance.") % (
+                        batches_original_dts[-1],)))
+
         def unnormalize_batch(batch_aug):
             i = batch_aug.data
             # if input was Batch, then .data has content (i, .data)
@@ -347,6 +325,21 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             # singlecore augmentation
 
             for batch_normalized in batches_normalized:
+                # This is a bit of a weird structure where the batch is
+                # normalized again. That is because there is one normalization
+                # in this function for legacy support reasons, which converts
+                # inputs that are not Batch instances to Batch instances.
+                # Additionally, there is a normalization function for Batch
+                # instances that normalizes all arguments to Batch.
+                # At least parts of the first normalization have to be kept as
+                # non-Batch inputs must also lead to non-Batch outputs of this
+                # function.
+                # TODO remove the first normalization as much as possible,
+                #      possibly drop it completely and remove legacy support
+                batch_orig = batch_normalized
+                batch_normalized = batch_normalized.to_normalized_batch()
+                # ----
+
                 batch_augment_images = batch_normalized.images_unaug is not None
                 batch_augment_heatmaps = batch_normalized.heatmaps_unaug is not None
                 batch_augment_segmaps = batch_normalized.segmentation_maps_unaug is not None
@@ -380,10 +373,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
                         batch_normalized.bounding_boxes_unaug, hooks=hooks)
                 if batch_augment_polygons:
-                    # TODO enable hooks for polygons
                     batch_normalized.polygons_aug = augseq.augment_polygons(
                         batch_normalized.polygons_unaug, hooks=hooks)
 
+                # two-staged denormalization, see above
+                batch_normalized = batch_orig.fill_from_augmented_normalized_batch(batch_normalized)
                 batch_unnormalized = unnormalize_batch(batch_normalized)
 
                 yield batch_unnormalized
@@ -1267,6 +1261,107 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             result.append(ia.PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
 
         return result
+
+    def augment(self, return_batch=False, hooks=None, **kwargs):
+        # TODO this function currently calls augment_batches(). Would it be
+        #      better if augment_batches() instead called this?
+
+        expected_keys = ["images", "heatmaps", "segmentation_maps",
+                         "keypoints", "bounding_boxes", "polygons"]
+        expected_keys_call = ["image"] + expected_keys
+
+        # at least one augmentable provided?
+        assert any([key in kwargs for key in expected_keys_call]), (
+            "Expected augment() to be called with one of the following named "
+            + "arguments: %s. Got none of these." % (
+                ", ".join(expected_keys_call),))
+
+        # all keys in kwargs actually known?
+        unknown_args = [key for key in kwargs.keys()
+                        if key not in expected_keys_call]
+        assert len(unknown_args) == 0, (
+            "Got the following unknown keyword argument(s) in augment(): %s" % (
+                ", ".join(unknown_args)
+            ))
+
+        # normalize image=... input to images=...
+        # this is not done by Batch.to_normalized_batch()
+        if "image" in kwargs:
+            assert "images" not in kwargs, (
+                "You may only provide the argument 'image' OR 'images' to "
+                "augment(), not both of them.")
+            images = [kwargs["image"]]
+        else:
+            images = kwargs.get("images", None)
+
+        # Decide whether to return the final tuple in the order of the kwargs
+        # keys or the default order based on python version. Only 3.6+ uses
+        # an ordered dict implementation for kwargs.
+        order = "standard"
+        nb_keys = len(list(kwargs.keys())) > 2
+        vinfo = sys.version_info
+        newer_than_36 = vinfo[0] > 3 or (vinfo[0] == 3 and vinfo[1] >= 6)
+        if newer_than_36:
+            order = "kwargs_keys"
+        elif not return_batch and nb_keys > 2:
+            raise ValueError(
+                "Requested more than two outputs in augment(), but detected "
+                "python version is below 3.6. More than two outputs are only "
+                "supported for 3.6+ as earlier python versions offer no way "
+                "to retrieve the order of the provided named arguments. To "
+                "still use more than two outputs, add 'return_batch=True' as "
+                "an argument and retrieve the outputs manually from the "
+                "returned Batch instance, e.g. via 'batch.images_aug' to get "
+                "augmented images."
+            )
+        elif not return_batch and nb_keys == 2 and "images" not in kwargs:
+            raise ValueError(
+                "Requested two outputs from augment() that were not 'images', "
+                "but detected python version is below 3.6. For security "
+                "reasons, only single-output requests or requests with two "
+                "outputs of which one is 'images' are allowed in <3.6. "
+                "'images' will then always be returned first. If you don't "
+                "want this, use 'return_batch=True' mode in augment(), which "
+                "returns a single Batch instance instead and supports any "
+                "combination of outputs."
+            )
+
+        # augment batch
+        batch = Batch(
+            images=images,
+            heatmaps=kwargs.get("heatmaps", None),
+            segmentation_maps=kwargs.get("segmentation_maps", None),
+            keypoints=kwargs.get("keypoints", None),
+            bounding_boxes=kwargs.get("bounding_boxes", None),
+            polygons=kwargs.get("polygons", None)
+        )
+
+        batch_aug = list(self.augment_batches([batch], hooks=hooks))[0]
+
+        # return either batch or tuple of augmentables, depending on what
+        # was requested by user
+        if return_batch:
+            return batch_aug
+
+        result = []
+        if order == "kwargs_keys":
+            for key in kwargs:
+                if key == "image":
+                    attr = getattr(batch_aug, "images_aug")
+                    result.append(attr[0])
+                else:
+                    result.append(getattr(batch_aug, "%s_aug" % (key,)))
+        else:
+            for key in expected_keys:
+                if key == "images" and "image" in kwargs:
+                    attr = getattr(batch_aug, "images_aug")
+                    result.append(attr[0])
+                elif key in kwargs:
+                    result.append(getattr(batch_aug, "%s_aug" % (key,)))
+
+        if len(result) == 1:
+            return result[0]
+        return tuple(result)
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):
         """
