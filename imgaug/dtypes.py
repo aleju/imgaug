@@ -180,6 +180,33 @@ def get_value_range_of_dtype(dtype):
         raise Exception("Cannot estimate value range of dtype '%s' (type: %s)" % (str(dtype), type(dtype)))
 
 
+# TODO call this function wherever data is clipped
+def clip_(array, min_value, max_value):
+    # If the min of the input value range is above the allowed min, we do not
+    # have to clip to the allowed min as we cannot exceed it anyways.
+    # Analogous for max. In fact, we must not clip then to min/max as that can
+    # lead to errors in numpy's clip. E.g.
+    #     >>> arr = np.zeros((1,), dtype=np.int32)
+    #     >>> np.clip(arr, 0, np.iinfo(np.dtype("uint32")).max)
+    # will return
+    #     array([-1], dtype=int32)
+    # (observed on numpy version 1.15.2).
+    min_value_arrdt, _, max_value_arrdt = get_value_range_of_dtype(array.dtype)
+    if min_value is not None and min_value < min_value_arrdt:
+        min_value = None
+    if max_value is not None and max_value_arrdt < max_value:
+        max_value = None
+
+    if min_value is not None or max_value is not None:
+        # for scalar arrays, i.e. with shape = (), "out" is not a valid
+        # argument
+        if len(array.shape) == 0:
+            array = np.clip(array, min_value, max_value)
+        else:
+            array = np.clip(array, min_value, max_value, out=array)
+    return array
+
+
 def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None):
     # for some reason, using 'out' did not work for uint64 (would clip max value to 0)
     # but removing out then results in float64 array instead of uint64
@@ -199,8 +226,8 @@ def clip_to_dtype_value_range_(array, dtype, validate=True, validate_values=None
             max_value_found = np.max(array_val)
         assert min_value <= min_value_found <= max_value
         assert min_value <= max_value_found <= max_value
-    array = np.clip(array, min_value, max_value, out=array)
-    return array
+
+    return clip_(array, min_value, max_value)
 
 
 def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
