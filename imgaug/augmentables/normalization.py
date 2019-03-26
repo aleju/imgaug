@@ -69,7 +69,7 @@ def normalize_segmentation_maps(inputs, images=None):
         return None
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
         assert images is not None
-        assert inputs.ndim == 4  # always (N,H,W,C)
+        assert inputs.ndim == 3  # always (N,H,W)
         assert len(inputs) == len(images)
         if ntype == "array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
@@ -86,7 +86,7 @@ def normalize_segmentation_maps(inputs, images=None):
                    "iterable-array[bool]"]:
         assert images is not None
         assert len(inputs) == len(images)
-        assert all([attr_i.ndim == 3 for attr_i in inputs])  # all (H,W,C)
+        assert all([attr_i.ndim == 2 for attr_i in inputs])  # all (H,W)
         if ntype == "iterable-array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
                     for attr_i, image_i in zip(inputs, images)]
