@@ -398,8 +398,11 @@ def invert_normalize_heatmaps(heatmaps, heatmaps_old):
         assert heatmaps is None
         return heatmaps
     elif ntype == "array[float]":
-        assert len(heatmaps) == 1
-        return heatmaps[0].arr_0to1
+        assert len(heatmaps) == heatmaps_old.shape[0]
+        input_dtype = heatmaps_old.dtype
+        return restore_dtype_and_merge(
+            [hm_i.arr_0to1 for hm_i in heatmaps],
+            input_dtype)
     elif ntype == "HeatmapsOnImage":
         assert len(heatmaps) == 1
         return heatmaps[0]
@@ -407,7 +410,10 @@ def invert_normalize_heatmaps(heatmaps, heatmaps_old):
         assert heatmaps is None
         return []
     elif ntype == "iterable-array[float]":
-        return [hm_i.arr_0to1 for hm_i in heatmaps]
+        nonempty, _, _ = find_first_nonempty(heatmaps_old)
+        input_dtype = nonempty.dtype
+        return [restore_dtype_and_merge(hm_i.arr_0to1, input_dtype)
+                for hm_i in heatmaps]
     else:
         assert ntype == "iterable-HeatmapsOnImage"
         return heatmaps
