@@ -16,7 +16,14 @@ def normalize_images(images):
         else:
             return images
     elif ia.is_iterable(images):
-        return list(images)
+        result = []
+        for image in images:
+            if image.ndim == 2:
+                result.append(image[..., np.newaxis])
+            else:
+                assert image.ndim == 3
+                result.append(image)
+        return result
     raise ValueError(
         ("Expected argument 'images' to be any of the following: "
          + "None or array or iterable of array. Got type: %s.") % (
@@ -368,10 +375,16 @@ def invert_normalize_images(images, images_old):
         else:
             return images
     elif ia.is_iterable(images_old):
-        if isinstance(images_old, tuple):
-            return tuple(images)
-        else:
-            return list(images)
+        result = []
+        for image, image_old in zip(images, images_old):
+            if image_old.ndim == 2:
+                assert image.shape[2] == 1
+                result.append(image[:, :, 0])
+            else:
+                assert image.ndim == 3
+                assert image_old.ndim == 3
+                result.append(image)
+        return result
     raise ValueError(
         ("Expected argument 'images_old' to be any of the following: "
          + "None or array or iterable of array. Got type: %s.") % (
