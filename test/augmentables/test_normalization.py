@@ -85,6 +85,88 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(ValueError):
             normalization.invert_normalize_images(False, False)
 
+    def test_invert_normalize_heatmaps(self):
+        def _norm_and_invert(heatmaps, images):
+            return normalization.invert_normalize_heatmaps(
+                normalization.normalize_heatmaps(heatmaps, images=images),
+                heatmaps
+            )
+
+        # ----
+        # None
+        # ----
+        observed = normalization.invert_normalize_heatmaps(None, None)
+        assert observed is None
+
+        # ----
+        # array
+        # ----
+        before = np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert ia.is_np_array(after)
+        assert after.shape == (1, 1, 1, 1)
+        assert after.dtype.name == "float32"
+        assert np.allclose(after, before)
+
+        before = np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1
+        after = _norm_and_invert(before,
+                                 images=np.zeros((1, 1, 1, 3), dtype=np.uint8))
+        assert ia.is_np_array(after)
+        assert after.shape == (1, 1, 1, 1)
+        assert after.dtype.name == "float32"
+        assert np.allclose(after, before)
+
+        # ----
+        # single HeatmapsOnImage
+        # ----
+        before = ia.HeatmapsOnImage(
+                    np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
+                    shape=(1, 1, 3))
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, ia.HeatmapsOnImage)
+        assert np.allclose(after.arr_0to1, before.arr_0to1)
+
+        # ----
+        # empty iterable
+        # ----
+        before = []
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, list)
+        assert len(after) == 0
+
+        # ----
+        # iterable of arrays
+        # ----
+        before = [np.zeros((1, 1, 1), dtype=np.float32) + 0.1]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 1
+        assert after[0].shape == (1, 1, 1)
+        assert after[0].dtype.name == "float32"
+        assert np.allclose(after[0], before[0])
+
+        before = [np.zeros((1, 1, 1), dtype=np.float32) + 0.1]
+        after = _norm_and_invert(before,
+                                 images=np.zeros((1, 1, 1, 3), dtype=np.uint8))
+        assert isinstance(after, list)
+        assert len(after) == 1
+        assert after[0].shape == (1, 1, 1)
+        assert after[0].dtype.name == "float32"
+        assert np.allclose(after[0], before[0])
+
+        # ----
+        # iterable of HeatmapsOnImage
+        # ----
+        before = [ia.HeatmapsOnImage(
+                    np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
+                    shape=(1, 1, 3))]
+        after = normalization.normalize_heatmaps(before, images=None)
+        assert isinstance(after, list)
+        assert isinstance(after[0], ia.HeatmapsOnImage)
+        assert np.allclose(after[0].arr_0to1, before[0].arr_0to1)
+
     def test_normalize_images(self):
         assert normalization.normalize_images(None) is None
 
