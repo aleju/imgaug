@@ -856,17 +856,6 @@ def _nonempty_info_to_type_str(nonempty, success, parents):
     if not success:
         return "%siterable[empty]" % (parent_iters,)
 
-    # check if this is an (x, y) tuple
-    # if tuple_size=4 (i.e. for BBs) check if it is (x1, y1, x2, y2)
-    """assert tuple_size in [2, 4]
-    if len(parents) >= 1 and isinstance(parents[-1], tuple) \
-            and len(parents[-1]) == tuple_size \
-            and all([ia.is_single_number(val) for val in parents[-1]]):
-        parent_iters = "-".join(["iterable"] * (len(parents)-1))
-        if tuple_size == 4:
-            return "-".join([parent_iters, "(x1,y1,x2,y2)"]).lstrip("-")
-        return "-".join([parent_iters, "(x,y)"]).lstrip("-")"""
-
     is_parent_tuple = (
         len(parents) >= 1
         and isinstance(parents[-1], tuple)
