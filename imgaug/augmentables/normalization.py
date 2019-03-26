@@ -427,8 +427,11 @@ def invert_normalize_segmentation_maps(segmentation_maps,
         assert segmentation_maps is None
         return segmentation_maps
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
-        assert len(segmentation_maps) == 1
-        return segmentation_maps[0].arr
+        assert len(segmentation_maps) == segmentation_maps_old.shape[0]
+        input_dtype = segmentation_maps_old.dtype
+        return restore_dtype_and_merge(
+            [segmap_i.get_arr_int() for segmap_i in segmentation_maps],
+            input_dtype)
     elif ntype == "SegmentationMapOnImage":
         assert len(segmentation_maps) == 1
         return segmentation_maps[0]
@@ -438,7 +441,10 @@ def invert_normalize_segmentation_maps(segmentation_maps,
     elif ntype in ["iterable-array[int]",
                    "iterable-array[uint]",
                    "iterable-array[bool]"]:
-        return [segmap_i.arr for segmap_i in segmentation_maps]
+        nonempty, _, _ = find_first_nonempty(segmentation_maps_old)
+        input_dtype = nonempty.dtype
+        return [restore_dtype_and_merge(segmap_i.get_arr_int(), input_dtype)
+                for segmap_i in segmentation_maps]
     else:
         assert ntype == "iterable-SegmentationMapOnImage"
         return segmentation_maps
