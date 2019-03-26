@@ -18,6 +18,94 @@ def main():
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
 
 
+# TODO extend tests towards all dtypes and actual minima/maxima of value ranges
+def test_clip():
+    arr = np.int32([0, 1, 2, 3, 4, 5])
+    observed = iadt.clip_(arr, 0, 10)
+    assert np.array_equal(observed, np.int32([0, 1, 2, 3, 4, 5]))
+
+    arr = np.int32([0, 1, 2, 3, 4, 5])
+    observed = iadt.clip_(arr, 0, 5)
+    assert np.array_equal(observed, np.int32([0, 1, 2, 3, 4, 5]))
+
+    arr = np.int32([0, 1, 2, 3, 4, 5])
+    observed = iadt.clip_(arr, 0, 4)
+    assert np.array_equal(observed, np.int32([0, 1, 2, 3, 4, 4]))
+
+    arr = np.float32([-1.0])
+    observed = iadt.clip_(arr, 0, 1)
+    assert np.allclose(observed, np.float32([0.0]))
+
+    arr = np.float32([-1.0])
+    observed = iadt.clip_(arr, -1.0, 1)
+    assert np.allclose(observed, np.float32([-1.0]))
+
+    arr = np.uint32([0])
+    observed = iadt.clip_(arr, 0, 1)
+    assert np.array_equal(observed, np.uint32([0]))
+
+    arr = np.uint32([1])
+    observed = iadt.clip_(arr, 0, 1)
+    assert np.array_equal(observed, np.uint32([1]))
+
+    arr = np.uint32([2])
+    observed = iadt.clip_(arr, 0, 1)
+    assert np.array_equal(observed, np.uint32([1]))
+
+    arr = np.uint32([1])
+    observed = iadt.clip_(arr, -1, 1)
+    assert np.array_equal(observed, np.uint32([1]))
+
+    arr = np.uint32([10])
+    observed = iadt.clip_(arr, -1, 1)
+    assert np.array_equal(observed, np.uint32([1]))
+
+    arr = np.int8([127])
+    observed = iadt.clip_(arr, 0, 127)
+    assert np.array_equal(observed, np.int8([127]))
+
+    arr = np.int8([127])
+    observed = iadt.clip_(arr, 0, 128)
+    assert np.array_equal(observed, np.int8([127]))
+
+    arr = np.int8([127])
+    observed = iadt.clip_(arr, -1, 127)
+    assert np.array_equal(observed, np.int8([127]))
+
+    arr = np.int8([1])
+    observed = iadt.clip_(arr, None, None)
+    assert np.array_equal(observed, np.int8([1]))
+
+    arr = np.int8([1])
+    observed = iadt.clip_(arr, None, 10)
+    assert np.array_equal(observed, np.int8([1]))
+
+    arr = np.int8([1])
+    observed = iadt.clip_(arr, -10, None)
+    assert np.array_equal(observed, np.int8([1]))
+
+    arr = np.int8([10])
+    observed = iadt.clip_(arr, None, 1)
+    assert np.array_equal(observed, np.int8([1]))
+
+    arr = np.int8([-10])
+    observed = iadt.clip_(arr, -1, None)
+    assert np.array_equal(observed, np.int8([-1]))
+
+    # single value arrays, shape == tuple()
+    arr = np.int8(-10)
+    observed = iadt.clip_(arr, -10, 10)
+    assert np.array_equal(observed, np.int8(-10))
+
+    arr = np.int8(-10)
+    observed = iadt.clip_(arr, -1, 10)
+    assert np.array_equal(observed, np.int8(-1))
+
+    arr = np.int8(10)
+    observed = iadt.clip_(arr, -10, 1)
+    assert np.array_equal(observed, np.int8(1))
+
+
 def test_copy_dtypes_for_restore():
     # TODO using dtype=np.bool is causing this to fail as it ends up being <type bool> instead of
     # <type 'numpy.bool_'>. Any problems from that for the library?
