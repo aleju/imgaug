@@ -1363,6 +1363,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             return result[0]
         return tuple(result)
 
+    def __call__(self, *args, **kwargs):
+        return self.augment(*args, **kwargs)
+
     def pool(self, processes=None, maxtasksperchild=None, seed=None):
         """
         Create a pool used for multicore augmentation from this augmenter.

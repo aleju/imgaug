@@ -47,6 +47,7 @@ def main():
     test_Augmenter_augment()
     test_Augmenter_augment_py36_or_higher()
     test_Augmenter_augment_py35_or_lower()
+    test_Augmenter___call__()
     test_Augmenter_pool()
     test_Augmenter_find()
     test_Augmenter_remove()
@@ -2649,6 +2650,14 @@ def test_Augmenter_augment_py35_or_lower():
         assert "Requested more than two outputs" in str(exc)
         got_exception = True
     assert got_exception
+
+
+def test_Augmenter___call__():
+    image = ia.quokka(size=(128, 128), extract="square")
+    heatmaps = ia.quokka_heatmap(size=(128, 128), extract="square")
+    images_aug, heatmaps_aug = iaa.Noop()(images=[image], heatmaps=[heatmaps])
+    assert np.array_equal(images_aug[0], image)
+    assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
 
 
 def test_Augmenter_pool():
