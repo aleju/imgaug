@@ -3,6 +3,7 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 
 import imgaug.imgaug as ia
+import imgaug.dtypes as iadt
 
 
 def normalize_images(images):
@@ -784,7 +785,6 @@ def estimate_normalization_type(inputs):
     return type_str
 
 
-# TODO replace partially with dtypes.restore_dtypes_()
 def restore_dtype_and_merge(arr, input_dtype):
     if isinstance(arr, list):
         arr = [restore_dtype_and_merge(arr_i, input_dtype)
@@ -794,12 +794,7 @@ def restore_dtype_and_merge(arr, input_dtype):
             arr = np.array(arr)
 
     if ia.is_np_array(arr):
-        if input_dtype.kind == "i":
-            arr = np.round(arr).astype(input_dtype)
-        elif input_dtype.kind == "u":
-            arr = np.round(arr)
-            arr = np.clip(arr, 0, np.iinfo(input_dtype).max)
-            arr = arr.astype(input_dtype)
+        arr = iadt.restore_dtypes_(arr, input_dtype)
     return arr
 
 
