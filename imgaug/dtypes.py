@@ -32,7 +32,7 @@ def restore_dtypes_(images, dtypes, clip=True, round=True):
                 images = np.round(images)
             if clip:
                 min_value, _, max_value = get_value_range_of_dtype(dtype_to)
-                images = np.clip(images, min_value, max_value, out=images)
+                images = clip_(images, min_value, max_value)
             result = images.astype(dtype_to, copy=False)
     elif ia.is_iterable(images):
         result = images

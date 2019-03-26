@@ -79,8 +79,8 @@
 * Marked support for non-`Batch` inputs to `augment_batches()` as deprecated.
 * Added `Augmenter.augment()` method.
 * Added `dtypes.clip_()` function.
-* Fixed an issue in `dtypes.clip_to_value_range_()` causing errors when clip value range exceeded array dtype's value range.
-* Fixed an issue in `dtypes.clip_to_value_range_()` when the input array was scalar, i.e. had shape `()`.
+* Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` causing errors when clip value range exceeded array dtype's value range.
+* Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` when the input array was scalar, i.e. had shape `()`.
 
 
 # 0.2.8
