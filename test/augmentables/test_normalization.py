@@ -37,6 +37,54 @@ class TestNormalization(unittest.TestCase):
     def setUp(self):
         reseed()
 
+    def test_invert_normalize_images(self):
+        assert normalization.invert_normalize_images(None, None) is None
+
+        arr = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+        arr_old = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(arr, arr_old)
+        assert ia.is_np_array(observed)
+        assert observed.shape == (1, 4, 4, 3)
+        assert observed.dtype.name == "uint8"
+
+        arr = np.zeros((1, 4, 4, 1), dtype=np.uint8)
+        arr_old = np.zeros((4, 4), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(arr, arr_old)
+        assert ia.is_np_array(observed)
+        assert observed.shape == (4, 4)
+        assert observed.dtype.name == "uint8"
+
+        arr = np.zeros((1, 4, 4, 1), dtype=np.uint8)
+        arr_old = np.zeros((1, 4, 4), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(arr, arr_old)
+        assert ia.is_np_array(observed)
+        assert observed.shape == (1, 4, 4)
+        assert observed.dtype.name == "uint8"
+
+        images = []
+        images_old = []
+        observed = normalization.invert_normalize_images(images, images_old)
+        assert isinstance(observed, list)
+        assert len(observed) == 0
+
+        arr1 = np.zeros((4, 4), dtype=np.uint8)
+        arr2 = np.zeros((5, 5, 3), dtype=np.uint8)
+        arr1_old = np.copy(arr1)
+        arr2_old = np.copy(arr2)
+        observed = normalization.invert_normalize_images([arr1, arr2],
+                                                         [arr1_old, arr2_old])
+        assert isinstance(observed, list)
+        assert len(observed) == 2
+        assert ia.is_np_array(observed[0])
+        assert ia.is_np_array(observed[1])
+        assert observed[0].shape == (4, 4)
+        assert observed[1].shape == (5, 5, 3)
+        assert observed[0].dtype.name == "uint8"
+        assert observed[1].dtype.name == "uint8"
+
+        with self.assertRaises(ValueError):
+            normalization.invert_normalize_images(False, False)
+
     def test_normalize_images(self):
         assert normalization.normalize_images(None) is None
 

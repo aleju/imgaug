@@ -359,8 +359,11 @@ def invert_normalize_images(images, images_old):
         return None
     elif ia.is_np_array(images_old):
         if images_old.ndim == 2:
+            assert images.shape[0] == 1
+            assert images.shape[3] == 1
             return images[0, ..., 0]
         elif images_old.ndim == 3:
+            assert images.shape[3] == 1
             return images[..., 0]
         else:
             return images
