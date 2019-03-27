@@ -228,6 +228,177 @@ class TestNormalization(unittest.TestCase):
         assert after[0].shape == before[0].shape
         assert np.allclose(after[0].arr, before[0].arr)
 
+    def test_invert_normalize_keypoints(self):
+        def _norm_and_invert(kps, images):
+            return normalization.invert_normalize_keypoints(
+                normalization.normalize_keypoints(
+                    kps, images=images),
+                kps
+            )
+
+        # ----
+        # None
+        # ----
+        observed = normalization.invert_normalize_keypoints(None, None)
+        assert observed is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = np.zeros((1, 1, 2), dtype=dt) + 1
+                after = _norm_and_invert(before, images=images)
+                assert ia.is_np_array(after)
+                assert after.shape == (1, 1, 2)
+                assert after.dtype.name == dt.name
+                assert np.allclose(after, 1)
+
+        # ----
+        # (x,y)
+        # ----
+        before = (1, 2)
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, tuple)
+        assert after == (1, 2)
+
+        # ----
+        # single Keypoint instance
+        # ----
+        before = ia.Keypoint(x=1, y=2)
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, ia.Keypoint)
+        assert after.x == 1
+        assert after.y == 2
+
+        # ----
+        # single KeypointsOnImage instance
+        # ----
+        before = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3))
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, ia.KeypointsOnImage)
+        assert len(after.keypoints) == 1
+        assert after.keypoints[0].x == 1
+        assert after.keypoints[0].y == 2
+        assert after.shape == (1, 1, 3)
+
+        # ----
+        # empty iterable
+        # ----
+        before = []
+        after = _norm_and_invert(before, images=None)
+        assert after == []
+
+        # ----
+        # iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = np.zeros((1, 1, 2), dtype=dt) + 1
+                after = _norm_and_invert(before, images=images)
+                assert ia.is_np_array(after)
+                assert after.shape == (1, 1, 2)
+                assert after.dtype.name == dt.name
+                assert np.allclose(after, 1)
+
+        # ----
+        # iterable of (x,y)
+        # ----
+        before = [(1, 2), (3, 4)]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert after == [(1, 2), (3, 4)]
+
+        # ----
+        # iterable of Keypoint
+        # ----
+        before = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], ia.Keypoint)
+        assert isinstance(after[1], ia.Keypoint)
+        assert after[0].x == 1
+        assert after[0].y == 2
+        assert after[1].x == 3
+        assert after[1].y == 4
+
+        # ----
+        # iterable of KeypointsOnImage
+        # ----
+        before = [
+            ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3)),
+            ia.KeypointsOnImage([ia.Keypoint(x=3, y=4)], shape=(1, 1, 3)),
+        ]
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], ia.KeypointsOnImage)
+        assert isinstance(after[1], ia.KeypointsOnImage)
+        assert after[0].keypoints[0].x == 1
+        assert after[0].keypoints[0].y == 2
+        assert after[1].keypoints[0].x == 3
+        assert after[1].keypoints[0].y == 4
+
+        # ----
+        # iterable of empty interables
+        # ----
+        before = [[]]
+        after = _norm_and_invert(before, [np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert after == [[]]
+
+        # ----
+        # iterable of iterable of (x,y)
+        # ----
+        before = [
+            [(1, 2), (3, 4)],
+            [(5, 6), (7, 8)]
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], list)
+        assert isinstance(after[1], list)
+        assert after[0][0][0] == 1
+        assert after[0][0][1] == 2
+        assert after[0][1][0] == 3
+        assert after[0][1][1] == 4
+        assert after[1][0][0] == 5
+        assert after[1][0][1] == 6
+        assert after[1][1][0] == 7
+        assert after[1][1][1] == 8
+
+        # ----
+        # iterable of iterable of Keypoint
+        # ----
+        before = [
+            [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
+            [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], list)
+        assert isinstance(after[1], list)
+        assert after[0][0].x == 1
+        assert after[0][0].y == 2
+        assert after[0][1].x == 3
+        assert after[0][1].y == 4
+        assert after[1][0].x == 5
+        assert after[1][0].y == 6
+        assert after[1][1].x == 7
+        assert after[1][1].y == 8
+
     def test_normalize_images(self):
         assert normalization.normalize_images(None) is None
 
