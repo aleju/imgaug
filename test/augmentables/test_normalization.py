@@ -399,6 +399,209 @@ class TestNormalization(unittest.TestCase):
         assert after[1][1].x == 7
         assert after[1][1].y == 8
 
+    def test_invert_normalize_bounding_boxes(self):
+        def _norm_and_invert(kps, images):
+            return normalization.invert_normalize_bounding_boxes(
+                normalization.normalize_bounding_boxes(
+                    kps, images=images),
+                kps
+            )
+
+        # ----
+        # None
+        # ----
+        observed = normalization.invert_normalize_bounding_boxes(None, None)
+        assert observed is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = np.zeros((1, 1, 4), dtype=dt) + 1
+                after = _norm_and_invert(before, images=images)
+                assert ia.is_np_array(after)
+                assert after.shape == (1, 1, 4)
+                assert after.dtype.name == dt.name
+                assert np.allclose(after, 1)
+
+        # ----
+        # (x1,y1,x2,y2)
+        # ----
+        before = (1, 2, 3, 4)
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, tuple)
+        assert after == (1, 2, 3, 4)
+
+        # ----
+        # single BoundingBox instance
+        # ----
+        before = ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, ia.BoundingBox)
+        assert after.x1 == 1
+        assert after.y1 == 2
+        assert after.x2 == 3
+        assert after.y2 == 4
+
+        # ----
+        # single BoundingBoxesOnImage instance
+        # ----
+        before = ia.BoundingBoxesOnImage(
+                     [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
+                     shape=(1, 1, 3))
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, ia.BoundingBoxesOnImage)
+        assert len(after.bounding_boxes) == 1
+        assert after.bounding_boxes[0].x1 == 1
+        assert after.bounding_boxes[0].y1 == 2
+        assert after.bounding_boxes[0].x2 == 3
+        assert after.bounding_boxes[0].y2 == 4
+        assert after.shape == (1, 1, 3)
+
+        # ----
+        # empty iterable
+        # ----
+        before = []
+        after = _norm_and_invert(before, images=None)
+        assert after == []
+
+        # ----
+        # iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = [np.zeros((1, 4), dtype=dt) + 1]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert ia.is_np_array(after[0])
+                assert after[0].shape == (1, 4)
+                assert after[0].dtype.name == dt.name
+                assert np.allclose(after[0], 1)
+
+        # ----
+        # iterable of (x1,y1,x2,y2)
+        # ----
+        before = [(1, 2, 3, 4), (5, 6, 7, 8)]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert after == [(1, 2, 3, 4), (5, 6, 7, 8)]
+
+        # ----
+        # iterable of BoundingBox
+        # ----
+        before = [
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+            ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], ia.BoundingBox)
+        assert isinstance(after[1], ia.BoundingBox)
+        assert after[0].x1 == 1
+        assert after[0].y1 == 2
+        assert after[0].x2 == 3
+        assert after[0].y2 == 4
+        assert after[1].x1 == 5
+        assert after[1].y1 == 6
+        assert after[1].x2 == 7
+        assert after[1].y2 == 8
+
+        # ----
+        # iterable of BoundingBoxesOnImage
+        # ----
+        before = [
+            ia.BoundingBoxesOnImage(
+                [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
+                shape=(1, 1, 3)),
+            ia.BoundingBoxesOnImage(
+                [ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
+                shape=(1, 1, 3))
+        ]
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], ia.BoundingBoxesOnImage)
+        assert isinstance(after[1], ia.BoundingBoxesOnImage)
+        assert isinstance(after[0].bounding_boxes[0], ia.BoundingBox)
+        assert isinstance(after[1].bounding_boxes[0], ia.BoundingBox)
+        assert after[0].bounding_boxes[0].x1 == 1
+        assert after[0].bounding_boxes[0].y1 == 2
+        assert after[0].bounding_boxes[0].x2 == 3
+        assert after[0].bounding_boxes[0].y2 == 4
+        assert after[1].bounding_boxes[0].x1 == 5
+        assert after[1].bounding_boxes[0].y1 == 6
+        assert after[1].bounding_boxes[0].x2 == 7
+        assert after[1].bounding_boxes[0].y2 == 8
+        assert after[0].shape == (1, 1, 3)
+        assert after[1].shape == (1, 1, 3)
+
+        # ----
+        # iterable of empty interables
+        # ----
+        before = [[]]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert after == [[]]
+
+        # ----
+        # iterable of iterable of (x1,y1,x2,y2)
+        # ----
+        before = [
+            [(1, 2, 3, 4)],
+            [(5, 6, 7, 8), (9, 10, 11, 12)]
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert after == [
+            [(1, 2, 3, 4)],
+            [(5, 6, 7, 8), (9, 10, 11, 12)]
+        ]
+
+        # ----
+        # iterable of iterable of Keypoint
+        # ----
+        before = [
+            [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+             ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
+            [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
+             ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert isinstance(after[0], list)
+        assert isinstance(after[1], list)
+        assert len(after[0]) == 2
+        assert len(after[1]) == 2
+        assert after[0][0].x1 == 1
+        assert after[0][0].y1 == 2
+        assert after[0][0].x2 == 3
+        assert after[0][0].y2 == 4
+        assert after[0][1].x1 == 5
+        assert after[0][1].y1 == 6
+        assert after[0][1].x2 == 7
+        assert after[0][1].y2 == 8
+        assert after[1][0].x1 == 9
+        assert after[1][0].y1 == 10
+        assert after[1][0].x2 == 11
+        assert after[1][0].y2 == 12
+        assert after[1][1].x1 == 13
+        assert after[1][1].y1 == 14
+        assert after[1][1].x2 == 15
+        assert after[1][1].y2 == 16
+
     def test_normalize_images(self):
         assert normalization.normalize_images(None) is None
 
@@ -1274,7 +1477,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # ----
-        # iterable of Keypoint
+        # iterable of BoundingBox
         # ----
         bbs_norm = normalization.normalize_bounding_boxes(
             [
