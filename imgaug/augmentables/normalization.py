@@ -489,6 +489,9 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
         assert len(keypoints) == 1
         return [
             (kp.x, kp.y) for kp in keypoints[0].keypoints]
+    elif ntype == "iterable-Keypoint":
+        assert len(keypoints) == 1
+        return keypoints[0].keypoints
     elif ntype == "iterable-KeypointsOnImage":
         return keypoints
     elif ntype == "iterable-iterable[empty]":
