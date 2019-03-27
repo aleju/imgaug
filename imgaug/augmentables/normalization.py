@@ -597,29 +597,29 @@ def invert_normalize_polygons(polygons, polygons_old):
         input_dtype = nonempty.dtype
         return [
             restore_dtype_and_merge(
-                [poly.exterior for poly in psoi.poylgons],
+                [poly.exterior for poly in psoi.polygons],
                 input_dtype)
             for psoi in polygons
         ]
     elif ntype == "iterable-tuple[number,size=2]":
         assert len(polygons) == 1
         assert len(polygons[0].polygons) == 1
-        return [(point.x, point.y)
+        return [(point[0], point[1])
                 for point in polygons[0].polygons[0].exterior]
     elif ntype == "iterable-Keypoint":
         assert len(polygons) == 1
         assert len(polygons[0].polygons) == 1
-        return [Keypoint(x=point.x, y=point.y)
+        return [Keypoint(x=point[0], y=point[1])
                 for point in polygons[0].polygons[0].exterior]
     elif ntype == "iterable-Polygon":
         assert len(polygons) == 1
-        assert len(polygons[0].polygons) == len(polygons_old[0].polygons)
+        assert len(polygons[0].polygons) == len(polygons_old)
         return polygons[0].polygons
     elif ntype == "iterable-PolygonsOnImage":
         return polygons
     elif ntype == "iterable-iterable[empty]":
         assert polygons is None
-        return polygons[:]
+        return polygons_old[:]
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
@@ -641,8 +641,7 @@ def invert_normalize_polygons(polygons, polygons_old):
             [Keypoint(x=point[0], y=point[1]) for point in polygon.exterior]
             for polygon in polygons[0].polygons]
     elif ntype == "iterable-iterable-Polygon":
-        assert len(polygons) == 1
-        return polygons[0].polygons
+        return [psoi.polygons for psoi in polygons]
     elif ntype == "iterable-iterable-iterable[empty]":
         return polygons_old[:]
     elif ntype == "iterable-iterable-iterable-tuple[number,size=2]":
