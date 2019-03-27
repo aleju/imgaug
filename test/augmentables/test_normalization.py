@@ -400,11 +400,11 @@ class TestNormalization(unittest.TestCase):
         assert after[1][1].y == 8
 
     def test_invert_normalize_bounding_boxes(self):
-        def _norm_and_invert(kps, images):
+        def _norm_and_invert(bbs, images):
             return normalization.invert_normalize_bounding_boxes(
                 normalization.normalize_bounding_boxes(
-                    kps, images=images),
-                kps
+                    bbs, images=images),
+                bbs
             )
 
         # ----
@@ -601,6 +601,290 @@ class TestNormalization(unittest.TestCase):
         assert after[1][1].y1 == 14
         assert after[1][1].x2 == 15
         assert after[1][1].y2 == 16
+
+    def test_invert_normalize_polygons(self):
+        def _norm_and_invert(polys, images):
+            return normalization.invert_normalize_polygons(
+                normalization.normalize_polygons(
+                    polys, images=images),
+                polys
+            )
+
+        coords1 = [(0, 0), (10, 0), (10, 10)]
+        coords2 = [(5, 5), (15, 5), (15, 15)]
+        coords3 = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        coords4 = [(5, 5), (15, 5), (15, 15), (5, 15)]
+
+        coords1_kps = [ia.Keypoint(x=x, y=y) for x, y in coords1]
+        coords2_kps = [ia.Keypoint(x=x, y=y) for x, y in coords2]
+        coords3_kps = [ia.Keypoint(x=x, y=y) for x, y in coords3]
+        coords4_kps = [ia.Keypoint(x=x, y=y) for x, y in coords4]
+
+        coords1_arr = np.float32(coords1)
+        coords2_arr = np.float32(coords2)
+        coords3_arr = np.float32(coords3)
+        coords4_arr = np.float32(coords4)
+
+        # ----
+        # None
+        # ----
+        observed = normalization.invert_normalize_polygons(None, None)
+        assert observed is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = coords1_arr[np.newaxis, np.newaxis, ...].astype(dt)
+                after = _norm_and_invert(before, images=images)
+                assert ia.is_np_array(after)
+                assert after.shape == (1, 1, 3, 2)
+                assert after.dtype.name == dt.name
+                assert np.allclose(after,
+                                   coords1_arr[np.newaxis, np.newaxis, ...])
+
+                before = np.tile(
+                    coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
+                    (1, 5, 1, 1)
+                )
+                after = _norm_and_invert(before, images=images)
+                assert ia.is_np_array(after)
+                assert after.shape == (1, 5, 3, 2)
+                assert after.dtype.name == dt.name
+                assert np.allclose(after[0],
+                                   coords1_arr[np.newaxis, ...])
+
+        # ----
+        # single Polygon instance
+        # ----
+        before = ia.Polygon(coords1)
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, ia.Polygon)
+        assert after.exterior_almost_equals(coords1)
+
+        # ----
+        # single PolygonsOnImage instance
+        # ----
+        before = ia.PolygonsOnImage([ia.Polygon(coords1)], shape=(1, 1, 3))
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, ia.PolygonsOnImage)
+        assert len(after.polygons) == 1
+        assert after.polygons[0].exterior_almost_equals(coords1)
+        assert after.shape == (1, 1, 3)
+
+        # ----
+        # empty iterable
+        # ----
+        before = []
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, list)
+        assert after == []
+
+        # ----
+        # iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = [coords1_arr[np.newaxis, ...].astype(dt)]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert ia.is_np_array(after[0])
+                assert after[0].shape == (1, 3, 2)
+                assert after[0].dtype.name == dt.name
+                assert np.allclose(after[0], coords1_arr[np.newaxis, ...])
+
+                before = [np.tile(
+                    coords1_arr[np.newaxis, ...].astype(dt),
+                    (5, 1, 1)
+                )]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert ia.is_np_array(after[0])
+                assert after[0].shape == (5, 3, 2)
+                assert after[0].dtype.name == dt.name
+                assert np.allclose(after[0][0], coords1_arr)
+
+        # ----
+        # iterable of (x,y)
+        # ----
+        before = coords1
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert after == coords1
+
+        # ----
+        # iterable of Keypoint
+        # ----
+        before = coords1_kps
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == len(coords1_kps)
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after, coords1_kps)])
+
+        # ----
+        # iterable of Polygon
+        # ----
+        before = [ia.Polygon(coords1), ia.Polygon(coords2)]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert after[0].exterior_almost_equals(coords1)
+        assert after[1].exterior_almost_equals(coords2)
+
+        # ----
+        # iterable of PolygonsOnImage
+        # ----
+        before = [
+            ia.PolygonsOnImage([ia.Polygon(coords1)], shape=(1, 1, 3)),
+            ia.PolygonsOnImage([ia.Polygon(coords2)], shape=(2, 1, 3))
+        ]
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], ia.PolygonsOnImage)
+        assert isinstance(after[1], ia.PolygonsOnImage)
+        assert after[0].polygons[0].exterior_almost_equals(coords1)
+        assert after[1].polygons[0].exterior_almost_equals(coords2)
+        assert after[0].shape == (1, 1, 3)
+        assert after[1].shape == (2, 1, 3)
+
+        # ----
+        # iterable of empty interables
+        # ----
+        before = [[]]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert after == [[]]
+
+        # ----
+        # iterable of iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = [[coords1_arr.astype(dt)]]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert isinstance(after[0], list)
+                assert len(after[0]) == 1
+                assert ia.is_np_array(after[0][0])
+                assert after[0][0].shape == (3, 2)
+                assert after[0][0].dtype.name == dt.name
+                assert np.allclose(after[0][0], coords1_arr)
+
+                before = [[coords1_arr.astype(dt) for _ in sm.xrange(5)]]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert isinstance(after[0], list)
+                assert len(after[0]) == 5
+                assert ia.is_np_array(after[0][0])
+                assert after[0][0].shape == (3, 2)
+                assert after[0][0].dtype.name == dt.name
+                assert np.allclose(after[0][0], coords1_arr)
+
+        # ----
+        # iterable of iterable of (x,y)
+        # ----
+        before = [coords1, coords2]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert after[0] == coords1
+        assert after[1] == coords2
+
+        # ----
+        # iterable of iterable of Keypoint
+        # ----
+        before = [coords1_kps, coords2_kps]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert len(after[0]) == len(coords1_kps)
+        assert len(after[1]) == len(coords2_kps)
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after[0], coords1_kps)])
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after[1], coords2_kps)])
+
+        # ----
+        # iterable of iterable of Polygon
+        # ----
+        before = [
+            [ia.Polygon(coords1), ia.Polygon(coords2)],
+            [ia.Polygon(coords3), ia.Polygon(coords4)]
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert isinstance(after[0], list)
+        assert isinstance(after[1], list)
+        assert len(after[0]) == 2
+        assert len(after[1]) == 2
+        assert after[0][0].exterior_almost_equals(coords1)
+        assert after[0][1].exterior_almost_equals(coords2)
+        assert after[1][0].exterior_almost_equals(coords3)
+        assert after[1][1].exterior_almost_equals(coords4)
+
+        # ----
+        # iterable of iterable of empty iterable
+        # ----
+        before = [[[]]]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert after == [[[]]]
+
+        # ----
+        # iterable of iterable of iterable of (x,y)
+        # ----
+        before = [[coords1, coords2], [coords3, coords4]]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert len(after[0]) == 2
+        assert len(after[1]) == 2
+        assert after[0][0] == coords1
+        assert after[0][1] == coords2
+        assert after[1][0] == coords3
+        assert after[1][1] == coords4
+
+        # ----
+        # iterable of iterable of iterable of Keypoint
+        # ----
+        before = [[coords1_kps, coords2_kps], [coords3_kps, coords4_kps]]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert len(after[0]) == 2
+        assert len(after[1]) == 2
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after[0][0], coords1_kps)])
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after[0][1], coords2_kps)])
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after[1][0], coords3_kps)])
+        assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
+                    for kp_after, kp_before in zip(after[1][1], coords4_kps)])
 
     def test_normalize_images(self):
         assert normalization.normalize_images(None) is None
@@ -1658,7 +1942,7 @@ class TestNormalization(unittest.TestCase):
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
     
-    def test_get_polygons_unaug_normalized(self):
+    def test_normalize_polygons(self):
         def _assert_single_image_expected(inputs):
             # --> images None
             with self.assertRaises(AssertionError):
