@@ -547,6 +547,9 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
         return [
             (bb.x1, bb.y1, bb.x2, bb.y2)
             for bb in bounding_boxes[0].bounding_boxes]
+    elif ntype == "iterable-BoundingBox":
+        assert len(bounding_boxes) == 1
+        return bounding_boxes[0].bounding_boxes
     elif ntype == "iterable-BoundingBoxesOnImage":
         return bounding_boxes
     elif ntype == "iterable-iterable[empty]":
