@@ -967,7 +967,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> wrong channel number
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
                 shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -1046,7 +1046,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> wrong number of dimensions
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1],
                 shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -1180,7 +1180,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong number of dimensions
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     [np.zeros((1, 1, 1), dtype=np.int32) + 1],
                     shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -1265,7 +1265,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong keypoints shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     np.zeros((1, 1, 100), dtype=dt) + 1,
                     shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -1371,7 +1371,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [np.zeros((1, 100), dtype=dt) + 1],
                     shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -1615,7 +1615,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong keypoints shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     np.zeros((1, 1, 100), dtype=dt) + 1,
                     shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -1727,7 +1727,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [np.zeros((1, 100), dtype=dt) + 1],
                     shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
@@ -2032,7 +2032,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong polygons shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     np.tile(
                         coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
@@ -2121,7 +2121,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong polygons shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     [np.tile(
                         coords1_arr[np.newaxis, ...].astype(dt),
@@ -2266,7 +2266,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> wrong polygons shape
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     [[np.tile(
                         coords1_arr.astype(dt),

@@ -53,6 +53,77 @@ def _assert_exactly_n_shapes(shapes, n, from_ntype, to_ntype):
         )
 
 
+def _assert_single_array_ndim(arr, ndim, shape_str, to_ntype):
+    if arr.ndim != ndim:
+        raise ValueError(
+            ("Tried to convert an array to list of %s. Expected "
+             + "that array to be of shape %s, i.e. %d-dimensional, but "
+             + "got %d dimensions instead.") % (
+                to_ntype, shape_str, ndim, arr.ndim,)
+        )
+
+
+def _assert_many_arrays_ndim(arrs, ndim, shape_str, to_ntype):
+    # For polygons, this can be a list of lists of arrays, hence we must
+    # flatten the lists here.
+    # itertools.chain.from_iterable() seems to flatten the arrays too, so it
+    # cannot be used here.
+    iterable_type_str = "iterable"
+    if len(arrs) == 0:
+        arrs_flat = []
+    elif ia.is_np_array(arrs[0]):
+        arrs_flat = arrs
+    else:
+        iterable_type_str = "iterable of iterable"
+        arrs_flat = [arr for arrs_sublist in arrs for arr in arrs_sublist]
+
+    if any([arr.ndim != ndim for arr in arrs_flat]):
+        raise ValueError(
+            ("Tried to convert an %s of arrays to a list of "
+             + "%s. Expected each array to be of shape %s, "
+             + "i.e. to be %d-dimensional, but got dimensions %s "
+             + "instead (array shapes: %s).") % (
+                iterable_type_str, to_ntype, shape_str, ndim,
+                ", ".join([str(arr.ndim) for arr in arrs_flat]),
+                ", ".join([str(arr.shape) for arr in arrs_flat]))
+        )
+
+
+def _assert_single_array_last_dim_exactly(arr, size, to_ntype):
+    if arr.shape[-1] != size:
+        raise ValueError(
+            ("Tried to convert an array to a list of %s. Expected the array's "
+             + "last dimension to have size %d, but got %d instead (array "
+             + "shape: %s).") % (
+                 to_ntype, size, arr.shape[-1], str(arr.shape))
+        )
+
+
+def _assert_many_arrays_last_dim_exactly(arrs, size, to_ntype):
+    # For polygons, this can be a list of lists of arrays, hence we must
+    # flatten the lists here.
+    # itertools.chain.from_iterable() seems to flatten the arrays too, so it
+    # cannot be used here.
+    iterable_type_str = "iterable"
+    if len(arrs) == 0:
+        arrs_flat = []
+    elif ia.is_np_array(arrs[0]):
+        arrs_flat = arrs
+    else:
+        iterable_type_str = "iterable of iterable"
+        arrs_flat = [arr for arrs_sublist in arrs for arr in arrs_sublist]
+
+    if any([arr.shape[-1] != size for arr in arrs_flat]):
+        raise ValueError(
+            ("Tried to convert an %s of array to a list of %s. Expected the "
+             + "arrays' last dimensions to have size %d, but got %s instead "
+             + "(array shapes: %s).") % (
+                 iterable_type_str, to_ntype, size,
+                 ", ".join([str(arr.shape[-1]) for arr in arrs_flat]),
+                 ", ".join([str(arr.shape) for arr in arrs_flat]))
+        )
+
+
 def normalize_images(images):
     if images is None:
         return None
@@ -66,10 +137,16 @@ def normalize_images(images):
     elif ia.is_iterable(images):
         result = []
         for image in images:
+            assert image.ndim in [2, 3], (
+                ("Got a list of arrays as argument 'images'. Expected each "
+                 + "array in that list to have 2 or 3 dimensions, i.e. shape "
+                 + "(H,W) or (H,W,C). Got %d dimensions "
+                 + "instead.") % (image.ndim,)
+            )
+
             if image.ndim == 2:
                 result.append(image[..., np.newaxis])
             else:
-                assert image.ndim == 3
                 result.append(image)
         return result
     raise ValueError(
@@ -93,7 +170,7 @@ def normalize_heatmaps(inputs, shapes=None):
         return None
     elif ntype == "array[float]":
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert inputs.ndim == 4  # always (N,H,W,C)
+        _assert_single_array_ndim(inputs, 4, "(N,H,W,C)", "HeatmapsOnImage")
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
     elif ntype == "HeatmapsOnImage":
@@ -102,7 +179,7 @@ def normalize_heatmaps(inputs, shapes=None):
         return None
     elif ntype == "iterable-array[float]":
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert all([attr_i.ndim == 3 for attr_i in inputs])  # all (H,W,C)
+        _assert_many_arrays_ndim(inputs, 3, "(H,W,C)", "HeatmapsOnImage")
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
     else:
@@ -125,7 +202,8 @@ def normalize_segmentation_maps(inputs, shapes=None):
         return None
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert inputs.ndim == 3  # always (N,H,W)
+        _assert_single_array_ndim(inputs, 3, "(N,H,W)",
+                                  "SegmentationMapOnImage")
         if ntype == "array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
@@ -140,7 +218,7 @@ def normalize_segmentation_maps(inputs, shapes=None):
                    "iterable-array[uint]",
                    "iterable-array[bool]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert all([attr_i.ndim == 2 for attr_i in inputs])  # all (H,W)
+        _assert_many_arrays_ndim(inputs, 2, "(H,W)", "SegmentationMapsOnImage")
         if ntype == "iterable-array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
@@ -167,8 +245,8 @@ def normalize_keypoints(inputs, shapes=None):
         return inputs
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert inputs.ndim == 3  # (N,K,2)
-        assert inputs.shape[2] == 2
+        _assert_single_array_ndim(inputs, 3, "(N,K,2)", "KeypointsOnImage")
+        _assert_single_array_last_dim_exactly(inputs, 2, "KeypointsOnImage")
         return [
             KeypointsOnImage.from_coords_array(attr_i, shape=shape)
             for attr_i, shape
@@ -189,8 +267,8 @@ def normalize_keypoints(inputs, shapes=None):
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert all([attr_i.ndim == 2 for attr_i in inputs])  # (K,2)
-        assert all([attr_i.shape[1] == 2 for attr_i in inputs])
+        _assert_many_arrays_ndim(inputs, 2, "(K,2)", "KeypointsOnImage")
+        _assert_many_arrays_last_dim_exactly(inputs, 2, "KeypointsOnImage")
         return [
             KeypointsOnImage.from_coords_array(attr_i, shape=shape)
             for attr_i, shape
@@ -239,8 +317,8 @@ def normalize_bounding_boxes(inputs, shapes=None):
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert inputs.ndim == 3  # (N,B,4)
-        assert inputs.shape[2] == 4
+        _assert_single_array_ndim(inputs, 3, "(N,B,4)", "BoundingBoxesOnImage")
+        _assert_single_array_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
         return [
             BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
             for attr_i, shape
@@ -266,8 +344,8 @@ def normalize_bounding_boxes(inputs, shapes=None):
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert all([attr_i.ndim == 2 for attr_i in inputs])  # (B,4)
-        assert all([attr_i.shape[1] == 4 for attr_i in inputs])
+        _assert_many_arrays_ndim(inputs, 2, "(B,2)", "BoundingBoxesOnImage")
+        _assert_many_arrays_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
         return [
             BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
             for attr_i, shape
@@ -320,8 +398,9 @@ def normalize_polygons(inputs, shapes=None):
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert inputs.ndim == 4  # (N,#polys,#points,2)
-        assert inputs.shape[-1] == 2
+        _assert_single_array_ndim(inputs, 4, "(N,#polys,#points,2)",
+                                  "PolygonsOnImage")
+        _assert_single_array_last_dim_exactly(inputs, 2, "PolygonsOnImage")
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
@@ -340,8 +419,9 @@ def normalize_polygons(inputs, shapes=None):
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert all([attr_i.ndim == 3 for attr_i in inputs])  # (#polys,#points,2)
-        assert all([attr_i.shape[-1] == 2 for attr_i in inputs])
+        _assert_many_arrays_ndim(inputs, 3, "(#polys,#points,2)",
+                                 "PolygonsOnImage")
+        _assert_many_arrays_last_dim_exactly(inputs, 2, "PolygonsOnImage")
         return [
             PolygonsOnImage([Polygon(poly_points) for poly_points in attr_i],
                             shape=shape)
@@ -365,9 +445,8 @@ def normalize_polygons(inputs, shapes=None):
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        assert all([poly_points.ndim == 2 and poly_points.shape[-1] == 2
-                    for attr_i in inputs
-                    for poly_points in attr_i])
+        _assert_many_arrays_ndim(inputs, 2, "(#points,2)", "PolygonsOnImage")
+        _assert_many_arrays_last_dim_exactly(inputs, 2, "PolygonsOnImage")
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
