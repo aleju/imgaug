@@ -1203,19 +1203,19 @@ class TestNormalization(unittest.TestCase):
     def test_normalize_keypoints(self):
         def _assert_single_image_expected(inputs):
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     inputs, None)
 
             # --> too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     inputs,
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     inputs,
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -1251,14 +1251,14 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
 
             # --> keypoints for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     np.zeros((2, 1, 2), dtype=dt) + 1,
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few keypoints
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     np.zeros((1, 1, 2), dtype=dt) + 1,
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
@@ -1347,7 +1347,7 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
 
             # --> keypoints for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [
                         np.zeros((1, 2), dtype=dt) + 1,
@@ -1357,14 +1357,14 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> too few keypoints
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [np.zeros((1, 2), dtype=dt) + 1],
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [np.zeros((1, 2), dtype=dt) + 1],
                     shapes=None
@@ -1393,7 +1393,7 @@ class TestNormalization(unittest.TestCase):
         assert keypoints_norm[0].keypoints[1].y == 4
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [(1, 2)],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -1416,7 +1416,7 @@ class TestNormalization(unittest.TestCase):
         assert keypoints_norm[0].keypoints[1].y == 4
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [ia.Keypoint(x=1, y=2)],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -1480,7 +1480,7 @@ class TestNormalization(unittest.TestCase):
         assert keypoints_norm[1].keypoints[1].y == 8
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [
                     [(1, 2), (3, 4)],
@@ -1490,7 +1490,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [
                     [(1, 2), (3, 4)],
@@ -1527,7 +1527,7 @@ class TestNormalization(unittest.TestCase):
         assert keypoints_norm[1].keypoints[1].y == 8
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [
                     [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
@@ -1537,7 +1537,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [
                     [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],

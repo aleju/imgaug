@@ -158,26 +158,28 @@ def normalize_keypoints(inputs, shapes=None):
 
     shapes = _preprocess_shapes(shapes)
     ntype = estimate_keypoints_norm_type(inputs)
+    _assert_exactly_n_shapes_partial = functools.partial(
+        _assert_exactly_n_shapes,
+        from_ntype=ntype, to_ntype="List[KeypointsOnImage]",
+        shapes=shapes)
+
     if ntype == "None":
         return inputs
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        assert shapes is not None
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert inputs.ndim == 3  # (N,K,2)
         assert inputs.shape[2] == 2
-        assert len(inputs) == len(shapes)
         return [
             KeypointsOnImage.from_coords_array(attr_i, shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
     elif ntype == "tuple[number,size=2]":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage([Keypoint(x=inputs[0], y=inputs[1])],
                                  shape=shapes[0])]
     elif ntype == "Keypoint":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage([inputs], shape=shapes[0])]
     elif ntype == "KeypointsOnImage":
         return [inputs]
@@ -186,31 +188,27 @@ def normalize_keypoints(inputs, shapes=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        assert shapes is not None
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert all([attr_i.ndim == 2 for attr_i in inputs])  # (K,2)
         assert all([attr_i.shape[1] == 2 for attr_i in inputs])
-        assert len(inputs) == len(shapes)
         return [
             KeypointsOnImage.from_coords_array(attr_i, shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
     elif ntype == "iterable-tuple[number,size=2]":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage([Keypoint(x=x, y=y) for x, y in inputs],
                                  shape=shapes[0])]
     elif ntype == "iterable-Keypoint":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage(inputs, shape=shapes[0])]
     elif ntype == "iterable-KeypointsOnImage":
         return inputs
     elif ntype == "iterable-iterable[empty]":
         return None
     elif ntype == "iterable-iterable-tuple[number,size=2]":
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             KeypointsOnImage.from_coords_array(
                 np.array(attr_i, dtype=np.float32),
@@ -220,8 +218,7 @@ def normalize_keypoints(inputs, shapes=None):
         ]
     else:
         assert ntype == "iterable-iterable-Keypoint"
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [KeypointsOnImage(attr_i, shape=shape)
                 for attr_i, shape
                 in zip(inputs, shapes)]
