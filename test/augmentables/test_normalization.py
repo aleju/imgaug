@@ -1093,21 +1093,21 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
 
             # --> segmaps for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     np.zeros((2, 1, 1), dtype=dt) + 1,
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few segmaps
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     np.zeros((1, 1, 1), dtype=dt) + 1,
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     np.zeros((1, 1, 1), dtype=dt) + 1,
                     shapes=None
@@ -1156,7 +1156,7 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(segmaps_norm[0].arr[..., 1], 1)
 
             # --> heatmaps for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     [
                         np.zeros((1, 1), dtype=np.int32) + 1,
@@ -1166,14 +1166,14 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> too few segmaps
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     [np.zeros((1, 1), dtype=np.int32) + 1],
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     [np.zeros((1, 1), dtype=np.int32) + 1],
                     shapes=None

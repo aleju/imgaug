@@ -116,12 +116,16 @@ def normalize_segmentation_maps(inputs, shapes=None):
 
     shapes = _preprocess_shapes(shapes)
     ntype = estimate_segmaps_norm_type(inputs)
+    _assert_exactly_n_shapes_partial = functools.partial(
+        _assert_exactly_n_shapes,
+        from_ntype=ntype, to_ntype="List[SegmentationMapOnImage]",
+        shapes=shapes)
+
     if ntype == "None":
         return None
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
-        assert shapes is not None
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert inputs.ndim == 3  # always (N,H,W)
-        assert len(inputs) == len(shapes)
         if ntype == "array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
@@ -135,8 +139,7 @@ def normalize_segmentation_maps(inputs, shapes=None):
     elif ntype in ["iterable-array[int]",
                    "iterable-array[uint]",
                    "iterable-array[bool]"]:
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert all([attr_i.ndim == 2 for attr_i in inputs])  # all (H,W)
         if ntype == "iterable-array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=shape)
