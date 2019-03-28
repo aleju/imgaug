@@ -24,6 +24,34 @@ def _preprocess_shapes(shapes):
         return result
 
 
+def _assert_exactly_n_shapes(shapes, n, from_ntype, to_ntype):
+    if shapes is None:
+        raise ValueError(
+            ("Tried to convert data of form '%s' to '%s'. This required %d "
+             + "corresponding image shapes, but argument 'shapes' was set to "
+             + "None. This can happen e.g. if no images were provided in a "
+             + "Batch, as these would usually be used to automatically derive "
+             + "image shapes.") % (from_ntype, to_ntype, n)
+        )
+    elif len(shapes) != n:
+        raise ValueError(
+            ("Tried to convert data of form '%s' to '%s'. This required "
+             + "exactly %d corresponding image shapes, but instead %d were "
+             + "provided. This can happen e.g. if more images were provided "
+             + "than a corresponding augmentables, e.g. 10 images but only 5 "
+             + "segmentation maps. It can also happen if there was a "
+             + "misunderstanding about how an augmentable input would be "
+             + "parsed. E.g. if a list of N (x,y)-tuples was provided as "
+             + "keypoints and the expectation was that this would be parsed "
+             + "as one keypoint per image, but instead it was parsed as N "
+             + "keypoints on 1 image (i.e. 'shapes' would have to contain 1 "
+             + "shape, but N would be provided). To aboid this, it is "
+             + "recommended to provide imgaug standard classes, e.g. "
+             + "KeypointsOnImage for keypoints instead of lists of "
+             + "tuples.") % (from_ntype, to_ntype, n)
+        )
+
+
 def normalize_images(images):
     if images is None:
         return None
