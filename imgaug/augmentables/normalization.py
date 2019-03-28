@@ -79,23 +79,24 @@ def normalize_heatmaps(inputs, shapes=None):
         return inputs  # len allowed to differ from len of images
 
 
-def normalize_segmentation_maps(inputs, images=None):
+def normalize_segmentation_maps(inputs, shapes=None):
     # TODO get rid of this deferred import
     from imgaug.augmentables.segmaps import SegmentationMapOnImage
 
+    shapes = _preprocess_shapes(shapes)
     ntype = estimate_segmaps_norm_type(inputs)
     if ntype == "None":
         return None
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
-        assert images is not None
+        assert shapes is not None
         assert inputs.ndim == 3  # always (N,H,W)
-        assert len(inputs) == len(images)
+        assert len(inputs) == len(shapes)
         if ntype == "array[bool]":
-            return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
-                    for attr_i, image_i in zip(inputs, images)]
+            return [SegmentationMapOnImage(attr_i, shape=shape)
+                    for attr_i, shape in zip(inputs, shapes)]
         return [SegmentationMapOnImage(
-                    attr_i, shape=image_i.shape, nb_classes=1+np.max(attr_i))
-                for attr_i, image_i in zip(inputs, images)]
+                    attr_i, shape=shape, nb_classes=1+np.max(attr_i))
+                for attr_i, shape in zip(inputs, shapes)]
     elif ntype == "SegmentationMapOnImage":
         return [inputs]
     elif ntype == "iterable[empty]":
@@ -103,15 +104,15 @@ def normalize_segmentation_maps(inputs, images=None):
     elif ntype in ["iterable-array[int]",
                    "iterable-array[uint]",
                    "iterable-array[bool]"]:
-        assert images is not None
-        assert len(inputs) == len(images)
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
         assert all([attr_i.ndim == 2 for attr_i in inputs])  # all (H,W)
         if ntype == "iterable-array[bool]":
-            return [SegmentationMapOnImage(attr_i, shape=image_i.shape)
-                    for attr_i, image_i in zip(inputs, images)]
+            return [SegmentationMapOnImage(attr_i, shape=shape)
+                    for attr_i, shape in zip(inputs, shapes)]
         return [SegmentationMapOnImage(
-                    attr_i, shape=image_i.shape, nb_classes=1+np.max(attr_i))
-                for attr_i, image_i in zip(inputs, images)]
+                    attr_i, shape=shape, nb_classes=1+np.max(attr_i))
+                for attr_i, shape in zip(inputs, shapes)]
     else:
         assert ntype == "iterable-SegmentationMapOnImage"
         return inputs  # len allowed to differ from len of images
