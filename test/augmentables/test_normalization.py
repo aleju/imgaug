@@ -1551,21 +1551,21 @@ class TestNormalization(unittest.TestCase):
     def test_normalize_bounding_boxes(self):
         def _assert_single_image_expected(inputs):
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     inputs,
                     shapes=None
                 )
 
             # --> too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     inputs,
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     inputs,
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -1601,14 +1601,14 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(bbs_norm[0].to_xyxy_array(), 1)
 
             # --> bounding boxes for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     np.zeros((2, 1, 4), dtype=dt) + 1,
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few bounding boxes
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     np.zeros((1, 1, 4), dtype=dt) + 1,
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
@@ -1638,7 +1638,7 @@ class TestNormalization(unittest.TestCase):
         assert bbs_norm[0].bounding_boxes[0].x2 == 3
         assert bbs_norm[0].bounding_boxes[0].y2 == 4
 
-        _assert_single_image_expected((1, 4))
+        _assert_single_image_expected((1, 2, 3, 4))
 
         # ----
         # single BoundingBox instance
@@ -1703,7 +1703,7 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(bbs_norm[0].to_xyxy_array(), 1)
 
             # --> bounding boxes for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [
                         np.zeros((1, 4), dtype=dt) + 1,
@@ -1713,14 +1713,14 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> too few bounding boxes
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [np.zeros((1, 4), dtype=dt) + 1],
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [np.zeros((1, 4), dtype=dt) + 1],
                     shapes=None
@@ -1753,9 +1753,9 @@ class TestNormalization(unittest.TestCase):
         assert bbs_norm[0].bounding_boxes[1].y2 == 8
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _bbs_norm = normalization.normalize_bounding_boxes(
-                [(1, 4)],
+                [(1, 2, 3, 4)],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
@@ -1783,7 +1783,7 @@ class TestNormalization(unittest.TestCase):
         assert bbs_norm[0].bounding_boxes[1].y2 == 8
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -1860,17 +1860,17 @@ class TestNormalization(unittest.TestCase):
         assert bbs_norm[1].bounding_boxes[1].y2 == 12
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [
-                    [(1, 4), (3, 4)],
-                    [(5, 6), (7, 8)]
+                    [(1, 2, 3, 4), (3, 4, 5, 6)],
+                    [(5, 6, 7, 8), (7, 8, 9, 10)]
                 ],
                 shapes=None
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [
                     [(1, 2, 3, 4)],
@@ -1917,7 +1917,7 @@ class TestNormalization(unittest.TestCase):
         assert bbs_norm[1].bounding_boxes[1].y2 == 16
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [
                     [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
@@ -1929,7 +1929,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [
                     [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
