@@ -193,37 +193,38 @@ def normalize_keypoints(inputs, shapes=None):
                 in zip(inputs, shapes)]
 
 
-def normalize_bounding_boxes(inputs, images=None):
+def normalize_bounding_boxes(inputs, shapes=None):
     # TODO get rid of this deferred import
     from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 
+    shapes = _preprocess_shapes(shapes)
     ntype = estimate_bounding_boxes_norm_type(inputs)
     if ntype == "None":
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        assert images is not None
+        assert shapes is not None
         assert inputs.ndim == 3  # (N,B,4)
         assert inputs.shape[2] == 4
-        assert len(inputs) == len(images)
+        assert len(inputs) == len(shapes)
         return [
-            BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=image_i.shape)
-            for attr_i, image_i
-            in zip(inputs, images)
+            BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     elif ntype == "tuple[number,size=4]":
-        assert images is not None
-        assert len(images) == 1
+        assert shapes is not None
+        assert len(shapes) == 1
         return [
             BoundingBoxesOnImage(
                 [BoundingBox(
                     x1=inputs[0], y1=inputs[1],
                     x2=inputs[2], y2=inputs[3])],
-                shape=images[0].shape)
+                shape=shapes[0])
         ]
     elif ntype == "BoundingBox":
-        assert images is not None
-        assert len(images) == 1
-        return [BoundingBoxesOnImage([inputs], shape=images[0].shape)]
+        assert shapes is not None
+        assert len(shapes) == 1
+        return [BoundingBoxesOnImage([inputs], shape=shapes[0])]
     elif ntype == "BoundingBoxesOnImage":
         return [inputs]
     elif ntype == "iterable[empty]":
@@ -231,49 +232,49 @@ def normalize_bounding_boxes(inputs, images=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        assert images is not None
+        assert shapes is not None
         assert all([attr_i.ndim == 2 for attr_i in inputs])  # (B,4)
         assert all([attr_i.shape[1] == 4 for attr_i in inputs])
-        assert len(inputs) == len(images)
+        assert len(inputs) == len(shapes)
         return [
-            BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=image_i.shape)
-            for attr_i, image_i
-            in zip(inputs, images)
+            BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     elif ntype == "iterable-tuple[number,size=4]":
-        assert images is not None
-        assert len(images) == 1
+        assert shapes is not None
+        assert len(shapes) == 1
         return [
             BoundingBoxesOnImage(
                 [BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2)
                  for x1, y1, x2, y2 in inputs],
-                shape=images[0].shape)
+                shape=shapes[0])
         ]
     elif ntype == "iterable-BoundingBox":
-        assert images is not None
-        assert len(images) == 1
-        return [BoundingBoxesOnImage(inputs, shape=images[0].shape)]
+        assert shapes is not None
+        assert len(shapes) == 1
+        return [BoundingBoxesOnImage(inputs, shape=shapes[0])]
     elif ntype == "iterable-BoundingBoxesOnImage":
         return inputs
     elif ntype == "iterable-iterable[empty]":
         return None
     elif ntype == "iterable-iterable-tuple[number,size=4]":
-        assert images is not None
-        assert len(inputs) == len(images)
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
         return [
             BoundingBoxesOnImage.from_xyxy_array(
                 np.array(attr_i, dtype=np.float32),
-                shape=image_i.shape)
-            for attr_i, image_i
-            in zip(inputs, images)
+                shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     else:
         assert ntype == "iterable-iterable-BoundingBox"
-        assert images is not None
-        assert len(inputs) == len(images)
-        return [BoundingBoxesOnImage(attr_i, shape=image_i.shape)
-                for attr_i, image_i
-                in zip(inputs, images)]
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
+        return [BoundingBoxesOnImage(attr_i, shape=shape)
+                for attr_i, shape
+                in zip(inputs, shapes)]
 
 
 def normalize_polygons(inputs, images=None):

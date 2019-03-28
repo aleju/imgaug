@@ -403,7 +403,7 @@ class TestNormalization(unittest.TestCase):
         def _norm_and_invert(bbs, images):
             return normalization.invert_normalize_bounding_boxes(
                 normalization.normalize_bounding_boxes(
-                    bbs, images=images),
+                    bbs, shapes=images),
                 bbs
             )
 
@@ -1554,21 +1554,21 @@ class TestNormalization(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     inputs,
-                    images=None
+                    shapes=None
                 )
 
             # --> too many images
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     inputs,
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> too many images
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     inputs,
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                             np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
@@ -1584,7 +1584,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             bbs_norm = normalization.normalize_bounding_boxes(
                 np.zeros((1, 1, 4), dtype=dt) + 1,
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(bbs_norm, list)
             assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1593,7 +1593,7 @@ class TestNormalization(unittest.TestCase):
 
             bbs_norm = normalization.normalize_bounding_boxes(
                 np.zeros((1, 5, 4), dtype=dt) + 1,
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(bbs_norm, list)
             assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1604,21 +1604,21 @@ class TestNormalization(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     np.zeros((2, 1, 4), dtype=dt) + 1,
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few bounding boxes
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     np.zeros((1, 1, 4), dtype=dt) + 1,
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> wrong keypoints shape
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     np.zeros((1, 1, 100), dtype=dt) + 1,
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
             _assert_single_image_expected(np.zeros((1, 1, 4), dtype=dt) + 1)
@@ -1628,7 +1628,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         bbs_norm = normalization.normalize_bounding_boxes(
             (1, 2, 3, 4),
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(bbs_norm, list)
         assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1645,7 +1645,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         bbs_norm = normalization.normalize_bounding_boxes(
             ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(bbs_norm, list)
         assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1664,7 +1664,7 @@ class TestNormalization(unittest.TestCase):
             ia.BoundingBoxesOnImage(
                 [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
                 shape=(1, 1, 3)),
-            images=None
+            shapes=None
         )
         assert isinstance(bbs_norm, list)
         assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1677,7 +1677,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         # empty iterable
         # ----
-        bbs_norm = normalization.normalize_bounding_boxes([], images=None)
+        bbs_norm = normalization.normalize_bounding_boxes([], shapes=None)
         assert bbs_norm is None
 
         # ----
@@ -1686,7 +1686,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             bbs_norm = normalization.normalize_bounding_boxes(
                 [np.zeros((1, 4), dtype=dt) + 1],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(bbs_norm, list)
             assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1695,7 +1695,7 @@ class TestNormalization(unittest.TestCase):
 
             bbs_norm = normalization.normalize_bounding_boxes(
                 [np.zeros((5, 4), dtype=dt) + 1],
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(bbs_norm, list)
             assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1709,28 +1709,28 @@ class TestNormalization(unittest.TestCase):
                         np.zeros((1, 4), dtype=dt) + 1,
                         np.zeros((1, 4), dtype=dt) + 1
                     ],
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few bounding boxes
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [np.zeros((1, 4), dtype=dt) + 1],
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [np.zeros((1, 4), dtype=dt) + 1],
-                    images=None
+                    shapes=None
                 )
 
             # --> wrong shape
             with self.assertRaises(AssertionError):
                 _bbs_norm = normalization.normalize_bounding_boxes(
                     [np.zeros((1, 100), dtype=dt) + 1],
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
         # ----
@@ -1738,7 +1738,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         bbs_norm = normalization.normalize_bounding_boxes(
             [(1, 2, 3, 4), (5, 6, 7, 8)],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(bbs_norm, list)
         assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1756,7 +1756,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [(1, 4)],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -1768,7 +1768,7 @@ class TestNormalization(unittest.TestCase):
                 ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
                 ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)
             ],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(bbs_norm, list)
         assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1786,7 +1786,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _bbs_norm = normalization.normalize_bounding_boxes(
                 [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -1802,7 +1802,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)],
                     shape=(1, 1, 3))
             ],
-            images=None
+            shapes=None
         )
         assert isinstance(bbs_norm, list)
 
@@ -1825,7 +1825,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         bbs_norm = normalization.normalize_bounding_boxes(
             [[]],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert bbs_norm is None
 
@@ -1837,7 +1837,7 @@ class TestNormalization(unittest.TestCase):
                 [(1, 2, 3, 4)],
                 [(5, 6, 7, 8), (9, 10, 11, 12)]
             ],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                     np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(bbs_norm, list)
@@ -1866,7 +1866,7 @@ class TestNormalization(unittest.TestCase):
                     [(1, 4), (3, 4)],
                     [(5, 6), (7, 8)]
                 ],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
@@ -1891,8 +1891,8 @@ class TestNormalization(unittest.TestCase):
                 [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
                  ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
             ],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
-                    np.zeros((1, 1, 3), dtype=np.uint8)],
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(bbs_norm, list)
         assert isinstance(bbs_norm[0], ia.BoundingBoxesOnImage)
@@ -1925,7 +1925,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
                      ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
                 ],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
@@ -1937,7 +1937,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.BoundingBox(x1=9, y1=10, x2=11, y2=12),
                      ia.BoundingBox(x1=13, y1=14, x2=15, y2=16)]
                 ],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
