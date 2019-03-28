@@ -1,4 +1,5 @@
 from __future__ import print_function, division, absolute_import
+import functools
 
 import numpy as np
 
@@ -38,17 +39,17 @@ def _assert_exactly_n_shapes(shapes, n, from_ntype, to_ntype):
             ("Tried to convert data of form '%s' to '%s'. This required "
              + "exactly %d corresponding image shapes, but instead %d were "
              + "provided. This can happen e.g. if more images were provided "
-             + "than a corresponding augmentables, e.g. 10 images but only 5 "
+             + "than corresponding augmentables, e.g. 10 images but only 5 "
              + "segmentation maps. It can also happen if there was a "
              + "misunderstanding about how an augmentable input would be "
              + "parsed. E.g. if a list of N (x,y)-tuples was provided as "
              + "keypoints and the expectation was that this would be parsed "
-             + "as one keypoint per image, but instead it was parsed as N "
-             + "keypoints on 1 image (i.e. 'shapes' would have to contain 1 "
-             + "shape, but N would be provided). To aboid this, it is "
-             + "recommended to provide imgaug standard classes, e.g. "
+             + "as one keypoint per image for N images, but instead it was "
+             + "parsed as N keypoints on 1 image (i.e. 'shapes' would have to "
+             + "contain 1 shape, but N would be provided). To avoid this, it "
+             + "is recommended to provide imgaug standard classes, e.g. "
              + "KeypointsOnImage for keypoints instead of lists of "
-             + "tuples.") % (from_ntype, to_ntype, n)
+             + "tuples.") % (from_ntype, to_ntype, n, len(shapes))
         )
 
 
@@ -84,12 +85,15 @@ def normalize_heatmaps(inputs, shapes=None):
 
     shapes = _preprocess_shapes(shapes)
     ntype = estimate_heatmaps_norm_type(inputs)
+    _assert_exactly_n_shapes_partial = functools.partial(
+        _assert_exactly_n_shapes,
+        from_ntype=ntype, to_ntype="List[HeatmapsOnImage]", shapes=shapes)
+
     if ntype == "None":
         return None
     elif ntype == "array[float]":
-        assert shapes is not None
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert inputs.ndim == 4  # always (N,H,W,C)
-        assert len(inputs) == len(shapes)
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
     elif ntype == "HeatmapsOnImage":
@@ -97,8 +101,7 @@ def normalize_heatmaps(inputs, shapes=None):
     elif ntype == "iterable[empty]":
         return None
     elif ntype == "iterable-array[float]":
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert all([attr_i.ndim == 3 for attr_i in inputs])  # all (H,W,C)
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]

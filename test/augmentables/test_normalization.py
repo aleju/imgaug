@@ -953,14 +953,14 @@ class TestNormalization(unittest.TestCase):
         assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
 
         # --> heatmaps for too many images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((2, 1, 1, 1), dtype=np.float32) + 0.1,
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
         # --> too few heatmaps
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1,
                 np.zeros((2, 1, 1, 3), dtype=np.uint8)
@@ -974,7 +974,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1,
                 shapes=None
@@ -1022,7 +1022,7 @@ class TestNormalization(unittest.TestCase):
         assert np.allclose(heatmaps_norm[0].arr_0to1, 0 + 0.1)
 
         # --> heatmaps for too many images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [
                     np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
@@ -1032,14 +1032,14 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> too few heatmaps
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [np.zeros((1, 1, 1), dtype=np.float32) + 0.1],
                 shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
             )
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [np.zeros((1, 1, 1), dtype=np.float32) + 0.1],
                 shapes=None,
