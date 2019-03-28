@@ -311,13 +311,17 @@ def normalize_polygons(inputs, shapes=None):
 
     shapes = _preprocess_shapes(shapes)
     ntype = estimate_polygons_norm_type(inputs)
+    _assert_exactly_n_shapes_partial = functools.partial(
+        _assert_exactly_n_shapes,
+        from_ntype=ntype, to_ntype="List[PolygonsOnImage]",
+        shapes=shapes)
+
     if ntype == "None":
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        assert shapes is not None
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert inputs.ndim == 4  # (N,#polys,#points,2)
         assert inputs.shape[-1] == 2
-        assert len(inputs) == len(shapes)
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
@@ -326,8 +330,7 @@ def normalize_polygons(inputs, shapes=None):
             in zip(inputs, shapes)
         ]
     elif ntype == "Polygon":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [PolygonsOnImage([inputs], shape=shapes[0])]
     elif ntype == "PolygonsOnImage":
         return [inputs]
@@ -336,10 +339,9 @@ def normalize_polygons(inputs, shapes=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        assert shapes is not None
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert all([attr_i.ndim == 3 for attr_i in inputs])  # (#polys,#points,2)
         assert all([attr_i.shape[-1] == 2 for attr_i in inputs])
-        assert len(inputs) == len(shapes)
         return [
             PolygonsOnImage([Polygon(poly_points) for poly_points in attr_i],
                             shape=shape)
@@ -347,16 +349,13 @@ def normalize_polygons(inputs, shapes=None):
             in zip(inputs, shapes)
         ]
     elif ntype == "iterable-tuple[number,size=2]":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [PolygonsOnImage([Polygon(inputs)], shape=shapes[0])]
     elif ntype == "iterable-Keypoint":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [PolygonsOnImage([Polygon(inputs)], shape=shapes[0])]
     elif ntype == "iterable-Polygon":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [PolygonsOnImage(inputs, shape=shapes[0])]
     elif ntype == "iterable-PolygonsOnImage":
         return inputs
@@ -365,8 +364,7 @@ def normalize_polygons(inputs, shapes=None):
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         assert all([poly_points.ndim == 2 and poly_points.shape[-1] == 2
                     for attr_i in inputs
                     for poly_points in attr_i])
@@ -378,22 +376,19 @@ def normalize_polygons(inputs, shapes=None):
             in zip(inputs, shapes)
         ]
     elif ntype == "iterable-iterable-tuple[number,size=2]":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [
             PolygonsOnImage([Polygon(attr_i) for attr_i in inputs],
                             shape=shapes[0])
         ]
     elif ntype == "iterable-iterable-Keypoint":
-        assert shapes is not None
-        assert len(shapes) == 1
+        _assert_exactly_n_shapes_partial(n=1)
         return [
             PolygonsOnImage([Polygon(attr_i) for attr_i in inputs],
                             shape=shapes[0])
         ]
     elif ntype == "iterable-iterable-Polygon":
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             PolygonsOnImage(attr_i, shape=shape)
             for attr_i, shape
@@ -404,8 +399,7 @@ def normalize_polygons(inputs, shapes=None):
     else:
         assert ntype in ["iterable-iterable-iterable-tuple[number,size=2]",
                          "iterable-iterable-iterable-Keypoint"]
-        assert shapes is not None
-        assert len(inputs) == len(shapes)
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],

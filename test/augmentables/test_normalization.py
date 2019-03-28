@@ -1945,18 +1945,18 @@ class TestNormalization(unittest.TestCase):
     def test_normalize_polygons(self):
         def _assert_single_image_expected(inputs):
             # --> images None
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     inputs, shapes=None)
 
             # --> too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     inputs,
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8))
 
             # --> too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     inputs,
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2012,7 +2012,7 @@ class TestNormalization(unittest.TestCase):
                                coords1_arr)
 
             # --> polygons for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     np.tile(
                         coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
@@ -2022,7 +2022,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> too few polygons
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     np.tile(
                         coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
@@ -2106,7 +2106,7 @@ class TestNormalization(unittest.TestCase):
                                coords1_arr)
 
             # --> polygons for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     [coords1_arr[np.newaxis, ...].astype(dt),
                      coords2_arr[np.newaxis, ...].astype(dt)],
@@ -2114,7 +2114,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> too few polygons
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     [coords1_arr[np.newaxis, ...].astype(dt)],
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
@@ -2147,7 +2147,7 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 coords1,
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2167,7 +2167,7 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[0].polygons[0].exterior_almost_equals(coords1)
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 coords1_kps,
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2188,7 +2188,7 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
 
         # may only be used for single images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [ia.Polygon(coords1)],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2251,7 +2251,7 @@ class TestNormalization(unittest.TestCase):
                                coords1_arr)
 
             # --> polygons for too many images
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     [[coords1_arr.astype(dt)],
                      [coords2_arr.astype(dt)]],
@@ -2259,7 +2259,7 @@ class TestNormalization(unittest.TestCase):
                 )
 
             # --> too few polygons
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 _polygons_norm = normalization.normalize_polygons(
                     [[coords1_arr.astype(dt)]],
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
@@ -2293,14 +2293,14 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1, coords2],
                 shapes=None
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1, coords2],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2322,14 +2322,14 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[0].polygons[1].exterior_almost_equals(coords2)
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1_kps, coords2_kps],
                 shapes=None
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1_kps, coords2_kps],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2361,7 +2361,7 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[1].polygons[1].exterior_almost_equals(coords4)
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [
                     [ia.Polygon(coords1), ia.Polygon(coords2)],
@@ -2371,7 +2371,7 @@ class TestNormalization(unittest.TestCase):
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [
                     [ia.Polygon(coords1), ia.Polygon(coords2)],
@@ -2411,14 +2411,14 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[1].polygons[1].exterior_almost_equals(coords4)
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1, coords2]],
                 shapes=None
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1, coords2], [coords3]],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
@@ -2446,14 +2446,14 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[1].polygons[1].exterior_almost_equals(coords4)
 
         # --> images None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1_kps, coords2_kps]],
                 shapes=None
             )
 
         # --> different number of images
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1_kps, coords2_kps], [coords3_kps]],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
