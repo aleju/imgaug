@@ -277,29 +277,30 @@ def normalize_bounding_boxes(inputs, shapes=None):
                 in zip(inputs, shapes)]
 
 
-def normalize_polygons(inputs, images=None):
+def normalize_polygons(inputs, shapes=None):
     # TODO get rid of this deferred import
     from imgaug.augmentables.polys import Polygon, PolygonsOnImage
 
+    shapes = _preprocess_shapes(shapes)
     ntype = estimate_polygons_norm_type(inputs)
     if ntype == "None":
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        assert images is not None
+        assert shapes is not None
         assert inputs.ndim == 4  # (N,#polys,#points,2)
         assert inputs.shape[-1] == 2
-        assert len(inputs) == len(images)
+        assert len(inputs) == len(shapes)
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
-                shape=image_i.shape)
-            for attr_i, image_i
-            in zip(inputs, images)
+                shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     elif ntype == "Polygon":
-        assert images is not None
-        assert len(images) == 1
-        return [PolygonsOnImage([inputs], shape=images[0].shape)]
+        assert shapes is not None
+        assert len(shapes) == 1
+        return [PolygonsOnImage([inputs], shape=shapes[0])]
     elif ntype == "PolygonsOnImage":
         return [inputs]
     elif ntype == "iterable[empty]":
@@ -307,28 +308,28 @@ def normalize_polygons(inputs, images=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        assert images is not None
+        assert shapes is not None
         assert all([attr_i.ndim == 3 for attr_i in inputs])  # (#polys,#points,2)
         assert all([attr_i.shape[-1] == 2 for attr_i in inputs])
-        assert len(inputs) == len(images)
+        assert len(inputs) == len(shapes)
         return [
             PolygonsOnImage([Polygon(poly_points) for poly_points in attr_i],
-                            shape=image_i.shape)
-            for attr_i, image_i
-            in zip(inputs, images)
+                            shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     elif ntype == "iterable-tuple[number,size=2]":
-        assert images is not None
-        assert len(images) == 1
-        return [PolygonsOnImage([Polygon(inputs)], shape=images[0].shape)]
+        assert shapes is not None
+        assert len(shapes) == 1
+        return [PolygonsOnImage([Polygon(inputs)], shape=shapes[0])]
     elif ntype == "iterable-Keypoint":
-        assert images is not None
-        assert len(images) == 1
-        return [PolygonsOnImage([Polygon(inputs)], shape=images[0].shape)]
+        assert shapes is not None
+        assert len(shapes) == 1
+        return [PolygonsOnImage([Polygon(inputs)], shape=shapes[0])]
     elif ntype == "iterable-Polygon":
-        assert images is not None
-        assert len(images) == 1
-        return [PolygonsOnImage(inputs, shape=images[0].shape)]
+        assert shapes is not None
+        assert len(shapes) == 1
+        return [PolygonsOnImage(inputs, shape=shapes[0])]
     elif ntype == "iterable-PolygonsOnImage":
         return inputs
     elif ntype == "iterable-iterable[empty]":
@@ -336,50 +337,53 @@ def normalize_polygons(inputs, images=None):
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
-        assert images is not None
-        assert len(inputs) == len(images)
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
         assert all([poly_points.ndim == 2 and poly_points.shape[-1] == 2
                     for attr_i in inputs
                     for poly_points in attr_i])
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
-                shape=image_i.shape)
-            for attr_i, image_i in zip(inputs, images)
+                shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     elif ntype == "iterable-iterable-tuple[number,size=2]":
-        assert images is not None
-        assert len(images) == 1
+        assert shapes is not None
+        assert len(shapes) == 1
         return [
             PolygonsOnImage([Polygon(attr_i) for attr_i in inputs],
-                            shape=images[0].shape)
+                            shape=shapes[0])
         ]
     elif ntype == "iterable-iterable-Keypoint":
-        assert images is not None
-        assert len(images) == 1
+        assert shapes is not None
+        assert len(shapes) == 1
         return [
             PolygonsOnImage([Polygon(attr_i) for attr_i in inputs],
-                            shape=images[0].shape)
+                            shape=shapes[0])
         ]
     elif ntype == "iterable-iterable-Polygon":
-        assert images is not None
-        assert len(inputs) == len(images)
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
         return [
-            PolygonsOnImage(attr_i, shape=images[0].shape)
-            for attr_i, image_i in zip(inputs, images)
+            PolygonsOnImage(attr_i, shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
     elif ntype == "iterable-iterable-iterable[empty]":
         return None
     else:
         assert ntype in ["iterable-iterable-iterable-tuple[number,size=2]",
                          "iterable-iterable-iterable-Keypoint"]
-        assert images is not None
-        assert len(inputs) == len(images)
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
-                shape=image_i.shape)
-            for attr_i, image_i in zip(inputs, images)
+                shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)
         ]
 
 

@@ -606,7 +606,7 @@ class TestNormalization(unittest.TestCase):
         def _norm_and_invert(polys, images):
             return normalization.invert_normalize_polygons(
                 normalization.normalize_polygons(
-                    polys, images=images),
+                    polys, shapes=images),
                 polys
             )
 
@@ -1947,19 +1947,19 @@ class TestNormalization(unittest.TestCase):
             # --> images None
             with self.assertRaises(AssertionError):
                 _polygons_norm = normalization.normalize_polygons(
-                    inputs, images=None)
+                    inputs, shapes=None)
 
             # --> too many images
             with self.assertRaises(AssertionError):
                 _polygons_norm = normalization.normalize_polygons(
                     inputs,
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8))
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8))
 
             # --> too many images
             with self.assertRaises(AssertionError):
                 _polygons_norm = normalization.normalize_polygons(
                     inputs,
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                             np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
@@ -1990,7 +1990,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             polygons_norm = normalization.normalize_polygons(
                 coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(polygons_norm, list)
             assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2003,7 +2003,7 @@ class TestNormalization(unittest.TestCase):
                     coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
                     (1, 5, 1, 1)
                 ),
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(polygons_norm, list)
             assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2018,7 +2018,7 @@ class TestNormalization(unittest.TestCase):
                         coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
                         (2, 1, 1, 1)
                     ),
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few polygons
@@ -2028,7 +2028,7 @@ class TestNormalization(unittest.TestCase):
                         coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
                         (1, 1, 1, 1)
                     ),
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> wrong polygons shape
@@ -2038,7 +2038,7 @@ class TestNormalization(unittest.TestCase):
                         coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
                         (1, 1, 1, 10)
                     ),
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
             _assert_single_image_expected(
@@ -2049,7 +2049,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             ia.Polygon(coords1),
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2063,7 +2063,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             ia.PolygonsOnImage([ia.Polygon(coords1)], shape=(1, 1, 3)),
-            images=None,
+            shapes=None
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2074,7 +2074,7 @@ class TestNormalization(unittest.TestCase):
         # empty iterable
         # ----
         polygons_norm = normalization.normalize_polygons(
-            [], images=None
+            [], shapes=None
         )
         assert polygons_norm is None
 
@@ -2084,7 +2084,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             polygons_norm = normalization.normalize_polygons(
                 [coords1_arr[np.newaxis, ...].astype(dt)],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(polygons_norm, list)
             assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2097,7 +2097,7 @@ class TestNormalization(unittest.TestCase):
                     coords1_arr[np.newaxis, ...].astype(dt),
                     (5, 1, 1)
                 )],
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(polygons_norm, list)
             assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2110,14 +2110,14 @@ class TestNormalization(unittest.TestCase):
                 _polygons_norm = normalization.normalize_polygons(
                     [coords1_arr[np.newaxis, ...].astype(dt),
                      coords2_arr[np.newaxis, ...].astype(dt)],
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few polygons
             with self.assertRaises(AssertionError):
                 _polygons_norm = normalization.normalize_polygons(
                     [coords1_arr[np.newaxis, ...].astype(dt)],
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> wrong polygons shape
@@ -2127,7 +2127,7 @@ class TestNormalization(unittest.TestCase):
                         coords1_arr[np.newaxis, ...].astype(dt),
                         (1, 1, 10)
                     )],
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
             _assert_single_image_expected(
@@ -2139,7 +2139,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             coords1,
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2150,7 +2150,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 coords1,
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -2159,7 +2159,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             coords1_kps,
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2170,7 +2170,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 coords1_kps,
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -2179,7 +2179,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [ia.Polygon(coords1), ia.Polygon(coords2)],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2191,7 +2191,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [ia.Polygon(coords1)],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -2203,7 +2203,7 @@ class TestNormalization(unittest.TestCase):
                 ia.PolygonsOnImage([ia.Polygon(coords1)], shape=(1, 1, 3)),
                 ia.PolygonsOnImage([ia.Polygon(coords2)], shape=(1, 1, 3))
             ],
-            images=None
+            shapes=None
         )
         assert isinstance(polygons_norm, list)
 
@@ -2220,7 +2220,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [[]],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert polygons_norm is None
 
@@ -2230,7 +2230,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             polygons_norm = normalization.normalize_polygons(
                 [[coords1_arr.astype(dt)]],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(polygons_norm, list)
             assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2242,7 +2242,7 @@ class TestNormalization(unittest.TestCase):
                 [[
                     np.copy(coords1_arr).astype(dt) for _ in sm.xrange(5)
                 ]],
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(polygons_norm, list)
             assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2255,14 +2255,14 @@ class TestNormalization(unittest.TestCase):
                 _polygons_norm = normalization.normalize_polygons(
                     [[coords1_arr.astype(dt)],
                      [coords2_arr.astype(dt)]],
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few polygons
             with self.assertRaises(AssertionError):
                 _polygons_norm = normalization.normalize_polygons(
                     [[coords1_arr.astype(dt)]],
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> wrong polygons shape
@@ -2272,7 +2272,7 @@ class TestNormalization(unittest.TestCase):
                         coords1_arr.astype(dt),
                         (1, 1, 10)
                     )]],
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
             _assert_single_image_expected(
@@ -2284,7 +2284,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [coords1, coords2],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2296,14 +2296,14 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1, coords2],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1, coords2],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
@@ -2313,7 +2313,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [coords1_kps, coords2_kps],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
         assert isinstance(polygons_norm[0], ia.PolygonsOnImage)
@@ -2325,14 +2325,14 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1_kps, coords2_kps],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [coords1_kps, coords2_kps],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
@@ -2345,7 +2345,7 @@ class TestNormalization(unittest.TestCase):
                 [ia.Polygon(coords1), ia.Polygon(coords2)],
                 [ia.Polygon(coords3), ia.Polygon(coords4)]
             ],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                     np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
@@ -2367,7 +2367,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.Polygon(coords1), ia.Polygon(coords2)],
                     [ia.Polygon(coords3), ia.Polygon(coords4)]
                 ],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
@@ -2377,7 +2377,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.Polygon(coords1), ia.Polygon(coords2)],
                     [ia.Polygon(coords3), ia.Polygon(coords4)]
                 ],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
@@ -2387,7 +2387,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [[[]]],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert polygons_norm is None
 
@@ -2396,7 +2396,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [[coords1, coords2], [coords3, coords4]],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                     np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
@@ -2414,14 +2414,14 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1, coords2]],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1, coords2], [coords3]],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
@@ -2431,7 +2431,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         polygons_norm = normalization.normalize_polygons(
             [[coords1_kps, coords2_kps], [coords3_kps, coords4_kps]],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                     np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(polygons_norm, list)
@@ -2449,14 +2449,14 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1_kps, coords2_kps]],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
         with self.assertRaises(AssertionError):
             _polygons_norm = normalization.normalize_polygons(
                 [[coords1_kps, coords2_kps], [coords3_kps]],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
