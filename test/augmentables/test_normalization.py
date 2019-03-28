@@ -88,7 +88,7 @@ class TestNormalization(unittest.TestCase):
     def test_invert_normalize_heatmaps(self):
         def _norm_and_invert(heatmaps, images):
             return normalization.invert_normalize_heatmaps(
-                normalization.normalize_heatmaps(heatmaps, images=images),
+                normalization.normalize_heatmaps(heatmaps, shapes=images),
                 heatmaps
             )
 
@@ -938,7 +938,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         heatmaps_norm = normalization.normalize_heatmaps(
             np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1,
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(heatmaps_norm, list)
         assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
@@ -946,7 +946,7 @@ class TestNormalization(unittest.TestCase):
 
         heatmaps_norm = normalization.normalize_heatmaps(
             np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1,
-            images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+            shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
         )
         assert isinstance(heatmaps_norm, list)
         assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
@@ -956,7 +956,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((2, 1, 1, 1), dtype=np.float32) + 0.1,
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
         # --> too few heatmaps
@@ -970,14 +970,14 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
 
         # --> images None
         with self.assertRaises(AssertionError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1,
-                images=None,
+                shapes=None
             )
 
         # ----
@@ -987,7 +987,7 @@ class TestNormalization(unittest.TestCase):
             ia.HeatmapsOnImage(
                 np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
                 shape=(1, 1, 3)),
-            images=None,
+            shapes=None
         )
         assert isinstance(heatmaps_norm, list)
         assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
@@ -998,7 +998,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         heatmaps_norm = normalization.normalize_heatmaps(
             [],
-            images=None
+            shapes=None
         )
         assert heatmaps_norm is None
 
@@ -1007,7 +1007,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         heatmaps_norm = normalization.normalize_heatmaps(
             [np.zeros((1, 1, 1), dtype=np.float32) + 0.1],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(heatmaps_norm, list)
         assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
@@ -1015,7 +1015,7 @@ class TestNormalization(unittest.TestCase):
 
         heatmaps_norm = normalization.normalize_heatmaps(
             [np.zeros((1, 1, 1), dtype=np.float32) + 0.1],
-            images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+            shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
         )
         assert isinstance(heatmaps_norm, list)
         assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)
@@ -1028,28 +1028,28 @@ class TestNormalization(unittest.TestCase):
                     np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
                     np.zeros((1, 1, 1), dtype=np.float32) + 0.1
                 ],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
         # --> too few heatmaps
         with self.assertRaises(AssertionError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [np.zeros((1, 1, 1), dtype=np.float32) + 0.1],
-                images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
             )
 
         # --> images None
         with self.assertRaises(AssertionError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [np.zeros((1, 1, 1), dtype=np.float32) + 0.1],
-                images=None,
+                shapes=None,
             )
 
         # --> wrong number of dimensions
         with self.assertRaises(AssertionError):
             _heatmaps_norm = normalization.normalize_heatmaps(
                 [np.zeros((1, 1, 1, 1), dtype=np.float32) + 0.1],
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
 
         # ----
@@ -1059,7 +1059,7 @@ class TestNormalization(unittest.TestCase):
             [ia.HeatmapsOnImage(
                 np.zeros((1, 1, 1), dtype=np.float32) + 0.1,
                 shape=(1, 1, 3))],
-            images=None
+            shapes=None
         )
         assert isinstance(heatmaps_norm, list)
         assert isinstance(heatmaps_norm[0], ia.HeatmapsOnImage)

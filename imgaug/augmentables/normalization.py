@@ -6,6 +6,24 @@ import imgaug.imgaug as ia
 import imgaug.dtypes as iadt
 
 
+def _preprocess_shapes(shapes):
+    if shapes is None:
+        return None
+    elif ia.is_np_array(shapes):
+        assert shapes.ndim in [3, 4]
+        return [image.shape for image in shapes]
+    else:
+        assert isinstance(shapes, list)
+        result = []
+        for shape_i in shapes:
+            if isinstance(shape_i, tuple):
+                result.append(shape_i)
+            else:
+                assert ia.is_np_array(shape_i)
+                result.append(shape_i.shape)
+        return result
+
+
 def normalize_images(images):
     if images is None:
         return None
@@ -32,29 +50,30 @@ def normalize_images(images):
     )
 
 
-def normalize_heatmaps(inputs, images=None):
+def normalize_heatmaps(inputs, shapes=None):
     # TODO get rid of this deferred import
     from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
+    shapes = _preprocess_shapes(shapes)
     ntype = estimate_heatmaps_norm_type(inputs)
     if ntype == "None":
         return None
     elif ntype == "array[float]":
-        assert images is not None
+        assert shapes is not None
         assert inputs.ndim == 4  # always (N,H,W,C)
-        assert len(inputs) == len(images)
-        return [HeatmapsOnImage(attr_i, shape=image_i.shape)
-                for attr_i, image_i in zip(inputs, images)]
+        assert len(inputs) == len(shapes)
+        return [HeatmapsOnImage(attr_i, shape=shape_i)
+                for attr_i, shape_i in zip(inputs, shapes)]
     elif ntype == "HeatmapsOnImage":
         return [inputs]
     elif ntype == "iterable[empty]":
         return None
     elif ntype == "iterable-array[float]":
-        assert images is not None
-        assert len(inputs) == len(images)
+        assert shapes is not None
+        assert len(inputs) == len(shapes)
         assert all([attr_i.ndim == 3 for attr_i in inputs])  # all (H,W,C)
-        return [HeatmapsOnImage(attr_i, shape=image_i.shape)
-                for attr_i, image_i in zip(inputs, images)]
+        return [HeatmapsOnImage(attr_i, shape=shape_i)
+                for attr_i, shape_i in zip(inputs, shapes)]
     else:
         assert ntype == "iterable-HeatmapsOnImage"
         return inputs  # len allowed to differ from len of images
