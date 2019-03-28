@@ -232,7 +232,7 @@ class TestNormalization(unittest.TestCase):
         def _norm_and_invert(kps, images):
             return normalization.invert_normalize_keypoints(
                 normalization.normalize_keypoints(
-                    kps, images=images),
+                    kps, shapes=images),
                 kps
             )
 
@@ -1211,14 +1211,14 @@ class TestNormalization(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     inputs,
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> too many images
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     inputs,
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                             np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
@@ -1234,7 +1234,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             keypoints_norm = normalization.normalize_keypoints(
                 np.zeros((1, 1, 2), dtype=dt) + 1,
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1243,7 +1243,7 @@ class TestNormalization(unittest.TestCase):
 
             keypoints_norm = normalization.normalize_keypoints(
                 np.zeros((1, 5, 2), dtype=dt) + 1,
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1254,21 +1254,21 @@ class TestNormalization(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     np.zeros((2, 1, 2), dtype=dt) + 1,
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few keypoints
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     np.zeros((1, 1, 2), dtype=dt) + 1,
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> wrong keypoints shape
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     np.zeros((1, 1, 100), dtype=dt) + 1,
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
             _assert_single_image_expected(np.zeros((1, 1, 2), dtype=dt) + 1)
@@ -1278,7 +1278,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         keypoints_norm = normalization.normalize_keypoints(
             (1, 2),
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(keypoints_norm, list)
         assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1293,7 +1293,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         keypoints_norm = normalization.normalize_keypoints(
             ia.Keypoint(x=1, y=2),
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(keypoints_norm, list)
         assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1308,7 +1308,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         keypoints_norm = normalization.normalize_keypoints(
             ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3)),
-            images=None,
+            shapes=None
         )
         assert isinstance(keypoints_norm, list)
         assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1320,7 +1320,7 @@ class TestNormalization(unittest.TestCase):
         # empty iterable
         # ----
         keypoints_norm = normalization.normalize_keypoints(
-            [], images=None
+            [], shapes=None
         )
         assert keypoints_norm is None
 
@@ -1330,7 +1330,7 @@ class TestNormalization(unittest.TestCase):
         for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
             keypoints_norm = normalization.normalize_keypoints(
                 [np.zeros((1, 2), dtype=dt) + 1],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1339,7 +1339,7 @@ class TestNormalization(unittest.TestCase):
 
             keypoints_norm = normalization.normalize_keypoints(
                 [np.zeros((5, 2), dtype=dt) + 1],
-                images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1353,28 +1353,28 @@ class TestNormalization(unittest.TestCase):
                         np.zeros((1, 2), dtype=dt) + 1,
                         np.zeros((1, 2), dtype=dt) + 1
                     ],
-                    images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+                    shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few keypoints
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [np.zeros((1, 2), dtype=dt) + 1],
-                    images=np.zeros((2, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [np.zeros((1, 2), dtype=dt) + 1],
-                    images=None
+                    shapes=None
                 )
 
             # --> wrong shape
             with self.assertRaises(AssertionError):
                 _keypoints_norm = normalization.normalize_keypoints(
                     [np.zeros((1, 100), dtype=dt) + 1],
-                    images=np.zeros((1, 1, 1, 3), dtype=np.uint8)
+                    shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
         # ----
@@ -1382,7 +1382,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         keypoints_norm = normalization.normalize_keypoints(
             [(1, 2), (3, 4)],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(keypoints_norm, list)
         assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1396,7 +1396,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [(1, 2)],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -1405,7 +1405,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         keypoints_norm = normalization.normalize_keypoints(
             [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(keypoints_norm, list)
         assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
@@ -1419,7 +1419,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _keypoints_norm = normalization.normalize_keypoints(
                 [ia.Keypoint(x=1, y=2)],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
 
@@ -1431,7 +1431,7 @@ class TestNormalization(unittest.TestCase):
                 ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(1, 1, 3)),
                 ia.KeypointsOnImage([ia.Keypoint(x=3, y=4)], shape=(1, 1, 3)),
             ],
-            images=None
+            shapes=None
         )
         assert isinstance(keypoints_norm, list)
 
@@ -1450,7 +1450,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         keypoints_norm = normalization.normalize_keypoints(
             [[]],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert keypoints_norm is None
 
@@ -1462,7 +1462,7 @@ class TestNormalization(unittest.TestCase):
                 [(1, 2), (3, 4)],
                 [(5, 6), (7, 8)]
             ],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                     np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(keypoints_norm, list)
@@ -1486,7 +1486,7 @@ class TestNormalization(unittest.TestCase):
                     [(1, 2), (3, 4)],
                     [(5, 6), (7, 8)]
                 ],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
@@ -1496,7 +1496,7 @@ class TestNormalization(unittest.TestCase):
                     [(1, 2), (3, 4)],
                     [(5, 6), (7, 8)]
                 ],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
@@ -1509,7 +1509,7 @@ class TestNormalization(unittest.TestCase):
                 [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
                 [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
             ],
-            images=[np.zeros((1, 1, 3), dtype=np.uint8),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                     np.zeros((1, 1, 3), dtype=np.uint8)]
         )
         assert isinstance(keypoints_norm, list)
@@ -1533,7 +1533,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
                     [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
                 ],
-                images=None
+                shapes=None
             )
 
         # --> different number of images
@@ -1543,7 +1543,7 @@ class TestNormalization(unittest.TestCase):
                     [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)],
                     [ia.Keypoint(x=5, y=6), ia.Keypoint(x=7, y=8)]
                 ],
-                images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
