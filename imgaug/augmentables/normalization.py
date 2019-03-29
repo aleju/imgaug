@@ -344,7 +344,7 @@ def normalize_bounding_boxes(inputs, shapes=None):
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
         _assert_exactly_n_shapes_partial(n=len(inputs))
-        _assert_many_arrays_ndim(inputs, 2, "(B,2)", "BoundingBoxesOnImage")
+        _assert_many_arrays_ndim(inputs, 2, "(B,4)", "BoundingBoxesOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
         return [
             BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)

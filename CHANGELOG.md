@@ -72,11 +72,16 @@
 * Moved `HeatmapsOnImage` to `augmentables/heatmaps.py`.
 * Moved `SegmentationMapOnImage` to `augmentables/segmaps.py`.
 * Moved `Batch` to `augmentables/batches.py`.
+* Added `imgaug.augmentables.batches.UnnormalizedBatch`.
 * Added module `imgaug.augmentables.normalization` for data normalization routines.
 * Added normalization routines to `imgaug.augmentables.batches.Batch`.
-* Changed `augment_batches()` to now normalize batches before augmentation.
-  This allows to use `Batch` instances with non-standard datatypes.
-* Marked support for non-`Batch` inputs to `augment_batches()` as deprecated.
+* Changed `augment_batches()`:
+  * Accepts now `UnnormalizedBatch` as input. It is automatically normalized before augmentation and unnormalized afterwards.
+    This allows to use `Batch` instances with non-standard datatypes.
+  * Accepts now single instances of `Batch` (and `UnnormalizedBatch`).
+  * The input may now also be a generator.
+  * The input may now be any iterable instead of just list (arrays or strings are not allowed).
+* Marked support for non-`Batch` (and non-`UnnormalizedBatch`) inputs to `augment_batches()` as deprecated.
 * Added `Augmenter.augment()` method.
 * Added `dtypes.clip_()` function.
 * Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` causing errors when clip value range exceeded array dtype's value range.
