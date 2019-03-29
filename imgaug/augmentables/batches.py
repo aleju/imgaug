@@ -300,53 +300,6 @@ class Batch(object):
         self.polygons_aug = None
         self.data = data
 
-    def set_images_aug_normalized(self, images):
-        self.images_aug = nlib.invert_normalize_images(
-            images, self.images_unaug)
-
-    def set_heatmaps_aug_normalized(self, heatmaps):
-        self.heatmaps_aug = nlib.invert_normalize_heatmaps(
-            heatmaps, self.heatmaps_unaug)
-
-    def set_segmentation_maps_aug_normalized(self, segmentation_maps):
-        self.segmentation_maps_aug = nlib.invert_normalize_segmentation_maps(
-            segmentation_maps, self.segmentation_maps_unaug)
-
-    def set_keypoints_aug_normalized(self, keypoints):
-        self.keypoints_aug = nlib.invert_normalize_keypoints(
-            keypoints, self.keypoints_unaug)
-
-    def set_bounding_boxes_aug_normalized(self, bounding_boxes):
-        self.bounding_boxes_aug = nlib.invert_normalize_bounding_boxes(
-            bounding_boxes, self.bounding_boxes_unaug)
-
-    def set_polygons_aug_normalized(self, polygons):
-        self.polygons_aug = nlib.invert_normalize_polygons(
-            polygons, self.polygons_unaug)
-
-    def get_images_unaug_normalized(self):
-        return nlib.normalize_images(self.images_unaug)
-
-    def get_heatmaps_unaug_normalized(self):
-        return nlib.normalize_heatmaps(
-            self.heatmaps_unaug, self.get_images_unaug_normalized())
-
-    def get_segmentation_maps_unaug_normalized(self):
-        return nlib.normalize_segmentation_maps(
-            self.segmentation_maps_unaug, self.get_images_unaug_normalized())
-
-    def get_keypoints_unaug_normalized(self):
-        return nlib.normalize_keypoints(
-            self.keypoints_unaug, self.get_images_unaug_normalized())
-
-    def get_bounding_boxes_unaug_normalized(self):
-        return nlib.normalize_bounding_boxes(
-            self.bounding_boxes_unaug, self.get_images_unaug_normalized())
-
-    def get_polygons_unaug_normalized(self):
-        return nlib.normalize_polygons(
-            self.polygons_unaug, self.get_images_unaug_normalized())
-
     @property
     def images(self):
         warnings.warn(DeprecationWarning(
