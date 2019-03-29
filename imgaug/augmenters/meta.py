@@ -1311,6 +1311,241 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         return result
 
     def augment(self, return_batch=False, hooks=None, **kwargs):
+        """
+        Augment data.
+
+        This method is a wrapper around
+        ``imgaug.augmentables.batches.UnnormalizedBatch`` and
+        ``augment_batch()``. Hence, it supports the same datatypes as
+        ``UnnormalizedBatch``.
+
+        If `return_batch` was not set to ``True``, this method will try to
+        return the same augmentables (only augmented) in the same order as
+        they were provided. E.g. ``augment(images, keypoints)`` will return
+        a tuple ``(augmented images, augmented keypoints)``.
+        Only in _python 3.6+_ three or more augmentables may be used as input.
+        Only in _python 3.6+_ is the return order guaranteed to match the
+        order of the named arguments in the method call.
+        In _python <3.6_ only two augmentables may be provided max.
+        In _python <3.6_ the order of the returned tuple does _not_ match the
+        order of the (input) named arguments (because there is no way to
+        retrieve it in these versions). Instead the order is always as
+        follows: (1) image/images, (2) heatmaps, (3) segmentation maps,
+        (4) keypoints, (5) bounding boxes, (6) polygons.
+
+        It is recommended to use python 3.6 when using this method.
+
+        All augmentables must be provided as named arguments.
+        E.g. ``augment(<array>)`` will crash, but ``augment(images=<array>)``
+        will work.
+
+        Parameters
+        ----------
+        image : None
+            or (H,W,C) ndarray \
+            or (H,W) ndarray, \
+            optional
+            The image to augment. Only this or `images` can be set, not both.
+
+        images : None \
+            or (N,H,W,C) ndarray \
+            or (N,H,W) ndarray \
+            or iterable of (H,W,C) ndarray \
+            or iterable of (H,W) ndarray, \
+            optional
+            The images to augment. Only this or `image` can be set, not both.
+
+        heatmaps : None \
+            or (N,H,W,C) ndarray \
+            or imgaug.augmentables.heatmaps.HeatmapsOnImage \
+            or iterable of (H,W,C) ndarray \
+            or iterable of imgaug.augmentables.heatmaps.HeatmapsOnImage, \
+            optional
+            The heatmaps to augment.
+            If anything else than ``HeatmapsOnImage``, then the number of
+            heatmaps must match the number of images provided via parameter
+            `images`. The number is contained either in ``N`` or the first
+            iterable's size.
+
+        segmentation_maps : None \
+            or (N,H,W) ndarray \
+            or imgaug.augmentables.segmaps.SegmentationMapOnImage \
+            or iterable of (H,W) ndarray \
+            or iterable of imgaug.augmentables.segmaps.SegmentationMapOnImage, \
+            optional
+            The segmentation maps to augment.
+            If anything else than ``SegmentationMapOnImage``, then the number
+            of segmaps must match the number of images provided via parameter
+            `images`. The number is contained either in ``N`` or the first
+            iterable's size.
+
+        keypoints : None \
+            or list of (N,K,2) ndarray \
+            or tuple of number \
+            or imgaug.augmentables.kps.Keypoint \
+            or iterable of (K,2) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of imgaug.augmentables.kps.KeypointOnImage \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable of imgaug.augmentables.kps.Keypoint, \
+            optional
+            The keypoints to augment.
+            If a tuple (or iterable(s) of tuple), then iterpreted as (x,y)
+            coordinates and must hence contain two numbers.
+            A single tuple represents a single coordinate on one image, an
+            iterable of tuples the coordinates on one image and an iterable of
+            iterable of tuples the coordinates on several images. Analogous if
+            ``Keypoint`` objects are used instead of tuples.
+            If an ndarray, then ``N`` denotes the number of images and ``K``
+            the number of keypoints on each image.
+            If anything else than ``KeypointsOnImage`` is provided, then the
+            number of keypoint groups must match the number of images provided
+            via parameter `images`. The number is contained e.g. in ``N`` or
+            in case of "iterable of iterable of tuples" in the first iterable's
+            size.
+
+        bounding_boxes : None \
+            or (N,B,4) ndarray \
+            or tuple of number \
+            or imgaug.augmentables.bbs.BoundingBox \
+            or imgaug.augmentables.bbs.BoundingBoxesOnImage \
+            or iterable of (B,4) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.bbs.BoundingBox \
+            or iterable of imgaug.augmentables.bbs.BoundingBoxesOnImage \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable imgaug.augmentables.bbs.BoundingBox, \
+            optional
+            The bounding boxes to augment.
+            This is analogous to the `keypoints` parameter. However, each
+            tuple -- and also the last index in case of arrays -- has size 4,
+            denoting the bounding box coordinates ``x1``, ``y1``, ``x2`` and
+            ``y2``.
+
+        polygons : None  \
+            or (N,#polys,#points,2) ndarray \
+            or imgaug.augmentables.polys.Polygon \
+            or imgaug.augmentables.polys.PolygonsOnImage \
+            or iterable of (#polys,#points,2) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of imgaug.augmentables.polys.Polygon \
+            or iterable of imgaug.augmentables.polys.PolygonsOnImage \
+            or iterable of iterable of (#points,2) ndarray \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of iterable of imgaug.augmentables.polys.Polygon \
+            or iterable of iterable of iterable of tuple of number \
+            or iterable of iterable of iterable of tuple of \
+            imgaug.augmentables.kps.Keypoint, \
+            optional
+            The polygons to augment.
+            This is similar to the `keypoints` parameter. However, each polygon
+            may be made up of several (x,y) coordinates (three or more are
+            required for valid polygons).
+            The following datatypes will be interpreted as a single polygon on
+            a single image:
+              * ``imgaug.augmentables.polys.Polygon``
+              * ``iterable of tuple of number``
+              * ``iterable of imgaug.augmentables.kps.Keypoint``
+
+            The following datatypes will be interpreted as multiple polygons
+            on a single image:
+              * ``imgaug.augmentables.polys.PolygonsOnImage``
+              * ``iterable of imgaug.augmentables.polys.Polygon``
+              * ``iterable of iterable of tuple of number``
+              * ``iterable of iterable of imgaug.augmentables.kps.Keypoint``
+              * ``iterable of iterable of imgaug.augmentables.polys.Polygon``
+
+            The following datatypes will be interpreted as multiple polygons on
+            multiple images:
+              * ``(N,#polys,#points,2) ndarray``
+              * ``iterable of (#polys,#points,2) ndarray``
+              * ``iterable of iterable of (#points,2) ndarray``
+              * ``iterable of iterable of iterable of tuple of number``
+              * ``iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint``
+
+        return_batch : bool, optional
+            Whether to return an instance of
+            `imgaug.augmentables.batches.UnnormalizedBatch`. If the python
+            version is below 3.6 and more than two augmentables were provided
+            (e.g. images, keypoints and polygons), then this must be set to
+            ``True``. Otherwise an error will be raised.
+
+        hooks : None or imgaug.imgaug.HooksImages, optional
+            Hooks object to dynamically interfere with the augmentation process.
+
+        Returns
+        -------
+        tuple or imgaug.augmentables.batches.UnnormalizedBatch
+            An ``UnnormalizedBatch`` will be returned if `return_batch` was
+            set to ``True``.
+            Otherwise a tuple of augmentables will be returned,
+            e.g. ``(augmented images, augmented keypoints)``. The
+            datatypes match the input datatypes. The order of the augmentables
+            matches the input order _in python 3.6+_. In _python <3.6_ only
+            a maximum of two augmentables may be returned and the order is
+            always as follows: (1) image/images, (2) heatmaps,
+            (3) segmentation maps, (4) keypoints, (5) bounding boxes,
+            (6) polygons.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
+        >>> aug = iaa.Affine(rotate=(-25, 25))
+        >>> image = np.zeros((64, 64, 3), dtype=np.uint8)
+        >>> keypoints = [(10, 20), (30, 32)]  # (x,y) coordinates
+        >>> images_aug, keypoints_aug = aug.augment(
+        >>>     image=image, keypoints=keypoints)
+
+        This creates a single image and a set of two keypoints on it, then
+        augments both by applying a random rotation between -25deg and +25deg.
+        The sampled rotation value is automatically aligned between image and
+        keypoints. Note that in python <3.6, augmented images will always be
+        returned first, independent of the order of the named input arguments.
+        So ``keypoints_aug, images_aug = aug.augment(keypoints=keypoints,
+        image=image)`` would _not_ work (except in python 3.6+).
+
+        >>> import numpy as np
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
+        >>> aug = iaa.Affine(rotate=(-25, 25))
+        >>> images = [np.zeros((64, 64, 3), dtype=np.uint8),
+        >>>           np.zeros((32, 32, 3), dtype=np.uint8)]
+        >>> keypoints = [[(10, 20), (30, 32)],  # KPs on first image
+        >>>              [(22, 10), (12, 14)]]  # KPs on second image
+        >>> bbs = [
+        >>>           [ia.BoundingBox(x1=5, y1=5, x2=50, y2=45)],
+        >>>           [ia.BoundingBox(x1=4, y1=6, x2=10, y2=15),
+        >>>            ia.BoundingBox(x1=8, y1=9, x2=16, y2=30)]
+        >>>       ]  # one BB on first image, two BBs on second image
+        >>> batch_aug = aug.augment(
+        >>>     image=image, keypoints=keypoints, bounding_boxes=bbs,
+        >>>     return_batch=True)
+
+        This creates two images of size 64x64 and 32x32, two sets of keypoints
+        (each containing two keypoints) and two sets of bounding boxes (the
+        first containing one bounding box, the second two bounding boxes).
+        These augmentables are then augmented by applying random rotations
+        between -25deg and +25deg to them. The rotation values are sampled
+        by image and aligned between all augmentables on the same image.
+        The method finally returns an instance of ``UnnormalizedBatch`` from
+        which the augmented data can be retrieved via ``batch_aug.images_aug``,
+        ``batch_aug.keypoints_aug``, and ``batch_aug.bounding_boxes_aug``.
+        In python 3.6+, `return_batch` can be kept at ``False`` and the
+        augmented data can be retrieved as
+        ``images_aug, keypoints_aug, bbs_aug = augment(...)``.
+
+        """
+        assert ia.is_single_bool(return_batch), (
+            ("Expected boolean as argument for 'return_batch', got type %s. "
+             + "Call augment() only with named arguments, e.g. "
+             + "augment(images=<array>).") % (str(type(return_batch)),)
+        )
+
         expected_keys = ["images", "heatmaps", "segmentation_maps",
                          "keypoints", "bounding_boxes", "polygons"]
         expected_keys_call = ["image"] + expected_keys
@@ -1409,6 +1644,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         return tuple(result)
 
     def __call__(self, *args, **kwargs):
+        """Alias for :func:`imgaug.augmenters.meta.Augmenter.augment`."""
         return self.augment(*args, **kwargs)
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):
