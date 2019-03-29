@@ -83,6 +83,7 @@
   * The input may now be any iterable instead of just list (arrays or strings are not allowed).
 * Marked support for non-`Batch` (and non-`UnnormalizedBatch`) inputs to `augment_batches()` as deprecated.
 * Added `Augmenter.augment()` method.
+* Added `Augmenter.augment_batch()` method.
 * Added `dtypes.clip_()` function.
 * Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` causing errors when clip value range exceeded array dtype's value range.
 * Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` when the input array was scalar, i.e. had shape `()`.

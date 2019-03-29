@@ -297,7 +297,7 @@ def _Pool_worker(batch_idx, batch):
         seed_local = ia.SEED_MIN_VALUE + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
         ia.seed(seed_global)
         aug.reseed(seed_local)
-    result = list(aug.augment_batches([batch], background=False))[0]
+    result = aug.augment_batch(batch)
     return result
 
 
@@ -611,7 +611,7 @@ class BackgroundAugmenter(object):
                     # put it back in so that other workers know that the loading queue is finished
                     queue_source.put(pickle.dumps(None, protocol=-1))
                 else:
-                    batch_aug = list(augseq.augment_batches([batch], background=False))[0]
+                    batch_aug = augseq.augment_batch(batch)
 
                     # send augmented batch to output queue
                     batch_str = pickle.dumps(batch_aug, protocol=-1)

@@ -205,11 +205,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
     def augment_batches(self, batches, hooks=None, background=False):
         """
-        Augment multiple batches of images.
+        Augment multiple batches.
 
-        In contrast to other augment functions, this function _yields_ batches instead of just
-        returning a full list. This is more suited for most training loops. It also supports
-        augmentation on multiple cpu cores, activated via the `background` flag.
+        In contrast to other augment functions, this function _yields_ batches
+        instead of just returning a full list. This is more suited for most
+        training loops. It also supports augmentation on multiple cpu cores,
+        activated via the `background` flag.
 
         Parameters
         ----------
@@ -220,20 +221,27 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             A single batch or a list of batches to augment.
 
         hooks : None or imgaug.HooksImages, optional
-            HooksImages object to dynamically interfere with the augmentation process.
+            HooksImages object to dynamically interfere with the augmentation
+            process.
 
         background : bool, optional
             Whether to augment the batches in background processes.
             If true, hooks can currently not be used as that would require
             pickling functions.
+            Note that multicore augmentation distributes the batches onto
+            different CPU cores. It does not split the data within batches.
+            It is therefore not sensible to use ``background=True`` for a
+            single batch.
+            Note also that multicore augmentation needs some time to start. It
+            is therefore not recommended to use it for very few batches.
 
         Yields
         -------
-        augmented_batch : imgaug.augmentables.batches.Batch
+        imgaug.augmentables.batches.Batch \
                   or imgaug.augmentables.batches.UnnormalizedBatch \
                   or iterable of imgaug.augmentables.batches.Batch \
                   or iterable of imgaug.augmentables.batches.UnnormalizedBatch
-            Augmented objects.
+            Augmented batches.
 
         """
         if isinstance(batches, (Batch, UnnormalizedBatch)):
@@ -360,43 +368,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
             for idx, batch in enumerate(batches):
                 batch_normalized, batch_orig_dt = _normalize_batch(idx, batch)
-
-                batch_augment_images = (batch_normalized.images_unaug is not None)
-                batch_augment_heatmaps = (batch_normalized.heatmaps_unaug is not None)
-                batch_augment_segmaps = (batch_normalized.segmentation_maps_unaug is not None)
-                batch_augment_keypoints = (batch_normalized.keypoints_unaug is not None)
-                batch_augment_bounding_boxes = (batch_normalized.bounding_boxes_unaug is not None)
-                batch_augment_polygons = (batch_normalized.polygons_unaug is not None)
-
-                nb_to_aug = sum([1 if to_aug else 0
-                                 for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps,
-                                                batch_augment_keypoints, batch_augment_bounding_boxes,
-                                                batch_augment_polygons]])
-
-                if nb_to_aug > 1:
-                    augseq = self.to_deterministic() if not self.deterministic else self
-                else:
-                    augseq = self
-
-                if batch_augment_images:
-                    batch_normalized.images_aug = augseq.augment_images(
-                        batch_normalized.images_unaug, hooks=hooks)
-                if batch_augment_heatmaps:
-                    batch_normalized.heatmaps_aug = augseq.augment_heatmaps(
-                        batch_normalized.heatmaps_unaug, hooks=hooks)
-                if batch_augment_segmaps:
-                    batch_normalized.segmentation_maps_aug = augseq.augment_segmentation_maps(
-                        batch_normalized.segmentation_maps_unaug, hooks=hooks)
-                if batch_augment_keypoints:
-                    batch_normalized.keypoints_aug = augseq.augment_keypoints(
-                        batch_normalized.keypoints_unaug, hooks=hooks)
-                if batch_augment_bounding_boxes:
-                    batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
-                        batch_normalized.bounding_boxes_unaug, hooks=hooks)
-                if batch_augment_polygons:
-                    batch_normalized.polygons_aug = augseq.augment_polygons(
-                        batch_normalized.polygons_unaug, hooks=hooks)
-
+                batch_normalized = self.augment_batch(
+                    batch_normalized, hooks=hooks)
                 batch_unnormalized = _unnormalize_batch(
                     batch_normalized, batch, batch_orig_dt)
 
@@ -423,6 +396,51 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                         batch_aug, batch_orig, batch_orig_dt)
                     del id_to_batch_orig[idx]
                     yield batch_unnormalized
+
+    def augment_batch(self, batch, hooks=None):
+        """
+        Augment a single batch.
+
+        Parameters
+        ----------
+        batch : imgaug.augmentables.batches.Batch \
+                or imgaug.augmentables.batches.UnnormalizedBatch
+            A single batch to augment.
+
+        hooks : None or imgaug.HooksImages, optional
+            HooksImages object to dynamically interfere with the augmentation
+            process.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.Batch \
+                or imgaug.augmentables.batches.UnnormalizedBatch
+            Augmented batch.
+
+        """
+        batch_orig = batch
+        if isinstance(batch, UnnormalizedBatch):
+            batch = batch.to_normalized_batch()
+
+        augmentables = [(attr_name[:-len("_unaug")], attr)
+                        for attr_name, attr
+                        in batch.__dict__.items()
+                        if attr_name.endswith("_unaug") and attr is not None]
+
+        augseq = self
+        if len(augmentables) > 1 and not self.deterministic:
+            augseq = self.to_deterministic()
+
+        # set attribute batch.T_aug with result of self.augment_T() for each
+        # batch.T_unaug that was not None
+        for attr_name, attr in augmentables:
+            aug = getattr(augseq, "augment_%s" % (attr_name,))(
+                attr, hooks=hooks)
+            setattr(batch, "%s_aug" % (attr_name,), aug)
+
+        if isinstance(batch_orig, UnnormalizedBatch):
+            batch = batch_orig.fill_from_augmented_normalized_batch(batch)
+        return batch
 
     def augment_image(self, image, hooks=None):
         """
@@ -1293,9 +1311,6 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         return result
 
     def augment(self, return_batch=False, hooks=None, **kwargs):
-        # TODO this function currently calls augment_batches(). Would it be
-        #      better if augment_batches() instead called this?
-
         expected_keys = ["images", "heatmaps", "segmentation_maps",
                          "keypoints", "bounding_boxes", "polygons"]
         expected_keys_call = ["image"] + expected_keys
@@ -1366,9 +1381,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             polygons=kwargs.get("polygons", None)
         )
 
-        batch_aug = list(self.augment_batches(
-            [batch],
-            hooks=hooks))[0]
+        batch_aug = self.augment_batch(batch, hooks=hooks)
 
         # return either batch or tuple of augmentables, depending on what
         # was requested by user
