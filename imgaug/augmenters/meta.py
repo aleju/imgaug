@@ -35,13 +35,15 @@ from abc import ABCMeta, abstractmethod
 import copy as copy_module
 import re
 import itertools
+import sys
 
 import numpy as np
 import six
 import six.moves as sm
 
-from .. import imgaug as ia
+import imgaug as ia
 from .. import parameters as iap
+from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
 def clip_augmented_image_(image, min_value, max_value):
@@ -203,197 +205,242 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
     def augment_batches(self, batches, hooks=None, background=False):
         """
-        Augment multiple batches of images.
+        Augment multiple batches.
 
-        In contrast to other augment functions, this function _yields_ batches instead of just
-        returning a full list. This is more suited for most training loops. It also supports
-        augmentation on multiple cpu cores, activated via the `background` flag.
+        In contrast to other augment functions, this function _yields_ batches
+        instead of just returning a full list. This is more suited for most
+        training loops. It also supports augmentation on multiple cpu cores,
+        activated via the `background` flag.
 
         Parameters
         ----------
-        batches : imgaug.Batch or list of imgaug.Batch or list of imgaug.HeatmapsOnImage\
-                  or list of imgaug.SegmentationMapOnImage or list of imgaug.KeypointsOnImage\
-                  or list of imgaug.BoundingBoxesOnImage or list of imgaug.PolygonsOnImage\
-                  or list of ([N],H,W,[C]) ndarray
-            List of batches to augment.
-            The expected input is a list, with each entry having one of the following datatypes:
-
-                * imgaug.Batch
-                * []
-                * list of imgaug.HeatmapsOnImage
-                * list of imgaug.SegmentationMapOnImage
-                * list of imgaug.KeypointsOnImage
-                * list of imgaug.BoundingBoxesOnImage
-                * list of imgaug.PolygonsOnImage
-                * list of (H,W,C) ndarray
-                * list of (H,W) ndarray
-                * (N,H,W,C) ndarray
-                * (N,H,W) ndarray
-
-            where ``N`` is the number of images, ``H`` is the height, ``W`` is the width, ``C`` is the number of
-            channels. Each image is recommended to have dtype uint8 (range 0-255).
+        batches : imgaug.augmentables.batches.Batch \
+                  or imgaug.augmentables.batches.UnnormalizedBatch \
+                  or iterable of imgaug.augmentables.batches.Batch \
+                  or iterable of imgaug.augmentables.batches.UnnormalizedBatch
+            A single batch or a list of batches to augment.
 
         hooks : None or imgaug.HooksImages, optional
-            HooksImages object to dynamically interfere with the augmentation process.
+            HooksImages object to dynamically interfere with the augmentation
+            process.
 
         background : bool, optional
             Whether to augment the batches in background processes.
             If true, hooks can currently not be used as that would require
             pickling functions.
+            Note that multicore augmentation distributes the batches onto
+            different CPU cores. It does not split the data within batches.
+            It is therefore not sensible to use ``background=True`` for a
+            single batch.
+            Note also that multicore augmentation needs some time to start. It
+            is therefore not recommended to use it for very few batches.
 
         Yields
         -------
-        augmented_batch : ia.Batch\
-                          or list of ia.HeatmapsOnImage\
-                          or list of ia.SegmentationMapOnImage\
-                          or list of ia.KeypointsOnImage\
-                          or list of ia.BoundingBoxesOnImage\
-                          or list of ia.PolygonsOnImage\
-                          or list of (H,W,C) ndarray\
-                          or list of (H,W) ndarray\
-                          or list of (N,H,W,C) ndarray\
-                          or list of (N,H,W) ndarray
-            Augmented objects.
+        imgaug.augmentables.batches.Batch \
+                  or imgaug.augmentables.batches.UnnormalizedBatch \
+                  or iterable of imgaug.augmentables.batches.Batch \
+                  or iterable of imgaug.augmentables.batches.UnnormalizedBatch
+            Augmented batches.
 
         """
-        ia.do_assert(isinstance(batches, list))
-        ia.do_assert(len(batches) > 0)
-        if background:
-            ia.do_assert(hooks is None, "Hooks can not be used when background augmentation is activated.")
+        if isinstance(batches, (Batch, UnnormalizedBatch)):
+            batches = [batches]
 
-        batches_normalized = []
-        batches_original_dts = []
-        for i, batch in enumerate(batches):
-            if isinstance(batch, ia.Batch):
+        ia.do_assert(
+            (ia.is_iterable(batches)
+             and not ia.is_np_array(batches)
+             and not ia.is_string(batches))
+            or ia.is_generator(batches),
+            ("Expected either (a) an iterable that is not an array or a string "
+             + "or (b) a generator. Got: %s") % (type(batches),))
+
+        if background:
+            ia.do_assert(
+                hooks is None,
+                "Hooks can not be used when background augmentation is "
+                "activated.")
+
+        def _normalize_batch(idx, batch):
+            if isinstance(batch, Batch):
                 batch_copy = batch.deepcopy()
-                batch_copy.data = (i, batch_copy.data)
-                batches_normalized.append(batch_copy)
-                batches_original_dts.append("imgaug.Batch")
+                batch_copy.data = (idx, batch_copy.data)
+                batch_normalized = batch_copy
+                batch_orig_dt = "imgaug.Batch"
+            elif isinstance(batch, UnnormalizedBatch):
+                batch_copy = batch.to_normalized_batch()
+                batch_copy.data = (idx, batch_copy.data)
+                batch_normalized = batch_copy
+                batch_orig_dt = "imgaug.UnnormalizedBatch"
             elif ia.is_np_array(batch):
-                ia.do_assert(batch.ndim in (3, 4),
-                             "Expected numpy array to have shape (N, H, W) or (N, H, W, C), got %s." % (batch.shape,))
-                batches_normalized.append(ia.Batch(images=batch, data=i))
-                batches_original_dts.append("numpy_array")
+                ia.do_assert(
+                    batch.ndim in (3, 4),
+                    ("Expected numpy array to have shape (N, H, W) or "
+                     + "(N, H, W, C), got %s.") % (batch.shape,))
+                batch_normalized = Batch(images=batch, data=(idx,))
+                batch_orig_dt = "numpy_array"
             elif isinstance(batch, list):
                 if len(batch) == 0:
-                    batches_normalized.append(ia.Batch(data=i))
-                    batches_original_dts.append("empty_list")
+                    batch_normalized = Batch(data=(idx,))
+                    batch_orig_dt = "empty_list"
                 elif ia.is_np_array(batch[0]):
-                    batches_normalized.append(ia.Batch(images=batch, data=i))
-                    batches_original_dts.append("list_of_numpy_arrays")
+                    batch_normalized = Batch(images=batch, data=(idx,))
+                    batch_orig_dt = "list_of_numpy_arrays"
                 elif isinstance(batch[0], ia.HeatmapsOnImage):
-                    batches_normalized.append(ia.Batch(heatmaps=batch, data=i))
-                    batches_original_dts.append("list_of_imgaug.HeatmapsOnImage")
+                    batch_normalized = Batch(heatmaps=batch, data=(idx,))
+                    batch_orig_dt = "list_of_imgaug.HeatmapsOnImage"
                 elif isinstance(batch[0], ia.SegmentationMapOnImage):
-                    batches_normalized.append(ia.Batch(segmentation_maps=batch, data=i))
-                    batches_original_dts.append("list_of_imgaug.SegmentationMapOnImage")
+                    batch_normalized = Batch(segmentation_maps=batch,
+                                             data=(idx,))
+                    batch_orig_dt = "list_of_imgaug.SegmentationMapOnImage"
                 elif isinstance(batch[0], ia.KeypointsOnImage):
-                    batches_normalized.append(ia.Batch(keypoints=batch, data=i))
-                    batches_original_dts.append("list_of_imgaug.KeypointsOnImage")
+                    batch_normalized = Batch(keypoints=batch, data=(idx,))
+                    batch_orig_dt = "list_of_imgaug.KeypointsOnImage"
                 elif isinstance(batch[0], ia.BoundingBoxesOnImage):
-                    batches_normalized.append(ia.Batch(bounding_boxes=batch, data=i))
-                    batches_original_dts.append("list_of_imgaug.BoundingBoxesOnImage")
+                    batch_normalized = Batch(bounding_boxes=batch, data=(idx,))
+                    batch_orig_dt = "list_of_imgaug.BoundingBoxesOnImage"
                 elif isinstance(batch[0], ia.PolygonsOnImage):
-                    batches_normalized.append(ia.Batch(polygons=batch, data=i))
-                    batches_original_dts.append("list_of_imgaug.PolygonsOnImage")
+                    batch_normalized = Batch(polygons=batch, data=(idx,))
+                    batch_orig_dt = "list_of_imgaug.PolygonsOnImage"
                 else:
                     raise Exception(
-                        "Unknown datatype in batch[0]. Expected numpy array or imgaug.HeatmapsOnImage or "
-                        + "imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or imgaug.BoundingBoxesOnImage, "
-                        + "or imgaug.PolygonsOnImage, "
-                        + "got %s." % (type(batch[0]),))
+                        ("Unknown datatype in batch[0]. Expected numpy array "
+                         + "or imgaug.HeatmapsOnImage or "
+                         + "imgaug.SegmentationMapOnImage or "
+                         + "imgaug.KeypointsOnImage or "
+                         + "imgaug.BoundingBoxesOnImage, "
+                         + "or imgaug.PolygonsOnImage, "
+                         + "got %s.") % (type(batch[0]),))
             else:
                 raise Exception(
-                    "Unknown datatype of batch. Expected imgaug.Batch or numpy array or list of (numpy array or "
-                    + "imgaug.HeatmapsOnImage or imgaug.SegmentationMapOnImage or imgaug.KeypointsOnImage or "
-                    + "imgaug.BoundingBoxesOnImage or imgaug.PolygonsOnImage). "
-                    + "Got %s." % (type(batch),))
+                    ("Unknown datatype of batch. Expected imgaug.Batch or "
+                     + "imgaug.UnnormalizedBatch or "
+                     + "numpy array or list of (numpy array or "
+                     + "imgaug.HeatmapsOnImage or "
+                     + "imgaug.SegmentationMapOnImage "
+                     + "or imgaug.KeypointsOnImage or "
+                     + "imgaug.BoundingBoxesOnImage or "
+                     + "imgaug.PolygonsOnImage). Got %s.") % (type(batch),))
 
-        def unnormalize_batch(batch_aug):
-            i = batch_aug.data
-            # if input was ia.Batch, then .data has content (i, .data)
-            if isinstance(i, tuple):
-                i = i[0]
-            dt_orig = batches_original_dts[i]
-            if dt_orig == "imgaug.Batch":
+            if batch_orig_dt not in ["imgaug.Batch",
+                                     "imgaug.UnnormalizedBatch"]:
+                warnings.warn(DeprecationWarning(
+                    ("Received an input in augment_batches() that was not an "
+                     + "instance of imgaug.augmentables.batches.Batch, but "
+                     + "instead %s. This is outdated. Use augment() for such "
+                     + "data or wrap it in a Batch instance.") % (
+                        batch_orig_dt,)))
+            return batch_normalized, batch_orig_dt
+
+        # unnormalization of non-Batch/UnnormalizedBatch is for legacy support
+        def _unnormalize_batch(batch_aug, batch_orig, batch_orig_dt):
+            if batch_orig_dt == "imgaug.Batch":
                 batch_unnormalized = batch_aug
                 # change (i, .data) back to just .data
                 batch_unnormalized.data = batch_unnormalized.data[1]
-            elif dt_orig == "numpy_array":
+            elif batch_orig_dt == "imgaug.UnnormalizedBatch":
+                # change (i, .data) back to just .data
+                batch_aug.data = batch_aug.data[1]
+
+                batch_unnormalized = \
+                    batch_orig.fill_from_augmented_normalized_batch(batch_aug)
+            elif batch_orig_dt == "numpy_array":
                 batch_unnormalized = batch_aug.images_aug
-            elif dt_orig == "empty_list":
+            elif batch_orig_dt == "empty_list":
                 batch_unnormalized = []
-            elif dt_orig == "list_of_numpy_arrays":
+            elif batch_orig_dt == "list_of_numpy_arrays":
                 batch_unnormalized = batch_aug.images_aug
-            elif dt_orig == "list_of_imgaug.HeatmapsOnImage":
+            elif batch_orig_dt == "list_of_imgaug.HeatmapsOnImage":
                 batch_unnormalized = batch_aug.heatmaps_aug
-            elif dt_orig == "list_of_imgaug.SegmentationMapOnImage":
+            elif batch_orig_dt == "list_of_imgaug.SegmentationMapOnImage":
                 batch_unnormalized = batch_aug.segmentation_maps_aug
-            elif dt_orig == "list_of_imgaug.KeypointsOnImage":
+            elif batch_orig_dt == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
-            elif dt_orig == "list_of_imgaug.BoundingBoxesOnImage":
+            elif batch_orig_dt == "list_of_imgaug.BoundingBoxesOnImage":
                 batch_unnormalized = batch_aug.bounding_boxes_aug
             else:  # only option left
-                ia.do_assert(dt_orig == "list_of_imgaug.PolygonsOnImage")
+                ia.do_assert(batch_orig_dt == "list_of_imgaug.PolygonsOnImage")
                 batch_unnormalized = batch_aug.polygons_aug
             return batch_unnormalized
 
         if not background:
             # singlecore augmentation
 
-            for batch_normalized in batches_normalized:
-                batch_augment_images = batch_normalized.images_unaug is not None
-                batch_augment_heatmaps = batch_normalized.heatmaps_unaug is not None
-                batch_augment_segmaps = batch_normalized.segmentation_maps_unaug is not None
-                batch_augment_keypoints = batch_normalized.keypoints_unaug is not None
-                batch_augment_bounding_boxes = batch_normalized.bounding_boxes_unaug is not None
-                batch_augment_polygons = batch_normalized.polygons_unaug is not None
-
-                nb_to_aug = sum([1 if to_aug else 0
-                                 for to_aug in [batch_augment_images, batch_augment_heatmaps, batch_augment_segmaps,
-                                                batch_augment_keypoints, batch_augment_bounding_boxes,
-                                                batch_augment_polygons]])
-
-                if nb_to_aug > 1:
-                    augseq = self.to_deterministic() if not self.deterministic else self
-                else:
-                    augseq = self
-
-                if batch_augment_images:
-                    batch_normalized.images_aug = augseq.augment_images(
-                        batch_normalized.images_unaug, hooks=hooks)
-                if batch_augment_heatmaps:
-                    batch_normalized.heatmaps_aug = augseq.augment_heatmaps(
-                        batch_normalized.heatmaps_unaug, hooks=hooks)
-                if batch_augment_segmaps:
-                    batch_normalized.segmentation_maps_aug = augseq.augment_segmentation_maps(
-                        batch_normalized.segmentation_maps_unaug, hooks=hooks)
-                if batch_augment_keypoints:
-                    batch_normalized.keypoints_aug = augseq.augment_keypoints(
-                        batch_normalized.keypoints_unaug, hooks=hooks)
-                if batch_augment_bounding_boxes:
-                    batch_normalized.bounding_boxes_aug = augseq.augment_bounding_boxes(
-                        batch_normalized.bounding_boxes_unaug, hooks=hooks)
-                if batch_augment_polygons:
-                    # TODO enable hooks for polygons
-                    batch_normalized.polygons_aug = augseq.augment_polygons(
-                        batch_normalized.polygons_unaug, hooks=hooks)
-
-                batch_unnormalized = unnormalize_batch(batch_normalized)
+            for idx, batch in enumerate(batches):
+                batch_normalized, batch_orig_dt = _normalize_batch(idx, batch)
+                batch_normalized = self.augment_batch(
+                    batch_normalized, hooks=hooks)
+                batch_unnormalized = _unnormalize_batch(
+                    batch_normalized, batch, batch_orig_dt)
 
                 yield batch_unnormalized
         else:
             # multicore augmentation
             import imgaug.multicore as multicore
 
-            # TODO skip this if the input is already a generator
+            id_to_batch_orig = dict()
+
             def load_batches():
-                for batch in batches_normalized:
-                    yield batch
+                for idx, batch in enumerate(batches):
+                    batch_normalized, batch_orig_dt = _normalize_batch(
+                        idx, batch)
+                    id_to_batch_orig[idx] = (batch, batch_orig_dt)
+                    yield batch_normalized
 
             with multicore.Pool(self) as pool:
                 for batch_aug in pool.imap_batches(load_batches()):
-                    yield unnormalize_batch(batch_aug)
+                    idx = batch_aug.data[0]
+                    assert idx in id_to_batch_orig
+                    batch_orig, batch_orig_dt = id_to_batch_orig[idx]
+                    batch_unnormalized = _unnormalize_batch(
+                        batch_aug, batch_orig, batch_orig_dt)
+                    del id_to_batch_orig[idx]
+                    yield batch_unnormalized
+
+    def augment_batch(self, batch, hooks=None):
+        """
+        Augment a single batch.
+
+        Parameters
+        ----------
+        batch : imgaug.augmentables.batches.Batch \
+                or imgaug.augmentables.batches.UnnormalizedBatch
+            A single batch to augment.
+
+        hooks : None or imgaug.HooksImages, optional
+            HooksImages object to dynamically interfere with the augmentation
+            process.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.Batch \
+                or imgaug.augmentables.batches.UnnormalizedBatch
+            Augmented batch.
+
+        """
+        batch_orig = batch
+        if isinstance(batch, UnnormalizedBatch):
+            batch = batch.to_normalized_batch()
+
+        augmentables = [(attr_name[:-len("_unaug")], attr)
+                        for attr_name, attr
+                        in batch.__dict__.items()
+                        if attr_name.endswith("_unaug") and attr is not None]
+
+        augseq = self
+        if len(augmentables) > 1 and not self.deterministic:
+            augseq = self.to_deterministic()
+
+        # set attribute batch.T_aug with result of self.augment_T() for each
+        # batch.T_unaug that was not None
+        for attr_name, attr in augmentables:
+            aug = getattr(augseq, "augment_%s" % (attr_name,))(
+                attr, hooks=hooks)
+            setattr(batch, "%s_aug" % (attr_name,), aug)
+
+        if isinstance(batch_orig, UnnormalizedBatch):
+            batch = batch_orig.fill_from_augmented_normalized_batch(batch)
+        return batch
 
     def augment_image(self, image, hooks=None):
         """
@@ -1262,6 +1309,348 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             result.append(ia.PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
 
         return result
+
+    def augment(self, return_batch=False, hooks=None, **kwargs):
+        """
+        Augment data.
+
+        This method is a wrapper around
+        ``imgaug.augmentables.batches.UnnormalizedBatch`` and
+        ``augment_batch()``. Hence, it supports the same datatypes as
+        ``UnnormalizedBatch``.
+
+        If `return_batch` was not set to ``True``, the method will return
+        a tuple of augmentables. It will return the same types of augmentables
+        (only augmented) as input into the method. This behaviour
+        is partly specific to the python version:
+          * In _python 3.6+_ (if ``return_batch=False``):
+            * Three or more augmentables may be used as input.
+            * The return order matches the order of the named arguments, e.g.
+              ``B, D, C = augment(B=x, D=y, C=z)``.
+            * None of the provided named arguments has to be `image` or `images`.
+          * In _python <3.6_  (if ``return_batch=False``):
+            * One or two augmentables may be used as input, not more than that.
+            * At least one the augmentables has to be `image` or `images`.
+            * The augmented images are always returned first.
+
+        If `return_batch` was not set to ``False``, an instance of
+        ``UnnormalizedBatch`` will be returned. The output is the same for
+        all python version and any number or combination of augmentables may
+        be provided.
+
+        All augmentables must be provided as named arguments.
+        E.g. ``augment(<array>)`` will crash, but ``augment(images=<array>)``
+        will work.
+
+        Parameters
+        ----------
+        image : None
+            or (H,W,C) ndarray \
+            or (H,W) ndarray, \
+            optional
+            The image to augment. Only this or `images` can be set, not both.
+            If `return_batch` is ``False`` and the python version is below 3.6,
+            either this or `images` _must_ be provided.
+
+        images : None \
+            or (N,H,W,C) ndarray \
+            or (N,H,W) ndarray \
+            or iterable of (H,W,C) ndarray \
+            or iterable of (H,W) ndarray, \
+            optional
+            The images to augment. Only this or `image` can be set, not both.
+            If `return_batch` is ``False`` and the python version is below 3.6,
+            either this or `image` _must_ be provided.
+
+        heatmaps : None \
+            or (N,H,W,C) ndarray \
+            or imgaug.augmentables.heatmaps.HeatmapsOnImage \
+            or iterable of (H,W,C) ndarray \
+            or iterable of imgaug.augmentables.heatmaps.HeatmapsOnImage, \
+            optional
+            The heatmaps to augment.
+            If anything else than ``HeatmapsOnImage``, then the number of
+            heatmaps must match the number of images provided via parameter
+            `images`. The number is contained either in ``N`` or the first
+            iterable's size.
+
+        segmentation_maps : None \
+            or (N,H,W) ndarray \
+            or imgaug.augmentables.segmaps.SegmentationMapOnImage \
+            or iterable of (H,W) ndarray \
+            or iterable of imgaug.augmentables.segmaps.SegmentationMapOnImage, \
+            optional
+            The segmentation maps to augment.
+            If anything else than ``SegmentationMapOnImage``, then the number
+            of segmaps must match the number of images provided via parameter
+            `images`. The number is contained either in ``N`` or the first
+            iterable's size.
+
+        keypoints : None \
+            or list of (N,K,2) ndarray \
+            or tuple of number \
+            or imgaug.augmentables.kps.Keypoint \
+            or iterable of (K,2) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of imgaug.augmentables.kps.KeypointOnImage \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable of imgaug.augmentables.kps.Keypoint, \
+            optional
+            The keypoints to augment.
+            If a tuple (or iterable(s) of tuple), then iterpreted as (x,y)
+            coordinates and must hence contain two numbers.
+            A single tuple represents a single coordinate on one image, an
+            iterable of tuples the coordinates on one image and an iterable of
+            iterable of tuples the coordinates on several images. Analogous if
+            ``Keypoint`` objects are used instead of tuples.
+            If an ndarray, then ``N`` denotes the number of images and ``K``
+            the number of keypoints on each image.
+            If anything else than ``KeypointsOnImage`` is provided, then the
+            number of keypoint groups must match the number of images provided
+            via parameter `images`. The number is contained e.g. in ``N`` or
+            in case of "iterable of iterable of tuples" in the first iterable's
+            size.
+
+        bounding_boxes : None \
+            or (N,B,4) ndarray \
+            or tuple of number \
+            or imgaug.augmentables.bbs.BoundingBox \
+            or imgaug.augmentables.bbs.BoundingBoxesOnImage \
+            or iterable of (B,4) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.bbs.BoundingBox \
+            or iterable of imgaug.augmentables.bbs.BoundingBoxesOnImage \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable imgaug.augmentables.bbs.BoundingBox, \
+            optional
+            The bounding boxes to augment.
+            This is analogous to the `keypoints` parameter. However, each
+            tuple -- and also the last index in case of arrays -- has size 4,
+            denoting the bounding box coordinates ``x1``, ``y1``, ``x2`` and
+            ``y2``.
+
+        polygons : None  \
+            or (N,#polys,#points,2) ndarray \
+            or imgaug.augmentables.polys.Polygon \
+            or imgaug.augmentables.polys.PolygonsOnImage \
+            or iterable of (#polys,#points,2) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of imgaug.augmentables.polys.Polygon \
+            or iterable of imgaug.augmentables.polys.PolygonsOnImage \
+            or iterable of iterable of (#points,2) ndarray \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of iterable of imgaug.augmentables.polys.Polygon \
+            or iterable of iterable of iterable of tuple of number \
+            or iterable of iterable of iterable of tuple of \
+            imgaug.augmentables.kps.Keypoint, \
+            optional
+            The polygons to augment.
+            This is similar to the `keypoints` parameter. However, each polygon
+            may be made up of several (x,y) coordinates (three or more are
+            required for valid polygons).
+            The following datatypes will be interpreted as a single polygon on
+            a single image:
+              * ``imgaug.augmentables.polys.Polygon``
+              * ``iterable of tuple of number``
+              * ``iterable of imgaug.augmentables.kps.Keypoint``
+
+            The following datatypes will be interpreted as multiple polygons
+            on a single image:
+              * ``imgaug.augmentables.polys.PolygonsOnImage``
+              * ``iterable of imgaug.augmentables.polys.Polygon``
+              * ``iterable of iterable of tuple of number``
+              * ``iterable of iterable of imgaug.augmentables.kps.Keypoint``
+              * ``iterable of iterable of imgaug.augmentables.polys.Polygon``
+
+            The following datatypes will be interpreted as multiple polygons on
+            multiple images:
+              * ``(N,#polys,#points,2) ndarray``
+              * ``iterable of (#polys,#points,2) ndarray``
+              * ``iterable of iterable of (#points,2) ndarray``
+              * ``iterable of iterable of iterable of tuple of number``
+              * ``iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint``
+
+        return_batch : bool, optional
+            Whether to return an instance of
+            `imgaug.augmentables.batches.UnnormalizedBatch`. If the python
+            version is below 3.6 and more than two augmentables were provided
+            (e.g. images, keypoints and polygons), then this must be set to
+            ``True``. Otherwise an error will be raised.
+
+        hooks : None or imgaug.imgaug.HooksImages, optional
+            Hooks object to dynamically interfere with the augmentation process.
+
+        Returns
+        -------
+        tuple or imgaug.augmentables.batches.UnnormalizedBatch
+            If `return_batch` was set to ``True``, a instance of
+            ``UnnormalizedBatch`` will be returned.
+            If `return_batch` was set to ``False``, a tuple of augmentables
+            will be returned, e.g. ``(augmented images, augmented keypoints)``.
+            The datatypes match the input datatypes of the corresponding named
+            arguments. In python <3.6, augmented images are always the first
+            entry in the returned tuple. In python 3.6+ the order matches the
+            order of the named arguments.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
+        >>> aug = iaa.Affine(rotate=(-25, 25))
+        >>> image = np.zeros((64, 64, 3), dtype=np.uint8)
+        >>> keypoints = [(10, 20), (30, 32)]  # (x,y) coordinates
+        >>> images_aug, keypoints_aug = aug.augment(
+        >>>     image=image, keypoints=keypoints)
+
+        This creates a single image and a set of two keypoints on it, then
+        augments both by applying a random rotation between -25deg and +25deg.
+        The sampled rotation value is automatically aligned between image and
+        keypoints. Note that in python <3.6, augmented images will always be
+        returned first, independent of the order of the named input arguments.
+        So ``keypoints_aug, images_aug = aug.augment(keypoints=keypoints,
+        image=image)`` would _not_ work (except in python 3.6+).
+
+        >>> import numpy as np
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
+        >>> aug = iaa.Affine(rotate=(-25, 25))
+        >>> images = [np.zeros((64, 64, 3), dtype=np.uint8),
+        >>>           np.zeros((32, 32, 3), dtype=np.uint8)]
+        >>> keypoints = [[(10, 20), (30, 32)],  # KPs on first image
+        >>>              [(22, 10), (12, 14)]]  # KPs on second image
+        >>> bbs = [
+        >>>           [ia.BoundingBox(x1=5, y1=5, x2=50, y2=45)],
+        >>>           [ia.BoundingBox(x1=4, y1=6, x2=10, y2=15),
+        >>>            ia.BoundingBox(x1=8, y1=9, x2=16, y2=30)]
+        >>>       ]  # one BB on first image, two BBs on second image
+        >>> batch_aug = aug.augment(
+        >>>     images=images, keypoints=keypoints, bounding_boxes=bbs,
+        >>>     return_batch=True)
+
+        This creates two images of size 64x64 and 32x32, two sets of keypoints
+        (each containing two keypoints) and two sets of bounding boxes (the
+        first containing one bounding box, the second two bounding boxes).
+        These augmentables are then augmented by applying random rotations
+        between -25deg and +25deg to them. The rotation values are sampled
+        by image and aligned between all augmentables on the same image.
+        The method finally returns an instance of ``UnnormalizedBatch`` from
+        which the augmented data can be retrieved via ``batch_aug.images_aug``,
+        ``batch_aug.keypoints_aug``, and ``batch_aug.bounding_boxes_aug``.
+        In python 3.6+, `return_batch` can be kept at ``False`` and the
+        augmented data can be retrieved as
+        ``images_aug, keypoints_aug, bbs_aug = augment(...)``.
+
+        """
+        assert ia.is_single_bool(return_batch), (
+            ("Expected boolean as argument for 'return_batch', got type %s. "
+             + "Call augment() only with named arguments, e.g. "
+             + "augment(images=<array>).") % (str(type(return_batch)),)
+        )
+
+        expected_keys = ["images", "heatmaps", "segmentation_maps",
+                         "keypoints", "bounding_boxes", "polygons"]
+        expected_keys_call = ["image"] + expected_keys
+
+        # at least one augmentable provided?
+        assert any([key in kwargs for key in expected_keys_call]), (
+            "Expected augment() to be called with one of the following named "
+            + "arguments: %s. Got none of these." % (
+                ", ".join(expected_keys_call),))
+
+        # all keys in kwargs actually known?
+        unknown_args = [key for key in kwargs.keys()
+                        if key not in expected_keys_call]
+        assert len(unknown_args) == 0, (
+            "Got the following unknown keyword argument(s) in augment(): %s" % (
+                ", ".join(unknown_args)
+            ))
+
+        # normalize image=... input to images=...
+        # this is not done by Batch.to_normalized_batch()
+        if "image" in kwargs:
+            assert "images" not in kwargs, (
+                "You may only provide the argument 'image' OR 'images' to "
+                "augment(), not both of them.")
+            images = [kwargs["image"]]
+        else:
+            images = kwargs.get("images", None)
+
+        # Decide whether to return the final tuple in the order of the kwargs
+        # keys or the default order based on python version. Only 3.6+ uses
+        # an ordered dict implementation for kwargs.
+        order = "standard"
+        nb_keys = len(list(kwargs.keys()))
+        vinfo = sys.version_info
+        is_py36_or_newer = vinfo[0] > 3 or (vinfo[0] == 3 and vinfo[1] >= 6)
+        if is_py36_or_newer:
+            order = "kwargs_keys"
+        elif not return_batch and nb_keys > 2:
+            raise ValueError(
+                "Requested more than two outputs in augment(), but detected "
+                "python version is below 3.6. More than two outputs are only "
+                "supported for 3.6+ as earlier python versions offer no way "
+                "to retrieve the order of the provided named arguments. To "
+                "still use more than two outputs, add 'return_batch=True' as "
+                "an argument and retrieve the outputs manually from the "
+                "returned UnnormalizedBatch instance, e.g. via "
+                "'batch.images_aug' to get augmented images."
+            )
+        elif not return_batch and nb_keys == 2 and images is None:
+            raise ValueError(
+                "Requested two outputs from augment() that were not 'images', "
+                "but detected python version is below 3.6. For security "
+                "reasons, only single-output requests or requests with two "
+                "outputs of which one is 'images' are allowed in <3.6. "
+                "'images' will then always be returned first. If you don't "
+                "want this, use 'return_batch=True' mode in augment(), which "
+                "returns a single UnnormalizedBatch instance instead and "
+                "supports any combination of outputs."
+            )
+
+        # augment batch
+        batch = UnnormalizedBatch(
+            images=images,
+            heatmaps=kwargs.get("heatmaps", None),
+            segmentation_maps=kwargs.get("segmentation_maps", None),
+            keypoints=kwargs.get("keypoints", None),
+            bounding_boxes=kwargs.get("bounding_boxes", None),
+            polygons=kwargs.get("polygons", None)
+        )
+
+        batch_aug = self.augment_batch(batch, hooks=hooks)
+
+        # return either batch or tuple of augmentables, depending on what
+        # was requested by user
+        if return_batch:
+            return batch_aug
+
+        result = []
+        if order == "kwargs_keys":
+            for key in kwargs:
+                if key == "image":
+                    attr = getattr(batch_aug, "images_aug")
+                    result.append(attr[0])
+                else:
+                    result.append(getattr(batch_aug, "%s_aug" % (key,)))
+        else:
+            for key in expected_keys:
+                if key == "images" and "image" in kwargs:
+                    attr = getattr(batch_aug, "images_aug")
+                    result.append(attr[0])
+                elif key in kwargs:
+                    result.append(getattr(batch_aug, "%s_aug" % (key,)))
+
+        if len(result) == 1:
+            return result[0]
+        return tuple(result)
+
+    def __call__(self, *args, **kwargs):
+        """Alias for :func:`imgaug.augmenters.meta.Augmenter.augment`."""
+        return self.augment(*args, **kwargs)
 
     def pool(self, processes=None, maxtasksperchild=None, seed=None):
         """

@@ -65,6 +65,31 @@
 * Changed `ElasticTransformation` to always use `order=3` for heatmap augmentation.
 * Changed check in `HeatmapsOnImage` that validates whether the input array is within the desired value range `[min_value, max_value]` 
   from a hard exception to a soft warning (with clipping). Also improved the error message a bit.
+* Fixed assert in `SegmentationMapOnImage` falsely checking if max class index is `<= nb_classes` instead of `< nb_classes`. 
+* Moved `Keypoint`, `KeypointsOnImage` and `imgaug.imgaug.compute_geometric_median` to `augmentables/kps.py`.
+* Moved `BoundingBox`, `BoundingBoxesOnImage` to `augmentables/bbs.py`.
+* Moved `Polygon`, `PolygonsOnImage` and related classes/functions to `augmentables/polys.py`.
+* Moved `HeatmapsOnImage` to `augmentables/heatmaps.py`.
+* Moved `SegmentationMapOnImage` to `augmentables/segmaps.py`.
+* Moved `Batch` to `augmentables/batches.py`.
+* Added `imgaug.augmentables.batches.UnnormalizedBatch`.
+* Added module `imgaug.augmentables.normalization` for data normalization routines.
+* Changed `augment_batches()`:
+  * Accepts now `UnnormalizedBatch` as input. It is automatically normalized before augmentation and unnormalized afterwards.
+    This allows to use `Batch` instances with non-standard datatypes.
+  * Accepts now single instances of `Batch` (and `UnnormalizedBatch`).
+  * The input may now also be a generator.
+  * The input may now be any iterable instead of just list (arrays or strings are not allowed).
+* Marked support for non-`Batch` (and non-`UnnormalizedBatch`) inputs to `augment_batches()` as deprecated.
+* Added `Augmenter.augment()` method.
+* Added `Augmenter.augment_batch()` method.
+    * This method is now called by `Augmenter.augment_batches()` and multicore routines.
+* Added `dtypes.clip_()` function.
+* Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` causing errors when clip value range exceeded array dtype's value range.
+* Fixed an issue in `dtypes.clip_to_value_range_()` and `dtypes.restore_dtypes_()` when the input array was scalar, i.e. had shape `()`.
+* Refactored `Batch.deepcopy()`
+    * Does not longer verify attribute datatypes.
+    * Allows now to directly change attributes of created copies, e.g. via `batch.deepcopy(images_aug=...)`.
 
 
 # 0.2.8

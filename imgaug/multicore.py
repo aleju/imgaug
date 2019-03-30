@@ -10,7 +10,8 @@ import warnings
 
 import numpy as np
 
-from . import imgaug as ia
+import imgaug.imgaug as ia
+from imgaug.augmentables.batches import Batch
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -112,7 +113,7 @@ class Pool(object):
 
         Parameters
         ----------
-        batches : list of imgaug.imgaug.Batch
+        batches : list of imgaug.augmentables.batches.Batch
             The batches to augment.
 
         chunksize : None or int, optional
@@ -121,7 +122,7 @@ class Pool(object):
 
         Returns
         -------
-        list of imgaug.imgaug.Batch
+        list of imgaug.augmentables.batches.Batch
             Augmented batches.
 
         """
@@ -135,7 +136,7 @@ class Pool(object):
 
         Parameters
         ----------
-        batches : list of imgaug.imgaug.Batch
+        batches : list of imgaug.augmentables.batches.Batch
             The batches to augment.
 
         chunksize : None or int, optional
@@ -165,7 +166,7 @@ class Pool(object):
 
         Parameters
         ----------
-        batches : generator of imgaug.imgaug.Batch
+        batches : generator of imgaug.augmentables.batches.Batch
             The batches to augment, provided as a generator. Each call to the generator should yield exactly one
             batch.
 
@@ -175,7 +176,7 @@ class Pool(object):
 
         Yields
         ------
-        imgaug.imgaug.Batch
+        imgaug.augmentables.batches.Batch
             Augmented batch.
 
         """
@@ -192,7 +193,7 @@ class Pool(object):
 
         Parameters
         ----------
-        batches : generator of imgaug.imgaug.Batch
+        batches : generator of imgaug.augmentables.batches.Batch
             The batches to augment, provided as a generator. Each call to the generator should yield exactly one
             batch.
 
@@ -202,7 +203,7 @@ class Pool(object):
 
         Yields
         ------
-        imgaug.imgaug.Batch
+        imgaug.augmentables.batches.Batch
             Augmented batch.
 
         """
@@ -287,7 +288,7 @@ def _Pool_initialize_worker(augseq, seed_start):
 # could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
 def _Pool_worker(batch_idx, batch):
     assert ia.is_single_integer(batch_idx)
-    assert isinstance(batch, ia.Batch)
+    assert isinstance(batch, Batch)
     assert Pool._WORKER_AUGSEQ is not None
     aug = Pool._WORKER_AUGSEQ
     if Pool._WORKER_SEED_START is not None:
@@ -296,7 +297,7 @@ def _Pool_worker(batch_idx, batch):
         seed_local = ia.SEED_MIN_VALUE + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
         ia.seed(seed_global)
         aug.reseed(seed_local)
-    result = list(aug.augment_batches([batch], background=False))[0]
+    result = aug.augment_batch(batch)
     return result
 
 
@@ -421,7 +422,7 @@ class BatchLoader(object):
         try:
             gen = load_batch_func() if not ia.is_generator(load_batch_func) else load_batch_func
             for batch in gen:
-                ia.do_assert(isinstance(batch, ia.Batch),
+                ia.do_assert(isinstance(batch, Batch),
                              "Expected batch returned by load_batch_func to be of class imgaug.Batch, got %s." % (
                                  type(batch),))
                 batch_pickled = pickle.dumps(batch, protocol=-1)
@@ -610,7 +611,7 @@ class BackgroundAugmenter(object):
                     # put it back in so that other workers know that the loading queue is finished
                     queue_source.put(pickle.dumps(None, protocol=-1))
                 else:
-                    batch_aug = list(augseq.augment_batches([batch], background=False))[0]
+                    batch_aug = augseq.augment_batch(batch)
 
                     # send augmented batch to output queue
                     batch_str = pickle.dumps(batch_aug, protocol=-1)

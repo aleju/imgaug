@@ -26,7 +26,7 @@ import numpy as np
 import cv2
 
 from . import meta, arithmetic, blur, contrast, color as augmenters_color
-from .. import imgaug as ia
+import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 

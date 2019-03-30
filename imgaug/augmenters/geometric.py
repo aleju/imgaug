@@ -35,7 +35,8 @@ import six.moves as sm
 
 from . import meta
 from . import blur as blur_lib
-from .. import imgaug as ia
+import imgaug as ia
+from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from .. import parameters as iap
 from .. import dtypes as iadt
 
@@ -1746,7 +1747,7 @@ class PiecewiseAffine(meta.Augmenter):
         self.absolute_scale = absolute_scale
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
-            self.polygon_recoverer = ia._ConcavePolygonRecoverer()
+            self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
@@ -2548,7 +2549,7 @@ class ElasticTransformation(meta.Augmenter):
 
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
-            self.polygon_recoverer = ia._ConcavePolygonRecoverer()
+            self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
         # seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
