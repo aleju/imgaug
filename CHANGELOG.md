@@ -90,6 +90,11 @@
 * Refactored `Batch.deepcopy()`
     * Does not longer verify attribute datatypes.
     * Allows now to directly change attributes of created copies, e.g. via `batch.deepcopy(images_aug=...)`.
+* Added `imgaug.imgaug.DeprecationWarning`. The builtin python `DeprecationWarning` is silent since 2.7, which is why now a separate deprecation warning is used.
+* Added `imgaug.imgaug.warn_deprecated()`.
+    * Refactored deprecation warnings to use this function.
+* Added `imgaug.imgaug.deprecated` decorator.
+    * Refactored deprecation warnings to use this decorator.
 
 
 # 0.2.8
