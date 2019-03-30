@@ -1578,7 +1578,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         # keys or the default order based on python version. Only 3.6+ uses
         # an ordered dict implementation for kwargs.
         order = "standard"
-        nb_keys = len(list(kwargs.keys())) > 2
+        nb_keys = len(list(kwargs.keys()))
         vinfo = sys.version_info
         is_py36_or_newer = vinfo[0] > 3 or (vinfo[0] == 3 and vinfo[1] >= 6)
         if is_py36_or_newer:
