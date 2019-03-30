@@ -1591,8 +1591,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 "to retrieve the order of the provided named arguments. To "
                 "still use more than two outputs, add 'return_batch=True' as "
                 "an argument and retrieve the outputs manually from the "
-                "returned Batch instance, e.g. via 'batch.images_aug' to get "
-                "augmented images."
+                "returned UnnormalizedBatch instance, e.g. via "
+                "'batch.images_aug' to get augmented images."
             )
         elif not return_batch and nb_keys == 2 and "images" not in kwargs:
             raise ValueError(
@@ -1602,8 +1602,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 "outputs of which one is 'images' are allowed in <3.6. "
                 "'images' will then always be returned first. If you don't "
                 "want this, use 'return_batch=True' mode in augment(), which "
-                "returns a single Batch instance instead and supports any "
-                "combination of outputs."
+                "returns a single UnnormalizedBatch instance instead and "
+                "supports any combination of outputs."
             )
 
         # augment batch
