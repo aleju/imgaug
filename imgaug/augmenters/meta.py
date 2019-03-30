@@ -1319,21 +1319,24 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         ``augment_batch()``. Hence, it supports the same datatypes as
         ``UnnormalizedBatch``.
 
-        If `return_batch` was not set to ``True``, this method will try to
-        return the same augmentables (only augmented) in the same order as
-        they were provided. E.g. ``augment(images, keypoints)`` will return
-        a tuple ``(augmented images, augmented keypoints)``.
-        Only in _python 3.6+_ three or more augmentables may be used as input.
-        Only in _python 3.6+_ is the return order guaranteed to match the
-        order of the named arguments in the method call.
-        In _python <3.6_ only two augmentables may be provided max.
-        In _python <3.6_ the order of the returned tuple does _not_ match the
-        order of the (input) named arguments (because there is no way to
-        retrieve it in these versions). Instead the order is always as
-        follows: (1) image/images, (2) heatmaps, (3) segmentation maps,
-        (4) keypoints, (5) bounding boxes, (6) polygons.
+        If `return_batch` was not set to ``True``, the method will return
+        a tuple of augmentables. It will return the same types of augmentables
+        (only augmented) as input into the method. This behaviour
+        is partly specific to the python version:
+          * In _python 3.6+_ (if ``return_batch=False``):
+            * Three or more augmentables may be used as input.
+            * The return order matches the order of the named arguments, e.g.
+              ``B, D, C = augment(B=x, D=y, C=z)``.
+            * None of the provided named arguments has to be `image` or `images`.
+          * In _python <3.6_  (if ``return_batch=False``):
+            * One or two augmentables may be used as input, not more than that.
+            * At least one the augmentables has to be `image` or `images`.
+            * The augmented images are always returned first.
 
-        It is recommended to use python 3.6 when using this method.
+        If `return_batch` was not set to ``False``, an instance of
+        ``UnnormalizedBatch`` will be returned. The output is the same for
+        all python version and any number or combination of augmentables may
+        be provided.
 
         All augmentables must be provided as named arguments.
         E.g. ``augment(<array>)`` will crash, but ``augment(images=<array>)``
@@ -1346,6 +1349,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             or (H,W) ndarray, \
             optional
             The image to augment. Only this or `images` can be set, not both.
+            If `return_batch` is ``False`` and the python version is below 3.6,
+            either this or `images` _must_ be provided.
 
         images : None \
             or (N,H,W,C) ndarray \
@@ -1354,6 +1359,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             or iterable of (H,W) ndarray, \
             optional
             The images to augment. Only this or `image` can be set, not both.
+            If `return_batch` is ``False`` and the python version is below 3.6,
+            either this or `image` _must_ be provided.
 
         heatmaps : None \
             or (N,H,W,C) ndarray \
@@ -1479,16 +1486,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Returns
         -------
         tuple or imgaug.augmentables.batches.UnnormalizedBatch
-            An ``UnnormalizedBatch`` will be returned if `return_batch` was
-            set to ``True``.
-            Otherwise a tuple of augmentables will be returned,
-            e.g. ``(augmented images, augmented keypoints)``. The
-            datatypes match the input datatypes. The order of the augmentables
-            matches the input order _in python 3.6+_. In _python <3.6_ only
-            a maximum of two augmentables may be returned and the order is
-            always as follows: (1) image/images, (2) heatmaps,
-            (3) segmentation maps, (4) keypoints, (5) bounding boxes,
-            (6) polygons.
+            If `return_batch` was set to ``True``, a instance of
+            ``UnnormalizedBatch`` will be returned.
+            If `return_batch` was set to ``False``, a tuple of augmentables
+            will be returned, e.g. ``(augmented images, augmented keypoints)``.
+            The datatypes match the input datatypes of the corresponding named
+            arguments. In python <3.6, augmented images are always the first
+            entry in the returned tuple. In python 3.6+ the order matches the
+            order of the named arguments.
 
         Examples
         --------
