@@ -2003,7 +2003,7 @@ class HooksKeypoints(HooksImages):
 # Helpers for deprecation
 #####################################################################
 
-class DeprecationWarning(Warning):
+class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
     """Warning for deprecated calls.
 
     Since python 2.7 DeprecatedWarning is silent by default. So we define
