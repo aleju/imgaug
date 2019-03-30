@@ -1517,7 +1517,7 @@ class _ConcavePolygonRecoverer(object):
             duplicates = [False] * len(exterior_with_duplicates)
             for key in points_map:
                 candidates = points_map[key]
-                for i in range(len(candidates)):
+                for i, p0_idx in enumerate(candidates):
                     p0_idx = candidates[i]
                     p0 = exterior_with_duplicates[p0_idx]
                     if duplicates[p0_idx]:
@@ -1689,10 +1689,10 @@ class _ConcavePolygonRecoverer(object):
 
         assert len(exterior) == len(segment_add_points)
         exterior_interp = []
-        for i in range(len(exterior)):
+        for i, p0 in enumerate(exterior):
             p0 = exterior[i]
             exterior_interp.append(p0)
-            for j, p_inter in enumerate(segment_add_points[i]):
+            for p_inter in segment_add_points[i]:
                 exterior_interp.append(p_inter)
         return exterior_interp
 
