@@ -1,7 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import warnings
-
 import numpy as np
 import six.moves as sm
 
@@ -353,6 +351,7 @@ class HeatmapsOnImage(object):
                                          max_value=self.max_value)
 
     def scale(self, *args, **kwargs):
+        import warnings
         warnings.warn(DeprecationWarning("HeatmapsOnImage.scale() is deprecated. "
                                          "Use HeatmapsOnImage.resize() instead. "
                                          "It has the exactly same interface "

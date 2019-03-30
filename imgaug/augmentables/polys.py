@@ -1659,8 +1659,7 @@ class _ConcavePolygonRecoverer(object):
         segment_add_points_sorted_overs = [[] for _ in range(len(segment_add_points))]
 
         n_points = len(exterior)
-        for i in range(len(exterior)):
-            last = exterior[i]
+        for i, last in enumerate(exterior):
             for j, p_inter in enumerate(segment_add_points[i]):
                 direction = (p_inter[0] - last[0], p_inter[1] - last[1])
 
