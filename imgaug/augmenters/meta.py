@@ -1523,7 +1523,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         >>>            ia.BoundingBox(x1=8, y1=9, x2=16, y2=30)]
         >>>       ]  # one BB on first image, two BBs on second image
         >>> batch_aug = aug.augment(
-        >>>     image=image, keypoints=keypoints, bounding_boxes=bbs,
+        >>>     images=images, keypoints=keypoints, bounding_boxes=bbs,
         >>>     return_batch=True)
 
         This creates two images of size 64x64 and 32x32, two sets of keypoints
