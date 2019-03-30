@@ -5745,12 +5745,15 @@ class HeatmapsOnImage(object):
         do_assert(len(shape) in [2, 3],
                   "Argument 'shape' in HeatmapsOnImage expected to be 2d or 3d, got shape %s." % (shape,))
         do_assert(min_value < max_value)
-        do_assert(np.min(arr.flat[0:50]) >= min_value - np.finfo(arr.dtype).eps,
-                  ("Value range of heatmap was chosen to be (%.8f, %.8f), but found value below minimum in first "
-                   + "50 heatmap array values.") % (min_value, max_value))
-        do_assert(np.max(arr.flat[0:50]) <= max_value + np.finfo(arr.dtype).eps,
-                  ("Value range of heatmap was chosen to be (%.8f, %.8f), but found value above maximum in first "
-                   + "50 heatmap array values.") % (min_value, max_value))
+        if np.min(arr.flat[0:50]) < min_value - np.finfo(arr.dtype).eps \
+                or np.max(arr.flat[0:50]) > max_value + np.finfo(arr.dtype).eps:
+            import warnings
+            warnings.warn(
+                ("Value range of heatmap was chosen to be (%.8f, %.8f), but "
+                 "found actual min/max of (%.8f, %.8f). Array will be "
+                 "clipped to chosen value range.") % (
+                    min_value, max_value, np.min(arr), np.max(arr)))
+            arr = np.clip(arr, min_value, max_value)
 
         if arr.ndim == 2:
             arr = arr[..., np.newaxis]

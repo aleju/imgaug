@@ -713,12 +713,19 @@ class Affine(meta.Augmenter):
             cval_samples, mode_samples, order_samples = self._draw_samples(nb_heatmaps, random_state)
         cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
         mode_samples = ["constant"] * len(mode_samples)
+        order_samples = [3] * len(order_samples)
 
         arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
         arrs_aug, matrices = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,
                                                              shear_samples, cval_samples, mode_samples, order_samples,
                                                              return_matrices=True)
-        for heatmaps_i, arr_aug, matrix in zip(heatmaps, arrs_aug, matrices):
+        for heatmaps_i, arr_aug, matrix, order in zip(heatmaps, arrs_aug, matrices, order_samples):
+            # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
+            # not clear whether 4+ also do that
+            # TODO add test for this
+            if order >= 3:
+                arr_aug = np.clip(arr_aug, 0.0, 1.0, out=arr_aug)
+
             heatmaps_i.arr_0to1 = arr_aug
             if self.fit_output:
                 _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
@@ -1802,11 +1809,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = heatmaps
         nb_images = len(heatmaps)
 
-        rss = ia.derive_random_states(random_state, nb_images+3)
+        rss = ia.derive_random_states(random_state, nb_images+2)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-3])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-2])
-        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-1])
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
 
         for i in sm.xrange(nb_images):
             heatmaps_i = heatmaps[i]
@@ -1820,7 +1826,7 @@ class PiecewiseAffine(meta.Augmenter):
                 arr_0to1_warped = tf.warp(
                     arr_0to1,
                     transformer,
-                    order=order_samples[i],
+                    order=3,
                     mode="constant",
                     cval=0,
                     preserve_range=True,
@@ -1829,6 +1835,12 @@ class PiecewiseAffine(meta.Augmenter):
 
                 # skimage converts to float64
                 arr_0to1_warped = arr_0to1_warped.astype(np.float32)
+
+                # TODO not entirely clear whether this breaks the value range -- Affine does
+                # TODO add test for this
+                # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
+                # not clear whether 4+ also do that
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
 
                 heatmaps_i.arr_0to1 = arr_0to1_warped
 
@@ -2593,7 +2605,7 @@ class ElasticTransformation(meta.Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_heatmaps = len(heatmaps)
-        rss, alphas, sigmas, orders, _cvals, _modes = self._draw_samples(nb_heatmaps, random_state)
+        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_heatmaps, random_state)
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
             if heatmaps_i.arr_0to1.shape[0:2] == heatmaps_i.shape[0:2]:
@@ -2608,7 +2620,7 @@ class ElasticTransformation(meta.Augmenter):
                     heatmaps_i.arr_0to1,
                     dx,
                     dy,
-                    order=orders[i],
+                    order=3,
                     cval=0,
                     mode="constant"
                 )
@@ -2641,7 +2653,7 @@ class ElasticTransformation(meta.Augmenter):
                     arr_0to1,
                     dx,
                     dy,
-                    order=orders[i],
+                    order=3,
                     cval=0,
                     mode="constant"
                 )
