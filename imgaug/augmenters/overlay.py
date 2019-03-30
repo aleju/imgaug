@@ -1,36 +1,39 @@
 """Alias for module blend.
 
 Deprecated module. Original name for module blend.py. Was changed in 0.2.8.
+
 """
 from __future__ import print_function, division, absolute_import
-import warnings
+
 from . import blend
-
-DEPRECATION_WARNING = "Usage of imgaug.augmenters.overlay.%s() is deprecated. " \
-                      "Use imgaug.augmenters.blend.%s() instead. " \
-                      "(Same interface, simple renaming.)"
+import imgaug as ia
 
 
+@ia.deprecated(alt_func="imgaug.augmenters.blend.blend_alpha()",
+               comment="It has the exactly same interface.")
 def blend_alpha(*args, **kwargs):
-    warnings.warn(DeprecationWarning(DEPRECATION_WARNING % ("blend_alpha", "blend_alpha")))
     return blend.blend_alpha(*args, **kwargs)
 
 
+@ia.deprecated(alt_func="imgaug.augmenters.blend.Alpha",
+               comment="It has the exactly same interface.")
 def Alpha(*args, **kwargs):
-    warnings.warn(DeprecationWarning(DEPRECATION_WARNING % ("Alpha", "Alpha")))
     return blend.Alpha(*args, **kwargs)
 
 
+@ia.deprecated(alt_func="imgaug.augmenters.blend.AlphaElementwise",
+               comment="It has the exactly same interface.")
 def AlphaElementwise(*args, **kwargs):
-    warnings.warn(DeprecationWarning(DEPRECATION_WARNING % ("AlphaElementwise", "AlphaElementwise")))
     return blend.AlphaElementwise(*args, **kwargs)
 
 
+@ia.deprecated(alt_func="imgaug.augmenters.blend.SimplexNoiseAlpha",
+               comment="It has the exactly same interface.")
 def SimplexNoiseAlpha(*args, **kwargs):
-    warnings.warn(DeprecationWarning(DEPRECATION_WARNING % ("SimplexNoiseAlpha", "SimplexNoiseAlpha")))
     return blend.SimplexNoiseAlpha(*args, **kwargs)
 
 
+@ia.deprecated(alt_func="imgaug.augmenters.blend.FrequencyNoiseAlpha",
+               comment="It has the exactly same interface.")
 def FrequencyNoiseAlpha(*args, **kwargs):
-    warnings.warn(DeprecationWarning(DEPRECATION_WARNING % ("FrequencyNoiseAlpha", "FrequencyNoiseAlpha")))
     return blend.FrequencyNoiseAlpha(*args, **kwargs)

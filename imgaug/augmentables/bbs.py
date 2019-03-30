@@ -437,10 +437,10 @@ class BoundingBox(object):
         else:
             return fully
 
+    @ia.deprecated(alt_func="BoundingBox.clip_out_of_image()",
+                   comment="clip_out_of_image() has the exactly same "
+                           "interface.")
     def cut_out_of_image(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("BoundingBox.cut_out_of_image() is deprecated. Use "
-                                         "BoundingBox.clip_out_of_image() instead. It has the "
-                                         "exactly same interface (simple renaming)."))
         return self.clip_out_of_image(*args, **kwargs)
 
     def clip_out_of_image(self, image):
@@ -990,10 +990,10 @@ class BoundingBoxesOnImage(object):
                      if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
+    @ia.deprecated(alt_func="BoundingBoxesOnImage.clip_out_of_image()",
+                   comment="clip_out_of_image() has the exactly same "
+                           "interface.")
     def cut_out_of_image(self):
-        warnings.warn(DeprecationWarning("BoundingBoxesOnImage.cut_out_of_image() is deprecated."
-                                         "Use BoundingBoxesOnImage.clip_out_of_image() instead. It "
-                                         "has the exactly same interface (simple renaming)."))
         return self.clip_out_of_image()
 
     def clip_out_of_image(self):

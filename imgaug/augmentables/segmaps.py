@@ -412,10 +412,9 @@ class SegmentationMapOnImage(object):
         else:
             return segmap
 
+    @ia.deprecated(alt_func="SegmentationMapOnImage.resize()",
+                   comment="resize() has the exactly same interface.")
     def scale(self, *args, **kwargs):
-        warnings.warn(DeprecationWarning("SegmentationMapOnImage.scale() is deprecated. "
-                                         "Use SegmentationMapOnImage.resize() instead. "
-                                         "It has the exactly same interface (simple renaming)."))
         return self.resize(*args, **kwargs)
 
     def resize(self, sizes, interpolation="cubic"):
