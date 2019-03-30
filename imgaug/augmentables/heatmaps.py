@@ -350,12 +350,9 @@ class HeatmapsOnImage(object):
         return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
                                          max_value=self.max_value)
 
+    @ia.deprecated(alt_func="HeatmapsOnImage.resize()",
+                   comment="resize() has the exactly same interface.")
     def scale(self, *args, **kwargs):
-        import warnings
-        warnings.warn(DeprecationWarning("HeatmapsOnImage.scale() is deprecated. "
-                                         "Use HeatmapsOnImage.resize() instead. "
-                                         "It has the exactly same interface "
-                                         "(simple renaming)."))
         return self.resize(*args, **kwargs)
 
     def resize(self, sizes, interpolation="cubic"):

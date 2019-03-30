@@ -350,10 +350,10 @@ class Polygon(object):
         else:
             return fully
 
+    @ia.deprecated(alt_func="Polygon.clip_out_of_image()",
+                   comment="clip_out_of_image() has the exactly same "
+                           "interface.")
     def cut_out_of_image(self, image):
-        warnings.warn(DeprecationWarning("Polygon.cut_out_of_image() is deprecated. Use "
-                                         "Polygon.clip_out_of_image() instead. It has the exactly "
-                                         "same interface (simple renaming)."))
         return self.clip_out_of_image(image)
 
     # TODO this currently can mess up the order of points - change somehow to

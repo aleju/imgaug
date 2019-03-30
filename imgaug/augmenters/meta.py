@@ -324,12 +324,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
             if batch_orig_dt not in ["imgaug.Batch",
                                      "imgaug.UnnormalizedBatch"]:
-                warnings.warn(DeprecationWarning(
+                ia.warn_deprecated(
                     ("Received an input in augment_batches() that was not an "
-                     + "instance of imgaug.augmentables.batches.Batch, but "
+                     + "instance of imgaug.augmentables.batches.Batch "
+                     + "or imgaug.augmentables.batches.UnnormalizedBatch, but "
                      + "instead %s. This is outdated. Use augment() for such "
                      + "data or wrap it in a Batch instance.") % (
-                        batch_orig_dt,)))
+                        batch_orig_dt,))
             return batch_normalized, batch_orig_dt
 
         # unnormalization of non-Batch/UnnormalizedBatch is for legacy support

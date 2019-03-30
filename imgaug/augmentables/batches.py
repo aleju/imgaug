@@ -301,41 +301,28 @@ class Batch(object):
         self.data = data
 
     @property
+    @ia.deprecated("Batch.images_unaug")
     def images(self):
-        warnings.warn(DeprecationWarning(
-            "Accessing imgaug.Batch.images is deprecated. Access instead "
-            "imgaug.Batch.images_unaug or imgaug.Batch.images_aug."))
         return self.images_unaug
 
     @property
+    @ia.deprecated("Batch.heatmaps_unaug")
     def heatmaps(self):
-        warnings.warn(DeprecationWarning(
-            "Accessing imgaug.Batch.heatmaps is deprecated. Access instead "
-            "imgaug.Batch.heatmaps_unaug or imgaug.Batch.heatmaps_aug."))
         return self.heatmaps_unaug
 
     @property
+    @ia.deprecated("Batch.segmentation_maps_unaug")
     def segmentation_maps(self):
-        warnings.warn(DeprecationWarning(
-            "Accessing imgaug.Batch.segmentation_maps is deprecated. Access "
-            "instead imgaug.Batch.segmentation_maps_unaug or "
-            "imgaug.Batch.segmentation_maps_aug."))
         return self.segmentation_maps_unaug
 
     @property
+    @ia.deprecated("Batch.keypoints_unaug")
     def keypoints(self):
-        warnings.warn(DeprecationWarning(
-            "Accessing imgaug.Batch.keypoints is deprecated. Access "
-            "instead imgaug.Batch.keypoints_unaug or "
-            "imgaug.Batch.keypoints_aug."))
         return self.keypoints_unaug
 
     @property
+    @ia.deprecated("Batch.bounding_boxes_unaug")
     def bounding_boxes(self):
-        warnings.warn(DeprecationWarning(
-            "Accessing imgaug.Batch.bounding_boxes is deprecated. Access "
-            "instead imgaug.Batch.bounding_boxes_unaug or "
-            "imgaug.Batch.bounding_boxes_aug."))
         return self.bounding_boxes_unaug
 
     @classmethod

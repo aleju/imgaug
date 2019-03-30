@@ -428,7 +428,7 @@ def test_BatchLoader():
 
         assert len(caught_warnings) > 0
         for warning in caught_warnings:
-            assert "BatchLoader is deprecated" in str(warning.message)
+            assert "is deprecated" in str(warning.message)
 
 
 def test_BackgroundAugmenter__augment_images_worker():
@@ -481,10 +481,7 @@ def test_BackgroundAugmenter__augment_images_worker():
 
     assert len(caught_warnings) > 0
     for warning in caught_warnings:
-        assert (
-                "BatchLoader is deprecated" in str(warning.message)
-                or "BackgroundAugmenter is deprecated" in str(warning.message)
-        )
+        assert "is deprecated" in str(warning.message)
 
 
 if __name__ == "__main__":

@@ -161,10 +161,9 @@ def _handle_position_parameter(position):
         )
 
 
+@ia.deprecated(alt_func="Resize",
+               comment="Resize has the exactly same interface as Scale.")
 def Scale(*args, **kwargs):
-    import warnings
-    warnings.warn(DeprecationWarning("'Scale' is deprecated. Use 'Resize' instead. It has the exactly same interface "
-                                     "(simple renaming)."))
     return Resize(*args, **kwargs)
 
 

@@ -457,7 +457,7 @@ def test_Polygon_cut_out_of_image():
         # Verify
         # get multiple warnings here, one for each function call
         assert all([
-            "Use Polygon.clip_out_of_image() instead" in str(msg.message)
+            "is deprecated" in str(msg.message)
             for msg in caught_warnings])
 
 

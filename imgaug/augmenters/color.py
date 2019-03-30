@@ -24,8 +24,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
-import warnings
-
 import numpy as np
 import cv2
 import six.moves as sm
@@ -37,11 +35,10 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
-# legacy support
+@ia.deprecated(alt_func="WithColorspace")
 def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False,
                  random_state=None):
-    """Deprecated. Use WithColorspace."""
-    warnings.warn('InColorspace is deprecated. Use WithColorspace.', DeprecationWarning)
+    """Convert images to another colorspace."""
     return WithColorspace(to_colorspace, from_colorspace, children, name, deterministic, random_state)
 
 
@@ -528,19 +525,21 @@ class ChangeColorspace(meta.Augmenter):
             ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
 
             if alpha == 0 or self.from_colorspace == to_colorspace:
-                pass # no change necessary
+                pass  # no change necessary
             else:
                 # some colorspaces here should use image/255.0 according to the docs,
                 # but at least for conversion to grayscale that results in errors,
                 # ie uint8 is expected
 
                 if image.ndim != 3:
+                    import warnings
                     warnings.warn(
                         "Received an image with %d dimensions in "
                         "ChangeColorspace._augment_image(), but expected 3 dimensions, i.e. shape "
                         "(height, width, channels)." % (image.ndim,)
                     )
                 elif image.shape[2] != 3:
+                    import warnings
                     warnings.warn(
                         "Received an image with shape (H, W, C) and C=%d in "
                         "ChangeColorspace._augment_image(). Expected C to usually be 3 -- any "
