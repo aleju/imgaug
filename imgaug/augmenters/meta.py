@@ -1580,8 +1580,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         order = "standard"
         nb_keys = len(list(kwargs.keys())) > 2
         vinfo = sys.version_info
-        newer_than_36 = vinfo[0] > 3 or (vinfo[0] == 3 and vinfo[1] >= 6)
-        if newer_than_36:
+        is_py36_or_newer = vinfo[0] > 3 or (vinfo[0] == 3 and vinfo[1] >= 6)
+        if is_py36_or_newer:
             order = "kwargs_keys"
         elif not return_batch and nb_keys > 2:
             raise ValueError(
