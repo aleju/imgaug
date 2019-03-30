@@ -169,8 +169,8 @@ def normalize_heatmaps(inputs, shapes=None):
     if ntype == "None":
         return None
     elif ntype == "array[float]":
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_single_array_ndim(inputs, 4, "(N,H,W,C)", "HeatmapsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
     elif ntype == "HeatmapsOnImage":
@@ -178,8 +178,8 @@ def normalize_heatmaps(inputs, shapes=None):
     elif ntype == "iterable[empty]":
         return None
     elif ntype == "iterable-array[float]":
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_many_arrays_ndim(inputs, 3, "(H,W,C)", "HeatmapsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
     else:
@@ -201,9 +201,9 @@ def normalize_segmentation_maps(inputs, shapes=None):
     if ntype == "None":
         return None
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_single_array_ndim(inputs, 3, "(N,H,W)",
                                   "SegmentationMapOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         if ntype == "array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
@@ -217,8 +217,8 @@ def normalize_segmentation_maps(inputs, shapes=None):
     elif ntype in ["iterable-array[int]",
                    "iterable-array[uint]",
                    "iterable-array[bool]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_many_arrays_ndim(inputs, 2, "(H,W)", "SegmentationMapsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         if ntype == "iterable-array[bool]":
             return [SegmentationMapOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
@@ -244,9 +244,9 @@ def normalize_keypoints(inputs, shapes=None):
     if ntype == "None":
         return inputs
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_single_array_ndim(inputs, 3, "(N,K,2)", "KeypointsOnImage")
         _assert_single_array_last_dim_exactly(inputs, 2, "KeypointsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             KeypointsOnImage.from_coords_array(attr_i, shape=shape)
             for attr_i, shape
@@ -266,9 +266,9 @@ def normalize_keypoints(inputs, shapes=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_many_arrays_ndim(inputs, 2, "(K,2)", "KeypointsOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 2, "KeypointsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             KeypointsOnImage.from_coords_array(attr_i, shape=shape)
             for attr_i, shape
@@ -316,9 +316,9 @@ def normalize_bounding_boxes(inputs, shapes=None):
     if ntype == "None":
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_single_array_ndim(inputs, 3, "(N,B,4)", "BoundingBoxesOnImage")
         _assert_single_array_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
             for attr_i, shape
@@ -343,9 +343,9 @@ def normalize_bounding_boxes(inputs, shapes=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_many_arrays_ndim(inputs, 2, "(B,4)", "BoundingBoxesOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
             for attr_i, shape
@@ -397,10 +397,10 @@ def normalize_polygons(inputs, shapes=None):
     if ntype == "None":
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_single_array_ndim(inputs, 4, "(N,#polys,#points,2)",
                                   "PolygonsOnImage")
         _assert_single_array_last_dim_exactly(inputs, 2, "PolygonsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
@@ -418,10 +418,10 @@ def normalize_polygons(inputs, shapes=None):
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_many_arrays_ndim(inputs, 3, "(#polys,#points,2)",
                                  "PolygonsOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 2, "PolygonsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             PolygonsOnImage([Polygon(poly_points) for poly_points in attr_i],
                             shape=shape)
@@ -444,9 +444,9 @@ def normalize_polygons(inputs, shapes=None):
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
-        _assert_exactly_n_shapes_partial(n=len(inputs))
         _assert_many_arrays_ndim(inputs, 2, "(#points,2)", "PolygonsOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 2, "PolygonsOnImage")
+        _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             PolygonsOnImage(
                 [Polygon(poly_points) for poly_points in attr_i],
