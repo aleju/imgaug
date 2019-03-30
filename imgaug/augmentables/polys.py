@@ -312,6 +312,9 @@ class Polygon(object):
         """
         return not self.is_out_of_image(image, fully=True, partly=False)
 
+    # FIXME this is not completely correct as it only evaluates corner points
+    #       and a polygon can still have parts of if inside the image, even when
+    #       all points are outside of it
     def is_out_of_image(self, image, fully=True, partly=False):
         """
         Estimate whether the polygon is partially or fully outside of the image area.
@@ -360,20 +363,27 @@ class Polygon(object):
         Cut off all parts of the polygon that are outside of the image.
 
         This operation may lead to new points being created.
-        As a single polygon may be split into multiple new polygons, the result is a MultiPolygon.
+        As a single polygon may be split into multiple new polygons, the result
+        is always a list, which may contain more than one output polygon.
+
+        This operation will return an empty list if the polygon is completely
+        outside of the image plane.
 
         Parameters
         ----------
         image : (H,W,...) ndarray or tuple of int
             Image dimensions to use for the clipping of the polygon.
             If an ndarray, its shape will be used.
-            If a tuple, it is assumed to represent the image shape and must contain at least two integers.
+            If a tuple, it is assumed to represent the image shape and must
+            contain at least two integers.
 
         Returns
         -------
-        imgaug.MultiPolygon
+        list of imgaug.Polygon
             Polygon, clipped to fall within the image dimensions.
-            Returned as MultiPolygon, because the clipping can split the polygon into multiple parts.
+            Returned as a list, because the clipping can split the polygon into
+            multiple parts. The list may also be empty, if the polygon was
+            fully outside of the image plane.
 
         """
         # load shapely lazily, which makes the dependency more optional
@@ -381,7 +391,7 @@ class Polygon(object):
 
         # if fully out of image, clip everything away, nothing remaining
         if self.is_out_of_image(image, fully=True, partly=False):
-            return MultiPolygon([])
+            return []
 
         h, w = image.shape[0:2] if ia.is_np_array(image) else image[0:2]
         poly_shapely = self.to_shapely_polygon()
@@ -395,7 +405,8 @@ class Polygon(object):
         for poly_inter_shapely in multipoly_inter_shapely.geoms:
             polygons.append(Polygon.from_shapely(poly_inter_shapely, label=self.label))
 
-        # shapely changes the order of points, we try here to preserve it as good as possible
+        # shapely changes the order of points, we try here to preserve it as
+        # much as possible
         polygons_reordered = []
         for polygon in polygons:
             found = False
@@ -408,7 +419,7 @@ class Polygon(object):
                     break
             ia.do_assert(found)  # could only not find closest points if new polys are empty
 
-        return MultiPolygon(polygons_reordered)
+        return polygons_reordered
 
     def shift(self, top=None, right=None, bottom=None, left=None):
         """
@@ -1095,6 +1106,7 @@ class PolygonsOnImage(object):
             return self.deepcopy()
         else:
             polygons = [poly.project(self.shape, shape) for poly in self.polygons]
+            # TODO use deepcopy() here
             return PolygonsOnImage(polygons, shape)
 
     def draw_on_image(self,
@@ -1219,6 +1231,7 @@ class PolygonsOnImage(object):
             poly for poly in self.polygons
             if not poly.is_out_of_image(self.shape, fully=fully, partly=partly)
         ]
+        # TODO use deepcopy() here
         return PolygonsOnImage(polys_clean, shape=self.shape)
 
     def clip_out_of_image(self):
@@ -1242,12 +1255,13 @@ class PolygonsOnImage(object):
 
         """
         polys_cut = [
-            poly.clip_out_of_image(self.shape).geoms
+            poly.clip_out_of_image(self.shape)
             for poly
             in self.polygons
             if poly.is_partly_within_image(self.shape)
         ]
         polys_cut_flat = [poly for poly_lst in polys_cut for poly in poly_lst]
+        # TODO use deepcopy() here
         return PolygonsOnImage(polys_cut_flat, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
@@ -1835,6 +1849,8 @@ class _ConcavePolygonRecoverer(object):
         return points_kept
 
 
+# TODO remove this? was previously only used by Polygon.clip_*(), but that
+#      doesn't use it anymore
 class MultiPolygon(object):
     """
     Class that represents several polygons.

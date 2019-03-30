@@ -470,24 +470,24 @@ def _test_Polygon_cut_clip(func):
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label=None)
     image = np.zeros((1, 1, 3), dtype=np.uint8)
     multipoly_clipped = func(poly, image)
-    assert isinstance(multipoly_clipped, ia.MultiPolygon)
-    assert len(multipoly_clipped.geoms) == 1
-    assert multipoly_clipped.geoms[0].exterior_almost_equals(poly.exterior)
-    assert multipoly_clipped.geoms[0].label is None
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(poly.exterior)
+    assert multipoly_clipped[0].label is None
 
     # square poly shifted by x=0.5, y=0.5 => half out of image
     poly = ia.Polygon([(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)], label="test")
     image = np.zeros((1, 1, 3), dtype=np.uint8)
     multipoly_clipped = func(poly, image)
-    assert isinstance(multipoly_clipped, ia.MultiPolygon)
-    assert len(multipoly_clipped.geoms) == 1
-    assert multipoly_clipped.geoms[0].exterior_almost_equals(np.float32([
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
         [0.5, 0.5],
         [1.0, 0.5],
         [1.0, 1.0],
         [0.5, 1.0]
     ]))
-    assert multipoly_clipped.geoms[0].label == "test"
+    assert multipoly_clipped[0].label == "test"
 
     # non-square poly, with one rectangle on the left side of the image and one on the right side,
     # both sides are connected by a thin strip below the image
@@ -497,28 +497,28 @@ def _test_Polygon_cut_clip(func):
                       label="test")
     image = np.zeros((1, 1, 3), dtype=np.uint8)
     multipoly_clipped = func(poly, image)
-    assert isinstance(multipoly_clipped, ia.MultiPolygon)
-    assert len(multipoly_clipped.geoms) == 2
-    assert multipoly_clipped.geoms[0].exterior_almost_equals(np.float32([
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 2
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
         [0.0, 0.0],
         [0.4, 0.0],
         [0.4, 1.0],
         [0.0, 1.0]
     ]))
-    assert multipoly_clipped.geoms[0].label == "test"
-    assert multipoly_clipped.geoms[1].exterior_almost_equals(np.float32([
+    assert multipoly_clipped[0].label == "test"
+    assert multipoly_clipped[1].exterior_almost_equals(np.float32([
         [0.6, 0.0],
         [1.0, 0.0],
         [1.0, 1.0],
         [0.6, 1.0]
     ]))
-    assert multipoly_clipped.geoms[0].label == "test"
+    assert multipoly_clipped[0].label == "test"
 
     # poly outside of image
     poly = ia.Polygon([(10.0, 10.0)])
     multipoly_clipped = func(poly, (5, 5, 3))
-    assert isinstance(multipoly_clipped, ia.MultiPolygon)
-    assert len(multipoly_clipped.geoms) == 0
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 0
 
 
 def test_Polygon_shift():
