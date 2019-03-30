@@ -2484,6 +2484,137 @@ def test_Augmenter_augment():
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
 
+    # ----------------------------------------------
+    # make sure that augment actually does something
+    # ----------------------------------------------
+    aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant", cval=0)
+    image = np.zeros((4, 4, 1), dtype=np.uint8) + 255
+    heatmaps = np.ones((1, 4, 4, 1), dtype=np.float32)
+    segmaps = np.ones((1, 4, 4), dtype=np.int32)
+    kps = [(0, 0), (1, 2)]
+    bbs = [(0, 0, 1, 1), (1, 2, 2, 3)]
+    polygons = [(0, 0), (1, 0), (1, 1)]
+
+    image_aug = aug.augment(image=image)
+    _, heatmaps_aug = aug.augment(image=image, heatmaps=heatmaps)
+    _, segmaps_aug = aug.augment(image=image, segmentation_maps=segmaps)
+    _, kps_aug = aug.augment(image=image, keypoints=kps)
+    _, bbs_aug = aug.augment(image=image, bounding_boxes=bbs)
+    _, polygons_aug = aug.augment(image=image, polygons=polygons)
+    # all augmentables must have been moved to the right by 1px
+    assert np.all(image_aug[:, 0] == 0)
+    assert np.all(image_aug[:, 1:] == 255)
+    assert np.allclose(heatmaps_aug[0][:, 0], 0.0)
+    assert np.allclose(heatmaps_aug[0][:, 1:], 1.0)
+    assert np.all(segmaps_aug[0][:, 0] == 0)
+    assert np.all(segmaps_aug[0][:, 1:] == 1)
+    assert kps_aug == [(1, 0), (2, 2)]
+    assert bbs_aug == [(1, 0, 2, 1), (2, 2, 3, 3)]
+    assert polygons_aug == [(1, 0), (2, 0), (2, 1)]
+
+    # ----------------------------------------------
+    # make sure that changes from augment() are aligned and for each call
+    # ----------------------------------------------
+    aug = iaa.Affine(translate_px={"x": (0, 100)}, order=0, mode="constant",
+                     cval=0)
+    image = np.zeros((1, 100, 1), dtype=np.uint8) + 255
+    heatmaps = np.ones((1, 1, 100, 1), dtype=np.float32)
+    segmaps = np.ones((1, 1, 100), dtype=np.int32)
+    kps = [(0, 0)]
+    bbs = [(0, 0, 1, 1)]
+    polygons = [(0, 0), (1, 0), (1, 1)]
+
+    seen = []
+    for _ in range(10):
+        batch_aug = aug.augment(image=image, heatmaps=heatmaps,
+                                segmentation_maps=segmaps, keypoints=kps,
+                                bounding_boxes=bbs, polygons=polygons,
+                                return_batch=True)
+        shift_image = np.sum(batch_aug.images_aug[0][0, :] == 0)
+        shift_heatmaps = np.sum(
+            np.isclose(batch_aug.heatmaps_aug[0][0, :, 0], 0.0))
+        shift_segmaps = np.sum(
+            batch_aug.segmentation_maps_aug[0][0, :] == 0)
+        shift_kps = batch_aug.keypoints_aug[0][0]
+        shift_bbs = batch_aug.bounding_boxes_aug[0][0]
+        shift_polygons = batch_aug.polygons_aug[0][0]
+
+        assert len({shift_image, shift_heatmaps, shift_segmaps,
+                    shift_kps, shift_bbs, shift_polygons}) == 1
+        seen.append(shift_image)
+    assert len(set(seen)) > 7
+
+    # ----------------------------------------------
+    # make sure that changes from augment() are aligned
+    # and do NOT vary if the augmenter was already in deterministic mode
+    # ----------------------------------------------
+    aug = iaa.Affine(translate_px={"x": (0, 100)}, order=0, mode="constant",
+                     cval=0)
+    aug = aug.to_deterministic()
+
+    image = np.zeros((1, 100, 1), dtype=np.uint8) + 255
+    heatmaps = np.ones((1, 1, 100, 1), dtype=np.float32)
+    segmaps = np.ones((1, 1, 100), dtype=np.int32)
+    kps = [(0, 0)]
+    bbs = [(0, 0, 1, 1)]
+    polygons = [(0, 0), (1, 0), (1, 1)]
+
+    seen = []
+    for _ in range(10):
+        batch_aug = aug.augment(image=image, heatmaps=heatmaps,
+                                segmentation_maps=segmaps, keypoints=kps,
+                                bounding_boxes=bbs, polygons=polygons,
+                                return_batch=True)
+        shift_image = np.sum(batch_aug.images_aug[0][0, :] == 0)
+        shift_heatmaps = np.sum(
+            np.isclose(batch_aug.heatmaps_aug[0][0, :, 0], 0.0))
+        shift_segmaps = np.sum(
+            batch_aug.segmentation_maps_aug[0][0, :] == 0)
+        shift_kps = batch_aug.keypoints_aug[0][0]
+        shift_bbs = batch_aug.bounding_boxes_aug[0][0]
+        shift_polygons = batch_aug.polygons_aug[0][0]
+
+        assert len({shift_image, shift_heatmaps, shift_segmaps,
+                    shift_kps, shift_bbs, shift_polygons}) == 1
+        seen.append(shift_image)
+    assert len(set(seen)) == 1
+
+    # -------------------------------------------------------------------------
+    # make sure that arrays (of images, heatmaps, segmaps) get split to lists
+    # of arrays if the augmenter changes shapes in non-uniform (between images)
+    # ways
+    # we augment 100 images here with rotation of either 0deg or 90deg
+    # and do not resize back to the original image size afterwards, so shapes
+    # change
+    # -------------------------------------------------------------------------
+    aug = iaa.Rot90([0, 1], keep_size=False)
+
+    # base_arr is (100, 1, 2) array, each containing [[0, 1]]
+    base_arr = np.tile(np.arange(1*2).reshape((1, 2))[np.newaxis, :, :],
+                       (100, 1, 1))
+    images = np.copy(base_arr)[:, :, :, np.newaxis].astype(np.uint8)
+    heatmaps = (
+        np.copy(base_arr)[:, :, :, np.newaxis].astype(np.float32)
+        / np.max(base_arr)
+    )
+    segmaps = np.copy(base_arr).astype(np.int32)
+
+    batch_aug = aug.augment(images=images, heatmaps=heatmaps,
+                            segmentation_maps=segmaps,
+                            return_batch=True)
+    assert isinstance(batch_aug.images_aug, list)
+    assert isinstance(batch_aug.heatmaps_aug, list)
+    assert isinstance(batch_aug.segmentation_maps_aug, list)
+    shapes_images = [arr.shape for arr in batch_aug.images_aug]
+    shapes_heatmaps = [arr.shape for arr in batch_aug.heatmaps_aug]
+    shapes_segmaps = [arr.shape for arr in batch_aug.segmentation_maps_aug]
+    assert (
+        [shape[0:2] for shape in shapes_images]
+        == [shape[0:2] for shape in shapes_heatmaps]
+        == [shape[0:2] for shape in shapes_segmaps]
+    )
+    assert len(set(shapes_images)) == 2
+
 
 def test_Augmenter_augment_py36_or_higher():
     is_py36_or_higher = (sys.version_info[0] == 3 and sys.version_info[1] >= 6)
