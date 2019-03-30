@@ -1594,7 +1594,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 "returned UnnormalizedBatch instance, e.g. via "
                 "'batch.images_aug' to get augmented images."
             )
-        elif not return_batch and nb_keys == 2 and "images" not in kwargs:
+        elif not return_batch and nb_keys == 2 and images is None:
             raise ValueError(
                 "Requested two outputs from augment() that were not 'images', "
                 "but detected python version is below 3.6. For security "
