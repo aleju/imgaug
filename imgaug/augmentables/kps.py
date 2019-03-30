@@ -6,7 +6,7 @@ import numpy as np
 import scipy.spatial.distance
 import six.moves as sm
 
-import imgaug.imgaug as ia
+from .. import imgaug as ia
 
 
 def compute_geometric_median(X, eps=1e-5):

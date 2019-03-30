@@ -10,7 +10,7 @@ import skimage.draw
 import skimage.measure
 import collections
 
-import imgaug.imgaug as ia
+from .. import imgaug as ia
 
 
 # TODO somehow merge with BoundingBox

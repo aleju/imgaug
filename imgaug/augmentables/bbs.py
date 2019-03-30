@@ -7,7 +7,7 @@ import numpy as np
 import skimage.draw
 import skimage.measure
 
-import imgaug.imgaug as ia
+from .. import imgaug as ia
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()

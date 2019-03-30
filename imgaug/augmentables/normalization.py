@@ -3,8 +3,8 @@ import functools
 
 import numpy as np
 
-import imgaug.imgaug as ia
-import imgaug.dtypes as iadt
+from .. import imgaug as ia
+from .. import dtypes as iadt
 
 
 def _preprocess_shapes(shapes):

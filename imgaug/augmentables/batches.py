@@ -5,8 +5,8 @@ import warnings
 
 import numpy as np
 
-import imgaug.imgaug as ia
-import imgaug.augmentables.normalization as nlib
+from .. import imgaug as ia
+from . import normalization as nlib
 
 DEFAULT = "DEFAULT"
 

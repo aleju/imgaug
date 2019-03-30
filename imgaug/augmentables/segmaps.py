@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 import six.moves as sm
 
-import imgaug.imgaug as ia
+from .. import imgaug as ia
 
 
 class SegmentationMapOnImage(object):
