@@ -448,16 +448,20 @@ class LineString(object):
         Parameters
         ----------
         top : None or int, optional
-            Amount of pixels by which to shift the bounding box from the top.
+            Amount of pixels by which to shift the bounding box from the
+            top.
 
         right : None or int, optional
-            Amount of pixels by which to shift the bounding box from the right.
+            Amount of pixels by which to shift the bounding box from the
+            right.
 
         bottom : None or int, optional
-            Amount of pixels by which to shift the bounding box from the bottom.
+            Amount of pixels by which to shift the bounding box from the
+            bottom.
 
         left : None or int, optional
-            Amount of pixels by which to shift the bounding box from the left.
+            Amount of pixels by which to shift the bounding box from the
+            left.
 
         Returns
         -------
@@ -485,7 +489,7 @@ class LineString(object):
             The shape of the image onto which to draw the line mask.
 
         size_line : int, optional
-            Thickness of the line.
+            Thickness of the line segments.
 
         size_points : int, optional
             Size of the points in pixels.
@@ -525,7 +529,7 @@ class LineString(object):
             line string.
 
         size : int, optional
-            Thickness of the line.
+            Thickness of the line segments.
 
         antialiased : bool, optional
             Whether to draw the line with anti-aliasing activated.
@@ -672,7 +676,7 @@ class LineString(object):
             visible points.
 
         size_line : int, optional
-            Thickness of the line.
+            Thickness of the line segments.
 
         size_points : int, optional
             Size of the points in pixels.
@@ -737,7 +741,7 @@ class LineString(object):
             line string.
 
         size : int, optional
-            Thickness of the line.
+            Thickness of the line segments.
 
         antialiased : bool, optional
             Whether to draw the line with anti-aliasing activated.
@@ -893,8 +897,8 @@ class LineString(object):
 
         Parameters
         ----------
-        image : (H,W,C) ndarray(uint8)
-            The image onto which to draw the bounding box.
+        image : ndarray
+            The `(H,W,C)` `uint8` image onto which to draw the line string.
 
         color : iterable of int, optional
             Color to use as RGB, i.e. three values.
@@ -910,28 +914,28 @@ class LineString(object):
             If ``None``, this value is derived from ``0.5 * color``.
 
         alpha : float, optional
-            Opacity of the line string. Higher values denote a more visible
+            Opacity of the line string. Higher values denote more visible
             points.
             The alphas of the line and points are derived from this value,
             unless they are set.
 
         alpha_line : None or float, optional
-            Opacity of the line string. Higher values denote a more visible
+            Opacity of the line string. Higher values denote more visible
             line string.
             If ``None``, this value is derived from `alpha`.
 
         alpha_points : None or float, optional
-            Opacity of the line string points. Higher values denote a more
+            Opacity of the line string points. Higher values denote more
             visible points.
             If ``None``, this value is derived from `alpha`.
 
         size : int, optional
-            Thickness of the line string.
+            Size of the line string.
             The sizes of the line and points are derived from this value,
             unless they are set.
 
         size_line : None or int, optional
-            Thickness of the line.
+            Thickness of the line segments.
             If ``None``, this value is derived from `size`.
 
         size_points : None or int, optional
@@ -980,7 +984,6 @@ class LineString(object):
 
         return image
 
-    # TODO
     def extract_from_image(self, image, size=3, pad=True, pad_max=10*1000,
                            antialiased=True, prevent_zero_size=True):
         """
@@ -994,8 +997,9 @@ class LineString(object):
 
         Parameters
         ----------
-        image : (H,W) ndarray or (H,W,C) ndarray
-            The image from which to extract the pixels within the bounding box.
+        image : ndarray
+            The image of shape `(H,W,[C])` from which to extract the pixels
+            within the line string.
 
         size : int, optional
             Thickness of the line.
@@ -1095,7 +1099,6 @@ class LineString(object):
         from imgaug.augmentables.kps import Keypoint
         return [Keypoint(x=x, y=y) for (x, y) in self.coords]
 
-    # TODO
     def to_bounding_box(self):
         """
         Generate a bounding box encapsulating the line string.
@@ -1116,7 +1119,6 @@ class LineString(object):
                            x2=np.max(self.xx), y2=np.max(self.yy),
                            label=self.label)
 
-    # TODO
     def to_polygon(self):
         """
         Generate a polygon from the line string points.
@@ -1132,7 +1134,6 @@ class LineString(object):
         from .polys import Polygon
         return Polygon(self.coords, label=self.label)
 
-    # TODO
     def to_heatmap(self, image_shape, size_line=1, size_points=0,
                    antialiased=True, raise_if_out_of_image=False):
         """
@@ -1273,6 +1274,366 @@ class LineString(object):
         points_str = ", ".join(
             ["(%.2f, %.2f)" % (x, y) for x, y in self.coords])
         return "LineString([%s], label=%s)" % (points_str, self.label)
+
+
+# TODO
+# distance
+# hausdorff_distance
+# is_fully_within_image()
+# is_partly_within_image()
+# is_out_of_image()
+# draw()
+# draw_mask()
+# extract_from_image()
+# to_keypoints()
+# intersects(other)
+# concat(other)
+# is_self_intersecting()
+# remove_self_intersections()
+class LineStringsOnImage(object):
+    """
+    Object that represents all line strings on a single image.
+
+    Parameters
+    ----------
+    line_strings : list of imgaug.augmentables.lines.LineString
+        List of line strings on the image.
+
+    shape : tuple of int or ndarray
+        The shape of the image on which the objects are placed.
+        Either an image with shape ``(H,W,[C])`` or a tuple denoting
+        such an image shape.
+
+    Examples
+    --------
+    >>> import imgaug.augmentables.lines as lines
+    >>> image = np.zeros((100, 100))
+    >>> lss = [
+    >>>     lines.LineString([(0, 0), (10, 0)]),
+    >>>     lines.LineString([(10, 20), (30, 30), (50, 70)])
+    >>> ]
+    >>> lsoi = lines.LineStringsOnImage(lss, shape=image.shape)
+
+    """
+
+    def __init__(self, line_strings, shape):
+        assert ia.is_iterable(line_strings), (
+            "Expected 'line_strings' to be an iterable, got type '%s'." % (
+                type(line_strings),))
+        self.line_strings = line_strings
+        self.shape = _parse_shape(shape)
+
+    @property
+    def empty(self):
+        """
+        Returns whether this object contains zero line strings.
+
+        Returns
+        -------
+        bool
+            True if this object contains zero line strings.
+
+        """
+        return len(self.line_strings) == 0
+
+    def on(self, image):
+        """
+        Project bounding boxes from one image to a new one.
+
+        Parameters
+        ----------
+        image : ndarray or tuple of int
+            The new image onto which to project.
+            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            such an image shape.
+
+        Returns
+        -------
+        line_strings : imgaug.augmentables.lines.LineStrings
+            Object containing all projected line strings.
+
+        """
+        shape = _parse_shape(image)
+        if shape[0:2] == self.shape[0:2]:
+            return self.deepcopy()
+        line_strings = [ls.project(self.shape, shape)
+                        for ls in self.line_strings]
+        return self.deepcopy(line_strings=line_strings)
+
+    @classmethod
+    def from_xy_array(cls, xy, shape):
+        """
+        Convert an `(N,M,2)` ndarray to a LineStringsOnImage object.
+
+        This is the inverse of
+        :func:`imgaug.augmentables.lines.LineStringsOnImage.to_xy_array`.
+
+        Parameters
+        ----------
+        xy : (N,M,2) ndarray or iterable of (M,2) ndarray
+            Array containing the point coordinates ``N`` line strings
+            with each ``M`` points given as ``(x,y)`` coordinates.
+            ``M`` may differ if an iterable of arrays is used.
+            Each array should usually be of dtype ``float32``.
+
+        shape : tuple of int
+            ``(H,W,[C])`` shape of the image on which the line strings are
+            placed.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Object containing a list of ``LineString`` objects following the
+            provided point coordinates.
+
+        """
+        lss = []
+        for xy_ls in xy:
+            lss.append(LineString(xy_ls))
+        return cls(lss, shape)
+
+    def to_xyxy_array(self, dtype=np.float32):
+        """
+        Convert this object to an iterable of ``(M,2)`` arrays of points.
+
+        This is the inverse of
+        :func:`imgaug.augmentables.lines.LineStringsOnImage.from_xy_array`.
+
+        Parameters
+        ----------
+        dtype : numpy.dtype, optional
+            Desired output datatype of the ndarray.
+
+        Returns
+        -------
+        list of ndarray
+            The arrays of point coordinates, each given as ``(M,2)``.
+
+        """
+        from .. import dtypes as iadt
+        return [iadt.restore_dtypes_(np.copy(ls.coords), dtype)
+                for ls in self.line_strings]
+
+    def draw_on_image(self, image,
+                      color=(0, 255, 0), color_line=None, color_points=None,
+                      alpha=1.0, alpha_line=None, alpha_points=None,
+                      size=1, size_line=None, size_points=None,
+                      antialiased=True,
+                      raise_if_out_of_image=False):
+        """
+        Draw all line strings onto a given image.
+
+        Parameters
+        ----------
+        image : ndarray
+            The `(H,W,C)` `uint8` image onto which to draw the line strings.
+
+        color : iterable of int, optional
+            Color to use as RGB, i.e. three values.
+            The color of the lines and points are derived from this value,
+            unless they are set.
+
+        color_line : None or iterable of int
+            Color to use for the line segments as RGB, i.e. three values.
+            If ``None``, this value is derived from `color`.
+
+        color_points : None or iterable of int
+            Color to use for the points as RGB, i.e. three values.
+            If ``None``, this value is derived from ``0.5 * color``.
+
+        alpha : float, optional
+            Opacity of the line strings. Higher values denote more visible
+            points.
+            The alphas of the line and points are derived from this value,
+            unless they are set.
+
+        alpha_line : None or float, optional
+            Opacity of the line strings. Higher values denote more visible
+            line string.
+            If ``None``, this value is derived from `alpha`.
+
+        alpha_points : None or float, optional
+            Opacity of the line string points. Higher values denote more
+            visible points.
+            If ``None``, this value is derived from `alpha`.
+
+        size : int, optional
+            Size of the line strings.
+            The sizes of the line and points are derived from this value,
+            unless they are set.
+
+        size_line : None or int, optional
+            Thickness of the line segments.
+            If ``None``, this value is derived from `size`.
+
+        size_points : None or int, optional
+            Size of the points in pixels.
+            If ``None``, this value is derived from ``3 * size``.
+
+        antialiased : bool, optional
+            Whether to draw the lines with anti-aliasing activated.
+            This does currently not affect the point drawing.
+
+        raise_if_out_of_image : bool, optional
+            Whether to raise an error if a line string is fully
+            outside of the image. If set to False, no error will be raised and
+            only the parts inside the image will be drawn.
+
+        Returns
+        -------
+        ndarray
+            Image with line strings drawn on it.
+
+        """
+        # TODO improve efficiency here by copying only once
+        for ls in self.line_strings:
+            image = ls.draw_on_image(
+                image,
+                color=color, color_line=color_line, color_points=color_points,
+                alpha=alpha, alpha_line=alpha_line, alpha_points=alpha_points,
+                size=size, size_line=size_line, size_points=size_points,
+                antialiased=antialiased,
+                raise_if_out_of_image=raise_if_out_of_image
+            )
+
+        return image
+
+    def remove_out_of_image(self, fully=True, partly=False):
+        """
+        Remove all line strings that are fully/partially outside of the image.
+
+        Parameters
+        ----------
+        fully : bool, optional
+            Whether to remove line strings that are fully outside of the image.
+
+        partly : bool, optional
+            Whether to remove line strings that are partially outside of the
+            image.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Reduced set of line strings, with those that were fully/partially
+            outside of the image removed.
+
+        """
+        lss_clean = [ls for ls in self.line_strings
+                     if not ls.is_out_of_image(
+                         self.shape, fully=fully, partly=partly)]
+        return LineStringsOnImage(lss_clean, shape=self.shape)
+
+    def clip_out_of_image(self):
+        """
+        Clip off all parts of the line_strings that are outside of the image.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Line strings, clipped to fall within the image dimensions.
+
+        """
+        lss_cut = [ls.clip_out_of_image(self.shape)
+                   for ls in self.line_strings
+                   if ls.is_partly_within_image(self.shape)]
+        return LineStringsOnImage(lss_cut, shape=self.shape)
+
+    def shift(self, top=None, right=None, bottom=None, left=None):
+        """
+        Shift/move the line strings from one or more image sides.
+
+        Parameters
+        ----------
+        top : None or int, optional
+            Amount of pixels by which to shift all bounding boxes from the
+            top.
+
+        right : None or int, optional
+            Amount of pixels by which to shift all bounding boxes from the
+            right.
+
+        bottom : None or int, optional
+            Amount of pixels by which to shift all bounding boxes from the
+            bottom.
+
+        left : None or int, optional
+            Amount of pixels by which to shift all bounding boxes from the
+            left.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Shifted line strings.
+
+        """
+        lss_new = [ls.shift(top=top, right=right, bottom=bottom, left=left)
+                   for ls in self.line_strings]
+        return LineStringsOnImage(lss_new, shape=self.shape)
+
+    def copy(self, line_strings, shape):
+        """
+        Create a shallow copy of the LineStringsOnImage object.
+
+        Parameters
+        ----------
+        line_strings : list of imgaug.augmentables.lines.LineString
+            List of line strings on the image.
+            If not ``None``, then the ``line_strings`` attribute of the copied
+            object will be set to this value.
+
+        shape : tuple of int or ndarray
+            The shape of the image on which the objects are placed.
+            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            such an image shape.
+            If not ``None``, then the ``shape`` attribute of the copied object
+            will be set to this value.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Shallow copy.
+
+        """
+        lss = self.line_strings if line_strings is None else line_strings
+        shape = self.shape if shape is None else shape
+        return LineStringsOnImage(line_strings=lss, shape=shape)
+
+    def deepcopy(self, line_strings, shape):
+        """
+        Create a deep copy of the LineStringsOnImage object.
+
+        Parameters
+        ----------
+        line_strings : list of imgaug.augmentables.lines.LineString
+            List of line strings on the image.
+            If not ``None``, then the ``line_strings`` attribute of the copied
+            object will be set to this value.
+
+        shape : tuple of int or ndarray
+            The shape of the image on which the objects are placed.
+            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            such an image shape.
+            If not ``None``, then the ``shape`` attribute of the copied object
+            will be set to this value.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Deep copy.
+
+        """
+        lss = self.line_strings if line_strings is None else line_strings
+        shape = self.shape if shape is None else shape
+        return LineStringsOnImage(
+            line_strings=[ls.deepcopy() for ls in lss],
+            shape=tuple(shape))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "LineStringsOnImage(%s, shape=%s)" % (
+            str(self.line_strings), self.shape)
 
 
 def _is_point_on_line(line_start, line_end, point, eps=1e-4):

@@ -101,6 +101,7 @@
 * Added module `imgaug.augmentables.lines`.
     * Added `LineString`.
     * Added helper functions `_is_point_on_line()`, `_parse_shapes()`, `_project_coords()`.
+    * Added `LineStringsOnImage`.
 
 
 # 0.2.8
