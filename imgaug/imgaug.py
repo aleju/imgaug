@@ -895,25 +895,25 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
     x1 : number
         x coordinate of the first point on line 1. (The lines extends beyond this point.)
 
-    y1 : number:
+    y1 : number
         y coordinate of the first point on line 1. (The lines extends beyond this point.)
 
     x2 : number
         x coordinate of the second point on line 1. (The lines extends beyond this point.)
 
-    y2 : number:
+    y2 : number
         y coordinate of the second point on line 1. (The lines extends beyond this point.)
 
     x3 : number
         x coordinate of the first point on line 2. (The lines extends beyond this point.)
 
-    y3 : number:
+    y3 : number
         y coordinate of the first point on line 2. (The lines extends beyond this point.)
 
     x4 : number
         x coordinate of the second point on line 2. (The lines extends beyond this point.)
 
-    y4 : number:
+    y4 : number
         y coordinate of the second point on line 2. (The lines extends beyond this point.)
 
     Returns
