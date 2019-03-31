@@ -840,16 +840,12 @@ class BoundingBoxesOnImage(object):
             Object containing all projected bounding boxes.
 
         """
-        if ia.is_np_array(image):
-            shape = image.shape
-        else:
-            shape = image
-
+        shape = _parse_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
-        else:
-            bounding_boxes = [bb.project(self.shape, shape) for bb in self.bounding_boxes]
-            return BoundingBoxesOnImage(bounding_boxes, shape)
+        bounding_boxes = [bb.project(self.shape, shape)
+                          for bb in self.bounding_boxes]
+        return BoundingBoxesOnImage(bounding_boxes, shape)
 
     @classmethod
     def from_xyxy_array(cls, xyxy, shape):
