@@ -95,6 +95,9 @@
     * Refactored deprecation warnings to use this function.
 * Added `imgaug.imgaug.deprecated` decorator.
     * Refactored deprecation warnings to use this decorator.
+* Added module `imgaug.augmentables.lines`.
+    * Added `LineString`.
+    * Added helper functions `_is_point_on_line()`, `_parse_shapes()`, `_project_coords()`.
 
 
 # 0.2.8
