@@ -95,6 +95,9 @@
     * Refactored deprecation warnings to use this function.
 * Added `imgaug.imgaug.deprecated` decorator.
     * Refactored deprecation warnings to use this decorator.
+* Changed `BoundingBox.contains()` to also accept `Keypoint`.
+* Changed `BoundingBox.project(from, to)` to also accept images instead of shapes.
+* Reduced code repetition in `BoundingBox`.
 * Added module `imgaug.augmentables.lines`.
     * Added `LineString`.
     * Added helper functions `_is_point_on_line()`, `_parse_shapes()`, `_project_coords()`.
