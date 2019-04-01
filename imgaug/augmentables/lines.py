@@ -1570,18 +1570,19 @@ class LineStringsOnImage(object):
                    for ls in self.line_strings]
         return LineStringsOnImage(lss_new, shape=self.shape)
 
-    def copy(self, line_strings, shape):
+    def copy(self, line_strings=None, shape=None):
         """
         Create a shallow copy of the LineStringsOnImage object.
 
         Parameters
         ----------
-        line_strings : list of imgaug.augmentables.lines.LineString
+        line_strings : None \
+                       or list of imgaug.augmentables.lines.LineString, optional
             List of line strings on the image.
             If not ``None``, then the ``line_strings`` attribute of the copied
             object will be set to this value.
 
-        shape : tuple of int or ndarray
+        shape : None or tuple of int or ndarray, optional
             The shape of the image on which the objects are placed.
             Either an image with shape ``(H,W,[C])`` or a tuple denoting
             such an image shape.
@@ -1598,18 +1599,19 @@ class LineStringsOnImage(object):
         shape = self.shape if shape is None else shape
         return LineStringsOnImage(line_strings=lss, shape=shape)
 
-    def deepcopy(self, line_strings, shape):
+    def deepcopy(self, line_strings=None, shape=None):
         """
         Create a deep copy of the LineStringsOnImage object.
 
         Parameters
         ----------
-        line_strings : list of imgaug.augmentables.lines.LineString
+        line_strings : None \
+                       or list of imgaug.augmentables.lines.LineString, optional
             List of line strings on the image.
             If not ``None``, then the ``line_strings`` attribute of the copied
             object will be set to this value.
 
-        shape : tuple of int or ndarray
+        shape : None or tuple of int or ndarray, optional
             The shape of the image on which the objects are placed.
             Either an image with shape ``(H,W,[C])`` or a tuple denoting
             such an image shape.
