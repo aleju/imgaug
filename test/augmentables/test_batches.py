@@ -37,7 +37,7 @@ class TestBatch(unittest.TestCase):
 
     def test_init(self):
         attr_names = ["images", "heatmaps", "segmentation_maps", "keypoints",
-                      "bounding_boxes", "polygons"]
+                      "bounding_boxes", "polygons", "line_strings"]
         batch = ia.Batch()
         for attr_name in attr_names:
             assert getattr(batch, "%s_unaug" % (attr_name,)) is None
@@ -52,12 +52,13 @@ class TestBatch(unittest.TestCase):
             keypoints=3,
             bounding_boxes=4,
             polygons=5,
-            data=6
+            line_strings=6,
+            data=7
         )
         for i, attr_name in enumerate(attr_names):
             assert getattr(batch, "%s_unaug" % (attr_name,)) == i
             assert getattr(batch, "%s_aug" % (attr_name,)) is None
-        assert batch.data == 6
+        assert batch.data == 7
 
     def test_property_warnings(self):
         batch = ia.Batch()
@@ -89,7 +90,7 @@ class TestBatch(unittest.TestCase):
         batch = ia.Batch()
         observed = batch.deepcopy()
         keys = list(observed.__dict__.keys())
-        assert len(keys) >= 12
+        assert len(keys) >= 14
         for attr_name in keys:
             assert getattr(observed, attr_name) is None
 
@@ -124,6 +125,11 @@ class TestBatch(unittest.TestCase):
                     ia.Polygon([(0, 0), (10, 0), (10, 10)])
                 ], shape=(100, 100, 3))
             ],
+            line_strings=[
+                ia.LineStringsOnImage([
+                    ia.LineString([(1, 1), (11, 1), (11, 11)])
+                ], shape=(101, 101, 3))
+            ],
             data={"test": 123, "foo": "bar", "test2": [1, 2, 3]}
         )
         observed = batch.deepcopy()
@@ -140,6 +146,7 @@ class TestBatch(unittest.TestCase):
         assert isinstance(observed.bounding_boxes_unaug[0],
                           ia.BoundingBoxesOnImage)
         assert isinstance(observed.polygons_unaug[0], ia.PolygonsOnImage)
+        assert isinstance(observed.line_strings_unaug[0], ia.LineStringsOnImage)
         assert isinstance(observed.data, dict)
 
         assert observed.heatmaps_unaug[0].shape == (4, 4, 3)
@@ -147,6 +154,7 @@ class TestBatch(unittest.TestCase):
         assert observed.keypoints_unaug[0].shape == (6, 6, 3)
         assert observed.bounding_boxes_unaug[0].shape == (7, 7, 3)
         assert observed.polygons_unaug[0].shape == (100, 100, 3)
+        assert observed.line_strings_unaug[0].shape == (101, 101, 3)
 
         assert observed.heatmaps_unaug[0].arr_0to1.shape == (1, 1, 1)
         assert observed.segmentation_maps_unaug[0].arr.shape == (1, 1, 20)
@@ -162,6 +170,12 @@ class TestBatch(unittest.TestCase):
         assert observed.polygons_unaug[0].polygons[0].exterior[1, 1] == 0
         assert observed.polygons_unaug[0].polygons[0].exterior[2, 0] == 10
         assert observed.polygons_unaug[0].polygons[0].exterior[2, 1] == 10
+        assert observed.line_strings_unaug[0].line_strings[0].coords[0, 0] == 1
+        assert observed.line_strings_unaug[0].line_strings[0].coords[0, 1] == 1
+        assert observed.line_strings_unaug[0].line_strings[0].coords[1, 0] == 11
+        assert observed.line_strings_unaug[0].line_strings[0].coords[1, 1] == 1
+        assert observed.line_strings_unaug[0].line_strings[0].coords[2, 0] == 11
+        assert observed.line_strings_unaug[0].line_strings[0].coords[2, 1] == 11
 
         assert observed.data["test"] == 123
         assert observed.data["foo"] == "bar"
