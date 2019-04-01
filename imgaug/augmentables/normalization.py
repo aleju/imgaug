@@ -183,7 +183,8 @@ def normalize_heatmaps(inputs, shapes=None):
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
     else:
-        assert ntype == "iterable-HeatmapsOnImage"
+        assert ntype == "iterable-HeatmapsOnImage", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return inputs  # len allowed to differ from len of images
 
 
@@ -226,7 +227,8 @@ def normalize_segmentation_maps(inputs, shapes=None):
                     attr_i, shape=shape, nb_classes=1+np.max(attr_i))
                 for attr_i, shape in zip(inputs, shapes)]
     else:
-        assert ntype == "iterable-SegmentationMapOnImage"
+        assert ntype == "iterable-SegmentationMapOnImage", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return inputs  # len allowed to differ from len of images
 
 
@@ -295,7 +297,8 @@ def normalize_keypoints(inputs, shapes=None):
             in zip(inputs, shapes)
         ]
     else:
-        assert ntype == "iterable-iterable-Keypoint"
+        assert ntype == "iterable-iterable-Keypoint", (
+            "Got unknown normalization type '%s'." % (ntype,))
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [KeypointsOnImage(attr_i, shape=shape)
                 for attr_i, shape
@@ -376,7 +379,8 @@ def normalize_bounding_boxes(inputs, shapes=None):
             in zip(inputs, shapes)
         ]
     else:
-        assert ntype == "iterable-iterable-BoundingBox"
+        assert ntype == "iterable-iterable-BoundingBox", (
+            "Got unknown normalization type '%s'." % (ntype,))
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [BoundingBoxesOnImage(attr_i, shape=shape)
                 for attr_i, shape
@@ -387,69 +391,99 @@ def normalize_polygons(inputs, shapes=None):
     # TODO get rid of this deferred import
     from imgaug.augmentables.polys import Polygon, PolygonsOnImage
 
+    return _normalize_polygons_and_line_strings(
+        cls_single=Polygon,
+        cls_oi=PolygonsOnImage,
+        axis_names=["#polys", "#points"],
+        estimate_ntype_func=estimate_polygons_norm_type,
+        inputs=inputs, shapes=shapes
+    )
+
+
+def normalize_line_strings(inputs, shapes=None):
+    # TODO get rid of this deferred import
+    from imgaug.augmentables.lines import LineString, LineStringsOnImage
+
+    return _normalize_polygons_and_line_strings(
+        cls_single=LineString,
+        cls_oi=LineStringsOnImage,
+        axis_names=["#lines", "#points"],
+        estimate_ntype_func=estimate_line_strings_norm_type,
+        inputs=inputs, shapes=shapes
+    )
+
+
+def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
+                                         estimate_ntype_func,
+                                         inputs, shapes=None):
+    cls_single_name = cls_single.__name__
+    cls_oi_name = cls_oi.__name__
+    axis_names_4_str = "(N,%s,%s,2)" % (axis_names[0], axis_names[1])
+    axis_names_3_str = "(%s,%s,2)" % (axis_names[0], axis_names[1])
+    axis_names_2_str = "(%s,2)" % (axis_names[1],)
+
     shapes = _preprocess_shapes(shapes)
-    ntype = estimate_polygons_norm_type(inputs)
+    ntype = estimate_ntype_func(inputs)
     _assert_exactly_n_shapes_partial = functools.partial(
         _assert_exactly_n_shapes,
-        from_ntype=ntype, to_ntype="List[PolygonsOnImage]",
+        from_ntype=ntype, to_ntype=("List[%s]" % (cls_oi_name,)),
         shapes=shapes)
 
     if ntype == "None":
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        _assert_single_array_ndim(inputs, 4, "(N,#polys,#points,2)",
-                                  "PolygonsOnImage")
-        _assert_single_array_last_dim_exactly(inputs, 2, "PolygonsOnImage")
+        _assert_single_array_ndim(inputs, 4, axis_names_4_str,
+                                  cls_oi_name)
+        _assert_single_array_last_dim_exactly(inputs, 2, cls_oi_name)
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            PolygonsOnImage(
-                [Polygon(poly_points) for poly_points in attr_i],
+            cls_oi(
+                [cls_single(points) for points in attr_i],
                 shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "Polygon":
+    elif ntype == cls_single_name:
         _assert_exactly_n_shapes_partial(n=1)
-        return [PolygonsOnImage([inputs], shape=shapes[0])]
-    elif ntype == "PolygonsOnImage":
+        return [cls_oi([inputs], shape=shapes[0])]
+    elif ntype == cls_oi_name:
         return [inputs]
     elif ntype == "iterable[empty]":
         return None
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        _assert_many_arrays_ndim(inputs, 3, "(#polys,#points,2)",
-                                 "PolygonsOnImage")
-        _assert_many_arrays_last_dim_exactly(inputs, 2, "PolygonsOnImage")
+        _assert_many_arrays_ndim(inputs, 3, axis_names_3_str,
+                                 cls_oi_name)
+        _assert_many_arrays_last_dim_exactly(inputs, 2, cls_oi_name)
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            PolygonsOnImage([Polygon(poly_points) for poly_points in attr_i],
-                            shape=shape)
+            cls_oi([cls_single(points) for points in attr_i], shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
     elif ntype == "iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=1)
-        return [PolygonsOnImage([Polygon(inputs)], shape=shapes[0])]
+        return [cls_oi([cls_single(inputs)], shape=shapes[0])]
     elif ntype == "iterable-Keypoint":
         _assert_exactly_n_shapes_partial(n=1)
-        return [PolygonsOnImage([Polygon(inputs)], shape=shapes[0])]
-    elif ntype == "iterable-Polygon":
+        return [cls_oi([cls_single(inputs)], shape=shapes[0])]
+    elif ntype == ("iterable-%s" % (cls_single_name,)):
         _assert_exactly_n_shapes_partial(n=1)
-        return [PolygonsOnImage(inputs, shape=shapes[0])]
-    elif ntype == "iterable-PolygonsOnImage":
+        return [cls_oi(inputs, shape=shapes[0])]
+    elif ntype == ("iterable-%s" % (cls_oi_name,)):
         return inputs
     elif ntype == "iterable-iterable[empty]":
         return None
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
-        _assert_many_arrays_ndim(inputs, 2, "(#points,2)", "PolygonsOnImage")
-        _assert_many_arrays_last_dim_exactly(inputs, 2, "PolygonsOnImage")
+        _assert_many_arrays_ndim(inputs, 2, axis_names_2_str, cls_oi_name)
+        _assert_many_arrays_last_dim_exactly(inputs, 2, cls_oi_name)
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            PolygonsOnImage(
-                [Polygon(poly_points) for poly_points in attr_i],
+            cls_oi(
+                [cls_single(points) for points in attr_i],
                 shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
@@ -457,19 +491,19 @@ def normalize_polygons(inputs, shapes=None):
     elif ntype == "iterable-iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=1)
         return [
-            PolygonsOnImage([Polygon(attr_i) for attr_i in inputs],
-                            shape=shapes[0])
+            cls_oi([cls_single(attr_i) for attr_i in inputs],
+                   shape=shapes[0])
         ]
     elif ntype == "iterable-iterable-Keypoint":
         _assert_exactly_n_shapes_partial(n=1)
         return [
-            PolygonsOnImage([Polygon(attr_i) for attr_i in inputs],
-                            shape=shapes[0])
+            cls_oi([cls_single(attr_i) for attr_i in inputs],
+                   shape=shapes[0])
         ]
-    elif ntype == "iterable-iterable-Polygon":
+    elif ntype == ("iterable-iterable-%s" % (cls_single_name,)):
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            PolygonsOnImage(attr_i, shape=shape)
+            cls_oi(attr_i, shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
@@ -477,11 +511,12 @@ def normalize_polygons(inputs, shapes=None):
         return None
     else:
         assert ntype in ["iterable-iterable-iterable-tuple[number,size=2]",
-                         "iterable-iterable-iterable-Keypoint"]
+                         "iterable-iterable-iterable-Keypoint"], (
+            "Got unknown normalization type '%s'." % (ntype,))
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            PolygonsOnImage(
-                [Polygon(poly_points) for poly_points in attr_i],
+            cls_oi(
+                [cls_single(points) for points in attr_i],
                 shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
@@ -543,7 +578,8 @@ def invert_normalize_heatmaps(heatmaps, heatmaps_old):
         return [restore_dtype_and_merge(hm_i.arr_0to1, input_dtype)
                 for hm_i in heatmaps]
     else:
-        assert ntype == "iterable-HeatmapsOnImage"
+        assert ntype == "iterable-HeatmapsOnImage", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return heatmaps
 
 
@@ -573,7 +609,8 @@ def invert_normalize_segmentation_maps(segmentation_maps,
         return [restore_dtype_and_merge(segmap_i.get_arr_int(), input_dtype)
                 for segmap_i in segmentation_maps]
     else:
-        assert ntype == "iterable-SegmentationMapOnImage"
+        assert ntype == "iterable-SegmentationMapOnImage", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return segmentation_maps
 
 
@@ -629,7 +666,8 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
             [(kp.x, kp.y) for kp in kpsoi.keypoints]
             for kpsoi in keypoints]
     else:
-        assert ntype == "iterable-iterable-Keypoint"
+        assert ntype == "iterable-iterable-Keypoint", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return [
             [kp for kp in kpsoi.keypoints]
             for kpsoi in keypoints]
@@ -687,111 +725,137 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
             [(bb.x1, bb.y1, bb.x2, bb.y2) for bb in bbsoi.bounding_boxes]
             for bbsoi in bounding_boxes]
     else:
-        assert ntype == "iterable-iterable-BoundingBox"
+        assert ntype == "iterable-iterable-BoundingBox", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return [
             [bb for bb in bbsoi.bounding_boxes]
             for bbsoi in bounding_boxes]
 
 
 def invert_normalize_polygons(polygons, polygons_old):
+    return _invert_normalize_polygons_and_line_strings(
+        polygons, polygons_old, estimate_polygons_norm_type,
+        "Polygon",
+        "PolygonsOnImage",
+        lambda psoi: psoi.polygons,
+        lambda poly: poly.exterior)
+
+
+def invert_normalize_line_strings(line_strings, line_strings_old):
+    return _invert_normalize_polygons_and_line_strings(
+        line_strings, line_strings_old, estimate_line_strings_norm_type,
+        "LineString",
+        "LineStringsOnImage",
+        lambda lsoi: lsoi.line_strings,
+        lambda ls: ls.coords)
+
+
+def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
+                                                estimate_ntype_func,
+                                                cls_single_name,
+                                                cls_oi_name,
+                                                get_entities_func,
+                                                get_points_func):
     # TODO get rid of this deferred import
     from imgaug.augmentables.kps import Keypoint
 
-    ntype = estimate_polygons_norm_type(polygons_old)
+    ntype = estimate_ntype_func(inputs_old)
     if ntype == "None":
-        assert polygons is None
-        return polygons
+        assert inputs is None
+        return inputs
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
-        input_dtype = polygons_old.dtype
+        input_dtype = inputs_old.dtype
         return restore_dtype_and_merge([
-            [poly.exterior for poly in psoi.polygons]
-            for psoi in polygons
+            [get_points_func(entity) for entity in get_entities_func(oi)]
+            for oi in inputs
         ], input_dtype)
-    elif ntype == "Polygon":
-        assert len(polygons) == 1
-        assert len(polygons[0].polygons) == 1
-        return polygons[0].polygons[0]
-    elif ntype == "PolygonsOnImage":
-        assert len(polygons) == 1
-        return polygons[0]
+    elif ntype == cls_single_name:
+        assert len(inputs) == 1
+        assert len(get_entities_func(inputs[0])) == 1
+        return get_entities_func(inputs[0])[0]
+    elif ntype == cls_oi_name:
+        assert len(inputs) == 1
+        return inputs[0]
     elif ntype == "iterable[empty]":
-        assert polygons is None
+        assert inputs is None
         return []
     elif ntype in ["iterable-array[float]",
                    "iterable-array[int]",
                    "iterable-array[uint]"]:
-        nonempty, _, _ = find_first_nonempty(polygons_old)
+        nonempty, _, _ = find_first_nonempty(inputs_old)
         input_dtype = nonempty.dtype
         return [
             restore_dtype_and_merge(
-                [poly.exterior for poly in psoi.polygons],
+                [get_points_func(entity) for entity in get_entities_func(oi)],
                 input_dtype)
-            for psoi in polygons
+            for oi in inputs
         ]
     elif ntype == "iterable-tuple[number,size=2]":
-        assert len(polygons) == 1
-        assert len(polygons[0].polygons) == 1
+        assert len(inputs) == 1
+        assert len(get_entities_func(inputs[0])) == 1
         return [(point[0], point[1])
-                for point in polygons[0].polygons[0].exterior]
+                for point in get_points_func(get_entities_func(inputs[0])[0])]
     elif ntype == "iterable-Keypoint":
-        assert len(polygons) == 1
-        assert len(polygons[0].polygons) == 1
+        assert len(inputs) == 1
+        assert len(get_entities_func(inputs[0])) == 1
         return [Keypoint(x=point[0], y=point[1])
-                for point in polygons[0].polygons[0].exterior]
-    elif ntype == "iterable-Polygon":
-        assert len(polygons) == 1
-        assert len(polygons[0].polygons) == len(polygons_old)
-        return polygons[0].polygons
-    elif ntype == "iterable-PolygonsOnImage":
-        return polygons
+                for point in get_points_func(get_entities_func(inputs[0])[0])]
+    elif ntype == ("iterable-%s" % (cls_single_name,)):
+        assert len(inputs) == 1
+        assert len(get_entities_func(inputs[0])) == len(inputs_old)
+        return get_entities_func(inputs[0])
+    elif ntype == ("iterable-%s" % (cls_oi_name,)):
+        return inputs
     elif ntype == "iterable-iterable[empty]":
-        assert polygons is None
-        return polygons_old[:]
+        assert inputs is None
+        return inputs_old[:]
     elif ntype in ["iterable-iterable-array[float]",
                    "iterable-iterable-array[int]",
                    "iterable-iterable-array[uint]"]:
-        nonempty, _, _ = find_first_nonempty(polygons_old)
+        nonempty, _, _ = find_first_nonempty(inputs_old)
         input_dtype = nonempty.dtype
         return [
-            [restore_dtype_and_merge(poly.exterior, input_dtype)
-             for poly in psoi.polygons]
-            for psoi in polygons
+            [restore_dtype_and_merge(get_points_func(entity), input_dtype)
+             for entity in get_entities_func(oi)]
+            for oi in inputs
         ]
     elif ntype == "iterable-iterable-tuple[number,size=2]":
-        assert len(polygons) == 1
+        assert len(inputs) == 1
         return [
-            [(point[0], point[1]) for point in polygon.exterior]
-            for polygon in polygons[0].polygons]
+            [(point[0], point[1]) for point in get_points_func(entity)]
+            for entity in get_entities_func(inputs[0])]
     elif ntype == "iterable-iterable-Keypoint":
-        assert len(polygons) == 1
+        assert len(inputs) == 1
         return [
-            [Keypoint(x=point[0], y=point[1]) for point in polygon.exterior]
-            for polygon in polygons[0].polygons]
-    elif ntype == "iterable-iterable-Polygon":
-        return [psoi.polygons for psoi in polygons]
+            [Keypoint(x=point[0], y=point[1])
+             for point in get_points_func(entity)]
+            for entity in get_entities_func(inputs[0])]
+    elif ntype == ("iterable-iterable-%s" % (cls_single_name,)):
+        return [get_entities_func(oi) for oi in inputs]
     elif ntype == "iterable-iterable-iterable[empty]":
-        return polygons_old[:]
+        return inputs_old[:]
     elif ntype == "iterable-iterable-iterable-tuple[number,size=2]":
         return [
             [
                 [
                     (point[0], point[1])
-                    for point in polygon.exterior
+                    for point in get_points_func(entity)
                 ]
-                for polygon in psoi.polygons
+                for entity in get_entities_func(oi)
             ]
-            for psoi in polygons]
+            for oi in inputs]
     else:
-        assert ntype == "iterable-iterable-iterable-Keypoint"
+        assert ntype == "iterable-iterable-iterable-Keypoint", (
+            "Got unknown normalization type '%s'." % (ntype,))
         return [
             [
                 [
                     Keypoint(x=point[0], y=point[1])
-                    for point in polygon.exterior
+                    for point in get_points_func(entity)
                 ]
-                for polygon in psoi.polygons
+                for entity in get_entities_func(oi)
             ]
-            for psoi in polygons]
+            for oi in inputs]
 
 
 def _assert_is_of_norm_type(type_str, valid_type_strs, arg_name):
@@ -886,34 +950,46 @@ def estimate_bounding_boxes_norm_type(bounding_boxes):
 
 
 def estimate_polygons_norm_type(polygons):
-    type_str = estimate_normalization_type(polygons)
+    return _estimate_polygons_and_line_segments_norm_type(
+        polygons, "Polygon", "PolygonsOnImage", "polygons")
+
+
+def estimate_line_strings_norm_type(line_strings):
+    return _estimate_polygons_and_line_segments_norm_type(
+        line_strings, "LineString", "LineStringsOnImage", "line_strings")
+
+
+def _estimate_polygons_and_line_segments_norm_type(inputs, cls_single_name,
+                                                   cls_oi_name,
+                                                   augmentable_name):
+    type_str = estimate_normalization_type(inputs)
     valid_type_strs = [
         "None",
         "array[float]",
         "array[int]",
         "array[uint]",
-        "Polygon",
-        "PolygonsOnImage",
+        cls_single_name,
+        cls_oi_name,
         "iterable[empty]",
         "iterable-array[float]",
         "iterable-array[int]",
         "iterable-array[uint]",
         "iterable-tuple[number,size=2]",
         "iterable-Keypoint",
-        "iterable-Polygon",
-        "iterable-PolygonsOnImage",
+        "iterable-%s" % (cls_single_name,),
+        "iterable-%s" % (cls_oi_name,),
         "iterable-iterable[empty]",
         "iterable-iterable-array[float]",
         "iterable-iterable-array[int]",
         "iterable-iterable-array[uint]",
         "iterable-iterable-tuple[number,size=2]",
         "iterable-iterable-Keypoint",
-        "iterable-iterable-Polygon",
+        "iterable-iterable-%s" % (cls_single_name,),
         "iterable-iterable-iterable[empty]",
         "iterable-iterable-iterable-tuple[number,size=2]",
         "iterable-iterable-iterable-Keypoint"
     ]
-    _assert_is_of_norm_type(type_str, valid_type_strs, "polygons")
+    _assert_is_of_norm_type(type_str, valid_type_strs, augmentable_name)
     return type_str
 
 
