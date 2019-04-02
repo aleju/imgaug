@@ -224,10 +224,10 @@ class BoundingBox(object):
         coords_proj = _project_coords([(self.x1, self.y1), (self.x2, self.y2)],
                                       from_shape, to_shape)
         return self.copy(
-            x1=coords_proj[0, 0],
-            y1=coords_proj[0, 1],
-            x2=coords_proj[1, 0],
-            y2=coords_proj[1, 1],
+            x1=coords_proj[0][0],
+            y1=coords_proj[0][1],
+            x2=coords_proj[1][0],
+            y2=coords_proj[1][1],
             label=self.label)
 
     def extend(self, all_sides=0, top=0, right=0, bottom=0, left=0):
@@ -1072,4 +1072,4 @@ def _project_coords(coords, from_shape, to_shape):
     coords_proj = np.float32(coords)
     coords_proj[:, 0] = (coords_proj[:, 0] / from_width) * to_width
     coords_proj[:, 1] = (coords_proj[:, 1] / from_height) * to_height
-    return coords
+    return coords_proj
