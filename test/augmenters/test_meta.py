@@ -43,6 +43,7 @@ def main():
     test_Augmenter_augment_keypoints()
     test_Augmenter_augment_bounding_boxes()
     test_Augmenter_augment_polygons()
+    test_Augmenter_augment_line_strings()
     test_Augmenter_augment_segmentation_maps()
     test_Augmenter_augment()
     test_Augmenter_augment_py36_or_higher()
@@ -2138,6 +2139,221 @@ def test_Augmenter_augment_polygons():
                 psoi.polygons[0].exterior[0][0] if len(psoi.polygons) > 0 else None
                 for psoi
                 in psoi_lst_aug]
+
+            assert len([
+                pointresult
+                for pointresult
+                in translations_points
+                if pointresult is None
+            ]) == 1
+            assert translations_points[5] is None
+            translations_imgs = np.concatenate([translations_imgs[0:5], translations_imgs[6:]])
+            translations_points = np.array(
+                translations_points[0:5] + translations_points[6:],
+                dtype=translations_imgs.dtype)
+            translations_points[2] -= 1
+            translations_points[8-1] -= 1
+            assert np.array_equal(translations_imgs, translations_points)
+
+
+# TODO merge this test with test_Augmenter_augment_polygons()?
+#      they are almost identical -- essentially just different variable names,
+#      class names, .exterior instead of .coords and augment_polygons() instead
+#      of augment_line_strings()
+def test_Augmenter_augment_line_strings():
+    reseed()
+
+    # single instance of LineStringsOnImage with 0 line strings
+    aug = iaa.Rot90(1, keep_size=False)
+    ls_oi = ia.LineStringsOnImage([], shape=(10, 11, 3))
+    ls_oi_aug = aug.augment_line_strings(ls_oi)
+    assert isinstance(ls_oi_aug, ia.LineStringsOnImage)
+    assert len(ls_oi_aug.line_strings) == 0
+    assert ls_oi_aug.shape == (11, 10, 3)
+
+    # list of LineStringsOnImage with 0 line strings
+    aug = iaa.Rot90(1, keep_size=False)
+    ls_oi = ia.LineStringsOnImage([], shape=(10, 11, 3))
+    ls_oi_aug = aug.augment_line_strings([ls_oi])
+    assert isinstance(ls_oi_aug, list)
+    assert isinstance(ls_oi_aug[0], ia.LineStringsOnImage)
+    assert len(ls_oi_aug[0].line_strings) == 0
+    assert ls_oi_aug[0].shape == (11, 10, 3)
+
+    # 2 LineStringsOnImage, each 2 line strings
+    aug = iaa.Rot90(1, keep_size=False)
+    ls_ois = [
+        ia.LineStringsOnImage(
+            [ia.LineString([(0, 0), (5, 0), (5, 5)]),
+             ia.LineString([(1, 1), (6, 1), (6, 6)])],
+            shape=(10, 10, 3)),
+        ia.LineStringsOnImage(
+            [ia.LineString([(2, 2), (7, 2), (7, 7)]),
+             ia.LineString([(3, 3), (8, 3), (8, 8)])],
+            shape=(10, 10, 3)),
+    ]
+    ls_ois_aug = aug.augment_line_strings(ls_ois)
+    assert isinstance(ls_ois_aug, list)
+    assert isinstance(ls_ois_aug[0], ia.LineStringsOnImage)
+    assert isinstance(ls_ois_aug[0], ia.LineStringsOnImage)
+    assert len(ls_ois_aug[0].line_strings) == 2
+    assert len(ls_ois_aug[1].line_strings) == 2
+    assert np.allclose(
+        ls_ois_aug[0].line_strings[0].coords,
+        [(9, 0), (9, 5), (4, 5)],
+        atol=1e-4, rtol=0
+    )
+    assert np.allclose(
+        ls_ois_aug[0].line_strings[1].coords,
+        [(8, 1), (8, 6), (3, 6)],
+        atol=1e-4, rtol=0
+    )
+    assert np.allclose(
+        ls_ois_aug[1].line_strings[0].coords,
+        [(7, 2), (7, 7), (2, 7)],
+        atol=1e-4, rtol=0
+    )
+    assert np.allclose(
+        ls_ois_aug[1].line_strings[1].coords,
+        [(6, 3), (6, 8), (1, 8)],
+        atol=1e-4, rtol=0
+    )
+    assert ls_ois_aug[0].shape == (10, 10, 3)
+    assert ls_ois_aug[1].shape == (10, 10, 3)
+
+    # test whether there is randomness within each batch and between batches
+    aug = iaa.Rot90((0, 3), keep_size=False)
+    ls = ia.LineString([(0, 0), (5, 0), (5, 5)])
+    ls_oi = ia.LineStringsOnImage(
+        [ls.deepcopy() for _ in sm.xrange(100)],
+        shape=(10, 11, 3)
+    )
+    ls_ois = [ls_oi, ls_oi.deepcopy()]
+    lss_ois_aug1 = aug.augment_line_strings(ls_ois)
+    lss_ois_aug2 = aug.augment_line_strings(ls_ois)
+
+    # --> different between runs
+    points1 = [ls.coords for ls_oi in lss_ois_aug1 for ls in ls_oi.line_strings]
+    points2 = [ls.coords for ls_oi in lss_ois_aug2 for ls in ls_oi.line_strings]
+    points1 = np.float32(points1)
+    points2 = np.float32(points2)
+    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+
+    # --> different between LineStringsOnImages
+    points1 = [ls.coords for ls in lss_ois_aug1[0].line_strings]
+    points2 = [ls.coords for ls in lss_ois_aug1[1].line_strings]  # aug1 is correct here
+    points1 = np.float32(points1)
+    points2 = np.float32(points2)
+    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+
+    # --> different between polygons
+    points1 = set()
+    for ls in lss_ois_aug1[0].line_strings:
+        for point in ls.coords:
+            points1.add(tuple(
+                [int(point[0]*10), int(point[1]*10)]
+            ))
+    assert len(points1) > 1
+
+    # test determinism
+    aug_det = aug.to_deterministic()
+    ls = ia.LineString([(0, 0), (5, 0), (5, 5)])
+    ls_oi = ia.LineStringsOnImage(
+        [ls.deepcopy() for _ in sm.xrange(100)],
+        shape=(10, 11, 3)
+    )
+    ls_ois = [ls_oi, ls_oi.deepcopy()]
+    lss_ois_aug1 = aug_det.augment_line_strings(ls_ois)
+    lss_ois_aug2 = aug_det.augment_line_strings(ls_ois)
+
+    # --> different within the same run
+    points1 = set()
+    for ls in lss_ois_aug1[0].line_strings:
+        for point in ls.coords:
+            points1.add(tuple(
+                [int(point[0]*10), int(point[1]*10)]
+            ))
+    assert len(points1) > 1
+
+    # --> similar between augmentation runs
+    points1 = [ls.coords for ls_oi in lss_ois_aug1 for ls in ls_oi.line_strings]
+    points2 = [ls.coords for ls_oi in lss_ois_aug2 for ls in ls_oi.line_strings]
+    points1 = np.float32(points1)
+    points2 = np.float32(points2)
+    assert np.allclose(points1, points2, atol=1e-2, rtol=0)
+
+    # test if augmentation aligned with images
+    aug = iaa.Rot90((0, 3), keep_size=False)
+    image = np.zeros((10, 20), dtype=np.uint8)
+    image[5, :] = 255
+    image[2:5, 10] = 255
+    ls = ia.LineString([(0, 0), (10, 0), (10, 20)])
+    image_rots = [iaa.Rot90(k, keep_size=False).augment_image(image) for k in [0, 1, 2, 3]]
+    lss_rots = [
+        [(0, 0), (10, 0), (10, 20)],
+        [(9, 0), (9, 10), (-11, 10)],
+        [(19, 9), (9, 9), (9, -11)],
+        [(0, 19), (0, 9), (20, 9)]
+    ]
+
+    ls_ois = [ia.LineStringsOnImage([ls], shape=image.shape) for _ in sm.xrange(50)]
+    aug_det = aug.to_deterministic()
+    images_aug = aug_det.augment_images([image] * 50)
+    ls_ois_aug = aug_det.augment_line_strings(ls_ois)
+    seen = set()
+    for image_aug, ls_oi_aug in zip(images_aug, ls_ois_aug):
+        for img_rot_idx, img_rot in enumerate(image_rots):
+            if image_aug.shape == img_rot.shape and np.allclose(image_aug, img_rot):
+                break
+        for ls_rot_idx, ls_rot in enumerate(lss_rots):
+            if np.allclose(ls_oi_aug.line_strings[0].coords, ls_rot):
+                break
+        assert img_rot_idx == ls_rot_idx
+        seen.add((img_rot_idx, ls_rot_idx))
+    assert 2 <= len(seen) <= 4  # assert not always the same rot
+
+    # Test if augmenting lists of LineStringsOnImage is still aligned with image
+    # augmentation when one LineStringsOnImage instance is empty (no line strings)
+    ls = ia.LineString([(0, 0), (5, 0), (5, 5), (0, 5)])
+    lssoi_lst = [
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.shift(left=1)], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([], shape=(1, 8)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.shift(left=1)], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20)),
+        ia.LineStringsOnImage([ls.deepcopy()], shape=(10, 20))
+    ]
+    image = np.zeros((10, 20), dtype=np.uint8)
+    image[0, 0] = 255
+    image[0, 5] = 255
+    image[5, 5] = 255
+    image[5, 0] = 255
+    images = np.tile(image[np.newaxis, :, :], (len(lssoi_lst), 1, 1))
+
+    aug = iaa.Affine(translate_px={"x": (0, 8)}, order=0, mode="constant", cval=0)
+
+    for _ in sm.xrange(10):
+        for is_list in [False, True]:
+            aug_det = aug.to_deterministic()
+            if is_list:
+                images_aug = aug_det.augment_images(list(images))
+            else:
+                images_aug = aug_det.augment_images(images)
+            lssoi_lst_aug = aug_det.augment_line_strings(lssoi_lst)
+
+            if is_list:
+                translations_imgs = np.argmax(np.array(images_aug, dtype=np.uint8)[:, 0, :], axis=1)
+            else:
+                translations_imgs = np.argmax(images_aug[:, 0, :], axis=1)
+            translations_points = [
+                lssoi.line_strings[0].coords[0][0] if len(lssoi.line_strings) > 0 else None
+                for lssoi
+                in lssoi_lst_aug]
 
             assert len([
                 pointresult
