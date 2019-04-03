@@ -1220,6 +1220,83 @@ class LineString(object):
             shape=image_shape
         )
 
+    def coords_almost_equals(self, other, distance_threshold=1e-4):
+        """
+        Compare this and another LineString's coordinates.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.lines.LineString \
+                or tuple of number \
+                or ndarray \
+                or list of ndarray \
+                or list of tuple of number
+            The other line string or its coordinates.
+
+        distance_threshold : float
+            Max distance of any point from the other line string before
+            the two line strings are evaluated to be unequal.
+
+        Returns
+        -------
+        bool
+            Whether the two LineString's coordinates are almost identical,
+            i.e. the max distance is below the threshold.
+            If both have no coordinates, ``True`` is returned.
+            If only one has no coordinates, ``False`` is returned.
+            Beyond that, the number of points is not evaluated.
+
+        """
+        if isinstance(other, LineString):
+            pass
+        if isinstance(other, tuple):
+            other = LineString([other])
+        else:
+            other = LineString(other)
+
+        if len(self.coords) == 0 and len(other.coords) == 0:
+            return True
+        elif 0 in [len(self.coords), len(other.coords)]:
+            # only one of the two line strings has no coords
+            return False
+
+        dists_self2other = self.get_pointwise_distances(other)
+        dists_other2self = other.get_pointwise_distances(self)
+        dist = max(np.max(dists_self2other), np.max(dists_other2self))
+        return dist < distance_threshold
+
+    def almost_equals(self, other, distance_threshold=1e-4):
+        """
+        Compare this and another LineString.
+
+        Parameters
+        ----------
+        other: imgaug.augmentables.lines.LineString
+            The other line string. Must be a LineString instance, not just
+            its coordinates.
+
+        distance_threshold : float
+            Max distance of any point from the other line string before
+            the two line strings are evaluated to be unequal.
+
+        Returns
+        -------
+        bool
+            ``True`` if the coordinates are almost equal according to
+            :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`
+            and additionally the labels are identical. Otherwise ``False``.
+
+        """
+        if self.label is None and other.label is None:
+            return True
+        elif self.label is None or other.label is None:
+            return False
+        elif self.label != other.label:
+            return False
+        else:
+            return self.coords_almost_equals(
+                other, distance_threshold=distance_threshold)
+
     def copy(self, coords=None, label=None):
         """
         Create a shallow copy of the LineString object.
