@@ -62,11 +62,14 @@ class LineString(object):
 
     def __init__(self, coords, label=None):
         """Create a new LineString instance."""
-        coords = np.float32(coords)
-        assert coords.ndim == 2 and coords.shape[-1] == 2, (
-            "Expected 'coords' to have shape (N, 2), got shape %s." % (
-                coords.shape,))
-        self.coords = coords
+        if len(coords) == 0:
+            self.coords = np.zeros((0, 2), dtype=np.float32)
+        else:
+            coords = np.float32(coords)
+            assert coords.ndim == 2 and coords.shape[-1] == 2, (
+                "Expected 'coords' to have shape (N, 2), got shape %s." % (
+                    coords.shape,))
+            self.coords = coords
         self.label = label
 
     @property
@@ -80,6 +83,8 @@ class LineString(object):
             The length based on euclidean distance.
 
         """
+        if len(self.coords) == 0:
+            return 0
         return np.sum(self.get_pointwise_distances())
 
     @property
@@ -116,6 +121,7 @@ class LineString(object):
             return 0
         return np.max(self.xx) - np.min(self.xx)
 
+    # TODO add closed=False/True?
     def get_pointwise_distances(self):
         """
         Get the euclidean length of each point to the next.
@@ -129,7 +135,7 @@ class LineString(object):
 
         """
         if len(self.coords) <= 1:
-            return 0
+            return np.zeros((0,), dtype=np.float32)
         return np.sqrt(
             np.sum(
                 (self.coords[:-1, :] - self.coords[1:, :]) ** 2,
@@ -149,11 +155,13 @@ class LineString(object):
 
         Returns
         -------
-        ndarray(bool):
+        ndarray
             Boolean array with one value per point indicating whether it is
             inside of the provided image plane (``True``) or not (``False``).
 
         """
+        if len(self.coords) == 0:
+            return np.zeros((0,), dtype=bool)
         shape = _parse_shape(image)
         height, width = shape[0:2]
         x_within = np.logical_and(0 <= self.xx, self.xx < width)
@@ -258,7 +266,6 @@ class LineString(object):
         coords_proj = _project_coords(self.coords, from_shape, to_shape)
         return self.copy(coords=coords_proj, label=self.label)
 
-    # TODO
     def is_fully_within_image(self, image, default=False):
         """
         Estimate whether the line string is fully inside the image area.
@@ -283,7 +290,6 @@ class LineString(object):
             return default
         return np.all(self.get_pointwise_inside_image_mask(image))
 
-    # TODO
     def is_partly_within_image(self, image, default=False):
         """
         Estimate whether the line string is at least partially inside the image.
@@ -313,7 +319,7 @@ class LineString(object):
             return True
         return len(self.clip_out_of_image(image).coords) > 0
 
-    def is_out_of_image(self, image, fully=True, partly=False):
+    def is_out_of_image(self, image, fully=True, partly=False, default=False):
         """
         Estimate whether the line is partially/fully outside of the image area.
 
@@ -331,6 +337,9 @@ class LineString(object):
             Whether to return True if the bounding box is at least partially
             outside fo the image area.
 
+        default
+            Default value to return if the line string contains no points.
+
         Returns
         -------
         bool
@@ -339,6 +348,9 @@ class LineString(object):
             False otherwise.
 
         """
+        if len(self.coords) == 0:
+            return default
+
         if self.is_fully_within_image(image):
             return False
         elif self.is_partly_within_image(image):
@@ -1179,7 +1191,6 @@ class LineString(object):
             shape=image_shape
         )
 
-    # TODO
     def to_segmentation_map(self, image_shape, size_line=1, size_points=0,
                             raise_if_out_of_image=False):
         """
