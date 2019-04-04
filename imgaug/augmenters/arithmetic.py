@@ -2307,7 +2307,7 @@ class JpegCompression(meta.Augmenter):
             sample = int(sample)
             ia.do_assert(100 >= sample >= 0)
             image_pil = PIL_Image.fromarray(image)
-            with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as f:
+            with tempfile.NamedTemporaryFile(mode="wb+", suffix=".jpg") as f:
                 # Map from compression to quality used by PIL
                 # We have valid compressions from 0 to 100, i.e. 101 possible values
                 quality = int(
@@ -2322,10 +2322,18 @@ class JpegCompression(meta.Augmenter):
                 )
 
                 image_pil.save(f, quality=quality)
+
+                # read back from file
+                # we dont read from f.name, because that leads to
+                # PermissionDenied errors on windows
+                # we add f.seek(0) here, because otherwise we get
+                # SyntaxError: index out of range
+                # from PIL
+                f.seek(0)
                 if nb_channels == 1:
-                    image = imageio.imread(f.name, pilmode="L")
+                    image = imageio.imread(f, pilmode="L", format="jpeg")
                 else:
-                    image = imageio.imread(f.name, pilmode="RGB")
+                    image = imageio.imread(f, pilmode="RGB", format="jpeg")
             if is_single_channel:
                 image = image[..., np.newaxis]
             result[i] = image
