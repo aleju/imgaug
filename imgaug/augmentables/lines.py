@@ -9,35 +9,11 @@ import cv2
 
 from .. import imgaug as ia
 
-"""
-TODO
-def compute_distance(self, other):
-        # TODO
-        pass
 
-def compute_hausdorff_distance(self, other):
-    # TODO
-    pass
-
-# TODO
-def intersects(self, other):
-    pass
-
-# TODO
-def find_self_intersections(self):
-    pass
-
-# TODO
-def is_self_intersecting(self):
-    pass
-
-# TODO
-def remove_self_intersections(self):
-    pass
-
-"""
-
-
+# TODO Add Line class and make LineString a list of Line elements
+# TODO add to_distance_maps(), compute_hausdorff_distance(), intersects(),
+#      find_self_intersections(), is_self_intersecting(),
+#      remove_self_intersections()
 class LineString(object):
     """
     Class representing line strings.
@@ -794,6 +770,7 @@ class LineString(object):
             lines.append((line_start[0], line_start[1],
                           line_end[0], line_end[1]))
 
+        # size == 0 is already covered above
         if size == 1:
             color = np.float32(color).reshape((1, 1, -1))
             image = image.astype(np.float32)
@@ -996,7 +973,7 @@ class LineString(object):
 
         return image
 
-    def extract_from_image(self, image, size=3, pad=True, pad_max=10*1000,
+    def extract_from_image(self, image, size=1, pad=True, pad_max=None,
                            antialiased=True, prevent_zero_size=True):
         """
         Extract the image pixels covered by the line string.
@@ -1066,11 +1043,17 @@ class LineString(object):
 
         heatmap = self.draw_line_heatmap_array(
             image.shape[0:2], alpha=1.0, size=size, antialiased=antialiased)
-
+        heatmap_thresh = heatmap > 0.1
+        heatmap_nz = heatmap_thresh.nonzero()
+        y1 = np.min(heatmap_nz[0])
+        y2 = np.max(heatmap_nz[0])
+        x1 = np.min(heatmap_nz[1])
+        x2 = np.max(heatmap_nz[1])
         image = image.astype(np.float32) * heatmap
-        bb = self.to_bounding_box()
-        return bb.extract_from_image(image, pad=pad, pad_max=pad_max,
-                                     prevent_zero_size=prevent_zero_size)
+        bb = BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2)
+        extract = bb.extract_from_image(image, pad=pad, pad_max=pad_max,
+                                        prevent_zero_size=prevent_zero_size)
+        return np.clip(np.round(extract), 0, 255).astype(np.uint8)
 
     def concat(self, other):
         """
