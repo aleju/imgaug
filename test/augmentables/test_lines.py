@@ -345,28 +345,406 @@ class TestLineString(unittest.TestCase):
             [])
 
     def test_draw_mask(self):
-        pass  # TODO
+        ls = LineString([(0, 1), (5, 1), (5, 5)])
+        arr = ls.draw_mask(
+            (10, 10), size_line=1, size_points=0, raise_if_out_of_image=False)
+        assert np.all(arr[1, 0:5])
+        assert np.all(arr[1:5, 5])
+        assert not np.any(arr[0, :])
+        assert not np.any(arr[2:, 0:5])
+
+        ls = LineString([])
+        arr = ls.draw_mask(
+            (10, 10), size_line=1, raise_if_out_of_image=False)
+        assert not np.any(arr)
 
     def test_draw_line_heatmap_array(self):
-        pass  # TODO
+        ls = LineString([(0, 1), (5, 1), (5, 5)])
+        arr = ls.draw_line_heatmap_array(
+            (10, 10), alpha=0.5, size=1, raise_if_out_of_image=False)
+        assert np.isclose(arr[1, 0:5], 0.5)
+        assert np.isclose(arr[1:5, 5], 0.5)
+        assert np.allclose(arr[0, :], 0.0)
+        assert np.allclose(arr[2:, 0:5], 0.0)
+
+        ls = LineString([])
+        arr = ls.draw_line_heatmap_array(
+            (10, 10), alpha=0.5, size=1, raise_if_out_of_image=False)
+        assert np.allclose(arr, 0.0)
 
     def test_draw_points_heatmap_array(self):
-        pass  # TODO
+        ls = LineString([(0, 1), (5, 1), (5, 5)])
+        arr = ls.draw_points_heatmap_array(
+            (10, 10), alpha=0.5, size=1, raise_if_out_of_image=False)
+        assert np.isclose(arr[1, 0], 0.5)
+        assert np.isclose(arr[1, 5], 0.5)
+        assert np.isclose(arr[5, 5], 0.5)
+        assert np.allclose(arr[0, :], 0.0)
+        assert np.allclose(arr[2:, 0:5], 0.0)
+
+        ls = LineString([])
+        arr = ls.draw_points_heatmap_array(
+            (10, 10), alpha=0.5, size=1, raise_if_out_of_image=False)
+        assert np.allclose(arr, 0.0)
 
     def test_draw_heatmap_array(self):
-        pass  # TODO
+        module_name = "imgaug.augmentables.lines."
+        line_fname = "%sLineString.draw_line_heatmap_array" % (module_name,)
+        points_fname = "%sLineString.draw_points_heatmap_array" % (module_name,)
+        with mock.patch(line_fname, return_value=1) as mock_line, \
+                mock.patch(points_fname, return_value=2) as mock_points:
+            ls = LineString([(0, 1), (9, 1)])
+            _arr = ls.draw_heatmap_array(
+                (10, 10),
+                alpha_line=0.9, alpha_points=0.8,
+                size_line=3, size_points=5,
+                antialiased=True,
+                raise_if_out_of_image=True)
+            assert mock_line.call_count == 1
+            assert mock_points.call_count == 1
+
+            assert mock_line.call_args_list[0][0][0] == (10, 10)
+            assert np.isclose(mock_line.call_args_list[0][1]["alpha"], 0.9)
+            assert mock_line.call_args_list[0][1]["size"] == 3
+            assert mock_line.call_args_list[0][1]["antialiased"] is True
+            assert mock_line.call_args_list[0][1]["raise_if_out_of_image"] \
+                is True
+
+            assert mock_points.call_args_list[0][0][0] == (10, 10)
+            assert np.isclose(mock_points.call_args_list[0][1]["alpha"], 0.8)
+            assert mock_points.call_args_list[0][1]["size"] == 5
+            assert mock_points.call_args_list[0][1]["raise_if_out_of_image"] \
+                is True
+
+        ls = LineString([(0, 1), (5, 1), (5, 5)])
+        arr = ls.draw_heatmap_array((10, 10),
+                                    alpha_line=0.9, alpha_points=0.5,
+                                    size_line=1, size_points=3,
+                                    antialiased=False,
+                                    raise_if_out_of_image=False)
+        assert np.allclose(arr[1, 0:5], 0.9)
+        assert np.allclose(arr[1, 0:5], 0.9)
+        assert np.allclose(arr[1, 0:5], 0.9)
+        assert np.allclose(arr[1:5, 5], 0.9)
+        assert np.allclose(arr[1:5, 5], 0.9)
+        assert np.allclose(arr[1:5, 5], 0.9)
+
+        assert np.allclose(arr[0, 0:2+1], 0.5)
+        assert np.allclose(arr[2, 0:2+1], 0.5)
+
+        assert np.allclose(arr[0, 4:6+1], 0.5)
+        assert np.allclose(arr[2, 4:6+1], 0.5)
+
+        assert np.allclose(arr[4, 4:6+1], 0.5)
+        assert np.allclose(arr[5, 4:6+1], 0.5)
+
+        assert np.allclose(arr[0, 3], 0.0)
+        assert np.allclose(arr[7:, :], 0.0)
+
+        ls = LineString([])
+        arr = ls.draw_heatmap_array((10, 10))
+        assert arr.shape == (10, 10)
+        assert np.sum(arr) == 0
 
     def test_draw_line_on_image(self):
-        pass  # TODO
+        ls = LineString([(0, 1), (9, 1)])
+
+        # image of 0s
+        img = ls.draw_line_on_image(
+            np.zeros((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=1.0, size=1,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[1, :, 0] == 10)
+        assert np.all(img[1, :, 1] == 200)
+        assert np.all(img[1, :, 2] == 20)
+
+        # image of 1s
+        img = ls.draw_line_on_image(
+            np.ones((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=1.0, size=1,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[1, :, 0] == 11)
+        assert np.all(img[1, :, 1] == 201)
+        assert np.all(img[1, :, 2] == 21)
+
+        # alpha=0.5
+        img = ls.draw_line_on_image(
+            np.zeros((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=0.5, size=1,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[1, :, 0] == 5)
+        assert np.all(img[1, :, 1] == 100)
+        assert np.all(img[1, :, 2] == 10)
+
+        # alpha=0.5 with background
+        img = ls.draw_line_on_image(
+            10 + np.zeros((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=0.5, size=1,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[1, :, 0] == 5+5)
+        assert np.all(img[1, :, 1] == 5+100)
+        assert np.all(img[1, :, 2] == 5+10)
+
+        # size=3
+        ls = LineString([(0, 5), (9, 5)])
+        img = ls.draw_line_on_image(
+            np.zeros((10, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=1.0, size=3,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[5-1:5+1+1, :, 0] == 10)
+        assert np.all(img[5-1:5+1+1, :, 1] == 200)
+        assert np.all(img[5-1:5+1+1, :, 2] == 20)
+        assert np.all(img[:5-1, :, :] == 0)
+        assert np.all(img[5+1+1:, :, :] == 0)
+
+        # size=3, antialiasing
+        ls = LineString([(0, 5), (9, 5)])
+        img = ls.draw_line_on_image(
+            np.zeros((10, 10, 3), dtype=np.uint8),
+            color=(100, 100, 100),
+            alpha=1.0, size=3,
+            antialiased=True,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[5-2, :, :] > 0)
+        assert np.all(img[5-1:5+1+1, :, 0] == 100)
+        assert np.all(img[5-1:5+1+1, :, 1] == 100)
+        assert np.all(img[5-1:5+1+1, :, 2] == 100)
+        assert np.all(img[5+2, :, :] > 0)
+
+        # raise_if_out_of_image=True
+        with self.assertRaises(Exception):
+            ls = LineString([(0-5, 5), (9+5, 5)])
+            _img = ls.draw_line_on_image(
+                np.zeros((10, 10, 3), dtype=np.uint8),
+                color=(100, 100, 100),
+                alpha=1.0, size=3,
+                antialiased=False,
+                raise_if_out_of_image=True
+            )
 
     def test_draw_points_on_image(self):
-        pass  # TODO
+        # iamge of 0s
+        ls = LineString([(0, 1), (9, 1)])
+        img = ls.draw_points_on_image(
+            np.zeros((3, 10), dtype=np.uint8),
+            color=(10, 255, 20),
+            alpha=1.0, size=3,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[0:2, 0:2, 0] == 10)
+        assert np.all(img[0:2, 0:2, 1] == 255)
+        assert np.all(img[0:2, 0:2, 2] == 20)
+        assert np.all(img[0:2, -2:, 0] == 10)
+        assert np.all(img[0:2, -2:, 1] == 255)
+        assert np.all(img[0:2, -2:, 2] == 20)
+
+        # image of 1s
+        img = ls.draw_points_on_image(
+            np.ones((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=1.0, size=3,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[0:2, 0:2, 0] == 1+10)
+        assert np.all(img[0:2, 0:2, 1] == 1+200)
+        assert np.all(img[0:2, 0:2, 2] == 1+20)
+        assert np.all(img[0:2, -2:, 0] == 1+10)
+        assert np.all(img[0:2, -2:, 1] == 1+200)
+        assert np.all(img[0:2, -2:, 2] == 1+20)
+
+        # alpha=0.5
+        img = ls.draw_points_on_image(
+            np.zeros((3, 10), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=0.5, size=3,
+            raise_if_out_of_image=False
+        )
+        assert np.all(img[0:2, 0:2, 0] == 5)
+        assert np.all(img[0:2, 0:2, 1] == 100)
+        assert np.all(img[0:2, 0:2, 2] == 10)
+        assert np.all(img[0:2, -2:, 0] == 5)
+        assert np.all(img[0:2, -2:, 1] == 100)
+        assert np.all(img[0:2, -2:, 2] == 10)
+
+        # size=1
+        img = ls.draw_points_on_image(
+            np.zeros((3, 10), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=0.5, size=1,
+            raise_if_out_of_image=False
+        )
+        assert np.all(img[0, :, :] == 0)
+        assert np.all(img[2, :, :] == 0)
+
+        assert np.all(img[1, 1, 0] == 10)
+        assert np.all(img[1, 1, 1] == 200)
+        assert np.all(img[1, 1, 2] == 20)
+
+        assert np.all(img[1, -1, 0] == 10)
+        assert np.all(img[1, -1, 1] == 200)
+        assert np.all(img[1, -1, 2] == 20)
+
+        # raise_if_out_of_image=True
+        with self.assertRaises(Exception):
+            ls = LineString([(0-5, 1), (9+5, 1)])
+            _img = ls.draw_points_on_image(
+                np.zeros((3, 10), dtype=np.uint8),
+                color=(10, 200, 20),
+                alpha=0.5, size=1,
+                raise_if_out_of_image=True
+            )
 
     def test_draw_on_image(self):
-        pass  # TODO
+        module_name = "imgaug.augmentables.lines."
+        line_fname = "%sLineString.draw_line_on_image" % (module_name,)
+        points_fname = "%sLineString.draw_points_on_image" % (module_name,)
+        with mock.patch(line_fname, return_value=1) as mock_line, \
+                mock.patch(points_fname, return_value=2) as mock_points:
+            ls = LineString([(0, 1), (9, 1)])
+            _image = ls.draw_on_image(
+                np.zeros((10, 10, 3), dtype=np.uint8),
+                color=(1, 2, 3), color_line=(4, 5, 6), color_points=(7, 8, 9),
+                alpha=1.0, alpha_line=0.9, alpha_points=0.8,
+                size=1, size_line=3, size_points=5,
+                antialiased=False,
+                raise_if_out_of_image=True)
+            assert mock_line.call_count == 1
+            assert mock_points.call_count == 1
+
+            assert mock_line.call_args_list[0][0][0].shape == (10, 10)
+            assert mock_line.call_args_list[0][1]["color"] == (1, 2, 3)
+            assert np.isclose(mock_line.call_args_list[0][1]["alpha"], 0.9)
+            assert mock_line.call_args_list[0][1]["size"] == 3
+            assert mock_line.call_args_list[0][1]["antialiased"] is False
+            assert mock_line.call_args_list[0][1]["raise_if_out_of_image"] \
+                is True
+
+            assert mock_points.call_args_list[0][0][0] == 1  # mock_line result
+            assert mock_points.call_args_list[0][1]["color"] == (4, 5, 6)
+            assert np.isclose(mock_points.call_args_list[0][1]["alpha"], 0.8)
+            assert mock_points.call_args_list[0][1]["size"] == 5
+            assert mock_points.call_args_list[0][1]["raise_if_out_of_image"] \
+                is True
+
+        ls = LineString([(0, 1), (5, 1), (5, 5)])
+        img = ls.draw_on_image(np.zeros((10, 10, 3), dtype=np.uint8),
+                               color=(200, 120, 40), alpha=0.5, size=1)
+        assert np.all(img[1, 0:5, 0] == 200)
+        assert np.all(img[1, 0:5, 1] == 120)
+        assert np.all(img[1, 0:5, 2] == 40)
+        assert np.all(img[1:5, 5, 0] == 200)
+        assert np.all(img[1:5, 5, 1] == 120)
+        assert np.all(img[1:5, 5, 2] == 40)
+        assert np.all(img[0:2+1, 0:2+1, 0] == 200)
+        assert np.all(img[0:2+1, 0:2+1, 1] == 120)
+        assert np.all(img[0:2+1, 0:2+1, 2] == 40)
+        assert np.all(img[0:2+1, 4:6+1, 0] == 200)
+        assert np.all(img[0:2+1, 4:6+1, 1] == 120)
+        assert np.all(img[0:2+1, 4:6+1, 2] == 40)
+        assert np.all(img[4:6+1, 4:6+1, 0] == 200)
+        assert np.all(img[4:6+1, 4:6+1, 1] == 120)
+        assert np.all(img[4:6+1, 4:6+1, 2] == 40)
+        assert np.all(img[0, 3, :] == 0)
+        assert np.all(img[7:, :, :] == 0)
+
+        ls = LineString([])
+        img = ls.draw_on_image(np.zeros((10, 10, 3), dtype=np.uint8))
+        assert img.shape == (10, 10, 3)
+        assert np.sum(img) == 0
 
     def test_extract_from_image(self):
-        pass  # TODO
+        img = np.arange(10*10).reshape((10, 10, 1)).astype(np.uint8)
+
+        # size=1
+        ls = LineString([(0, 5), (9, 5)])
+        extract = ls.extract_from_image(img, antialiased=False)
+        assert extract.shape == (1, 10, 3)
+        assert np.array_equal(extract, img[5, 0:10, :])
+
+        # size=3
+        ls = LineString([(1, 5), (8, 5)])
+        extract = ls.extract_from_image(img, size=1, antialiased=False)
+        assert extract.shape == (3, 10, 3)
+        assert np.array_equal(extract, img[4:6+1, 0:10, :])
+
+        # weak antialiased=True test
+        ls = LineString([(1, 5), (8, 5)])
+        extract = ls.extract_from_image(img, size=3, antialiased=True)
+        assert extract.shape[0] > 3
+        assert extract.shape[1] > 10
+        assert extract.shape[2] == 3
+
+        # pad=False
+        ls = LineString([(-5, 5), (-3, 5)])
+        extract = ls.extract_from_image(img, size=1, antialiased=False,
+                                        pad=False, prevent_zero_size=True)
+        assert extract.shape == (1, 1, 3)
+        assert np.sum(extract) == 0
+
+        # pad=False, prevent_zero_size=False
+        ls = LineString([(-5, 5), (-3, 5)])
+        extract = ls.extract_from_image(img, size=1, antialiased=False,
+                                        pad=False, prevent_zero_size=False)
+        assert extract.shape == (0, 0, 3)
+
+        # pad_max=1
+        ls = LineString([(-5, 5), (9, 5)])
+        extract = ls.extract_from_image(img, antialiased=False, pad=True,
+                                        pad_max=1)
+        assert extract.shape == (1, 11, 3)
+        assert np.array_equal(extract[:, 1:], img[5, 0:10, :])
+        assert np.all(extract[0, 0, :] == 0)
+
+        # 1 coord
+        ls = LineString([(1, 1)])
+        extract = ls.extract_from_image(img)
+        assert extract.shape == (1, 1, 3)
+        assert np.sum(extract) == img[1:2, 1:2, :]
+
+        ls = LineString([(-10, -10)])
+        extract = ls.extract_from_image(img)
+        assert extract.shape == (1, 1, 3)
+        assert np.sum(extract) == 0
+
+        ls = LineString([(-10, -10)])
+        extract = ls.extract_from_image(img, prevent_zero_size=True)
+        assert extract.shape == (0, 0, 3)
+        assert np.sum(extract) == 0
+
+        # 0 coords
+        ls = LineString([])
+        extract = ls.extract_from_image(img)
+        assert extract.shape == (1, 1, 3)
+        assert np.sum(extract) == 0
+
+        ls = LineString([])
+        extract = ls.extract_from_image(img, prevent_zero_size=False)
+        assert extract.shape == (0, 0, 3)
+        assert np.sum(extract) == 0
 
     def test_concat(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
@@ -425,22 +803,50 @@ class TestLineString(unittest.TestCase):
         ls = LineString([(0, 0), (1, 0), (1, 1)])
         observed = ls.to_polygon()
         assert isinstance(observed, ia.Polygon)
-        assert np.allclose(observed, [(0, 0), (1, 0), (1, 1)])
+        assert np.allclose(observed.exterior, [(0, 0), (1, 0), (1, 1)])
 
         ls = LineString([(0, 0)])
         observed = ls.to_polygon()
         assert isinstance(observed, ia.Polygon)
-        assert np.allclose(observed, [(0, 0)])
+        assert np.allclose(observed.exterior, [(0, 0)])
 
         ls = LineString([])
         observed = ls.to_polygon()
         assert observed is None
 
     def test_to_heatmap(self):
-        pass  # TODO
+        from imgaug.augmentables.heatmaps import HeatmapsOnImage
+        ls = LineString([(0, 5), (5, 5)])
+        observed = ls.to_heatmap((5, 5), antialiased=False)
+        assert isinstance(observed, HeatmapsOnImage)
+        assert observed.shape == (5, 5)
+        assert observed.arr_0to1.shape == (5, 5, 1)
+        assert np.allclose(observed.arr_0to1[0:5, :, :], 0.0)
+        assert np.allclose(observed.arr_0to1[5, 0:5, :], 1.0)
+        assert np.allclose(observed.arr_0to1[6:, :, :], 0.0)
+
+        ls = LineString([])
+        observed = ls.to_heatmap((5, 5), antialiased=False)
+        assert observed.shape == (5, 5)
+        assert observed.arr_0to1.shape == (5, 5, 1)
+        assert np.allclose(observed.arr_0to1, 0.0)
 
     def test_segmentation_map(self):
-        pass  # TODO
+        from imgaug.augmentables.segmaps import SegmentationMapOnImage
+        ls = LineString([(0, 5), (5, 5)])
+        observed = ls.to_segmentation_map((5, 5))
+        assert isinstance(observed, SegmentationMapOnImage)
+        assert observed.shape == (5, 5)
+        assert observed.arr.shape == (5, 5, 1)
+        assert np.all(observed.arr[0:5, :, :] == 0)
+        assert np.all(observed.arr[5, 0:5, :] == 1)
+        assert np.all(observed.arr[6:, :, :] == 0)
+
+        ls = LineString([])
+        observed = ls.to_segmentation_map((5, 5))
+        assert observed.shape == (5, 5)
+        assert observed.arr.shape == (5, 5, 1)
+        assert np.all(observed.arr == 0)
 
     def test_coords_almost_equals(self):
         ls = LineString([(0, 0), (1, 0), (1, 1)])
