@@ -583,39 +583,6 @@ class LineString(object):
             line string. All values are in the interval ``[0.0, 1.0]``.
 
         """
-
-        # TODO remove?
-        """
-        if raise_if_out_of_image and self.is_out_of_image(image_shape):
-            raise Exception(
-                "Cannot draw line string '%s' on image shape %s, because "
-                "it would be out of bounds." % (
-                    self.__str__(), image_shape))
-
-        image_shape = _parse_shape(image_shape)[0:2]
-        if len(self.coords) <= 1 or alpha < 0 + 1e-4:
-            return np.zeros(image_shape, dtype=np.float32)
-
-        lines = []
-        for line_start, line_end in zip(self.coords):
-            lines.append((line_start[0], line_start[1],
-                          line_end[0], line_end[1]))
-
-        heatmap = np.zeros(image_shape, dtype=np.float32)
-        for line in lines:
-            if antialiased:
-                rr, cc, val = skimage.draw.line_aa(*line)
-            else:
-                rr, cc = skimage.draw.line(*line)
-                val = 1.0
-            heatmap[rr, cc] = val * alpha
-
-        if size > 1:
-            kernel = np.ones((size, size), dtype=np.uint8)
-            heatmap = cv2.dilate(heatmap, kernel)
-
-        return heatmap
-        """
         assert len(image_shape) == 2 or (
             len(image_shape) == 3 and image_shape[-1] == 1), (
             "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
@@ -657,39 +624,6 @@ class LineString(object):
             Float array of shape `image_shape` (no channel axis) with drawn
             line string points. All values are in the interval ``[0.0, 1.0]``.
 
-        """
-
-        # TODO remove?
-        """
-        points_ooi = TODO
-        if raise_if_out_of_image and all(points_ooi):
-            raise Exception(
-                "Cannot draw points of line string '%s' on image shape %s, "
-                "because they would be out of bounds." % (
-                    self.__str__(), image_shape))
-
-        image_shape = _parse_shape(image_shape)[0:2]
-        if len(self.coords) <= 1 or alpha < 0 + 1e-4:
-            return np.zeros(image_shape, dtype=np.float32)
-
-        # keypoint drawing currently only works with uint8 RGB images,
-        # so we add (3,) to the shape and set dtype to uint8. Later on and
-        # we will remove the axis and convert to [0.0, 1.0].
-        heatmap = np.zeros(image_shape[0:2] + (3,), dtype=np.uint8)
-
-        if alpha > 0:
-            from .kps import KeypointsOnImage
-
-            kpsoi = KeypointsOnImage.from_coords_array(self.coords,
-                                                       shape=image_shape)
-            heatmap = kpsoi.draw_on_image(
-                heatmap, color=(255, 255, 255), alpha=alpha,
-                size=size, copy=False,
-                raise_if_out_of_image=raise_if_out_of_image)
-
-        heatmap = heatmap.astype(np.float32) / 255.0
-        heatmap = heatmap[:, :, 0]
-        return heatmap
         """
         assert len(image_shape) == 2 or (
             len(image_shape) == 3 and image_shape[-1] == 1), (
@@ -853,37 +787,6 @@ class LineString(object):
         # Note here that we have to be careful not to draw lines two times
         # at their intersection points, e.g. for (p0, p1), (p1, 2) we could
         # end up drawing at p1 twice, leading to higher values if alpha is used.
-        """
-        # for efficiency we apply size=1 separately
-        # TODO clean this up. keep only size>1 branch?
-        if size == 1:
-            color = np.float32(color)
-            for line in lines:
-                if antialiased:
-                    rr, cc, val = skimage.draw.line_aa(*line)
-                else:
-                    rr, cc = skimage.draw.line(*line)
-                    val = 1.0
-
-                # mask check here, because line() can generate coordinates
-                # outside of the image plane
-                rr_mask = np.logical_and(0 <= rr, rr < height)
-                cc_mask = np.logical_and(0 <= cc, cc < width)
-                mask = np.logical_and(rr_mask, cc_mask)
-
-                if np.any(mask):
-                    rr = rr[mask]
-                    cc = cc[mask]
-
-                    pixels = image[rr, cc]
-                    val = val * alpha
-                    if image_was_empty:
-                        image[rr, cc] = val * color
-                    else:
-                        image[rr, cc] = (1 - val) * pixels + val * color
-            return iadt.restore_dtypes_(image, np.uint8)
-        else:
-        """
         color = np.float32(color)
         heatmap = np.zeros(image.shape[0:2], dtype=np.float32)
         for line in lines:
@@ -1047,11 +950,15 @@ class LineString(object):
         assert alpha is not None
         assert size is not None
 
-        color_line = color_line if color_line is not None else np.float32(color)
-        color_points = color_points if color_points is not None else np.float32(color) * 0.5
+        color_line = color_line if color_line is not None \
+            else np.float32(color)
+        color_points = color_points if color_points is not None \
+            else np.float32(color) * 0.5
 
-        alpha_line = alpha_line if alpha_line is not None else np.float32(alpha)
-        alpha_points = alpha_points if alpha_points is not None else np.float32(alpha)
+        alpha_line = alpha_line if alpha_line is not None \
+            else np.float32(alpha)
+        alpha_points = alpha_points if alpha_points is not None \
+            else np.float32(alpha)
 
         size_line = size_line if size_line is not None else size
         size_points = size_points if size_points is not None else size * 3
