@@ -1148,3 +1148,400 @@ class TestLineString(unittest.TestCase):
         expected = ("LineString([(0.00, 0.00), (1.00, 0.00), (1.00, 1.00)], "
                     "label=foo)")
         assert observed == expected
+
+
+class TestLineStringsOnImage(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        lsoi = LineStringsOnImage([], shape=(10, 10))
+        assert lsoi.line_strings == []
+        assert lsoi.shape == (10, 10)
+
+        lsoi = LineStringsOnImage([
+            LineString([]),
+            LineString([(0, 0), (5, 0)])
+        ], shape=(10, 10, 3))
+        assert len(lsoi.line_strings) == 2
+        assert lsoi.shape == (10, 10, 3)
+
+    def test_empty(self):
+        lsoi = LineStringsOnImage([], shape=(10, 10, 3))
+        assert lsoi.empty
+
+        lsoi = LineStringsOnImage([LineString([])], shape=(10, 10, 3))
+        assert not lsoi.empty
+
+        lsoi = LineStringsOnImage([LineString([(0, 0)])], shape=(10, 10, 3))
+        assert not lsoi.empty
+
+    def test_on(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        lsoi_proj = lsoi.on((100, 100, 3))
+        assert all([ls_a.coords_almost_equals(ls_b)
+                    for ls_a, ls_b
+                    in zip(lsoi.line_strings, lsoi_proj.line_strings)])
+        assert lsoi_proj.shape == (100, 100, 3)
+
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        lsoi_proj = lsoi.on((200, 200, 3))
+        assert lsoi_proj.line_strings[0].coords_almost_equals(
+            [(0, 0), (1*2, 0), (2*2, 1*2)]
+        )
+        assert lsoi_proj.line_strings[1].coords_almost_equals(
+            [(10*2, 10*2)]
+        )
+        assert lsoi_proj.shape == (200, 200, 3)
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        lsoi_proj = lsoi.on((200, 200, 3))
+        assert len(lsoi_proj.line_strings) == 0
+        assert lsoi_proj.shape == (200, 200, 3)
+
+    def test_from_xy_arrays(self):
+        arrs = np.float32([
+            [(0, 0), (10, 10), (5, 10)],
+            [(5, 5), (15, 15), (10, 15)]
+        ])
+        lsoi = LineStringsOnImage.from_xy_arrays(arrs, shape=(100, 100, 3))
+        assert len(lsoi.line_strings) == 2
+        assert lsoi.line_strings[0].coords_almost_equals(arrs[0])
+        assert lsoi.line_strings[1].coords_almost_equals(arrs[1])
+
+        arrs = [
+            np.float32([(0, 0), (10, 10), (5, 10)]),
+            np.float32([(5, 5), (15, 15), (10, 15), (25, 25)])
+        ]
+        lsoi = LineStringsOnImage.from_xy_arrays(arrs, shape=(100, 100, 3))
+        assert len(lsoi.line_strings) == 2
+        assert lsoi.line_strings[0].coords_almost_equals(arrs[0])
+        assert lsoi.line_strings[1].coords_almost_equals(arrs[1])
+
+        arrs = np.zeros((0, 0, 2), dtype=np.float32)
+        lsoi = LineStringsOnImage.from_xy_arrays(arrs, shape=(100, 100, 3))
+        assert len(lsoi.line_strings) == 0
+
+        arrs = np.zeros((0, 5, 2), dtype=np.float32)
+        lsoi = LineStringsOnImage.from_xy_arrays(arrs, shape=(100, 100, 3))
+        assert len(lsoi.line_strings) == 0
+
+    def test_to_xy_arrays(self):
+        ls1 = LineString([(0, 0), (10, 10), (5, 10)])
+        ls2 = LineString([(5, 5), (15, 15), (10, 15)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        arrs = lsoi.to_xy_arrays()
+        assert isinstance(arrs, list)
+        assert len(arrs) == 2
+        assert arrs[0].dtype.name == "float32"
+        assert arrs[1].dtype.name == "float32"
+        assert np.allclose(arrs, [
+            [(0, 0), (10, 10), (5, 10)],
+            [(5, 5), (15, 15), (10, 15)]
+        ])
+
+        ls1 = LineString([(0, 0), (10, 10), (5, 10)])
+        ls2 = LineString([(5, 5), (15, 15), (10, 15), (25, 25)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        arrs = lsoi.to_xy_arrays()
+        assert isinstance(arrs, list)
+        assert len(arrs) == 2
+        assert arrs[0].dtype.name == "float32"
+        assert arrs[1].dtype.name == "float32"
+        assert np.allclose(arrs[0], [(0, 0), (10, 10), (5, 10)])
+        assert np.allclose(arrs[1], [(5, 5), (15, 15), (10, 15), (25, 25)])
+
+        ls1 = LineString([])
+        ls2 = LineString([(5, 5), (15, 15), (10, 15), (25, 25)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        arrs = lsoi.to_xy_arrays()
+        assert isinstance(arrs, list)
+        assert len(arrs) == 2
+        assert arrs[0].dtype.name == "float32"
+        assert arrs[1].dtype.name == "float32"
+        assert arrs[0].shape == (0, 2)
+        assert np.allclose(arrs[1], [(5, 5), (15, 15), (10, 15), (25, 25)])
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        arrs = lsoi.to_xy_arrays()
+        assert isinstance(arrs, list)
+        assert len(arrs) == 0
+
+    def test_draw_on_image(self):
+        ls1 = LineString([(0, 0), (10, 10), (5, 10)])
+        ls2 = LineString([(5, 5), (15, 15), (10, 15), (25, 25)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        img = np.zeros((100, 100, 3), dtype=np.uint8) + 1
+        observed = lsoi.draw_on_image(img)
+        expected = np.copy(img)
+        for ls in [ls1, ls2]:
+            expected = ls.draw_on_image(expected)
+        assert np.array_equal(observed, expected)
+
+        ls1 = LineString([(0, 0), (10, 10), (5, 10)])
+        ls2 = LineString([(5, 5), (15, 15), (10, 15), (25, 25)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        img = np.zeros((100, 100, 3), dtype=np.uint8) + 1
+        observed = lsoi.draw_on_image(img,
+                                      color_line=(0, 0, 255),
+                                      color_points=(255, 0, 0),
+                                      alpha_line=0.5,
+                                      alpha_points=0.6,
+                                      antialiased=False)
+        expected = np.copy(img)
+        for ls in [ls1, ls2]:
+            expected = ls.draw_on_image(expected,
+                                        color_line=(0, 0, 255),
+                                        color_points=(255, 0, 0),
+                                        alpha_line=0.5,
+                                        alpha_points=0.6,
+                                        antialiased=False)
+        assert np.array_equal(observed, expected)
+
+        ls1 = LineString([])
+        ls2 = LineString([(5, 5), (15, 15), (10, 15), (25, 25)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        img = np.zeros((100, 100, 3), dtype=np.uint8) + 1
+        observed = lsoi.draw_on_image(img)
+        expected = np.copy(img)
+        for ls in [ls1, ls2]:
+            expected = ls.draw_on_image(expected)
+        assert np.array_equal(observed, expected)
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        img = np.zeros((100, 100, 3), dtype=np.uint8) + 1
+        observed = lsoi.draw_on_image(img)
+        expected = np.copy(img)
+        assert np.array_equal(observed, expected)
+
+    def test_remove_out_of_image(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image()
+        assert len(observed.line_strings) == 2
+        assert observed.line_strings[0] is ls1
+        assert observed.line_strings[1] is ls2
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image()
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image()
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([(-10, -10), (5, 5)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image()
+        assert len(observed.line_strings) == 1
+        assert observed.line_strings[0] is ls1
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([(-10, -10), (5, 5)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image(partly=True, fully=True)
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([(-10, -10)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image()
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([(-10, -10)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.remove_out_of_image(partly=False, fully=False)
+        assert len(observed.line_strings) == 1
+        assert observed.line_strings[0] is ls1
+        assert observed.shape == (100, 100, 3)
+
+    def test_clip_out_of_image(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.clip_out_of_image()
+        assert observed.line_strings[0].coords_almost_equals(
+            ls1.clip_out_of_image((100, 100, 3))
+        )
+        assert observed.line_strings[1].coords_almost_equals(
+            ls2.clip_out_of_image((100, 100, 3))
+        )
+        assert observed.shape == (100, 100, 3)
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.clip_out_of_image()
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.clip_out_of_image()
+        assert len(observed.line_strings[0].coords) == 0
+        assert observed.shape == (100, 100, 3)
+
+        ls1 = LineString([(-10, -10)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+        observed = lsoi.clip_out_of_image()
+        assert len(observed.line_strings[0].coords) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_shift(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.shift(top=1, right=2, bottom=3, left=4)
+        assert observed.line_strings[0].coords_almost_equals(
+            ls1.shift(top=1, right=2, bottom=3, left=4)
+        )
+        assert observed.line_strings[1].coords_almost_equals(
+            ls2.shift(top=1, right=2, bottom=3, left=4)
+        )
+        assert observed.shape == (100, 100, 3)
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.shift(top=1, right=2, bottom=3, left=4)
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_copy(self):
+        # basic test, without labels
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.copy()
+        assert observed.line_strings[0] is ls1
+        assert observed.line_strings[1] is ls2
+        assert observed.shape == (100, 100, 3)
+
+        # basic test, with labels
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)], label="foo")
+        ls2 = LineString([(10, 10)], label="bar")
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.copy()
+        assert observed.line_strings[0] is ls1
+        assert observed.line_strings[1] is ls2
+        assert observed.line_strings[0].label == "foo"
+        assert observed.line_strings[1].label == "bar"
+        assert observed.shape == (100, 100, 3)
+
+        # LSOI is empty
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.copy()
+        assert observed.line_strings == []
+        assert observed.shape == (100, 100, 3)
+
+        # provide line_strings
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.copy(line_strings=[ls1, ls2], shape=(200, 201, 3))
+        assert observed.line_strings[0] is ls1
+        assert observed.line_strings[1] is ls2
+        assert observed.shape == (200, 201, 3)
+
+        # provide line_strings, with labels
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)], label="foo")
+        ls2 = LineString([(10, 10)], label="bar")
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.copy(line_strings=[ls1, ls2], shape=(200, 201, 3))
+        assert observed.line_strings[0] is ls1
+        assert observed.line_strings[1] is ls2
+        assert observed.line_strings[0].label == "foo"
+        assert observed.line_strings[1].label == "bar"
+        assert observed.shape == (200, 201, 3)
+
+        # provide empty list of line_strings
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.copy(line_strings=[], shape=(200, 201, 3))
+        assert observed.line_strings == []
+        assert observed.shape == (200, 201, 3)
+
+    def test_deepcopy(self):
+        # basic test, without labels
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.deepcopy()
+        assert observed.line_strings[0] is not ls1
+        assert observed.line_strings[1] is not ls2
+        assert observed.line_strings[0].coords_almost_equals(ls1)
+        assert observed.line_strings[1].coords_almost_equals(ls2)
+        assert observed.shape == (100, 100, 3)
+
+        # basic test, with labels
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)], label="foo")
+        ls2 = LineString([(10, 10)], label="bar")
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = lsoi.deepcopy()
+        assert observed.line_strings[0] is not ls1
+        assert observed.line_strings[1] is not ls2
+        assert observed.line_strings[0].coords_almost_equals(ls1)
+        assert observed.line_strings[1].coords_almost_equals(ls2)
+        assert observed.line_strings[0].label == "foo"
+        assert observed.line_strings[1].label == "bar"
+        assert observed.shape == (100, 100, 3)
+
+        # LSOI is empty
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.deepcopy()
+        assert observed.line_strings == []
+        assert observed.shape == (100, 100, 3)
+
+        # provide line_strings
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.deepcopy(line_strings=[ls1, ls2], shape=(200, 201, 3))
+        # line strings provided via line_strings are also deepcopied
+        assert observed.line_strings[0].coords_almost_equals(ls1)
+        assert observed.line_strings[1].coords_almost_equals(ls2)
+        assert observed.shape == (200, 201, 3)
+
+        # provide line_strings, with labels
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)], label="foo")
+        ls2 = LineString([(10, 10)], label="bar")
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.deepcopy(line_strings=[ls1, ls2], shape=(200, 201, 3))
+        # line strings provided via line_strings are also deepcopied
+        assert observed.line_strings[0].coords_almost_equals(ls1)
+        assert observed.line_strings[1].coords_almost_equals(ls2)
+        assert observed.line_strings[0].label == "foo"
+        assert observed.line_strings[1].label == "bar"
+        assert observed.shape == (200, 201, 3)
+
+        # provide empty list of line_strings
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = lsoi.deepcopy(line_strings=[], shape=(200, 201, 3))
+        assert observed.line_strings == []
+        assert observed.shape == (200, 201, 3)
+
+    def test___repr__(self):
+        self._test_str_repr(lambda obj: obj.__repr__())
+
+    def test___str__(self):
+        self._test_str_repr(lambda obj: obj.__str__())
+
+    @classmethod
+    def _test_str_repr(cls, func):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+        observed = func(lsoi)
+        expected = "LineStringsOnImage([%s, %s], shape=(100, 100, 3))" % (
+            func(ls1), func(ls2)
+        )
+        assert observed == expected
+
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+        observed = func(lsoi)
+        expected = "LineStringsOnImage([], shape=(100, 100, 3))"
+        assert observed == expected
