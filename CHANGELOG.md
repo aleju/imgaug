@@ -104,6 +104,8 @@
     * Added `LineStringsOnImage`.
 * Added to `BoundingBox.extract_from_image()` the arguments `pad` and `pad_max`.
 * Refactored `BoundingBox.extract_from_image()`. Improved some code fragments that looked wrong.
+* Changed `KeypointsOnImage.draw_on_image()` to raise an error if an input image has shape `(H,W)`.
+* Changed `KeypointsOnImage.draw_on_image()` to handle single-number inputs for `color`.
 
 
 # 0.2.8

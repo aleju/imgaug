@@ -396,6 +396,13 @@ class KeypointsOnImage(object):
         if copy:
             image = np.copy(image)
 
+        if image.ndim == 2:
+            assert ia.is_single_number(color), (
+                "Got a 2D image. Expected then 'color' to be a single number, "
+                "but got %s." % (str(color),))
+        elif image.ndim == 3 and ia.is_single_number(color):
+            color = [color] * image.shape[-1]
+
         input_dtype = image.dtype
         alpha_color = color
         if alpha < 0.01:
