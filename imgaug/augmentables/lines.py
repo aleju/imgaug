@@ -38,14 +38,26 @@ class LineString(object):
 
     def __init__(self, coords, label=None):
         """Create a new LineString instance."""
-        if len(coords) == 0:
-            self.coords = np.zeros((0, 2), dtype=np.float32)
+        # use the conditions here to avoid unnecessary copies of ndarray inputs
+        if ia.is_np_array(coords):
+            if coords.dtype.name != "float32":
+                coords = coords.astype(np.float32)
+        elif len(coords) == 0:
+            coords = np.zeros((0, 2), dtype=np.float32)
         else:
+            assert ia.is_iterable(coords), (
+                "Expected 'coords' to be an iterable, "
+                "got type %s." % (type(coords),))
+            assert all([len(coords_i) == 2 for coords_i in coords]), (
+                "Expected 'coords' to contain (x,y) tuples, "
+                "got %s." % (str(coords),))
             coords = np.float32(coords)
-            assert coords.ndim == 2 and coords.shape[-1] == 2, (
-                "Expected 'coords' to have shape (N, 2), got shape %s." % (
-                    coords.shape,))
-            self.coords = coords
+
+        assert coords.ndim == 2 and coords.shape[-1] == 2, (
+            "Expected 'coords' to have shape (N, 2), got shape %s." % (
+                coords.shape,))
+
+        self.coords = coords
         self.label = label
 
     @property
@@ -61,7 +73,7 @@ class LineString(object):
         """
         if len(self.coords) == 0:
             return 0
-        return np.sum(self.get_pointwise_distances())
+        return np.sum(self.compute_neighbour_distances())
 
     @property
     def xx(self):
@@ -97,28 +109,6 @@ class LineString(object):
             return 0
         return np.max(self.xx) - np.min(self.xx)
 
-    # TODO add closed=False/True?
-    def get_pointwise_distances(self):
-        """
-        Get the euclidean length of each point to the next.
-
-        Returns
-        -------
-        ndarray
-            Euclidean distances between point pairs.
-            Same order as in `coords`. For ``N`` points, ``N-1`` distances
-            are returned.
-
-        """
-        if len(self.coords) <= 1:
-            return np.zeros((0,), dtype=np.float32)
-        return np.sqrt(
-            np.sum(
-                (self.coords[:-1, :] - self.coords[1:, :]) ** 2,
-                axis=1
-            )
-        )
-
     def get_pointwise_inside_image_mask(self, image):
         """
         Get for each point whether it is inside of the given image plane.
@@ -144,6 +134,71 @@ class LineString(object):
         y_within = np.logical_and(0 <= self.yy, self.yy < height)
         return np.logical_and(x_within, y_within)
 
+    # TODO add closed=False/True?
+    def compute_neighbour_distances(self):
+        """
+        Get the euclidean distance between each two consecutive points.
+
+        Returns
+        -------
+        ndarray
+            Euclidean distances between point pairs.
+            Same order as in `coords`. For ``N`` points, ``N-1`` distances
+            are returned.
+
+        """
+        if len(self.coords) <= 1:
+            return np.zeros((0,), dtype=np.float32)
+        return np.sqrt(
+            np.sum(
+                (self.coords[:-1, :] - self.coords[1:, :]) ** 2,
+                axis=1
+            )
+        )
+
+    def compute_pointwise_distances(self, other, default=None):
+        """
+        Compute the minimal distance between each point on self and other.
+
+        Parameters
+        ----------
+        other : tuple of number \
+                or imgaug.augmentables.kps.Keypoint \
+                or imgaug.augmentables.LineString
+            Other object to which to compute the distances.
+
+        default
+            Value to return if `other` contains no points.
+
+        Returns
+        -------
+        list of float
+            Distances to `other` or `default` if not distance could be computed.
+
+        """
+        import shapely.geometry
+        from .kps import Keypoint
+
+        if isinstance(other, Keypoint):
+            other = shapely.geometry.Point((other.x, other.y))
+        elif isinstance(other, LineString):
+            if len(other.coords) == 0:
+                return default
+            elif len(other.coords) == 1:
+                other = shapely.geometry.Point(other.coords[0, :])
+            else:
+                other = shapely.geometry.LineString(other.coords)
+        elif isinstance(other, tuple):
+            assert len(other) == 2
+            other = shapely.geometry.Point(other)
+        else:
+            raise ValueError(
+                ("Expected Keypoint or LineString or tuple (x,y), "
+                 + "got type %s.") % (type(other),))
+
+        return [shapely.geometry.Point(point).distance(other)
+                for point in self.coords]
+
     def compute_distance(self, other, default=None):
         """
         Compute the minimal distance between the line string and `other`.
@@ -164,29 +219,10 @@ class LineString(object):
             Distance to `other` or `default` if not distance could be computed.
 
         """
-        import shapely.geometry
-        from .kps import Keypoint
-
-        if isinstance(other, Keypoint):
-            other = shapely.geometry.Point((other.x, other.y))
-        elif isinstance(other, LineString):
-            if len(other.coords) == 0:
-                return default
-            other = shapely.geometry.LineString(other.coords)
-        elif isinstance(other, tuple):
-            assert len(other) == 2
-            other = shapely.geometry.Point(other)
-        else:
-            raise ValueError(
-                ("Expected Keypoint or LineString or tuple (x,y), "
-                 + "got type %s.") % (type(other),))
-
-        if len(self.coords) == 0:
+        distances = self.compute_pointwise_distances(other, default=[])
+        if len(distances) == 0:
             return default
-        elif len(self.coords) == 1:
-            return shapely.geometry.Point(self.coords[0]).distance(other)
-
-        return shapely.geometry.LineString(self.coords).distance(other)
+        return min(distances)
 
     # TODO update BB's contains(), which can only accept Keypoint currently
     def contains(self, other, distance_threshold=1e-4):
@@ -295,7 +331,7 @@ class LineString(object):
             return True
         return len(self.clip_out_of_image(image).coords) > 0
 
-    def is_out_of_image(self, image, fully=True, partly=False, default=False):
+    def is_out_of_image(self, image, fully=True, partly=False, default=True):
         """
         Estimate whether the line is partially/fully outside of the image area.
 
@@ -319,6 +355,7 @@ class LineString(object):
         Returns
         -------
         bool
+            `default` if the line string has no points.
             True if the line string is partially/fully outside of the image
             area, depending on defined parameters.
             False otherwise.
@@ -364,13 +401,21 @@ class LineString(object):
             return self.copy()
 
         # top, right, bottom, left image edges
+        # we subtract eps here, because intersection() works inclusively,
+        # i.e. not subtracting eps would be equivalent to 0<=x<=C for C being
+        # height or width
         import shapely.geometry
-        height, width = image.shape[0:2]
+        height, width = _parse_shape(image)[0:2]
+        eps = np.finfo(np.float32).eps
         edges = [
-            shapely.geometry.LineString([(0.0, 0.0), (width, 0.0)]),
-            shapely.geometry.LineString([(width, 0.0), (width, height)]),
-            shapely.geometry.LineString([(width, height), (0.0, height)]),
-            shapely.geometry.LineString([(0.0, height), (0.0, 0.0)])
+            shapely.geometry.LineString([(0.0, 0.0),
+                                         (width - eps, 0.0)]),
+            shapely.geometry.LineString([(width - eps, 0.0),
+                                         (width - eps, height - eps)]),
+            shapely.geometry.LineString([(width - eps, height - eps),
+                                         (0.0, height - eps)]),
+            shapely.geometry.LineString([(0.0, height),
+                                         (0.0, 0.0)])
         ]
 
         coords = []
@@ -390,39 +435,43 @@ class LineString(object):
 
             line_segment = shapely.geometry.LineString([line_start, line_end])
             intersections = [line_segment.intersection(edge) for edge in edges]
+            intersections = [
+                inter.geoms if hasattr(inter, "geoms") else inter
+                for inter in intersections]
 
+            # We might get line segments instead of points as intersections
+            # if the line segment overlaps with an edge.
+            inter_clean = []
+            for p in ia.flatten(intersections):
+                if isinstance(p, shapely.geometry.Point):
+                    inter_clean.append((p.x, p.y))
+                elif isinstance(p, shapely.geometry.LineString):
+                    inter_start = p.coords[0]
+                    inter_end = p.coords[1]
+                    if ooi_start:
+                        inter_clean.append(inter_start)
+                    if ooi_end:
+                        inter_clean.append(inter_end)
+                else:
+                    raise Exception(
+                        "Got unexpected type from shapely. "
+                        "Input was (%s, %s), got %s (type %s)." % (
+                            line_start, line_end, p, type(p)))
+            intersections = inter_clean
+
+            # There can be 0, 1 or 2 intersection points.
+            # They are ordered as: top-side, right-side, bottom-side,
+            # left-side. That may not match the direction of the line
+            # segment, so we sort here by distance to the line segment
+            # start point.
+            intersections = sorted(
+                intersections,
+                key=lambda p: np.linalg.norm(np.float32(p) - line_start)
+            )
             if intersections:
-                # We might get line segments instead of points as intersections
-                # if the line segment overlaps with an edge.
-                inter_clean = []
-                for p in intersections:
-                    if isinstance(p, shapely.geometry.Point):
-                        inter_clean.append(p)
-                    elif isinstance(p, shapely.geometry.LineString):
-                        inter_start = p.coords[0]
-                        inter_end = p.coords[1]
-                        if ooi_start:
-                            inter_clean.append(inter_start)
-                        if ooi_end:
-                            inter_clean.append(inter_end)
-                    else:
-                        raise Exception(
-                            "Got unexpected type from shapely."
-                            "Input was (%s, %s), got %s (type %s)." % (
-                                line_start, line_end, p, type(p)))
+                coords.extend(intersections)
 
-                # There can be 0, 1 or 2 intersection points.
-                # They are ordered as: top-side, right-side, bottom-side,
-                # left-side. That may not match the direction of the line
-                # segment, so we sort here by distance to the line segment
-                # start point.
-                intersections = sorted(
-                    intersections,
-                    key=lambda p: np.linalg.norm(np.float32(p) - line_start)
-                )
-                self.coords.extend(intersections)
-
-            is_last = (i == len(self.coords) - 1)
+            is_last = (i == len(self.coords) - 2)
             if is_last and not ooi_end:
                 coords.append(line_end)
 
@@ -567,13 +616,18 @@ class LineString(object):
 
         return heatmap
         """
-        image = self.draw_line_on_image(
+        assert len(image_shape) == 2 or (
+            len(image_shape) == 3 and image_shape[-1] == 1), (
+            "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
+                image_shape,))
+
+        arr = self.draw_line_on_image(
             np.zeros(image_shape, dtype=np.uint8),
-            color=(255, 255, 255), alpha=alpha, size=size,
+            color=255, alpha=alpha, size=size,
             antialiased=antialiased,
             raise_if_out_of_image=raise_if_out_of_image
         )
-        return image[:, :, 0].astype(np.float32) / 255.0
+        return arr.astype(np.float32) / 255.0
 
     def draw_points_heatmap_array(self, image_shape, alpha=1.0,
                                   size=1, raise_if_out_of_image=False):
@@ -637,12 +691,17 @@ class LineString(object):
         heatmap = heatmap[:, :, 0]
         return heatmap
         """
-        image = self.draw_points_on_image(
+        assert len(image_shape) == 2 or (
+            len(image_shape) == 3 and image_shape[-1] == 1), (
+            "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
+                image_shape,))
+
+        arr = self.draw_points_on_image(
             np.zeros(image_shape, dtype=np.uint8),
-            color=(255, 255, 255), alpha=alpha, size=size,
+            color=255, alpha=alpha, size=size,
             raise_if_out_of_image=raise_if_out_of_image
         )
-        return image[:, :, 0].astype(np.float32) / 255.0
+        return arr.astype(np.float32) / 255.0
 
     def draw_heatmap_array(self, image_shape, alpha_line=1.0, alpha_points=1.0,
                            size_line=1, size_points=0, antialiased=False,
@@ -721,7 +780,7 @@ class LineString(object):
             If a tuple, expected to be ``(H, W, C)`` and will lead to a new
             ``uint8`` array of zeros being created.
 
-        color : iterable of int
+        color : int or iterable of int
             Color to use as RGB, i.e. three values.
 
         alpha : float, optional
@@ -752,65 +811,113 @@ class LineString(object):
         if isinstance(image, tuple):
             image_was_empty = True
             image = np.zeros(image, dtype=np.uint8)
-        assert len(image) == 3, (
-            ("Expected image or shape of form (H, W, C), "
+        assert image.ndim in [2, 3], (
+            ("Expected image or shape of form (H,W) or (H,W,C), "
              + "got shape %s.") % (image.shape,))
 
         if len(self.coords) <= 1 or alpha < 0 + 1e-4 or size < 1:
             return np.copy(image)
 
-        if raise_if_out_of_image and self.is_out_of_image(image):
+        if raise_if_out_of_image \
+                and self.is_out_of_image(image, partly=False, fully=True):
             raise Exception(
                 "Cannot draw line string '%s' on image with shape %s, because "
                 "it would be out of bounds." % (
                     self.__str__(), image.shape))
 
+        if image.ndim == 2:
+            assert ia.is_single_number(color), (
+                "Got a 2D image. Expected then 'color' to be a single number, "
+                "but got %s." % (str(color),))
+            color = [color]
+        elif image.ndim == 3 and ia.is_single_number(color):
+            color = [color] * image.shape[-1]
+
+        image = image.astype(np.float32)
+        height, width = image.shape[0:2]
+
+        # We can't trivially exclude lines outside of the image here, because
+        # even if start and end point are outside, there can still be parts of
+        # the line inside the image.
+        # TODO Do this with edge-wise intersection tests
         lines = []
-        for line_start, line_end in zip(self.coords):
-            lines.append((line_start[0], line_start[1],
-                          line_end[0], line_end[1]))
+        for line_start, line_end in zip(self.coords[:-1], self.coords[1:]):
+            # note that line() expects order (y1, x1, y2, x2), hence ([1], [0])
+            lines.append((line_start[1], line_start[0],
+                          line_end[1], line_end[0]))
+
+        # skimage.draw.line can only handle integers
+        lines = np.round(np.float32(lines)).astype(np.int32)
 
         # size == 0 is already covered above
+        # Note here that we have to be careful not to draw lines two times
+        # at their intersection points, e.g. for (p0, p1), (p1, 2) we could
+        # end up drawing at p1 twice, leading to higher values if alpha is used.
+        """
+        # for efficiency we apply size=1 separately
+        # TODO clean this up. keep only size>1 branch?
         if size == 1:
-            color = np.float32(color).reshape((1, 1, -1))
-            image = image.astype(np.float32)
+            color = np.float32(color)
             for line in lines:
                 if antialiased:
                     rr, cc, val = skimage.draw.line_aa(*line)
                 else:
                     rr, cc = skimage.draw.line(*line)
                     val = 1.0
-                pixels = image[rr, cc]
-                val = val * alpha
-                if image_was_empty:
-                    image[rr, cc] = val * color
-                else:
-                    image[rr, cc] = (1 - val) * pixels + val * color
+
+                # mask check here, because line() can generate coordinates
+                # outside of the image plane
+                rr_mask = np.logical_and(0 <= rr, rr < height)
+                cc_mask = np.logical_and(0 <= cc, cc < width)
+                mask = np.logical_and(rr_mask, cc_mask)
+
+                if np.any(mask):
+                    rr = rr[mask]
+                    cc = cc[mask]
+
+                    pixels = image[rr, cc]
+                    val = val * alpha
+                    if image_was_empty:
+                        image[rr, cc] = val * color
+                    else:
+                        image[rr, cc] = (1 - val) * pixels + val * color
             return iadt.restore_dtypes_(image, np.uint8)
         else:
-            color = np.uint8(color).reshape((1, 1, -1))
-            heatmap = np.zeros(image.shape[0:2], dtype=np.float32)
-            for line in lines:
-                if antialiased:
-                    rr, cc, val = skimage.draw.line_aa(*line)
-                else:
-                    rr, cc = skimage.draw.line(*line)
-                    val = 1.0
+        """
+        color = np.float32(color)
+        heatmap = np.zeros(image.shape[0:2], dtype=np.float32)
+        for line in lines:
+            if antialiased:
+                rr, cc, val = skimage.draw.line_aa(*line)
+            else:
+                rr, cc = skimage.draw.line(*line)
+                val = 1.0
+
+            # mask check here, because line() can generate coordinates
+            # outside of the image plane
+            rr_mask = np.logical_and(0 <= rr, rr < height)
+            cc_mask = np.logical_and(0 <= cc, cc < width)
+            mask = np.logical_and(rr_mask, cc_mask)
+
+            if np.any(mask):
+                rr = rr[mask]
+                cc = cc[mask]
                 heatmap[rr, cc] = val * alpha
 
-            kernel = np.ones((size, size), dtype=np.uint8)
-            heatmap = cv2.dilate(heatmap, kernel)
+        kernel = np.ones((size, size), dtype=np.uint8)
+        heatmap = cv2.dilate(heatmap, kernel)
 
-            if image_was_empty:
-                image_blend = image + heatmap * color
-            else:
-                mask = heatmap * alpha
-                image_color = np.tile(
-                    color, image.shape[0:2] + (color.shape[2],))
-                image_blend = blendlib.blend_alpha(image_color, image, mask)
+        if image_was_empty:
+            image_blend = image + heatmap * color
+        else:
+            image_color_shape = image.shape[0:2]
+            if image.ndim == 3:
+                image_color_shape = image_color_shape + (1,)
+            image_color = np.tile(color, image_color_shape)
+            image_blend = blendlib.blend_alpha(image_color, image, heatmap)
 
-            image_blend = iadt.restore_dtypes_(image_blend, np.uint8)
-            return image_blend
+        image_blend = iadt.restore_dtypes_(image_blend, np.uint8)
+        return image_blend
 
     def draw_points_on_image(self, image, color=(0, 128, 0),
                              alpha=1.0, size=3,
@@ -855,16 +962,6 @@ class LineString(object):
             line string points. All values are in the interval ``[0.0, 1.0]``.
 
         """
-        if len(self.coords) <= 0 or alpha < 0 + 1e-4 or size < 1:
-            return np.copy(image)
-
-        points_inside = self.get_pointwise_inside_image_mask(image)
-        if raise_if_out_of_image and not np.any(points_inside):
-            raise Exception(
-                "Cannot draw points of line string '%s' on image with "
-                "shape %s, because they would be out of bounds." % (
-                    self.__str__(), image.shape))
-
         from .kps import KeypointsOnImage
         kpsoi = KeypointsOnImage.from_coords_array(self.coords,
                                                    shape=image.shape)
@@ -960,13 +1057,13 @@ class LineString(object):
         size_points = size_points if size_points is not None else size * 3
 
         image = self.draw_line_on_image(
-            image, color=color_line.astype(np.uint8),
+            image, color=np.array(color_line).astype(np.uint8),
             alpha=alpha_line, size=size_line,
             antialiased=antialiased,
             raise_if_out_of_image=raise_if_out_of_image)
 
         image = self.draw_points_on_image(
-            image, color=color_points.astype(np.uint8),
+            image, color=np.array(color_points).astype(np.uint8),
             alpha=alpha_points, size=size_points,
             copy=False,
             raise_if_out_of_image=raise_if_out_of_image)
@@ -994,8 +1091,8 @@ class LineString(object):
             Thickness of the line.
 
         pad : bool, optional
-            Whether to zero-pad the image if the line string is
-            partially/fully outside of it.
+            Whether to zero-pad the image if the object is partially/fully
+            outside of it.
 
         pad_max : None or int, optional
             The maximum number of pixels that may be zero-paded on any side,
@@ -1028,30 +1125,42 @@ class LineString(object):
         """
         from .bbs import BoundingBox
 
-        if len(self.coords) == 0:
+        assert image.ndim in [2, 3], (
+            "Expected image of shape (H,W,[C]), "
+            "got shape %s." % (image.shape,))
+
+        if len(self.coords) == 0 or size <= 0:
             if prevent_zero_size:
                 return np.zeros((1, 1) + image.shape[2:], dtype=image.dtype)
             return np.zeros((0, 0) + image.shape[2:], dtype=image.dtype)
-        elif len(self.coords) == 1:
-            x1 = self.coords[0, 0] - (size / 2)
-            y1 = self.coords[0, 1] - (size / 2)
-            x2 = self.coords[1, 0] + (size / 2)
-            y2 = self.coords[1, 1] + (size / 2)
-            bb = BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2)
+
+        xx = self.xx_int
+        yy = self.yy_int
+
+        # this would probably work if drawing was subpixel-accurate
+        # x1 = np.min(self.coords[:, 0]) - (size / 2)
+        # y1 = np.min(self.coords[:, 1]) - (size / 2)
+        # x2 = np.max(self.coords[:, 0]) + (size / 2)
+        # y2 = np.max(self.coords[:, 1]) + (size / 2)
+
+        # this works currently with non-subpixel-accurate drawing
+        sizeh = (size - 1) / 2
+        x1 = np.min(xx) - sizeh
+        y1 = np.min(yy) - sizeh
+        x2 = np.max(xx) + 1 + sizeh
+        y2 = np.max(yy) + 1 + sizeh
+        bb = BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2)
+
+        if len(self.coords) == 1:
             return bb.extract_from_image(image, pad=pad, pad_max=pad_max,
                                          prevent_zero_size=prevent_zero_size)
 
         heatmap = self.draw_line_heatmap_array(
             image.shape[0:2], alpha=1.0, size=size, antialiased=antialiased)
-        heatmap_thresh = heatmap > 0.1
-        heatmap_nz = heatmap_thresh.nonzero()
-        y1 = np.min(heatmap_nz[0])
-        y2 = np.max(heatmap_nz[0])
-        x1 = np.min(heatmap_nz[1])
-        x2 = np.max(heatmap_nz[1])
-        image = image.astype(np.float32) * heatmap
-        bb = BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2)
-        extract = bb.extract_from_image(image, pad=pad, pad_max=pad_max,
+        if image.ndim == 3:
+            heatmap = np.atleast_3d(heatmap)
+        image_masked = image.astype(np.float32) * heatmap
+        extract = bb.extract_from_image(image_masked, pad=pad, pad_max=pad_max,
                                         prevent_zero_size=prevent_zero_size)
         return np.clip(np.round(extract), 0, 255).astype(np.uint8)
 
@@ -1243,7 +1352,7 @@ class LineString(object):
         """
         if isinstance(other, LineString):
             pass
-        if isinstance(other, tuple):
+        elif isinstance(other, tuple):
             other = LineString([other])
         else:
             other = LineString(other)
@@ -1254,8 +1363,8 @@ class LineString(object):
             # only one of the two line strings has no coords
             return False
 
-        dists_self2other = self.get_pointwise_distances(other)
-        dists_other2self = other.get_pointwise_distances(self)
+        dists_self2other = self.compute_pointwise_distances(other)
+        dists_other2self = other.compute_pointwise_distances(self)
         dist = max(np.max(dists_self2other), np.max(dists_other2self))
         return dist < distance_threshold
 
@@ -1281,15 +1390,10 @@ class LineString(object):
             and additionally the labels are identical. Otherwise ``False``.
 
         """
-        if self.label is None and other.label is None:
-            return True
-        elif self.label is None or other.label is None:
+        if self.label != other.label:
             return False
-        elif self.label != other.label:
-            return False
-        else:
-            return self.coords_almost_equals(
-                other, distance_threshold=distance_threshold)
+        return self.coords_almost_equals(
+            other, distance_threshold=distance_threshold)
 
     def copy(self, coords=None, label=None):
         """
