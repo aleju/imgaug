@@ -102,6 +102,8 @@
     * Added `LineString`.
     * Added helper functions `_is_point_on_line()`, `_parse_shapes()`, `_project_coords()`.
     * Added `LineStringsOnImage`.
+* Added to `BoundingBox.extract_from_image()` the arguments `pad` and `pad_max`.
+* Refactored `BoundingBox.extract_from_image()`. Improved some code fragments that looked wrong.
 
 
 # 0.2.8
