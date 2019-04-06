@@ -655,6 +655,34 @@ class TestLineString(unittest.TestCase):
         assert np.all(img[-3:, :3, :] == 0)
         assert np.all(img_aa[-3:, :3, :] == 0)
 
+        # line partially outside if image
+        ls = LineString([(-1, 1), (9, 1)])
+        img = ls.draw_line_on_image(
+            np.zeros((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=1.0, size=1,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img[0, :, :] == 0)
+        assert np.all(img[1, :, 0] == 10)
+        assert np.all(img[1, :, 1] == 200)
+        assert np.all(img[1, :, 2] == 20)
+        assert np.all(img[2, :, :] == 0)
+
+        # line fully outside if image
+        ls = LineString([(-10, 1), (-9, 1)])
+        img = ls.draw_line_on_image(
+            np.zeros((3, 10, 3), dtype=np.uint8),
+            color=(10, 200, 20),
+            alpha=1.0, size=1,
+            antialiased=False,
+            raise_if_out_of_image=False
+        )
+        assert img.dtype.name == "uint8"
+        assert np.all(img == 0)
+
         # raise_if_out_of_image=True
         got_exception = False
         try:

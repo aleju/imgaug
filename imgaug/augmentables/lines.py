@@ -805,6 +805,7 @@ class LineString(object):
             if np.any(mask):
                 rr = rr[mask]
                 cc = cc[mask]
+                val = val[mask] if not ia.is_single_number(val) else val
                 heatmap[rr, cc] = val * alpha
 
         kernel = np.ones((size, size), dtype=np.uint8)
