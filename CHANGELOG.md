@@ -107,6 +107,7 @@
 * Changed `KeypointsOnImage.draw_on_image()` to raise an error if an input image has shape `(H,W)`.
 * Changed `KeypointsOnImage.draw_on_image()` to handle single-number inputs for `color`.
 * Added function `imgaug.imgaug.flatten()` that flattens nested lists/tuples.
+* Refactored `imgaug.augmenters.blend.blend_alpha()` to no longer enforce a channel axis for foreground and background image.
 
 
 # 0.2.8
