@@ -1402,6 +1402,10 @@ class LineStringsOnImage(object):
         assert ia.is_iterable(line_strings), (
             "Expected 'line_strings' to be an iterable, got type '%s'." % (
                 type(line_strings),))
+        assert all([isinstance(v, LineString) for v in line_strings]), (
+            "Expected iterable of LineString, got types: %s." % (
+                ", ".join([str(type(v)) for v in line_strings])
+            ))
         self.line_strings = line_strings
         self.shape = _parse_shape(shape)
 
@@ -1440,10 +1444,10 @@ class LineStringsOnImage(object):
             return self.deepcopy()
         line_strings = [ls.project(self.shape, shape)
                         for ls in self.line_strings]
-        return self.deepcopy(line_strings=line_strings)
+        return self.deepcopy(line_strings=line_strings, shape=shape)
 
     @classmethod
-    def from_xy_array(cls, xy, shape):
+    def from_xy_arrays(cls, xy, shape):
         """
         Convert an `(N,M,2)` ndarray to a LineStringsOnImage object.
 
@@ -1474,7 +1478,7 @@ class LineStringsOnImage(object):
             lss.append(LineString(xy_ls))
         return cls(lss, shape)
 
-    def to_xyxy_array(self, dtype=np.float32):
+    def to_xy_arrays(self, dtype=np.float32):
         """
         Convert this object to an iterable of ``(M,2)`` arrays of points.
 
@@ -1607,7 +1611,7 @@ class LineStringsOnImage(object):
 
     def clip_out_of_image(self):
         """
-        Clip off all parts of the line_strings that are outside of the image.
+        Clip off all parts of the line strings that are outside of the image.
 
         Returns
         -------
@@ -1616,8 +1620,7 @@ class LineStringsOnImage(object):
 
         """
         lss_cut = [ls.clip_out_of_image(self.shape)
-                   for ls in self.line_strings
-                   if ls.is_partly_within_image(self.shape)]
+                   for ls in self.line_strings]
         return LineStringsOnImage(lss_cut, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
