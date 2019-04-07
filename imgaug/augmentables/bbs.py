@@ -1112,7 +1112,7 @@ def _project_coords(coords, from_shape, to_shape):
     to_height, to_width = to_shape[0:2]
     assert all([v > 0 for v in [from_height, from_width, to_height, to_width]])
 
-    coords_proj = np.float32(coords)
+    coords_proj = coords.astype(np.float32)
     coords_proj[:, 0] = (coords_proj[:, 0] / from_width) * to_width
     coords_proj[:, 1] = (coords_proj[:, 1] / from_height) * to_height
     return coords_proj
