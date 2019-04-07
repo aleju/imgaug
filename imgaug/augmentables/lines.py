@@ -1072,9 +1072,9 @@ class LineString(object):
                                         prevent_zero_size=prevent_zero_size)
         return np.clip(np.round(extract), 0, 255).astype(np.uint8)
 
-    def concat(self, other):
+    def concatenate(self, other):
         """
-        Concat this line string with another one.
+        Concatenate this line string with another one.
 
         This will add a line segment between the end point of this line string
         and the start point of `other`.

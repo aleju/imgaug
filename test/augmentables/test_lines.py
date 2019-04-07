@@ -939,23 +939,23 @@ class TestLineString(unittest.TestCase):
         assert extract.shape == (0, 0, 1)
         assert np.sum(extract) == 0
 
-    def test_concat(self):
+    def test_concatenate(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
-        assert ls.concat(ls).coords_almost_equals([
+        assert ls.concatenate(ls).coords_almost_equals([
             (0, 0), (1, 0), (2, 1), (0, 0), (1, 0), (2, 1)
         ])
 
         ls = LineString([])
-        assert ls.concat(ls).coords_almost_equals([])
+        assert ls.concatenate(ls).coords_almost_equals([])
 
         ls = LineString([])
-        assert ls.concat(LineString([(0, 0)])).coords_almost_equals([(0, 0)])
+        assert ls.concatenate(LineString([(0, 0)])).coords_almost_equals([(0, 0)])
 
         ls = LineString([(0, 0)])
-        assert ls.concat(LineString([])).coords_almost_equals([(0, 0)])
+        assert ls.concatenate(LineString([])).coords_almost_equals([(0, 0)])
 
         ls = LineString([])
-        assert ls.concat([(0, 0)]).coords_almost_equals([(0, 0)])
+        assert ls.concatenate([(0, 0)]).coords_almost_equals([(0, 0)])
 
     def test_to_keypoints(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
