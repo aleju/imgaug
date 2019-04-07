@@ -557,7 +557,7 @@ class LineString(object):
         return heatmap > 0.5
 
     def draw_line_heatmap_array(self, image_shape, alpha=1.0,
-                                size=1, antialiased=False,
+                                size=1, antialiased=True,
                                 raise_if_out_of_image=False):
         """
         Draw the line segments of the line string as a heatmap array.
@@ -644,7 +644,7 @@ class LineString(object):
         return arr.astype(np.float32) / 255.0
 
     def draw_heatmap_array(self, image_shape, alpha_line=1.0, alpha_points=1.0,
-                           size_line=1, size_points=0, antialiased=False,
+                           size_line=1, size_points=0, antialiased=True,
                            raise_if_out_of_image=False):
         """
         Draw the line segments and points of the line string as a heatmap array.
