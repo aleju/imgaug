@@ -406,7 +406,13 @@ class LineString(object):
         # height or width
         import shapely.geometry
         height, width = _parse_shape(image)[0:2]
-        eps = np.finfo(np.float32).eps
+
+        # don't set the eps too low, otherwise points at height/width seem
+        # to get rounded to height/width by shapely, which can cause problems
+        # when first clipping and then calling is_fully_within_image()
+        # returning false
+        eps = 1e-5
+
         edges = [
             shapely.geometry.LineString([(0.0, 0.0),
                                          (width - eps, 0.0)]),
