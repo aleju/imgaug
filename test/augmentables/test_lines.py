@@ -348,54 +348,277 @@ class TestLineString(unittest.TestCase):
 
     def test_clip_out_of_image(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
-        assert ls.clip_out_of_image((10, 10)).coords_almost_equals(ls)
-        assert ls.clip_out_of_image((2, 3)).coords_almost_equals(ls)
-        assert not ls.clip_out_of_image((2, 2)).coords_almost_equals(ls, distance_threshold=1e-6)
-        assert ls.clip_out_of_image((2, 2)).coords_almost_equals(ls, distance_threshold=1e-3)
-        assert not ls.clip_out_of_image((1, 1)).coords_almost_equals([(0, 0), (1, 0)], distance_threshold=1e-6)
-        assert ls.clip_out_of_image((1, 1)).coords_almost_equals([(0, 0), (1, 0)], distance_threshold=1e-3)
 
-        ls = LineString([(1, 0), (2, 0), (3, 1)])
-        assert ls.clip_out_of_image((10, 10)).coords_almost_equals(ls)
-        assert not ls.clip_out_of_image((2, 3)).coords_almost_equals(ls, distance_threshold=1e-6)
-        assert ls.clip_out_of_image((2, 3)).coords_almost_equals(ls, distance_threshold=1e-3)
-        assert not ls.clip_out_of_image((2, 2)).coords_almost_equals([(1, 0), (2, 0)], distance_threshold=1e-6)
-        assert ls.clip_out_of_image((2, 2)).coords_almost_equals([(1, 0), (2, 0)], distance_threshold=1e-3)
-        assert ls.clip_out_of_image((1, 1)).coords_almost_equals([])
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
 
-        # line string that cuts through the middle of the image,
-        # with both points outside of a BB (0, 0), (10, 10)
-        ls = LineString([(-1, 5), (11, 5)])
-        assert ls.clip_out_of_image((100, 100)).coords_almost_equals([(0, 5), (11, 5)])
-        assert ls.clip_out_of_image((10, 12)).coords_almost_equals([(0, 5), (11, 5)])
-        assert ls.clip_out_of_image((10, 10)).coords_almost_equals([(0, 5), (10, 5)])
-        assert ls.clip_out_of_image((10, 1)).coords_almost_equals([(0, 5), (1, 5)])
-        assert ls.clip_out_of_image((1, 1)).coords_almost_equals([])
+        lss_clipped = ls.clip_out_of_image((2, 2))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
 
-        # line string around inner rectangle of (-1, -1), (11, 11)
-        ls = LineString([(-1, -1), (11, -1), (11, 11), (-1, 11)])
-        assert ls.clip_out_of_image((100, 100)).coords_almost_equals([(11, 0), (11, 11), (0, 11)])
-        assert ls.clip_out_of_image((12, 12)).coords_almost_equals([(11, 0), (11, 11), (0, 11)])
-        assert ls.clip_out_of_image((10, 10)).coords_almost_equals([])
+        lss_clipped = ls.clip_out_of_image((2, 1))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (1, 0)])
 
-        # just one point
-        ls = LineString([(11, 11)])
-        assert ls.clip_out_of_image((100, 100)).coords_almost_equals([(11, 11)])
-        assert ls.clip_out_of_image((12, 12)).coords_almost_equals([(11, 11)])
-        assert ls.clip_out_of_image((10, 10)).coords_almost_equals([])
+        # same as above, all coords at x+5, y+5
+        ls = LineString([(5, 5), (6, 5), (7, 6)])
 
-        # no point
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((4, 4))
+        assert len(lss_clipped) == 0
+
+        # line that leaves image plane and comes back
+        ls = LineString([(0, 0), (1, 0), (3, 0),
+                         (3, 2), (1, 2), (0, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((10, 2))
+        assert len(lss_clipped) == 2
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (1, 0), (2, 0)])
+        assert lss_clipped[1].coords_almost_equals([(2, 2), (1, 2), (0, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 1))
+        assert len(lss_clipped) == 2
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (1, 0)])
+        assert lss_clipped[1].coords_almost_equals([(1, 2), (0, 2)])
+
+        # same as above, but removing first and last point
+        # so that only one point before and after out of image part remain
+        ls = LineString([(1, 0), (3, 0),
+                         (3, 2), (1, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((10, 2))
+        assert len(lss_clipped) == 2
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (2, 0)])
+        assert lss_clipped[1].coords_almost_equals([(2, 2), (1, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 1))
+        assert len(lss_clipped) == 0
+
+        # same as above, but only one point out of image remains
+        ls = LineString([(1, 0), (3, 0),
+                         (1, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((10, 2))
+        assert len(lss_clipped) == 2
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (2, 0)])
+        assert lss_clipped[1].coords_almost_equals([(2, 1), (1, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 1))
+        assert len(lss_clipped) == 0
+
+        # line string that leaves image, comes back, then leaves again, then
+        # comes back again
+        ls = LineString([(1, 0), (3, 0),  # leaves
+                         (3, 1), (1, 1),  # comes back
+                         (1, 2), (3, 2),  # leaves
+                         (3, 3), (1, 3)])  # comes back
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((10, 2))
+        assert len(lss_clipped) == 3  # from above: 1s line, 2nd+3rd, 4th
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (2, 0)])
+        assert lss_clipped[1].coords_almost_equals([(2, 1), (1, 1), (1, 2), (2, 2)])
+        assert lss_clipped[2].coords_almost_equals([(2, 3), (1, 3)])
+
+        # line string that starts out of image and ends within the image plane
+        for y in [1, 0]:
+            # one point inside image
+            ls = LineString([(-10, y), (3, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 10))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (3, y)])
+
+            lss_clipped = ls.clip_out_of_image((2, 1))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (1, y)])
+
+            lss_clipped = ls.clip_out_of_image((1, 1))
+            if y == 1:
+                assert len(lss_clipped) == 0
+            else:
+                assert len(lss_clipped) == 1
+                assert lss_clipped[0].coords_almost_equals([(0, y), (1, y)])
+
+            # two points inside image
+            ls = LineString([(-10, y), (3, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 10))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (3, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 4))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (3, y), (4, y)])
+
+            lss_clipped = ls.clip_out_of_image((2, 1))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (1, y)])
+
+            lss_clipped = ls.clip_out_of_image((1, 1))
+            if y == 1:
+                assert len(lss_clipped) == 0
+            else:
+                assert len(lss_clipped) == 1
+                assert lss_clipped[0].coords_almost_equals([(0, y), (1, y)])
+
+        # line string that starts within the image plane and ends outside
+        for y in [1, 0]:
+            # one point inside image
+            ls = LineString([(2, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 10))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(2, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 4))
+            assert lss_clipped[0].coords_almost_equals([(2, y), (4, y)])
+
+            # two points inside image
+            ls = LineString([(1, y), (2, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 10))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(1, y), (2, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 4))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(1, y), (2, y), (4, y)])
+
+            lss_clipped = ls.clip_out_of_image((2, 1))
+            assert len(lss_clipped) == 0
+
+            # two points outside image
+            ls = LineString([(2, y), (5, y), (6, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 10))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(2, y), (5, y), (6, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 4))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(2, y), (4, y)])
+
+            lss_clipped = ls.clip_out_of_image((2, 1))
+            assert len(lss_clipped) == 0
+
+        # line string that cuts through the image plane in the center
+        for y in [1, 0]:
+            ls = LineString([(-5, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((10, 10))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (5, y)])
+
+            lss_clipped = ls.clip_out_of_image((4, 4))
+            assert len(lss_clipped) == 1
+            assert lss_clipped[0].coords_almost_equals([(0, y), (4, y)])
+
+        # line string that cuts through the image plane from the bottom left
+        # corner to the top right corner
+        ls = LineString([(-5, -5), (5, 5)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (5, 5)])
+
+        lss_clipped = ls.clip_out_of_image((4, 4))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (4, 4)])
+
+        # line string that overlaps with the bottom edge
+        ls = LineString([(1, 0), (4, 0)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((3, 3))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (3, 0)])
+
+        # same as above, multiple points on line
+        ls = LineString([(1, 0), (4, 0), (5, 0), (6, 0), (7, 0)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((5, 5))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (4, 0), (5, 0)])
+
+        lss_clipped = ls.clip_out_of_image((5, 4))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (4, 0)])
+
+        lss_clipped = ls.clip_out_of_image((5, 2))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(1, 0), (2, 0)])
+
+        # line string that starts outside the image, intersects with the
+        # bottom left corner and overlaps with the bottom border
+        ls = LineString([(-5, 0), (5, 0)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (5, 0)])
+
+        lss_clipped = ls.clip_out_of_image((10, 5))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (5, 0)])
+
+        lss_clipped = ls.clip_out_of_image((10, 4))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals([(0, 0), (4, 0)])
+
+        # line string that contains a single point
+        ls = LineString([(2, 2)])
+
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 1
+        assert lss_clipped[0].coords_almost_equals(ls)
+
+        lss_clipped = ls.clip_out_of_image((1, 1))
+        assert len(lss_clipped) == 0
+
+        # line string that is empty
         ls = LineString([])
-        assert ls.clip_out_of_image((100, 100)).coords_almost_equals([])
-        assert ls.clip_out_of_image((10, 10)).coords_almost_equals([])
+        lss_clipped = ls.clip_out_of_image((10, 10))
+        assert len(lss_clipped) == 0
 
         # combine clip + is_fully_within_image
         h, w = 100, 200
         ls = LineString([(0, 10), (w, 10), (w, h), (w-10, h-10)])
-        assert ls.clip_out_of_image((h, w)).is_fully_within_image((h, w))
+        lss_clipped = ls.clip_out_of_image((h, w))
+        assert len(lss_clipped) == 2
+        assert lss_clipped[0].is_fully_within_image((h, w))
+        assert lss_clipped[1].is_fully_within_image((h, w))
 
         ls = LineString([(0, 10), (w+10, 10), (w+10, h-10), (w-10, h-10)])
-        assert ls.clip_out_of_image((h, w)).is_fully_within_image((h, w))
+        lss_clipped = ls.clip_out_of_image((h, w))
+        assert len(lss_clipped) == 2
+        assert lss_clipped[0].is_fully_within_image((h, w))
+        assert lss_clipped[1].is_fully_within_image((h, w))
 
     def test_shift(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
