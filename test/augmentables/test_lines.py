@@ -1632,12 +1632,12 @@ class TestLineStringsOnImage(unittest.TestCase):
         ls2 = LineString([(10, 10)])
         lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
         observed = lsoi.clip_out_of_image()
-        assert observed.line_strings[0].coords_almost_equals(
-            ls1.clip_out_of_image((100, 100, 3))
-        )
-        assert observed.line_strings[1].coords_almost_equals(
-            ls2.clip_out_of_image((100, 100, 3))
-        )
+        expected = []
+        expected.extend(ls1.clip_out_of_image((100, 100, 3)))
+        expected.extend(ls2.clip_out_of_image((100, 100, 3)))
+        assert len(lsoi.line_strings) == len(expected)
+        for ls_obs, ls_exp in zip(observed.line_strings, expected):
+            assert ls_obs.coords_almost_equals(ls_exp)
         assert observed.shape == (100, 100, 3)
 
         lsoi = LineStringsOnImage([], shape=(100, 100, 3))
@@ -1648,13 +1648,13 @@ class TestLineStringsOnImage(unittest.TestCase):
         ls1 = LineString([])
         lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
         observed = lsoi.clip_out_of_image()
-        assert len(observed.line_strings[0].coords) == 0
+        assert len(observed.line_strings) == 0
         assert observed.shape == (100, 100, 3)
 
         ls1 = LineString([(-10, -10)])
         lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
         observed = lsoi.clip_out_of_image()
-        assert len(observed.line_strings[0].coords) == 0
+        assert len(observed.line_strings) == 0
         assert observed.shape == (100, 100, 3)
 
     def test_shift(self):
