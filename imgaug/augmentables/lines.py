@@ -870,8 +870,9 @@ class LineString(object):
                 val = val[mask] if not ia.is_single_number(val) else val
                 heatmap[rr, cc] = val * alpha
 
-        kernel = np.ones((size, size), dtype=np.uint8)
-        heatmap = cv2.dilate(heatmap, kernel)
+        if size > 1:
+            kernel = np.ones((size, size), dtype=np.uint8)
+            heatmap = cv2.dilate(heatmap, kernel)
 
         if image_was_empty:
             image_blend = image + heatmap * color
