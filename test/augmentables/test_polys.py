@@ -1115,6 +1115,58 @@ def test_Polygon_to_bounding_box():
     assert 1.0 - 1e-8 < bb.y2 < 1.0 + 1e-8
 
 
+def test_Polygon_to_line_string():
+    poly = ia.Polygon([])
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 0
+    assert ls.label is None
+
+    poly = ia.Polygon([])
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 0
+    assert ls.label is None
+
+    poly = ia.Polygon([], label="foo")
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 0
+    assert ls.label == "foo"
+
+    poly = ia.Polygon([(0, 0)])
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 1
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0)])
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 1
+    assert ls.coords_almost_equals([(0, 0)])
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 2
+    assert ls.coords_almost_equals([(0, 0), (1, 1)])
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 3
+    assert ls.coords_almost_equals([(0, 0), (1, 1), (0, 0)])
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0), (1, 1)], label="foo")
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 3
+    assert ls.coords_almost_equals([(0, 0), (1, 1), (0, 0)])
+    assert ls.label == "foo"
+
+    poly = ia.Polygon([(0, 0), (1, 1)], label="foo")
+    ls = poly.to_line_string()
+    assert len(ls.coords) == 3
+    assert ls.coords_almost_equals([(0, 0), (1, 1), (0, 0)])
+    assert ls.label == "foo"
+
+
 def test_Polygon_from_shapely():
     exterior = [(0, 0), (1, 0), (1, 1), (0, 1)]
     poly_shapely = shapely.geometry.Polygon(exterior)

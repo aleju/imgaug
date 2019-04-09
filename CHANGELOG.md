@@ -111,6 +111,7 @@
 * Added module `imgaug.augmentables.utils`.
     * Added function `normalize_shape()`.
     * Added function `project_coords()`.
+* Added `Polygon.to_line_string()`.
 
 
 # 0.2.8
