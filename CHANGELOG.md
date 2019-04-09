@@ -118,6 +118,7 @@
     * Added arguments `size` and `size_perimeter` to control polygon line thickness.
     * Renamed arguments `alpha_perimeter` to `alpha_line`, `color_perimeter` to `color_line` to align with `LineStrings`.
     * Renamed arguments `alpha_fill` to `alpha_face` and `color_fill` to `color_face`.
+* Refactored `Polygon.project()` to use `LineString.project()`.
 
 
 # 0.2.8

@@ -212,13 +212,11 @@ class Polygon(object):
             Polygon object with new coordinates.
 
         """
-        # TODO get rid of this deferred import
-        from imgaug.augmentables.kps import Keypoint
-
         if from_shape[0:2] == to_shape[0:2]:
             return self.copy()
-        exterior = [Keypoint(x=x, y=y).project(from_shape, to_shape) for x, y in self.exterior]
-        return self.copy(exterior=exterior)
+        ls_proj = self.to_line_string(closed=False).project(
+            from_shape, to_shape)
+        return self.copy(exterior=ls_proj.coords)
 
     def find_closest_point_index(self, x, y, return_distance=False):
         """
