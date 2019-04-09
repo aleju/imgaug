@@ -257,17 +257,6 @@ class Polygon(object):
             return closest_idx, distances[closest_idx]
         return closest_idx
 
-    def _compute_inside_image_point_mask(self, image):
-        if isinstance(image, tuple):
-            shape = image
-        else:
-            shape = image.shape
-        h, w = shape[0:2]
-        return np.logical_and(
-            np.logical_and(0 <= self.exterior[:, 0], self.exterior[:, 0] < w),
-            np.logical_and(0 <= self.exterior[:, 1], self.exterior[:, 1] < h)
-        )
-
     # TODO keep this method? it is almost an alias for is_out_of_image()
     def is_fully_within_image(self, image):
         """

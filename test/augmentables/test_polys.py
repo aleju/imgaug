@@ -42,7 +42,6 @@ def main():
     test_Polygon_width()
     test_Polygon_project()
     test_Polygon_find_closest_point_idx()
-    test_Polygon__compute_inside_image_point_mask()
     test_Polygon_is_fully_within_image()
     test_Polygon_is_partly_within_image()
     test_Polygon_is_out_of_image()
@@ -344,24 +343,6 @@ def test_Polygon_find_closest_point_idx():
     closest_idx, distance = poly.find_closest_point_index(x=0.9, y=0.15, return_distance=True)
     assert closest_idx == 1
     assert np.allclose(distance, np.sqrt(((1.0-0.9)**2) + (0.15**2)))
-
-
-def test_Polygon__compute_inside_image_point_mask():
-    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
-    mask = poly._compute_inside_image_point_mask((1, 1, 3))
-    assert np.array_equal(mask, np.array([True, True, True, True], dtype=bool))
-
-    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    mask = poly._compute_inside_image_point_mask((1, 1, 3))
-    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
-
-    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    mask = poly._compute_inside_image_point_mask((1, 1))
-    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
-
-    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    mask = poly._compute_inside_image_point_mask(np.zeros((1, 1, 3), dtype=np.uint8))
-    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
 
 
 def test_Polygon_is_fully_within_image():
