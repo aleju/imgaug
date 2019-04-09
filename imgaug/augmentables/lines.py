@@ -385,8 +385,9 @@ class LineString(object):
 
         Returns
         -------
-        result : imgaug.augmentables.lines.LineString
-            Line string, clipped to fall within the image dimensions.
+        list of imgaug.augmentables.lines.LineString
+            Line strings, clipped to the image shape.
+            The result may contain any number of line strins, including zero.
 
         """
         if len(self.coords) == 0:
@@ -1684,8 +1685,9 @@ class LineStringsOnImage(object):
             Line strings, clipped to fall within the image dimensions.
 
         """
-        lss_cut = [ls.clip_out_of_image(self.shape)
-                   for ls in self.line_strings]
+        lss_cut = [ls_clipped
+                   for ls in self.line_strings
+                   for ls_clipped in ls.clip_out_of_image(self.shape)]
         return LineStringsOnImage(lss_cut, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
