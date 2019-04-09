@@ -452,10 +452,10 @@ class Polygon(object):
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_fill=None,
-                      color_perimeter=None, color_points=None,
+                      color_line=None, color_points=None,
                       alpha=1.0, alpha_fill=None,
-                      alpha_perimeter=None, alpha_points=None,
-                      size=1, size_perimeter=None, size_points=None,
+                      alpha_line=None, alpha_points=None,
+                      size=1, size_line=None, size_points=None,
                       raise_if_out_of_image=False):
         """
         Draw the polygon on an image.
@@ -477,17 +477,17 @@ class Polygon(object):
         color_fill : None or iterable of int, optional
             The color to use for the inner polygon area (excluding perimeter).
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 1.0``.
+            If this is ``None``, it will be derived from ``color * 1.0``.
 
-        color_perimeter : None or iterable of int, optional
-            The color to use for the perimeter (aka border) of the polygon.
+        color_line : None or iterable of int, optional
+            The color to use for the line (aka perimeter/border) of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+            If this is ``None``, it will be derived from ``color * 0.5``.
 
         color_points : None or iterable of int, optional
             The color to use for the corner points of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+            If this is ``None``, it will be derived from ``color * 0.5``.
 
         alpha : float, optional
             The opacity of the whole polygon, where ``1.0`` denotes a completely
@@ -501,26 +501,26 @@ class Polygon(object):
             The opacity of the polygon's inner area (excluding the perimeter),
             where ``1.0`` denotes a completely visible inner area and ``0.0``
             an invisible one.
-            If this is ``None``, it will be derived from``alpha * 0.5``.
+            If this is ``None``, it will be derived from ``alpha * 0.5``.
 
-        alpha_perimeter : None or number, optional
-            The opacity of the polygon's perimeter (aka border),
-            where ``1.0`` denotes a completely visible perimeter and ``0.0`` an
+        alpha_line : None or number, optional
+            The opacity of the polygon's line (aka perimeter/border),
+            where ``1.0`` denotes a completely visible line and ``0.0`` an
             invisible one.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
 
         alpha_points : None or number, optional
             The opacity of the polygon's corner points, where ``1.0`` denotes
             completely visible corners and ``0.0`` invisible ones.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
 
         size : int, optional
             Size of the polygon.
             The sizes of the perimeter and points are derived from this value,
             unless they are set.
 
-        size_perimeter : None or int, optional
-            Thickness of the perimeter.
+        size_line : None or int, optional
+            Thickness of the polygon's line (aka perimeter/border).
             If ``None``, this value is derived from `size`.
 
         size_points : int, optional
@@ -543,14 +543,14 @@ class Polygon(object):
         assert size is not None
 
         color_fill = color_fill if color_fill is not None else np.array(color)
-        color_perimeter = color_perimeter if color_perimeter is not None else np.array(color) * 0.5
+        color_line = color_line if color_line is not None else np.array(color) * 0.5
         color_points = color_points if color_points is not None else np.array(color) * 0.5
 
         alpha_fill = alpha_fill if alpha_fill is not None else alpha * 0.5
-        alpha_perimeter = alpha_perimeter if alpha_perimeter is not None else alpha
+        alpha_line = alpha_line if alpha_line is not None else alpha
         alpha_points = alpha_points if alpha_points is not None else alpha
 
-        size_perimeter = size_perimeter if size_perimeter is not None else size
+        size_line = size_line if size_line is not None else size
         size_points = size_points if size_points is not None else size * 3
 
         if image.ndim == 2:
@@ -594,8 +594,8 @@ class Polygon(object):
         ls_open = self.to_line_string(closed=False)
         ls_closed = self.to_line_string(closed=True)
         result = ls_closed.draw_line_on_image(
-            result, color=color_perimeter, alpha=alpha_perimeter,
-            size=size_perimeter, raise_if_out_of_image=raise_if_out_of_image)
+            result, color=color_line, alpha=alpha_line,
+            size=size_line, raise_if_out_of_image=raise_if_out_of_image)
         result = ls_open.draw_points_on_image(
             result, color=color_points, alpha=alpha_points,
             size=size_points, raise_if_out_of_image=raise_if_out_of_image)
@@ -1041,6 +1041,7 @@ class Polygon(object):
         return "Polygon([%s] (%d points), label=%s)" % (points_str, len(self.exterior), self.label)
 
 
+# TODO add tests for this
 class PolygonsOnImage(object):
     """
     Object that represents all polygons on a single image.
@@ -1118,10 +1119,10 @@ class PolygonsOnImage(object):
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_fill=None,
-                      color_perimeter=None, color_points=None,
+                      color_line=None, color_points=None,
                       alpha=1.0, alpha_fill=None,
-                      alpha_perimeter=None, alpha_points=None,
-                      size=1, size_perimeter=None, size_points=None,
+                      alpha_line=None, alpha_points=None,
+                      size=1, size_line=None, size_points=None,
                       raise_if_out_of_image=False):
         """
         Draw all polygons onto a given image.
@@ -1144,17 +1145,18 @@ class PolygonsOnImage(object):
         color_fill : None or iterable of int, optional
             The color to use for the inner polygon areas (excluding perimeters).
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 1.0``.
+            If this is ``None``, it will be derived from ``color * 1.0``.
 
-        color_perimeter : None or iterable of int, optional
-            The color to use for the perimeters (aka borders) of the polygons.
-            Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+        color_line : None or iterable of int, optional
+            The color to use for the lines (aka perimeters/borders) of the
+            polygons. Must correspond to the channel layout of the image.
+            Usually RGB. If this is ``None``, it will be derived
+            from ``color * 0.5``.
 
         color_points : None or iterable of int, optional
             The color to use for the corner points of the polygons.
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+            If this is ``None``, it will be derived from ``color * 0.5``.
 
         alpha : float, optional
             The opacity of the whole polygons, where ``1.0`` denotes
@@ -1168,28 +1170,28 @@ class PolygonsOnImage(object):
             The opacity of the polygon's inner areas (excluding the perimeters),
             where ``1.0`` denotes completely visible inner areas and ``0.0``
             invisible ones.
-            If this is ``None``, it will be derived from``alpha * 0.5``.
+            If this is ``None``, it will be derived from ``alpha * 0.5``.
 
-        alpha_perimeter : None or number, optional
-            The opacity of the polygon's perimeters (aka borders),
+        alpha_line : None or number, optional
+            The opacity of the polygon's lines (aka perimeters/borders),
             where ``1.0`` denotes completely visible perimeters and ``0.0``
             invisible ones.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
 
         alpha_points : None or number, optional
             The opacity of the polygon's corner points, where ``1.0`` denotes
             completely visible corners and ``0.0`` invisible ones.
             Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
             are allowed.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
 
         size : int, optional
             Size of the polygons.
             The sizes of the perimeter and points are derived from this value,
             unless they are set.
 
-        size_perimeter : None or int, optional
-            Thickness of the perimeters.
+        size_line : None or int, optional
+            Thickness of the polygon lines (aka perimeter/border).
             If ``None``, this value is derived from `size`.
 
         size_points : int, optional
@@ -1212,14 +1214,14 @@ class PolygonsOnImage(object):
                 image,
                 color=color,
                 color_fill=color_fill,
-                color_perimeter=color_perimeter,
+                color_line=color_line,
                 color_points=color_points,
                 alpha=alpha,
                 alpha_fill=alpha_fill,
-                alpha_perimeter=alpha_perimeter,
+                alpha_line=alpha_line,
                 alpha_points=alpha_points,
                 size=size,
-                size_perimeter=size_perimeter,
+                size_line=size_line,
                 size_points=size_points,
                 raise_if_out_of_image=raise_if_out_of_image
             )

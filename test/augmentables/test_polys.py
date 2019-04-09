@@ -610,11 +610,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_line=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -634,7 +634,7 @@ def test_Polygon_draw_on_image():
                                     color=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_line=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -654,11 +654,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image.astype(np.float32),
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_line=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.float32
@@ -676,11 +676,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_line=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -700,11 +700,11 @@ def test_Polygon_draw_on_image():
         _ = poly.draw_on_image(image,
                                color=[32, 128, 32],
                                color_fill=[32, 128, 32],
-                               color_perimeter=[0, 255, 0],
+                               color_line=[0, 255, 0],
                                color_points=[0, 255, 0],
                                alpha=1.0,
                                alpha_fill=1.0,
-                               alpha_perimeter=1.0,
+                               alpha_line=1.0,
                                alpha_points=0.0,
                                raise_if_out_of_image=True)
     except Exception as exc:
@@ -717,11 +717,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_line=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert np.array_equal(image_poly, image)
@@ -733,11 +733,11 @@ def test_Polygon_draw_on_image():
         _ = poly.draw_on_image(image,
                                color=[32, 128, 32],
                                color_fill=[32, 128, 32],
-                               color_perimeter=[0, 255, 0],
+                               color_line=[0, 255, 0],
                                color_points=[0, 255, 0],
                                alpha=1.0,
                                alpha_fill=1.0,
-                               alpha_perimeter=1.0,
+                               alpha_line=1.0,
                                alpha_points=0.0,
                                raise_if_out_of_image=True)
     except Exception as exc:
@@ -750,11 +750,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=0.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_line=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -769,11 +769,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=1.0,
-                                    alpha_perimeter=0.0,
+                                    alpha_line=0.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -787,7 +787,7 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=0.8,
                                     alpha_points=0.0,
@@ -809,11 +809,11 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
                                     color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_line=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
                                     alpha_fill=0.5,
-                                    alpha_perimeter=0.5,
+                                    alpha_line=0.5,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
