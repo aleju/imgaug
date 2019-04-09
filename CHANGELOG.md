@@ -124,6 +124,7 @@
     * Refactored to make use of `LineString.coords_almost_equals()`.
     * Removed argument `interpolate`.
     * Renamed argument `other_polygon` to `other`.
+* Refactored `PolygonsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 
 
 # 0.2.8

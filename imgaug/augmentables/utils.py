@@ -3,7 +3,6 @@ import numpy as np
 import imgaug as ia
 
 
-# TODO integrate into polygons
 # TODO integrate into keypoints
 def normalize_shape(shape):
     """
@@ -27,7 +26,6 @@ def normalize_shape(shape):
     return shape.shape
 
 
-# TODO intergrate into polygons
 # TODO integrate into keypoints
 def project_coords(coords, from_shape, to_shape):
     """

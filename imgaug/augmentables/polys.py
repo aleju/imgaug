@@ -11,6 +11,7 @@ import skimage.measure
 import collections
 
 from .. import imgaug as ia
+from .utils import normalize_shape
 
 
 # TODO somehow merge with BoundingBox
@@ -987,11 +988,7 @@ class PolygonsOnImage(object):
 
     def __init__(self, polygons, shape):
         self.polygons = polygons
-        if ia.is_np_array(shape):
-            self.shape = shape.shape
-        else:
-            ia.do_assert(isinstance(shape, (tuple, list)))
-            self.shape = tuple(shape)
+        self.shape = normalize_shape(shape)
 
     @property
     def empty(self):
@@ -1022,17 +1019,12 @@ class PolygonsOnImage(object):
             Object containing all projected polygons.
 
         """
-        if ia.is_np_array(image):
-            shape = image.shape
-        else:
-            shape = image
-
+        shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
-        else:
-            polygons = [poly.project(self.shape, shape) for poly in self.polygons]
-            # TODO use deepcopy() here
-            return PolygonsOnImage(polygons, shape)
+        polygons = [poly.project(self.shape, shape) for poly in self.polygons]
+        # TODO use deepcopy() here
+        return PolygonsOnImage(polygons, shape)
 
     def draw_on_image(self,
                       image,
