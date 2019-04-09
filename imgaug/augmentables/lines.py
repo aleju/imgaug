@@ -279,7 +279,7 @@ class LineString(object):
 
         """
         coords_proj = project_coords(self.coords, from_shape, to_shape)
-        return self.copy(coords=coords_proj, label=self.label)
+        return self.copy(coords=coords_proj)
 
     def is_fully_within_image(self, image, default=False):
         """
