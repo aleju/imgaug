@@ -447,14 +447,15 @@ class Polygon(object):
         exterior[:, 1] += (top - bottom)
         return self.deepcopy(exterior=exterior)
 
-    # TODO add perimeter thickness
+    # TODO separate this into draw_face_on_image() and draw_border_on_image()
+    # TODO add tests for line thickness
     def draw_on_image(self,
                       image,
                       color=(0, 255, 0), color_fill=None,
                       color_perimeter=None, color_points=None,
                       alpha=1.0, alpha_fill=None,
                       alpha_perimeter=None, alpha_points=None,
-                      size_points=3,
+                      size=1, size_perimeter=None, size_points=None,
                       raise_if_out_of_image=False):
         """
         Draw the polygon on an image.
@@ -513,9 +514,18 @@ class Polygon(object):
             completely visible corners and ``0.0`` invisible ones.
             If this is ``None``, it will be derived from``alpha * 1.0``.
 
+        size : int, optional
+            Size of the polygon.
+            The sizes of the perimeter and points are derived from this value,
+            unless they are set.
+
+        size_perimeter : None or int, optional
+            Thickness of the perimeter.
+            If ``None``, this value is derived from `size`.
+
         size_points : int, optional
-            The size of each corner point. If set to ``C``, each corner point
-            will be drawn as a square of size ``C x C``.
+            Size of the points in pixels.
+            If ``None``, this value is derived from ``3 * size``.
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the polygon is fully
@@ -528,11 +538,9 @@ class Polygon(object):
             Image with polygon drawn on it. Result dtype is the same as the input dtype.
 
         """
-        # TODO get rid of this deferred import
-        from imgaug.augmentables.kps import KeypointsOnImage
-
         assert color is not None
         assert alpha is not None
+        assert size is not None
 
         color_fill = color_fill if color_fill is not None else np.array(color)
         color_perimeter = color_perimeter if color_perimeter is not None else np.array(color) * 0.5
@@ -542,30 +550,26 @@ class Polygon(object):
         alpha_perimeter = alpha_perimeter if alpha_perimeter is not None else alpha
         alpha_points = alpha_points if alpha_points is not None else alpha
 
+        size_perimeter = size_perimeter if size_perimeter is not None else size
+        size_points = size_points if size_points is not None else size * 3
+
+        if image.ndim == 2:
+            assert ia.is_single_number(color_fill), (
+                "Got a 2D image. Expected then 'color_fill' to be a single "
+                "number, but got %s." % (str(color_fill),))
+            color_fill = [color_fill]
+        elif image.ndim == 3 and ia.is_single_number(color_fill):
+            color_fill = [color_fill] * image.shape[-1]
+
         if alpha_fill < 0.01:
             alpha_fill = 0
         elif alpha_fill > 0.99:
             alpha_fill = 1
 
-        if alpha_perimeter < 0.01:
-            alpha_perimeter = 0
-        elif alpha_perimeter > 0.99:
-            alpha_perimeter = 1
-
-        if alpha_points < 0.01:
-            alpha_points = 0
-        elif alpha_points > 0.99:
-            alpha_points = 1
-
-        # TODO separate this into draw_face_on_image() and draw_border_on_image()
-
         if raise_if_out_of_image and self.is_out_of_image(image):
             raise Exception("Cannot draw polygon %s on image with shape %s." % (
                 str(self), image.shape
             ))
-
-        xx = self.xx_int
-        yy = self.yy_int
 
         # TODO np.clip to image plane if is_fully_within_image(), similar to how it is done for bounding boxes
 
@@ -573,47 +577,31 @@ class Polygon(object):
         # TODO for a rectangular polygon, the face coordinates include the top/left boundary but not the right/bottom
         # boundary. This may be unintuitive when not drawing the boundary. Maybe somehow remove the boundary
         # coordinates from the face coordinates after generating both?
-        params = []
-        if alpha_fill > 0:
-            rr, cc = skimage.draw.polygon(yy, xx, shape=image.shape)
-            params.append(
-                (rr, cc, color_fill, alpha_fill)
-            )
-        if alpha_perimeter > 0:
-            rr, cc = skimage.draw.polygon_perimeter(yy, xx, shape=image.shape)
-            params.append(
-                (rr, cc, color_perimeter, alpha_perimeter)
-            )
-
         input_dtype = image.dtype
         result = image.astype(np.float32)
-
-        c = 0
-        for rr, cc, color_this, alpha_this in params:
-            c += 1
-            color_this = np.float32(color_this)
-
-            # don't have to check here for alpha<=0.01, as then these
-            # parameters wouldn't have been added to params
-            if alpha_this >= 0.99:
-                result[rr, cc, :] = color_this
+        rr, cc = skimage.draw.polygon(self.yy_int, self.xx_int, shape=image.shape)
+        if len(rr) > 0:
+            if alpha_fill == 1:
+                result[rr, cc] = np.float32(color_fill)
+            elif alpha_fill == 0:
+                pass
             else:
-                # TODO replace with blend_alpha()
-                result[rr, cc, :] = (
-                        (1 - alpha_this) * result[rr, cc, :]
-                        + alpha_this * color_this
+                result[rr, cc] = (
+                    (1 - alpha_fill) * result[rr, cc, :]
+                    + alpha_fill * np.float32(color_fill)
                 )
 
-        if alpha_points > 0:
-            kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
-                                                       shape=image.shape)
-            result = kpsoi.draw_on_image(
-                result, color=color_points, alpha=alpha_points,
-                size=size_points, copy=False,
-                raise_if_out_of_image=raise_if_out_of_image)
+        ls_open = self.to_line_string(closed=False)
+        ls_closed = self.to_line_string(closed=True)
+        result = ls_closed.draw_line_on_image(
+            result, color=color_perimeter, alpha=alpha_perimeter,
+            size=size_perimeter, raise_if_out_of_image=raise_if_out_of_image)
+        result = ls_open.draw_points_on_image(
+            result, color=color_points, alpha=alpha_points,
+            size=size_points, raise_if_out_of_image=raise_if_out_of_image)
 
         if input_dtype.type == np.uint8:
-            result = np.clip(result, 0, 255).astype(input_dtype)  # TODO make clipping more flexible
+            result = np.clip(np.round(result), 0, 255).astype(input_dtype)  # TODO make clipping more flexible
         else:
             result = result.astype(input_dtype)
 
@@ -1133,7 +1121,7 @@ class PolygonsOnImage(object):
                       color_perimeter=None, color_points=None,
                       alpha=1.0, alpha_fill=None,
                       alpha_perimeter=None, alpha_points=None,
-                      size_points=3,
+                      size=1, size_perimeter=None, size_points=None,
                       raise_if_out_of_image=False):
         """
         Draw all polygons onto a given image.
@@ -1195,6 +1183,15 @@ class PolygonsOnImage(object):
             are allowed.
             If this is ``None``, it will be derived from``alpha * 1.0``.
 
+        size : int, optional
+            Size of the polygons.
+            The sizes of the perimeter and points are derived from this value,
+            unless they are set.
+
+        size_perimeter : None or int, optional
+            Thickness of the perimeters.
+            If ``None``, this value is derived from `size`.
+
         size_points : int, optional
             The size of all corner points. If set to ``C``, each corner point
             will be drawn as a square of size ``C x C``.
@@ -1221,6 +1218,8 @@ class PolygonsOnImage(object):
                 alpha_fill=alpha_fill,
                 alpha_perimeter=alpha_perimeter,
                 alpha_points=alpha_points,
+                size=size,
+                size_perimeter=size_perimeter,
                 size_points=size_points,
                 raise_if_out_of_image=raise_if_out_of_image
             )

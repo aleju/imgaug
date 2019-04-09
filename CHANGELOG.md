@@ -113,6 +113,9 @@
     * Added function `project_coords()`.
 * Added `Polygon.to_line_string()`.
 * Fixed `Polygon.is_out_of_image()` falsely only checking the corner points of the polygon.
+* [rarely breaking] `Polygon.draw_on_image()`
+    * Refactored to make partial use `LineString` methods.
+    * Added arguments `size` and `size_perimeter` to control polygon line thickness.
 
 
 # 0.2.8

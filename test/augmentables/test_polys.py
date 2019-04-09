@@ -641,7 +641,7 @@ def test_Polygon_draw_on_image():
     assert image_poly.shape == (10, 10, 3)
     assert np.sum(image) == 3 * np.sum(np.arange(100))  # draw did not change original image (copy=True)
     for c_idx, value in enumerate([0, 0.5*255, 0]):
-        value = int(value)
+        value = int(np.round(value))
         assert np.all(image_poly[2:9, 2:3, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # left boundary
         assert np.all(image_poly[2:9, 8:9, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # right boundary
         assert np.all(image_poly[2:3, 2:9, c_idx] == np.zeros((1, 7), dtype=np.uint8) + value)  # top boundary
@@ -795,16 +795,14 @@ def test_Polygon_draw_on_image():
     assert image_poly.dtype.type == np.uint8
     assert image_poly.shape == (10, 10, 3)
     for c_idx, value in enumerate([0, 255, 0]):
-        assert np.all(
-            image_poly[2:9, 8:9, c_idx] ==
-            (
-                (1-0.8)*image[2:9, 8:9, c_idx]
-                + np.full((7, 1), 0.8*value, dtype=np.float32)
-            ).astype(np.uint8)
-        )  # right boundary
+        expected = np.round(
+            (1-0.8)*image[2:9, 8:9, c_idx]
+            + np.full((7, 1), 0.8*value, dtype=np.float32)
+        ).astype(np.uint8)
+        assert np.all(image_poly[2:9, 8:9, c_idx] == expected)  # right boundary
     expected = (0.8 * 0.5) * np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1)) \
         + (1 - (0.8 * 0.5)) * image[3:8, 3:8, :]
-    assert np.all(image_poly[3:8, 3:8, :] == expected.astype(np.uint8))
+    assert np.all(image_poly[3:8, 3:8, :] == np.round(expected).astype(np.uint8))
 
     # alpha of fill and perimeter 0.5
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
@@ -821,16 +819,14 @@ def test_Polygon_draw_on_image():
     assert image_poly.dtype.type == np.uint8
     assert image_poly.shape == (10, 10, 3)
     for c_idx, value in enumerate([0, 255, 0]):
-        assert np.all(
-            image_poly[2:9, 8:9, c_idx] ==
-            (
-                0.5*image[2:9, 8:9, c_idx]
-                + np.full((7, 1), 0.5*value, dtype=np.float32)
-            ).astype(np.uint8)
-        )  # right boundary
+        expected = np.round(
+            0.5*image[2:9, 8:9, c_idx]
+            + np.full((7, 1), 0.5*value, dtype=np.float32)
+        ).astype(np.uint8)
+        assert np.all(image_poly[2:9, 8:9, c_idx] == expected)  # right boundary
     expected = 0.5 * np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1)) \
         + 0.5 * image[3:8, 3:8, :]
-    assert np.all(image_poly[3:8, 3:8, :] == expected.astype(np.uint8))
+    assert np.all(image_poly[3:8, 3:8, :] == np.round(expected).astype(np.uint8))
 
     # copy=False
     # test deactivated as the function currently does not offer a copy argument
