@@ -112,6 +112,7 @@
     * Added function `normalize_shape()`.
     * Added function `project_coords()`.
 * Added `Polygon.to_line_string()`.
+* Fixed `Polygon.is_out_of_image()` falsely only checking the corner points of the polygon.
 
 
 # 0.2.8

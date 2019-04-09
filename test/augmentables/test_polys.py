@@ -438,6 +438,11 @@ def test_Polygon_is_out_of_image():
         assert poly.is_out_of_image(shape, partly=False, fully=True)
         assert poly.is_out_of_image(shape, partly=True, fully=True)
 
+    poly = ia.Polygon([(8, 11), (11, 8), (11, 11)])
+    assert not poly.is_out_of_image((100, 100, 3), fully=True, partly=True)
+    assert not poly.is_out_of_image((10, 10, 3), fully=True, partly=False)
+    assert poly.is_out_of_image((10, 10, 3), fully=False, partly=True)
+
     poly = ia.Polygon([])
     got_exception = False
     try:
