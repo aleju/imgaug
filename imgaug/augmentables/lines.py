@@ -392,40 +392,36 @@ class LineString(object):
         if len(self.coords) == 0:
             return []
 
-        inside_mask = self.get_pointwise_inside_image_mask(image)
-        ooi_mask = ~inside_mask
+        inside_image_mask = self.get_pointwise_inside_image_mask(image)
+        ooi_mask = ~inside_image_mask
 
         if len(self.coords) == 1:
-            if not np.any(inside_mask):
+            if not np.any(inside_image_mask):
                 return []
             return [self.copy()]
 
-        # all points inside the image?
-        if not np.any(ooi_mask):
+        if np.all(inside_image_mask):
             return [self.copy()]
 
         # top, right, bottom, left image edges
         # we subtract eps here, because intersection() works inclusively,
         # i.e. not subtracting eps would be equivalent to 0<=x<=C for C being
         # height or width
-        height, width = _parse_shape(image)[0:2]
-
         # don't set the eps too low, otherwise points at height/width seem
         # to get rounded to height/width by shapely, which can cause problems
         # when first clipping and then calling is_fully_within_image()
         # returning false
+        height, width = _parse_shape(image)[0:2]
         eps = 1e-5
-
         edges = [
             LineString([(0.0, 0.0), (width - eps, 0.0)]),
             LineString([(width - eps, 0.0), (width - eps, height - eps)]),
             LineString([(width - eps, height - eps), (0.0, height - eps)]),
             LineString([(0.0, height - eps), (0.0, 0.0)])
         ]
+        intersections = self.find_intersections_with(edges)
 
         points = []
-        intersections = self.find_intersections_with(
-            edges)
         gen = enumerate(zip(self.coords[:-1], self.coords[1:],
                             ooi_mask[:-1], ooi_mask[1:],
                             intersections))
@@ -515,25 +511,26 @@ class LineString(object):
         result = []
         for p_start, p_end in zip(self.coords[:-1], self.coords[1:]):
             ls = shapely.geometry.LineString([p_start, p_end])
-            inter_clean = []
             intersections = ls.intersection(geom)
             intersections = list(_flatten_shapely_collection(intersections))
 
+            intersections_points = []
             for inter in intersections:
                 if isinstance(inter, shapely.geometry.linestring.LineString):
                     inter_start = (inter.coords[0][0], inter.coords[0][1])
                     inter_end = (inter.coords[-1][0], inter.coords[-1][1])
-                    inter_clean.extend([inter_start, inter_end])
+                    intersections_points.extend([inter_start, inter_end])
                 else:
                     assert isinstance(inter, shapely.geometry.point.Point), (
                         "Expected to find shapely.geometry.point.Point or "
                         "shapely.geometry.linestring.LineString intersection, "
                         "actually found %s." % (type(inter),))
-                    inter_clean.append((inter.x, inter.y))
+                    intersections_points.append((inter.x, inter.y))
 
-            # sort by distance to start point
+            # sort by distance to start point, this makes it later on easier
+            # to remove duplicate points
             inter_sorted = sorted(
-                inter_clean,
+                intersections_points,
                 key=lambda p: np.linalg.norm(np.float32(p) - p_start)
             )
 
