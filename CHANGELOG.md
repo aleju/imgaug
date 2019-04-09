@@ -120,6 +120,10 @@
     * Renamed arguments `alpha_fill` to `alpha_face` and `color_fill` to `color_face`.
 * Refactored `Polygon.project()` to use `LineString.project()`.
 * Refactored `Polygon.shift()` to use `LineString.shift()`.
+* [rarely breaking] `Polygon.exterior_almost_equals()`, `Polygon.almost_equals()`
+    * Refactored to make use of `LineString.coords_almost_equals()`.
+    * Removed argument `interpolate`.
+    * Renamed argument `other_polygon` to `other`.
 
 
 # 0.2.8

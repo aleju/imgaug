@@ -57,6 +57,8 @@ def main():
     test_Polygon_deepcopy()
     test_Polygon___repr__()
     test_Polygon___str__()
+    test_Polygon_exterior_almost_equals()
+    test_Polygon_almost_equals()
     test___convert_points_to_shapely_line_string()
     test__interpolate_point_pair()
     test__interpolate_points()
@@ -1392,13 +1394,6 @@ def test_Polygon_exterior_almost_equals():
     poly_a = ia.Polygon([(0, 0)])
     poly_b = ia.Polygon([(0, 0), (0+1e-4, 0), (0, 0+1e-4)])
     assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-9)
-
-    # two polygons that are different, but with carefully placed points so that interpolation between polygon
-    # points is necessary to spot the difference
-    poly_a = ia.Polygon([(1, 0), (1, 1), (0, 1)])
-    poly_b = ia.Polygon([(1, 0), (1, 1), (0, 1), (1-1e-6, 1-1e-6)])
-    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-4, interpolate=0)
-    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-4, interpolate=1)
 
 
 def test_Polygon_almost_equals():

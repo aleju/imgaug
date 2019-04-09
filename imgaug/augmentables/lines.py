@@ -1294,7 +1294,7 @@ class LineString(object):
             shape=image_shape
         )
 
-    def coords_almost_equals(self, other, distance_threshold=1e-4):
+    def coords_almost_equals(self, other, max_distance=1e-6):
         """
         Compare this and another LineString's coordinates.
 
@@ -1307,7 +1307,7 @@ class LineString(object):
                 or list of tuple of number
             The other line string or its coordinates.
 
-        distance_threshold : float
+        max_distance : float
             Max distance of any point from the other line string before
             the two line strings are evaluated to be unequal.
 
@@ -1341,9 +1341,9 @@ class LineString(object):
         dists_self2other = self.compute_pointwise_distances(other)
         dists_other2self = other.compute_pointwise_distances(self)
         dist = max(np.max(dists_self2other), np.max(dists_other2self))
-        return dist < distance_threshold
+        return dist < max_distance
 
-    def almost_equals(self, other, distance_threshold=1e-4):
+    def almost_equals(self, other, max_distance=1e-4):
         """
         Compare this and another LineString.
 
@@ -1353,7 +1353,7 @@ class LineString(object):
             The other line string. Must be a LineString instance, not just
             its coordinates.
 
-        distance_threshold : float
+        max_distance : float
             Max distance of any point from the other line string before
             the two line strings are evaluated to be unequal.
 
@@ -1367,8 +1367,7 @@ class LineString(object):
         """
         if self.label != other.label:
             return False
-        return self.coords_almost_equals(
-            other, distance_threshold=distance_threshold)
+        return self.coords_almost_equals(other, max_distance=max_distance)
 
     def copy(self, coords=None, label=None):
         """

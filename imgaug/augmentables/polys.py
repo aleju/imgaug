@@ -832,7 +832,7 @@ class Polygon(object):
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
 
-    def exterior_almost_equals(self, other_polygon, max_distance=1e-6, interpolate=8):
+    def exterior_almost_equals(self, other, max_distance=1e-6):
         """
         Estimate whether the geometry of the exterior of this polygon and another polygon are comparable.
 
@@ -845,7 +845,7 @@ class Polygon(object):
 
         Parameters
         ----------
-        other_polygon : imgaug.Polygon or (N,2) ndarray or list of tuple
+        other : imgaug.Polygon or (N,2) ndarray or list of tuple
             The other polygon with which to compare the exterior.
             If this is an ndarray, it is assumed to represent an exterior.
             It must then have dtype float32 and shape (N,2) with the second dimension denoting xy-coordinates.
@@ -858,87 +858,26 @@ class Polygon(object):
             The points are other the points contained in the polygon's exterior ndarray or interpolated points
             between these.
 
-        interpolate : int
-            How many points to interpolate between the points of the polygon's exteriors.
-            If this is set to zero, then only the points given by the polygon's exterior ndarrays will be used.
-            Higher values make it less likely that unequal polygons are evaluated as equal.
-
         Returns
         -------
         bool
             Whether the two polygon's exteriors can be viewed as equal (approximate test).
 
         """
-        # load shapely lazily, which makes the dependency more optional
-        import shapely.geometry
-
-        atol = max_distance
-
-        ext_a = self.exterior
-        if isinstance(other_polygon, list):
-            ext_b = np.float32(other_polygon)
-        elif ia.is_np_array(other_polygon):
-            ext_b = other_polygon
+        if isinstance(other, list):
+            other = Polygon(np.float32(other))
+        elif ia.is_np_array(other):
+            other = Polygon(other)
         else:
-            assert isinstance(other_polygon, Polygon)
-            ext_b = other_polygon.exterior
-        len_a = len(ext_a)
-        len_b = len(ext_b)
+            assert isinstance(other, Polygon)
+            other = other
 
-        if len_a == 0 and len_b == 0:
-            return True
-        elif len_a == 0 and len_b > 0:
-            return False
-        elif len_a > 0 and len_b == 0:
-            return False
+        return self.to_line_string(closed=True).coords_almost_equals(
+            other.to_line_string(closed=True),
+            max_distance=max_distance
+        )
 
-        # neither A nor B is zero-sized at this point
-
-        # if A or B only contain points identical to the first point, merge them to one point
-        if len_a > 1:
-            if all([np.allclose(ext_a[0, :], ext_a[1 + i, :], rtol=0, atol=atol) for i in sm.xrange(len_a - 1)]):
-                ext_a = ext_a[0:1, :]
-                len_a = 1
-        if len_b > 1:
-            if all([np.allclose(ext_b[0, :], ext_b[1 + i, :], rtol=0, atol=atol) for i in sm.xrange(len_b - 1)]):
-                ext_b = ext_b[0:1, :]
-                len_b = 1
-
-        # handle polygons that contain a single point
-        if len_a == 1 and len_b == 1:
-            return np.allclose(ext_a[0, :], ext_b[0, :], rtol=0, atol=atol)
-        elif len_a == 1:
-            return all([np.allclose(ext_a[0, :], ext_b[i, :], rtol=0, atol=atol) for i in sm.xrange(len_b)])
-        elif len_b == 1:
-            return all([np.allclose(ext_b[0, :], ext_a[i, :], rtol=0, atol=atol) for i in sm.xrange(len_a)])
-
-        # After this point, both polygons have at least 2 points, i.e. LineStrings can be used.
-        # We can also safely go back to the original exteriors (before close points were merged).
-        ls_a = self.to_shapely_line_string(closed=True, interpolate=interpolate)
-        if isinstance(other_polygon, list) or ia.is_np_array(other_polygon):
-            ls_b = _convert_points_to_shapely_line_string(
-                other_polygon, closed=True, interpolate=interpolate)
-        else:
-            ls_b = other_polygon.to_shapely_line_string(
-                closed=True, interpolate=interpolate)
-
-        # Measure the distance from each point in A to LineString B and vice versa.
-        # Make sure that no point violates the tolerance.
-        # Note that we can't just use LineString.almost_equals(LineString) -- that seems to expect the same number
-        # and order of points in both LineStrings (failed with duplicated points).
-        for x, y in ls_a.coords:
-            point = shapely.geometry.Point(x, y)
-            if not ls_b.distance(point) <= max_distance:
-                return False
-
-        for x, y in ls_b.coords:
-            point = shapely.geometry.Point(x, y)
-            if not ls_a.distance(point) <= max_distance:
-                return False
-
-        return True
-
-    def almost_equals(self, other, max_distance=1e-6, interpolate=8):
+    def almost_equals(self, other, max_distance=1e-6):
         """
         Compare this polygon with another one and estimate whether they can be viewed as equal.
 
@@ -950,9 +889,6 @@ class Polygon(object):
             The object to compare against. If not a Polygon, then False will be returned.
 
         max_distance : float
-            See :func:`imgaug.Polygon.exterior_almost_equals`.
-
-        interpolate : int
             See :func:`imgaug.Polygon.exterior_almost_equals`.
 
         Returns
@@ -970,7 +906,7 @@ class Polygon(object):
                 return False
             if self.label != other.label:
                 return False
-        return self.exterior_almost_equals(other, max_distance=max_distance, interpolate=interpolate)
+        return self.exterior_almost_equals(other, max_distance=max_distance)
 
     def copy(self, exterior=None, label=None):
         """
