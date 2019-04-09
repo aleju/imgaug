@@ -425,14 +425,9 @@ class Polygon(object):
             Shifted polygon.
 
         """
-        top = top if top is not None else 0
-        right = right if right is not None else 0
-        bottom = bottom if bottom is not None else 0
-        left = left if left is not None else 0
-        exterior = np.copy(self.exterior)
-        exterior[:, 0] += (left - right)
-        exterior[:, 1] += (top - bottom)
-        return self.deepcopy(exterior=exterior)
+        ls_shifted = self.to_line_string(closed=False).shift(
+            top=top, right=right, bottom=bottom, left=left)
+        return self.copy(exterior=ls_shifted.coords)
 
     # TODO separate this into draw_face_on_image() and draw_border_on_image()
     # TODO add tests for line thickness
