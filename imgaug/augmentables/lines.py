@@ -510,23 +510,7 @@ class LineString(object):
         """
         import shapely.geometry
 
-        if isinstance(other, tuple):
-            geom = shapely.geometry.Point(other[0], other[1])
-        elif isinstance(other, list):
-            assert len(other) > 0
-            if isinstance(other[0], tuple):
-                geom = shapely.geometry.LineString(other)
-            elif all([isinstance(v, LineString) for v in other]):
-                geom = shapely.geometry.MultiLineString([
-                    shapely.geometry.LineString(ls.coords) for ls in other
-                ])
-            else:
-                raise ValueError("Invalid datatypes: %s" % (
-                    ", ".join([str(type(v)) for v in other]),))
-        elif isinstance(other, LineString):
-            geom = shapely.geometry.LineString(other.coords)
-        else:
-            raise ValueError("Invalid datatype: %s" % (type(other),))
+        geom = _convert_var_to_shapely_geometry(other)
 
         result = []
         for p_start, p_end in zip(self.coords[:-1], self.coords[1:]):
@@ -1859,3 +1843,29 @@ def _flatten_shapely_collection(collection):
                     yield _flatten_shapely_collection(subel)
         else:
             yield el
+
+
+def _convert_var_to_shapely_geometry(var):
+    import shapely.geometry
+    if isinstance(var, tuple):
+        geom = shapely.geometry.Point(var[0], var[1])
+    elif isinstance(var, list):
+        assert len(var) > 0
+        if isinstance(var[0], tuple):
+            geom = shapely.geometry.LineString(var)
+        elif all([isinstance(v, LineString) for v in var]):
+            geom = shapely.geometry.MultiLineString([
+                shapely.geometry.LineString(ls.coords) for ls in var
+            ])
+        else:
+            raise ValueError(
+                "Could not convert list-input to shapely geometry. Invalid "
+                "datatype. List elements had datatypes: %s." % (
+                    ", ".join([str(type(v)) for v in var]),))
+    elif isinstance(var, LineString):
+        geom = shapely.geometry.LineString(var.coords)
+    else:
+        raise ValueError(
+            "Could not convert input to shapely geometry. Invalid datatype. "
+            "Got: %s" % (type(var),))
+    return geom
