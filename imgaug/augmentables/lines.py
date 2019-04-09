@@ -8,6 +8,7 @@ import skimage.measure
 import cv2
 
 from .. import imgaug as ia
+from .utils import normalize_shape, project_coords
 
 
 # TODO Add Line class and make LineString a list of Line elements
@@ -128,7 +129,7 @@ class LineString(object):
         """
         if len(self.coords) == 0:
             return np.zeros((0,), dtype=bool)
-        shape = _parse_shape(image)
+        shape = normalize_shape(image)
         height, width = shape[0:2]
         x_within = np.logical_and(0 <= self.xx, self.xx < width)
         y_within = np.logical_and(0 <= self.yy, self.yy < height)
@@ -277,7 +278,7 @@ class LineString(object):
             Line string with new coordinates.
 
         """
-        coords_proj = _project_coords(self.coords, from_shape, to_shape)
+        coords_proj = project_coords(self.coords, from_shape, to_shape)
         return self.copy(coords=coords_proj, label=self.label)
 
     def is_fully_within_image(self, image, default=False):
@@ -412,7 +413,7 @@ class LineString(object):
         # to get rounded to height/width by shapely, which can cause problems
         # when first clipping and then calling is_fully_within_image()
         # returning false
-        height, width = _parse_shape(image)[0:2]
+        height, width = normalize_shape(image)[0:2]
         eps = 1e-5
         edges = [
             LineString([(0.0, 0.0), (width - eps, 0.0)]),
@@ -1473,7 +1474,7 @@ class LineStringsOnImage(object):
                 ", ".join([str(type(v)) for v in line_strings])
             ))
         self.line_strings = line_strings
-        self.shape = _parse_shape(shape)
+        self.shape = normalize_shape(shape)
 
     @property
     def empty(self):
@@ -1505,7 +1506,7 @@ class LineStringsOnImage(object):
             Object containing all projected line strings.
 
         """
-        shape = _parse_shape(image)
+        shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
         line_strings = [ls.project(self.shape, shape)
@@ -1797,34 +1798,6 @@ def _is_point_on_line(line_start, line_end, point, eps=1e-4):
         + np.linalg.norm(np.float32(point) - np.float32(line_end))
     )
     return -eps < (dist_s2p2e - dist_s2e) < eps
-
-
-# TODO merge with implementation in bbs.py
-def _parse_shape(shape):
-    if isinstance(shape, tuple):
-        return shape
-    assert ia.is_np_array(shape), (
-        "Expected tuple of ints or array, got %s." % (type(shape),))
-    return shape.shape
-
-
-# TODO merge with BBs
-# TODO intergrate into polygons
-# TODO integrate into keypoints
-def _project_coords(coords, from_shape, to_shape):
-    from_shape = _parse_shape(from_shape)
-    to_shape = _parse_shape(to_shape)
-    if from_shape[0:2] == to_shape[0:2]:
-        return coords
-
-    from_height, from_width = from_shape[0:2]
-    to_height, to_width = to_shape[0:2]
-    assert all([v > 0 for v in [from_height, from_width, to_height, to_width]])
-
-    coords_proj = coords.astype(np.float32)
-    coords_proj[:, 0] = (coords_proj[:, 0] / from_width) * to_width
-    coords_proj[:, 1] = (coords_proj[:, 1] / from_height) * to_height
-    return coords_proj
 
 
 def _flatten_shapely_collection(collection):

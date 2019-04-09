@@ -1,13 +1,13 @@
 from __future__ import print_function, division, absolute_import
 
 import copy
-import warnings
 
 import numpy as np
 import skimage.draw
 import skimage.measure
 
 from .. import imgaug as ia
+from .utils import normalize_shape, project_coords
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -221,8 +221,8 @@ class BoundingBox(object):
             BoundingBox object with new coordinates.
 
         """
-        coords_proj = _project_coords([(self.x1, self.y1), (self.x2, self.y2)],
-                                      from_shape, to_shape)
+        coords_proj = project_coords([(self.x1, self.y1), (self.x2, self.y2)],
+                                     from_shape, to_shape)
         return self.copy(
             x1=coords_proj[0][0],
             y1=coords_proj[0][1],
@@ -365,7 +365,7 @@ class BoundingBox(object):
             True if the bounding box is fully inside the image area. False otherwise.
 
         """
-        shape = _parse_shape(image)
+        shape = normalize_shape(image)
         height, width = shape[0:2]
         return self.x1 >= 0 and self.x2 < width and self.y1 >= 0 and self.y2 < height
 
@@ -387,7 +387,7 @@ class BoundingBox(object):
             True if the bounding box is at least partially inside the image area. False otherwise.
 
         """
-        shape = _parse_shape(image)
+        shape = normalize_shape(image)
         height, width = shape[0:2]
         eps = np.finfo(np.float32).eps
         img_bb = BoundingBox(x1=0, x2=width-eps, y1=0, y2=height-eps)
@@ -447,7 +447,7 @@ class BoundingBox(object):
             Bounding box, clipped to fall within the image dimensions.
 
         """
-        shape = _parse_shape(image)
+        shape = normalize_shape(image)
 
         height, width = shape[0:2]
         ia.do_assert(height > 0)
@@ -883,7 +883,7 @@ class BoundingBoxesOnImage(object):
             Object containing all projected bounding boxes.
 
         """
-        shape = _parse_shape(image)
+        shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
         bounding_boxes = [bb.project(self.shape, shape)
@@ -1092,27 +1092,3 @@ class BoundingBoxesOnImage(object):
 
     def __str__(self):
         return "BoundingBoxesOnImage(%s, shape=%s)" % (str(self.bounding_boxes), self.shape)
-
-
-def _parse_shape(shape):
-    if isinstance(shape, tuple):
-        return shape
-    assert ia.is_np_array(shape), (
-        "Expected tuple of ints or array, got %s." % (type(shape),))
-    return shape.shape
-
-
-def _project_coords(coords, from_shape, to_shape):
-    from_shape = _parse_shape(from_shape)
-    to_shape = _parse_shape(to_shape)
-    if from_shape[0:2] == to_shape[0:2]:
-        return coords
-
-    from_height, from_width = from_shape[0:2]
-    to_height, to_width = to_shape[0:2]
-    assert all([v > 0 for v in [from_height, from_width, to_height, to_width]])
-
-    coords_proj = coords.astype(np.float32)
-    coords_proj[:, 0] = (coords_proj[:, 0] / from_width) * to_width
-    coords_proj[:, 1] = (coords_proj[:, 1] / from_height) * to_height
-    return coords_proj

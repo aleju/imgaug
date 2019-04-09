@@ -108,6 +108,9 @@
 * Changed `KeypointsOnImage.draw_on_image()` to handle single-number inputs for `color`.
 * Added function `imgaug.imgaug.flatten()` that flattens nested lists/tuples.
 * Refactored `imgaug.augmenters.blend.blend_alpha()` to no longer enforce a channel axis for foreground and background image.
+* Added module `imgaug.augmentables.utils`.
+    * Added function `normalize_shape()`.
+    * Added function `project_coords()`.
 
 
 # 0.2.8
