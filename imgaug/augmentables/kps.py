@@ -211,16 +211,30 @@ class Keypoint(object):
         height, width = image.shape[0:2]
 
         y, x = self.y_int, self.x_int
-        if 0 <= y < height and 0 <= x < width:
-            x1 = max(x - size//2, 0)
-            x2 = min(x + 1 + size//2, width)
-            y1 = max(y - size//2, 0)
-            y2 = min(y + 1 + size//2, height)
+
+        x1 = max(x - size//2, 0)
+        x2 = min(x + 1 + size//2, width)
+        y1 = max(y - size//2, 0)
+        y2 = min(y + 1 + size//2, height)
+
+        x1_clipped, x2_clipped = np.clip([x1, x2], 0, width)
+        y1_clipped, y2_clipped = np.clip([y1, y2], 0, height)
+
+        x1_clipped_ooi = (x1_clipped < 0 or x1_clipped >= width)
+        x2_clipped_ooi = (x2_clipped < 0 or x2_clipped >= width+1)
+        y1_clipped_ooi = (y1_clipped < 0 or y1_clipped >= height)
+        y2_clipped_ooi = (y2_clipped < 0 or y2_clipped >= height+1)
+        x_ooi = (x1_clipped_ooi and x2_clipped_ooi)
+        y_ooi = (y1_clipped_ooi and y2_clipped_ooi)
+        x_zero_size = (x2_clipped - x1_clipped) < 1  # min size is 1px
+        y_zero_size = (y2_clipped - y1_clipped) < 1
+        if not x_ooi and not y_ooi and not x_zero_size and not y_zero_size:
             if alpha == 1:
-                image[y1:y2, x1:x2] = color
+                image[y1_clipped:y2_clipped, x1_clipped:x2_clipped] = color
             else:
-                image[y1:y2, x1:x2] = (
-                        (1 - alpha) * image[y1:y2, x1:x2]
+                image[y1_clipped:y2_clipped, x1_clipped:x2_clipped] = (
+                        (1 - alpha)
+                        * image[y1_clipped:y2_clipped, x1_clipped:x2_clipped]
                         + alpha_color
                 )
         else:

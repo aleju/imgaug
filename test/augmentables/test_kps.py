@@ -33,7 +33,9 @@ def main():
 def test_Keypoint():
     eps = 1e-8
 
+    # -------------
     # x/y/x_int/y_int
+    # -------------
     kp = ia.Keypoint(y=1, x=2)
     assert kp.y == 1
     assert kp.x == 2
@@ -45,7 +47,9 @@ def test_Keypoint():
     assert kp.y_int == 1
     assert kp.x_int == 3
 
+    # -------------
     # project
+    # -------------
     kp = ia.Keypoint(y=1, x=2)
     kp2 = kp.project((10, 10), (10, 10))
     assert kp2.y == 1
@@ -60,7 +64,9 @@ def test_Keypoint():
     assert kp2.y == 2
     assert kp2.x == 4
 
+    # -------------
     # shift
+    # -------------
     kp = ia.Keypoint(y=1, x=2)
     kp2 = kp.shift(y=1)
     assert kp2.y == 2
@@ -78,7 +84,75 @@ def test_Keypoint():
     assert kp2.y == 2
     assert kp2.x == 4
 
+    # -------------
+    # draw_on_image
+    # -------------
+    kp = ia.Keypoint(x=0, y=0)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 255, 0), alpha=1, size=1, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[0, 0, :] == [0, 255, 0])
+    assert np.all(image_kp[1:, :, :] == 10)
+    assert np.all(image_kp[:, 1:, :] == 10)
+
+    kp = ia.Keypoint(x=4, y=4)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 255, 0), alpha=1, size=1, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[4, 4, :] == [0, 255, 0])
+    assert np.all(image_kp[:4, :, :] == 10)
+    assert np.all(image_kp[:, :4, :] == 10)
+
+    kp = ia.Keypoint(x=4, y=4)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 255, 0), alpha=1, size=5, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[2:, 2:, :] == [0, 255, 0])
+    assert np.all(image_kp[:2, :, :] == 10)
+    assert np.all(image_kp[:, :2, :] == 10)
+
+    kp = ia.Keypoint(x=5, y=5)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 255, 0), alpha=1, size=5, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[3:, 3:, :] == [0, 255, 0])
+    assert np.all(image_kp[:3, :, :] == 10)
+    assert np.all(image_kp[:, :3, :] == 10)
+
+    kp = ia.Keypoint(x=0, y=0)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 255, 0), alpha=1, size=5, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[:3, :3, :] == [0, 255, 0])
+    assert np.all(image_kp[3:, :, :] == 10)
+    assert np.all(image_kp[:, 3:, :] == 10)
+
+    kp = ia.Keypoint(x=-1, y=-1)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 255, 0), alpha=1, size=5, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[:2, :2, :] == [0, 255, 0])
+    assert np.all(image_kp[2:, :, :] == 10)
+    assert np.all(image_kp[:, 2:, :] == 10)
+
+    kp = ia.Keypoint(x=0, y=0)
+    image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
+    image_kp = kp.draw_on_image(
+        image, color=(0, 200, 0), alpha=0.5, size=1, copy=True,
+        raise_if_out_of_image=False)
+    assert np.all(image_kp[0, 0, :] == [0 + 5, 100 + 5, 0 + 5])
+    assert np.all(image_kp[1:, :, :] == 10)
+    assert np.all(image_kp[:, 1:, :] == 10)
+
+    # -------------
     # generate_similar_points_manhattan
+    # -------------
     kp = ia.Keypoint(y=4, x=5)
     kps_manhatten = kp.generate_similar_points_manhattan(0, 1.0, return_array=False)
     assert len(kps_manhatten) == 1
@@ -98,7 +172,9 @@ def test_Keypoint():
         assert any([np.allclose([y, x], [kp_manhatten_y, kp_manhatten_x])
                     for kp_manhatten_x, kp_manhatten_y in kps_manhatten])
 
+    # -------------
     # __repr__ / __str_
+    # -------------
     kp = ia.Keypoint(y=1, x=2)
     assert kp.__repr__() == kp.__str__() == "Keypoint(x=2.00000000, y=1.00000000)"
     kp = ia.Keypoint(y=1.2, x=2.7)
@@ -119,7 +195,9 @@ def test_KeypointsOnImage():
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=np.zeros((10, 20, 3), dtype=np.uint8))
     assert kpi.shape == (10, 20, 3)
 
+    # -------------
     # on()
+    # -------------
     kpi2 = kpi.on((10, 20, 3))
     assert all([kp_i.x == kp_j.x and kp_i.y == kp_j.y for kp_i, kp_j in zip(kpi.keypoints, kpi2.keypoints)])
 
@@ -135,7 +213,9 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[1].x == 6
     assert kpi2.keypoints[1].y == 8
 
+    # -------------
     # draw_on_image
+    # -------------
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
     kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
@@ -210,7 +290,9 @@ def test_KeypointsOnImage():
         got_exception = True
     assert got_exception
 
+    # -------------
     # shift
+    # -------------
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     kpi2 = kpi.shift(x=0, y=0)
     assert kpi2.keypoints[0].x == kpi.keypoints[0].x
@@ -248,7 +330,9 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[1].x == kpi.keypoints[1].x + 1
     assert kpi2.keypoints[1].y == kpi.keypoints[1].y + 2
 
+    # -------------
     # to_xy_array
+    # -------------
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     observed = kpi.to_xy_array()
     expected = np.float32([
@@ -257,7 +341,9 @@ def test_KeypointsOnImage():
     ])
     assert np.allclose(observed, expected)
 
+    # -------------
     # from_xy_array
+    # -------------
     arr = np.float32([
         [1, 2],
         [3, 4]
@@ -268,7 +354,9 @@ def test_KeypointsOnImage():
     assert 3 - eps < kpi.keypoints[1].x < 3 + eps
     assert 4 - eps < kpi.keypoints[1].y < 4 + eps
 
+    # -------------
     # to_keypoint_image
+    # -------------
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     image = kpi.to_keypoint_image(size=1)
     image_size3 = kpi.to_keypoint_image(size=3)
@@ -284,7 +372,9 @@ def test_KeypointsOnImage():
     assert np.all(image_size3[kps_mask_size3] >= 128)
     assert np.all(image_size3[~kps_mask_size3] == 0)
 
+    # -------------
     # from_keypoint_image()
+    # -------------
     kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
     kps_image[2, 1, 0] = 255
     kps_image[4, 3, 1] = 255
@@ -341,7 +431,9 @@ def test_KeypointsOnImage():
         got_exception = True
     assert got_exception
 
+    # -------------
     # to_distance_maps()
+    # -------------
     kpi = ia.KeypointsOnImage(keypoints=[ia.Keypoint(x=2, y=3)], shape=(5, 5, 3))
     distance_map = kpi.to_distance_maps()
     expected_xx = np.float32([
@@ -389,7 +481,9 @@ def test_KeypointsOnImage():
     expected_inv = np.divide(np.ones_like(expected), expected+1)
     assert np.allclose(np.max(distance_map_inv, axis=2), expected_inv)
 
+    # -------------
     # from_distance_maps()
+    # -------------
     distance_map1 = np.float32([
         [2, 2, 2, 2, 2],
         [2, 1, 1, 1, 2],
@@ -450,7 +544,9 @@ def test_KeypointsOnImage():
         got_exception = True
     assert got_exception
 
+    # -------------
     # copy()
+    # -------------
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     kpi2 = kpi.copy()
@@ -464,7 +560,9 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[1].x == 3
     assert kpi2.keypoints[1].y == 4
 
+    # -------------
     # deepcopy()
+    # -------------
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     kpi2 = kpi.deepcopy()
@@ -478,7 +576,9 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[1].x == 3
     assert kpi2.keypoints[1].y == 4
 
+    # -------------
     # repr/str
+    # -------------
     kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
     expected = "KeypointsOnImage([Keypoint(x=1.00000000, y=2.00000000), Keypoint(x=3.00000000, y=4.00000000)], " \

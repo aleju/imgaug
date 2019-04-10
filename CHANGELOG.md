@@ -133,12 +133,14 @@
     * Marked as deprecated.
     * Renamed to `from_xy_array()`.
     * Renamed arg `coords` to `xy`.
-    * Is now a `classmethod` instead of `staticmethod`.
+    * Changed the method from `staticmethod` to `classmethod`.
     * Refactored to make code simpler.
 * `KeypointsOnImage.get_coords_array()`
     * Marked as deprecated.
     * Renamed to `to_xy_array()`.
 * Moved keypoint drawing code from `KeypointsOnImage.draw_on_image()` into new method `Keypoint.draw_on_image()`.
+* Changed `Keypoint.draw_on_image()` to draw a rectangle for the keypoint, so long as any part of that rectangle is within the image plane.
+  (Previously, the rectangle was only drawn if the integer xy-coordinate of the point was inside the image plane.)
 
 
 # 0.2.8
