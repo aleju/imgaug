@@ -126,7 +126,11 @@ class SegmentationMapOnImage(object):
         ia.do_assert(arr.ndim == 3)
         ia.do_assert(arr.dtype.name == "float32")
         self.arr = arr
+
+        # don't allow arrays here as an alternative to tuples as input
+        # as allowing arrays introduces risk to mix up 'arr' and 'shape' args
         self.shape = shape
+
         self.nb_classes = nb_classes if nb_classes is not None else arr.shape[2]
 
     def get_arr_int(self, background_threshold=0.01, background_class_id=None):
