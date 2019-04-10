@@ -820,11 +820,7 @@ class BoundingBoxesOnImage(object):
     """
     def __init__(self, bounding_boxes, shape):
         self.bounding_boxes = bounding_boxes
-        if ia.is_np_array(shape):
-            self.shape = shape.shape
-        else:
-            ia.do_assert(isinstance(shape, (tuple, list)))
-            self.shape = tuple(shape)
+        self.shape = normalize_shape(shape)
 
     # TODO remove this? here it is image height at BoundingBox it is bounding box height
     @property

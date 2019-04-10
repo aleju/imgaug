@@ -125,6 +125,7 @@
     * Removed argument `interpolate`.
     * Renamed argument `other_polygon` to `other`.
 * Refactored `PolygonsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `BoundingBoxesOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 
 
 # 0.2.8
