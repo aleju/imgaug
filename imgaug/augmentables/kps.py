@@ -457,6 +457,7 @@ class KeypointsOnImage(object):
         return result
 
     @staticmethod
+    @ia.deprecated(alt_func="KeypointsOnImage.from_xy_array()")
     def from_coords_array(coords, shape):
         """
         Convert an array (N,2) with a given image shape to a KeypointsOnImage object.
@@ -473,11 +474,33 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        out : KeypointsOnImage
+        KeypointsOnImage
             KeypointsOnImage object that contains all keypoints from the array.
 
         """
-        keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
+        return KeypointsOnImage.from_xy_array(coords, shape)
+
+    @classmethod
+    def from_xy_array(cls, coords, shape):
+        """
+        Convert an array (N,2) with a given image shape to a KeypointsOnImage object.
+
+        Parameters
+        ----------
+        coords : (N, 2) ndarray
+            Coordinates of ``N`` keypoints on the original image, given
+            as ``(N,2)`` array of xy-coordinates.
+
+        shape : tuple of int or ndarray
+            Shape tuple of the image on which the keypoints are placed.
+
+        Returns
+        -------
+        KeypointsOnImage
+            KeypointsOnImage object that contains all keypoints from the array.
+
+        """
+        keypoints = [Keypoint(x=coord[0], y=coord[1]) for coord in coords]
         return KeypointsOnImage(keypoints, shape)
 
     # TODO add to_gaussian_heatmaps(), from_gaussian_heatmaps()

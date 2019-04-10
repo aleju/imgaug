@@ -129,6 +129,11 @@
 * Refactored `KeypointsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `KeypointsOnImage.on()` to use `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `Keypoint.project()` to use `imgaug.augmentables.utils.project_coords()`.
+* `KeypointsOnImage.from_coords_array()`
+    * Marked as deprecated.
+    * Renamed to `from_xy_array()`.
+    * Is now a `classmethod` instead of `staticmethod`.
+    * Refactored to make code simpler.
 
 
 # 0.2.8

@@ -257,12 +257,12 @@ def test_KeypointsOnImage():
     ])
     assert np.allclose(observed, expected)
 
-    # from_coords_array
+    # from_xy_array
     arr = np.float32([
         [1, 2],
         [3, 4]
     ])
-    kpi = ia.KeypointsOnImage.from_coords_array(arr, shape=(5, 5, 3))
+    kpi = ia.KeypointsOnImage.from_xy_array(arr, shape=(5, 5, 3))
     assert 1 - eps < kpi.keypoints[0].x < 1 + eps
     assert 2 - eps < kpi.keypoints[0].y < 2 + eps
     assert 3 - eps < kpi.keypoints[1].x < 3 + eps
