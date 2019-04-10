@@ -248,9 +248,9 @@ def test_KeypointsOnImage():
     assert kpi2.keypoints[1].x == kpi.keypoints[1].x + 1
     assert kpi2.keypoints[1].y == kpi.keypoints[1].y + 2
 
-    # get_coords_array
+    # to_xy_array
     kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-    observed = kpi.get_coords_array()
+    observed = kpi.to_xy_array()
     expected = np.float32([
         [1, 2],
         [3, 4]

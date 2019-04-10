@@ -438,7 +438,7 @@ class KeypointsOnImage(object):
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
         return self.deepcopy(keypoints)
 
-    # TODO align naming with BoundingBoxesOnImage.to_xyxy_array()
+    @ia.deprecated(alt_func="KeypointsOnImage.to_xy_array()")
     def get_coords_array(self):
         """
         Convert the coordinates of all keypoints in this object to an array of shape (N,2).
@@ -450,7 +450,20 @@ class KeypointsOnImage(object):
             x coordinate, each second value is the y coordinate.
 
         """
-        result = np.zeros((len(self.keypoints), 2), np.float32)
+        return self.to_xy_array()
+
+    def to_xy_array(self):
+        """
+        Convert keypoint coordinates to ``(N,2)`` array.
+
+        Returns
+        -------
+        (N, 2) ndarray
+            Array containing the coordinates of all keypoints.
+            Shape is ``(N,2)`` with coordinates in xy-form.
+
+        """
+        result = np.zeros((len(self.keypoints), 2), dtype=np.float32)
         for i, keypoint in enumerate(self.keypoints):
             result[i, 0] = keypoint.x
             result[i, 1] = keypoint.y
