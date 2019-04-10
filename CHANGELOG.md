@@ -127,6 +127,7 @@
 * Refactored `PolygonsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `BoundingBoxesOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `KeypointsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `KeypointsOnImage.on()` to use `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `Keypoint.project()` to use `imgaug.augmentables.utils.project_coords()`.
 
 

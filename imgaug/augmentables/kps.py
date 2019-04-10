@@ -328,11 +328,7 @@ class KeypointsOnImage(object):
             Object containing all projected keypoints.
 
         """
-        if ia.is_np_array(image):
-            shape = image.shape
-        else:
-            shape = image
-
+        shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
         else:
