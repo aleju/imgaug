@@ -138,6 +138,7 @@
 * `KeypointsOnImage.get_coords_array()`
     * Marked as deprecated.
     * Renamed to `to_xy_array()`.
+* Moved keypoint drawing code from `KeypointsOnImage.draw_on_image()` into new method `Keypoint.draw_on_image()`.
 
 
 # 0.2.8
