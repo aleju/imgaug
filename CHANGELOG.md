@@ -126,6 +126,7 @@
     * Renamed argument `other_polygon` to `other`.
 * Refactored `PolygonsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `BoundingBoxesOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `Keypoint.project()` to use `imgaug.augmentables.utils.project_coords()`.
 
 
 # 0.2.8

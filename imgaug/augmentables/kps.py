@@ -7,6 +7,7 @@ import scipy.spatial.distance
 import six.moves as sm
 
 from .. import imgaug as ia
+from .utils import normalize_shape, project_coords
 
 
 def compute_geometric_median(X, eps=1e-5):
@@ -126,24 +127,8 @@ class Keypoint(object):
             Keypoint object with new coordinates.
 
         """
-        if from_shape[0:2] == to_shape[0:2]:
-            return self.deepcopy(x=self.x, y=self.y)
-
-        # avoid division by zeros
-        # TODO add this to other project() functions too
-        assert all([v > 0 for v in from_shape[0:2]]), \
-            "Got invalid from_shape %s in Keypoint.project()" % (
-                str(from_shape),)
-        if any([v <= 0 for v in to_shape[0:2]]):
-            import warnings
-            warnings.warn("Got invalid to_shape %s in Keypoint.project()" % (
-                str(to_shape),))
-
-        from_height, from_width = from_shape[0:2]
-        to_height, to_width = to_shape[0:2]
-        x = (self.x / from_width) * to_width
-        y = (self.y / from_height) * to_height
-        return self.deepcopy(x=x, y=y)
+        xy_proj = project_coords([(self.x, self.y)], from_shape, to_shape)
+        return self.deepcopy(x=xy_proj[0][0], y=xy_proj[0][1])
 
     def shift(self, x=0, y=0):
         """
