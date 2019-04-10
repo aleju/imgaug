@@ -930,8 +930,7 @@ class LineString(object):
 
         """
         from .kps import KeypointsOnImage
-        kpsoi = KeypointsOnImage.from_coords_array(self.coords,
-                                                   shape=image.shape)
+        kpsoi = KeypointsOnImage.from_xy_array(self.coords, shape=image.shape)
         image = kpsoi.draw_on_image(
             image, color=color, alpha=alpha,
             size=size, copy=copy,

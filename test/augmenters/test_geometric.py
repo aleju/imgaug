@@ -3424,7 +3424,7 @@ def test_ElasticTransformation():
     kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
     aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
     observed = aug.augment_keypoints([kpsoi])[0]
-    d = kpsoi.get_coords_array() - observed.get_coords_array()
+    d = kpsoi.to_xy_array() - observed.to_xy_array()
     d[:, 0] = d[:, 0] ** 2
     d[:, 1] = d[:, 1] ** 2
     d = np.sum(d, axis=1)
@@ -3445,7 +3445,7 @@ def test_ElasticTransformation():
     kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
     aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
     observed = aug.augment_keypoints([kpsoi])[0]
-    d = kpsoi.get_coords_array() - observed.get_coords_array()
+    d = kpsoi.to_xy_array() - observed.to_xy_array()
     d[:, 0] = d[:, 0] ** 2
     d[:, 1] = d[:, 1] ** 2
     d = np.sum(d, axis=1)
@@ -3467,7 +3467,7 @@ def test_ElasticTransformation():
     kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
     aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
     observed = aug.augment_keypoints([kpsoi])[0]
-    d = kpsoi.get_coords_array() - observed.get_coords_array()
+    d = kpsoi.to_xy_array() - observed.to_xy_array()
     d[:, 0] = d[:, 0] ** 2
     d[:, 1] = d[:, 1] ** 2
     d = np.sum(d, axis=1)

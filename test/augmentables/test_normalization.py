@@ -1363,7 +1363,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 1
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             keypoints_norm = normalization.normalize_keypoints(
                 np.zeros((1, 5, 2), dtype=dt) + 1,
@@ -1372,7 +1372,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 5
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             # --> keypoints for too many images
             with self.assertRaises(ValueError):
@@ -1459,7 +1459,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 1
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             keypoints_norm = normalization.normalize_keypoints(
                 [np.zeros((5, 2), dtype=dt) + 1],
@@ -1468,7 +1468,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 5
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             # --> keypoints for too many images
             with self.assertRaises(ValueError):

@@ -2619,8 +2619,8 @@ def test_Augmenter_augment():
     images_aug, keypoints_aug = aug.augment(images=[image],
                                             keypoints=[keypoints])
     assert np.array_equal(images_aug[0], image)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
 
     images_aug, bbs_aug = aug.augment(images=[image], bounding_boxes=[bbs])
     assert np.array_equal(images_aug[0], image)
@@ -2655,8 +2655,8 @@ def test_Augmenter_augment():
     images_aug = batch.images_aug
     keypoints_aug = batch.keypoints_aug
     assert np.array_equal(images_aug[0], image)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
 
     batch = aug.augment(images=[image], bounding_boxes=[bbs],
                         return_batch=True)
@@ -2681,8 +2681,8 @@ def test_Augmenter_augment():
     polygons_aug = batch.polygons_aug
     assert np.array_equal(images_aug[0], image)
     assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
@@ -2694,8 +2694,8 @@ def test_Augmenter_augment():
     polygons_aug = batch.polygons_aug
     assert np.array_equal(images_aug[0], image)
     assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
@@ -2852,8 +2852,8 @@ def test_Augmenter_augment_py36_or_higher():
     # this should work in py3.6+
     keypoints_aug, polygons_aug = aug.augment(keypoints=[keypoints],
                                               polygons=[polygons])
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
@@ -2872,8 +2872,8 @@ def test_Augmenter_augment_py36_or_higher():
     keypoints_aug, images_aug = aug.augment(keypoints=[keypoints],
                                             images=[image])
     assert np.array_equal(images_aug[0], image)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
 
     bbs_aug, images_aug = aug.augment(bounding_boxes=[bbs], images=[image])
     assert np.array_equal(images_aug[0], image)
@@ -2887,8 +2887,8 @@ def test_Augmenter_augment_py36_or_higher():
 
     polygons_aug, keypoints_aug = aug.augment(polygons=[polygons],
                                               keypoints=[keypoints])
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
@@ -2904,8 +2904,8 @@ def test_Augmenter_augment_py36_or_higher():
         segmentation_maps=[segmaps], keypoints=[keypoints], polygons=[polygons])
     assert np.array_equal(images_aug[0], image)
     assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
@@ -2921,8 +2921,8 @@ def test_Augmenter_augment_py36_or_higher():
         polygons=[polygons], keypoints=[keypoints], segmentation_maps=[segmaps])
     assert np.array_equal(images_aug[0], image)
     assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
         assert polygon_aug.exterior_almost_equals(polygon)
@@ -2938,8 +2938,8 @@ def test_Augmenter_augment_py36_or_higher():
     assert np.array_equal(images_aug[0], image)
     assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
     assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):
@@ -2956,8 +2956,8 @@ def test_Augmenter_augment_py36_or_higher():
     assert np.array_equal(images_aug[0], image)
     assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
     assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-    assert np.allclose(keypoints_aug[0].get_coords_array(),
-                       keypoints.get_coords_array())
+    assert np.allclose(keypoints_aug[0].to_xy_array(),
+                       keypoints.to_xy_array())
     assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
     for polygon_aug, polygon in zip(polygons_aug[0].polygons,
                                     polygons.polygons):

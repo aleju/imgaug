@@ -250,7 +250,7 @@ def normalize_keypoints(inputs, shapes=None):
         _assert_single_array_last_dim_exactly(inputs, 2, "KeypointsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            KeypointsOnImage.from_coords_array(attr_i, shape=shape)
+            KeypointsOnImage.from_xy_array(attr_i, shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
@@ -272,7 +272,7 @@ def normalize_keypoints(inputs, shapes=None):
         _assert_many_arrays_last_dim_exactly(inputs, 2, "KeypointsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            KeypointsOnImage.from_coords_array(attr_i, shape=shape)
+            KeypointsOnImage.from_xy_array(attr_i, shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
@@ -290,7 +290,7 @@ def normalize_keypoints(inputs, shapes=None):
     elif ntype == "iterable-iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
-            KeypointsOnImage.from_coords_array(
+            KeypointsOnImage.from_xy_array(
                 np.array(attr_i, dtype=np.float32),
                 shape=shape)
             for attr_i, shape
@@ -623,7 +623,7 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
         assert len(keypoints) == 1
         input_dtype = keypoints_old.dtype
         return restore_dtype_and_merge(
-            [kpsoi.get_coords_array() for kpsoi in keypoints],
+            [kpsoi.to_xy_array() for kpsoi in keypoints],
             input_dtype)
     elif ntype == "tuple[number,size=2]":
         assert len(keypoints) == 1
@@ -646,8 +646,7 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
         nonempty, _, _ = find_first_nonempty(keypoints_old)
         input_dtype = nonempty.dtype
         return [
-            restore_dtype_and_merge(kps_i.get_coords_array(),
-                                    input_dtype)
+            restore_dtype_and_merge(kps_i.to_xy_array(), input_dtype)
             for kps_i in keypoints]
     elif ntype == "iterable-tuple[number,size=2]":
         assert len(keypoints) == 1
