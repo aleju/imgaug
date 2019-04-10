@@ -132,6 +132,7 @@
 * `KeypointsOnImage.from_coords_array()`
     * Marked as deprecated.
     * Renamed to `from_xy_array()`.
+    * Renamed arg `coords` to `xy`.
     * Is now a `classmethod` instead of `staticmethod`.
     * Refactored to make code simpler.
 * `KeypointsOnImage.get_coords_array()`
