@@ -348,7 +348,7 @@ class TestLineString(unittest.TestCase):
 
     def test_clip_out_of_image(self):
         def _eq(ls, other):
-            return ls.coords_almost_equals(other, max_distance=1e-3)
+            return ls.coords_almost_equals(other, max_distance=1e-2)
 
         ls = LineString([(0, 0), (1, 0), (2, 1)])
 
@@ -610,18 +610,27 @@ class TestLineString(unittest.TestCase):
         assert len(lss_clipped) == 0
 
         # combine clip + is_fully_within_image
-        h, w = 100, 200
-        ls = LineString([(0, 10), (w, 10), (w, h), (w-10, h-10)])
-        lss_clipped = ls.clip_out_of_image((h, w))
-        assert len(lss_clipped) == 2
-        assert lss_clipped[0].is_fully_within_image((h, w))
-        assert lss_clipped[1].is_fully_within_image((h, w))
+        sizes = [(200, 400), (400, 800), (800, 1600), (1600, 3200),
+                 (3200, 6400)]
+        sizes = sizes + [(w, h) for h, w in sizes]
+        for h, w in sizes:
+            ls = LineString([(0, 10), (w, 10), (w, h), (w-10, h-10)])
+            lss_clipped = ls.clip_out_of_image((h, w))
+            assert len(lss_clipped) == 2
+            assert lss_clipped[0].is_fully_within_image((h, w))
+            assert lss_clipped[1].is_fully_within_image((h, w))
 
-        ls = LineString([(0, 10), (w+10, 10), (w+10, h-10), (w-10, h-10)])
-        lss_clipped = ls.clip_out_of_image((h, w))
-        assert len(lss_clipped) == 2
-        assert lss_clipped[0].is_fully_within_image((h, w))
-        assert lss_clipped[1].is_fully_within_image((h, w))
+            ls = LineString([(0, 10), (w+10, 10), (w+10, h-10), (w-10, h-10)])
+            lss_clipped = ls.clip_out_of_image((h, w))
+            assert len(lss_clipped) == 2
+            assert lss_clipped[0].is_fully_within_image((h, w))
+            assert lss_clipped[1].is_fully_within_image((h, w))
+
+            ls = LineString([(-10, 10), (w+10, 10), (w-10, h-10)])
+            lss_clipped = ls.clip_out_of_image((h, w))
+            assert len(lss_clipped) == 2
+            assert lss_clipped[0].is_fully_within_image((h, w))
+            assert lss_clipped[1].is_fully_within_image((h, w))
 
     def test_shift(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])

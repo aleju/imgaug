@@ -414,7 +414,7 @@ class LineString(object):
         # when first clipping and then calling is_fully_within_image()
         # returning false
         height, width = normalize_shape(image)[0:2]
-        eps = 1e-5
+        eps = 1e-3
         edges = [
             LineString([(0.0, 0.0), (width - eps, 0.0)]),
             LineString([(width - eps, 0.0), (width - eps, height - eps)]),
@@ -476,8 +476,8 @@ class LineString(object):
                     dist_next = np.linalg.norm(
                         np.float32(coord) - np.float32(p_next))
 
-                dist_prev_ok = (dist_prev is None or dist_prev > 1e-4)
-                dist_next_ok = (dist_next is None or dist_next > 1e-4)
+                dist_prev_ok = (dist_prev is None or dist_prev > 1e-2)
+                dist_next_ok = (dist_next is None or dist_next > 1e-2)
                 if dist_prev_ok and dist_next_ok:
                     line.append(coord)
 
