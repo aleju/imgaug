@@ -289,11 +289,7 @@ class KeypointsOnImage(object):
     """
     def __init__(self, keypoints, shape):
         self.keypoints = keypoints
-        if ia.is_np_array(shape):
-            self.shape = shape.shape
-        else:
-            ia.do_assert(isinstance(shape, (tuple, list)))
-            self.shape = tuple(shape)
+        self.shape = normalize_shape(shape)
 
     @property
     def height(self):
