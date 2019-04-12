@@ -228,7 +228,7 @@ class LineString(object):
         return min(distances)
 
     # TODO update BB's contains(), which can only accept Keypoint currently
-    def contains(self, other, distance_threshold=1e-4):
+    def contains(self, other, max_distance=1e-4):
         """
         Estimate whether the bounding box contains a point.
 
@@ -237,7 +237,7 @@ class LineString(object):
         other : tuple of number or imgaug.augmentables.kps.Keypoint
             Point to check for.
 
-        distance_threshold : float
+        max_distance : float
             Maximum allowed euclidean distance between the point and the
             closest point on the line. If the threshold is exceeded, the point
             is not considered to be contained in the line.
@@ -250,7 +250,7 @@ class LineString(object):
             is below a threshold.
 
         """
-        return self.compute_distance(other, default=np.inf) < distance_threshold
+        return self.compute_distance(other, default=np.inf) < max_distance
 
     def project(self, from_shape, to_shape):
         """

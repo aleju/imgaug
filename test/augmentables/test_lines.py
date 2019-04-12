@@ -231,9 +231,9 @@ class TestLineString(unittest.TestCase):
         assert ls.contains((1, 0))
         assert ls.contains((2, 1))
         assert ls.contains((0+1e-8, 0))
-        assert not ls.contains((0+1e-8, 0), distance_threshold=0)
+        assert not ls.contains((0+1e-8, 0), max_distance=0)
         assert not ls.contains((0-1, 0))
-        assert ls.contains((0-1, 0), distance_threshold=2)
+        assert ls.contains((0-1, 0), max_distance=2)
 
         ls = LineString([(0, 0)])
         assert ls.contains((0, 0))
