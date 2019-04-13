@@ -11,7 +11,7 @@ import skimage.measure
 import collections
 
 from .. import imgaug as ia
-from .utils import normalize_shape
+from .utils import normalize_shape, interpolate_points
 
 
 # TODO somehow merge with BoundingBox
@@ -1272,53 +1272,13 @@ def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
 
     # interpolate points between each consecutive pair of points
     if interpolate > 0:
-        points_tuples = _interpolate_points(points_tuples, interpolate)
+        points_tuples = interpolate_points(points_tuples, interpolate)
 
     # close if requested and not yet closed
     if closed and len(points) > 1:  # here intentionally used points instead of points_tuples
         points_tuples.append(points_tuples[0])
 
     return shapely.geometry.LineString(points_tuples)
-
-
-def _interpolate_point_pair(point_a, point_b, nb_steps):
-    if nb_steps < 1:
-        return []
-    x1, y1 = point_a
-    x2, y2 = point_b
-    vec = np.float32([x2 - x1, y2 - y1])
-    step_size = vec / (1 + nb_steps)
-    return [(x1 + (i + 1) * step_size[0], y1 + (i + 1) * step_size[1]) for i in sm.xrange(nb_steps)]
-
-
-def _interpolate_points(points, nb_steps, closed=True):
-    if len(points) <= 1:
-        return points
-    if closed:
-        points = list(points) + [points[0]]
-    points_interp = []
-    for point_a, point_b in zip(points[:-1], points[1:]):
-        points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
-    if not closed:
-        points_interp.append(points[-1])
-    # close does not have to be reverted here, as last point is not included in the extend()
-    return points_interp
-
-
-def _interpolate_points_by_max_distance(points, max_distance, closed=True):
-    ia.do_assert(max_distance > 0, "max_distance must have value greater than 0, got %.8f" % (max_distance,))
-    if len(points) <= 1:
-        return points
-    if closed:
-        points = list(points) + [points[0]]
-    points_interp = []
-    for point_a, point_b in zip(points[:-1], points[1:]):
-        dist = np.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2)
-        nb_steps = int((dist / max_distance) - 1)
-        points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
-    if not closed:
-        points_interp.append(points[-1])
-    return points_interp
 
 
 class _ConcavePolygonRecoverer(object):

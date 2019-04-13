@@ -146,6 +146,7 @@
 * Renamed argument `thickness` in `BoundingBoxesOnImage.draw_on_image()` to `size` in order to match the name used for keypoints, polygons and line strings.
   The argument `thickness` will still be accepted, but raises a deprecation warning.
 * Improved efficiency of `BoundingBoxesOnImage.draw_on_image()` by evading unnecessary array copies.
+* Moved line interpolation functions `_interpolate_points()`, `_interpolate_point_pair()` and `_interpolate_points_by_max_distance()` to `imgaug.augmentables.utils` and made them public functions.
 
 
 # 0.2.8
