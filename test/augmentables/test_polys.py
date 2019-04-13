@@ -58,9 +58,6 @@ def main():
     test_Polygon_exterior_almost_equals()
     test_Polygon_almost_equals()
     test___convert_points_to_shapely_line_string()
-    test__interpolate_point_pair()
-    test__interpolate_points()
-    test__interpolate_points_by_max_distance()
 
 
 def test_Polygon___init__():
