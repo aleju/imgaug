@@ -964,8 +964,8 @@ class BoundingBoxesOnImage(object):
             set in BoundingBoxesOnImage.shape.
 
         color : int or list of int or tuple of int or (3,) ndarray, optional
-            The RGB color of all bounding boxes. If a single int ``C``, then that is
-            equivalent to ``(C,C,C)``.
+            The RGB color of all bounding boxes. If a single int ``C``, then
+            that is equivalent to ``(C,C,C)``.
 
         alpha : float, optional
             Alpha/transparency of the bounding box.
@@ -974,10 +974,11 @@ class BoundingBoxesOnImage(object):
             Thickness in pixels.
 
         copy : bool, optional
-            Whether to copy the image before drawing the points.
+            Whether to copy the image before drawing the bounding boxes.
 
         raise_if_out_of_image : bool, optional
-            Whether to raise an exception if any bounding box is outside of the image.
+            Whether to raise an exception if any bounding box is outside of the
+            image.
 
         thickness : None or int, optional
             Deprecated.
@@ -988,14 +989,15 @@ class BoundingBoxesOnImage(object):
             Image with drawn bounding boxes.
 
         """
-        # TODO improve efficiency here by copying only once
+        image = np.copy(image) if copy else image
+
         for bb in self.bounding_boxes:
             image = bb.draw_on_image(
                 image,
                 color=color,
                 alpha=alpha,
                 size=size,
-                copy=copy,
+                copy=False,
                 raise_if_out_of_image=raise_if_out_of_image,
                 thickness=thickness
             )

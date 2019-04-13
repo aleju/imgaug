@@ -145,6 +145,7 @@
   The argument `thickness` will still be accepted, but raises a deprecation warning.
 * Renamed argument `thickness` in `BoundingBoxesOnImage.draw_on_image()` to `size` in order to match the name used for keypoints, polygons and line strings.
   The argument `thickness` will still be accepted, but raises a deprecation warning.
+* Improved efficiency of `BoundingBoxesOnImage.draw_on_image()` by evading unnecessary array copies.
 
 
 # 0.2.8
