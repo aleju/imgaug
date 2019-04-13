@@ -320,32 +320,32 @@ def test_BoundingBox():
     bb_mask[1:3+1, 3] = True
     bb_mask[1, 1:3+1] = True
     bb_mask[3, 1:3+1] = True
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
     assert np.all(image == 0)
 
-    image_bb = bb.draw_on_image(image, color=[255, 0, 0], alpha=1.0, thickness=1, copy=True,
+    image_bb = bb.draw_on_image(image, color=[255, 0, 0], alpha=1.0, size=1, copy=True,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 0, 0])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    image_bb = bb.draw_on_image(image, color=128, alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False)
+    image_bb = bb.draw_on_image(image, color=128, alpha=1.0, size=1, copy=True, raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [128, 128, 128])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    image_bb = bb.draw_on_image(image+100, color=[200, 200, 200], alpha=0.5, thickness=1, copy=True,
+    image_bb = bb.draw_on_image(image + 100, color=[200, 200, 200], alpha=0.5, size=1, copy=True,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [150, 150, 150])
     assert np.all(image_bb[~bb_mask] == [100, 100, 100])
 
-    image_bb = bb.draw_on_image((image+100).astype(np.float32), color=[200, 200, 200], alpha=0.5, thickness=1,
+    image_bb = bb.draw_on_image((image+100).astype(np.float32), color=[200, 200, 200], alpha=0.5, size=1,
                                 copy=True, raise_if_out_of_image=False)
     assert np.sum(np.abs((image_bb - [150, 150, 150])[bb_mask])) < 0.1
     assert np.sum(np.abs((image_bb - [100, 100, 100])[~bb_mask])) < 0.1
 
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=False,
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=1, copy=False,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
@@ -357,7 +357,7 @@ def test_BoundingBox():
     bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
     bb_mask[2, 0:3] = True
     bb_mask[0:3, 2] = True
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
@@ -366,7 +366,7 @@ def test_BoundingBox():
     bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
     bb_mask[0:5, 0:5] = True
     bb_mask[2, 2] = False
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=2, copy=True,
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=2, copy=True,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
@@ -375,7 +375,7 @@ def test_BoundingBox():
     bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
     bb_mask[0:1+1, 1] = True
     bb_mask[1, 0:1+1] = True
-    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+    image_bb = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
                                 raise_if_out_of_image=False)
     assert np.all(image_bb[bb_mask] == [255, 255, 255])
     assert np.all(image_bb[~bb_mask] == [0, 0, 0])
@@ -383,7 +383,7 @@ def test_BoundingBox():
     bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1, label=None)
     got_exception = False
     try:
-        _ = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+        _ = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
                              raise_if_out_of_image=True)
     except Exception:
         got_exception = True
@@ -392,7 +392,7 @@ def test_BoundingBox():
     bb = ia.BoundingBox(y1=-5, x1=-5, y2=-1, x2=-1, label=None)
     got_exception = False
     try:
-        _ = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, thickness=1, copy=True,
+        _ = bb.draw_on_image(image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
                              raise_if_out_of_image=True)
     except Exception:
         got_exception = True
@@ -617,7 +617,7 @@ def test_BoundingBoxesOnImage():
     bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40, label=None)
     bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45, label=None)
     bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
-    image = bbsoi.draw_on_image(np.zeros(bbsoi.shape, dtype=np.uint8), color=[0, 255, 0], alpha=1.0, thickness=1,
+    image = bbsoi.draw_on_image(np.zeros(bbsoi.shape, dtype=np.uint8), color=[0, 255, 0], alpha=1.0, size=1,
                                 copy=True, raise_if_out_of_image=False)
     assert np.all(image[10-1, 20-1, :] == [0, 0, 0])
     assert np.all(image[10-1, 20-0, :] == [0, 0, 0])

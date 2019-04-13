@@ -141,6 +141,10 @@
 * Moved keypoint drawing code from `KeypointsOnImage.draw_on_image()` into new method `Keypoint.draw_on_image()`.
 * Changed `Keypoint.draw_on_image()` to draw a rectangle for the keypoint, so long as any part of that rectangle is within the image plane.
   (Previously, the rectangle was only drawn if the integer xy-coordinate of the point was inside the image plane.)
+* Renamed argument `thickness` in `BoundingBox.draw_on_image()` to `size` in order to match the name used for keypoints, polygons and line strings.
+  The argument `thickness` will still be accepted, but raises a deprecation warning.
+* Renamed argument `thickness` in `BoundingBoxesOnImage.draw_on_image()` to `size` in order to match the name used for keypoints, polygons and line strings.
+  The argument `thickness` will still be accepted, but raises a deprecation warning.
 
 
 # 0.2.8

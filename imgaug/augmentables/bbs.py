@@ -504,7 +504,8 @@ class BoundingBox(object):
         )
 
     # TODO add explicit test for zero-sized BBs (worked when tested by hand)
-    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
+                      copy=True, raise_if_out_of_image=False, thickness=None):
         """
         Draw the bounding box on an image.
 
@@ -520,7 +521,7 @@ class BoundingBox(object):
             The transparency of the drawn bounding box, where 1.0 denotes no transparency and
             0.0 is invisible.
 
-        thickness : int, optional
+        size : int, optional
             The thickness of the bounding box in pixels. If the value is larger than 1, then
             additional pixels will be added around the bounding box (i.e. extension towards the
             outside).
@@ -533,12 +534,22 @@ class BoundingBox(object):
             image. If set to False, no error will be raised and only the parts inside the image
             will be drawn.
 
+        thickness : None or int, optional
+            Deprecated.
+
         Returns
         -------
         result : (H,W,C) ndarray(uint8)
             Image with bounding box drawn on it.
 
         """
+        if thickness is not None:
+            ia.warn_deprecated(
+                "Usage of argument 'thickness' in BoundingBox.draw_on_image() "
+                "is deprecated. The argument was renamed to 'size'."
+            )
+            size = thickness
+
         if raise_if_out_of_image and self.is_out_of_image(image):
             raise Exception("Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f on image with shape %s." % (
                 self.x1, self.y1, self.x2, self.y2, image.shape))
@@ -548,7 +559,7 @@ class BoundingBox(object):
         if isinstance(color, (tuple, list)):
             color = np.uint8(color)
 
-        for i in range(thickness):
+        for i in range(size):
             y1, y2, x1, x2 = self.y1_int, self.y2_int, self.x1_int, self.x2_int
 
             # When y values get into the range (H-0.5, H), the *_int functions round them to H.
@@ -940,7 +951,8 @@ class BoundingBoxesOnImage(object):
 
         return xyxy_array.astype(dtype)
 
-    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, thickness=1, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
+                      copy=True, raise_if_out_of_image=False, thickness=None):
         """
         Draw all bounding boxes onto a given image.
 
@@ -958,7 +970,7 @@ class BoundingBoxesOnImage(object):
         alpha : float, optional
             Alpha/transparency of the bounding box.
 
-        thickness : int, optional
+        size : int, optional
             Thickness in pixels.
 
         copy : bool, optional
@@ -966,6 +978,9 @@ class BoundingBoxesOnImage(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an exception if any bounding box is outside of the image.
+
+        thickness : None or int, optional
+            Deprecated.
 
         Returns
         -------
@@ -979,9 +994,10 @@ class BoundingBoxesOnImage(object):
                 image,
                 color=color,
                 alpha=alpha,
-                thickness=thickness,
+                size=size,
                 copy=copy,
-                raise_if_out_of_image=raise_if_out_of_image
+                raise_if_out_of_image=raise_if_out_of_image,
+                thickness=thickness
             )
 
         return image
