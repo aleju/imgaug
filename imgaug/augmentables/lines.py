@@ -1378,7 +1378,7 @@ class LineString(object):
         dist = max(np.max(dist_self2other), np.max(dist_other2self))
         return  dist < max_distance
 
-    def almost_equals(self, other, max_distance=1e-4):
+    def almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
         """
         Compare this and another LineString.
 
@@ -1388,9 +1388,11 @@ class LineString(object):
             The other line string. Must be a LineString instance, not just
             its coordinates.
 
-        max_distance : float
-            Max distance of any point from the other line string before
-            the two line strings are evaluated to be unequal.
+        max_distance : float, optional
+            See :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`.
+
+        points_per_edge : int, optional
+            See :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`.
 
         Returns
         -------
@@ -1402,7 +1404,8 @@ class LineString(object):
         """
         if self.label != other.label:
             return False
-        return self.coords_almost_equals(other, max_distance=max_distance)
+        return self.coords_almost_equals(
+            other, max_distance=max_distance, points_per_edge=points_per_edge)
 
     def copy(self, coords=None, label=None):
         """
