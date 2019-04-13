@@ -1312,6 +1312,16 @@ class TestLineString(unittest.TestCase):
         ls = LineString([(0, 0)])
         assert not ls.coords_almost_equals([])
 
+        ls_a = LineString([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)])
+        ls_b = LineString([(0, 0), (10, 0), (10, 10), (0, 10),
+                           (0, 5.01), (0, 5.0), (0, 4.99), (0, 0)])
+        assert ls_a.coords_almost_equals(ls_b)
+
+        ls_a = LineString([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)])
+        ls_b = LineString([(0, 0), (10, 0), (10, 10), (0, 10),
+                           (0, 5.01), (10, 5.0), (0, 4.99), (0, 0)])
+        assert not ls_a.coords_almost_equals(ls_b)
+
     def test_almost_equals(self):
         ls = LineString([(0, 0), (1, 0), (1, 1)])
         assert ls.almost_equals(ls)

@@ -8,7 +8,7 @@ import skimage.measure
 import cv2
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords
+from .utils import normalize_shape, project_coords, interpolate_points
 
 
 # TODO Add Line class and make LineString a list of Line elements
@@ -1159,6 +1159,36 @@ class LineString(object):
         return self.deepcopy(
             coords=np.concatenate([self.coords, other.coords], axis=0))
 
+    # TODO add tests
+    def subdivide(self, points_per_edge):
+        """
+        Adds ``N`` interpolated points with uniform spacing to each edge.
+
+        For each edge between points ``A`` and ``B`` this adds points
+        at ``A + (i/(1+N)) * (B - A)``, where ``i`` is the index of the added
+        point and ``N`` is the number of points to add per edge.
+
+        Calling this method two times will split each edge at its center
+        and then again split each newly created edge at their center.
+        It is equivalent to calling `subdivide(3)`.
+
+        Parameters
+        ----------
+        points_per_edge : int
+            Number of points to interpolate on each edge.
+
+        Returns
+        -------
+        LineString
+            Line string with subdivided edges.
+
+        """
+        if len(self.coords) <= 1 or points_per_edge < 1:
+            return self.deepcopy()
+        coords = interpolate_points(self.coords, nb_steps=points_per_edge,
+                                    closed=False)
+        return self.deepcopy(coords=coords)
+
     def to_keypoints(self):
         """
         Convert the line string points to keypoints.
@@ -1293,9 +1323,13 @@ class LineString(object):
             shape=image_shape
         )
 
-    def coords_almost_equals(self, other, max_distance=1e-6):
+    # TODO make this non-approximate
+    def coords_almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
         """
         Compare this and another LineString's coordinates.
+
+        This is an approximate method based on pointwise distances and can
+        in rare corner cases produce wrong outputs.
 
         Parameters
         ----------
@@ -1309,6 +1343,9 @@ class LineString(object):
         max_distance : float
             Max distance of any point from the other line string before
             the two line strings are evaluated to be unequal.
+
+        points_per_edge : int, optional
+            How many points to interpolate on each edge.
 
         Returns
         -------
@@ -1333,14 +1370,13 @@ class LineString(object):
             # only one of the two line strings has no coords
             return False
 
-        # Even though this checks pointise and ignores the line(s) in between,
-        # this should still work as it is based on the maximum distance and
-        # the maximum should in all cases be defined by the maximum point
-        # distance (no line can be further away than its points).
-        dists_self2other = self.compute_pointwise_distances(other)
-        dists_other2self = other.compute_pointwise_distances(self)
-        dist = max(np.max(dists_self2other), np.max(dists_other2self))
-        return dist < max_distance
+        self_subd = self.subdivide(points_per_edge)
+        other_subd = other.subdivide(points_per_edge)
+
+        dist_self2other = self_subd.compute_pointwise_distances(other_subd)
+        dist_other2self = other_subd.compute_pointwise_distances(self_subd)
+        dist = max(np.max(dist_self2other), np.max(dist_other2self))
+        return  dist < max_distance
 
     def almost_equals(self, other, max_distance=1e-4):
         """
