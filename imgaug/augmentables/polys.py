@@ -833,36 +833,46 @@ class Polygon(object):
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
 
-    def exterior_almost_equals(self, other, max_distance=1e-6):
+    def exterior_almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
         """
-        Estimate whether the geometry of the exterior of this polygon and another polygon are comparable.
+        Estimate if this and other polygon's exterior are almost identical.
 
-        The two exteriors can have different numbers of points, but any point randomly sampled on the exterior
-        of one polygon should be close to the closest point on the exterior of the other polygon.
+        The two exteriors can have different numbers of points, but any point
+        randomly sampled on the exterior of one polygon should be close to the
+        closest point on the exterior of the other polygon.
 
-        Note that this method works approximately. One can come up with polygons with fairly different shapes that
-        will still be estimated as equal by this method. In practice however this should be unlikely to be the case.
-        The probability for something like that goes down as the interpolation parameter is increased.
+        Note that this method works approximately. One can come up with
+        polygons with fairly different shapes that will still be estimated as
+        equal by this method. In practice however this should be unlikely to be
+        the case. The probability for something like that goes down as the
+        interpolation parameter is increased.
 
         Parameters
         ----------
         other : imgaug.Polygon or (N,2) ndarray or list of tuple
             The other polygon with which to compare the exterior.
             If this is an ndarray, it is assumed to represent an exterior.
-            It must then have dtype float32 and shape (N,2) with the second dimension denoting xy-coordinates.
+            It must then have dtype ``float32`` and shape ``(N,2)`` with the
+            second dimension denoting xy-coordinates.
             If this is a list of tuples, it is assumed to represent an exterior.
-            Each tuple then must contain exactly two numbers, denoting xy-coordinates.
+            Each tuple then must contain exactly two numbers, denoting
+            xy-coordinates.
 
-        max_distance : number
-            The maximum euclidean distance between a point on one polygon and the closest point on the other polygon.
-            If the distance is exceeded for any such pair, the two exteriors are not viewed as equal.
-            The points are other the points contained in the polygon's exterior ndarray or interpolated points
-            between these.
+        max_distance : number, optional
+            The maximum euclidean distance between a point on one polygon and
+            the closest point on the other polygon. If the distance is exceeded
+            for any such pair, the two exteriors are not viewed as equal. The
+            points are other the points contained in the polygon's exterior
+            ndarray or interpolated points between these.
+
+        points_per_edge : int, optional
+            How many points to interpolate on each edge.
 
         Returns
         -------
         bool
-            Whether the two polygon's exteriors can be viewed as equal (approximate test).
+            Whether the two polygon's exteriors can be viewed as equal
+            (approximate test).
 
         """
         if isinstance(other, list):
@@ -875,27 +885,34 @@ class Polygon(object):
 
         return self.to_line_string(closed=True).coords_almost_equals(
             other.to_line_string(closed=True),
-            max_distance=max_distance
+            max_distance=max_distance,
+            points_per_edge=points_per_edge
         )
 
-    def almost_equals(self, other, max_distance=1e-6):
+    def almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
         """
-        Compare this polygon with another one and estimate whether they can be viewed as equal.
+        Estimate if this polygon's and another's geometry/labels are similar.
 
-        This is the same as :func:`imgaug.Polygon.exterior_almost_equals` but additionally compares the labels.
+        This is the same as :func:`imgaug.Polygon.exterior_almost_equals` but
+        additionally compares the labels.
 
         Parameters
         ----------
         other
-            The object to compare against. If not a Polygon, then False will be returned.
+            The object to compare against. If not a Polygon, then False will
+            be returned.
 
-        max_distance : float
-            See :func:`imgaug.Polygon.exterior_almost_equals`.
+        max_distance : float, optional
+            See :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        points_per_edge : int, optional
+            See :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         Returns
         -------
         bool
-            Whether the two polygons can be viewed as equal. In the case of the exteriors this is an approximate test.
+            Whether the two polygons can be viewed as equal. In the case of
+            the exteriors this is an approximate test.
 
         """
         if not isinstance(other, Polygon):
@@ -907,7 +924,8 @@ class Polygon(object):
                 return False
             if self.label != other.label:
                 return False
-        return self.exterior_almost_equals(other, max_distance=max_distance)
+        return self.exterior_almost_equals(
+            other, max_distance=max_distance, points_per_edge=points_per_edge)
 
     def copy(self, exterior=None, label=None):
         """

@@ -122,7 +122,7 @@
 * Refactored `Polygon.shift()` to use `LineString.shift()`.
 * [rarely breaking] `Polygon.exterior_almost_equals()`, `Polygon.almost_equals()`
     * Refactored to make use of `LineString.coords_almost_equals()`.
-    * Removed argument `interpolate`.
+    * Renamed argument `interpolate` to `points_per_edge`.
     * Renamed argument `other_polygon` to `other`.
 * Refactored `PolygonsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
 * Refactored `BoundingBoxesOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
