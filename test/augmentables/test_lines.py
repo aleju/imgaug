@@ -654,7 +654,7 @@ class TestLineString(unittest.TestCase):
     def test_draw_mask(self):
         ls = LineString([(0, 1), (5, 1), (5, 5)])
         arr = ls.draw_mask(
-            (10, 10), size_line=1, size_points=0, raise_if_out_of_image=False)
+            (10, 10), size_lines=1, size_points=0, raise_if_out_of_image=False)
         assert np.all(arr[1, 0:5])
         assert np.all(arr[1:5, 5])
         assert not np.any(arr[0, :])
@@ -662,7 +662,7 @@ class TestLineString(unittest.TestCase):
 
         ls = LineString([])
         arr = ls.draw_mask(
-            (10, 10), size_line=1, raise_if_out_of_image=False)
+            (10, 10), size_lines=1, raise_if_out_of_image=False)
         assert not np.any(arr)
 
     def test_draw_line_heatmap_array(self):
@@ -672,7 +672,7 @@ class TestLineString(unittest.TestCase):
             return np.allclose(arr, v, atol=(1.01/255), rtol=0)
 
         ls = LineString([(0, 1), (5, 1), (5, 5)])
-        arr = ls.draw_line_heatmap_array(
+        arr = ls.draw_lines_heatmap_array(
             (10, 10), alpha=0.5, size=1, raise_if_out_of_image=False)
         assert _allclose(arr[1, 0:5], 0.5)
         assert _allclose(arr[1:5, 5], 0.5)
@@ -680,7 +680,7 @@ class TestLineString(unittest.TestCase):
         assert _allclose(arr[2:, 0:5], 0.0)
 
         ls = LineString([])
-        arr = ls.draw_line_heatmap_array(
+        arr = ls.draw_lines_heatmap_array(
             (10, 10), alpha=0.5, size=1, raise_if_out_of_image=False)
         assert _allclose(arr, 0.0)
 
@@ -711,15 +711,15 @@ class TestLineString(unittest.TestCase):
             return np.allclose(arr, v, atol=(1.01/255), rtol=0)
 
         module_name = "imgaug.augmentables.lines."
-        line_fname = "%sLineString.draw_line_heatmap_array" % (module_name,)
+        line_fname = "%sLineString.draw_lines_heatmap_array" % (module_name,)
         points_fname = "%sLineString.draw_points_heatmap_array" % (module_name,)
         with mock.patch(line_fname, return_value=1) as mock_line, \
                 mock.patch(points_fname, return_value=2) as mock_points:
             ls = LineString([(0, 1), (9, 1)])
             _arr = ls.draw_heatmap_array(
                 (10, 10),
-                alpha_line=0.9, alpha_points=0.8,
-                size_line=3, size_points=5,
+                alpha_lines=0.9, alpha_points=0.8,
+                size_lines=3, size_points=5,
                 antialiased=True,
                 raise_if_out_of_image=True)
             assert mock_line.call_count == 1
@@ -740,8 +740,8 @@ class TestLineString(unittest.TestCase):
 
         ls = LineString([(0, 1), (5, 1), (5, 5)])
         arr = ls.draw_heatmap_array((10, 10),
-                                    alpha_line=0.9, alpha_points=0.5,
-                                    size_line=1, size_points=3,
+                                    alpha_lines=0.9, alpha_points=0.5,
+                                    size_lines=1, size_points=3,
                                     antialiased=False,
                                     raise_if_out_of_image=False)
         assert _allclose(arr[1, 0:5], 0.9)
@@ -774,7 +774,7 @@ class TestLineString(unittest.TestCase):
         ls = LineString([(0, 1), (9, 1)])
 
         # image of 0s
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((3, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=1.0, size=1,
@@ -789,7 +789,7 @@ class TestLineString(unittest.TestCase):
         assert np.all(img[2, :, :] == 0)
 
         # image of 0s, 2D input image
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((3, 10), dtype=np.uint8),
             color=200,
             alpha=1.0, size=1,
@@ -802,7 +802,7 @@ class TestLineString(unittest.TestCase):
         assert np.all(img[2, :] == 0)
 
         # image of 1s
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.ones((3, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=1.0, size=1,
@@ -817,7 +817,7 @@ class TestLineString(unittest.TestCase):
         assert np.all(img[2, :, :] == 1)
 
         # alpha=0.5
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((3, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=0.5, size=1,
@@ -832,7 +832,7 @@ class TestLineString(unittest.TestCase):
         assert np.all(img[2, :, :] == 0)
 
         # alpha=0.5 with background
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             10 + np.zeros((3, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=0.5, size=1,
@@ -848,7 +848,7 @@ class TestLineString(unittest.TestCase):
 
         # size=3
         ls = LineString([(0, 5), (9, 5)])
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((10, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=1.0, size=3,
@@ -864,7 +864,7 @@ class TestLineString(unittest.TestCase):
 
         # size=3, 2D input image
         ls = LineString([(0, 5), (9, 5)])
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((10, 10), dtype=np.uint8),
             color=200,
             alpha=1.0, size=3,
@@ -878,14 +878,14 @@ class TestLineString(unittest.TestCase):
 
         # size=3, antialiasing
         ls = LineString([(0, 0), (9, 9)])
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((10, 10, 3), dtype=np.uint8),
             color=(100, 100, 100),
             alpha=1.0, size=3,
             antialiased=False,
             raise_if_out_of_image=False
         )
-        img_aa = ls.draw_line_on_image(
+        img_aa = ls.draw_lines_on_image(
             np.zeros((10, 10, 3), dtype=np.uint8),
             color=(100, 100, 100),
             alpha=1.0, size=3,
@@ -904,7 +904,7 @@ class TestLineString(unittest.TestCase):
 
         # line partially outside if image
         ls = LineString([(-1, 1), (9, 1)])
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((3, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=1.0, size=1,
@@ -920,7 +920,7 @@ class TestLineString(unittest.TestCase):
 
         # line fully outside if image
         ls = LineString([(-10, 1), (-9, 1)])
-        img = ls.draw_line_on_image(
+        img = ls.draw_lines_on_image(
             np.zeros((3, 10, 3), dtype=np.uint8),
             color=(10, 200, 20),
             alpha=1.0, size=1,
@@ -934,7 +934,7 @@ class TestLineString(unittest.TestCase):
         got_exception = False
         try:
             ls = LineString([(0-5, 5), (-1, 5)])
-            _img = ls.draw_line_on_image(
+            _img = ls.draw_lines_on_image(
                 np.zeros((10, 10, 3), dtype=np.uint8),
                 color=(100, 100, 100),
                 alpha=1.0, size=3,
@@ -951,7 +951,7 @@ class TestLineString(unittest.TestCase):
         got_exception = False
         try:
             ls = LineString([(-1, 5), (11, 5)])
-            _img = ls.draw_line_on_image(
+            _img = ls.draw_lines_on_image(
                 np.zeros((10, 10, 3), dtype=np.uint8),
                 color=(100, 100, 100),
                 alpha=1.0, size=3,
@@ -1047,16 +1047,16 @@ class TestLineString(unittest.TestCase):
 
     def test_draw_on_image(self):
         module_name = "imgaug.augmentables.lines."
-        line_fname = "%sLineString.draw_line_on_image" % (module_name,)
+        line_fname = "%sLineString.draw_lines_on_image" % (module_name,)
         points_fname = "%sLineString.draw_points_on_image" % (module_name,)
         with mock.patch(line_fname, return_value=1) as mock_line, \
                 mock.patch(points_fname, return_value=2) as mock_points:
             ls = LineString([(0, 1), (9, 1)])
             _image = ls.draw_on_image(
                 np.zeros((10, 10, 3), dtype=np.uint8),
-                color=(1, 2, 3), color_line=(4, 5, 6), color_points=(7, 8, 9),
-                alpha=1.0, alpha_line=0.9, alpha_points=0.8,
-                size=1, size_line=3, size_points=5,
+                color=(1, 2, 3), color_lines=(4, 5, 6), color_points=(7, 8, 9),
+                alpha=1.0, alpha_lines=0.9, alpha_points=0.8,
+                size=1, size_lines=3, size_points=5,
                 antialiased=False,
                 raise_if_out_of_image=True)
             assert mock_line.call_count == 1
@@ -1572,17 +1572,17 @@ class TestLineStringsOnImage(unittest.TestCase):
         lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
         img = np.zeros((100, 100, 3), dtype=np.uint8) + 1
         observed = lsoi.draw_on_image(img,
-                                      color_line=(0, 0, 255),
+                                      color_lines=(0, 0, 255),
                                       color_points=(255, 0, 0),
-                                      alpha_line=0.5,
+                                      alpha_lines=0.5,
                                       alpha_points=0.6,
                                       antialiased=False)
         expected = np.copy(img)
         for ls in [ls1, ls2]:
             expected = ls.draw_on_image(expected,
-                                        color_line=(0, 0, 255),
+                                        color_lines=(0, 0, 255),
                                         color_points=(255, 0, 0),
-                                        alpha_line=0.5,
+                                        alpha_lines=0.5,
                                         alpha_points=0.6,
                                         antialiased=False)
         assert np.array_equal(observed, expected)

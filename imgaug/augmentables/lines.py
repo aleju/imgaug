@@ -577,7 +577,7 @@ class LineString(object):
         coords[:, 1] += top - bottom
         return self.copy(coords=coords)
 
-    def draw_mask(self, image_shape, size_line=1, size_points=0,
+    def draw_mask(self, image_shape, size_lines=1, size_points=0,
                   raise_if_out_of_image=False):
         """
         Draw this line segment as a binary image mask.
@@ -587,7 +587,7 @@ class LineString(object):
         image_shape : tuple of int
             The shape of the image onto which to draw the line mask.
 
-        size_line : int, optional
+        size_lines : int, optional
             Thickness of the line segments.
 
         size_points : int, optional
@@ -606,15 +606,15 @@ class LineString(object):
         """
         heatmap = self.draw_heatmap_array(
             image_shape,
-            alpha_line=1.0, alpha_points=1.0,
-            size_line=size_line, size_points=size_points,
+            alpha_lines=1.0, alpha_points=1.0,
+            size_lines=size_lines, size_points=size_points,
             antialiased=False,
             raise_if_out_of_image=raise_if_out_of_image)
         return heatmap > 0.5
 
-    def draw_line_heatmap_array(self, image_shape, alpha=1.0,
-                                size=1, antialiased=True,
-                                raise_if_out_of_image=False):
+    def draw_lines_heatmap_array(self, image_shape, alpha=1.0,
+                                 size=1, antialiased=True,
+                                 raise_if_out_of_image=False):
         """
         Draw the line segments of the line string as a heatmap array.
 
@@ -650,7 +650,7 @@ class LineString(object):
             "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
                 image_shape,))
 
-        arr = self.draw_line_on_image(
+        arr = self.draw_lines_on_image(
             np.zeros(image_shape, dtype=np.uint8),
             color=255, alpha=alpha, size=size,
             antialiased=antialiased,
@@ -699,8 +699,8 @@ class LineString(object):
         )
         return arr.astype(np.float32) / 255.0
 
-    def draw_heatmap_array(self, image_shape, alpha_line=1.0, alpha_points=1.0,
-                           size_line=1, size_points=0, antialiased=True,
+    def draw_heatmap_array(self, image_shape, alpha_lines=1.0, alpha_points=1.0,
+                           size_lines=1, size_points=0, antialiased=True,
                            raise_if_out_of_image=False):
         """
         Draw the line segments and points of the line string as a heatmap array.
@@ -710,7 +710,7 @@ class LineString(object):
         image_shape : tuple of int
             The shape of the image onto which to draw the line mask.
 
-        alpha_line : float, optional
+        alpha_lines : float, optional
             Opacity of the line string. Higher values denote a more visible
             line string.
 
@@ -718,7 +718,7 @@ class LineString(object):
             Opacity of the line string points. Higher values denote a more
             visible points.
 
-        size_line : int, optional
+        size_lines : int, optional
             Thickness of the line segments.
 
         size_points : int, optional
@@ -740,14 +740,14 @@ class LineString(object):
             interval ``[0.0, 1.0]``.
 
         """
-        heatmap_line = self.draw_line_heatmap_array(
+        heatmap_lines = self.draw_lines_heatmap_array(
             image_shape,
-            alpha=alpha_line,
-            size=size_line,
+            alpha=alpha_lines,
+            size=size_lines,
             antialiased=antialiased,
             raise_if_out_of_image=raise_if_out_of_image)
         if size_points <= 0:
-            return heatmap_line
+            return heatmap_lines
 
         heatmap_points = self.draw_points_heatmap_array(
             image_shape,
@@ -755,15 +755,15 @@ class LineString(object):
             size=size_points,
             raise_if_out_of_image=raise_if_out_of_image)
 
-        heatmap = np.dstack([heatmap_line, heatmap_points])
+        heatmap = np.dstack([heatmap_lines, heatmap_points])
         return np.max(heatmap, axis=2)
 
     # TODO only draw line on image of size BB around line, then paste into full
     #      sized image
-    def draw_line_on_image(self, image, color=(0, 255, 0),
-                           alpha=1.0, size=3,
-                           antialiased=True,
-                           raise_if_out_of_image=False):
+    def draw_lines_on_image(self, image, color=(0, 255, 0),
+                            alpha=1.0, size=3,
+                            antialiased=True,
+                            raise_if_out_of_image=False):
         """
         Draw the line segments of the line string on a given image.
 
@@ -939,9 +939,9 @@ class LineString(object):
         return image
 
     def draw_on_image(self, image,
-                      color=(0, 255, 0), color_line=None, color_points=None,
-                      alpha=1.0, alpha_line=None, alpha_points=None,
-                      size=1, size_line=None, size_points=None,
+                      color=(0, 255, 0), color_lines=None, color_points=None,
+                      alpha=1.0, alpha_lines=None, alpha_points=None,
+                      size=1, size_lines=None, size_points=None,
                       antialiased=True,
                       raise_if_out_of_image=False):
         """
@@ -957,7 +957,7 @@ class LineString(object):
             The color of the line and points are derived from this value,
             unless they are set.
 
-        color_line : None or iterable of int
+        color_lines : None or iterable of int
             Color to use for the line segments as RGB, i.e. three values.
             If ``None``, this value is derived from `color`.
 
@@ -971,7 +971,7 @@ class LineString(object):
             The alphas of the line and points are derived from this value,
             unless they are set.
 
-        alpha_line : None or float, optional
+        alpha_lines : None or float, optional
             Opacity of the line string. Higher values denote more visible
             line string.
             If ``None``, this value is derived from `alpha`.
@@ -986,7 +986,7 @@ class LineString(object):
             The sizes of the line and points are derived from this value,
             unless they are set.
 
-        size_line : None or int, optional
+        size_lines : None or int, optional
             Thickness of the line segments.
             If ``None``, this value is derived from `size`.
 
@@ -1013,22 +1013,22 @@ class LineString(object):
         assert alpha is not None
         assert size is not None
 
-        color_line = color_line if color_line is not None \
+        color_lines = color_lines if color_lines is not None \
             else np.float32(color)
         color_points = color_points if color_points is not None \
             else np.float32(color) * 0.5
 
-        alpha_line = alpha_line if alpha_line is not None \
+        alpha_lines = alpha_lines if alpha_lines is not None \
             else np.float32(alpha)
         alpha_points = alpha_points if alpha_points is not None \
             else np.float32(alpha)
 
-        size_line = size_line if size_line is not None else size
+        size_lines = size_lines if size_lines is not None else size
         size_points = size_points if size_points is not None else size * 3
 
-        image = self.draw_line_on_image(
-            image, color=np.array(color_line).astype(np.uint8),
-            alpha=alpha_line, size=size_line,
+        image = self.draw_lines_on_image(
+            image, color=np.array(color_lines).astype(np.uint8),
+            alpha=alpha_lines, size=size_lines,
             antialiased=antialiased,
             raise_if_out_of_image=raise_if_out_of_image)
 
@@ -1125,7 +1125,7 @@ class LineString(object):
             return bb.extract_from_image(image, pad=pad, pad_max=pad_max,
                                          prevent_zero_size=prevent_zero_size)
 
-        heatmap = self.draw_line_heatmap_array(
+        heatmap = self.draw_lines_heatmap_array(
             image.shape[0:2], alpha=1.0, size=size, antialiased=antialiased)
         if image.ndim == 3:
             heatmap = np.atleast_3d(heatmap)
@@ -1238,13 +1238,13 @@ class LineString(object):
         from .polys import Polygon
         return Polygon(self.coords, label=self.label)
 
-    def to_heatmap(self, image_shape, size_line=1, size_points=0,
+    def to_heatmap(self, image_shape, size_lines=1, size_points=0,
                    antialiased=True, raise_if_out_of_image=False):
         """
         Generate a heatmap object from the line string.
 
         This is similar to
-        :func:`imgaug.augmentables.lines.LineString.draw_line_heatmap_array`
+        :func:`imgaug.augmentables.lines.LineString.draw_lines_heatmap_array`
         executed with ``alpha=1.0``. The result is wrapped in a
         ``HeatmapsOnImage`` object instead of just an array.
         No points are drawn.
@@ -1254,7 +1254,7 @@ class LineString(object):
         image_shape : tuple of int
             The shape of the image onto which to draw the line mask.
 
-        size_line : int, optional
+        size_lines : int, optional
             Thickness of the line.
 
         size_points : int, optional
@@ -1277,13 +1277,13 @@ class LineString(object):
         from .heatmaps import HeatmapsOnImage
         return HeatmapsOnImage(
             self.draw_heatmap_array(
-                image_shape, size_line=size_line, size_points=size_points,
+                image_shape, size_lines=size_lines, size_points=size_points,
                 antialiased=antialiased,
                 raise_if_out_of_image=raise_if_out_of_image),
             shape=image_shape
         )
 
-    def to_segmentation_map(self, image_shape, size_line=1, size_points=0,
+    def to_segmentation_map(self, image_shape, size_lines=1, size_points=0,
                             raise_if_out_of_image=False):
         """
         Generate a segmentation map object from the line string.
@@ -1298,7 +1298,7 @@ class LineString(object):
         image_shape : tuple of int
             The shape of the image onto which to draw the line mask.
 
-        size_line : int, optional
+        size_lines : int, optional
             Thickness of the line.
 
         size_points : int, optional
@@ -1318,7 +1318,7 @@ class LineString(object):
         from .segmaps import SegmentationMapOnImage
         return SegmentationMapOnImage(
             self.draw_mask(
-                image_shape, size_line=size_line, size_points=size_points,
+                image_shape, size_lines=size_lines, size_points=size_points,
                 raise_if_out_of_image=raise_if_out_of_image),
             shape=image_shape
         )
@@ -1606,9 +1606,9 @@ class LineStringsOnImage(object):
                 for ls in self.line_strings]
 
     def draw_on_image(self, image,
-                      color=(0, 255, 0), color_line=None, color_points=None,
-                      alpha=1.0, alpha_line=None, alpha_points=None,
-                      size=1, size_line=None, size_points=None,
+                      color=(0, 255, 0), color_lines=None, color_points=None,
+                      alpha=1.0, alpha_lines=None, alpha_points=None,
+                      size=1, size_lines=None, size_points=None,
                       antialiased=True,
                       raise_if_out_of_image=False):
         """
@@ -1624,7 +1624,7 @@ class LineStringsOnImage(object):
             The color of the lines and points are derived from this value,
             unless they are set.
 
-        color_line : None or iterable of int
+        color_lines : None or iterable of int
             Color to use for the line segments as RGB, i.e. three values.
             If ``None``, this value is derived from `color`.
 
@@ -1638,7 +1638,7 @@ class LineStringsOnImage(object):
             The alphas of the line and points are derived from this value,
             unless they are set.
 
-        alpha_line : None or float, optional
+        alpha_lines : None or float, optional
             Opacity of the line strings. Higher values denote more visible
             line string.
             If ``None``, this value is derived from `alpha`.
@@ -1653,7 +1653,7 @@ class LineStringsOnImage(object):
             The sizes of the line and points are derived from this value,
             unless they are set.
 
-        size_line : None or int, optional
+        size_lines : None or int, optional
             Thickness of the line segments.
             If ``None``, this value is derived from `size`.
 
@@ -1680,9 +1680,9 @@ class LineStringsOnImage(object):
         for ls in self.line_strings:
             image = ls.draw_on_image(
                 image,
-                color=color, color_line=color_line, color_points=color_points,
-                alpha=alpha, alpha_line=alpha_line, alpha_points=alpha_points,
-                size=size, size_line=size_line, size_points=size_points,
+                color=color, color_lines=color_lines, color_points=color_points,
+                alpha=alpha, alpha_lines=alpha_lines, alpha_points=alpha_points,
+                size=size, size_lines=size_lines, size_points=size_points,
                 antialiased=antialiased,
                 raise_if_out_of_image=raise_if_out_of_image
             )
