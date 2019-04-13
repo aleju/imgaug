@@ -86,6 +86,7 @@ It converts a set of input images into a new, much larger set of slightly altere
   * Keypoints/Landmarks (int or float coordinates)
   * Bounding Boxes (int or float coordinates)
   * Polygons (int or float coordinates) (Beta)
+  * LineStrings (int or float coordinates) (Beta)
   * Can augment all of the above automatically with the same sampled values. E.g. rotate both images and the segmentation maps on them by the same random value sampled from `uniform(0°, 30°)`.
   * Native support for heatmaps and segmentation maps that are smaller than their corresponding images.
 * Define flexible stochastic ranges for each augmentation parameter.
@@ -108,6 +109,7 @@ It converts a set of input images into a new, much larger set of slightly altere
     or working with [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
     [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
     [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
+    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
     [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
     [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb)
 
