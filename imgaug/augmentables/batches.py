@@ -106,7 +106,7 @@ class UnnormalizedBatch(object):
                imgaug.augmentables.kps.Keypoint
         The polygons to augment.
         This is similar to the `keypoints` parameter. However, each polygon
-        may be made up of several (x,y) coordinates (three or more are
+        may be made up of several ``(x,y)`` coordinates (three or more are
         required for valid polygons).
         The following datatypes will be interpreted as a single polygon on a
         single image:
@@ -130,6 +130,26 @@ class UnnormalizedBatch(object):
           * ``iterable of iterable of iterable of tuple of number``
           * ``iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint``
 
+    line_strings : None  \
+               or (N,#lines,#points,2) ndarray \
+               or imgaug.augmentables.lines.LineString \
+               or imgaug.augmentables.lines.LineStringOnImage \
+               or iterable of (#lines,#points,2) ndarray \
+               or iterable of tuple of number \
+               or iterable of imgaug.augmentables.kps.Keypoint \
+               or iterable of imgaug.augmentables.lines.LineString \
+               or iterable of imgaug.augmentables.lines.LineStringOnImage \
+               or iterable of iterable of (#points,2) ndarray \
+               or iterable of iterable of tuple of number \
+               or iterable of iterable of imgaug.augmentables.kps.Keypoint \
+               or iterable of iterable of imgaug.augmentables.polys.LineString \
+               or iterable of iterable of iterable of tuple of number \
+               or iterable of iterable of iterable of tuple of \
+               imgaug.augmentables.kps.Keypoint
+        The line strings to augment.
+        See `polygons` for more details as polygons follow a similar
+        structure to line strings.
+
     data
         Additional data that is saved in the batch and may be read out
         after augmentation. This could e.g. contain filepaths to each image
@@ -140,7 +160,7 @@ class UnnormalizedBatch(object):
     """
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
                  keypoints=None, bounding_boxes=None, polygons=None,
-                 data=None):
+                 line_strings=None, data=None):
         self.images_unaug = images
         self.images_aug = None
         self.heatmaps_unaug = heatmaps
@@ -153,6 +173,8 @@ class UnnormalizedBatch(object):
         self.bounding_boxes_aug = None
         self.polygons_unaug = polygons
         self.polygons_aug = None
+        self.line_strings_unaug = line_strings
+        self.line_strings_aug = None
         self.data = data
 
     def to_normalized_batch(self):
@@ -195,6 +217,8 @@ class UnnormalizedBatch(object):
                 self.bounding_boxes_unaug, shapes),
             polygons=nlib.normalize_polygons(
                 self.polygons_unaug, shapes),
+            line_strings=nlib.normalize_line_strings(
+                self.line_strings_unaug, shapes),
             data=self.data
         )
 
@@ -231,6 +255,7 @@ class UnnormalizedBatch(object):
             keypoints=self.keypoints_unaug,
             bounding_boxes=self.bounding_boxes_unaug,
             polygons=self.polygons_unaug,
+            line_strings=self.line_strings_unaug,
             data=batch_aug_norm.data
         )
 
@@ -246,6 +271,8 @@ class UnnormalizedBatch(object):
             batch_aug_norm.bounding_boxes_aug, self.bounding_boxes_unaug)
         batch.polygons_aug = nlib.invert_normalize_polygons(
             batch_aug_norm.polygons_aug, self.polygons_unaug)
+        batch.line_strings_aug = nlib.invert_normalize_line_strings(
+            batch_aug_norm.line_strings_aug, self.line_strings_unaug)
 
         return batch
 
@@ -269,11 +296,15 @@ class Batch(object):
     keypoints : None or list of imgaug.augmentables.kps.KeypointOnImage
         The keypoints to augment.
 
-    bounding_boxes : None or list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+    bounding_boxes : None \
+                     or list of imgaug.augmentables.bbs.BoundingBoxesOnImage
         The bounding boxes to augment.
 
     polygons : None or list of imgaug.augmentables.polys.PolygonsOnImage
         The polygons to augment.
+
+    line_strings : None or list of imgaug.augmentables.lines.LineStringsOnImage
+        The line strings to augment.
 
     data
         Additional data that is saved in the batch and may be read out
@@ -285,7 +316,7 @@ class Batch(object):
     """
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
                  keypoints=None, bounding_boxes=None, polygons=None,
-                 data=None):
+                 line_strings=None, data=None):
         self.images_unaug = images
         self.images_aug = None
         self.heatmaps_unaug = heatmaps
@@ -298,6 +329,8 @@ class Batch(object):
         self.bounding_boxes_aug = None
         self.polygons_unaug = polygons
         self.polygons_aug = None
+        self.line_strings_unaug = line_strings
+        self.line_strings_aug = None
         self.data = data
 
     @property
@@ -354,24 +387,34 @@ class Batch(object):
                  bounding_boxes_unaug=DEFAULT,
                  bounding_boxes_aug=DEFAULT,
                  polygons_unaug=DEFAULT,
-                 polygons_aug=DEFAULT):
+                 polygons_aug=DEFAULT,
+                 line_strings_unaug=DEFAULT,
+                 line_strings_aug=DEFAULT):
         def _copy_optional(self_attr, arg):
             return self._deepcopy_obj(arg if arg is not DEFAULT else self_attr)
 
         batch = Batch(
             images=_copy_optional(self.images_unaug, images_unaug),
             heatmaps=_copy_optional(self.heatmaps_unaug, heatmaps_unaug),
-            segmentation_maps=_copy_optional(self.segmentation_maps_unaug, segmentation_maps_unaug),
+            segmentation_maps=_copy_optional(self.segmentation_maps_unaug,
+                                             segmentation_maps_unaug),
             keypoints=_copy_optional(self.keypoints_unaug, keypoints_unaug),
-            bounding_boxes=_copy_optional(self.bounding_boxes_unaug, bounding_boxes_unaug),
+            bounding_boxes=_copy_optional(self.bounding_boxes_unaug,
+                                          bounding_boxes_unaug),
             polygons=_copy_optional(self.polygons_unaug, polygons_unaug),
+            line_strings=_copy_optional(self.line_strings_unaug,
+                                        line_strings_unaug),
             data=copy.deepcopy(self.data)
         )
         batch.images_aug = _copy_optional(self.images_aug, images_aug)
         batch.heatmaps_aug = _copy_optional(self.heatmaps_aug, heatmaps_aug)
-        batch.segmentation_maps_aug = _copy_optional(self.segmentation_maps_aug, segmentation_maps_aug)
+        batch.segmentation_maps_aug = _copy_optional(self.segmentation_maps_aug,
+                                                     segmentation_maps_aug)
         batch.keypoints_aug = _copy_optional(self.keypoints_aug, keypoints_aug)
-        batch.bounding_boxes_aug = _copy_optional(self.bounding_boxes_aug, bounding_boxes_aug)
+        batch.bounding_boxes_aug = _copy_optional(self.bounding_boxes_aug,
+                                                  bounding_boxes_aug)
         batch.polygons_aug = _copy_optional(self.polygons_aug, polygons_aug)
+        batch.line_strings_aug = _copy_optional(self.line_strings_aug,
+                                                line_strings_aug)
 
         return batch

@@ -1098,11 +1098,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         This is the corresponding function to ``augment_keypoints()``, just for
         polygons.
-        Usually you will want to call ``augment_images()`` with a list of images,
-        e.g. ``augment_images([A, B, C])`` and then ``augment_polygons()``
-        with the corresponding list of polygons on these images, e.g.
-        ``augment_polygons([Apoly, Bpoly, Cpoly])``, where ``Abb`` are the
-        bounding boxes on image ``A``.
+        Usually you will want to call ``augment_images()`` with a list of
+        images, e.g. ``augment_images([A, B, C])`` and then
+        ``augment_polygons()`` with the corresponding list of polygons on these
+        images, e.g. ``augment_polygons([A_poly, B_poly, C_poly])``, where
+        ``A_poly`` are the polygons on image ``A``.
 
         Make sure to first convert the augmenter(s) to deterministic states
         before augmenting images and their corresponding polygons,
@@ -1150,6 +1150,148 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             Augmented polygons.
 
         """
+        from imgaug.augmentables.polys import PolygonsOnImage
+
+        def _subaugment(polygons_on_images_, random_state_, parents_, hooks_):
+            return self._augment_polygons(
+                polygons_on_images_,
+                random_state=random_state_,
+                parents=parents_,
+                hooks=hooks_
+            )
+
+        return self._augment_coord_augables(
+            cls_expected=PolygonsOnImage,
+            subaugment_func=_subaugment,
+            augables_ois=polygons_on_images,
+            parents=parents,
+            hooks=hooks
+        )
+
+    def augment_line_strings(self, line_strings_on_images, parents=None,
+                             hooks=None):
+        """
+        Augment line strings.
+
+        This is the corresponding function to ``augment_keypoints()``, just for
+        line strings.
+        Usually you will want to call ``augment_images()`` with a list of
+        images, e.g. ``augment_images([A, B, C])`` and then
+        ``augment_line_strings()``
+        with the corresponding list of line strings on these images, e.g.
+        ``augment_line_strings([A_line, B_line, C_line])``, where ``A_line``
+        are the line strings on image ``A``.
+
+        Make sure to first convert the augmenter(s) to deterministic states
+        before augmenting images and their corresponding line strings,
+        e.g. by
+
+        >>> import imgaug as ia
+        >>> import imgaug.augmenters as iaa
+        >>> A = B = C = np.ones((10, 10), dtype=np.uint8)
+        >>> A_line = B_line = C_line = ia.LineStringsOnImage(
+        >>>     [ia.LineString([(0, 0), (1, 0), (1, 1), (0, 1)])],
+        >>>     shape=(10, 10))
+        >>> seq = iaa.Fliplr(0.5)
+        >>> seq_det = seq.to_deterministic()
+        >>> imgs_aug = seq_det.augment_images([A, B, C])
+        >>> lines_aug = seq_det.augment_line_strings([A_line, B_line, C_line])
+
+        Otherwise, different random values will be sampled for the image
+        and line string augmentations, resulting in different augmentations
+        (e.g. images might be rotated by ``30deg`` and line strings by
+        ``-10deg``). Also make sure to call ``to_deterministic()`` again for
+        each new batch, otherwise you would augment all batches in the same
+        way.
+
+        Parameters
+        ----------
+        line_strings_on_images : imgaug.augmentables.lines.LineStringsOnImage \
+                                 or list of imgaug.augmentables.lines.LineStringsOnImage
+            The line strings to augment.
+            Expected is an instance of LineStringsOnImage or a list of
+            LineStringsOnImage objects, with each such object containing the
+            line strings of a single image.
+
+        parents : None or list of imgaug.augmenters.meta.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
+
+        hooks : None or imgaug.HooksKeypoints, optional
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage \
+        or list of imgaug.augmentables.lines.LineStringsOnImage
+            Augmented line strings.
+
+        """
+        from imgaug.augmentables.lines import LineStringsOnImage
+
+        def _subaugment(line_strings_on_images_, random_state_, parents_, hooks_):
+            return self._augment_line_strings(
+                line_strings_on_images_,
+                random_state=random_state_,
+                parents=parents_,
+                hooks=hooks_
+            )
+
+        return self._augment_coord_augables(
+            cls_expected=LineStringsOnImage,
+            subaugment_func=_subaugment,
+            augables_ois=line_strings_on_images,
+            parents=parents,
+            hooks=hooks
+        )
+
+    def _augment_coord_augables(self, cls_expected, subaugment_func,
+                                augables_ois, parents=None,
+                                hooks=None):
+        """
+        Augment coordinate-based augmentables.
+
+        This is an abstract function called by keypoints, bounding boxes,
+        polygons and line strings.
+        TODO keypoints, bounding boxes currently missing -- add them
+
+        Parameters
+        ----------
+        cls_expected : class
+            Class type that is expected. `augmentables_ois` will be
+            verified to use that class.
+
+        subaugment_func : callable
+            Function that will be called to actually augment the data.
+
+        augables_ois : imgaug.augmentables.polys.PolygonsOnImage \
+                       or imgaug.augmentables.lines.LineStringsOnImage \
+                       or list of imgaug.augmentables.lines.LineStringsOnImage \
+                       or list of imgaug.augmentables.polys.PolygonsOnImage
+            The augmentables to augment. `augables_ois` is the abbreviation for
+            "augmentables_on_images". Expected are the augmentables on a
+            single image (single instance) or 1+ images (list of instances).
+
+        parents : None or list of imgaug.augmenters.meta.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as None.
+            It is set automatically for child augmenters.
+
+        hooks : None or imgaug.HooksKeypoints, optional
+            HooksKeypoints object to dynamically interfere with the
+            augmentation process.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.PolygonsOnImage \
+        or imgaug.augmentables.lines.LineStringsOnImage \
+        or list of imgaug.augmentables.polys.PolygonsOnImage \
+        or list of imgaug.augmentables.lines.LineStringsOnImage
+            Augmented augmentables.
+
+        """
         if self.deterministic:
             state_orig = self.random_state.get_state()
 
@@ -1157,53 +1299,53 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             parents = []
 
         input_was_single_instance = False
-        if isinstance(polygons_on_images, ia.PolygonsOnImage):
+        if isinstance(augables_ois, cls_expected):
             input_was_single_instance = True
-            polygons_on_images = [polygons_on_images]
+            augables_ois = [augables_ois]
 
-        ia.do_assert(ia.is_iterable(polygons_on_images))
-        ia.do_assert(all([isinstance(polygons_on_image, ia.PolygonsOnImage)
-                          for polygons_on_image in polygons_on_images]))
+        ia.do_assert(ia.is_iterable(augables_ois))
+        ia.do_assert(all([isinstance(augable_oi, cls_expected)
+                          for augable_oi in augables_ois]))
 
         # copy, but only if topmost call or hooks are provided
-        polygons_on_images_copy = polygons_on_images
+        augables_ois_copy = augables_ois
         if len(parents) == 0 or hooks is not None:
-            polygons_on_images_copy = [polygons_on_image.deepcopy()
-                                       for polygons_on_image
-                                       in polygons_on_images]
+            augables_ois_copy = [augable_oi.deepcopy()
+                                 for augable_oi
+                                 in augables_ois]
 
         if hooks is not None:
-            polygons_on_images_copy = hooks.preprocess(
-                polygons_on_images_copy, augmenter=self, parents=parents)
+            augables_ois_copy = hooks.preprocess(
+                augables_ois_copy, augmenter=self, parents=parents)
 
-        polygons_on_images_result = polygons_on_images_copy
+        augables_ois_result = augables_ois_copy
         is_activated = (hooks is None and self.activated)
         is_activated_hooks = (is_activated is False) and (
             hooks is not None
-            and hooks.is_activated(polygons_on_images_copy,
+            and hooks.is_activated(augables_ois_copy,
                                    augmenter=self, parents=parents,
                                    default=self.activated)
         )
         if is_activated or is_activated_hooks:
-            if len(polygons_on_images) > 0:
-                polygons_on_images_result = self._augment_polygons(
-                    polygons_on_images_copy,
-                    random_state=ia.copy_random_state(self.random_state),
-                    parents=parents,
-                    hooks=hooks
+            if len(augables_ois) > 0:
+                augables_ois_result = subaugment_func(
+                    augables_ois_copy,
+                    ia.copy_random_state(self.random_state),
+                    parents,
+                    hooks
                 )
                 ia.forward_random_state(self.random_state)
 
         if hooks is not None:
-            polygons_on_images_result = hooks.postprocess(
-                polygons_on_images_result, augmenter=self, parents=parents)
+            augables_ois_result = hooks.postprocess(
+                augables_ois_result, augmenter=self, parents=parents)
 
         if self.deterministic:
             self.random_state.set_state(state_orig)
 
         if input_was_single_instance:
-            return polygons_on_images_result[0]
-        return polygons_on_images_result
+            return augables_ois_result[0]
+        return augables_ois_result
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
@@ -1308,6 +1450,76 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 polys_aug.append(poly_aug)
                 counter += count
             result.append(ia.PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
+
+        return result
+
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        """
+        Augment line strings on images.
+
+        This is the internal version of ``augment_line_strings()``.
+        It is called from ``augment_line_strings()`` and should usually not be
+        called directly.
+        This method may transform the line strings in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
+            Line strings to augment. They may be changed in-place.
+
+        random_state : numpy.random.RandomState
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
+
+        hooks : imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
+
+        Returns
+        ----------
+        list of imgaug.augmentables.lines.LineStringsOnImage
+            The augmented line strings.
+
+        """
+        # TODO this is very similar to the polygon augmentation method,
+        #      merge somehow
+        # TODO get rid of this deferred import:
+        from imgaug.augmentables.lines import LineStringsOnImage
+
+        kps_ois = []
+        kp_counts = []
+        for ls_oi in line_strings_on_images:
+            kps = []
+            kp_counts_image = []
+            for ls in ls_oi.line_strings:
+                ls_kps = ls.to_keypoints()
+                kps.extend(ls_kps)
+                kp_counts_image.append(len(ls_kps))
+            kps_ois.append(ia.KeypointsOnImage(kps, shape=ls_oi.shape))
+            kp_counts.append(kp_counts_image)
+
+        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
+                                              hooks)
+
+        result = []
+        gen = enumerate(zip(kps_ois_aug, kp_counts))
+        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
+            lss_aug = []
+            counter = 0
+            for i, count in enumerate(kp_counts_image):
+                ls_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
+                ls_old = line_strings_on_images[img_idx].line_strings[i]
+                ls_aug = ls_old.deepcopy(
+                    coords=[(kp.x, kp.y) for kp in ls_kps_aug])
+                lss_aug.append(ls_aug)
+                counter += count
+            result.append(LineStringsOnImage(lss_aug, shape=kps_oi_aug.shape))
 
         return result
 
@@ -1474,6 +1686,26 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
               * ``iterable of iterable of iterable of tuple of number``
               * ``iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint``
 
+        line_strings : None \
+            or (N,#lines,#points,2) ndarray \
+            or imgaug.augmentables.lines.LineString \
+            or imgaug.augmentables.lines.LineStringOnImage \
+            or iterable of (#polys,#points,2) ndarray \
+            or iterable of tuple of number \
+            or iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of imgaug.augmentables.lines.LineString \
+            or iterable of imgaug.augmentables.lines.LineStringOnImage \
+            or iterable of iterable of (#points,2) ndarray \
+            or iterable of iterable of tuple of number \
+            or iterable of iterable of imgaug.augmentables.kps.Keypoint \
+            or iterable of iterable of imgaug.augmentables.lines.LineString \
+            or iterable of iterable of iterable of tuple of number \
+            or iterable of iterable of iterable of tuple of \
+            imgaug.augmentables.kps.Keypoint, \
+            optional
+            The line strings to augment.
+            See `polygons`, which behaves similarly.
+
         return_batch : bool, optional
             Whether to return an instance of
             `imgaug.augmentables.batches.UnnormalizedBatch`. If the python
@@ -1553,7 +1785,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         )
 
         expected_keys = ["images", "heatmaps", "segmentation_maps",
-                         "keypoints", "bounding_boxes", "polygons"]
+                         "keypoints", "bounding_boxes", "polygons",
+                         "line_strings"]
         expected_keys_call = ["image"] + expected_keys
 
         # at least one augmentable provided?
@@ -1619,7 +1852,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             segmentation_maps=kwargs.get("segmentation_maps", None),
             keypoints=kwargs.get("keypoints", None),
             bounding_boxes=kwargs.get("bounding_boxes", None),
-            polygons=kwargs.get("polygons", None)
+            polygons=kwargs.get("polygons", None),
+            line_strings=kwargs.get("line_strings", None)
         )
 
         batch_aug = self.augment_batch(batch, hooks=hooks)

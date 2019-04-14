@@ -258,6 +258,36 @@ def is_generator(val):
     return isinstance(val, types.GeneratorType)
 
 
+def flatten(nested_iterable):
+    """
+    Flattens arbitrarily nested lists/tuples.
+
+    Code partially taken from https://stackoverflow.com/a/10824420.
+
+    Parameters
+    ----------
+    nested_iterable
+        A list or tuple of arbitrarily nested values.
+
+    Yields
+    ------
+    any
+        Non-list and non-tuple values in `nested_iterable`.
+
+    """
+    # don't just check if something is iterable here, because then strings
+    # and arrays will be split into their characters and components
+    if not isinstance(nested_iterable, (list, tuple)):
+        yield nested_iterable
+    else:
+        for i in nested_iterable:
+            if isinstance(i, (list, tuple)):
+                for j in flatten(i):
+                    yield j
+            else:
+                yield i
+
+
 def caller_name():
     """
     Returns the name of the caller, e.g. a function.
@@ -895,25 +925,25 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
     x1 : number
         x coordinate of the first point on line 1. (The lines extends beyond this point.)
 
-    y1 : number:
+    y1 : number
         y coordinate of the first point on line 1. (The lines extends beyond this point.)
 
     x2 : number
         x coordinate of the second point on line 1. (The lines extends beyond this point.)
 
-    y2 : number:
+    y2 : number
         y coordinate of the second point on line 1. (The lines extends beyond this point.)
 
     x3 : number
         x coordinate of the first point on line 2. (The lines extends beyond this point.)
 
-    y3 : number:
+    y3 : number
         y coordinate of the first point on line 2. (The lines extends beyond this point.)
 
     x4 : number
         x coordinate of the second point on line 2. (The lines extends beyond this point.)
 
-    y4 : number:
+    y4 : number
         y coordinate of the second point on line 2. (The lines extends beyond this point.)
 
     Returns

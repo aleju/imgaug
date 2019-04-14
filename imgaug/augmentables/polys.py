@@ -11,6 +11,7 @@ import skimage.measure
 import collections
 
 from .. import imgaug as ia
+from .utils import normalize_shape, interpolate_points
 
 
 # TODO somehow merge with BoundingBox
@@ -212,13 +213,11 @@ class Polygon(object):
             Polygon object with new coordinates.
 
         """
-        # TODO get rid of this deferred import
-        from imgaug.augmentables.kps import Keypoint
-
         if from_shape[0:2] == to_shape[0:2]:
             return self.copy()
-        exterior = [Keypoint(x=x, y=y).project(from_shape, to_shape) for x, y in self.exterior]
-        return self.copy(exterior=exterior)
+        ls_proj = self.to_line_string(closed=False).project(
+            from_shape, to_shape)
+        return self.copy(exterior=ls_proj.coords)
 
     def find_closest_point_index(self, x, y, return_distance=False):
         """
@@ -258,17 +257,6 @@ class Polygon(object):
         if return_distance:
             return closest_idx, distances[closest_idx]
         return closest_idx
-
-    def _compute_inside_image_point_mask(self, image):
-        if isinstance(image, tuple):
-            shape = image
-        else:
-            shape = image.shape
-        h, w = shape[0:2]
-        return np.logical_and(
-            np.logical_and(0 <= self.exterior[:, 0], self.exterior[:, 0] < w),
-            np.logical_and(0 <= self.exterior[:, 1], self.exterior[:, 1] < h)
-        )
 
     # TODO keep this method? it is almost an alias for is_out_of_image()
     def is_fully_within_image(self, image):
@@ -312,9 +300,6 @@ class Polygon(object):
         """
         return not self.is_out_of_image(image, fully=True, partly=False)
 
-    # FIXME this is not completely correct as it only evaluates corner points
-    #       and a polygon can still have parts of if inside the image, even when
-    #       all points are outside of it
     def is_out_of_image(self, image, fully=True, partly=False):
         """
         Estimate whether the polygon is partially or fully outside of the image area.
@@ -327,7 +312,7 @@ class Polygon(object):
             If a tuple, it is assumed to represent the image shape and must contain at least two integers.
 
         fully : bool, optional
-            Whether to return True if the polygon is fully outside fo the image area.
+            Whether to return True if the polygon is fully outside of the image area.
 
         partly : bool, optional
             Whether to return True if the polygon is at least partially outside fo the image area.
@@ -339,16 +324,12 @@ class Polygon(object):
             on defined parameters. False otherwise.
 
         """
+        # TODO this is inconsistent with line strings, which return a default
+        #      value in these cases
         if len(self.exterior) == 0:
             raise Exception("Cannot determine whether the polygon is inside the image, because it contains no points.")
-        inside = self._compute_inside_image_point_mask(image)
-        nb_inside = sum(inside)
-        if nb_inside == len(inside):
-            return False
-        elif nb_inside > 0:
-            return partly
-        else:
-            return fully
+        ls = self.to_line_string()
+        return ls.is_out_of_image(image, fully=fully, partly=partly)
 
     @ia.deprecated(alt_func="Polygon.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "
@@ -445,23 +426,19 @@ class Polygon(object):
             Shifted polygon.
 
         """
-        top = top if top is not None else 0
-        right = right if right is not None else 0
-        bottom = bottom if bottom is not None else 0
-        left = left if left is not None else 0
-        exterior = np.copy(self.exterior)
-        exterior[:, 0] += (left - right)
-        exterior[:, 1] += (top - bottom)
-        return self.deepcopy(exterior=exterior)
+        ls_shifted = self.to_line_string(closed=False).shift(
+            top=top, right=right, bottom=bottom, left=left)
+        return self.copy(exterior=ls_shifted.coords)
 
-    # TODO add perimeter thickness
+    # TODO separate this into draw_face_on_image() and draw_border_on_image()
+    # TODO add tests for line thickness
     def draw_on_image(self,
                       image,
-                      color=(0, 255, 0), color_fill=None,
-                      color_perimeter=None, color_points=None,
-                      alpha=1.0, alpha_fill=None,
-                      alpha_perimeter=None, alpha_points=None,
-                      size_points=3,
+                      color=(0, 255, 0), color_face=None,
+                      color_lines=None, color_points=None,
+                      alpha=1.0, alpha_face=None,
+                      alpha_lines=None, alpha_points=None,
+                      size=1, size_lines=None, size_points=None,
                       raise_if_out_of_image=False):
         """
         Draw the polygon on an image.
@@ -475,54 +452,63 @@ class Polygon(object):
         color : iterable of int, optional
             The color to use for the whole polygon.
             Must correspond to the channel layout of the image. Usually RGB.
-            The values for `color_fill`, `color_perimeter` and `color_points`
+            The values for `color_face`, `color_lines` and `color_points`
             will be derived from this color if they are set to ``None``.
-            This argument has no effect if `color_fill`, `color_perimeter`
+            This argument has no effect if `color_face`, `color_lines`
             and `color_points` are all set anything other than ``None``.
 
-        color_fill : None or iterable of int, optional
+        color_face : None or iterable of int, optional
             The color to use for the inner polygon area (excluding perimeter).
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 1.0``.
+            If this is ``None``, it will be derived from ``color * 1.0``.
 
-        color_perimeter : None or iterable of int, optional
-            The color to use for the perimeter (aka border) of the polygon.
+        color_lines : None or iterable of int, optional
+            The color to use for the line (aka perimeter/border) of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+            If this is ``None``, it will be derived from ``color * 0.5``.
 
         color_points : None or iterable of int, optional
             The color to use for the corner points of the polygon.
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+            If this is ``None``, it will be derived from ``color * 0.5``.
 
         alpha : float, optional
             The opacity of the whole polygon, where ``1.0`` denotes a completely
             visible polygon and ``0.0`` an invisible one.
-            The values for `alpha_fill`, `alpha_perimeter` and `alpha_points`
+            The values for `alpha_face`, `alpha_lines` and `alpha_points`
             will be derived from this alpha value if they are set to ``None``.
-            This argument has no effect if `alpha_fill`, `alpha_perimeter`
+            This argument has no effect if `alpha_face`, `alpha_lines`
             and `alpha_points` are all set anything other than ``None``.
 
-        alpha_fill : None or number, optional
+        alpha_face : None or number, optional
             The opacity of the polygon's inner area (excluding the perimeter),
             where ``1.0`` denotes a completely visible inner area and ``0.0``
             an invisible one.
-            If this is ``None``, it will be derived from``alpha * 0.5``.
+            If this is ``None``, it will be derived from ``alpha * 0.5``.
 
-        alpha_perimeter : None or number, optional
-            The opacity of the polygon's perimeter (aka border),
-            where ``1.0`` denotes a completely visible perimeter and ``0.0`` an
+        alpha_lines : None or number, optional
+            The opacity of the polygon's line (aka perimeter/border),
+            where ``1.0`` denotes a completely visible line and ``0.0`` an
             invisible one.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
 
         alpha_points : None or number, optional
             The opacity of the polygon's corner points, where ``1.0`` denotes
             completely visible corners and ``0.0`` invisible ones.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
+
+        size : int, optional
+            Size of the polygon.
+            The sizes of the line and points are derived from this value,
+            unless they are set.
+
+        size_lines : None or int, optional
+            Thickness of the polygon's line (aka perimeter/border).
+            If ``None``, this value is derived from `size`.
 
         size_points : int, optional
-            The size of each corner point. If set to ``C``, each corner point
-            will be drawn as a square of size ``C x C``.
+            Size of the points in pixels.
+            If ``None``, this value is derived from ``3 * size``.
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the polygon is fully
@@ -535,44 +521,38 @@ class Polygon(object):
             Image with polygon drawn on it. Result dtype is the same as the input dtype.
 
         """
-        # TODO get rid of this deferred import
-        from imgaug.augmentables.kps import KeypointsOnImage
-
         assert color is not None
         assert alpha is not None
+        assert size is not None
 
-        color_fill = color_fill if color_fill is not None else np.array(color)
-        color_perimeter = color_perimeter if color_perimeter is not None else np.array(color) * 0.5
+        color_face = color_face if color_face is not None else np.array(color)
+        color_lines = color_lines if color_lines is not None else np.array(color) * 0.5
         color_points = color_points if color_points is not None else np.array(color) * 0.5
 
-        alpha_fill = alpha_fill if alpha_fill is not None else alpha * 0.5
-        alpha_perimeter = alpha_perimeter if alpha_perimeter is not None else alpha
+        alpha_face = alpha_face if alpha_face is not None else alpha * 0.5
+        alpha_lines = alpha_lines if alpha_lines is not None else alpha
         alpha_points = alpha_points if alpha_points is not None else alpha
 
-        if alpha_fill < 0.01:
-            alpha_fill = 0
-        elif alpha_fill > 0.99:
-            alpha_fill = 1
+        size_lines = size_lines if size_lines is not None else size
+        size_points = size_points if size_points is not None else size * 3
 
-        if alpha_perimeter < 0.01:
-            alpha_perimeter = 0
-        elif alpha_perimeter > 0.99:
-            alpha_perimeter = 1
+        if image.ndim == 2:
+            assert ia.is_single_number(color_face), (
+                "Got a 2D image. Expected then 'color_face' to be a single "
+                "number, but got %s." % (str(color_face),))
+            color_face = [color_face]
+        elif image.ndim == 3 and ia.is_single_number(color_face):
+            color_face = [color_face] * image.shape[-1]
 
-        if alpha_points < 0.01:
-            alpha_points = 0
-        elif alpha_points > 0.99:
-            alpha_points = 1
-
-        # TODO separate this into draw_face_on_image() and draw_border_on_image()
+        if alpha_face < 0.01:
+            alpha_face = 0
+        elif alpha_face > 0.99:
+            alpha_face = 1
 
         if raise_if_out_of_image and self.is_out_of_image(image):
             raise Exception("Cannot draw polygon %s on image with shape %s." % (
                 str(self), image.shape
             ))
-
-        xx = self.xx_int
-        yy = self.yy_int
 
         # TODO np.clip to image plane if is_fully_within_image(), similar to how it is done for bounding boxes
 
@@ -580,47 +560,31 @@ class Polygon(object):
         # TODO for a rectangular polygon, the face coordinates include the top/left boundary but not the right/bottom
         # boundary. This may be unintuitive when not drawing the boundary. Maybe somehow remove the boundary
         # coordinates from the face coordinates after generating both?
-        params = []
-        if alpha_fill > 0:
-            rr, cc = skimage.draw.polygon(yy, xx, shape=image.shape)
-            params.append(
-                (rr, cc, color_fill, alpha_fill)
-            )
-        if alpha_perimeter > 0:
-            rr, cc = skimage.draw.polygon_perimeter(yy, xx, shape=image.shape)
-            params.append(
-                (rr, cc, color_perimeter, alpha_perimeter)
-            )
-
         input_dtype = image.dtype
         result = image.astype(np.float32)
-
-        c = 0
-        for rr, cc, color_this, alpha_this in params:
-            c += 1
-            color_this = np.float32(color_this)
-
-            # don't have to check here for alpha<=0.01, as then these
-            # parameters wouldn't have been added to params
-            if alpha_this >= 0.99:
-                result[rr, cc, :] = color_this
+        rr, cc = skimage.draw.polygon(self.yy_int, self.xx_int, shape=image.shape)
+        if len(rr) > 0:
+            if alpha_face == 1:
+                result[rr, cc] = np.float32(color_face)
+            elif alpha_face == 0:
+                pass
             else:
-                # TODO replace with blend_alpha()
-                result[rr, cc, :] = (
-                        (1 - alpha_this) * result[rr, cc, :]
-                        + alpha_this * color_this
+                result[rr, cc] = (
+                        (1 - alpha_face) * result[rr, cc, :]
+                        + alpha_face * np.float32(color_face)
                 )
 
-        if alpha_points > 0:
-            kpsoi = KeypointsOnImage.from_coords_array(self.exterior,
-                                                       shape=image.shape)
-            result = kpsoi.draw_on_image(
-                result, color=color_points, alpha=alpha_points,
-                size=size_points, copy=False,
-                raise_if_out_of_image=raise_if_out_of_image)
+        ls_open = self.to_line_string(closed=False)
+        ls_closed = self.to_line_string(closed=True)
+        result = ls_closed.draw_lines_on_image(
+            result, color=color_lines, alpha=alpha_lines,
+            size=size_lines, raise_if_out_of_image=raise_if_out_of_image)
+        result = ls_open.draw_points_on_image(
+            result, color=color_points, alpha=alpha_points,
+            size=size_points, raise_if_out_of_image=raise_if_out_of_image)
 
         if input_dtype.type == np.uint8:
-            result = np.clip(result, 0, 255).astype(input_dtype)  # TODO make clipping more flexible
+            result = np.clip(np.round(result), 0, 255).astype(input_dtype)  # TODO make clipping more flexible
         else:
             result = result.astype(input_dtype)
 
@@ -813,6 +777,31 @@ class Polygon(object):
 
         return [Keypoint(x=point[0], y=point[1]) for point in self.exterior]
 
+    def to_line_string(self, closed=True):
+        """
+        Convert this polygon's `exterior` to a ``LineString`` instance.
+
+        Parameters
+        ----------
+        closed : bool, optional
+            Whether to close the line string, i.e. to add the first point of
+            the `exterior` also as the last point at the end of the line string.
+            This has no effect if the polygon has a single point or zero
+            points.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineString
+            Exterior of the polygon as a line string.
+
+        """
+        from imgaug.augmentables.lines import LineString
+        if not closed or len(self.exterior) <= 1:
+            return LineString(self.exterior, label=self.label)
+        return LineString(
+            np.concatenate([self.exterior, self.exterior[0:1, :]], axis=0),
+            label=self.label)
+
     @staticmethod
     def from_shapely(polygon_shapely, label=None):
         """
@@ -844,133 +833,86 @@ class Polygon(object):
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
 
-    def exterior_almost_equals(self, other_polygon, max_distance=1e-6, interpolate=8):
+    def exterior_almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
         """
-        Estimate whether the geometry of the exterior of this polygon and another polygon are comparable.
+        Estimate if this and other polygon's exterior are almost identical.
 
-        The two exteriors can have different numbers of points, but any point randomly sampled on the exterior
-        of one polygon should be close to the closest point on the exterior of the other polygon.
+        The two exteriors can have different numbers of points, but any point
+        randomly sampled on the exterior of one polygon should be close to the
+        closest point on the exterior of the other polygon.
 
-        Note that this method works approximately. One can come up with polygons with fairly different shapes that
-        will still be estimated as equal by this method. In practice however this should be unlikely to be the case.
-        The probability for something like that goes down as the interpolation parameter is increased.
+        Note that this method works approximately. One can come up with
+        polygons with fairly different shapes that will still be estimated as
+        equal by this method. In practice however this should be unlikely to be
+        the case. The probability for something like that goes down as the
+        interpolation parameter is increased.
 
         Parameters
         ----------
-        other_polygon : imgaug.Polygon or (N,2) ndarray or list of tuple
+        other : imgaug.Polygon or (N,2) ndarray or list of tuple
             The other polygon with which to compare the exterior.
             If this is an ndarray, it is assumed to represent an exterior.
-            It must then have dtype float32 and shape (N,2) with the second dimension denoting xy-coordinates.
+            It must then have dtype ``float32`` and shape ``(N,2)`` with the
+            second dimension denoting xy-coordinates.
             If this is a list of tuples, it is assumed to represent an exterior.
-            Each tuple then must contain exactly two numbers, denoting xy-coordinates.
+            Each tuple then must contain exactly two numbers, denoting
+            xy-coordinates.
 
-        max_distance : number
-            The maximum euclidean distance between a point on one polygon and the closest point on the other polygon.
-            If the distance is exceeded for any such pair, the two exteriors are not viewed as equal.
-            The points are other the points contained in the polygon's exterior ndarray or interpolated points
-            between these.
+        max_distance : number, optional
+            The maximum euclidean distance between a point on one polygon and
+            the closest point on the other polygon. If the distance is exceeded
+            for any such pair, the two exteriors are not viewed as equal. The
+            points are other the points contained in the polygon's exterior
+            ndarray or interpolated points between these.
 
-        interpolate : int
-            How many points to interpolate between the points of the polygon's exteriors.
-            If this is set to zero, then only the points given by the polygon's exterior ndarrays will be used.
-            Higher values make it less likely that unequal polygons are evaluated as equal.
+        points_per_edge : int, optional
+            How many points to interpolate on each edge.
 
         Returns
         -------
         bool
-            Whether the two polygon's exteriors can be viewed as equal (approximate test).
+            Whether the two polygon's exteriors can be viewed as equal
+            (approximate test).
 
         """
-        # load shapely lazily, which makes the dependency more optional
-        import shapely.geometry
-
-        atol = max_distance
-
-        ext_a = self.exterior
-        if isinstance(other_polygon, list):
-            ext_b = np.float32(other_polygon)
-        elif ia.is_np_array(other_polygon):
-            ext_b = other_polygon
+        if isinstance(other, list):
+            other = Polygon(np.float32(other))
+        elif ia.is_np_array(other):
+            other = Polygon(other)
         else:
-            assert isinstance(other_polygon, Polygon)
-            ext_b = other_polygon.exterior
-        len_a = len(ext_a)
-        len_b = len(ext_b)
+            assert isinstance(other, Polygon)
+            other = other
 
-        if len_a == 0 and len_b == 0:
-            return True
-        elif len_a == 0 and len_b > 0:
-            return False
-        elif len_a > 0 and len_b == 0:
-            return False
+        return self.to_line_string(closed=True).coords_almost_equals(
+            other.to_line_string(closed=True),
+            max_distance=max_distance,
+            points_per_edge=points_per_edge
+        )
 
-        # neither A nor B is zero-sized at this point
-
-        # if A or B only contain points identical to the first point, merge them to one point
-        if len_a > 1:
-            if all([np.allclose(ext_a[0, :], ext_a[1 + i, :], rtol=0, atol=atol) for i in sm.xrange(len_a - 1)]):
-                ext_a = ext_a[0:1, :]
-                len_a = 1
-        if len_b > 1:
-            if all([np.allclose(ext_b[0, :], ext_b[1 + i, :], rtol=0, atol=atol) for i in sm.xrange(len_b - 1)]):
-                ext_b = ext_b[0:1, :]
-                len_b = 1
-
-        # handle polygons that contain a single point
-        if len_a == 1 and len_b == 1:
-            return np.allclose(ext_a[0, :], ext_b[0, :], rtol=0, atol=atol)
-        elif len_a == 1:
-            return all([np.allclose(ext_a[0, :], ext_b[i, :], rtol=0, atol=atol) for i in sm.xrange(len_b)])
-        elif len_b == 1:
-            return all([np.allclose(ext_b[0, :], ext_a[i, :], rtol=0, atol=atol) for i in sm.xrange(len_a)])
-
-        # After this point, both polygons have at least 2 points, i.e. LineStrings can be used.
-        # We can also safely go back to the original exteriors (before close points were merged).
-        ls_a = self.to_shapely_line_string(closed=True, interpolate=interpolate)
-        if isinstance(other_polygon, list) or ia.is_np_array(other_polygon):
-            ls_b = _convert_points_to_shapely_line_string(
-                other_polygon, closed=True, interpolate=interpolate)
-        else:
-            ls_b = other_polygon.to_shapely_line_string(
-                closed=True, interpolate=interpolate)
-
-        # Measure the distance from each point in A to LineString B and vice versa.
-        # Make sure that no point violates the tolerance.
-        # Note that we can't just use LineString.almost_equals(LineString) -- that seems to expect the same number
-        # and order of points in both LineStrings (failed with duplicated points).
-        for x, y in ls_a.coords:
-            point = shapely.geometry.Point(x, y)
-            if not ls_b.distance(point) <= max_distance:
-                return False
-
-        for x, y in ls_b.coords:
-            point = shapely.geometry.Point(x, y)
-            if not ls_a.distance(point) <= max_distance:
-                return False
-
-        return True
-
-    def almost_equals(self, other, max_distance=1e-6, interpolate=8):
+    def almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
         """
-        Compare this polygon with another one and estimate whether they can be viewed as equal.
+        Estimate if this polygon's and another's geometry/labels are similar.
 
-        This is the same as :func:`imgaug.Polygon.exterior_almost_equals` but additionally compares the labels.
+        This is the same as :func:`imgaug.Polygon.exterior_almost_equals` but
+        additionally compares the labels.
 
         Parameters
         ----------
         other
-            The object to compare against. If not a Polygon, then False will be returned.
+            The object to compare against. If not a Polygon, then False will
+            be returned.
 
-        max_distance : float
-            See :func:`imgaug.Polygon.exterior_almost_equals`.
+        max_distance : float, optional
+            See :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
-        interpolate : int
-            See :func:`imgaug.Polygon.exterior_almost_equals`.
+        points_per_edge : int, optional
+            See :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         Returns
         -------
         bool
-            Whether the two polygons can be viewed as equal. In the case of the exteriors this is an approximate test.
+            Whether the two polygons can be viewed as equal. In the case of
+            the exteriors this is an approximate test.
 
         """
         if not isinstance(other, Polygon):
@@ -982,7 +924,8 @@ class Polygon(object):
                 return False
             if self.label != other.label:
                 return False
-        return self.exterior_almost_equals(other, max_distance=max_distance, interpolate=interpolate)
+        return self.exterior_almost_equals(
+            other, max_distance=max_distance, points_per_edge=points_per_edge)
 
     def copy(self, exterior=None, label=None):
         """
@@ -1035,6 +978,7 @@ class Polygon(object):
         return "Polygon([%s] (%d points), label=%s)" % (points_str, len(self.exterior), self.label)
 
 
+# TODO add tests for this
 class PolygonsOnImage(object):
     """
     Object that represents all polygons on a single image.
@@ -1062,11 +1006,7 @@ class PolygonsOnImage(object):
 
     def __init__(self, polygons, shape):
         self.polygons = polygons
-        if ia.is_np_array(shape):
-            self.shape = shape.shape
-        else:
-            ia.do_assert(isinstance(shape, (tuple, list)))
-            self.shape = tuple(shape)
+        self.shape = normalize_shape(shape)
 
     @property
     def empty(self):
@@ -1097,25 +1037,20 @@ class PolygonsOnImage(object):
             Object containing all projected polygons.
 
         """
-        if ia.is_np_array(image):
-            shape = image.shape
-        else:
-            shape = image
-
+        shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
-        else:
-            polygons = [poly.project(self.shape, shape) for poly in self.polygons]
-            # TODO use deepcopy() here
-            return PolygonsOnImage(polygons, shape)
+        polygons = [poly.project(self.shape, shape) for poly in self.polygons]
+        # TODO use deepcopy() here
+        return PolygonsOnImage(polygons, shape)
 
     def draw_on_image(self,
                       image,
-                      color=(0, 255, 0), color_fill=None,
-                      color_perimeter=None, color_points=None,
-                      alpha=1.0, alpha_fill=None,
-                      alpha_perimeter=None, alpha_points=None,
-                      size_points=3,
+                      color=(0, 255, 0), color_face=None,
+                      color_lines=None, color_points=None,
+                      alpha=1.0, alpha_face=None,
+                      alpha_lines=None, alpha_points=None,
+                      size=1, size_lines=None, size_points=None,
                       raise_if_out_of_image=False):
         """
         Draw all polygons onto a given image.
@@ -1130,52 +1065,62 @@ class PolygonsOnImage(object):
         color : iterable of int, optional
             The color to use for the whole polygons.
             Must correspond to the channel layout of the image. Usually RGB.
-            The values for `color_fill`, `color_perimeter` and `color_points`
+            The values for `color_face`, `color_lines` and `color_points`
             will be derived from this color if they are set to ``None``.
-            This argument has no effect if `color_fill`, `color_perimeter`
+            This argument has no effect if `color_face`, `color_lines`
             and `color_points` are all set anything other than ``None``.
 
-        color_fill : None or iterable of int, optional
+        color_face : None or iterable of int, optional
             The color to use for the inner polygon areas (excluding perimeters).
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 1.0``.
+            If this is ``None``, it will be derived from ``color * 1.0``.
 
-        color_perimeter : None or iterable of int, optional
-            The color to use for the perimeters (aka borders) of the polygons.
-            Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+        color_lines : None or iterable of int, optional
+            The color to use for the lines (aka perimeters/borders) of the
+            polygons. Must correspond to the channel layout of the image.
+            Usually RGB. If this is ``None``, it will be derived
+            from ``color * 0.5``.
 
         color_points : None or iterable of int, optional
             The color to use for the corner points of the polygons.
             Must correspond to the channel layout of the image. Usually RGB.
-            If this is ``None``, it will be derived from``color * 0.5``.
+            If this is ``None``, it will be derived from ``color * 0.5``.
 
         alpha : float, optional
             The opacity of the whole polygons, where ``1.0`` denotes
             completely visible polygons and ``0.0`` invisible ones.
-            The values for `alpha_fill`, `alpha_perimeter` and `alpha_points`
+            The values for `alpha_face`, `alpha_lines` and `alpha_points`
             will be derived from this alpha value if they are set to ``None``.
-            This argument has no effect if `alpha_fill`, `alpha_perimeter`
+            This argument has no effect if `alpha_face`, `alpha_lines`
             and `alpha_points` are all set anything other than ``None``.
 
-        alpha_fill : None or number, optional
+        alpha_face : None or number, optional
             The opacity of the polygon's inner areas (excluding the perimeters),
             where ``1.0`` denotes completely visible inner areas and ``0.0``
             invisible ones.
-            If this is ``None``, it will be derived from``alpha * 0.5``.
+            If this is ``None``, it will be derived from ``alpha * 0.5``.
 
-        alpha_perimeter : None or number, optional
-            The opacity of the polygon's perimeters (aka borders),
+        alpha_lines : None or number, optional
+            The opacity of the polygon's lines (aka perimeters/borders),
             where ``1.0`` denotes completely visible perimeters and ``0.0``
             invisible ones.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
 
         alpha_points : None or number, optional
             The opacity of the polygon's corner points, where ``1.0`` denotes
             completely visible corners and ``0.0`` invisible ones.
             Currently this is an on/off choice, i.e. only ``0.0`` or ``1.0``
             are allowed.
-            If this is ``None``, it will be derived from``alpha * 1.0``.
+            If this is ``None``, it will be derived from ``alpha * 1.0``.
+
+        size : int, optional
+            Size of the polygons.
+            The sizes of the line and points are derived from this value,
+            unless they are set.
+
+        size_lines : None or int, optional
+            Thickness of the polygon lines (aka perimeter/border).
+            If ``None``, this value is derived from `size`.
 
         size_points : int, optional
             The size of all corner points. If set to ``C``, each corner point
@@ -1196,13 +1141,15 @@ class PolygonsOnImage(object):
             image = poly.draw_on_image(
                 image,
                 color=color,
-                color_fill=color_fill,
-                color_perimeter=color_perimeter,
+                color_face=color_face,
+                color_lines=color_lines,
                 color_points=color_points,
                 alpha=alpha,
-                alpha_fill=alpha_fill,
-                alpha_perimeter=alpha_perimeter,
+                alpha_face=alpha_face,
+                alpha_lines=alpha_lines,
                 alpha_points=alpha_points,
+                size=size,
+                size_lines=size_lines,
                 size_points=size_points,
                 raise_if_out_of_image=raise_if_out_of_image
             )
@@ -1343,53 +1290,13 @@ def _convert_points_to_shapely_line_string(points, closed=False, interpolate=0):
 
     # interpolate points between each consecutive pair of points
     if interpolate > 0:
-        points_tuples = _interpolate_points(points_tuples, interpolate)
+        points_tuples = interpolate_points(points_tuples, interpolate)
 
     # close if requested and not yet closed
     if closed and len(points) > 1:  # here intentionally used points instead of points_tuples
         points_tuples.append(points_tuples[0])
 
     return shapely.geometry.LineString(points_tuples)
-
-
-def _interpolate_point_pair(point_a, point_b, nb_steps):
-    if nb_steps < 1:
-        return []
-    x1, y1 = point_a
-    x2, y2 = point_b
-    vec = np.float32([x2 - x1, y2 - y1])
-    step_size = vec / (1 + nb_steps)
-    return [(x1 + (i + 1) * step_size[0], y1 + (i + 1) * step_size[1]) for i in sm.xrange(nb_steps)]
-
-
-def _interpolate_points(points, nb_steps, closed=True):
-    if len(points) <= 1:
-        return points
-    if closed:
-        points = list(points) + [points[0]]
-    points_interp = []
-    for point_a, point_b in zip(points[:-1], points[1:]):
-        points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
-    if not closed:
-        points_interp.append(points[-1])
-    # close does not have to be reverted here, as last point is not included in the extend()
-    return points_interp
-
-
-def _interpolate_points_by_max_distance(points, max_distance, closed=True):
-    ia.do_assert(max_distance > 0, "max_distance must have value greater than 0, got %.8f" % (max_distance,))
-    if len(points) <= 1:
-        return points
-    if closed:
-        points = list(points) + [points[0]]
-    points_interp = []
-    for point_a, point_b in zip(points[:-1], points[1:]):
-        dist = np.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2)
-        nb_steps = int((dist / max_distance) - 1)
-        points_interp.extend([point_a] + _interpolate_point_pair(point_a, point_b, nb_steps))
-    if not closed:
-        points_interp.append(points[-1])
-    return points_interp
 
 
 class _ConcavePolygonRecoverer(object):

@@ -65,13 +65,13 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
 
     Parameters
     ----------
-    image_fg : (H,W,C) ndarray
-        Foreground image. Channel axis must be provided. Shape and dtype kind must match the one
-        of the background image.
+    image_fg : (H,W,[C]) ndarray
+        Foreground image. Shape and dtype kind must match the one of the
+        background image.
 
-    image_bg : (H,W,C) ndarray
-        Background image. Channel axis must be provided. Shape and dtype kind must match the one
-        of the foreground image.
+    image_bg : (H,W,[C]) ndarray
+        Background image. Shape and dtype kind must match the one of the
+        foreground image.
 
     alpha : number or iterable of number or ndarray
         The blending factor, between 0.0 and 1.0. Can be interpreted as the opacity of the
@@ -97,6 +97,12 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     # TODO switch to gate_dtypes()
     assert image_fg.dtype.name not in ["float128"]
     assert image_bg.dtype.name not in ["float128"]
+
+    # TODO add test for this
+    input_was_2d = (len(image_fg.shape) == 2)
+    if input_was_2d:
+        image_fg = np.atleast_3d(image_fg)
+        image_bg = np.atleast_3d(image_bg)
 
     input_was_bool = False
     if image_fg.dtype.kind == "b":
@@ -154,6 +160,8 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         # dont skip round, because otherwise it is very unlikely to hit the image's max possible value
         image_blend = iadt.restore_dtypes_(image_blend, dt_images, clip=False, round=True)
 
+    if input_was_2d:
+        return image_blend[:, :, 0]
     return image_blend
 
 

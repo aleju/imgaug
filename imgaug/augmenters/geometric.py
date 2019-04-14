@@ -776,7 +776,7 @@ class Affine(meta.Augmenter):
                 if len(keypoints_on_image.keypoints) == 0:
                     result.append(keypoints_on_image.deepcopy(shape=output_shape))
                 else:
-                    coords = keypoints_on_image.get_coords_array()
+                    coords = keypoints_on_image.to_xy_array()
                     coords_aug = tf.matrix_transform(coords, matrix.params)
                     kps_new = [kp.deepcopy(x=coords[0], y=coords[1])
                                for kp, coords
@@ -1505,7 +1505,7 @@ class AffineCv2(meta.Augmenter):
                 matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
                 matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
 
-                coords = keypoints_on_image.get_coords_array()
+                coords = keypoints_on_image.to_xy_array()
                 coords_aug = tf.matrix_transform(coords, matrix.params)
                 kps_new = [kp.deepcopy(x=coords[0], y=coords[1])
                            for kp, coords
@@ -2193,7 +2193,7 @@ class PerspectiveTransform(meta.Augmenter):
             if not keypoints_on_image.keypoints:
                 warped_kps = keypoints_on_image.deepcopy(shape=new_shape)
             else:
-                kps_arr = keypoints_on_image.get_coords_array()
+                kps_arr = keypoints_on_image.to_xy_array()
                 warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
                 warped = warped[0]
                 warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])

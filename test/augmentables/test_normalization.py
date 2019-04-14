@@ -886,6 +886,130 @@ class TestNormalization(unittest.TestCase):
         assert all([kp_after.x == kp_before.x and kp_after.y == kp_before.y
                     for kp_after, kp_before in zip(after[1][1], coords4_kps)])
 
+    # The underlying normalization functions are mostly identical for
+    # LineStrings and Polygons, hence we run only a few tests for LineStrings
+    # here. Most of the code was already tested for Polygons.
+    def test_invert_normalize_line_strings(self):
+        def _norm_and_invert(line_strings, images):
+            return normalization.invert_normalize_line_strings(
+                normalization.normalize_line_strings(
+                    line_strings, shapes=images),
+                line_strings
+            )
+
+        coords1 = [(0, 0), (10, 0), (10, 10)]
+        coords2 = [(5, 5), (15, 5), (15, 15)]
+        coords3 = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        coords4 = [(5, 5), (15, 5), (15, 15), (5, 15)]
+
+        coords1_arr = np.float32(coords1)
+
+        # ----
+        # None
+        # ----
+        observed = normalization.invert_normalize_line_strings(None, None)
+        assert observed is None
+
+        # ----
+        # single LineString instance
+        # ----
+        before = ia.LineString(coords1)
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, ia.LineString)
+        assert np.allclose(after.coords, coords1)
+
+        # ----
+        # single LineStringsOnImage instance
+        # ----
+        before = ia.LineStringsOnImage([ia.LineString(coords1)], shape=(1, 1, 3))
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, ia.LineStringsOnImage)
+        assert len(after.line_strings) == 1
+        assert np.allclose(after.line_strings[0].coords, coords1)
+        assert after.shape == (1, 1, 3)
+
+        # ----
+        # iterable of LineStringsOnImage
+        # ----
+        before = [
+            ia.LineStringsOnImage([ia.LineString(coords1)], shape=(1, 1, 3)),
+            ia.LineStringsOnImage([ia.LineString(coords2)], shape=(2, 1, 3))
+        ]
+        after = _norm_and_invert(before, images=None)
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert isinstance(after[0], ia.LineStringsOnImage)
+        assert isinstance(after[1], ia.LineStringsOnImage)
+        assert np.allclose(after[0].line_strings[0].coords, coords1)
+        assert np.allclose(after[1].line_strings[0].coords, coords2)
+        assert after[0].shape == (1, 1, 3)
+        assert after[1].shape == (2, 1, 3)
+
+        # ----
+        # iterable of iterable of array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            for images in [[np.zeros((1, 1, 3), dtype=np.uint8)],
+                           np.zeros((1, 1, 1, 3), dtype=np.uint8)]:
+                before = [[coords1_arr.astype(dt)]]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert isinstance(after[0], list)
+                assert len(after[0]) == 1
+                assert ia.is_np_array(after[0][0])
+                assert after[0][0].shape == (3, 2)
+                assert after[0][0].dtype.name == dt.name
+                assert np.allclose(after[0][0], coords1_arr)
+
+                before = [[coords1_arr.astype(dt) for _ in sm.xrange(5)]]
+                after = _norm_and_invert(before, images=images)
+                assert isinstance(after, list)
+                assert len(after) == 1
+                assert isinstance(after[0], list)
+                assert len(after[0]) == 5
+                assert ia.is_np_array(after[0][0])
+                assert after[0][0].shape == (3, 2)
+                assert after[0][0].dtype.name == dt.name
+                assert np.allclose(after[0][0], coords1_arr)
+
+        # ----
+        # iterable of iterable of LineString
+        # ----
+        before = [
+            [ia.LineString(coords1), ia.LineString(coords2)],
+            [ia.LineString(coords3), ia.LineString(coords4)]
+        ]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert isinstance(after[0], list)
+        assert isinstance(after[1], list)
+        assert len(after[0]) == 2
+        assert len(after[1]) == 2
+        assert np.allclose(after[0][0].coords, coords1)
+        assert np.allclose(after[0][1].coords, coords2)
+        assert np.allclose(after[1][0].coords, coords3)
+        assert np.allclose(after[1][1].coords, coords4)
+
+        # ----
+        # iterable of iterable of iterable of (x,y)
+        # ----
+        before = [[coords1, coords2], [coords3, coords4]]
+        after = _norm_and_invert(before,
+                                 images=[np.zeros((1, 1, 3), dtype=np.uint8),
+                                         np.zeros((1, 1, 3), dtype=np.uint8)])
+        assert isinstance(after, list)
+        assert len(after) == 2
+        assert len(after[0]) == 2
+        assert len(after[1]) == 2
+        assert after[0][0] == coords1
+        assert after[0][1] == coords2
+        assert after[1][0] == coords3
+        assert after[1][1] == coords4
+
     def test_normalize_images(self):
         assert normalization.normalize_images(None) is None
 
@@ -1239,7 +1363,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 1
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             keypoints_norm = normalization.normalize_keypoints(
                 np.zeros((1, 5, 2), dtype=dt) + 1,
@@ -1248,7 +1372,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 5
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             # --> keypoints for too many images
             with self.assertRaises(ValueError):
@@ -1335,7 +1459,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 1
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             keypoints_norm = normalization.normalize_keypoints(
                 [np.zeros((5, 2), dtype=dt) + 1],
@@ -1344,7 +1468,7 @@ class TestNormalization(unittest.TestCase):
             assert isinstance(keypoints_norm, list)
             assert isinstance(keypoints_norm[0], ia.KeypointsOnImage)
             assert len(keypoints_norm[0].keypoints) == 5
-            assert np.allclose(keypoints_norm[0].get_coords_array(), 1)
+            assert np.allclose(keypoints_norm[0].to_xy_array(), 1)
 
             # --> keypoints for too many images
             with self.assertRaises(ValueError):
@@ -2216,7 +2340,7 @@ class TestNormalization(unittest.TestCase):
         assert polygons_norm[1].polygons[0].exterior_almost_equals(coords2)
 
         # ----
-        # iterable of empty interables
+        # iterable of empty iterables
         # ----
         polygons_norm = normalization.normalize_polygons(
             [[]],
@@ -2460,6 +2584,131 @@ class TestNormalization(unittest.TestCase):
                         np.zeros((1, 1, 3), dtype=np.uint8),
                         np.zeros((1, 1, 3), dtype=np.uint8)]
             )
+
+    # essentially already tested via polygons, as they are based on the
+    # same methods, hence a short test here
+    def test_normalize_line_strings(self):
+        coords1 = [(0, 0), (10, 0), (10, 10)]
+        coords2 = [(5, 5), (15, 5), (15, 15)]
+        coords3 = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        coords4 = [(5, 5), (15, 5), (15, 15), (5, 15)]
+
+        coords1_arr = np.float32(coords1)
+
+        # ----
+        # None
+        # ----
+        lss_norm = normalization.normalize_line_strings(None)
+        assert lss_norm is None
+
+        # ----
+        # array
+        # ----
+        for dt in [np.dtype("float32"), np.dtype("int16"), np.dtype("uint16")]:
+            lss_norm = normalization.normalize_line_strings(
+                coords1_arr[np.newaxis, np.newaxis, ...].astype(dt),
+                shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
+            )
+            assert isinstance(lss_norm, list)
+            assert isinstance(lss_norm[0], ia.LineStringsOnImage)
+            assert len(lss_norm[0].line_strings) == 1
+            assert np.allclose(lss_norm[0].line_strings[0].coords, coords1_arr)
+
+        # ----
+        # single LineString instance
+        # ----
+        lss_norm = normalization.normalize_line_strings(
+            ia.LineString(coords1),
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
+        )
+        assert isinstance(lss_norm, list)
+        assert isinstance(lss_norm[0], ia.LineStringsOnImage)
+        assert len(lss_norm[0].line_strings) == 1
+        assert np.allclose(lss_norm[0].line_strings[0].coords, coords1)
+
+        # ----
+        # single LineStringOnImage instance
+        # ----
+        lss_norm = normalization.normalize_line_strings(
+            ia.LineStringsOnImage([ia.LineString(coords1)], shape=(1, 1, 3)),
+            shapes=None
+        )
+        assert isinstance(lss_norm, list)
+        assert isinstance(lss_norm[0], ia.LineStringsOnImage)
+        assert len(lss_norm[0].line_strings) == 1
+        assert np.allclose(lss_norm[0].line_strings[0].coords, coords1)
+
+        # ----
+        # empty iterable
+        # ----
+        lss_norm = normalization.normalize_line_strings(
+            [], shapes=None
+        )
+        assert lss_norm is None
+
+        # ----
+        # iterable of LineStringOnImage
+        # ----
+        lss_norm = normalization.normalize_line_strings(
+            [
+                ia.LineStringsOnImage(
+                    [ia.LineString(coords1)], shape=(1, 1, 3)),
+                ia.LineStringsOnImage(
+                    [ia.LineString(coords2)], shape=(1, 1, 3))
+            ],
+            shapes=None
+        )
+        assert isinstance(lss_norm, list)
+
+        assert isinstance(lss_norm[0], ia.LineStringsOnImage)
+        assert len(lss_norm[0].line_strings) == 1
+        assert np.allclose(lss_norm[0].line_strings[0].coords, coords1)
+
+        assert isinstance(lss_norm[1], ia.LineStringsOnImage)
+        assert len(lss_norm[1].line_strings) == 1
+        assert np.allclose(lss_norm[1].line_strings[0].coords, coords2)
+
+        # ----
+        # iterable of iterable of LineString
+        # ----
+        lss_norm = normalization.normalize_line_strings(
+            [
+                [ia.LineString(coords1), ia.LineString(coords2)],
+                [ia.LineString(coords3), ia.LineString(coords4)]
+            ],
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)]
+        )
+        assert isinstance(lss_norm, list)
+        assert isinstance(lss_norm[0], ia.LineStringsOnImage)
+        assert isinstance(lss_norm[1], ia.LineStringsOnImage)
+
+        assert len(lss_norm[0].line_strings) == 2
+        assert np.allclose(lss_norm[0].line_strings[0].coords, coords1)
+        assert np.allclose(lss_norm[0].line_strings[1].coords, coords2)
+
+        assert len(lss_norm[1].line_strings) == 2
+        assert np.allclose(lss_norm[1].line_strings[0].coords, coords3)
+        assert np.allclose(lss_norm[1].line_strings[1].coords, coords4)
+
+        # ----
+        # iterable of iterable of iterable of (x,y)
+        # ----
+        lss_norm = normalization.normalize_line_strings(
+            [[coords1, coords2], [coords3, coords4]],
+            shapes=[np.zeros((1, 1, 3), dtype=np.uint8),
+                    np.zeros((1, 1, 3), dtype=np.uint8)]
+        )
+        assert isinstance(lss_norm, list)
+        assert isinstance(lss_norm[0], ia.LineStringsOnImage)
+
+        assert len(lss_norm[0].line_strings) == 2
+        assert np.allclose(lss_norm[0].line_strings[0].coords, coords1)
+        assert np.allclose(lss_norm[0].line_strings[1].coords, coords2)
+
+        assert len(lss_norm[0].line_strings) == 2
+        assert np.allclose(lss_norm[1].line_strings[0].coords, coords3)
+        assert np.allclose(lss_norm[1].line_strings[1].coords, coords4)
 
     def test__find_first_nonempty(self):
         # None
@@ -2843,7 +3092,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _ntype = normalization.estimate_keypoints_norm_type([[[]]])
 
-        # list of list of of list of keypoints,
+        # list of list of list of keypoints,
         # only list of list of keypoints is max
         with self.assertRaises(AssertionError):
             _ntype = normalization.estimate_keypoints_norm_type(
@@ -2926,7 +3175,7 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _ntype = normalization.estimate_bounding_boxes_norm_type([[[]]])
 
-        # list of list of of list of bounding boxes,
+        # list of list of list of bounding boxes,
         # only list of list of bounding boxes is max
         with self.assertRaises(AssertionError):
             _ntype = normalization.estimate_bounding_boxes_norm_type([[[
@@ -3040,9 +3289,125 @@ class TestNormalization(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _ntype = normalization.estimate_polygons_norm_type([[[[]]]])
 
-        # list of list of of list of polygons,
+        # list of list of list of polygons,
         # only list of list of polygons is max
         with self.assertRaises(AssertionError):
             _ntype = normalization.estimate_polygons_norm_type([[[
                 ia.Polygon(points)]]]
+            )
+    
+    def test_estimate_line_strings_norm_type(self):
+        points = [(0, 0), (10, 0), (10, 10)]
+
+        ntype = normalization.estimate_line_strings_norm_type(None)
+        assert ntype == "None"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            ntype = normalization.estimate_line_strings_norm_type(
+                np.zeros((1, 2, 5, 2), dtype=dt)
+            )
+            assert ntype == "array[%s]" % (name,)
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            ia.LineString(points)
+        )
+        assert ntype == "LineString"
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            ia.LineStringsOnImage(
+                [ia.LineString(points)], shape=(1, 1, 3))
+        )
+        assert ntype == "LineStringsOnImage"
+
+        ntype = normalization.estimate_line_strings_norm_type([])
+        assert ntype == "iterable[empty]"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            ntype = normalization.estimate_line_strings_norm_type(
+                [np.zeros((5, 4), dtype=dt)]
+            )
+            assert ntype == "iterable-array[%s]" % (name,)
+
+        ntype = normalization.estimate_line_strings_norm_type(points)
+        assert ntype == "iterable-tuple[number,size=2]"
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            [ia.Keypoint(x=x, y=y) for x, y in points]
+        )
+        assert ntype == "iterable-Keypoint"
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            [ia.LineString(points)])
+        assert ntype == "iterable-LineString"
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            [ia.LineStringsOnImage([ia.LineString(points)],
+                                   shape=(1, 1, 3))]
+        )
+        assert ntype == "iterable-LineStringsOnImage"
+
+        ntype = normalization.estimate_line_strings_norm_type([[]])
+        assert ntype == "iterable-iterable[empty]"
+
+        for name, dt in zip(["float", "int", "uint"],
+                            [np.float32, np.int32, np.uint16]):
+            ntype = normalization.estimate_line_strings_norm_type(
+                [[np.zeros((5, 4), dtype=dt)]]
+            )
+            assert ntype == "iterable-iterable-array[%s]" % (name,)
+
+        ntype = normalization.estimate_line_strings_norm_type([points])
+        assert ntype == "iterable-iterable-tuple[number,size=2]"
+
+        ntype = normalization.estimate_line_strings_norm_type([[
+            ia.Keypoint(x=x, y=y) for x, y in points
+        ]])
+        assert ntype == "iterable-iterable-Keypoint"
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            [[ia.LineString(points)]]
+        )
+        assert ntype == "iterable-iterable-LineString"
+
+        ntype = normalization.estimate_line_strings_norm_type([[[]]])
+        assert ntype == "iterable-iterable-iterable[empty]"
+
+        ntype = normalization.estimate_line_strings_norm_type([[points]])
+        assert ntype == "iterable-iterable-iterable-tuple[number,size=2]"
+
+        ntype = normalization.estimate_line_strings_norm_type(
+            [[[ia.Keypoint(x=x, y=y) for x, y in points]]]
+        )
+        assert ntype == "iterable-iterable-iterable-Keypoint"
+
+        # --
+        # error cases
+        # --
+        with self.assertRaises(AssertionError):
+            _ntype = normalization.estimate_line_strings_norm_type(1)
+
+        with self.assertRaises(AssertionError):
+            _ntype = normalization.estimate_line_strings_norm_type("foo")
+
+        with self.assertRaises(AssertionError):
+            _ntype = normalization.estimate_line_strings_norm_type([1])
+
+        # wrong class
+        with self.assertRaises(AssertionError):
+            _ntype = normalization.estimate_line_strings_norm_type(
+                ia.HeatmapsOnImage(
+                    np.zeros((1, 1, 1), dtype=np.float32),
+                    shape=(1, 1, 1))
+            )
+
+        with self.assertRaises(AssertionError):
+            _ntype = normalization.estimate_line_strings_norm_type([[[[]]]])
+
+        # list of list of list of LineStrings,
+        # only list of list of LineStrings is max
+        with self.assertRaises(AssertionError):
+            _ntype = normalization.estimate_line_strings_norm_type([[[
+                ia.LineString(points)]]]
             )

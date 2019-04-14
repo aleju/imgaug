@@ -24,9 +24,7 @@ import shapely.geometry
 import imgaug as ia
 from imgaug.testutils import reseed
 from imgaug.augmentables.polys import (
-    _convert_points_to_shapely_line_string, _interpolate_point_pair, _interpolate_point_pair,
-    _interpolate_points, _interpolate_points_by_max_distance,
-    _ConcavePolygonRecoverer
+    _convert_points_to_shapely_line_string, _ConcavePolygonRecoverer
 )
 
 
@@ -42,7 +40,6 @@ def main():
     test_Polygon_width()
     test_Polygon_project()
     test_Polygon_find_closest_point_idx()
-    test_Polygon__compute_inside_image_point_mask()
     test_Polygon_is_fully_within_image()
     test_Polygon_is_partly_within_image()
     test_Polygon_is_out_of_image()
@@ -58,10 +55,9 @@ def main():
     test_Polygon_deepcopy()
     test_Polygon___repr__()
     test_Polygon___str__()
+    test_Polygon_exterior_almost_equals()
+    test_Polygon_almost_equals()
     test___convert_points_to_shapely_line_string()
-    test__interpolate_point_pair()
-    test__interpolate_points()
-    test__interpolate_points_by_max_distance()
 
 
 def test_Polygon___init__():
@@ -346,24 +342,6 @@ def test_Polygon_find_closest_point_idx():
     assert np.allclose(distance, np.sqrt(((1.0-0.9)**2) + (0.15**2)))
 
 
-def test_Polygon__compute_inside_image_point_mask():
-    poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
-    mask = poly._compute_inside_image_point_mask((1, 1, 3))
-    assert np.array_equal(mask, np.array([True, True, True, True], dtype=bool))
-
-    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    mask = poly._compute_inside_image_point_mask((1, 1, 3))
-    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
-
-    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    mask = poly._compute_inside_image_point_mask((1, 1))
-    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
-
-    poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-    mask = poly._compute_inside_image_point_mask(np.zeros((1, 1, 3), dtype=np.uint8))
-    assert np.array_equal(mask, np.array([True, False, False, False], dtype=bool))
-
-
 def test_Polygon_is_fully_within_image():
     poly = ia.Polygon([(0, 0), (0.999, 0), (0.999, 0.999), (0, 0.999)])
     assert poly.is_fully_within_image((1, 1, 3))
@@ -437,6 +415,11 @@ def test_Polygon_is_out_of_image():
         assert not poly.is_out_of_image(shape, partly=True, fully=False)
         assert poly.is_out_of_image(shape, partly=False, fully=True)
         assert poly.is_out_of_image(shape, partly=True, fully=True)
+
+    poly = ia.Polygon([(8, 11), (11, 8), (11, 11)])
+    assert not poly.is_out_of_image((100, 100, 3), fully=True, partly=True)
+    assert not poly.is_out_of_image((10, 10, 3), fully=True, partly=False)
+    assert poly.is_out_of_image((10, 10, 3), fully=False, partly=True)
 
     poly = ia.Polygon([])
     got_exception = False
@@ -604,12 +587,12 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_face=1.0,
+                                    alpha_lines=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -628,15 +611,15 @@ def test_Polygon_draw_on_image():
     image_poly = poly.draw_on_image(image,
                                     color=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_face=1.0,
+                                    alpha_lines=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
     assert image_poly.shape == (10, 10, 3)
     assert np.sum(image) == 3 * np.sum(np.arange(100))  # draw did not change original image (copy=True)
     for c_idx, value in enumerate([0, 0.5*255, 0]):
-        value = int(value)
+        value = int(np.round(value))
         assert np.all(image_poly[2:9, 2:3, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # left boundary
         assert np.all(image_poly[2:9, 8:9, c_idx] == np.zeros((7, 1), dtype=np.uint8) + value)  # right boundary
         assert np.all(image_poly[2:3, 2:9, c_idx] == np.zeros((1, 7), dtype=np.uint8) + value)  # top boundary
@@ -648,12 +631,12 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
     image_poly = poly.draw_on_image(image.astype(np.float32),
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_face=1.0,
+                                    alpha_lines=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.float32
@@ -670,12 +653,12 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(2, 2+5), (8, 2+5), (8, 8+5), (2, 8+5)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_face=1.0,
+                                    alpha_lines=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -694,12 +677,12 @@ def test_Polygon_draw_on_image():
     try:
         _ = poly.draw_on_image(image,
                                color=[32, 128, 32],
-                               color_fill=[32, 128, 32],
-                               color_perimeter=[0, 255, 0],
+                               color_face=[32, 128, 32],
+                               color_lines=[0, 255, 0],
                                color_points=[0, 255, 0],
                                alpha=1.0,
-                               alpha_fill=1.0,
-                               alpha_perimeter=1.0,
+                               alpha_face=1.0,
+                               alpha_lines=1.0,
                                alpha_points=0.0,
                                raise_if_out_of_image=True)
     except Exception as exc:
@@ -711,12 +694,12 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(100, 100), (100+10, 100), (100+10, 100+10), (100, 100+10)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=1.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_face=1.0,
+                                    alpha_lines=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert np.array_equal(image_poly, image)
@@ -727,12 +710,12 @@ def test_Polygon_draw_on_image():
     try:
         _ = poly.draw_on_image(image,
                                color=[32, 128, 32],
-                               color_fill=[32, 128, 32],
-                               color_perimeter=[0, 255, 0],
+                               color_face=[32, 128, 32],
+                               color_lines=[0, 255, 0],
                                color_points=[0, 255, 0],
                                alpha=1.0,
-                               alpha_fill=1.0,
-                               alpha_perimeter=1.0,
+                               alpha_face=1.0,
+                               alpha_lines=1.0,
                                alpha_points=0.0,
                                raise_if_out_of_image=True)
     except Exception as exc:
@@ -744,12 +727,12 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=0.0,
-                                    alpha_perimeter=1.0,
+                                    alpha_face=0.0,
+                                    alpha_lines=1.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -763,12 +746,12 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=1.0,
-                                    alpha_perimeter=0.0,
+                                    alpha_face=1.0,
+                                    alpha_lines=0.0,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
@@ -781,8 +764,8 @@ def test_Polygon_draw_on_image():
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=0.8,
                                     alpha_points=0.0,
@@ -790,42 +773,38 @@ def test_Polygon_draw_on_image():
     assert image_poly.dtype.type == np.uint8
     assert image_poly.shape == (10, 10, 3)
     for c_idx, value in enumerate([0, 255, 0]):
-        assert np.all(
-            image_poly[2:9, 8:9, c_idx] ==
-            (
-                (1-0.8)*image[2:9, 8:9, c_idx]
-                + np.full((7, 1), 0.8*value, dtype=np.float32)
-            ).astype(np.uint8)
-        )  # right boundary
+        expected = np.round(
+            (1-0.8)*image[2:9, 8:9, c_idx]
+            + np.full((7, 1), 0.8*value, dtype=np.float32)
+        ).astype(np.uint8)
+        assert np.all(image_poly[2:9, 8:9, c_idx] == expected)  # right boundary
     expected = (0.8 * 0.5) * np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1)) \
         + (1 - (0.8 * 0.5)) * image[3:8, 3:8, :]
-    assert np.all(image_poly[3:8, 3:8, :] == expected.astype(np.uint8))
+    assert np.all(image_poly[3:8, 3:8, :] == np.round(expected).astype(np.uint8))
 
     # alpha of fill and perimeter 0.5
     poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
     image_poly = poly.draw_on_image(image,
                                     color=[32, 128, 32],
-                                    color_fill=[32, 128, 32],
-                                    color_perimeter=[0, 255, 0],
+                                    color_face=[32, 128, 32],
+                                    color_lines=[0, 255, 0],
                                     color_points=[0, 255, 0],
                                     alpha=1.0,
-                                    alpha_fill=0.5,
-                                    alpha_perimeter=0.5,
+                                    alpha_face=0.5,
+                                    alpha_lines=0.5,
                                     alpha_points=0.0,
                                     raise_if_out_of_image=False)
     assert image_poly.dtype.type == np.uint8
     assert image_poly.shape == (10, 10, 3)
     for c_idx, value in enumerate([0, 255, 0]):
-        assert np.all(
-            image_poly[2:9, 8:9, c_idx] ==
-            (
-                0.5*image[2:9, 8:9, c_idx]
-                + np.full((7, 1), 0.5*value, dtype=np.float32)
-            ).astype(np.uint8)
-        )  # right boundary
+        expected = np.round(
+            0.5*image[2:9, 8:9, c_idx]
+            + np.full((7, 1), 0.5*value, dtype=np.float32)
+        ).astype(np.uint8)
+        assert np.all(image_poly[2:9, 8:9, c_idx] == expected)  # right boundary
     expected = 0.5 * np.tile(np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1)) \
         + 0.5 * image[3:8, 3:8, :]
-    assert np.all(image_poly[3:8, 3:8, :] == expected.astype(np.uint8))
+    assert np.all(image_poly[3:8, 3:8, :] == np.round(expected).astype(np.uint8))
 
     # copy=False
     # test deactivated as the function currently does not offer a copy argument
@@ -1115,6 +1094,58 @@ def test_Polygon_to_bounding_box():
     assert 1.0 - 1e-8 < bb.y2 < 1.0 + 1e-8
 
 
+def test_Polygon_to_line_string():
+    poly = ia.Polygon([])
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 0
+    assert ls.label is None
+
+    poly = ia.Polygon([])
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 0
+    assert ls.label is None
+
+    poly = ia.Polygon([], label="foo")
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 0
+    assert ls.label == "foo"
+
+    poly = ia.Polygon([(0, 0)])
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 1
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0)])
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 1
+    assert ls.coords_almost_equals([(0, 0)])
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    ls = poly.to_line_string(closed=False)
+    assert len(ls.coords) == 2
+    assert ls.coords_almost_equals([(0, 0), (1, 1)])
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0), (1, 1)])
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 3
+    assert ls.coords_almost_equals([(0, 0), (1, 1), (0, 0)])
+    assert ls.label is None
+
+    poly = ia.Polygon([(0, 0), (1, 1)], label="foo")
+    ls = poly.to_line_string(closed=True)
+    assert len(ls.coords) == 3
+    assert ls.coords_almost_equals([(0, 0), (1, 1), (0, 0)])
+    assert ls.label == "foo"
+
+    poly = ia.Polygon([(0, 0), (1, 1)], label="foo")
+    ls = poly.to_line_string()
+    assert len(ls.coords) == 3
+    assert ls.coords_almost_equals([(0, 0), (1, 1), (0, 0)])
+    assert ls.label == "foo"
+
+
 def test_Polygon_from_shapely():
     exterior = [(0, 0), (1, 0), (1, 1), (0, 1)]
     poly_shapely = shapely.geometry.Polygon(exterior)
@@ -1359,13 +1390,6 @@ def test_Polygon_exterior_almost_equals():
     poly_b = ia.Polygon([(0, 0), (0+1e-4, 0), (0, 0+1e-4)])
     assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-9)
 
-    # two polygons that are different, but with carefully placed points so that interpolation between polygon
-    # points is necessary to spot the difference
-    poly_a = ia.Polygon([(1, 0), (1, 1), (0, 1)])
-    poly_b = ia.Polygon([(1, 0), (1, 1), (0, 1), (1-1e-6, 1-1e-6)])
-    assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-4, interpolate=0)
-    assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-4, interpolate=1)
-
 
 def test_Polygon_almost_equals():
     poly_a = ia.Polygon([])
@@ -1425,211 +1449,7 @@ def test___convert_points_to_shapely_line_string():
     pass
 
 
-def test__interpolate_point_pair():
-    point_a = (0, 0)
-    point_b = (1, 2)
-    inter = _interpolate_point_pair(point_a, point_b, 1)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0.5, 1.0]
-        ])
-    )
 
-    inter = _interpolate_point_pair(point_a, point_b, 2)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [1*1/3, 1*2/3],
-            [2*1/3, 2*2/3]
-        ])
-    )
-
-    inter = _interpolate_point_pair(point_a, point_b, 0)
-    assert len(inter) == 0
-
-
-def test__interpolate_points():
-    # 2 points
-    points = [
-        (0, 0),
-        (1, 2)
-    ]
-    inter = _interpolate_points(points, 0)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [1, 2]
-        ])
-    )
-
-    inter = _interpolate_points(points, 1)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0.5, 1.0],
-            [1, 2],
-            [0.5, 1.0]
-        ])
-    )
-
-    inter = _interpolate_points(points, 1, closed=False)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0.5, 1.0],
-            [1, 2]
-        ])
-    )
-
-    # 3 points
-    points = [
-        (0, 0),
-        (1, 2),
-        (0.5, 3)
-    ]
-
-    inter = _interpolate_points(points, 0)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [1, 2],
-            [0.5, 3]
-        ])
-    )
-
-    inter = _interpolate_points(points, 1)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0.5, 1.0],
-            [1, 2],
-            [0.75, 2.5],
-            [0.5, 3],
-            [0.25, 1.5]
-        ])
-    )
-
-    inter = _interpolate_points(points, 1, closed=False)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0.5, 1.0],
-            [1, 2],
-            [0.75, 2.5],
-            [0.5, 3]
-        ])
-    )
-
-    # 0 points
-    points = []
-    inter = _interpolate_points(points, 1)
-    assert len(inter) == 0
-
-    # 1 point
-    points = [(0, 0)]
-    inter = _interpolate_points(points, 0)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0]
-        ])
-    )
-    inter = _interpolate_points(points, 1)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0]
-        ])
-    )
-
-
-def test__interpolate_points_by_max_distance():
-    # 2 points
-    points = [
-        (0, 0),
-        (0, 2)
-    ]
-    inter = _interpolate_points_by_max_distance(points, 10000)
-    assert np.allclose(
-        inter,
-        points
-    )
-
-    inter = _interpolate_points_by_max_distance(points, 1.0)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0, 1.0],
-            [0, 2],
-            [0, 1.0]
-        ])
-    )
-
-    inter = _interpolate_points_by_max_distance(points, 1.0, closed=False)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0, 1.0],
-            [0, 2]
-        ])
-    )
-
-    # 3 points
-    points = [
-        (0, 0),
-        (0, 2),
-        (2, 0)
-    ]
-
-    inter = _interpolate_points_by_max_distance(points, 1.0)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0, 1.0],
-            [0, 2],
-            [1.0, 1.0],
-            [2, 0],
-            [1.0, 0]
-        ])
-    )
-
-    inter = _interpolate_points_by_max_distance(points, 1.0, closed=False)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0],
-            [0, 1.0],
-            [0, 2],
-            [1.0, 1.0],
-            [2, 0]
-        ])
-    )
-
-    # 0 points
-    points = []
-    inter = _interpolate_points_by_max_distance(points, 1.0)
-    assert len(inter) == 0
-
-    # 1 points
-    points = [(0, 0)]
-
-    inter = _interpolate_points_by_max_distance(points, 1.0)
-    assert np.allclose(
-        inter,
-        np.float32([
-            [0, 0]
-        ])
-    )
 
 
 class TestPolygonsOnImage(unittest.TestCase):

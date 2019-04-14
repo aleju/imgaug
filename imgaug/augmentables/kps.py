@@ -7,6 +7,7 @@ import scipy.spatial.distance
 import six.moves as sm
 
 from .. import imgaug as ia
+from .utils import normalize_shape, project_coords
 
 
 def compute_geometric_median(X, eps=1e-5):
@@ -126,24 +127,8 @@ class Keypoint(object):
             Keypoint object with new coordinates.
 
         """
-        if from_shape[0:2] == to_shape[0:2]:
-            return self.deepcopy(x=self.x, y=self.y)
-
-        # avoid division by zeros
-        # TODO add this to other project() functions too
-        assert all([v > 0 for v in from_shape[0:2]]), \
-            "Got invalid from_shape %s in Keypoint.project()" % (
-                str(from_shape),)
-        if any([v <= 0 for v in to_shape[0:2]]):
-            import warnings
-            warnings.warn("Got invalid to_shape %s in Keypoint.project()" % (
-                str(to_shape),))
-
-        from_height, from_width = from_shape[0:2]
-        to_height, to_width = to_shape[0:2]
-        x = (self.x / from_width) * to_width
-        y = (self.y / from_height) * to_height
-        return self.deepcopy(x=x, y=y)
+        xy_proj = project_coords([(self.x, self.y)], from_shape, to_shape)
+        return self.deepcopy(x=xy_proj[0][0], y=xy_proj[0][1])
 
     def shift(self, x=0, y=0):
         """
@@ -164,6 +149,105 @@ class Keypoint(object):
 
         """
         return self.deepcopy(self.x + x, self.y + y)
+
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3,
+                      copy=True, raise_if_out_of_image=False):
+        """
+        Draw the keypoint onto a given image.
+
+        The keypoint is drawn as a square.
+
+        Parameters
+        ----------
+        image : (H,W,3) ndarray
+            The image onto which to draw the keypoint.
+
+        color : int or list of int or tuple of int or (3,) ndarray, optional
+            The RGB color of the keypoint. If a single int ``C``, then that is
+            equivalent to ``(C,C,C)``.
+
+        alpha : float, optional
+            The opacity of the drawn keypoint, where ``1.0`` denotes a fully
+            visible keypoint and ``0.0`` an invisible one.
+
+        size : int, optional
+            The size of the keypoint. If set to ``S``, each square will have
+            size ``S x S``.
+
+        copy : bool, optional
+            Whether to copy the image before drawing the keypoint.
+
+        raise_if_out_of_image : bool, optional
+            Whether to raise an exception if the keypoint is outside of the
+            image.
+
+        Returns
+        -------
+        image : (H,W,3) ndarray
+            Image with drawn keypoint.
+
+        """
+        if copy:
+            image = np.copy(image)
+
+        if image.ndim == 2:
+            assert ia.is_single_number(color), (
+                "Got a 2D image. Expected then 'color' to be a single number, "
+                "but got %s." % (str(color),))
+        elif image.ndim == 3 and ia.is_single_number(color):
+            color = [color] * image.shape[-1]
+
+        input_dtype = image.dtype
+        alpha_color = color
+        if alpha < 0.01:
+            # keypoint invisible, nothing to do
+            return image
+        elif alpha > 0.99:
+            alpha = 1
+        else:
+            image = image.astype(np.float32, copy=False)
+            alpha_color = alpha * np.array(color)
+
+        height, width = image.shape[0:2]
+
+        y, x = self.y_int, self.x_int
+
+        x1 = max(x - size//2, 0)
+        x2 = min(x + 1 + size//2, width)
+        y1 = max(y - size//2, 0)
+        y2 = min(y + 1 + size//2, height)
+
+        x1_clipped, x2_clipped = np.clip([x1, x2], 0, width)
+        y1_clipped, y2_clipped = np.clip([y1, y2], 0, height)
+
+        x1_clipped_ooi = (x1_clipped < 0 or x1_clipped >= width)
+        x2_clipped_ooi = (x2_clipped < 0 or x2_clipped >= width+1)
+        y1_clipped_ooi = (y1_clipped < 0 or y1_clipped >= height)
+        y2_clipped_ooi = (y2_clipped < 0 or y2_clipped >= height+1)
+        x_ooi = (x1_clipped_ooi and x2_clipped_ooi)
+        y_ooi = (y1_clipped_ooi and y2_clipped_ooi)
+        x_zero_size = (x2_clipped - x1_clipped) < 1  # min size is 1px
+        y_zero_size = (y2_clipped - y1_clipped) < 1
+        if not x_ooi and not y_ooi and not x_zero_size and not y_zero_size:
+            if alpha == 1:
+                image[y1_clipped:y2_clipped, x1_clipped:x2_clipped] = color
+            else:
+                image[y1_clipped:y2_clipped, x1_clipped:x2_clipped] = (
+                        (1 - alpha)
+                        * image[y1_clipped:y2_clipped, x1_clipped:x2_clipped]
+                        + alpha_color
+                )
+        else:
+            if raise_if_out_of_image:
+                raise Exception(
+                    "Cannot draw keypoint x=%.8f, y=%.8f on image with "
+                    "shape %s." % (y, x, image.shape))
+
+        if image.dtype.name != input_dtype.name:
+            if input_dtype.name == "uint8":
+                image = np.clip(image, 0, 255, out=image)
+            image = image.astype(input_dtype, copy=False)
+        return image
 
     def generate_similar_points_manhattan(self, nb_steps, step_size, return_array=False):
         """
@@ -304,11 +388,7 @@ class KeypointsOnImage(object):
     """
     def __init__(self, keypoints, shape):
         self.keypoints = keypoints
-        if ia.is_np_array(shape):
-            self.shape = shape.shape
-        else:
-            ia.do_assert(isinstance(shape, (tuple, list)))
-            self.shape = tuple(shape)
+        self.shape = normalize_shape(shape)
 
     @property
     def height(self):
@@ -347,20 +427,19 @@ class KeypointsOnImage(object):
             Object containing all projected keypoints.
 
         """
-        if ia.is_np_array(image):
-            shape = image.shape
-        else:
-            shape = image
-
+        shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
         else:
             keypoints = [kp.project(self.shape, shape) for kp in self.keypoints]
             return self.deepcopy(keypoints, shape)
 
-    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3, copy=True, raise_if_out_of_image=False):
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3,
+                      copy=True, raise_if_out_of_image=False):
         """
-        Draw all keypoints onto a given image. Each keypoint is marked by a square of a chosen color and size.
+        Draw all keypoints onto a given image.
+
+        Each keypoint is marked by a square of a chosen color and size.
 
         Parameters
         ----------
@@ -393,44 +472,11 @@ class KeypointsOnImage(object):
             Image with drawn keypoints.
 
         """
-        if copy:
-            image = np.copy(image)
-
-        input_dtype = image.dtype
-        alpha_color = color
-        if alpha < 0.01:
-            # keypoints all invisible, nothing to do
-            return image
-        elif alpha > 0.99:
-            alpha = 1
-        else:
-            image = image.astype(np.float32, copy=False)
-            alpha_color = alpha * np.array(color)
-
-        height, width = image.shape[0:2]
-
+        image = np.copy(image) if copy else image
         for keypoint in self.keypoints:
-            y, x = keypoint.y_int, keypoint.x_int
-            if 0 <= y < height and 0 <= x < width:
-                x1 = max(x - size//2, 0)
-                x2 = min(x + 1 + size//2, width)
-                y1 = max(y - size//2, 0)
-                y2 = min(y + 1 + size//2, height)
-                if alpha == 1:
-                    image[y1:y2, x1:x2] = color
-                else:
-                    image[y1:y2, x1:x2] = (
-                            (1 - alpha) * image[y1:y2, x1:x2]
-                            + alpha_color
-                    )
-            else:
-                if raise_if_out_of_image:
-                    raise Exception("Cannot draw keypoint x=%.8f, y=%.8f on image with shape %s." % (y, x, image.shape))
-
-        if image.dtype.name != input_dtype.name:
-            if input_dtype.name == "uint8":
-                image = np.clip(image, 0, 255, out=image)
-            image = image.astype(input_dtype, copy=False)
+            image = keypoint.draw_on_image(
+                image, color=color, alpha=alpha, size=size, copy=False,
+                raise_if_out_of_image=raise_if_out_of_image)
         return image
 
     def shift(self, x=0, y=0):
@@ -454,7 +500,7 @@ class KeypointsOnImage(object):
         keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
         return self.deepcopy(keypoints)
 
-    # TODO align naming with BoundingBoxesOnImage.to_xyxy_array()
+    @ia.deprecated(alt_func="KeypointsOnImage.to_xy_array()")
     def get_coords_array(self):
         """
         Convert the coordinates of all keypoints in this object to an array of shape (N,2).
@@ -466,13 +512,27 @@ class KeypointsOnImage(object):
             x coordinate, each second value is the y coordinate.
 
         """
-        result = np.zeros((len(self.keypoints), 2), np.float32)
+        return self.to_xy_array()
+
+    def to_xy_array(self):
+        """
+        Convert keypoint coordinates to ``(N,2)`` array.
+
+        Returns
+        -------
+        (N, 2) ndarray
+            Array containing the coordinates of all keypoints.
+            Shape is ``(N,2)`` with coordinates in xy-form.
+
+        """
+        result = np.zeros((len(self.keypoints), 2), dtype=np.float32)
         for i, keypoint in enumerate(self.keypoints):
             result[i, 0] = keypoint.x
             result[i, 1] = keypoint.y
         return result
 
     @staticmethod
+    @ia.deprecated(alt_func="KeypointsOnImage.from_xy_array()")
     def from_coords_array(coords, shape):
         """
         Convert an array (N,2) with a given image shape to a KeypointsOnImage object.
@@ -489,11 +549,33 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        out : KeypointsOnImage
+        KeypointsOnImage
             KeypointsOnImage object that contains all keypoints from the array.
 
         """
-        keypoints = [Keypoint(x=coords[i, 0], y=coords[i, 1]) for i in sm.xrange(coords.shape[0])]
+        return KeypointsOnImage.from_xy_array(coords, shape)
+
+    @classmethod
+    def from_xy_array(cls, xy, shape):
+        """
+        Convert an array (N,2) with a given image shape to a KeypointsOnImage object.
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray
+            Coordinates of ``N`` keypoints on the original image, given
+            as ``(N,2)`` array of xy-coordinates.
+
+        shape : tuple of int or ndarray
+            Shape tuple of the image on which the keypoints are placed.
+
+        Returns
+        -------
+        KeypointsOnImage
+            KeypointsOnImage object that contains all keypoints from the array.
+
+        """
+        keypoints = [Keypoint(x=coord[0], y=coord[1]) for coord in xy]
         return KeypointsOnImage(keypoints, shape)
 
     # TODO add to_gaussian_heatmaps(), from_gaussian_heatmaps()

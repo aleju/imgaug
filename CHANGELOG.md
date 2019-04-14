@@ -95,6 +95,59 @@
     * Refactored deprecation warnings to use this function.
 * Added `imgaug.imgaug.deprecated` decorator.
     * Refactored deprecation warnings to use this decorator.
+* Changed `BoundingBox.contains()` to also accept `Keypoint`.
+* Changed `BoundingBox.project(from, to)` to also accept images instead of shapes.
+* Reduced code repetition in `BoundingBox`.
+* Added module `imgaug.augmentables.lines`.
+    * Added `LineString`.
+    * Added helper functions `_is_point_on_line()`, `_parse_shapes()`, `_project_coords()`.
+    * Added `LineStringsOnImage`.
+* Added to `BoundingBox.extract_from_image()` the arguments `pad` and `pad_max`.
+* Refactored `BoundingBox.extract_from_image()`. Improved some code fragments that looked wrong.
+* Changed `KeypointsOnImage.draw_on_image()` to raise an error if an input image has shape `(H,W)`.
+* Changed `KeypointsOnImage.draw_on_image()` to handle single-number inputs for `color`.
+* Added function `imgaug.imgaug.flatten()` that flattens nested lists/tuples.
+* Refactored `imgaug.augmenters.blend.blend_alpha()` to no longer enforce a channel axis for foreground and background image.
+* Added module `imgaug.augmentables.utils`.
+    * Added function `normalize_shape()`.
+    * Added function `project_coords()`.
+* Added `Polygon.to_line_string()`.
+* Fixed `Polygon.is_out_of_image()` falsely only checking the corner points of the polygon.
+* [rarely breaking] `Polygon.draw_on_image()`, `PolygonsOnImage.draw_on_image()`
+    * Refactored to make partial use `LineString` methods.
+    * Added arguments `size` and `size_perimeter` to control polygon line thickness.
+    * Renamed arguments `alpha_perimeter` to `alpha_line`, `color_perimeter` to `color_line` to align with `LineStrings`.
+    * Renamed arguments `alpha_fill` to `alpha_face` and `color_fill` to `color_face`.
+* Refactored `Polygon.project()` to use `LineString.project()`.
+* Refactored `Polygon.shift()` to use `LineString.shift()`.
+* [rarely breaking] `Polygon.exterior_almost_equals()`, `Polygon.almost_equals()`
+    * Refactored to make use of `LineString.coords_almost_equals()`.
+    * Renamed argument `interpolate` to `points_per_edge`.
+    * Renamed argument `other_polygon` to `other`.
+* Refactored `PolygonsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `BoundingBoxesOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `KeypointsOnImage.__init__()` to make use of `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `KeypointsOnImage.on()` to use `imgaug.augmentables.utils.normalize_shape()`.
+* Refactored `Keypoint.project()` to use `imgaug.augmentables.utils.project_coords()`.
+* `KeypointsOnImage.from_coords_array()`
+    * Marked as deprecated.
+    * Renamed to `from_xy_array()`.
+    * Renamed arg `coords` to `xy`.
+    * Changed the method from `staticmethod` to `classmethod`.
+    * Refactored to make code simpler.
+* `KeypointsOnImage.get_coords_array()`
+    * Marked as deprecated.
+    * Renamed to `to_xy_array()`.
+* Moved keypoint drawing code from `KeypointsOnImage.draw_on_image()` into new method `Keypoint.draw_on_image()`.
+* Changed `Keypoint.draw_on_image()` to draw a rectangle for the keypoint, so long as any part of that rectangle is within the image plane.
+  (Previously, the rectangle was only drawn if the integer xy-coordinate of the point was inside the image plane.)
+* Renamed argument `thickness` in `BoundingBox.draw_on_image()` to `size` in order to match the name used for keypoints, polygons and line strings.
+  The argument `thickness` will still be accepted, but raises a deprecation warning.
+* Renamed argument `thickness` in `BoundingBoxesOnImage.draw_on_image()` to `size` in order to match the name used for keypoints, polygons and line strings.
+  The argument `thickness` will still be accepted, but raises a deprecation warning.
+* Improved efficiency of `BoundingBoxesOnImage.draw_on_image()` by evading unnecessary array copies.
+* Moved line interpolation functions `_interpolate_points()`, `_interpolate_point_pair()` and `_interpolate_points_by_max_distance()` to `imgaug.augmentables.utils` and made them public functions.
+* Renamed `color_line` to `color_lines`, `alpha_line` to `alpha_lines` in `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`. 
 
 
 # 0.2.8
