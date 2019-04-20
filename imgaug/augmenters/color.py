@@ -150,6 +150,16 @@ class WithColorspace(meta.Augmenter):
             )
         return result
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        result = segmaps
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            result = self.children.augment_segmentation_maps(
+                result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
         result = keypoints_on_images
@@ -1084,6 +1094,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     @classmethod
     def _generate_lut_table(cls):
+        # FIXME is int8 here correct? shouldn't these be uint8?
         table = (np.zeros((256*2, 256), dtype=np.int8),
                  np.zeros((256*2, 256), dtype=np.int8))
         value_range = np.arange(0, 256, dtype=np.int16)
