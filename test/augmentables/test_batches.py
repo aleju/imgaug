@@ -90,8 +90,7 @@ class TestBatch(unittest.TestCase):
                                        shape=(4, 4, 3))]
         segmentation_maps = [
             ia.SegmentationMapsOnImage(np.zeros((1, 1), dtype=np.int32),
-                                       shape=(5, 5, 3),
-                                       nb_classes=20)]
+                                       shape=(5, 5, 3))]
         keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)],
                                          shape=(6, 6, 3))]
         bounding_boxes = [
@@ -164,7 +163,7 @@ class TestBatch(unittest.TestCase):
         assert observed.line_strings_unaug[0].shape == (101, 101, 3)
 
         assert observed.heatmaps_unaug[0].arr_0to1.shape == (1, 1, 1)
-        assert observed.segmentation_maps_unaug[0].arr.shape == (1, 1, 20)
+        assert observed.segmentation_maps_unaug[0].arr.shape == (1, 1, 1)
         assert observed.keypoints_unaug[0].keypoints[0].x == 1
         assert observed.keypoints_unaug[0].keypoints[0].y == 2
         assert observed.bounding_boxes_unaug[0].bounding_boxes[0].x1 == 1
