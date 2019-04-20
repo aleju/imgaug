@@ -289,10 +289,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 elif isinstance(batch[0], ia.HeatmapsOnImage):
                     batch_normalized = Batch(heatmaps=batch, data=(idx,))
                     batch_orig_dt = "list_of_imgaug.HeatmapsOnImage"
-                elif isinstance(batch[0], ia.SegmentationMapOnImage):
+                elif isinstance(batch[0], ia.SegmentationMapsOnImage):
                     batch_normalized = Batch(segmentation_maps=batch,
                                              data=(idx,))
-                    batch_orig_dt = "list_of_imgaug.SegmentationMapOnImage"
+                    batch_orig_dt = "list_of_imgaug.SegmentationMapsOnImage"
                 elif isinstance(batch[0], ia.KeypointsOnImage):
                     batch_normalized = Batch(keypoints=batch, data=(idx,))
                     batch_orig_dt = "list_of_imgaug.KeypointsOnImage"
@@ -306,7 +306,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     raise Exception(
                         ("Unknown datatype in batch[0]. Expected numpy array "
                          + "or imgaug.HeatmapsOnImage or "
-                         + "imgaug.SegmentationMapOnImage or "
+                         + "imgaug.SegmentationMapsOnImage or "
                          + "imgaug.KeypointsOnImage or "
                          + "imgaug.BoundingBoxesOnImage, "
                          + "or imgaug.PolygonsOnImage, "
@@ -317,7 +317,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                      + "imgaug.UnnormalizedBatch or "
                      + "numpy array or list of (numpy array or "
                      + "imgaug.HeatmapsOnImage or "
-                     + "imgaug.SegmentationMapOnImage "
+                     + "imgaug.SegmentationMapsOnImage "
                      + "or imgaug.KeypointsOnImage or "
                      + "imgaug.BoundingBoxesOnImage or "
                      + "imgaug.PolygonsOnImage). Got %s.") % (type(batch),))
@@ -353,7 +353,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_unnormalized = batch_aug.images_aug
             elif batch_orig_dt == "list_of_imgaug.HeatmapsOnImage":
                 batch_unnormalized = batch_aug.heatmaps_aug
-            elif batch_orig_dt == "list_of_imgaug.SegmentationMapOnImage":
+            elif batch_orig_dt == "list_of_imgaug.SegmentationMapsOnImage":
                 batch_unnormalized = batch_aug.segmentation_maps_aug
             elif batch_orig_dt == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
@@ -766,9 +766,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Augment heatmaps on multiple images.
 
         This is the internal version of ``augment_heatmaps()``.
-        It is called from ``augment_heatmaps()`` and should usually not be called
-        directly.
-        This method may heatmaps in-place.
+        It is called from ``augment_heatmaps()`` and should usually not be
+        called directly.
+        This method may augment heatmaps in-place.
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
@@ -818,48 +818,117 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        segmaps : imgaug.SegmentationMapOnImage or \
-                  list of imgaug.SegmentationMapOnImage
-            Segmentation map(s) to augment. Either a single heatmap or a list of
-            segmentation maps.
+        segmaps : imgaug.SegmentationMapsOnImage or \
+                  list of imgaug.SegmentationMapsOnImage
+            Segmentation map(s) to augment. Either a single heatmap or a list
+            of segmentation maps.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
-            call to this function. Usually you can leave this parameter as None.
-            It is set automatically for child augmenters.
+            call to this function. Usually you can leave this parameter as
+            ``None``. It is set automatically for child augmenters.
 
         hooks : None or imgaug.HooksHeatmaps, optional
-            HooksHeatmaps object to dynamically interfere with the augmentation process.
+            HooksHeatmaps object to dynamically interfere with the augmentation
+            process.
 
         Returns
         -------
-        segmaps_aug : imgaug.SegmentationMapOnImage or \
-                      list of imgaug.SegmentationMapOnImage
+        segmaps_aug : imgaug.SegmentationMapsOnImage or \
+                      list of imgaug.SegmentationMapsOnImage
             Corresponding augmented segmentation map(s).
 
         """
+        if self.deterministic:
+            state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
         input_was_single_instance = False
-        if isinstance(segmaps, ia.SegmentationMapOnImage):
+        if isinstance(segmaps, ia.SegmentationMapsOnImage):
             input_was_single_instance = True
             segmaps = [segmaps]
 
-        heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True)
-                                  for segmap in segmaps]
-        heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
-        nonempty_class_indices = [nonempty_class_indices_i
-                                  for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
-        heatmaps_aug = self.augment_heatmaps(heatmaps, parents=parents, hooks=hooks)
-        segmaps_aug = []
-        for segmap, heatmaps_aug_i, nonempty_class_indices_i in zip(segmaps, heatmaps_aug, nonempty_class_indices):
-            segmap_aug = ia.SegmentationMapOnImage.from_heatmaps(heatmaps_aug_i,
-                                                                 class_indices=nonempty_class_indices_i,
-                                                                 nb_classes=segmap.nb_classes)
-            segmap_aug.input_was = segmap.input_was
-            segmaps_aug.append(segmap_aug)
+        ia.do_assert(
+            ia.is_iterable(segmaps),
+            "Expected to get list of imgaug.SegmentationMapsOnImage() "
+            "instances, got %s." % (type(segmaps),))
+        ia.do_assert(
+            all([isinstance(segmaps_i, ia.SegmentationMapsOnImage)
+                 for segmaps_i in segmaps]),
+            "Expected to get list of imgaug.SegmentationMapsOnImage() "
+            "instances, got %s." % (
+                [type(el) for el in segmaps],))
+
+        # copy, but only if topmost call or hooks are provided
+        if len(parents) == 0 or hooks is not None:
+            segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
+        else:
+            segmaps_copy = segmaps
+
+        if hooks is not None:
+            segmaps_copy = hooks.preprocess(segmaps_copy, augmenter=self, parents=parents)
+
+        if (hooks is None and self.activated) \
+                or (hooks is not None
+                    and hooks.is_activated(segmaps_copy, augmenter=self, parents=parents, default=self.activated)):
+            if len(segmaps_copy) > 0:
+                segmaps_result = self._augment_segmentation_maps(
+                    segmaps_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
+                ia.forward_random_state(self.random_state)
+            else:
+                segmaps_result = segmaps_copy
+        else:
+            segmaps_result = segmaps_copy
+
+        if hooks is not None:
+            segmaps_result = hooks.postprocess(segmaps_result, augmenter=self, parents=parents)
+
+        if self.deterministic:
+            self.random_state.set_state(state_orig)
 
         if input_was_single_instance:
-            return segmaps_aug[0]
-        return segmaps_aug
+            return segmaps_result[0]
+        return segmaps_result
+
+    # TODO this differs from _augment_heatmaps(), which is an abstractmethod
+    #      either this method should also be abstract or _augment_heatmaps()
+    #      should return the input heatmaps unchanged
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        """
+        Augment segmentation maps on multiple images.
+
+        This is the internal version of ``augment_segmentation_maps()``.
+        It is called from ``augment_segmentation_maps()`` and should usually
+        not be called directly.
+        This method may augment segmentation maps in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        segmaps : list of imgaug.SegmentationMapsOnImage
+            Segmentation maps to augment. They may be changed in-place.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_segmentation_maps`.
+
+        hooks : imgaug.HooksHeatmaps or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_segmentation_maps`.
+
+        Returns
+        ----------
+        images : list of imgaug.SegmentationMapsOnImage
+            The augmented segmentation maps.
+
+        """
+        return segmaps
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
         """
@@ -1589,12 +1658,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         segmentation_maps : None \
             or (N,H,W) ndarray \
-            or imgaug.augmentables.segmaps.SegmentationMapOnImage \
+            or imgaug.augmentables.segmaps.SegmentationMapsOnImage \
             or iterable of (H,W) ndarray \
-            or iterable of imgaug.augmentables.segmaps.SegmentationMapOnImage, \
+            or iterable of imgaug.augmentables.segmaps.SegmentationMapsOnImage, \
             optional
             The segmentation maps to augment.
-            If anything else than ``SegmentationMapOnImage``, then the number
+            If anything else than ``SegmentationMapsOnImage``, then the number
             of segmaps must match the number of images provided via parameter
             `images`. The number is contained either in ``N`` or the first
             iterable's size.
