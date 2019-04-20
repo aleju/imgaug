@@ -38,11 +38,11 @@ class UnnormalizedBatch(object):
 
     segmentation_maps : None \
             or (N,H,W) ndarray \
-            or imgaug.augmentables.segmaps.SegmentationMapOnImage \
+            or imgaug.augmentables.segmaps.SegmentationMapsOnImage \
             or iterable of (H,W) ndarray \
-            or iterable of imgaug.augmentables.segmaps.SegmentationMapOnImage
+            or iterable of imgaug.augmentables.segmaps.SegmentationMapsOnImage
         The segmentation maps to augment.
-        If anything else than ``SegmentationMapOnImage``, then the number of
+        If anything else than ``SegmentationMapsOnImage``, then the number of
         segmaps must match the number of images provided via parameter
         `images`. The number is contained either in ``N`` or the first
         iterable's size.
@@ -290,7 +290,7 @@ class Batch(object):
         The heatmaps to augment.
 
     segmentation_maps : None or list of \
-                        imgaug.augmentables.segmaps.SegmentationMapOnImage
+                        imgaug.augmentables.segmaps.SegmentationMapsOnImage
         The segmentation maps to augment.
 
     keypoints : None or list of imgaug.augmentables.kps.KeypointOnImage
