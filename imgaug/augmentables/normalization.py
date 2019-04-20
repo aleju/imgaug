@@ -190,44 +190,43 @@ def normalize_heatmaps(inputs, shapes=None):
 
 def normalize_segmentation_maps(inputs, shapes=None):
     # TODO get rid of this deferred import
-    from imgaug.augmentables.segmaps import SegmentationMapOnImage
+    from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
     shapes = _preprocess_shapes(shapes)
     ntype = estimate_segmaps_norm_type(inputs)
     _assert_exactly_n_shapes_partial = functools.partial(
         _assert_exactly_n_shapes,
-        from_ntype=ntype, to_ntype="List[SegmentationMapOnImage]",
+        from_ntype=ntype, to_ntype="List[SegmentationMapsOnImage]",
         shapes=shapes)
 
     if ntype == "None":
         return None
     elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
-        _assert_single_array_ndim(inputs, 3, "(N,H,W)",
-                                  "SegmentationMapOnImage")
+        _assert_single_array_ndim(inputs, 4, "(N,H,W,#SegmapsPerImage)",
+                                  "SegmentationMapsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         if ntype == "array[bool]":
-            return [SegmentationMapOnImage(attr_i, shape=shape)
+            return [SegmentationMapsOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
-        return [SegmentationMapOnImage(
-                    attr_i, shape=shape, nb_classes=1+np.max(attr_i))
+        return [SegmentationMapsOnImage(attr_i, shape=shape)
                 for attr_i, shape in zip(inputs, shapes)]
-    elif ntype == "SegmentationMapOnImage":
+    elif ntype == "SegmentationMapsOnImage":
         return [inputs]
     elif ntype == "iterable[empty]":
         return None
     elif ntype in ["iterable-array[int]",
                    "iterable-array[uint]",
                    "iterable-array[bool]"]:
-        _assert_many_arrays_ndim(inputs, 2, "(H,W)", "SegmentationMapsOnImage")
+        _assert_many_arrays_ndim(inputs, 3, "(H,W,#SegmapsPerImage)",
+                                 "SegmentationMapsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         if ntype == "iterable-array[bool]":
-            return [SegmentationMapOnImage(attr_i, shape=shape)
+            return [SegmentationMapsOnImage(attr_i, shape=shape)
                     for attr_i, shape in zip(inputs, shapes)]
-        return [SegmentationMapOnImage(
-                    attr_i, shape=shape, nb_classes=1+np.max(attr_i))
+        return [SegmentationMapsOnImage(attr_i, shape=shape)
                 for attr_i, shape in zip(inputs, shapes)]
     else:
-        assert ntype == "iterable-SegmentationMapOnImage", (
+        assert ntype == "iterable-SegmentationMapsOnImage", (
             "Got unknown normalization type '%s'." % (ntype,))
         return inputs  # len allowed to differ from len of images
 
@@ -593,9 +592,9 @@ def invert_normalize_segmentation_maps(segmentation_maps,
         assert len(segmentation_maps) == segmentation_maps_old.shape[0]
         input_dtype = segmentation_maps_old.dtype
         return restore_dtype_and_merge(
-            [segmap_i.get_arr_int() for segmap_i in segmentation_maps],
+            [segmap_i.get_arr() for segmap_i in segmentation_maps],
             input_dtype)
-    elif ntype == "SegmentationMapOnImage":
+    elif ntype == "SegmentationMapsOnImage":
         assert len(segmentation_maps) == 1
         return segmentation_maps[0]
     elif ntype == "iterable[empty]":
@@ -606,10 +605,10 @@ def invert_normalize_segmentation_maps(segmentation_maps,
                    "iterable-array[bool]"]:
         nonempty, _, _ = find_first_nonempty(segmentation_maps_old)
         input_dtype = nonempty.dtype
-        return [restore_dtype_and_merge(segmap_i.get_arr_int(), input_dtype)
+        return [restore_dtype_and_merge(segmap_i.get_arr(), input_dtype)
                 for segmap_i in segmentation_maps]
     else:
-        assert ntype == "iterable-SegmentationMapOnImage", (
+        assert ntype == "iterable-SegmentationMapsOnImage", (
             "Got unknown normalization type '%s'." % (ntype,))
         return segmentation_maps
 
@@ -885,12 +884,12 @@ def estimate_segmaps_norm_type(segmentation_maps):
         "array[int]",
         "array[uint]",
         "array[bool]",
-        "SegmentationMapOnImage",
+        "SegmentationMapsOnImage",
         "iterable[empty]",
         "iterable-array[int]",
         "iterable-array[uint]",
         "iterable-array[bool]",
-        "iterable-SegmentationMapOnImage"
+        "iterable-SegmentationMapsOnImage"
     ]
     _assert_is_of_norm_type(
         type_str, valid_type_strs, "segmentation_maps")
