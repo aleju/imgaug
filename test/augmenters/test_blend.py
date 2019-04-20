@@ -13,6 +13,8 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import blend
 from imgaug.testutils import keypoints_equal, reseed
+from imgaug.augmentables.heatmaps import HeatmapsOnImage
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 
 def main():
@@ -273,6 +275,7 @@ def test_Alpha():
     reseed()
 
     base_img = np.zeros((3, 3, 1), dtype=np.uint8)
+
     heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
                                [0.0, 0.0, 1.0],
                                [0.0, 1.0, 1.0]])
@@ -282,7 +285,18 @@ def test_Alpha():
     heatmaps_arr_l1 = np.float32([[0.0, 1.0, 0.0],
                                   [0.0, 1.0, 0.0],
                                   [1.0, 1.0, 0.0]])
-    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+    heatmaps = HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+
+    segmaps_arr = np.int32([[0, 0, 1],
+                            [0, 0, 1],
+                            [0, 1, 1]])
+    segmaps_arr_r1 = np.int32([[0, 0, 0],
+                               [0, 0, 0],
+                               [0, 0, 1]])
+    segmaps_arr_l1 = np.int32([[0, 1, 0],
+                               [0, 1, 0],
+                               [1, 1, 0]])
+    segmaps = SegmentationMapsOnImage(segmaps_arr, shape=(3, 3, 3))
 
     aug = iaa.Alpha(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
@@ -298,19 +312,39 @@ def test_Alpha():
         assert 1 - 1e-6 < heatmaps.max_value < 1 + 1e-6
         assert np.allclose(observed.get_arr(), heatmaps_arr_r1)
 
+    for per_channel in [False, True]:
+        aug = iaa.Alpha(1,
+                        iaa.Affine(translate_px={"x": 1}),
+                        iaa.Affine(translate_px={"x": -1}),
+                        per_channel=per_channel)
+        observed = aug.augment_segmentation_maps([segmaps])[0]
+        assert observed.shape == segmaps.shape
+        assert np.array_equal(observed.get_arr(), segmaps_arr_r1)
+
     aug = iaa.Alpha(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = np.round(base_img + 20).astype(np.uint8)
     assert np.allclose(observed, expected)
 
     for per_channel in [False, True]:
-        aug = iaa.Alpha(0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}),
+        aug = iaa.Alpha(0,
+                        iaa.Affine(translate_px={"x": 1}),
+                        iaa.Affine(translate_px={"x": -1}),
                         per_channel=per_channel)
         observed = aug.augment_heatmaps([heatmaps])[0]
         assert observed.shape == heatmaps.shape
         assert 0 - 1e-6 < heatmaps.min_value < 0 + 1e-6
         assert 1 - 1e-6 < heatmaps.max_value < 1 + 1e-6
         assert np.allclose(observed.get_arr(), heatmaps_arr_l1)
+
+    for per_channel in [False, True]:
+        aug = iaa.Alpha(0,
+                        iaa.Affine(translate_px={"x": 1}),
+                        iaa.Affine(translate_px={"x": -1}),
+                        per_channel=per_channel)
+        observed = aug.augment_segmentation_maps([segmaps])[0]
+        assert observed.shape == segmaps.shape
+        assert np.array_equal(observed.get_arr(), segmaps_arr_l1)
 
     aug = iaa.Alpha(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
@@ -597,6 +631,7 @@ def test_AlphaElementwise():
     reseed()
 
     base_img = np.zeros((3, 3, 1), dtype=np.uint8)
+
     heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
                                [0.0, 0.0, 1.0],
                                [0.0, 1.0, 1.0]])
@@ -606,31 +641,60 @@ def test_AlphaElementwise():
     heatmaps_arr_l1 = np.float32([[0.0, 1.0, 0.0],
                                   [0.0, 1.0, 0.0],
                                   [1.0, 1.0, 0.0]])
-    heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+    heatmaps = HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
+
+    segmaps_arr = np.int32([[0, 0, 1],
+                            [0, 0, 1],
+                            [0, 1, 1]])
+    segmaps_arr_r1 = np.int32([[0, 0, 0],
+                               [0, 0, 0],
+                               [0, 0, 1]])
+    segmaps_arr_l1 = np.int32([[0, 1, 0],
+                               [0, 1, 0],
+                               [1, 1, 0]])
+    segmaps = SegmentationMapsOnImage(segmaps_arr, shape=(3, 3, 3))
 
     aug = iaa.AlphaElementwise(1, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = base_img + 10
     assert np.allclose(observed, expected)
 
-    aug = iaa.AlphaElementwise(1, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}))
+    aug = iaa.AlphaElementwise(1,
+                               iaa.Affine(translate_px={"x": 1}),
+                               iaa.Affine(translate_px={"x": -1}))
     observed = aug.augment_heatmaps([heatmaps])[0]
     assert observed.shape == (3, 3, 3)
     assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
     assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
     assert np.allclose(observed.get_arr(), heatmaps_arr_r1)
 
+    aug = iaa.AlphaElementwise(1,
+                               iaa.Affine(translate_px={"x": 1}),
+                               iaa.Affine(translate_px={"x": -1}))
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert np.array_equal(observed.get_arr(), segmaps_arr_r1)
+
     aug = iaa.AlphaElementwise(0, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
     expected = base_img + 20
     assert np.allclose(observed, expected)
 
-    aug = iaa.AlphaElementwise(0, iaa.Affine(translate_px={"x": 1}), iaa.Affine(translate_px={"x": -1}))
+    aug = iaa.AlphaElementwise(0,
+                               iaa.Affine(translate_px={"x": 1}),
+                               iaa.Affine(translate_px={"x": -1}))
     observed = aug.augment_heatmaps([heatmaps])[0]
     assert observed.shape == (3, 3, 3)
     assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
     assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
     assert np.allclose(observed.get_arr(), heatmaps_arr_l1)
+
+    aug = iaa.AlphaElementwise(0,
+                               iaa.Affine(translate_px={"x": 1}),
+                               iaa.Affine(translate_px={"x": -1}))
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert np.array_equal(observed.get_arr(), segmaps_arr_l1)
 
     aug = iaa.AlphaElementwise(0.75, iaa.Add(10), iaa.Add(20))
     observed = aug.augment_image(base_img)
@@ -721,6 +785,29 @@ def test_AlphaElementwise():
     assert 0 - 1e-6 < observed.min_value < 0 + 1e-6
     assert 1 - 1e-6 < observed.max_value < 1 + 1e-6
     assert np.allclose(observed.get_arr(), heatmaps_arr_l1)
+
+    # -----
+    # segmaps and per_channel
+    # -----
+    aug = iaa.AlphaElementwise(
+        _DummyMaskParameter(inverted=False),
+        iaa.Affine(translate_px={"x": 1}),
+        iaa.Affine(translate_px={"x": -1}),
+        per_channel=True
+    )
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert np.array_equal(observed.get_arr(), segmaps_arr_r1)
+
+    aug = iaa.AlphaElementwise(
+        _DummyMaskParameter(inverted=True),
+        iaa.Affine(translate_px={"x": 1}),
+        iaa.Affine(translate_px={"x": -1}),
+        per_channel=True
+    )
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == (3, 3, 3)
+    assert np.array_equal(observed.get_arr(), segmaps_arr_l1)
 
     # -----
     # keypoints

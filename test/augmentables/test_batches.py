@@ -89,8 +89,9 @@ class TestBatch(unittest.TestCase):
         heatmaps = [ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
                                        shape=(4, 4, 3))]
         segmentation_maps = [
-            ia.SegmentationMapOnImage(np.zeros((1, 1), dtype=np.int32),
-                                      shape=(5, 5, 3), nb_classes=20)]
+            ia.SegmentationMapsOnImage(np.zeros((1, 1), dtype=np.int32),
+                                       shape=(5, 5, 3),
+                                       nb_classes=20)]
         keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)],
                                          shape=(6, 6, 3))]
         bounding_boxes = [
@@ -147,7 +148,7 @@ class TestBatch(unittest.TestCase):
         assert observed.images_unaug.shape == (1, 1, 1, 3)
         assert isinstance(observed.heatmaps_unaug[0], ia.HeatmapsOnImage)
         assert isinstance(observed.segmentation_maps_unaug[0],
-                          ia.SegmentationMapOnImage)
+                          ia.SegmentationMapsOnImage)
         assert isinstance(observed.keypoints_unaug[0], ia.KeypointsOnImage)
         assert isinstance(observed.bounding_boxes_unaug[0],
                           ia.BoundingBoxesOnImage)

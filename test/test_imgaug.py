@@ -506,17 +506,17 @@ def test_quokka_segmentation_map():
     segmap = ia.quokka_segmentation_map()
     assert segmap.shape == (643, 960, 3)
     assert segmap.arr.shape == (643, 960, 1)
-    assert np.allclose(np.average(segmap.arr), 0.3016427)
+    assert np.allclose(np.average(segmap.arr), 0.3016427, rtol=0, atol=1e-2)
 
     segmap = ia.quokka_segmentation_map(extract="square")
     assert segmap.shape == (643, 643, 3)
     assert segmap.arr.shape == (643, 643, 1)
-    assert np.allclose(np.average(segmap.arr), 0.450353)
+    assert np.allclose(np.average(segmap.arr), 0.450353, rtol=0, atol=1e-2)
 
     segmap = ia.quokka_segmentation_map(size=(642, 959))
     assert segmap.shape == (642, 959, 3)
     assert segmap.arr.shape == (642, 959, 1)
-    assert np.allclose(np.average(segmap.arr), 0.30160266)
+    assert np.allclose(np.average(segmap.arr), 0.30160266, rtol=0, atol=1e-2)
 
 
 def test_quokka_keypoints():
