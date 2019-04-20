@@ -2912,6 +2912,24 @@ class Sequential(Augmenter, list):
                     )
         return heatmaps
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            if self.random_order:
+                for index in random_state.permutation(len(self)):
+                    segmaps = self[index].augment_segmentation_maps(
+                        segmaps=segmaps,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                for augmenter in self:
+                    segmaps = augmenter.augment_segmentation_maps(
+                        segmaps=segmaps,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+        return segmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(keypoints_on_images,
                                                  augmenter=self, parents=parents, default=True):
@@ -3220,6 +3238,13 @@ class SomeOf(Augmenter, list):
         return self._augment_non_images(heatmaps, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _augfunc(augmenter_, segmaps_to_aug_, parents_, hooks_):
+            return augmenter_.augment_segmentation_maps(
+                segmaps_to_aug_, parents_, hooks_)
+        return self._augment_non_images(segmaps, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
             return augmenter_.augment_keypoints(koi_to_aug_, parents_, hooks_)
@@ -3490,6 +3515,12 @@ class Sometimes(Augmenter):
         return self._augment_non_images(heatmaps, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_segmentation_maps(inputs_, parents_, hooks_)
+        return self._augment_non_images(segmaps, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(augs_, inputs_, parents_, hooks_):
             return augs_.augment_keypoints(inputs_, parents_, hooks_)
@@ -3680,6 +3711,12 @@ class WithChannels(Augmenter):
             return children_.augment_heatmaps(inputs_, parents_, hooks_)
         return self._augment_non_images(heatmaps, parents, hooks, _augfunc)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_segmentation_maps(
+                inputs_, parents_, hooks_)
+        return self._augment_non_images(segmaps, parents, hooks, _augfunc)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(children_, inputs_, parents_, hooks_):
             return children_.augment_keypoints(inputs_, parents_, hooks_)
@@ -3835,6 +3872,18 @@ class Lambda(Augmenter):
         If this is ``None`` instead of a function, the heatmaps will not be
         altered.
 
+    func_segmentation_maps : None or callable, optional
+        The function to call for each batch of segmentation maps.
+        It must follow the form
+
+            ``function(segmaps, random_state, parents, hooks)``
+
+        and return the changed segmaps (may be transformed in-place).
+        This is essentially the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_segmentation_maps`.
+        If this is ``None`` instead of a function, the segmentatio maps will
+        not be altered.
+
     func_keypoints : None or callable, optional
         The function to call for each batch of image keypoints.
         It must follow the form
@@ -3906,12 +3955,14 @@ class Lambda(Augmenter):
 
     """
 
-    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None,
+    def __init__(self, func_images=None, func_heatmaps=None,
+                 func_segmentation_maps=None, func_keypoints=None,
                  func_polygons="keypoints",
                  name=None, deterministic=False, random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
+        self.func_segmentation_maps = func_segmentation_maps
         self.func_keypoints = func_keypoints
         self.func_polygons = func_polygons
 
@@ -3924,13 +3975,25 @@ class Lambda(Augmenter):
         if self.func_heatmaps is not None:
             result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
             ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() "
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage "
                          + "instances, got %s." % (type(result),))
             ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() "
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage "
                          + "instances, got %s." % ([type(el) for el in result],))
             return result
         return heatmaps
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        if self.func_segmentation_maps is not None:
+            result = self.func_segmentation_maps(segmaps, random_state, parents, hooks)
+            ia.do_assert(ia.is_iterable(result),
+                         "Expected callback function for segmentation maps to return list of imgaug.SegmentationMapsOnImage() "
+                         + "instances, got %s." % (type(result),))
+            ia.do_assert(all([isinstance(el, ia.SegmentationMapsOnImage) for el in result]),
+                         "Expected callback function for segmentation maps to return list of imgaug.SegmentationMapsOnImage() "
+                         + "instances, got %s." % ([type(el) for el in result],))
+            return result
+        return segmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if self.func_keypoints is not None:
@@ -3964,7 +4027,8 @@ class Lambda(Augmenter):
         return []
 
 
-def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
+def AssertLambda(func_images=None, func_heatmaps=None,
+                 func_segmentation_maps=None, func_keypoints=None,
                  func_polygons=None, name=None, deterministic=False,
                  random_state=None):
     """
@@ -4006,6 +4070,13 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
 
+    func_segmentation_maps : None or callable, optional
+        The function to call for each batch of segmentation maps.
+        It must follow the form ``function(segmaps, random_state, parents, hooks)``
+        and return either True (valid input) or False (invalid input).
+        It essentially reuses the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_segmentation_maps`.
+
     func_keypoints : None or callable, optional
         The function to call for each batch of keypoints.
         It must follow the form ``function(keypoints_on_images, random_state, parents, hooks)``
@@ -4040,6 +4111,11 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
                      "Input heatmaps did not fulfill user-defined assertion in AssertLambda.")
         return heatmaps
 
+    def func_segmentation_maps_assert(segmaps, random_state, parents, hooks):
+        ia.do_assert(func_segmentation_maps(segmaps, random_state, parents, hooks),
+                     "Input segmentation maps did not fulfill user-defined assertion in AssertLambda.")
+        return segmaps
+
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
         ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents, hooks),
                      "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
@@ -4054,13 +4130,15 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
         name = "Unnamed%s" % (ia.caller_name(),)
     return Lambda(func_images_assert if func_images is not None else None,
                   func_heatmaps_assert if func_heatmaps is not None else None,
+                  func_segmentation_maps_assert if func_segmentation_maps is not None else None,
                   func_keypoints_assert if func_keypoints is not None else None,
                   func_polygons_assert if func_polygons is not None else None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
 def AssertShape(shape, check_images=True, check_heatmaps=True,
-                check_keypoints=True, check_polygons=True,
+                check_segmentation_maps=True, check_keypoints=True,
+                check_polygons=True,
                 name=None, deterministic=False, random_state=None):
     """
     Augmenter to make assumptions about the shape of input image(s), heatmaps and keypoints.
@@ -4104,10 +4182,17 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
 
     check_heatmaps : bool, optional
         Whether to validate input heatmaps via the given shape.
-        The number of heatmaps will be checked and for each Heatmaps
+        The number of heatmaps will be checked and for each ``HeatmapsOnImage``
         instance its array's height and width, but not the channel
         count as the channel number denotes the expected number of channels
         in images.
+
+    check_segmentation_maps : bool, optional
+        Whether to validate input segmentation maps via the given shape.
+        The number of segmentation maps will be checked and for each
+        ``SegmentationMapsOnImage`` instance its array's height and width, but
+        not the channel count as the channel number denotes the expected number
+        of channels in images.
 
     check_keypoints : bool, optional
         Whether to validate input keypoints via the given shape.
@@ -4210,6 +4295,19 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
                     compare(observed, expected, j, i)
         return heatmaps
 
+    def func_segmentation_maps(segmaps, _random_state, _parents, _hooks):
+        if check_heatmaps:
+            if shape[0] is not None:
+                compare(len(segmaps), shape[0], 0, "ALL")
+
+            for i in sm.xrange(len(segmaps)):
+                segmaps_i = segmaps[i]
+                for j in sm.xrange(len(shape[0:2])):
+                    expected = shape[j+1]
+                    observed = segmaps_i.arr.shape[j]
+                    compare(observed, expected, j, i)
+        return segmaps
+
     def func_keypoints(keypoints_on_images, _random_state, _parents, _hooks):
         if check_keypoints:
             if shape[0] is not None:
@@ -4239,7 +4337,11 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return Lambda(func_images, func_heatmaps, func_keypoints, func_polygons,
+    return Lambda(func_images=func_images,
+                  func_heatmaps=func_heatmaps,
+                  func_segmentation_maps=func_segmentation_maps,
+                  func_keypoints=func_keypoints,
+                  func_polygons=func_polygons,
                   name=name, deterministic=deterministic,
                   random_state=random_state)
 
