@@ -189,6 +189,74 @@
   images (instead of only height/width). #349
 
 
+# Segmentation Maps
+
+- [breaking] Renamed `SegmentationMapOnImage` to plural `SegmentationMapsOnImage`
+  (as the input array may not contain several channels, with each channel
+   containing one full segmentation map).
+- [rarely breaking] Changed `SegmentationMapsOnImage.__init__` to no longer accept float arrays as `arr` argument.
+- [breaking] Changed `SegmentationMapsOnImage.__init__` to no longer accept `uint32` and larger itemsizes as `arr` argument, only `uint16` and below is accepted.
+  For `int` the maximum is `int32`.
+- Changed `SegmentationMapsOnImage.__init__` to always accept `(H,W,C)` `arr` arguments.
+- [breaking] Changed  `SegmentationMapsOnImage.arr` to always be 3-dimensional (`(H,W,C)`) instead of 2-dimensional (`(H,W)`).
+- [breaking] Removed `nb_classes` from `SegmentationMapsOnImage.__init__`.
+- [breaking] Removed `SegmentationMapsOnImage.get_arr_int()`.
+- `SegmentationMapsOnImage.draw()`:
+    - [breaking] Removed argument `return_foreground_mask`.
+    - [breaking] Removed optional output for foreground masks.
+    - [breaking] Changed output of drawn image to be a list of arrays instead of a single array (one per `C` in input array `(H,W,C)`).
+    - Refactored to be a wrapper around `SegmentationMapsOnImage.draw_on_image()`.
+- `SegmentationMapsOnImage.draw_on_image()`:
+    - [breaking] Removed argument `background_class_id`.
+    - [breaking] Removed argument `background_threshold`.
+    - [breaking] Changed output of drawn image to be a list of arrays instead of a single array (one per `C` in input array `(H,W,C)`).
+- Changed `SegmentationMapsOnImage.resize()` to use nearest neighbour interpolaton by default.
+- [rarely breaking] Changed `SegmentationMapsOnImage.copy()` to create a shallow copy instead of being an alias for `deepcopy()`.
+- Added optional arguments `arr` and `shape` to `SegmentationMapsOnImage.copy()`.
+- Added optional arguments `arr` and `shape` to `SegmentationMapsOnImage.deepcopy()`.
+- Refactored `SegmentationMapsOnImage.pad()`, `SegmentationMapsOnImage.pad_to_aspect_ratio()`
+  and `SegmentationMapsOnImage.resize()` to generate new object instances via
+  `SegmentationMapsOnImage.deepcopy()`.
+- [rarely breaking] Changed `SegmentationMapsOnImage.input_was` to always save `(input array dtype, input array ndim)` instead of mixtures of strings/ints that varied by dtype kind.
+- [rarely breaking] Restrict `shape` argument in `SegmentationMapsOnImage.__init__` to tuples instead of accepting all iterables.
+- [breaking] Removed `SegmentationMapsOnImage.to_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
+- [breaking] Removed `SegmentationMapsOnImage.from_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
+- [breaking] Removed `SegmentationMapsOnImage.get_arr_int()`.
+- Added `SegmentationMapsOnImage.get_arr()`, which always returns a segmentation map array with similar dtype and number of dimensions as was originally input when creating a class instance.
+- [breaking] Automatic segmentation map normalization from arrays or lists of arrays now expects a single `(N,H,W,C)` array (before: `(N,H,W)`) or a list of `(H,W,C)` arrays (before: `(H,W)`).
+  This affects valid segmentation map inputs for `Augmenter.augment()` and its alias `Augmenter.__call__()`, `imgaug.augmentables.batches.UnnormalizedBatch()` and `imgaug.augmentables.normalization.normalize_segmentation_maps()`.
+- Added `Augmenter._augment_segmentation_maps()`.
+- Changed `Augmenter.augment_segmentation_maps()` to no longer be a wrapper around `Augmenter.augment_heatmaps()` and instead call `Augmenter._augment_segmentation_maps()`.
+- Added special segmentation map handling to `Sequential`.
+- Added special segmentation map handling to `SomeOf`.
+- Added special segmentation map handling to `Sometimes`.
+- Added special segmentation map handling to `WithChannels`.
+- [breaking] Added segmentation map argument and handling to `Lambda`.
+  This changes the order of arguments in `Lambda.__init__()` and hence
+  breaks if one relied on that order.
+- [breaking] Added segmentation map argument and handling to `AssertLambda`.
+  This changes the order of arguments in `AssertLambda.__init__()` and hence
+  breaks if one relied on that order.
+- [breaking] Added segmentation map argument and handling to `AssertShape`.
+  This changes the order of arguments in `AssertShape.__init__()` and hence
+  breaks if one relied on that order.
+- Added special segmentation map handling to `Alpha`.
+- Added special segmentation map handling to `AlphaElementwise`.
+- Added special segmentation map handling to `WithColorspace`.
+- Added special segmentation map handling to `Fliplr`.
+- Added special segmentation map handling to `Flipud`.
+- Added special segmentation map handling to `Affine`.
+- Added special segmentation map handling to `AffineCv2`.
+- Added special segmentation map handling to `PiecewiseAffine`.
+- Added special segmentation map handling to `PerspectiveTransform`.
+- Added special segmentation map handling to `ElasticTransformation`.
+- Added special segmentation map handling to `Rot90`.
+- Added special segmentation map handling to `Resize`.
+- Added special segmentation map handling to `CropAndPad`.
+- Added special segmentation map handling to `PadToFixedSize`.
+- Added special segmentation map handling to `CropToFixedSize`.
+- Added special segmentation map handling to `KeepSizeByResize`.
+
 ## Fixes
  
 * Fixed an issue with `Polygon.clip_out_of_image()`,
