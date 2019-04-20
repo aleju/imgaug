@@ -383,6 +383,66 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
         return result
 
+    # TODO This is almost identical to coordinate based augmentation.
+    #      Merge the two.
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        nb_images = len(segmaps)
+        if nb_images == 0:
+            return segmaps
+
+        nb_channels = meta.estimate_max_number_of_channels(segmaps)
+        rss = ia.derive_random_states(random_state, 2)
+        per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
+        alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
+
+        result = segmaps
+
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                outputs_first = segmaps
+            else:
+                outputs_first = self.first.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                outputs_second = segmaps
+            else:
+                outputs_second = self.second.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            outputs_first = segmaps
+            outputs_second = segmaps
+
+        for i, (outputs_first_i, outputs_second_i) in enumerate(zip(outputs_first, outputs_second)):
+            # Segmap augmentation also works channel-wise based on image
+            # channels, even though the channels have different meanings
+            # between images and segmaps. This is done in order to keep the
+            # random values properly synchronized with the image augmentation
+            if per_channel[i] > 0.5:
+                nb_channels_i = segmaps[i].shape[2] if len(segmaps[i].shape) >= 3 else 1
+                alpha = np.average(alphas[i, 0:nb_channels_i])
+            else:
+                alpha = alphas[i, 0]
+            ia.do_assert(0 <= alpha <= 1.0)
+
+            # We cant choose "just a bit" of one segmentation map augmentation
+            # result without messing up the positions (interpolation doesn't
+            # make much sense here),
+            # so if the alpha is >= 0.5 (branch A is more visible than
+            # branch B), the result of branch A, otherwise branch B.
+            if alpha >= 0.5:
+                result[i] = outputs_first_i
+            else:
+                result[i] = outputs_second_i
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(augs_, keypoints_on_images_, parents_, hooks_):
             return augs_.augment_keypoints(
@@ -437,7 +497,6 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             # coordinate augmentation also works channel-wise -- even though
             # e.g. keypoints do not have channels -- in order to keep the random
             # values properly synchronized with the image augmentation
-            # per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel[i] > 0.5:
                 nb_channels_i = inputs[i].shape[2] if len(inputs[i].shape) >= 3 else 1
                 alpha = np.average(alphas[i, 0:nb_channels_i])
@@ -598,6 +657,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
+        # TODO use SEED_MAX
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
@@ -656,6 +716,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = heatmaps
         nb_heatmaps = len(heatmaps)
+        # TODO use SEED_MAX
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
 
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
@@ -708,6 +769,77 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
 
             result[i].arr_0to1 = heatmaps_arr_aug
+
+        return result
+
+    # TODO this is almost identical to heatmap aug, merge the two
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _sample_factor_mask(h_images, w_images, h_segmaps, w_segmaps, seed):
+            samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
+            ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
+
+            if (h_images, w_images) != (h_segmaps, w_segmaps):
+                samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
+                samples_c = ia.imresize_single_image(samples_c, (h_segmaps, w_segmaps), interpolation="cubic")
+                samples_c = samples_c.astype(np.float32) / 255.0
+
+            return samples_c
+
+        result = segmaps
+        nb_segmaps = len(segmaps)
+        # TODO use SEED_MAX
+        seeds = random_state.randint(0, 10**6, (nb_segmaps,))
+
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                segmaps_first = segmaps
+            else:
+                segmaps_first = self.first.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                segmaps_second = segmaps
+            else:
+                segmaps_second = self.second.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            segmaps_first = segmaps
+            segmaps_second = segmaps
+
+        for i in sm.xrange(nb_segmaps):
+            segmaps_i = segmaps[i]
+            h_img, w_img = segmaps_i.shape[0:2]
+            h_segmaps, w_segmaps = segmaps_i.arr.shape[0:2]
+            nb_channels_img = segmaps_i.shape[2] if len(segmaps_i.shape) >= 3 else 1
+            nb_channels_segmaps = segmaps_i.arr.shape[2]
+            segmaps_first_i = segmaps_first[i]
+            segmaps_second_i = segmaps_second[i]
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            if per_channel > 0.5:
+                samples = []
+                for c in sm.xrange(nb_channels_img):
+                    # We sample here at the same size as the original image, as some effects
+                    # might not scale with image size. We sampled mask is then downscaled to the
+                    # heatmap size.
+                    samples_c = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, seeds[i]+1+c)
+                    samples.append(samples_c[..., np.newaxis])
+                samples = np.concatenate(samples, axis=2)
+                samples_avg = np.average(samples, axis=2)
+                samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_segmaps))
+            else:
+                samples = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, seeds[i])
+                samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_segmaps))
+
+            mask = samples_tiled >= 0.5
+            segmaps_arr_aug = mask * segmaps_first_i.arr + (~mask) * segmaps_second_i.arr
+
+            result[i].arr = segmaps_arr_aug
 
         return result
 
