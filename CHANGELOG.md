@@ -148,6 +148,7 @@
 * Improved efficiency of `BoundingBoxesOnImage.draw_on_image()` by evading unnecessary array copies.
 * Moved line interpolation functions `_interpolate_points()`, `_interpolate_point_pair()` and `_interpolate_points_by_max_distance()` to `imgaug.augmentables.utils` and made them public functions.
 * Renamed `color_line` to `color_lines`, `alpha_line` to `alpha_lines` in `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`. 
+* Fixed a Permission Denied error when using `JpegCompression` on windows (possibly also affected other systems). #297
 
 
 # 0.2.8
