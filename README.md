@@ -96,7 +96,7 @@ It converts a set of input images into a new, much larger set of slightly altere
 * Supports augmentation of:
   * Images (full support for uint8, for other dtypes see [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html))
   * Heatmaps (float32)
-  * Segmentation maps (integer-based, bool, float-based)
+  * Segmentation Maps or Masks (int, bool)
   * Keypoints/Landmarks (int or float coordinates)
   * Bounding Boxes (int or float coordinates)
   * Polygons (int or float coordinates) (Beta)
