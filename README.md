@@ -94,6 +94,8 @@ It converts a set of input images into a new, much larger set of slightly altere
 * Many augmentation techniques
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
   * Optimized for high performance
+  * Easy to apply augmentations only to some images
+  * Easy to apply augmentations in random order
 * Support for
   * Images (full support for uint8, for other dtypes see [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html))
   * Heatmaps (float32), Segmentation Maps (int), Masks (bool)
