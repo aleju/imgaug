@@ -91,26 +91,28 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 ## Features
 
-* Supports both common and exotic augmentation techniques.
+* Many augmentation techniques
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
-* Supports augmentation of:
+  * Optimized for high performance
+* Support for
   * Images (full support for uint8, for other dtypes see [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html))
-  * Heatmaps (float32)
-  * Segmentation Maps or Masks (int, bool)
-  * Keypoints/Landmarks (int or float coordinates)
-  * Bounding Boxes (int or float coordinates)
-  * Polygons (int or float coordinates) (Beta)
-  * LineStrings (int or float coordinates) (Beta)
-  * Can augment all of the above automatically with the same sampled values. E.g. rotate both images and the segmentation maps on them by the same random value sampled from `uniform(0°, 30°)`.
-  * Native support for heatmaps and segmentation maps that are smaller than their corresponding images.
-* Define flexible stochastic ranges for each augmentation parameter.
-  * E.g. "rotate each image by a value between -45 and 45 degrees".
-  * E.g. "rotate each image by `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the gaussian distribution and `B(.)` the beta distribution.
-* Offers many helper functions.
-  * E.g. for drawing heatmaps, segmentation maps, keypoints, bounding boxes and polygons.
-  * E.g. for scaling segmentation maps, average/max pooling of images/maps or for padding images to desired aspect ratios (e.g. to square them).
-* Define your augmentation sequence once at the start of the experiment, then apply it many times.
-* Supports augmentation on multiple CPU cores.
+  * Heatmaps (float32), Segmentation Maps (int), Masks (bool)
+    * May be smaller/larger than their corresponding images. *No* extra lines of code needed for e.g. crop. 
+  * Keypoints/Landmarks (int/float coordinates)
+  * Bounding Boxes (int/float coordinates)
+  * Polygons (int/float coordinates) (Beta)
+  * Line Strings (int/float coordinates) (Beta)
+* Automatic alignment of sampled random values
+  * Example: Rotate image and segmentation map on it by the same value sampled from `uniform(-10°, 45°)`. (0 extra lines of code.)
+* Probability distributions as parameters
+  * Example: Rotate images by values sampled from `uniform(-10°, 45°)`.
+  * Example: Rotate images by values sampled from `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the gaussian distribution and `B(.)` the beta distribution.
+* Many helper functions
+  * Example: Draw heatmaps, segmentation maps, keypoints, bounding boxes, ...
+  * Example: Scale segmentation maps, average/max pool of images/maps, pad images to aspect
+    ratios (e.g. to square them)
+  * Example: Convert keypoints to distance maps, extract pixels within bounding boxes from images, clip polygon to the image plane, ...
+* Support for augmentation on multiple CPU cores
 
 
 <a name="installation"/>
