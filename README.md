@@ -163,6 +163,9 @@ Example ReadTheDocs pages (usually less up to date than the notebooks):
 
 More RTD documentation: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
 
+All documentation related files of this project are hosted in the
+repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
+
 
 <a name="recent_changes"/>
 
