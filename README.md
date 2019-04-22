@@ -131,7 +131,7 @@ pip install imgaug
 
 or install the latest version directly from github:
 ```bash
-pip install git+https://github.com/aleju/imgaug
+pip install git+https://github.com/aleju/imgaug.git
 ```
 
 Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install manually
