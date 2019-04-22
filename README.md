@@ -171,6 +171,8 @@ repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
 
 ## Recent Changes
 
+* **0.2.9**: Added polygon augmentation, added line string augmentation,
+  simplified augmentation interface.
 * **0.2.8**: Improved performance, dtype support and multicore augmentation.
 
 See [changelog](CHANGELOG.md) for more details.
