@@ -182,7 +182,12 @@ See [changelog](CHANGELOG.md) for more details.
 
 ## Example Images
 
-The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
+The images below show examples for most augmentation techniques.
+
+Values written in the form `(a, b)` denote a uniform distribution,
+i.e. the value is randomly picked from the interval `[a, b]`.
+Line strings are supported by all augmenters, but are not explicitly visualized
+here.
 
 <table>
 
