@@ -78,18 +78,18 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 ## Table of Contents
 
-1. [Features of the Library](#features)
+1. [Features](#features)
 2. [Documentation](#documentation)
 3. [Installation](#installation)
 4. [Recent Changes](#recent_changes)
-5. [Overview of Most Augmenters](#overview_of_most_augmenters)
+5. [Example Images](#example_images)
 6. [Code Examples](#code_examples)
 7. [List of augmenters](#list_of_augmenters)
 
 
 <a name="features"/>
 
-## Features of the Library
+## Features
 
 * Supports both common and exotic augmentation techniques.
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
@@ -167,9 +167,9 @@ To deinstall the library, just execute `pip uninstall imgaug`.
 See [changelog](CHANGELOG.md) for more details.
 
 
-<a name="overview_of_most_augmenters"/>
+<a name="example_images"/>
 
-## Overview of Most Augmenters
+## Example Images
 
 The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
 
