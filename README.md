@@ -75,7 +75,21 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 ![64 quokkas](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/examples_grid.jpg?raw=true "64 quokkas")
 
-## Features of the library
+
+## Table of Contents
+
+1. [Features of the Library](#features)
+2. [Documentation](#documentation)
+3. [Installation](#installation)
+4. [Recent Changes](#recent_changes)
+5. [Overview of Most Augmenters](#overview_of_most_augmenters)
+6. [Code Examples](#code_examples)
+7. [List of augmenters](#list_of_augmenters)
+
+
+<a name="features"/>
+
+## Features of the Library
 
 * Supports both common and exotic augmentation techniques.
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
@@ -98,6 +112,9 @@ It converts a set of input images into a new, much larger set of slightly altere
 * Define your augmentation sequence once at the start of the experiment, then apply it many times.
 * Supports augmentation on multiple CPU cores.
 
+
+<a name="documentation"/>
+
 ## Documentation
 
 * [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code on how to use the library.
@@ -112,6 +129,9 @@ It converts a set of input images into a new, much larger set of slightly altere
     [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
     [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
     [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb)
+
+
+<a name="installation"/>
 
 ## Installation
 
@@ -137,13 +157,19 @@ via `cd imgaug && python setup.py install`.
 
 To deinstall the library, just execute `pip uninstall imgaug`.
 
+
+<a name="recent_changes"/>
+
 ## Recent Changes
 
 * **0.2.8**: Improved performance, dtype support and multicore augmentation.
 
 See [changelog](CHANGELOG.md) for more details.
 
-## Overview of most augmenters
+
+<a name="overview_of_most_augmenters"/>
+
+## Overview of Most Augmenters
 
 The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
 
@@ -470,6 +496,9 @@ The images below show examples for most augmentation techniques (values written 
 
 </table>
 
+
+
+<a name="code_examples"/>
 
 ## Code Examples
 
@@ -863,7 +892,9 @@ heatmaps_aug = seq_det.augment_images(heatmaps, hooks=hooks_heatmaps)
 ```
 
 
-## List of augmenters
+<a name="list_of_augmenters"/>
+
+## List of Augmenters
 
 The following is a list of available augmenters.
 Note that most of the below mentioned variables can be set to ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image,
