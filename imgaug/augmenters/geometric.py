@@ -2049,6 +2049,48 @@ class PerspectiveTransform(meta.Augmenter):
         may end up having different shapes and will always be a list, never
         an array.
 
+    cval : number or tuple of number or list of number or imaug.ALL or imgaug.parameters.StochasticParameter, optional
+        The constant value used to fill up pixels in the result image that
+        didn't exist in the input image (e.g. when translating to the left,
+        some new pixels are created at the right). Such a fill-up with a
+        constant value only happens, when `mode` is "constant".
+        The expected value range is ``[0, 255]``. It may be a float value.
+
+            * If this is a single int or float, then that value will be used
+              (e.g. 0 results in black pixels).
+            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
+              is picked per image.
+            * If a list, then a random value will eb sampled from that list
+              per image.
+            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
+              sampled per image.
+            * If a StochasticParameter, a new value will be sampled from the
+              parameter per image.
+
+    mode : int or str or list of str or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter,
+           optional
+        Parameter that defines the handling of newly created pixels.
+        Same meaning as in OpenCV's border mode. Let ``abcdefgh`` be an image's
+        content and ``|`` be an image boundary, then:
+
+            * ``cv2.BORDER_REPLICATE``: ``aaaaaa|abcdefgh|hhhhhhh``
+            * ``cv2.BORDER_CONSTANT``: ``iiiiii|abcdefgh|iiiiiii``, where ``i`` is the defined cval.
+            * ``replicate``: Same as ``cv2.BORDER_REPLICATE``.
+            * ``constant``: Same as ``cv2.BORDER_CONSTANT``.
+
+        The datatype of the parameter may be:
+
+            * If a single int, then it must be one of ``cv2.BORDER_*``.
+            * If a single string, then it must be one of: ``replicate``,
+              ``reflect``, ``reflect_101``, ``wrap``, ``constant``.
+            * If a list of ints/strings, then per image a random mode will be
+              picked from that list.
+            * If imgaug.ALL, then a random mode from all possible modes will be
+              picked.
+            * If StochasticParameter, then the mode will be sampled from that
+              parameter per image, i.e. it must return only the above mentioned
+              strings.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -2069,7 +2111,7 @@ class PerspectiveTransform(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=0, keep_size=True, name=None, deterministic=False, random_state=None):
+    def __init__(self, scale=0, cval=0, mode='constant', keep_size=True, name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -2083,6 +2125,38 @@ class PerspectiveTransform(meta.Augmenter):
         self.min_height = 2
         self.shift_step_size = 0.5
 
+        if cval == ia.ALL:
+            self.cval = iap.DiscreteUniform(0, 255)
+        else:
+            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
+                                                  list_to_choice=True, allow_floats=True)
+
+        available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_CONSTANT]
+        available_modes_str = ["replicate", "constant"]
+        if mode == ia.ALL:
+            self.mode = iap.Choice(available_modes)
+        elif ia.is_single_integer(mode):
+            ia.do_assert(mode in available_modes,
+                         "Expected mode to be in %s, got %d." % (str(available_modes), mode))
+            self.mode = iap.Deterministic(mode)
+        elif ia.is_string(mode):
+            ia.do_assert(mode in available_modes_str,
+                         "Expected mode to be in %s, got %s." % (str(available_modes_str), mode))
+            self.mode = iap.Deterministic(mode)
+        elif isinstance(mode, list):
+            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]),
+                         "Expected mode list to only contain integers/strings, got types %s." % (
+                             str([type(val) for val in mode]),))
+            ia.do_assert(all([val in available_modes + available_modes_str for val in mode]),
+                         "Expected all mode values to be in %s, got %s." % (
+                             str(available_modes + available_modes_str), str(mode)))
+            self.mode = iap.Choice(mode)
+        elif isinstance(mode, iap.StochasticParameter):
+            self.mode = mode
+        else:
+            raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or "
+                            + "StochasticParameter, got %s." % (type(mode),))
+
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
                          allowed=["bool", "uint8", "uint16", "int8", "int16",
@@ -2095,12 +2169,12 @@ class PerspectiveTransform(meta.Augmenter):
         if not self.keep_size:
             result = list(result)
 
-        matrices, max_heights, max_widths = self._create_matrices(
+        matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
             [image.shape for image in images],
             random_state
         )
 
-        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+        for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
             image = images[i]
 
             # cv2.warpPerspective only supports <=4 channels
@@ -2112,13 +2186,23 @@ class PerspectiveTransform(meta.Augmenter):
                 image = image.astype(np.float32)
 
             if nb_channels <= 4:
-                warped = cv2.warpPerspective(image, M, (max_width, max_height))
+                warped = cv2.warpPerspective(
+                    image,
+                    M,
+                    (max_width, max_height),
+                    borderValue=cval,
+                    borderMode=mode)
                 if warped.ndim == 2 and images[i].ndim == 3:
                     warped = np.expand_dims(warped, 2)
             else:
                 # warp each channel on its own, re-add channel axis, then stack
                 # the result from a list of [H, W, 1] to (H, W, C).
-                warped = [cv2.warpPerspective(image[..., c], M, (max_width, max_height))
+                warped = [cv2.warpPerspective(
+                    image[..., c],
+                    M,
+                    (max_width, max_height),
+                    borderValue=cval,
+                    borderMode=mode)
                           for c in sm.xrange(nb_channels)]
                 warped = [warped_i[..., np.newaxis] for warped_i in warped]
                 warped = np.dstack(warped)
@@ -2139,7 +2223,7 @@ class PerspectiveTransform(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
 
-        matrices, max_heights, max_widths = self._create_matrices(
+        matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
             [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
             ia.copy_random_state(random_state)
         )
@@ -2150,19 +2234,23 @@ class PerspectiveTransform(meta.Augmenter):
         if self.keep_size:
             max_heights_imgs, max_widths_imgs = max_heights, max_widths
         else:
-            _, max_heights_imgs, max_widths_imgs = self._create_matrices(
+            _, max_heights_imgs, max_widths_imgs, cval_samples, mode_samples = self._create_matrices(
                 [heatmaps_i.shape for heatmaps_i in heatmaps],
                 ia.copy_random_state(random_state)
             )
 
-        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+        for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
             heatmaps_i = heatmaps[i]
 
             arr = heatmaps_i.arr_0to1
 
             nb_channels = arr.shape[2]
 
-            warped = [cv2.warpPerspective(arr[..., c], M, (max_width, max_height)) for c in sm.xrange(nb_channels)]
+            warped = [cv2.warpPerspective(
+                arr[..., c], M,
+                (max_width, max_height),
+                borderValue=0,
+                borderMode=cv2.BORDER_CONSTANT) for c in sm.xrange(nb_channels)]
             warped = [warped_i[..., np.newaxis] for warped_i in warped]
             warped = np.dstack(warped)
 
@@ -2182,12 +2270,12 @@ class PerspectiveTransform(meta.Augmenter):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
-        matrices, max_heights, max_widths = self._create_matrices(
+        matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
             [kps.shape for kps in keypoints_on_images],
             random_state
         )
 
-        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+        for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
             keypoints_on_image = keypoints_on_images[i]
             new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
             if not keypoints_on_image.keypoints:
@@ -2213,13 +2301,31 @@ class PerspectiveTransform(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def _create_matrices(self, shapes, random_state):
+        # TODO change these to class attributes
+        mode_str_to_int = {
+            "replicate": cv2.BORDER_REPLICATE,
+            "constant": cv2.BORDER_CONSTANT
+        }
+
         matrices = []
         max_heights = []
         max_widths = []
         nb_images = len(shapes)
         seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
 
+        cval_samples = self.cval.draw_samples((nb_images, 3),
+                                              random_state=random_state)
+        mode_samples = self.mode.draw_samples((nb_images,),
+                                              random_state=random_state)
+
+        cval_samples_cv2 = []
+
         for i in sm.xrange(nb_images):
+            mode = mode_samples[i]
+            mode_samples[i] = mode if ia.is_single_integer(mode) else mode_str_to_int[mode]
+
+            cval_samples_cv2.append([int(cval_i) for cval_i in cval_samples[i]])
+
             h, w = shapes[i][0:2]
 
             points = self.jitter.draw_samples((4, 2), random_state=ia.new_random_state(seeds[i]))
@@ -2294,7 +2400,8 @@ class PerspectiveTransform(meta.Augmenter):
             max_heights.append(max_height)
             max_widths.append(max_width)
 
-        return matrices, max_heights, max_widths
+        mode_samples = mode_samples.astype(int)
+        return matrices, max_heights, max_widths, cval_samples_cv2, mode_samples
 
     @classmethod
     def _order_points(cls, pts):
@@ -2321,7 +2428,7 @@ class PerspectiveTransform(meta.Augmenter):
         return pts_ordered
 
     def get_parameters(self):
-        return [self.jitter, self.keep_size]
+        return [self.jitter, self.keep_size, self.cval, self.mode]
 
 
 # code partially from https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a

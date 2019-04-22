@@ -3072,6 +3072,43 @@ def test_PerspectiveTransform():
         exterior_expected[:, 1] = ((exterior_expected[:, 1] - scale * 30) / (30 * (1-scale))) * 30
         observed.polygons[0].exterior_almost_equals(exterior_expected)
 
+
+
+    # ------------
+    # mode
+    # ------------
+    aug = iaa.PerspectiveTransform(cval=0, mode=ia.ALL)
+    assert isinstance(aug.mode, iap.Choice)
+    aug = iaa.PerspectiveTransform(cval=0, mode="replicate")
+    assert isinstance(aug.mode, iap.Deterministic)
+    assert aug.mode.value == "replicate"
+    aug = iaa.PerspectiveTransform(cval=0, mode=["replicate", "constant"])
+    assert isinstance(aug.mode, iap.Choice)
+    assert len(
+        aug.mode.a) == 2 and "replicate" in aug.mode.a and "constant" in aug.mode.a
+    aug = iaa.PerspectiveTransform(cval=0, mode=iap.Choice(["replicate", "constant"]))
+    assert isinstance(aug.mode, iap.Choice)
+    assert len(
+        aug.mode.a) == 2 and "replicate" in aug.mode.a and "constant" in aug.mode.a
+
+    # Check new values
+    img = np.ones((256, 256, 3), dtype=np.uint8) * 255
+    aug = iaa.PerspectiveTransform(scale=0.001, mode='replicate', cval=0,
+                                   random_state=np.random.RandomState(seed=31))
+    img_aug = aug.augment_image(img)
+
+    assert (img_aug == 255).all()
+
+    aug = iaa.PerspectiveTransform(scale=0.001, mode='constant', cval=255,
+                                   random_state=np.random.RandomState(seed=31))
+    img_aug = aug.augment_image(img)
+    assert (img_aug == 255).all()
+
+    aug = iaa.PerspectiveTransform(scale=0.001, mode='constant', cval=0,
+                                   random_state=np.random.RandomState(seed=31))
+    img_aug = aug.augment_image(img)
+    assert not (img_aug == 255).all()
+
     # --------
     # get_parameters
     # --------
@@ -3081,6 +3118,8 @@ def test_PerspectiveTransform():
     assert isinstance(params[0].scale, iap.Deterministic)
     assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
     assert params[1] is False
+    assert params[2].value == 0
+    assert params[3].value == 'constant'
 
     ###################
     # test other dtypes
