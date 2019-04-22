@@ -2111,7 +2111,7 @@ class PerspectiveTransform(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=0, keep_size=True, name=None, cval=0, mode='constant', deterministic=False, random_state=None):
+    def __init__(self, scale=0, cval=0, mode='constant', keep_size=True, name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -2249,8 +2249,8 @@ class PerspectiveTransform(meta.Augmenter):
             warped = [cv2.warpPerspective(
                 arr[..., c], M,
                 (max_width, max_height),
-                borderValue=cval,
-                borderMode=mode) for c in sm.xrange(nb_channels)]
+                borderValue=0,
+                borderMode=cv2.BORDER_CONSTANT) for c in sm.xrange(nb_channels)]
             warped = [warped_i[..., np.newaxis] for warped_i in warped]
             warped = np.dstack(warped)
 
@@ -2324,7 +2324,7 @@ class PerspectiveTransform(meta.Augmenter):
             mode = mode_samples[i]
             mode_samples[i] = mode if ia.is_single_integer(mode) else mode_str_to_int[mode]
 
-            cval_samples_cv2.append([int(i) for i in cval_samples[i]])
+            cval_samples_cv2.append([int(cval_i) for cval_i in cval_samples[i]])
 
             h, w = shapes[i][0:2]
 
