@@ -3095,19 +3095,19 @@ def test_PerspectiveTransform():
     img = np.ones((256, 256, 3), dtype=np.uint8) * 255
     aug = iaa.PerspectiveTransform(scale=0.001, mode='replicate', cval=0,
                                    random_state=np.random.RandomState(seed=31))
-    img = aug.augment_image(img)
+    img_aug = aug.augment_image(img)
 
-    assert (img == 255).all()
+    assert (img_aug == 255).all()
 
     aug = iaa.PerspectiveTransform(scale=0.001, mode='constant', cval=255,
                                    random_state=np.random.RandomState(seed=31))
-    img = aug.augment_image(img)
-    assert (img == 255).all()
+    img_aug = aug.augment_image(img)
+    assert (img_aug == 255).all()
 
     aug = iaa.PerspectiveTransform(scale=0.001, mode='constant', cval=0,
                                    random_state=np.random.RandomState(seed=31))
-    img = aug.augment_image(img)
-    assert not (img == 255).all()
+    img_aug = aug.augment_image(img)
+    assert not (img_aug == 255).all()
 
     # --------
     # get_parameters
