@@ -79,8 +79,8 @@ It converts a set of input images into a new, much larger set of slightly altere
 ## Table of Contents
 
 1. [Features](#features)
-2. [Documentation](#documentation)
-3. [Installation](#installation)
+2. [Installation](#installation)
+3. [Documentation](#documentation)
 4. [Recent Changes](#recent_changes)
 5. [Example Images](#example_images)
 6. [Code Examples](#code_examples)
@@ -113,24 +113,6 @@ It converts a set of input images into a new, much larger set of slightly altere
 * Supports augmentation on multiple CPU cores.
 
 
-<a name="documentation"/>
-
-## Documentation
-
-* [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code on how to use the library.
-* [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for some augmentation techniques. (See also the API, which usually contains examples for each augmenter.)
-* [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
-* For tutorial jupyter notebooks, see [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks)
-  * E.g. [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb),
-    [Multicore Support](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb),
-    or working with [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
-    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
-    [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
-    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
-    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
-    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb)
-
-
 <a name="installation"/>
 
 ## Installation
@@ -156,6 +138,24 @@ Alternatively, you can download the repository via `git clone https://github.com
 via `cd imgaug && python setup.py install`.
 
 To deinstall the library, just execute `pip uninstall imgaug`.
+
+
+<a name="documentation"/>
+
+## Documentation
+
+* [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code on how to use the library.
+* [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for some augmentation techniques. (See also the API, which usually contains examples for each augmenter.)
+* [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
+* For tutorial jupyter notebooks, see [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks)
+  * E.g. [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb),
+    [Multicore Support](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb),
+    or working with [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
+    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
+    [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
+    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
+    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
+    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb)
 
 
 <a name="recent_changes"/>
