@@ -149,6 +149,8 @@
 * Moved line interpolation functions `_interpolate_points()`, `_interpolate_point_pair()` and `_interpolate_points_by_max_distance()` to `imgaug.augmentables.utils` and made them public functions.
 * Renamed `color_line` to `color_lines`, `alpha_line` to `alpha_lines` in `Polygon.draw_on_image()` and `PolygonsOnImage.draw_on_image()`. 
 * Fixed a Permission Denied error when using `JpegCompression` on windows (possibly also affected other systems). #297
+* [rarely breaking] Added arguments `cval` and `mode` to `PerspectiveTransform` (PR #301).
+  This breaks code that relied on the order of the arguments and used `keep_size`, `name`, `deterministic` or `random_state` (as positional arguments).
 
 
 # 0.2.8
