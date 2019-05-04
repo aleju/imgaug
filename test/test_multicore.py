@@ -165,11 +165,91 @@ class TestPool(unittest.TestCase):
             # tuple 1, entry 1 in tuple (=> batch)
             assert np.array_equal(arg_batches[1][1].images_unaug, batches[1].images_unaug)
 
+    def _test_imap_batches_both_output_buffer_size(self, call_unordered, timeout=0.075):
+        batches = [ia.Batch(images=[
+                       np.full((1, 1), i, dtype=np.uint8)
+                   ]) for i in range(8)]
+
+        def _generate_batches(times):
+            for batch in batches:
+                yield batch
+                times.append(time.time())
+
+        def callfunc(pool, gen, output_buffer_size):
+            if call_unordered:
+                for v in pool.imap_batches_unordered(gen, output_buffer_size=output_buffer_size):
+                    yield v
+            else:
+                for v in pool.imap_batches(gen, output_buffer_size=output_buffer_size):
+                    yield v
+
+        def contains_all_ids(inputs):
+            arrs = np.uint8([batch.images_aug for batch in inputs])
+            ids_uq = np.unique(arrs)
+            return (
+                len(ids_uq) == len(batches)
+                and np.all(0 <= ids_uq)
+                and np.all(ids_uq < len(batches))
+            )
+
+        augseq = iaa.Noop()
+        with multicore.Pool(augseq, processes=1) as pool:
+            # no output buffer limit, there should be no noteworthy lag
+            # for any batch requested from _generate_batches()
+            times = []
+            gen = callfunc(pool, _generate_batches(times), None)
+            result = next(gen)
+            time.sleep(timeout)
+            result = [result] + list(gen)
+            times = np.float64(times)
+            times_diffs = times[1:] - times[0:-1]
+            assert np.all(times_diffs < timeout)
+            assert contains_all_ids(result)
+
+            # with output buffer limit, but set to the number of batches,
+            # i.e. should again not lead to any lag
+            times = []
+            gen = callfunc(pool, _generate_batches(times), len(batches))
+            result = next(gen)
+            time.sleep(timeout)
+            result = [result] + list(gen)
+            times = np.float64(times)
+            times_diffs = times[1:] - times[0:-1]
+            assert np.all(times_diffs < timeout)
+            assert contains_all_ids(result)
+
+            # With output buffer limit of #batches/2 (=4), followed by a
+            # timeout after starting the loading process. This should quickly
+            # load batches until the buffer is full, then wait until the
+            # batches are requested from the buffer (i.e. after the timeout
+            # ended) and then proceed to produce batches at the speed at which
+            # they are requested. This should lead to a measureable lag between
+            # batch 4 and 5 (matching the timeout).
+            times = []
+            gen = callfunc(pool, _generate_batches(times), 4)
+            result = next(gen)
+            time.sleep(timeout)
+            result = [result] + list(gen)
+            times = np.float64(times)
+            times_diffs = times[1:] - times[0:-1]
+            # use -1 here because we have N-1 times for N batches as
+            # diffs denote diffs between Nth and N+1th batch
+            assert np.all(times_diffs[0:4-1] < timeout)
+            assert np.all(times_diffs[4-1:4-1+1] >= timeout)
+            assert np.all(times_diffs[4-1+1:] < timeout)
+            assert contains_all_ids(result)
+
     def test_imap_batches(self):
         self._test_imap_batches_both(call_unordered=False)
 
     def test_imap_batches_unordered(self):
         self._test_imap_batches_both(call_unordered=True)
+
+    def test_imap_batches_output_buffer_size(self):
+        self._test_imap_batches_both_output_buffer_size(call_unordered=False)
+
+    def test_imap_batches_unordered_output_buffer_size(self):
+        self._test_imap_batches_both_output_buffer_size(call_unordered=True)
 
     def _assert_each_augmentation_not_more_than_once(self, batches_aug):
         sum_to_vecs = defaultdict(list)
