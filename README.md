@@ -75,43 +75,49 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 ![64 quokkas](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/examples_grid.jpg?raw=true "64 quokkas")
 
-## Features of the library
 
-* Supports both common and exotic augmentation techniques.
+## Table of Contents
+
+1. [Features](#features)
+2. [Installation](#installation)
+3. [Documentation](#documentation)
+4. [Recent Changes](#recent_changes)
+5. [Example Images](#example_images)
+6. [Code Examples](#code_examples)
+7. [List of augmenters](#list_of_augmenters)
+
+
+<a name="features"/>
+
+## Features
+
+* Many augmentation techniques
   * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
-* Supports augmentation of:
+  * Optimized for high performance
+  * Easy to apply augmentations only to some images
+  * Easy to apply augmentations in random order
+* Support for
   * Images (full support for uint8, for other dtypes see [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html))
-  * Heatmaps (float32)
-  * Segmentation maps (integer-based, bool, float-based)
-  * Keypoints/Landmarks (int or float coordinates)
-  * Bounding Boxes (int or float coordinates)
-  * Polygons (int or float coordinates) (Beta)
-  * LineStrings (int or float coordinates) (Beta)
-  * Can augment all of the above automatically with the same sampled values. E.g. rotate both images and the segmentation maps on them by the same random value sampled from `uniform(0°, 30°)`.
-  * Native support for heatmaps and segmentation maps that are smaller than their corresponding images.
-* Define flexible stochastic ranges for each augmentation parameter.
-  * E.g. "rotate each image by a value between -45 and 45 degrees".
-  * E.g. "rotate each image by `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the gaussian distribution and `B(.)` the beta distribution.
-* Offers many helper functions.
-  * E.g. for drawing heatmaps, segmentation maps, keypoints, bounding boxes and polygons.
-  * E.g. for scaling segmentation maps, average/max pooling of images/maps or for padding images to desired aspect ratios (e.g. to square them).
-* Define your augmentation sequence once at the start of the experiment, then apply it many times.
-* Supports augmentation on multiple CPU cores.
+  * Heatmaps (float32), Segmentation Maps (int), Masks (bool)
+    * May be smaller/larger than their corresponding images. *No* extra lines of code needed for e.g. crop. 
+  * Keypoints/Landmarks (int/float coordinates)
+  * Bounding Boxes (int/float coordinates)
+  * Polygons (int/float coordinates) (Beta)
+  * Line Strings (int/float coordinates) (Beta)
+* Automatic alignment of sampled random values
+  * Example: Rotate image and segmentation map on it by the same value sampled from `uniform(-10°, 45°)`. (0 extra lines of code.)
+* Probability distributions as parameters
+  * Example: Rotate images by values sampled from `uniform(-10°, 45°)`.
+  * Example: Rotate images by values sampled from `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the gaussian distribution and `B(.)` the beta distribution.
+* Many helper functions
+  * Example: Draw heatmaps, segmentation maps, keypoints, bounding boxes, ...
+  * Example: Scale segmentation maps, average/max pool of images/maps, pad images to aspect
+    ratios (e.g. to square them)
+  * Example: Convert keypoints to distance maps, extract pixels within bounding boxes from images, clip polygon to the image plane, ...
+* Support for augmentation on multiple CPU cores
 
-## Documentation
 
-* [http://imgaug.readthedocs.io/en/latest/source/examples_basics.html](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html) - Quick example code on how to use the library.
-* [http://imgaug.readthedocs.io/en/latest/source/augmenters.html](http://imgaug.readthedocs.io/en/latest/source/augmenters.html) - Example code for some augmentation techniques. (See also the API, which usually contains examples for each augmenter.)
-* [http://imgaug.readthedocs.io/en/latest/source/api.html](http://imgaug.readthedocs.io/en/latest/source/api.html) - API.
-* For tutorial jupyter notebooks, see [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks)
-  * E.g. [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb),
-    [Multicore Support](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb),
-    or working with [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
-    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
-    [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
-    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
-    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
-    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb)
+<a name="installation"/>
 
 ## Installation
 
@@ -129,7 +135,7 @@ pip install imgaug
 
 or install the latest version directly from github:
 ```bash
-pip install git+https://github.com/aleju/imgaug
+pip install git+https://github.com/aleju/imgaug.git
 ```
 
 Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install manually
@@ -137,15 +143,55 @@ via `cd imgaug && python setup.py install`.
 
 To deinstall the library, just execute `pip uninstall imgaug`.
 
+
+<a name="documentation"/>
+
+## Documentation
+
+Example jupyter notebooks:
+  * [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
+  * [Multicore Augmentation](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
+  * Augment and work with: [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
+    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
+    [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
+    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
+    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
+    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb) 
+
+More notebooks: [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks).
+
+Example ReadTheDocs pages (usually less up to date than the notebooks):
+* [Quick example code on how to use the library](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
+* [Examples for some of the supported augmentation techniques](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
+* [API](http://imgaug.readthedocs.io/en/latest/source/api.html)
+
+More RTD documentation: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
+
+All documentation related files of this project are hosted in the
+repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
+
+
+<a name="recent_changes"/>
+
 ## Recent Changes
 
+* **0.2.9**: Added polygon augmentation, added line string augmentation,
+  simplified augmentation interface.
 * **0.2.8**: Improved performance, dtype support and multicore augmentation.
 
 See [changelog](CHANGELOG.md) for more details.
 
-## Overview of most augmenters
 
-The images below show examples for most augmentation techniques (values written in the form `(a, b)` mean that a value was randomly picked from the range `a <= x <= b`):
+<a name="example_images"/>
+
+## Example Images
+
+The images below show examples for most augmentation techniques.
+
+Values written in the form `(a, b)` denote a uniform distribution,
+i.e. the value is randomly picked from the interval `[a, b]`.
+Line strings are supported by all augmenters, but are not explicitly visualized
+here.
 
 <table>
 
@@ -471,12 +517,36 @@ The images below show examples for most augmentation techniques (values written 
 </table>
 
 
+
+<a name="code_examples"/>
+
 ## Code Examples
+
+
+### Example: Simple Training Setting
 
 A standard machine learning situation.
 Train on batches of images and augment each batch via crop, horizontal flip ("Fliplr") and gaussian blur:
 ```python
-from imgaug import augmenters as iaa
+import numpy as np
+import imgaug.augmenters as iaa
+
+
+def load_batch(batch_idx):
+    # dummy function, implement this
+    # Return a numpy array of shape (N, height, width, #channels)
+    # or a list of (height, width, #channels) arrays (may have different image
+    # sizes).
+    # Images should be in RGB for colorspace augmentations.
+    # (cv2.imread() returns BGR!)
+    # Images should usually be in uint8 with values from 0-255.
+    return np.zeros((128, 32, 32, 3), dtype=np.uint8) + (batch_idx % 255)
+
+
+def train_on_images(images):
+    # dummy function, implement this
+    pass
+
 
 seq = iaa.Sequential([
     iaa.Crop(px=(0, 16)), # crop images from each side by 0 to 16px (randomly chosen)
@@ -485,21 +555,19 @@ seq = iaa.Sequential([
 ])
 
 for batch_idx in range(1000):
-    # 'images' should be either a 4D numpy array of shape (N, height, width, channels)
-    # or a list of 3D numpy arrays, each having shape (height, width, channels).
-    # Grayscale images must have shape (height, width, 1) each.
-    # All images must have numpy's dtype uint8. Values are expected to be in
-    # range 0-255.
-    images = load_batch(batch_idx)  # you have to implement this function
+    images = load_batch(batch_idx)
     images_aug = seq.augment_images(images)  # done by the library
-    train_on_images(images_aug)  # you have to implement this function
+    train_on_images(images_aug)
 ```
+
+### Example: Very Complex Augmentation Pipeline
 
 Apply heavy augmentations to images (used to create the image at the very top of this readme):
 ```python
-import imgaug as ia
-from imgaug import augmenters as iaa
 import numpy as np
+import imgaug as ia
+import imgaug.augmenters as iaa
+
 
 # random example images
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
@@ -583,131 +651,144 @@ seq = iaa.Sequential(
 images_aug = seq.augment_images(images)
 ```
 
+
+### Example: Visualize Augmentations
+
 Quickly show example results of your augmentation sequence:
 ```python
-from imgaug import augmenters as iaa
 import numpy as np
+import imgaug.augmenters as iaa
+
 
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 seq = iaa.Sequential([iaa.Fliplr(0.5), iaa.GaussianBlur((0, 3.0))])
 
-# show an image with 8*8 augmented versions of image 0
-seq.show_grid(images[0], cols=8, rows=8)
-
 # Show an image with 8*8 augmented versions of image 0 and 8*8 augmented
-# versions of image 1. The identical augmentations will be applied to
+# versions of image 1. Identical augmentations will be applied to
 # image 0 and 1.
 seq.show_grid([images[0], images[1]], cols=8, rows=8)
 ```
 
-Augment two batches of images in *exactly the same way* (e.g. horizontally flip 1st, 2nd and 5th images in both batches, but do not alter 3rd and 4th images):
+
+### Example: Augment Images and Keypoints
+
+Augment images *and* keypoints/landmarks on the same images:
 ```python
-from imgaug import augmenters as iaa
+import numpy as np
+import imgaug as ia
+import imgaug.augmenters as iaa
+from imgaug.augmentables.kps import KeypointsOnImage
+
+
+images = np.random.randint(0, 50, (4, 128, 128, 3), dtype=np.uint8)
+
+# Generate random keypoints, 1-10 per image with float32 coordinates
+keypoints = []
+for image in images:
+    n_keypoints = np.random.randint(1, 10)
+    kps = np.random.random((n_keypoints, 2))
+    kps[:, 0] *= image.shape[0]
+    kps[:, 1] *= image.shape[1]
+    keypoints.append(kps)
+
+seq = iaa.Sequential([iaa.GaussianBlur((0, 3.0)),
+                      iaa.Affine(scale=(0.5, 0.7))])
+
+# augment keypoints and images
+images_aug, keypoints_aug = seq(images=images, keypoints=keypoints)
+
+# Example code to show each image and print the new keypoints coordinates
+for i in range(len(images)):
+    print("[Image #%d]" % (i,))
+    keypoints_before = KeypointsOnImage.from_xy_array(
+        keypoints[i], shape=images[i].shape)
+    keypoints_after = KeypointsOnImage.from_xy_array(
+        keypoints_aug[i], shape=images_aug[i].shape)
+    image_before = keypoints_before.draw_on_image(images[i])
+    image_after = keypoints_after.draw_on_image(images_aug[i])
+    ia.imshow(np.hstack([image_before, image_after]))
+
+    kps_zipped = zip(keypoints_before.keypoints,
+                     keypoints_after.keypoints)
+    for keypoint_before, keypoint_after in kps_zipped:
+        x_before, y_before = keypoint_before.x, keypoint_before.y
+        x_after, y_after = keypoint_after.x, keypoint_after.y
+        print("before aug: x=%d y=%d | after aug: x=%d y=%d" % (
+            x_before, y_before, x_after, y_after))
+```
+
+### Example: Augment Images and Heatmaps
+
+Augment images and heatmaps on them in exactly the same way. Note here that
+the heatmaps have lower height and width than the images. `imgaug` handles
+that automatically. The crop pixels amounts will be halved for the heatmaps.
+
+```python
+import numpy as np
+import imgaug.augmenters as iaa
+
 
 # Standard scenario: You have N RGB-images and additionally 21 heatmaps per image.
 # You want to augment each image and its heatmaps identically.
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
-heatmaps = np.random.randint(0, 255, (16, 128, 128, 21), dtype=np.uint8)
+heatmaps = np.random.random(size=(16, 64, 64, 1)).astype(np.float32)
 
-seq = iaa.Sequential([iaa.GaussianBlur((0, 3.0)), iaa.Affine(translate_px={"x": (-40, 40)})])
+seq = iaa.Sequential([
+    iaa.GaussianBlur((0, 3.0)),
+    iaa.Affine(translate_px={"x": (-40, 40)}),
+    iaa.Crop(px=(0, 10))
+])
 
-# Convert the stochastic sequence of augmenters to a deterministic one.
-# The deterministic sequence will always apply the exactly same effects to the images.
-seq_det = seq.to_deterministic() # call this for each batch again, NOT only once at the start
-images_aug = seq_det.augment_images(images)
-heatmaps_aug = seq_det.augment_images(heatmaps)
+images_aug, heatmaps_aug = seq(images=images, heatmaps=heatmaps)
 ```
 
-Augment images *and* **landmarks/keypoints** on these images:
-```python
-import imgaug as ia
-from imgaug import augmenters as iaa
-import random
-import numpy as np
-images = np.random.randint(0, 50, (4, 128, 128, 3), dtype=np.uint8)
 
-# Generate random keypoints.
-# The augmenters expect a list of imgaug.KeypointsOnImage.
-keypoints_on_images = []
-for image in images:
-    height, width = image.shape[0:2]
-    keypoints = []
-    for _ in range(4):
-        x = random.randint(0, width-1)
-        y = random.randint(0, height-1)
-        keypoints.append(ia.Keypoint(x=x, y=y))
-    keypoints_on_images.append(ia.KeypointsOnImage(keypoints, shape=image.shape))
+### Example: Using Augmenters Only Once 
 
-seq = iaa.Sequential([iaa.GaussianBlur((0, 3.0)), iaa.Affine(scale=(0.5, 0.7))])
-seq_det = seq.to_deterministic() # call this for each batch again, NOT only once at the start
+While the interface is adapted towards defining augmenters once and using them
+many times, you are also free to use them only once. The overhead to
+instantiate the augmenters each time is usually negligible.
 
-# augment keypoints and images
-images_aug = seq_det.augment_images(images)
-keypoints_aug = seq_det.augment_keypoints(keypoints_on_images)
-
-# Example code to show each image and print the new keypoints coordinates
-for img_idx, (image_before, image_after, keypoints_before, keypoints_after) in enumerate(zip(images, images_aug, keypoints_on_images, keypoints_aug)):
-    image_before = keypoints_before.draw_on_image(image_before)
-    image_after = keypoints_after.draw_on_image(image_after)
-    ia.imshow(np.concatenate((image_before, image_after), axis=1)) # before and after
-    for kp_idx, keypoint in enumerate(keypoints_after.keypoints):
-        keypoint_old = keypoints_on_images[img_idx].keypoints[kp_idx]
-        x_old, y_old = keypoint_old.x, keypoint_old.y
-        x_new, y_new = keypoint.x, keypoint.y
-        print("[Keypoints for image #%d] before aug: x=%d y=%d | after aug: x=%d y=%d" % (img_idx, x_old, y_old, x_new, y_new))
-```
-
-Apply single augmentations to images:
 ```python
 from imgaug import augmenters as iaa
 import numpy as np
+
+
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
-flipper = iaa.Fliplr(1.0) # always horizontally flip each input image
-images[0] = flipper.augment_image(images[0]) # horizontally flip image 0
+# always horizontally flip each input image
+images_aug = iaa.Fliplr(1.0)(images=images)
 
-vflipper = iaa.Flipud(0.9) # vertically flip each input image with 90% probability
-images[1] = vflipper.augment_image(images[1]) # probably vertically flip image 1
+# vertically flip each input image with 90% probability
+images_aug = iaa.Flipud(0.9)(images=images)
 
-blurer = iaa.GaussianBlur(3.0)
-images[2] = blurer.augment_image(images[2]) # blur image 2 by a sigma of 3.0
-images[3] = blurer.augment_image(images[3]) # blur image 3 by a sigma of 3.0 too
+# blur image 2 by a sigma of 3.0
+images_aug = iaa.GaussianBlur(3.0)(images=images)
 
-translater = iaa.Affine(translate_px={"x": -16}) # move each input image by 16px to the left
-images[4] = translater.augment_image(images[4]) # move image 4 to the left
-
-scaler = iaa.Affine(scale={"y": (0.8, 1.2)}) # scale each input image to 80-120% on the y axis
-images[5] = scaler.augment_image(images[5]) # scale image 5 by 80-120% on the y axis
+# move each input image by 8 to 16px to the left
+images_aug = iaa.Affine(translate_px={"x": (-8, -16)})(images=images)
 ```
 
-Apply an augmenter to only specific image channels:
+
+### Example: Probability Distributions as Parameters
+
+Most augmenters support using tuples `(a, b)` as a shortcut to denote
+`uniform(a, b)` or lists `[a, b, c]` to denote a set of allowed values from
+which one will be picked randomly. If you require more complex probability
+distributions, e.g. gaussians, you can use stochastic parameters
+from `imgaug.parameters`:
+
 ```python
-from imgaug import augmenters as iaa
 import numpy as np
-
-# fake RGB images
-images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
-
-# add a random value from the range (-30, 30) to the first two channels of
-# input images (e.g. to the R and G channels)
-aug = iaa.WithChannels(
-  channels=[0, 1],
-  children=iaa.Add((-30, 30))
-)
-
-images_aug = aug.augment_images(images)
-```
-
-You can use more unusual distributions for the stochastic parameters of each augmenter:
-```python
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-import numpy as np
+
+
 images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
 
 # Blur by a value sigma which is sampled from a uniform distribution
 # of range 0.1 <= x < 3.0.
-# The convenience shortcut for this is: iaa.GaussianBlur((0.1, 3.0))
+# The convenience shortcut for this is: GaussianBlur((0.1, 3.0))
 blurer = iaa.GaussianBlur(iap.Uniform(0.1, 3.0))
 images_aug = blurer.augment_images(images)
 
@@ -722,7 +803,8 @@ images_aug = blurer.augment_images(images)
 blurer = iaa.GaussianBlur(iap.Clip(iap.Normal(iap.Uniform(0.5, 1.5), 0.1), 0.1, 3.0))
 images_aug = blurer.augment_images(images)
 
-# Use for sigma one of exactly three allowed values: 0.5, 1.0 or 1.5.
+# Sample sigma from one of exactly three allowed values: 0.5, 1.0 or 1.5.
+# The convenience shortcut for this is: GaussianBlur([0.5, 1.0, 1.5])
 blurer = iaa.GaussianBlur(iap.Choice([0.5, 1.0, 1.5]))
 images_aug = blurer.augment_images(images)
 
@@ -732,14 +814,19 @@ blurer = iaa.GaussianBlur(iap.DiscreteUniform(1, 5))
 images_aug = blurer.augment_images(images)
 ```
 
-Images can be augmented in **background processes** using the method `augment_batches(batches, background=True)`,
-where `batches` is expected to be a list of image batches or a list of batches/lists of `imgaug.KeypointsOnImage` or a list of `imgaug.Batch`.
+### Example: Multicore Augmentation
+
+Images can be augmented in **background processes** using the
+method `augment_batches(batches, background=True)`, where `batches` is
+list of `imgaug.augmentables.batches.UnnormalizedBatch` or
+`imgaug.augmentables.batches.Batch`.
 The following example augments a list of image batches in the background:
 ```python
-import imgaug as ia
-from imgaug import augmenters as iaa
-import numpy as np
 from skimage import data
+import imgaug as ia
+import imgaug.augmenters as iaa
+from imgaug.augmentables.batches import Batch
+
 
 # Number of batches and batch size for this example
 nb_batches = 10
@@ -759,12 +846,7 @@ astronaut = ia.imresize_single_image(astronaut, (64, 64))
 # the example image)
 batches = []
 for _ in range(nb_batches):
-    batches.append(
-        np.array(
-            [astronaut for _ in range(batch_size)],
-            dtype=np.uint8
-        )
-    )
+    batches.append(Batch(images=[astronaut] * batch_size))
 
 # Show the augmented images.
 # Note that augment_batches() returns a generator.
@@ -778,7 +860,8 @@ which random number seed to use and how large the chunks of data transferred to 
 ```python
 import numpy as np
 import imgaug as ia
-from imgaug import augmenters as iaa
+import imgaug.augmenters as iaa
+
 
 # Basic augmentation sequence. PiecewiseAffine is slow and therefore well suited
 # for augmentation on multiple CPU cores.
@@ -823,11 +906,38 @@ with aug.pool(processes=-1, maxtasksperchild=20, seed=123) as pool:
 ```
 
 
-You can **dynamically deactivate augmenters** in an already defined sequence:
+### Example: WithChannels
+
+Apply an augmenter to only specific image channels:
 ```python
-import imgaug as ia
-from imgaug import augmenters as iaa
 import numpy as np
+import imgaug.augmenters as iaa
+
+
+# fake RGB images
+images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
+
+# add a random value from the range (-30, 30) to the first two channels of
+# input images (e.g. to the R and G channels)
+aug = iaa.WithChannels(
+  channels=[0, 1],
+  children=iaa.Add((-30, 30))
+)
+
+images_aug = aug.augment_images(images)
+```
+
+
+### Example: Hooks
+
+You can **dynamically deactivate augmenters** in an already defined sequence.
+We show this here by running a second array (`heatmaps`) through the pipeline,
+but only apply a subset of augmenters to that input.
+```python
+import numpy as np
+import imgaug as ia
+import imgaug.augmenters as iaa
+
 
 # images and heatmaps, just arrays filled with value 30
 images = np.ones((16, 128, 128, 3), dtype=np.uint8) * 30
@@ -863,7 +973,9 @@ heatmaps_aug = seq_det.augment_images(heatmaps, hooks=hooks_heatmaps)
 ```
 
 
-## List of augmenters
+<a name="list_of_augmenters"/>
+
+## List of Augmenters
 
 The following is a list of available augmenters.
 Note that most of the below mentioned variables can be set to ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image,
