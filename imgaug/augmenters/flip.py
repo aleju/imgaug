@@ -116,8 +116,18 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             elif samples[i] == 1:
                 width = keypoints_on_image.shape[1]
                 for keypoint in keypoints_on_image.keypoints:
-                    # TODO is this still correct with float keypoints? Seems like the -1 should be dropped
-                    keypoint.x = (width - 1) - keypoint.x
+                    if isinstance(keypoint.x, int):
+                        # Note: an integer keypoint is equivalent floating
+                        # point keypoint is actually shifted by 0.5 to the
+                        # bottom/right.  This is because integer keypoints
+                        # point to the middle of a pixel / grid cell.
+                        keypoint.x = (width - 1) - keypoint.x
+                        # This is why the int implementation contains a -1 term.
+                        # It is the same thing moving to floating point
+                        # coordinate, flipping and then transforming back:
+                        # keypoint.x = int((width - (keypoint.x + 0.5)) - 0.5)
+                    else:
+                        keypoint.x = width - keypoint.x
         return keypoints_on_images
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
@@ -209,8 +219,18 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             elif samples[i] == 1:
                 height = keypoints_on_image.shape[0]
                 for keypoint in keypoints_on_image.keypoints:
-                    # TODO is this still correct with float keypoints? seems like the -1 should be dropped
-                    keypoint.y = (height - 1) - keypoint.y
+                    if isinstance(keypoint.y, int):
+                        # Note: an integer keypoint is equivalent floating
+                        # point keypoint is actually shifted by 0.5 to the
+                        # bottom/right.  This is because integer keypoints
+                        # point to the middle of a pixel / grid cell.
+                        keypoint.y = (height - 1) - keypoint.y
+                        # This is why the int implementation contains a -1 term.
+                        # It is the same thing moving to floating point
+                        # coordinate, flipping and then transforming back:
+                        # keypoint.x = int((width - (keypoint.x + 0.5)) - 0.5)
+                    else:
+                        keypoint.y = height - keypoint.y
         return keypoints_on_images
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
