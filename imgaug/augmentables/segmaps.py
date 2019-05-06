@@ -8,6 +8,12 @@ from .. import dtypes as iadt
 from ..augmenters import blend as blendlib
 
 
+@ia.deprecated(alt_func="SegmentationMapsOnImage",
+               comment="(Note the plural 'Maps' instead of old 'Map'.)")
+def SegmentationMapOnImage(*args, **kwargs):
+    return SegmentationMapsOnImage(*args, **kwargs)
+
+
 class SegmentationMapsOnImage(object):
     """
     Object representing a segmentation map associated with an image.
@@ -28,6 +34,9 @@ class SegmentationMapsOnImage(object):
         This is expected to be ``(H, W)`` or ``(H, W, C)`` with ``C`` usually
         being 3. If there is no corresponding image, then use the segmentation
         map's shape instead.
+
+    nb_classes : None or int, optional
+        Deprecated.
 
     """
 
@@ -78,7 +87,7 @@ class SegmentationMapsOnImage(object):
         (64, 64, 64),  # dark grey
     ]
 
-    def __init__(self, arr, shape):
+    def __init__(self, arr, shape, nb_classes=None):
         ia.do_assert(ia.is_np_array(arr),
                      "Expected to get numpy array, got %s." % (type(arr),))
         assert isinstance(shape, tuple)
@@ -115,6 +124,12 @@ class SegmentationMapsOnImage(object):
         # as allowing arrays introduces risk to mix up 'arr' and 'shape' args
         self.shape = shape
 
+        if nb_classes is not None:
+            ia.warn_deprecated(
+                "Providing nb_classes to SegmentationMapOnImage is no longer "
+                "necessary and hence deprecated. The argument is ignored "
+                "and can be safely removed.")
+
     def get_arr(self):
         """
         Return the segmentation map array similar to its input dtype and shape.
@@ -132,6 +147,10 @@ class SegmentationMapsOnImage(object):
             assert arr_input.shape[2] == 1
             return arr_input[:, :, 0]
         return arr_input
+
+    @ia.deprecated(alt_func="SegmentationMapsOnImage.get_arr()")
+    def get_arr_int(self, *args, **kwargs):
+        return self.get_arr()
 
     def draw(self, size=None, colors=None):
         """

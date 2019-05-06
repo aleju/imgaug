@@ -191,16 +191,20 @@
 
 # Segmentation Maps
 
-- [breaking] Renamed `SegmentationMapOnImage` to plural `SegmentationMapsOnImage`
-  (as the input array may not contain several channels, with each channel
-   containing one full segmentation map).
+- Renamed `SegmentationMapOnImage` to plural `SegmentationMapsOnImage`
+  and deprecated the old name.
+  This was changed due to the input array now being allowed to contain several
+  channels, with each such channel containing one full segmentation map.
 - [rarely breaking] Changed `SegmentationMapsOnImage.__init__` to no longer accept float arrays as `arr` argument.
 - [breaking] Changed `SegmentationMapsOnImage.__init__` to no longer accept `uint32` and larger itemsizes as `arr` argument, only `uint16` and below is accepted.
   For `int` the maximum is `int32`.
 - Changed `SegmentationMapsOnImage.__init__` to always accept `(H,W,C)` `arr` arguments.
 - [breaking] Changed  `SegmentationMapsOnImage.arr` to always be 3-dimensional (`(H,W,C)`) instead of 2-dimensional (`(H,W)`).
-- [breaking] Removed `nb_classes` from `SegmentationMapsOnImage.__init__`.
-- [breaking] Removed `SegmentationMapsOnImage.get_arr_int()`.
+- Deprecated `nb_classes` argument in `SegmentationMapsOnImage.__init__`.
+  The argument is now ignored.
+- Added `SegmentationMapsOnImage.get_arr()`, which always returns a segmentation map array with similar dtype and number of dimensions as was originally input when creating a class instance.
+- Deprecated `SegmentationMapsOnImage.get_arr_int()`.
+  The method is now an alias for `get_arr()`.
 - `SegmentationMapsOnImage.draw()`:
     - [breaking] Removed argument `return_foreground_mask`.
     - [breaking] Removed optional output for foreground masks.
@@ -221,8 +225,6 @@
 - [rarely breaking] Restrict `shape` argument in `SegmentationMapsOnImage.__init__` to tuples instead of accepting all iterables.
 - [breaking] Removed `SegmentationMapsOnImage.to_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
 - [breaking] Removed `SegmentationMapsOnImage.from_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
-- [breaking] Removed `SegmentationMapsOnImage.get_arr_int()`.
-- Added `SegmentationMapsOnImage.get_arr()`, which always returns a segmentation map array with similar dtype and number of dimensions as was originally input when creating a class instance.
 - [breaking] Automatic segmentation map normalization from arrays or lists of arrays now expects a single `(N,H,W,C)` array (before: `(N,H,W)`) or a list of `(H,W,C)` arrays (before: `(H,W)`).
   This affects valid segmentation map inputs for `Augmenter.augment()` and its alias `Augmenter.__call__()`, `imgaug.augmentables.batches.UnnormalizedBatch()` and `imgaug.augmentables.normalization.normalize_segmentation_maps()`.
 - Added `Augmenter._augment_segmentation_maps()`.
@@ -231,13 +233,13 @@
 - Added special segmentation map handling to `SomeOf`.
 - Added special segmentation map handling to `Sometimes`.
 - Added special segmentation map handling to `WithChannels`.
-- [breaking] Added segmentation map argument and handling to `Lambda`.
+- [rarely breaking] Added segmentation map argument and handling to `Lambda`.
   This changes the order of arguments in `Lambda.__init__()` and hence
   breaks if one relied on that order.
-- [breaking] Added segmentation map argument and handling to `AssertLambda`.
+- [rarely breaking] Added segmentation map argument and handling to `AssertLambda`.
   This changes the order of arguments in `AssertLambda.__init__()` and hence
   breaks if one relied on that order.
-- [breaking] Added segmentation map argument and handling to `AssertShape`.
+- [rarely breaking] Added segmentation map argument and handling to `AssertShape`.
   This changes the order of arguments in `AssertShape.__init__()` and hence
   breaks if one relied on that order.
 - Added special segmentation map handling to `Alpha`.
