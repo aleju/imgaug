@@ -435,7 +435,7 @@ class CloudLayer(meta.Augmenter):
 
     def get_parameters(self):
         return [self.intensity_mean, self.alpha_min, self.alpha_multiplier, self.alpha_size_px_max,
-                self.alpha_freq_exponent, self.intensity_freq_exponent, self.sparsity, self.density_min,
+                self.alpha_freq_exponent, self.intensity_freq_exponent, self.sparsity,
                 self.density_multiplier,
                 self.intensity_coarse_scale]
 
