@@ -1324,7 +1324,7 @@ class LineString(object):
         )
 
     # TODO make this non-approximate
-    def coords_almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
+    def coords_almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
         """
         Compare this and another LineString's coordinates.
 
@@ -1340,7 +1340,7 @@ class LineString(object):
                 or list of tuple of number
             The other line string or its coordinates.
 
-        max_distance : float
+        max_distance : float, optional
             Max distance of any point from the other line string before
             the two line strings are evaluated to be unequal.
 
@@ -1376,7 +1376,7 @@ class LineString(object):
         dist_self2other = self_subd.compute_pointwise_distances(other_subd)
         dist_other2self = other_subd.compute_pointwise_distances(self_subd)
         dist = max(np.max(dist_self2other), np.max(dist_other2self))
-        return  dist < max_distance
+        return dist < max_distance
 
     def almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
         """

@@ -503,6 +503,33 @@ def _test_Polygon_cut_clip(func):
     assert isinstance(multipoly_clipped, list)
     assert len(multipoly_clipped) == 0
 
+    # poly area partially inside image
+    # and one point is inside the image
+    poly = ia.Polygon([(50, 50), (110, 50), (110, 110), (50, 110)])
+    multipoly_clipped = func(poly, (100, 100, 3))
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [50, 50],
+        [100, 50],
+        [100, 100],
+        [50, 100]
+    ]))
+
+    # poly area partially inside image,
+    # but not a single point is inside the image
+    poly = ia.Polygon([(100+0.5*100, 0),
+                       (100+0.5*100, 100+0.5*100),
+                       (0, 100+0.5*100)])
+    multipoly_clipped = func(poly, (100, 100, 3))
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [100, 0.5*100],
+        [100, 100],
+        [0.5*100, 100]
+    ]))
+
 
 def test_Polygon_shift():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
