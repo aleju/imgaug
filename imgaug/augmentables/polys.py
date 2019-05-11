@@ -386,19 +386,25 @@ class Polygon(object):
         for poly_inter_shapely in multipoly_inter_shapely.geoms:
             polygons.append(Polygon.from_shapely(poly_inter_shapely, label=self.label))
 
-        # shapely changes the order of points, we try here to preserve it as
-        # much as possible
+        # Shapely changes the order of points, we try here to preserve it as
+        # much as possible.
+        # Note here, that all points of the new polygon might have high
+        # distance to the points on the old polygon. This can happen if the
+        # polygon overlaps with the image plane, but all of its points are
+        # outside of the image plane. The new polygon will not be made up of
+        # any of the old points.
         polygons_reordered = []
         for polygon in polygons:
-            found = False
+            best_idx = None
+            best_dist = None
             for x, y in self.exterior:
-                closest_idx, dist = polygon.find_closest_point_index(x=x, y=y, return_distance=True)
-                if dist < 1e-6:
-                    polygon_reordered = polygon.change_first_point_by_index(closest_idx)
-                    polygons_reordered.append(polygon_reordered)
-                    found = True
-                    break
-            ia.do_assert(found)  # could only not find closest points if new polys are empty
+                point_idx, dist = polygon.find_closest_point_index(x=x, y=y, return_distance=True)
+                if best_idx is None or dist < best_dist:
+                    best_idx = point_idx
+                    best_dist = dist
+            if best_idx is not None:
+                polygon_reordered = polygon.change_first_point_by_index(best_idx)
+                polygons_reordered.append(polygon_reordered)
 
         return polygons_reordered
 
@@ -833,7 +839,7 @@ class Polygon(object):
         exterior = np.float32([[x, y] for (x, y) in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
 
-    def exterior_almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
+    def exterior_almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
         """
         Estimate if this and other polygon's exterior are almost identical.
 
@@ -889,7 +895,7 @@ class Polygon(object):
             points_per_edge=points_per_edge
         )
 
-    def almost_equals(self, other, max_distance=1e-6, points_per_edge=8):
+    def almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
         """
         Estimate if this polygon's and another's geometry/labels are similar.
 

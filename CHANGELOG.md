@@ -1,3 +1,12 @@
+# 0.3.0
+
+* Increased `max_distance` thresholds for `almost_equals()`, `exterior_almost_equals()` and `coords_almost_equals()` in `Polygon` and `LineString` from `1e-6` to `1e-4`.
+  This should fix false-negative problems related to float inaccuracies. 
+* Fixed an issue with `Polygon.clip_out_of_image()`,
+  which would lead to exceptions if a polygon had overlap with an image,
+  but not a single one of its points was inside that image plane. 
+
+
 # 0.2.9
 
 This update mainly covers the following topics:
