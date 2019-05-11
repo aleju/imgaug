@@ -6,7 +6,6 @@ import threading
 import traceback
 import time
 import random
-import warnings
 
 import numpy as np
 
