@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 
 import imgaug.imgaug as ia
-from imgaug.augmentables.batches import Batch
+from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -363,7 +363,7 @@ def _Pool_initialize_worker(augseq, seed_start):
 # could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
 def _Pool_worker(batch_idx, batch):
     assert ia.is_single_integer(batch_idx)
-    assert isinstance(batch, Batch)
+    assert isinstance(batch, (UnnormalizedBatch, Batch))
     assert Pool._WORKER_AUGSEQ is not None
     aug = Pool._WORKER_AUGSEQ
     if Pool._WORKER_SEED_START is not None:

@@ -12,6 +12,7 @@
 * Fixed an issue with `Polygon.clip_out_of_image()`,
   which would lead to exceptions if a polygon had overlap with an image,
   but not a single one of its points was inside that image plane. 
+* Fixed `imgaug.multicore` falsely not accepting `imgaug.augmentables.batches.UnnormalizedBatch`.
 
 
 # 0.2.9
