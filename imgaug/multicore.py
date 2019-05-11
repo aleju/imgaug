@@ -187,6 +187,8 @@ class Pool(object):
             datasets, this should be set to an integer value to avoid filling
             the whole RAM if loading+augmentation happens faster than training.
 
+            *New in version 0.3.0.*
+
         Yields
         ------
         imgaug.augmentables.batches.Batch
@@ -240,6 +242,8 @@ class Pool(object):
             The buffer is unlimited if this is set to ``None``. For large
             datasets, this should be set to an integer value to avoid filling
             the whole RAM if loading+augmentation happens faster than training.
+
+            *New in version 0.3.0.*
 
         Yields
         ------
