@@ -94,7 +94,7 @@ class SegmentationMapsOnImage(object):
 
         if arr.dtype.name == "bool":
             ia.do_assert(arr.ndim in [2, 3])
-            self.input_was = (arr.dtype, arr.ndim)
+            self._input_was = (arr.dtype, arr.ndim)
             if arr.ndim == 2:
                 arr = arr[..., np.newaxis]
         elif arr.dtype.kind in ["i", "u"]:
@@ -107,7 +107,7 @@ class SegmentationMapsOnImage(object):
                     "and uint16 are allowed. Got dtype %s." % (arr.dtype.name,)
                 )
 
-            self.input_was = (arr.dtype, arr.ndim)
+            self._input_was = (arr.dtype, arr.ndim)
             if arr.ndim == 2:
                 arr = arr[..., np.newaxis]
         else:
@@ -141,7 +141,7 @@ class SegmentationMapsOnImage(object):
             originally used when the instance was created.
 
         """
-        input_dtype, input_ndim = self.input_was
+        input_dtype, input_ndim = self._input_was
         arr_input = iadt.restore_dtypes_(np.copy(self.arr), input_dtype)
         if input_ndim == 2:
             assert arr_input.shape[2] == 1
@@ -388,7 +388,7 @@ class SegmentationMapsOnImage(object):
                                                interpolation=interpolation)
         return self.deepcopy(arr_resized)
 
-    # TODO how best to handle changes to input_was due to changed 'arr'?
+    # TODO how best to handle changes to _input_was due to changed 'arr'?
     def copy(self, arr=None, shape=None):
         """
         Create a shallow copy of the segmentation map object.
@@ -416,7 +416,7 @@ class SegmentationMapsOnImage(object):
         segmap = SegmentationMapsOnImage(
             self.arr if arr is None else arr,
             shape=self.shape if shape is None else shape)
-        segmap.input_was = self.input_was
+        segmap._input_was = self._input_was
         return segmap
 
     def deepcopy(self, arr=None, shape=None):
@@ -446,5 +446,5 @@ class SegmentationMapsOnImage(object):
         segmap = SegmentationMapsOnImage(
             np.copy(self.arr if arr is None else arr),
             shape=self.shape if shape is None else shape)
-        segmap.input_was = self.input_was
+        segmap._input_was = self._input_was
         return segmap

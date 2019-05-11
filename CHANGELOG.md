@@ -239,7 +239,8 @@ Changes:
     - Refactored `SegmentationMapsOnImage.pad()`, `SegmentationMapsOnImage.pad_to_aspect_ratio()`
       and `SegmentationMapsOnImage.resize()` to generate new object instances via
       `SegmentationMapsOnImage.deepcopy()`.
-    - **[rarely breaking]** Changed `SegmentationMapsOnImage.input_was` to always save `(input array dtype, input array ndim)` instead of mixtures of strings/ints that varied by dtype kind.
+    - **[rarely breaking]** Renamed `SegmentationMapsOnImage.input_was` to `SegmentationMapsOnImage._input_was`.
+    - **[rarely breaking]** Changed `SegmentationMapsOnImage._input_was` to always save `(input array dtype, input array ndim)` instead of mixtures of strings/ints that varied by dtype kind.
     - **[rarely breaking]** Restrict `shape` argument in `SegmentationMapsOnImage.__init__` to tuples instead of accepting all iterables.
     - **[breaking]** Removed `SegmentationMapsOnImage.to_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
     - **[breaking]** Removed `SegmentationMapsOnImage.from_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.

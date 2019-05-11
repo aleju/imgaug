@@ -536,7 +536,7 @@ def test_SegmentationMapsOnImage_copy():
     observed = segmap.copy()
     assert np.array_equal(observed.arr, segmap.arr)
     assert observed.shape == (2, 2)
-    assert observed.input_was == segmap.input_was
+    assert observed._input_was == segmap._input_was
 
     observed.arr[0, 0, 0] = 10
     assert segmap.arr[0, 0, 0] == 10
@@ -545,12 +545,12 @@ def test_SegmentationMapsOnImage_copy():
     observed = segmap.copy(np.int32([[10]]).reshape((1, 1, 1)))
     assert observed.arr.shape == (1, 1, 1)
     assert observed.arr[0, 0, 0] == 10
-    assert observed.input_was == segmap.input_was
+    assert observed._input_was == segmap._input_was
 
     observed = segmap.copy(shape=(10, 11, 3))
     assert observed.shape == (10, 11, 3)
     assert segmap.shape != (10, 11, 3)
-    assert observed.input_was == segmap.input_was
+    assert observed._input_was == segmap._input_was
 
 
 def test_SegmentationMapsOnImage_deepcopy():
@@ -562,7 +562,7 @@ def test_SegmentationMapsOnImage_deepcopy():
     observed = segmap.deepcopy()
     assert np.array_equal(observed.arr, segmap.arr)
     assert observed.shape == (2, 2)
-    assert observed.input_was == segmap.input_was
+    assert observed._input_was == segmap._input_was
 
     observed.arr[0, 0, 0] = 10
     assert segmap.arr[0, 0, 0] != 10
@@ -572,9 +572,9 @@ def test_SegmentationMapsOnImage_deepcopy():
     assert observed.arr.shape == (1, 1, 1)
     assert observed.arr[0, 0, 0] == 10
     assert segmap.arr[0, 0, 0] != 10
-    assert observed.input_was == segmap.input_was
+    assert observed._input_was == segmap._input_was
 
     observed = segmap.copy(shape=(10, 11, 3))
     assert observed.shape == (10, 11, 3)
     assert segmap.shape != (10, 11, 3)
-    assert observed.input_was == segmap.input_was
+    assert observed._input_was == segmap._input_was
