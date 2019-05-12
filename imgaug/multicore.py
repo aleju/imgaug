@@ -6,12 +6,11 @@ import threading
 import traceback
 import time
 import random
-import warnings
 
 import numpy as np
 
 import imgaug.imgaug as ia
-from imgaug.augmentables.batches import Batch
+from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -160,10 +159,13 @@ class Pool(object):
         return self.pool.map_async(_Pool_starworker, self._handle_batch_ids(batches),
                                    chunksize=chunksize, callback=callback, error_callback=error_callback)
 
-    def imap_batches(self, batches, chunksize=1):
+    def imap_batches(self, batches, chunksize=1, output_buffer_size=None):
         """
         Augment batches from a generator.
 
+        Pattern for output buffer constraint is from
+        https://stackoverflow.com/a/47058399.
+
         Parameters
         ----------
         batches : generator of imgaug.augmentables.batches.Batch
@@ -174,6 +176,18 @@ class Pool(object):
             Rough indicator of how many tasks should be sent to each worker. Increasing this number can improve
             performance.
 
+        output_buffer_size : None or int, optional
+            Max number of batches to handle *at the same time* in the *whole*
+            pipeline (including already augmented batches that are waiting to
+            be requested). If the buffer size is reached, no new batches will
+            be loaded from `batches` until a produced (i.e. augmented) batch is
+            consumed (i.e. requested from this method).
+            The buffer is unlimited if this is set to ``None``. For large
+            datasets, this should be set to an integer value to avoid filling
+            the whole RAM if loading+augmentation happens faster than training.
+
+            *New in version 0.3.0.*
+
         Yields
         ------
         imgaug.augmentables.batches.Batch
@@ -182,15 +196,32 @@ class Pool(object):
         """
         assert ia.is_generator(batches), ("Expected to get a generator as 'batches', got type %s. "
                                           + "Call map_batches() if you use lists.") % (type(batches),)
+
+        # buffer is either None or a Semaphore
+        output_buffer_left = _create_output_buffer_left(output_buffer_size)
+
         # TODO change this to 'yield from' once switched to 3.3+
-        gen = self.pool.imap(_Pool_starworker, self._handle_batch_ids_gen(batches), chunksize=chunksize)
+        gen = self.pool.imap(
+            _Pool_starworker,
+            self._ibuffer_batch_loading(
+                self._handle_batch_ids_gen(batches),
+                output_buffer_left
+            ),
+            chunksize=chunksize)
+
         for batch in gen:
             yield batch
+            if output_buffer_left is not None:
+                output_buffer_left.release()
 
-    def imap_batches_unordered(self, batches, chunksize=1):
+    def imap_batches_unordered(self, batches, chunksize=1,
+                               output_buffer_size=None):
         """
         Augment batches from a generator in a way that does not guarantee to preserve order.
 
+        Pattern for output buffer constraint is from
+        https://stackoverflow.com/a/47058399.
+
         Parameters
         ----------
         batches : generator of imgaug.augmentables.batches.Batch
@@ -201,6 +232,18 @@ class Pool(object):
             Rough indicator of how many tasks should be sent to each worker. Increasing this number can improve
             performance.
 
+        output_buffer_size : None or int, optional
+            Max number of batches to handle *at the same time* in the *whole*
+            pipeline (including already augmented batches that are waiting to
+            be requested). If the buffer size is reached, no new batches will
+            be loaded from `batches` until a produced (i.e. augmented) batch is
+            consumed (i.e. requested from this method).
+            The buffer is unlimited if this is set to ``None``. For large
+            datasets, this should be set to an integer value to avoid filling
+            the whole RAM if loading+augmentation happens faster than training.
+
+            *New in version 0.3.0.*
+
         Yields
         ------
         imgaug.augmentables.batches.Batch
@@ -209,10 +252,24 @@ class Pool(object):
         """
         assert ia.is_generator(batches), ("Expected to get a generator as 'batches', got type %s. "
                                           + "Call map_batches() if you use lists.") % (type(batches),)
+
+        # buffer is either None or a Semaphore
+        output_buffer_left = _create_output_buffer_left(output_buffer_size)
+
         # TODO change this to 'yield from' once switched to 3.3+
-        gen = self.pool.imap_unordered(_Pool_starworker, self._handle_batch_ids_gen(batches), chunksize=chunksize)
+        gen = self.pool.imap_unordered(
+            _Pool_starworker,
+            self._ibuffer_batch_loading(
+                self._handle_batch_ids_gen(batches),
+                output_buffer_left
+            ),
+            chunksize=chunksize
+        )
+
         for batch in gen:
             yield batch
+            if output_buffer_left is not None:
+                output_buffer_left.release()
 
     def __enter__(self):
         assert self._pool is None, "Tried to __enter__ a pool that has already been initialized."
@@ -260,6 +317,23 @@ class Pool(object):
             yield batch_idx, batch
             self._batch_idx += 1
 
+    @classmethod
+    def _ibuffer_batch_loading(cls, batches, output_buffer_left):
+        for batch in batches:
+            if output_buffer_left is not None:
+                output_buffer_left.acquire()
+            yield batch
+
+
+def _create_output_buffer_left(output_buffer_size):
+    output_buffer_left = None
+    if output_buffer_size:
+        assert output_buffer_size > 0, (
+            ("Expected non-zero buffer size, "
+             + "but got %d") % (output_buffer_size,))
+        output_buffer_left = multiprocessing.Semaphore(output_buffer_size)
+    return output_buffer_left
+
 
 # could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
 def _Pool_initialize_worker(augseq, seed_start):
@@ -288,7 +362,7 @@ def _Pool_initialize_worker(augseq, seed_start):
 # could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that leads to pickle errors
 def _Pool_worker(batch_idx, batch):
     assert ia.is_single_integer(batch_idx)
-    assert isinstance(batch, Batch)
+    assert isinstance(batch, (UnnormalizedBatch, Batch))
     assert Pool._WORKER_AUGSEQ is not None
     aug = Pool._WORKER_AUGSEQ
     if Pool._WORKER_SEED_START is not None:

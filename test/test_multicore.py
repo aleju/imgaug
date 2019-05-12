@@ -26,6 +26,7 @@ import imgaug as ia
 import imgaug.multicore as multicore
 from imgaug import augmenters as iaa
 from imgaug.testutils import reseed
+from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
 def main():
@@ -92,35 +93,39 @@ class TestPool(unittest.TestCase):
                     assert mock_Pool.call_args[0][0] == expected
 
     def _test_map_batches_both(self, call_async):
-        augseq = iaa.Noop()
-        mock_Pool = mock.MagicMock()
-        mock_Pool.return_value = mock_Pool
-        mock_Pool.map.return_value = "X"
-        mock_Pool.map_async.return_value = "X"
-        with mock.patch("multiprocessing.Pool", mock_Pool):
-            batches = [ia.Batch(images=[ia.quokka()]), ia.Batch(images=[ia.quokka()+1])]
-            with multicore.Pool(augseq, processes=1) as pool:
+        for clazz in [Batch, UnnormalizedBatch]:
+            augseq = iaa.Noop()
+            mock_Pool = mock.MagicMock()
+            mock_Pool.return_value = mock_Pool
+            mock_Pool.map.return_value = "X"
+            mock_Pool.map_async.return_value = "X"
+            with mock.patch("multiprocessing.Pool", mock_Pool):
+                batches = [
+                    clazz(images=[ia.quokka()]),
+                    clazz(images=[ia.quokka()+1])
+                ]
+                with multicore.Pool(augseq, processes=1) as pool:
+                    if call_async:
+                        _ = pool.map_batches_async(batches)
+                    else:
+                        _ = pool.map_batches(batches)
+
                 if call_async:
-                    _ = pool.map_batches_async(batches)
+                    to_check = mock_Pool.map_async
                 else:
-                    _ = pool.map_batches(batches)
+                    to_check = mock_Pool.map
 
-            if call_async:
-                to_check = mock_Pool.map_async
-            else:
-                to_check = mock_Pool.map
-
-            assert to_check.call_count == 1
-            # args, arg 0
-            assert to_check.call_args[0][0] == multicore._Pool_starworker
-            # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
-            assert to_check.call_args[0][1][0][0] == 0
-            # args, arg 1 (batches with ids), tuple 0, entry 1 in tuple (=> batch)
-            assert np.array_equal(to_check.call_args[0][1][0][1].images_unaug, batches[0].images_unaug)
-            # args, arg 1 (batches with ids), tuple 1, entry 0 in tuple (=> batch id)
-            assert to_check.call_args[0][1][1][0] == 1
-            # args, arg 1 (batches with ids), tuple 1, entry 1 in tuple (=> batch)
-            assert np.array_equal(to_check.call_args[0][1][1][1].images_unaug, batches[1].images_unaug)
+                assert to_check.call_count == 1
+                # args, arg 0
+                assert to_check.call_args[0][0] == multicore._Pool_starworker
+                # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
+                assert to_check.call_args[0][1][0][0] == 0
+                # args, arg 1 (batches with ids), tuple 0, entry 1 in tuple (=> batch)
+                assert np.array_equal(to_check.call_args[0][1][0][1].images_unaug, batches[0].images_unaug)
+                # args, arg 1 (batches with ids), tuple 1, entry 0 in tuple (=> batch id)
+                assert to_check.call_args[0][1][1][0] == 1
+                # args, arg 1 (batches with ids), tuple 1, entry 1 in tuple (=> batch)
+                assert np.array_equal(to_check.call_args[0][1][1][1].images_unaug, batches[1].images_unaug)
 
     def test_map_batches(self):
         self._test_map_batches_both(call_async=False)
@@ -129,47 +134,129 @@ class TestPool(unittest.TestCase):
         self._test_map_batches_both(call_async=True)
 
     def _test_imap_batches_both(self, call_unordered):
-        batches = [ia.Batch(images=[ia.quokka()]), ia.Batch(images=[ia.quokka()+1])]
+        for clazz in [Batch, UnnormalizedBatch]:
+            batches = [clazz(images=[ia.quokka()]),
+                       clazz(images=[ia.quokka()+1])]
 
-        def _generate_batches():
+            def _generate_batches():
+                for batch in batches:
+                    yield batch
+
+            augseq = iaa.Noop()
+            mock_Pool = mock.MagicMock()
+            mock_Pool.return_value = mock_Pool
+            mock_Pool.imap.return_value = batches
+            mock_Pool.imap_unordered.return_value = batches
+            with mock.patch("multiprocessing.Pool", mock_Pool):
+                with multicore.Pool(augseq, processes=1) as pool:
+                    gen = _generate_batches()
+                    if call_unordered:
+                        _ = list(pool.imap_batches_unordered(gen))
+                    else:
+                        _ = list(pool.imap_batches(gen))
+
+                if call_unordered:
+                    to_check = mock_Pool.imap_unordered
+                else:
+                    to_check = mock_Pool.imap
+
+                assert to_check.call_count == 1
+                assert to_check.call_args[0][0] == multicore._Pool_starworker
+                arg_batches = list(to_check.call_args[0][1])  # convert generator to list, make it subscriptable
+                # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
+                assert arg_batches[0][0] == 0
+                # tuple 0, entry 1 in tuple (=> batch)
+                assert np.array_equal(arg_batches[0][1].images_unaug, batches[0].images_unaug)
+                # tuple 1, entry 0 in tuple (=> batch id)
+                assert arg_batches[1][0] == 1
+                # tuple 1, entry 1 in tuple (=> batch)
+                assert np.array_equal(arg_batches[1][1].images_unaug, batches[1].images_unaug)
+
+    def _test_imap_batches_both_output_buffer_size(self, call_unordered, timeout=0.075):
+        batches = [ia.Batch(images=[
+                       np.full((1, 1), i, dtype=np.uint8)
+                   ]) for i in range(8)]
+
+        def _generate_batches(times):
             for batch in batches:
                 yield batch
+                times.append(time.time())
+
+        def callfunc(pool, gen, output_buffer_size):
+            if call_unordered:
+                for v in pool.imap_batches_unordered(gen, output_buffer_size=output_buffer_size):
+                    yield v
+            else:
+                for v in pool.imap_batches(gen, output_buffer_size=output_buffer_size):
+                    yield v
+
+        def contains_all_ids(inputs):
+            arrs = np.uint8([batch.images_aug for batch in inputs])
+            ids_uq = np.unique(arrs)
+            return (
+                len(ids_uq) == len(batches)
+                and np.all(0 <= ids_uq)
+                and np.all(ids_uq < len(batches))
+            )
 
         augseq = iaa.Noop()
-        mock_Pool = mock.MagicMock()
-        mock_Pool.return_value = mock_Pool
-        mock_Pool.imap.return_value = batches
-        mock_Pool.imap_unordered.return_value = batches
-        with mock.patch("multiprocessing.Pool", mock_Pool):
-            with multicore.Pool(augseq, processes=1) as pool:
-                gen = _generate_batches()
-                if call_unordered:
-                    _ = list(pool.imap_batches_unordered(gen))
-                else:
-                    _ = list(pool.imap_batches(gen))
+        with multicore.Pool(augseq, processes=1) as pool:
+            # no output buffer limit, there should be no noteworthy lag
+            # for any batch requested from _generate_batches()
+            times = []
+            gen = callfunc(pool, _generate_batches(times), None)
+            result = next(gen)
+            time.sleep(timeout)
+            result = [result] + list(gen)
+            times = np.float64(times)
+            times_diffs = times[1:] - times[0:-1]
+            assert np.all(times_diffs < timeout)
+            assert contains_all_ids(result)
 
-            if call_unordered:
-                to_check = mock_Pool.imap_unordered
-            else:
-                to_check = mock_Pool.imap
+            # with output buffer limit, but set to the number of batches,
+            # i.e. should again not lead to any lag
+            times = []
+            gen = callfunc(pool, _generate_batches(times), len(batches))
+            result = next(gen)
+            time.sleep(timeout)
+            result = [result] + list(gen)
+            times = np.float64(times)
+            times_diffs = times[1:] - times[0:-1]
+            assert np.all(times_diffs < timeout)
+            assert contains_all_ids(result)
 
-            assert to_check.call_count == 1
-            assert to_check.call_args[0][0] == multicore._Pool_starworker
-            arg_batches = list(to_check.call_args[0][1])  # convert generator to list, make it subscriptable
-            # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
-            assert arg_batches[0][0] == 0
-            # tuple 0, entry 1 in tuple (=> batch)
-            assert np.array_equal(arg_batches[0][1].images_unaug, batches[0].images_unaug)
-            # tuple 1, entry 0 in tuple (=> batch id)
-            assert arg_batches[1][0] == 1
-            # tuple 1, entry 1 in tuple (=> batch)
-            assert np.array_equal(arg_batches[1][1].images_unaug, batches[1].images_unaug)
+            # With output buffer limit of #batches/2 (=4), followed by a
+            # timeout after starting the loading process. This should quickly
+            # load batches until the buffer is full, then wait until the
+            # batches are requested from the buffer (i.e. after the timeout
+            # ended) and then proceed to produce batches at the speed at which
+            # they are requested. This should lead to a measureable lag between
+            # batch 4 and 5 (matching the timeout).
+            times = []
+            gen = callfunc(pool, _generate_batches(times), 4)
+            result = next(gen)
+            time.sleep(timeout)
+            result = [result] + list(gen)
+            times = np.float64(times)
+            times_diffs = times[1:] - times[0:-1]
+            # use -1 here because we have N-1 times for N batches as
+            # diffs denote diffs between Nth and N+1th batch
+            assert np.all(times_diffs[0:4-1] < timeout)
+            assert np.all(times_diffs[4-1:4-1+1] >= timeout)
+            assert np.all(times_diffs[4-1+1:] < timeout)
+            assert contains_all_ids(result)
 
     def test_imap_batches(self):
         self._test_imap_batches_both(call_unordered=False)
 
     def test_imap_batches_unordered(self):
         self._test_imap_batches_both(call_unordered=True)
+
+    def test_imap_batches_output_buffer_size(self):
+        self._test_imap_batches_both_output_buffer_size(call_unordered=False)
+
+    def test_imap_batches_unordered_output_buffer_size(self):
+        self._test_imap_batches_both_output_buffer_size(call_unordered=True)
 
     def _assert_each_augmentation_not_more_than_once(self, batches_aug):
         sum_to_vecs = defaultdict(list)
