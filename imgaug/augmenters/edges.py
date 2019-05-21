@@ -222,8 +222,12 @@ class Canny(meta.Augmenter):
     sobel_kernel_size : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
         Kernel size of the sobel operator initially applied to each image.
         This corresponds to ``apertureSize`` in ``cv2.Canny()``.
-        If a sample from this parameter is ``0``, no action will be performed
+        If a sample from this parameter is ``<=1``, no action will be performed
         for the corresponding image.
+        The maximum for this parameter is ``7`` (inclusive). Higher values are
+        not accepted by OpenCV.
+        If an even value ``v`` is sampled, it is automatically changed to
+        ``v-1``.
 
             * If this is a single integer, the kernel size always matches that
               value.
@@ -261,11 +265,11 @@ class Canny(meta.Augmenter):
     e.g. ``images_aug = aug(images=<list of numpy array>)``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.Canny(sobel_kernel_size=(13, 17))
+    >>> aug = iaa.Canny(sobel_kernel_size=(0, 7))
 
     Creates a canny edge augmenter that initially preprocesses images using
-    a sobel filter with kernel size ``13x13`` to ``17x17``. This might be
-    useful for large images.
+    a sobel filter with kernel size ``3x3`` to ``7x7`` and will sometimes
+    not modify images at all (if a value ``<=2`` is sampled).
 
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Canny(alpha=(0.0, 0.5))
@@ -323,7 +327,7 @@ class Canny(meta.Augmenter):
         self.sobel_kernel_size = iap.handle_discrete_param(
             sobel_kernel_size,
             "sobel_kernel_size",
-            value_range=(0, None),
+            value_range=(0, 7),  # OpenCV only accepts ksize up to 7
             tuple_to_uniform=True,
             list_to_choice=True,
             allow_floats=False)
@@ -357,6 +361,18 @@ class Canny(meta.Augmenter):
         if np.any(invalid):
             hthresh_samples[invalid, :] = hthresh_samples[invalid, :][:, [1, 0]]
 
+        # ensure that sobel kernel sizes are correct
+        # note that OpenCV accepts only kernel sizes that are (a) even
+        # and (b) <=7
+        assert not np.any(sobel_samples < 0), (
+            "Sampled a sobel kernel size below 0 in Canny. "
+            "Allowed value range is 0 to 7.")
+        assert not np.any(sobel_samples > 7), (
+            "Sampled a sobel kernel size above 7 in Canny. "
+            "Allowed value range is 0 to 7.")
+        even_idx = (np.mod(sobel_samples, 2) == 0)
+        sobel_samples[even_idx] -= 1
+
         return alpha_samples, hthresh_samples, sobel_samples
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -388,7 +404,7 @@ class Canny(meta.Augmenter):
                 "channel numbers that are 1, 3 or 4. Got %d.") % (
                     image.shape[-1],)
 
-            if alpha > 0 and sobel > 0:
+            if alpha > 0 and sobel > 1:
                 image_canny = cv2.Canny(
                     image[:, :, 0:3],
                     threshold1=hthreshs[0],
