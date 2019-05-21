@@ -116,8 +116,7 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             elif samples[i] == 1:
                 width = keypoints_on_image.shape[1]
                 for keypoint in keypoints_on_image.keypoints:
-                    # TODO is this still correct with float keypoints? Seems like the -1 should be dropped
-                    keypoint.x = (width - 1) - keypoint.x
+                    keypoint.x = width - float(keypoint.x)
         return keypoints_on_images
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
@@ -209,8 +208,7 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             elif samples[i] == 1:
                 height = keypoints_on_image.shape[0]
                 for keypoint in keypoints_on_image.keypoints:
-                    # TODO is this still correct with float keypoints? seems like the -1 should be dropped
-                    keypoint.y = (height - 1) - keypoint.y
+                    keypoint.y = height - float(keypoint.y)
         return keypoints_on_images
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,

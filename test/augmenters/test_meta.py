@@ -1576,14 +1576,14 @@ def test_Augmenter():
 def test_Augmenter_augment_batches():
     reseed()
 
-    image = np.array([[0, 0, 1, 1],
-                      [0, 0, 1, 1],
-                      [0, 1, 1, 1]], dtype=np.uint8)
+    image = np.array([[0, 0, 1, 1, 1],
+                      [0, 0, 1, 1, 1],
+                      [0, 1, 1, 1, 1]], dtype=np.uint8)
     image_flipped = np.fliplr(image)
     keypoint = ia.Keypoint(x=2, y=1)
     keypoints = [ia.KeypointsOnImage([keypoint], shape=image.shape + (1,))]
     kp_flipped = ia.Keypoint(
-        x=image.shape[1]-1-keypoint.x,
+        x=image.shape[1]-keypoint.x,
         y=keypoint.y
     )
 
@@ -1650,9 +1650,9 @@ def test_Augmenter_augment_batches():
             if np.array_equal(image_aug, image_flipped):
                 nb_flipped_images += 1
 
-            assert (keypoint_aug.x == keypoint.x and keypoint_aug.y == keypoint.y) \
-                or (keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y)
-            if keypoint_aug.x == kp_flipped.x and keypoint_aug.y == kp_flipped.y:
+            assert np.isclose(keypoint_aug.x, keypoint.x) and np.isclose(keypoint_aug.y, keypoint.y) \
+                or np.isclose(keypoint_aug.x, kp_flipped.x) and np.isclose(keypoint_aug.y, kp_flipped.y)
+            if np.isclose(keypoint_aug.x, kp_flipped.x) and np.isclose(keypoint_aug.y, kp_flipped.y):
                 nb_flipped_keypoints += 1
         assert 0.4*nb_iterations <= nb_flipped_images <= 0.6*nb_iterations
         assert nb_flipped_images == nb_flipped_keypoints
@@ -3338,10 +3338,14 @@ def test_Sequential():
     images_lr_ud_list = [image_lr_ud]
     images_lr_ud = np.array([image_lr_ud])
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
-                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=0, y=2),
-                                          ia.Keypoint(x=0, y=1)], shape=image.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0),
+                                      ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)],
+                                     shape=image.shape)]
+    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=3-1, y=3-0),
+                                          ia.Keypoint(x=3-2, y=3-0),
+                                          ia.Keypoint(x=3-2, y=3-1)],
+                                         shape=image.shape)]
 
     polygons = [
         ia.PolygonsOnImage(
@@ -3350,7 +3354,7 @@ def test_Sequential():
     ]
     polygons_aug = [
         ia.PolygonsOnImage(
-            [ia.Polygon([(2, 2), (0, 2), (0, 0), (2, 0)])],
+            [ia.Polygon([(3-0, 3-0), (3-2, 3-0), (3-2, 3-2), (3-0, 3-2)])],
             shape=image.shape)
     ]
 
@@ -4360,21 +4364,27 @@ def test_Sometimes():
     images_ud_list = [image_ud]
     images_ud = np.array([image_ud])
 
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=2, y=0),
-                                      ia.Keypoint(x=2, y=1)], shape=image.shape)]
-    keypoints_lr = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0), ia.Keypoint(x=0, y=0),
-                                         ia.Keypoint(x=0, y=1)], shape=image.shape)]
-    keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=2),
-                                         ia.Keypoint(x=2, y=1)], shape=image.shape)]
+    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=0),
+                                      ia.Keypoint(x=2, y=0),
+                                      ia.Keypoint(x=2, y=1)],
+                                     shape=image.shape)]
+    keypoints_lr = [ia.KeypointsOnImage([ia.Keypoint(x=3-1, y=0),
+                                         ia.Keypoint(x=3-2, y=0),
+                                         ia.Keypoint(x=3-2, y=1)],
+                                        shape=image.shape)]
+    keypoints_ud = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=3-0),
+                                         ia.Keypoint(x=2, y=3-0),
+                                         ia.Keypoint(x=2, y=3-1)],
+                                        shape=image.shape)]
 
     polygons = [ia.PolygonsOnImage(
         [ia.Polygon([(0, 0), (2, 0), (2, 2)])],
         shape=image.shape)]
     polygons_lr = [ia.PolygonsOnImage(
-        [ia.Polygon([(2, 0), (0, 0), (0, 2)])],
+        [ia.Polygon([(3-0, 0), (3-2, 0), (3-2, 2)])],
         shape=image.shape)]
     polygons_ud = [ia.PolygonsOnImage(
-        [ia.Polygon([(0, 2), (2, 2), (2, 0)])],
+        [ia.Polygon([(0, 3-0), (2, 3-0), (2, 3-2)])],
         shape=image.shape)]
 
     heatmaps_arr = np.float32([[0.0, 0.0, 1.0],
