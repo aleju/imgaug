@@ -34,7 +34,6 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
-# TODO change color_fg, color_bg to color_true color_false?
 # TODO this should be placed in some other file than edges.py as it could be
 #      re-used wherever a binary image is the result
 @six.add_metaclass(ABCMeta)
@@ -73,7 +72,7 @@ class RandomColorsBinaryImageColorizer(BinaryImageColorizerIf):
 
     Parameters
     ----------
-    color_fg : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+    color_true : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
         Color of the foreground, i.e. all pixels in binary images that are
         ``True``. This parameter will be queried once per image to
         generate ``(3,)`` samples denoting the color. (Note that even for
@@ -90,33 +89,35 @@ class RandomColorsBinaryImageColorizer(BinaryImageColorizerIf):
             * If a StochasticParameter, three values will be sampled from the
               parameter per image.
 
-    color_bg : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        Analogous to `color_fg`, but denotes the color for all pixels that
+    color_false : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Analogous to `color_true`, but denotes the color for all pixels that
         are ``False`` in the binary input image.
 
     """
 
-    def __init__(self, color_fg=(0, 255), color_bg=(0, 255)):
-        self.color_fg = iap.handle_discrete_param(
-            color_fg,
-            "color_fg",
+    def __init__(self, color_true=(0, 255), color_false=(0, 255)):
+        self.color_true = iap.handle_discrete_param(
+            color_true,
+            "color_true",
             value_range=(0, 255),
             tuple_to_uniform=True,
             list_to_choice=True,
             allow_floats=False)
 
-        self.color_bg = iap.handle_discrete_param(
-            color_bg,
-            "color_bg",
+        self.color_false = iap.handle_discrete_param(
+            color_false,
+            "color_false",
             value_range=(0, 255),
             tuple_to_uniform=True,
             list_to_choice=True,
             allow_floats=False)
 
     def _draw_samples(self, random_state):
-        color_fg = self.color_fg.draw_samples((3,), random_state=random_state)
-        color_bg = self.color_bg.draw_samples((3,), random_state=random_state)
-        return color_fg, color_bg
+        color_true = self.color_true.draw_samples((3,),
+                                                  random_state=random_state)
+        color_false = self.color_false.draw_samples((3,),
+                                                    random_state=random_state)
+        return color_true, color_false
 
     def colorize(self, image_binary, image_original, nth_image, random_state):
         assert image_binary.ndim == 2
@@ -125,7 +126,7 @@ class RandomColorsBinaryImageColorizer(BinaryImageColorizerIf):
         assert image_original.shape[-1] in [1, 3, 4]
         assert image_original.dtype.name == "uint8"
 
-        color_fg, color_bg = self._draw_samples(random_state)
+        color_true, color_false = self._draw_samples(random_state)
 
         nb_channels = min(image_original.shape[-1], 3)
         image_colorized = np.zeros(
@@ -134,13 +135,17 @@ class RandomColorsBinaryImageColorizer(BinaryImageColorizerIf):
 
         if nb_channels == 1:
             # single channel input image, convert colors to grayscale
-            image_colorized[image_binary] = \
-                0.299*color_fg[0] + 0.587*color_fg[1] + 0.114*color_fg[2]
-            image_colorized[~image_binary] = \
-                0.299*color_bg[0] + 0.587*color_bg[1] + 0.114*color_bg[2]
+            image_colorized[image_binary] = (
+                0.299*color_true[0]
+                + 0.587*color_true[1]
+                + 0.114*color_true[2])
+            image_colorized[~image_binary] = (
+                0.299*color_false[0]
+                + 0.587*color_false[1]
+                + 0.114*color_false[2])
         else:
-            image_colorized[image_binary] = color_fg
-            image_colorized[~image_binary] = color_bg
+            image_colorized[image_binary] = color_true
+            image_colorized[~image_binary] = color_false
 
         # re-attach alpha channel if it was present in input image
         if image_original.shape[-1] == 4:
@@ -150,8 +155,9 @@ class RandomColorsBinaryImageColorizer(BinaryImageColorizerIf):
         return image_colorized
 
     def __str__(self):
-        return "RandomColorsBinaryImageColorizer(color_fg=%s, color_bg=%s)" % (
-            self.color_fg, self.color_bg)
+        return ("RandomColorsBinaryImageColorizer("
+                "color_true=%s, color_false=%s)") % (
+            self.color_true, self.color_false)
 
 
 class Canny(meta.Augmenter):

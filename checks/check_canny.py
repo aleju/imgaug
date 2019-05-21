@@ -5,7 +5,7 @@ import imgaug.augmenters as iaa
 
 def main():
     black_and_white = iaa.RandomColorsBinaryImageColorizer(
-        color_fg=255, color_bg=0)
+        color_true=255, color_false=0)
 
     print("alpha=1.0, black and white")
     image = ia.quokka_square((128, 128))

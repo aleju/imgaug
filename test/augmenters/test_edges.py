@@ -30,42 +30,42 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
 
     def test___init___default_settings(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer()
-        assert isinstance(colorizer.color_fg, iap.DiscreteUniform)
-        assert isinstance(colorizer.color_bg, iap.DiscreteUniform)
-        assert colorizer.color_fg.a.value == 0
-        assert colorizer.color_fg.b.value == 255
-        assert colorizer.color_bg.a.value == 0
-        assert colorizer.color_bg.b.value == 255
+        assert isinstance(colorizer.color_true, iap.DiscreteUniform)
+        assert isinstance(colorizer.color_false, iap.DiscreteUniform)
+        assert colorizer.color_true.a.value == 0
+        assert colorizer.color_true.b.value == 255
+        assert colorizer.color_false.a.value == 0
+        assert colorizer.color_false.b.value == 255
 
     def test___init___deterministic_settinga(self):
-        colorizer = iaa.RandomColorsBinaryImageColorizer(color_fg=1, color_bg=2)
-        assert isinstance(colorizer.color_fg, iap.Deterministic)
-        assert isinstance(colorizer.color_bg, iap.Deterministic)
-        assert colorizer.color_fg.value == 1
-        assert colorizer.color_bg.value == 2
+        colorizer = iaa.RandomColorsBinaryImageColorizer(color_true=1, color_false=2)
+        assert isinstance(colorizer.color_true, iap.Deterministic)
+        assert isinstance(colorizer.color_false, iap.Deterministic)
+        assert colorizer.color_true.value == 1
+        assert colorizer.color_false.value == 2
 
     def test___init___tuple_and_list(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=(0, 100), color_bg=[200, 201, 202])
-        assert isinstance(colorizer.color_fg, iap.DiscreteUniform)
-        assert isinstance(colorizer.color_bg, iap.Choice)
-        assert colorizer.color_fg.a.value == 0
-        assert colorizer.color_fg.b.value == 100
-        assert colorizer.color_bg.a[0] == 200
-        assert colorizer.color_bg.a[1] == 201
-        assert colorizer.color_bg.a[2] == 202
+            color_true=(0, 100), color_false=[200, 201, 202])
+        assert isinstance(colorizer.color_true, iap.DiscreteUniform)
+        assert isinstance(colorizer.color_false, iap.Choice)
+        assert colorizer.color_true.a.value == 0
+        assert colorizer.color_true.b.value == 100
+        assert colorizer.color_false.a[0] == 200
+        assert colorizer.color_false.a[1] == 201
+        assert colorizer.color_false.a[2] == 202
 
     def test___init___stochastic_parameters(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=iap.DiscreteUniform(0, 100),
-            color_bg=iap.Choice([200, 201, 202]))
-        assert isinstance(colorizer.color_fg, iap.DiscreteUniform)
-        assert isinstance(colorizer.color_bg, iap.Choice)
-        assert colorizer.color_fg.a.value == 0
-        assert colorizer.color_fg.b.value == 100
-        assert colorizer.color_bg.a[0] == 200
-        assert colorizer.color_bg.a[1] == 201
-        assert colorizer.color_bg.a[2] == 202
+            color_true=iap.DiscreteUniform(0, 100),
+            color_false=iap.Choice([200, 201, 202]))
+        assert isinstance(colorizer.color_true, iap.DiscreteUniform)
+        assert isinstance(colorizer.color_false, iap.Choice)
+        assert colorizer.color_true.a.value == 0
+        assert colorizer.color_true.b.value == 100
+        assert colorizer.color_false.a[0] == 200
+        assert colorizer.color_false.a[1] == 201
+        assert colorizer.color_false.a[2] == 202
 
     def test__draw_samples(self):
         class _ListSampler(iap.StochasticParameter):
@@ -80,19 +80,19 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
                 return np.uint8([0, 1, 2]) + self.offset
 
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=_ListSampler(0),
-            color_bg=_ListSampler(1))
+            color_true=_ListSampler(0),
+            color_false=_ListSampler(1))
         random_state = np.random.RandomState(42)
-        color_fg, color_bg = colorizer._draw_samples(random_state)
-        assert np.array_equal(color_fg, [0, 1, 2])
-        assert np.array_equal(color_bg, [1, 2, 3])
-        assert colorizer.color_fg.last_random_state == random_state
-        assert colorizer.color_bg.last_random_state == random_state
+        color_true, color_false = colorizer._draw_samples(random_state)
+        assert np.array_equal(color_true, [0, 1, 2])
+        assert np.array_equal(color_false, [1, 2, 3])
+        assert colorizer.color_true.last_random_state == random_state
+        assert colorizer.color_false.last_random_state == random_state
 
     def test_colorize__one_channel(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=100,
-            color_bg=10)
+            color_true=100,
+            color_false=10)
         random_state = np.random.RandomState(42)
 
         # input image has shape (H,W,1)
@@ -111,8 +111,8 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
 
     def test_colorize__three_channels(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=100,
-            color_bg=10)
+            color_true=100,
+            color_false=10)
         random_state = np.random.RandomState(42)
 
         # input image has shape (H,W,3)
@@ -131,8 +131,8 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
 
     def test_colorize__four_channels(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=100,
-            color_bg=10)
+            color_true=100,
+            color_false=10)
         random_state = np.random.RandomState(42)
 
         # input image has shape (H,W,4)
@@ -172,12 +172,12 @@ class TestCanny(unittest.TestCase):
         assert np.isclose(aug.hysteresis_thresholds[1].b.value, 200+40)
         assert aug.sobel_kernel_size.a.value == 3
         assert aug.sobel_kernel_size.b.value == 7
-        assert isinstance(aug.colorizer.color_fg, iap.DiscreteUniform)
-        assert isinstance(aug.colorizer.color_bg, iap.DiscreteUniform)
-        assert aug.colorizer.color_fg.a.value == 0
-        assert aug.colorizer.color_fg.b.value == 255
-        assert aug.colorizer.color_bg.a.value == 0
-        assert aug.colorizer.color_bg.b.value == 255
+        assert isinstance(aug.colorizer.color_true, iap.DiscreteUniform)
+        assert isinstance(aug.colorizer.color_false, iap.DiscreteUniform)
+        assert aug.colorizer.color_true.a.value == 0
+        assert aug.colorizer.color_true.b.value == 255
+        assert aug.colorizer.color_false.a.value == 0
+        assert aug.colorizer.color_false.b.value == 255
 
     def test___init___custom_settings(self):
         aug = iaa.Canny(
@@ -185,7 +185,7 @@ class TestCanny(unittest.TestCase):
             hysteresis_thresholds=([0, 1, 2], iap.DiscreteUniform(1, 10)),
             sobel_kernel_size=[3, 5],
             colorizer=iaa.RandomColorsBinaryImageColorizer(
-                color_fg=10, color_bg=20)
+                color_true=10, color_false=20)
         )
         assert isinstance(aug.alpha, iap.Deterministic)
         assert isinstance(aug.hysteresis_thresholds, tuple)
@@ -200,10 +200,10 @@ class TestCanny(unittest.TestCase):
         assert np.isclose(aug.hysteresis_thresholds[1].b.value, 10)
         assert isinstance(aug.sobel_kernel_size, iap.Choice)
         assert aug.sobel_kernel_size.a == [3, 5]
-        assert isinstance(aug.colorizer.color_fg, iap.Deterministic)
-        assert isinstance(aug.colorizer.color_bg, iap.Deterministic)
-        assert aug.colorizer.color_fg.value == 10
-        assert aug.colorizer.color_bg.value == 20
+        assert isinstance(aug.colorizer.color_true, iap.Deterministic)
+        assert isinstance(aug.colorizer.color_false, iap.Deterministic)
+        assert aug.colorizer.color_true.value == 10
+        assert aug.colorizer.color_false.value == 20
 
     def test___init___single_value_hysteresis(self):
         aug = iaa.Canny(
@@ -211,7 +211,7 @@ class TestCanny(unittest.TestCase):
             hysteresis_thresholds=[0, 1, 2],
             sobel_kernel_size=[3, 5],
             colorizer=iaa.RandomColorsBinaryImageColorizer(
-                color_fg=10, color_bg=20)
+                color_true=10, color_false=20)
         )
         assert isinstance(aug.alpha, iap.Deterministic)
         assert isinstance(aug.hysteresis_thresholds, iap.Choice)
@@ -221,10 +221,10 @@ class TestCanny(unittest.TestCase):
         assert aug.hysteresis_thresholds.a == [0, 1, 2]
         assert isinstance(aug.sobel_kernel_size, iap.Choice)
         assert aug.sobel_kernel_size.a == [3, 5]
-        assert isinstance(aug.colorizer.color_fg, iap.Deterministic)
-        assert isinstance(aug.colorizer.color_bg, iap.Deterministic)
-        assert aug.colorizer.color_fg.value == 10
-        assert aug.colorizer.color_bg.value == 20
+        assert isinstance(aug.colorizer.color_true, iap.Deterministic)
+        assert isinstance(aug.colorizer.color_false, iap.Deterministic)
+        assert aug.colorizer.color_true.value == 10
+        assert aug.colorizer.color_false.value == 20
 
     def test__draw_samples__single_value_hysteresis(self):
         seed = 1
@@ -233,7 +233,7 @@ class TestCanny(unittest.TestCase):
         aug = iaa.Canny(
             alpha=0.2,
             hysteresis_thresholds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            sobel_kernel_size=[3, 5, 7, 11, 13, 15, 17],
+            sobel_kernel_size=[3, 5, 7],
             random_state=np.random.RandomState(seed))
 
         example_image = np.zeros((5, 5, 3), dtype=np.uint8)
@@ -247,7 +247,7 @@ class TestCanny(unittest.TestCase):
         alpha_expected = [0.2] * nb_images
         hthresh_expected = rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                                          size=(nb_images, 2))
-        sobel_expected = rss[3].choice([3, 5, 7, 11, 13, 15, 17],
+        sobel_expected = rss[3].choice([3, 5, 7],
                                        size=(nb_images,))
 
         invalid = hthresh_expected[:, 0] > hthresh_expected[:, 1]
@@ -268,7 +268,7 @@ class TestCanny(unittest.TestCase):
             alpha=0.2,
             hysteresis_thresholds=([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                                    iap.DiscreteUniform(5, 100)),
-            sobel_kernel_size=[3, 5, 7, 11, 13, 15, 17],
+            sobel_kernel_size=[3, 5, 7],
             random_state=np.random.RandomState(seed))
 
         example_image = np.zeros((5, 5, 3), dtype=np.uint8)
@@ -290,7 +290,7 @@ class TestCanny(unittest.TestCase):
         )
         hthresh_expected = np.stack(hthresh_expected, axis=-1)
 
-        sobel_expected = rss[3].choice([3, 5, 7, 11, 13, 15, 17],
+        sobel_expected = rss[3].choice([3, 5, 7],
                                        size=(nb_images,))
 
         invalid = hthresh_expected[:, 0] > hthresh_expected[:, 1]
@@ -306,7 +306,7 @@ class TestCanny(unittest.TestCase):
         aug = iaa.Canny(
             alpha=0.0,
             hysteresis_thresholds=(0, 10),
-            sobel_kernel_size=[3, 5, 7, 11, 13, 15, 17],
+            sobel_kernel_size=[3, 5, 7],
             random_state=1)
 
         image = np.arange(5*5*3).astype(np.uint8).reshape((5, 5, 3))
@@ -315,8 +315,8 @@ class TestCanny(unittest.TestCase):
 
     def test_augment_images__alpha_is_one(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=254,
-            color_bg=1
+            color_true=254,
+            color_false=1
         )
 
         aug = iaa.Canny(
@@ -358,8 +358,8 @@ class TestCanny(unittest.TestCase):
 
     def test_augment_images__single_channel(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=254,
-            color_bg=1
+            color_true=254,
+            color_false=1
         )
 
         aug = iaa.Canny(
@@ -401,8 +401,8 @@ class TestCanny(unittest.TestCase):
 
     def test_augment_images__four_channels(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=254,
-            color_bg=1
+            color_true=254,
+            color_false=1
         )
 
         aug = iaa.Canny(
@@ -463,8 +463,8 @@ class TestCanny(unittest.TestCase):
                 return np.full(size, v, dtype=np.uint8)
 
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=_Color([253, 254]),
-            color_bg=_Color([1, 2])
+            color_true=_Color([253, 254]),
+            color_false=_Color([1, 2])
         )
 
         image_single_chan = np.uint8([
@@ -505,14 +505,14 @@ class TestCanny(unittest.TestCase):
                 random_state=i)
 
             image_aug = aug.augment_image(image)
-            color_fg = np.unique(image_aug[image_canny])
-            color_bg = np.unique(image_aug[~image_canny])
-            assert len(color_fg) == 1
-            assert len(color_bg) == 1
-            color_fg = int(color_fg[0])
-            color_bg = int(color_bg[0])
+            color_true = np.unique(image_aug[image_canny])
+            color_false = np.unique(image_aug[~image_canny])
+            assert len(color_true) == 1
+            assert len(color_false) == 1
+            color_true = int(color_true[0])
+            color_false = int(color_false[0])
 
-            seen[(int(color_fg), int(color_bg))] = True
+            seen[(int(color_true), int(color_false))] = True
             assert len(seen.keys()) == 4
             if all(seen.values()):
                 break
@@ -520,8 +520,8 @@ class TestCanny(unittest.TestCase):
 
     def test_augment_images__random_values(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=255,
-            color_bg=0
+            color_true=255,
+            color_false=0
         )
 
         image_single_chan = np.random.RandomState(1).randint(
@@ -582,7 +582,7 @@ class TestCanny(unittest.TestCase):
         hysteresis_thresholds = iap.Deterministic(10)
         sobel_kernel_size = iap.Deterministic(3)
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=10, color_bg=20)
+            color_true=10, color_false=20)
         aug = iaa.Canny(
             alpha=alpha,
             hysteresis_thresholds=hysteresis_thresholds,
@@ -600,7 +600,7 @@ class TestCanny(unittest.TestCase):
         hysteresis_thresholds = iap.Deterministic(10)
         sobel_kernel_size = iap.Deterministic(3)
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=10, color_bg=20)
+            color_true=10, color_false=20)
         aug = iaa.Canny(
             alpha=alpha,
             hysteresis_thresholds=hysteresis_thresholds,
@@ -623,7 +623,7 @@ class TestCanny(unittest.TestCase):
         )
         sobel_kernel_size = iap.Deterministic(3)
         colorizer = iaa.RandomColorsBinaryImageColorizer(
-            color_fg=10, color_bg=20)
+            color_true=10, color_false=20)
         aug = iaa.Canny(
             alpha=alpha,
             hysteresis_thresholds=hysteresis_thresholds,
