@@ -9,6 +9,7 @@ import imgaug.augmenters as iaa
 def main():
     run(iaa.AveragePool)
     run(iaa.MaxPool)
+    run(iaa.MinPool)
 
 
 def run(clazz):
