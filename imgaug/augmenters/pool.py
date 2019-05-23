@@ -96,6 +96,7 @@ class _AbstractPoolBase(meta.Augmenter):
 # TODO rename kernel size parameters in all augmenters to kernel_size
 # TODO add per_channel
 # TODO add upscaling interpolation mode?
+# TODO add dtype support
 class AveragePool(_AbstractPoolBase):
     """
     Apply average pooling to images.
@@ -207,6 +208,118 @@ class AveragePool(_AbstractPoolBase):
         # TODO extend avg_pool to support pad_mode and set it here
         #      to reflection padding
         return ia.avg_pool(
+            image,
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+        )
+
+
+class MaxPool(_AbstractPoolBase):
+    """
+    Apply max pooling to images.
+
+    This pools images with kernel sizes ``H x W`` by taking the maximum
+    pixel value over windows. For e.g. ``2 x 2`` this halves the image
+    size. Optionally, the augmenter will automatically re-upscale the image
+    to the input size (by default this is activated).
+
+    The maximum within each pixel window is always taken channelwise.
+
+    This augmenter does not affect heatmaps, segmentation maps or
+    coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
+
+    Attributes
+    ----------
+    kernel_size : int or tuple of int or list of int \
+                  or imgaug.parameters.StochasticParameter \
+                  or tuple of tuple of int or tuple of list of int \
+                  or tuple of imgaug.parameters.StochasticParameter, optional
+        The kernel size of the pooling operation.
+
+        * If an int, then that value will be used for all images for both
+          kernel height and width.
+        * If a tuple ``(a, b)``, then a value from the discrete range
+          ``[a..b]`` will be sampled per image.
+        * If a list, then a random value will be sampled from that list per
+          image and used for both kernel height and width.
+        * If a StochasticParameter, then a value will be sampled per image
+          from that parameter per image and used for both kernel height and
+          width.
+        * If a tuple of tuple of int given as ``((a, b), (c, d))``, then two
+          values will be sampled independently from the discrete ranges
+          ``[a..b]`` and ``[c..d]`` per image and used as the kernel height
+          and width.
+        * If a tuple of lists of int, then two values will be sampled
+          independently per image, one from the first list and one from the
+          second, and used as the kernel height and width.
+        * If a tuple of StochasticParameter, then two values will be sampled
+          indepdently per image, one from the first parameter and one from the
+          second, and used as the kernel height and width.
+
+    keep_size : bool, optional
+        After pooling, the result image will usually have a different
+        height/width compared to the original input image. If this
+        parameter is set to True, then the pooled image will be resized
+        to the input image's size, i.e. the augmenter's output shape is always
+        identical to the input shape.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = MaxPool(2)
+
+    Creates an augmenter that always pools with a kernel size of ``2 x 2``.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = MaxPool(2, keep_size=False)
+
+    Creates an augmenter that always pools with a kernel size of ``2 x 2``
+    and does *not* resize back to the input image size, i.e. the resulting
+    images have half the resolution.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = MaxPool([2, 8])
+
+    Creates an augmenter that always pools either with a kernel size
+    of ``2 x 2`` or ``8 x 8``.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = MaxPool((1, 7))
+
+    Creates an augmenter that always pools with a kernel size of
+    ``1 x 1`` (does nothing) to ``7 x 7``. The kernel sizes are always
+    symmetric.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = MaxPool(((1, 7), (1, 7)))
+
+    Creates an augmenter that always pools with a kernel size of
+    ``H x W`` where ``H`` and ``W`` are both sampled independently from the
+    range ``[1..7]``. E.g. resulting kernel sizes could be ``3 x 7``
+    or ``5 x 1``.
+
+    """
+
+    # TODO add floats as ksize denoting fractions of image sizes
+    #      (note possible overlap with fractional kernel sizes here)
+    def __init__(self, kernel_size, keep_size=True,
+                 name=None, deterministic=False, random_state=None):
+        super(MaxPool, self).__init__(
+            kernel_size=kernel_size, keep_size=keep_size,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _pool_image(self, image, kernel_size_h, kernel_size_w):
+        # TODO extend max_pool to support pad_mode and set it here
+        #      to reflection padding
+        return ia.max_pool(
             image,
             (max(kernel_size_h, 1), max(kernel_size_w, 1))
         )
