@@ -15,6 +15,7 @@ and then e.g. ::
 List of augmenters:
 
     * AveragePool
+    * MaxPool
 
 """
 from __future__ import print_function, division, absolute_import
