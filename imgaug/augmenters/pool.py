@@ -19,15 +19,84 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
+from abc import ABCMeta, abstractmethod
+
+import six
+
 from . import meta
 import imgaug as ia
 from .. import parameters as iap
 
 
+@six.add_metaclass(ABCMeta)
+class _AbstractPoolBase(meta.Augmenter):
+    # TODO add floats as ksize denoting fractions of image sizes
+    #      (note possible overlap with fractional kernel sizes here)
+    def __init__(self, kernel_size, keep_size=True,
+                 name=None, deterministic=False, random_state=None):
+        super(_AbstractPoolBase, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.kernel_size = iap.handle_discrete_kernel_size_param(
+            kernel_size,
+            "kernel_size",
+            value_range=(0, None),
+            allow_floats=False)
+        self.keep_size = keep_size
+
+    @abstractmethod
+    def _pool_image(self, image, kernel_size_h, kernel_size_w):
+        """Apply pooling method with given kernel height/width to an image."""
+
+    def _draw_samples(self, augmentables, random_state):
+        nb_images = len(augmentables)
+        rss = ia.derive_random_states(random_state, 2)
+        mode = "single" if self.kernel_size[1] is None else "two"
+        kernel_sizes_h = self.kernel_size[0].draw_samples(
+            (nb_images,),
+            random_state=rss[0])
+        if mode == "single":
+            kernel_sizes_w = kernel_sizes_h
+        else:
+            kernel_sizes_w = self.kernel_size[1].draw_samples(
+                (nb_images,), random_state=rss[1])
+        return kernel_sizes_h, kernel_sizes_w
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        if not self.keep_size:
+            images = list(images)
+
+        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
+            images, random_state)
+
+        gen = enumerate(zip(images, kernel_sizes_h, kernel_sizes_w))
+        for i, (image, ksize_h, ksize_w) in gen:
+            if ksize_h >= 2 or ksize_w >= 2:
+                image_pooled = self._pool_image(
+                    image,
+                    max(ksize_h, 1), max(ksize_w, 1)
+                )
+                if self.keep_size:
+                    image_pooled = ia.imresize_single_image(
+                        image_pooled, image.shape[0:2])
+                images[i] = image_pooled
+
+        return images
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.kernel_size, self.keep_size]
+
+
 # TODO rename kernel size parameters in all augmenters to kernel_size
 # TODO add per_channel
 # TODO add upscaling interpolation mode?
-class AveragePool(meta.Augmenter):
+class AveragePool(_AbstractPoolBase):
     """
     Apply average pooling to images.
 
@@ -131,57 +200,13 @@ class AveragePool(meta.Augmenter):
     def __init__(self, kernel_size, keep_size=True,
                  name=None, deterministic=False, random_state=None):
         super(AveragePool, self).__init__(
+            kernel_size=kernel_size, keep_size=keep_size,
             name=name, deterministic=deterministic, random_state=random_state)
-        self.kernel_size = iap.handle_discrete_kernel_size_param(
-            kernel_size,
-            "kernel_size",
-            value_range=(0, None),
-            allow_floats=False)
-        self.keep_size = keep_size
 
-    def _draw_samples(self, augmentables, random_state):
-        nb_images = len(augmentables)
-        rss = ia.derive_random_states(random_state, 2)
-        mode = "single" if self.kernel_size[1] is None else "two"
-        kernel_sizes_h = self.kernel_size[0].draw_samples(
-            (nb_images,),
-            random_state=rss[0])
-        if mode == "single":
-            kernel_sizes_w = kernel_sizes_h
-        else:
-            kernel_sizes_w = self.kernel_size[1].draw_samples(
-                (nb_images,), random_state=rss[1])
-        return kernel_sizes_h, kernel_sizes_w
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        if not self.keep_size:
-            images = list(images)
-
-        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
-            images, random_state)
-
-        gen = enumerate(zip(images, kernel_sizes_h, kernel_sizes_w))
-        for i, (image, ksize_h, ksize_w) in gen:
-            if ksize_h >= 2 or ksize_w >= 2:
-                # TODO extend avg_pool to support pad_mode and set it here
-                #      to reflection padding
-                image_pooled = ia.avg_pool(
-                    image,
-                    (max(ksize_h, 1), max(ksize_w, 1))
-                )
-                if self.keep_size:
-                    image_pooled = ia.imresize_single_image(
-                        image_pooled, image.shape[0:2])
-                images[i] = image_pooled
-
-        return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return keypoints_on_images
-
-    def get_parameters(self):
-        return [self.kernel_size, self.keep_size]
+    def _pool_image(self, image, kernel_size_h, kernel_size_w):
+        # TODO extend avg_pool to support pad_mode and set it here
+        #      to reflection padding
+        return ia.avg_pool(
+            image,
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+        )
