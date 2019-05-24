@@ -257,3 +257,48 @@ class TestMinPool(unittest.TestCase):
         diff = np.abs(image_aug.astype(np.int32) - image_expected)
         assert image_aug.shape == (1, 2, 2)
         assert np.all(diff <= 1)
+
+
+# We don't have many tests here, because MedianPool and AveragePool derive from
+# the same base class, i.e. they share most of the methods, which are then
+# tested via TestAveragePool.
+class TestMedianPool(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_augment_images(self):
+        aug = iaa.MedianPool(3, keep_size=False)
+
+        image = np.uint8([
+            [50-9, 50-8, 50-7, 120-5, 120-5, 120-5],
+            [50-5, 50+0, 50+3, 120-3, 120+0, 120+1],
+            [50+8, 50+9, 50+9, 120+2, 120+3, 120+4]
+        ])
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 3))
+
+        expected = np.uint8([
+            [50, 120]
+        ])
+        expected = np.tile(expected[:, :, np.newaxis], (1, 1, 3))
+
+        image_aug = aug.augment_image(image)
+        diff = np.abs(image_aug.astype(np.int32) - expected)
+        assert image_aug.shape == (1, 2, 3)
+        assert np.all(diff <= 1)
+
+    def test_augment_images__different_channels(self):
+        aug = iaa.MinPool((iap.Deterministic(1), iap.Deterministic(3)),
+                          keep_size=False)
+
+        c1 = np.arange(start=1, stop=9+1).reshape((1, 9, 1))
+        c2 = (100 + np.arange(start=1, stop=9+1)).reshape((1, 9, 1))
+        image = np.dstack([c1, c2]).astype(np.uint8)
+
+        c1_expected = np.uint8([2, 5, 8]).reshape((1, 3, 1))
+        c2_expected = np.uint8([100+2, 100+5, 100+8]).reshape((1, 3, 1))
+        image_expected = np.dstack([c1_expected, c2_expected])
+
+        image_aug = aug.augment_image(image)
+        diff = np.abs(image_aug.astype(np.int32) - image_expected)
+        assert image_aug.shape == (1, 3, 2)
+        assert np.all(diff <= 1)
