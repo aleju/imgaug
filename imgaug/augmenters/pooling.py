@@ -87,10 +87,16 @@ class _AbstractPoolingBase(meta.Augmenter):
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        # pylint: disable=no-self-use
+        # For some reason pylint raises a warning here, which it doesn't seem
+        # to do for other classes that also implement this method with self use.
         return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
+        # pylint: disable=no-self-use
+        # For some reason pylint raises a warning here, which it doesn't seem
+        # to do for other classes that also implement this method with self use.
         return keypoints_on_images
 
     def get_parameters(self):
