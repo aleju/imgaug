@@ -21,12 +21,12 @@ from imgaug import parameters as iap
 from imgaug.testutils import reseed
 
 
-class TestAveragePool(unittest.TestCase):
+class TestAveragePooling(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test___init___default_settings(self):
-        aug = iaa.AveragePool(2)
+        aug = iaa.AveragePooling(2)
         assert len(aug.kernel_size) == 2
         assert isinstance(aug.kernel_size[0], iap.Deterministic)
         assert aug.kernel_size[0].value == 2
@@ -34,7 +34,7 @@ class TestAveragePool(unittest.TestCase):
         assert aug.keep_size is True
 
     def test___init___custom_settings(self):
-        aug = iaa.AveragePool(((2, 4), (5, 6)), keep_size=False)
+        aug = iaa.AveragePooling(((2, 4), (5, 6)), keep_size=False)
         assert len(aug.kernel_size) == 2
         assert isinstance(aug.kernel_size[0], iap.DiscreteUniform)
         assert isinstance(aug.kernel_size[1], iap.DiscreteUniform)
@@ -45,17 +45,17 @@ class TestAveragePool(unittest.TestCase):
         assert aug.keep_size is False
 
     def test_augment_images__kernel_size_is_zero(self):
-        aug = iaa.AveragePool(0)
+        aug = iaa.AveragePooling(0)
         image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
         assert np.array_equal(aug.augment_image(image), image)
 
     def test_augment_images__kernel_size_is_one(self):
-        aug = iaa.AveragePool(1)
+        aug = iaa.AveragePooling(1)
         image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
         assert np.array_equal(aug.augment_image(image), image)
 
     def test_augment_images__kernel_size_is_two__full_100s(self):
-        aug = iaa.AveragePool(2, keep_size=False)
+        aug = iaa.AveragePooling(2, keep_size=False)
         image = np.full((6, 6, 3), 100, dtype=np.uint8)
         image_aug = aug.augment_image(image)
         diff = np.abs(image_aug.astype(np.int32) - 100)
@@ -63,7 +63,7 @@ class TestAveragePool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__kernel_size_is_two__custom_array(self):
-        aug = iaa.AveragePool(2, keep_size=False)
+        aug = iaa.AveragePooling(2, keep_size=False)
 
         image = np.uint8([
             [50-2, 50-1, 120-4, 120+4],
@@ -82,7 +82,7 @@ class TestAveragePool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__kernel_size_is_two__four_channels(self):
-        aug = iaa.AveragePool(2, keep_size=False)
+        aug = iaa.AveragePooling(2, keep_size=False)
 
         image = np.uint8([
             [50-2, 50-1, 120-4, 120+4],
@@ -101,7 +101,7 @@ class TestAveragePool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__kernel_size_differs(self):
-        aug = iaa.AveragePool(
+        aug = iaa.AveragePooling(
             (iap.Deterministic(3), iap.Deterministic(2)),
             keep_size=False)
 
@@ -123,7 +123,7 @@ class TestAveragePool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__kernel_size_is_two__keep_size(self):
-        aug = iaa.AveragePool(2, keep_size=True)
+        aug = iaa.AveragePooling(2, keep_size=True)
 
         image = np.uint8([
             [50-2, 50-1, 120-4, 120+4],
@@ -143,7 +143,7 @@ class TestAveragePool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__kernel_size_is_two__single_channel(self):
-        aug = iaa.AveragePool(2, keep_size=False)
+        aug = iaa.AveragePooling(2, keep_size=False)
 
         image = np.uint8([
             [50-2, 50-1, 120-4, 120+4],
@@ -162,7 +162,7 @@ class TestAveragePool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_get_parameters(self):
-        aug = iaa.AveragePool(2)
+        aug = iaa.AveragePooling(2)
         params = aug.get_parameters()
         assert len(params) == 2
         assert len(params[0]) == 2
@@ -171,15 +171,15 @@ class TestAveragePool(unittest.TestCase):
         assert params[0][1] is None
 
 
-# We don't have many tests here, because MaxPool and AveragePool derive from
-# the same base class, i.e. they share most of the methods, which are then
-# tested via TestAveragePool.
-class TestMaxPool(unittest.TestCase):
+# We don't have many tests here, because MaxPooling and AveragePooling derive
+# from the same base class, i.e. they share most of the methods, which are then
+# tested via TestAveragePooling.
+class TestMaxPooling(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_augment_images(self):
-        aug = iaa.MaxPool(2, keep_size=False)
+        aug = iaa.MaxPooling(2, keep_size=False)
 
         image = np.uint8([
             [50-2, 50-1, 120-4, 120+4],
@@ -198,8 +198,8 @@ class TestMaxPool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__different_channels(self):
-        aug = iaa.MaxPool((iap.Deterministic(1), iap.Deterministic(4)),
-                          keep_size=False)
+        aug = iaa.MaxPooling((iap.Deterministic(1), iap.Deterministic(4)),
+                             keep_size=False)
 
         c1 = np.arange(start=1, stop=8+1).reshape((1, 8, 1))
         c2 = (100 + np.arange(start=1, stop=8+1)).reshape((1, 8, 1))
@@ -215,15 +215,15 @@ class TestMaxPool(unittest.TestCase):
         assert np.all(diff <= 1)
 
 
-# We don't have many tests here, because MinPool and AveragePool derive from
-# the same base class, i.e. they share most of the methods, which are then
-# tested via TestAveragePool.
-class TestMinPool(unittest.TestCase):
+# We don't have many tests here, because MinPooling and AveragePooling derive
+# from the same base class, i.e. they share most of the methods, which are then
+# tested via TestAveragePooling.
+class TestMinPooling(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_augment_images(self):
-        aug = iaa.MinPool(2, keep_size=False)
+        aug = iaa.MinPooling(2, keep_size=False)
 
         image = np.uint8([
             [50-2, 50-1, 120-4, 120+4],
@@ -242,8 +242,8 @@ class TestMinPool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__different_channels(self):
-        aug = iaa.MinPool((iap.Deterministic(1), iap.Deterministic(4)),
-                          keep_size=False)
+        aug = iaa.MinPooling((iap.Deterministic(1), iap.Deterministic(4)),
+                             keep_size=False)
 
         c1 = np.arange(start=1, stop=8+1).reshape((1, 8, 1))
         c2 = (100 + np.arange(start=1, stop=8+1)).reshape((1, 8, 1))
@@ -259,15 +259,15 @@ class TestMinPool(unittest.TestCase):
         assert np.all(diff <= 1)
 
 
-# We don't have many tests here, because MedianPool and AveragePool derive from
-# the same base class, i.e. they share most of the methods, which are then
-# tested via TestAveragePool.
+# We don't have many tests here, because MedianPooling and AveragePooling
+# derive from the same base class, i.e. they share most of the methods, which
+# are then tested via TestAveragePooling.
 class TestMedianPool(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_augment_images(self):
-        aug = iaa.MedianPool(3, keep_size=False)
+        aug = iaa.MedianPooling(3, keep_size=False)
 
         image = np.uint8([
             [50-9, 50-8, 50-7, 120-5, 120-5, 120-5],
@@ -287,8 +287,8 @@ class TestMedianPool(unittest.TestCase):
         assert np.all(diff <= 1)
 
     def test_augment_images__different_channels(self):
-        aug = iaa.MinPool((iap.Deterministic(1), iap.Deterministic(3)),
-                          keep_size=False)
+        aug = iaa.MinPooling((iap.Deterministic(1), iap.Deterministic(3)),
+                             keep_size=False)
 
         c1 = np.arange(start=1, stop=9+1).reshape((1, 9, 1))
         c2 = (100 + np.arange(start=1, stop=9+1)).reshape((1, 9, 1))

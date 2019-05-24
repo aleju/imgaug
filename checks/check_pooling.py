@@ -7,10 +7,10 @@ import imgaug.augmenters as iaa
 
 
 def main():
-    run(iaa.AveragePool)
-    run(iaa.MaxPool)
-    run(iaa.MinPool)
-    run(iaa.MedianPool)
+    run(iaa.AveragePooling)
+    run(iaa.MaxPooling)
+    run(iaa.MinPooling)
+    run(iaa.MedianPooling)
 
 
 def run(clazz):

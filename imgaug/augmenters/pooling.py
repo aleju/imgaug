@@ -9,15 +9,15 @@ Use instead ::
 and then e.g. ::
 
     seq = iaa.Sequential([
-        iaa.AveragePool((1, 3))
+        iaa.AveragePooling((1, 3))
     ])
 
 List of augmenters:
 
-    * AveragePool
-    * MaxPool
-    * MinPool
-    * MedianPool
+    * AveragePooling
+    * MaxPooling
+    * MinPooling
+    * MedianPooling
 
 """
 from __future__ import print_function, division, absolute_import
@@ -33,12 +33,12 @@ from .. import parameters as iap
 
 
 @six.add_metaclass(ABCMeta)
-class _AbstractPoolBase(meta.Augmenter):
+class _AbstractPoolingBase(meta.Augmenter):
     # TODO add floats as ksize denoting fractions of image sizes
     #      (note possible overlap with fractional kernel sizes here)
     def __init__(self, kernel_size, keep_size=True,
                  name=None, deterministic=False, random_state=None):
-        super(_AbstractPoolBase, self).__init__(
+        super(_AbstractPoolingBase, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
         self.kernel_size = iap.handle_discrete_kernel_size_param(
             kernel_size,
@@ -101,7 +101,7 @@ class _AbstractPoolBase(meta.Augmenter):
 # TODO add per_channel
 # TODO add upscaling interpolation mode?
 # TODO add dtype support
-class AveragePool(_AbstractPoolBase):
+class AveragePooling(_AbstractPoolingBase):
     """
     Apply average pooling to images.
 
@@ -115,7 +115,7 @@ class AveragePool(_AbstractPoolBase):
 
     Note that this augmenter is very similar to ``AverageBlur``.
     ``AverageBlur`` applies averaging within windows of given kernel size
-    *without* striding, while ``AveragePool`` applies striding corresponding
+    *without* striding, while ``AveragePooling`` applies striding corresponding
     to the kernel size, with optional upscaling afterwards. The upscaling
     is configured to create "pixelated"/"blocky" images by default.
 
@@ -166,32 +166,32 @@ class AveragePool(_AbstractPoolBase):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = AveragePool(2)
+    >>> aug = AveragePooling(2)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = AveragePool(2, keep_size=False)
+    >>> aug = AveragePooling(2, keep_size=False)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``
     and does *not* resize back to the input image size, i.e. the resulting
     images have half the resolution.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = AveragePool([2, 8])
+    >>> aug = AveragePooling([2, 8])
 
     Creates an augmenter that always pools either with a kernel size
     of ``2 x 2`` or ``8 x 8``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = AveragePool((1, 7))
+    >>> aug = AveragePooling((1, 7))
 
     Creates an augmenter that always pools with a kernel size of
     ``1 x 1`` (does nothing) to ``7 x 7``. The kernel sizes are always
     symmetric.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = AveragePool(((1, 7), (1, 7)))
+    >>> aug = AveragePooling(((1, 7), (1, 7)))
 
     Creates an augmenter that always pools with a kernel size of
     ``H x W`` where ``H`` and ``W`` are both sampled independently from the
@@ -204,7 +204,7 @@ class AveragePool(_AbstractPoolBase):
     #      (note possible overlap with fractional kernel sizes here)
     def __init__(self, kernel_size, keep_size=True,
                  name=None, deterministic=False, random_state=None):
-        super(AveragePool, self).__init__(
+        super(AveragePooling, self).__init__(
             kernel_size=kernel_size, keep_size=keep_size,
             name=name, deterministic=deterministic, random_state=random_state)
 
@@ -217,7 +217,7 @@ class AveragePool(_AbstractPoolBase):
         )
 
 
-class MaxPool(_AbstractPoolBase):
+class MaxPooling(_AbstractPoolingBase):
     """
     Apply max pooling to images.
 
@@ -278,32 +278,32 @@ class MaxPool(_AbstractPoolBase):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = MaxPool(2)
+    >>> aug = MaxPooling(2)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MaxPool(2, keep_size=False)
+    >>> aug = MaxPooling(2, keep_size=False)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``
     and does *not* resize back to the input image size, i.e. the resulting
     images have half the resolution.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MaxPool([2, 8])
+    >>> aug = MaxPooling([2, 8])
 
     Creates an augmenter that always pools either with a kernel size
     of ``2 x 2`` or ``8 x 8``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MaxPool((1, 7))
+    >>> aug = MaxPooling((1, 7))
 
     Creates an augmenter that always pools with a kernel size of
     ``1 x 1`` (does nothing) to ``7 x 7``. The kernel sizes are always
     symmetric.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MaxPool(((1, 7), (1, 7)))
+    >>> aug = MaxPooling(((1, 7), (1, 7)))
 
     Creates an augmenter that always pools with a kernel size of
     ``H x W`` where ``H`` and ``W`` are both sampled independently from the
@@ -316,7 +316,7 @@ class MaxPool(_AbstractPoolBase):
     #      (note possible overlap with fractional kernel sizes here)
     def __init__(self, kernel_size, keep_size=True,
                  name=None, deterministic=False, random_state=None):
-        super(MaxPool, self).__init__(
+        super(MaxPooling, self).__init__(
             kernel_size=kernel_size, keep_size=keep_size,
             name=name, deterministic=deterministic, random_state=random_state)
 
@@ -329,7 +329,7 @@ class MaxPool(_AbstractPoolBase):
         )
 
 
-class MinPool(_AbstractPoolBase):
+class MinPooling(_AbstractPoolingBase):
     """
     Apply minimum pooling to images.
 
@@ -390,32 +390,32 @@ class MinPool(_AbstractPoolBase):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = MinPool(2)
+    >>> aug = MinPooling(2)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MinPool(2, keep_size=False)
+    >>> aug = MinPooling(2, keep_size=False)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``
     and does *not* resize back to the input image size, i.e. the resulting
     images have half the resolution.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MinPool([2, 8])
+    >>> aug = MinPooling([2, 8])
 
     Creates an augmenter that always pools either with a kernel size
     of ``2 x 2`` or ``8 x 8``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MinPool((1, 7))
+    >>> aug = MinPooling((1, 7))
 
     Creates an augmenter that always pools with a kernel size of
     ``1 x 1`` (does nothing) to ``7 x 7``. The kernel sizes are always
     symmetric.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MinPool(((1, 7), (1, 7)))
+    >>> aug = MinPooling(((1, 7), (1, 7)))
 
     Creates an augmenter that always pools with a kernel size of
     ``H x W`` where ``H`` and ``W`` are both sampled independently from the
@@ -428,7 +428,7 @@ class MinPool(_AbstractPoolBase):
     #      (note possible overlap with fractional kernel sizes here)
     def __init__(self, kernel_size, keep_size=True,
                  name=None, deterministic=False, random_state=None):
-        super(MinPool, self).__init__(
+        super(MinPooling, self).__init__(
             kernel_size=kernel_size, keep_size=keep_size,
             name=name, deterministic=deterministic, random_state=random_state)
 
@@ -446,7 +446,7 @@ class MinPool(_AbstractPoolBase):
             preserve_dtype=True)
 
 
-class MedianPool(_AbstractPoolBase):
+class MedianPooling(_AbstractPoolingBase):
     """
     Apply median pooling to images.
 
@@ -507,32 +507,32 @@ class MedianPool(_AbstractPoolBase):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = MedianPool(2)
+    >>> aug = MedianPooling(2)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MedianPool(2, keep_size=False)
+    >>> aug = MedianPooling(2, keep_size=False)
 
     Creates an augmenter that always pools with a kernel size of ``2 x 2``
     and does *not* resize back to the input image size, i.e. the resulting
     images have half the resolution.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MedianPool([2, 8])
+    >>> aug = MedianPooling([2, 8])
 
     Creates an augmenter that always pools either with a kernel size
     of ``2 x 2`` or ``8 x 8``.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MedianPool((1, 7))
+    >>> aug = MedianPooling((1, 7))
 
     Creates an augmenter that always pools with a kernel size of
     ``1 x 1`` (does nothing) to ``7 x 7``. The kernel sizes are always
     symmetric.
 
     >>> import imgaug.augmenters as iaa
-    >>> aug = MedianPool(((1, 7), (1, 7)))
+    >>> aug = MedianPooling(((1, 7), (1, 7)))
 
     Creates an augmenter that always pools with a kernel size of
     ``H x W`` where ``H`` and ``W`` are both sampled independently from the
@@ -545,7 +545,7 @@ class MedianPool(_AbstractPoolBase):
     #      (note possible overlap with fractional kernel sizes here)
     def __init__(self, kernel_size, keep_size=True,
                  name=None, deterministic=False, random_state=None):
-        super(MedianPool, self).__init__(
+        super(MedianPooling, self).__init__(
             kernel_size=kernel_size, keep_size=keep_size,
             name=name, deterministic=deterministic, random_state=random_state)
 
