@@ -258,7 +258,8 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     Examples
     --------
-    >>> aug = AddToHueAndSaturation((-20, 20), per_channel=True)
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.AddToHueAndSaturation((-20, 20), per_channel=True)
 
     Adds random values between -20 and 20 to the hue and saturation
     (independently per channel and the same value for all pixels within
@@ -295,74 +296,109 @@ class AddToHueAndSaturation(meta.Augmenter):
                 self._LUT_CACHE[0][i, :] = table_hue
                 self._LUT_CACHE[1][i, :] = table_saturation
 
+    def _draw_samples(self, augmentables, random_state):
+        nb_images = len(augmentables)
+        rss = ia.derive_random_states(random_state, 3)
+
+        per_channel = self.per_channel.draw_samples(
+            (nb_images,), random_state=rss[2])
+        per_channel = (per_channel > 0.5)
+
+        samples = self.value.draw_samples(
+            (nb_images, 2), random_state=rss[1]).astype(np.int32)
+        ia.do_assert(-255 <= samples[0, 0] <= 255)
+
+        samples_hue = samples[:, 0]
+        samples_hue = (
+            (samples_hue.astype(np.float32) / 255.0) * (360/2)
+        ).astype(np.int32)
+
+        samples_saturation = samples[:, 0]
+        samples_saturation[per_channel] = samples[per_channel, 1]
+
+        return samples_hue, samples_saturation, per_channel
+
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
-        nb_images = len(images)
 
-        # surprisingly, placing this here seems to be slightly slower than placing it inside the loop
+        # surprisingly, placing this here seems to be slightly slower than
+        # placing it inside the loop
         # if isinstance(images_hsv, list):
         #    images_hsv = [img.astype(np.int32) for img in images_hsv]
         # else:
         #    images_hsv = images_hsv.astype(np.int32)
 
         rss = ia.derive_random_states(random_state, 3)
-        images_hsv = self.colorspace_changer._augment_images(images, rss[0], parents + [self], hooks)
-        samples = self.value.draw_samples((nb_images, 2), random_state=rss[1]).astype(np.int32)
-        samples_hue = ((samples.astype(np.float32) / 255.0) * (360/2)).astype(np.int32)
-        per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[2])
-        rs_inv = random_state
-
-        ia.do_assert(-255 <= samples[0, 0] <= 255)
+        images_hsv = self.colorspace_changer._augment_images(
+            images, rss[0], parents + [self], hooks)
+        samples = self._draw_samples(images, rss[1])
+        hues = samples[0]
+        saturations = samples[1]
+        per_channels = samples[2]
+        rs_inv = rss[2]
 
         # this is needed if no cache for LUT is used:
         # value_range = np.arange(0, 256, dtype=np.int16)
 
-        gen = enumerate(zip(images_hsv, samples, samples_hue, per_channel))
-        for i, (image_hsv, samples_i, samples_hue_i, per_channel_i) in gen:
+        gen = enumerate(zip(images_hsv, hues, saturations, per_channels))
+        for i, (image_hsv, hue_i, saturation_i, per_channel_i) in gen:
             assert image_hsv.dtype.name == "uint8"
 
-            sample_saturation = samples_i[0]
-            if per_channel_i > 0.5:
-                sample_hue = samples_hue_i[1]
-            else:
-                sample_hue = samples_hue_i[0]
-
             if self.backend == "cv2":
-                # this has roughly the same speed as the numpy backend for 64x64 and is about 25% faster for 224x224
-
-                # code without using cache:
-                # table_hue = np.mod(value_range + sample_hue, 180)
-                # table_saturation = np.clip(value_range + sample_saturation, 0, 255)
-
-                # table_hue = table_hue.astype(np.uint8, copy=False)
-                # table_saturation = table_saturation.astype(np.uint8, copy=False)
-
-                # image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], table_hue)
-                # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
-
-                # code with using cache (at best maybe 10% faster for 64x64):
-                image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], self._LUT_CACHE[0][int(sample_hue)])
-                image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], self._LUT_CACHE[1][int(sample_saturation)])
+                image_hsv = self._transform_image_cv2(
+                    image_hsv, hue_i, saturation_i)
             else:
-                image_hsv = image_hsv.astype(np.int16)  # int16 seems to be slightly faster than int32
-                # np.mod() works also as required here for negative values
-                image_hsv[..., 0] = np.mod(image_hsv[..., 0] + sample_hue, 180)
-                image_hsv[..., 1] = np.clip(image_hsv[..., 1] + sample_saturation, 0, 255)
+                image_hsv = self._transform_image_numpy(
+                    image_hsv, hue_i, saturation_i)
 
             image_hsv = image_hsv.astype(input_dtypes[i])
-            # the inverse colorspace changer has a deterministic output (always <from_colorspace>, so that can
-            # always provide it the same random state as input
-            image_rgb = self.colorspace_changer_inv._augment_images([image_hsv], rs_inv, parents + [self], hooks)[0]
+            # the inverse colorspace changer has a deterministic output
+            # (always <from_colorspace>, so that can always provide it the
+            # same random state as input
+            image_rgb = self.colorspace_changer_inv._augment_images(
+                [image_hsv], rs_inv, parents + [self], hooks)[0]
             result[i] = image_rgb
 
         return result
 
+    def _transform_image_cv2(self, image_hsv, hue, saturation):
+        # this has roughly the same speed as the numpy backend
+        # for 64x64 and is about 25% faster for 224x224
+
+        # code without using cache:
+        # table_hue = np.mod(value_range + sample_hue, 180)
+        # table_saturation = np.clip(value_range + sample_saturation, 0, 255)
+
+        # table_hue = table_hue.astype(np.uint8, copy=False)
+        # table_saturation = table_saturation.astype(np.uint8, copy=False)
+
+        # image_hsv[..., 0] = cv2.LUT(image_hsv[..., 0], table_hue)
+        # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
+
+        # code with using cache (at best maybe 10% faster for 64x64):
+        image_hsv[..., 0] = cv2.LUT(
+            image_hsv[..., 0], self._LUT_CACHE[0][int(hue)])
+        image_hsv[..., 1] = cv2.LUT(
+            image_hsv[..., 1], self._LUT_CACHE[1][int(saturation)])
+        return image_hsv
+
+    @classmethod
+    def _transform_image_numpy(cls, image_hsv, hue, saturation):
+        # int16 seems to be slightly faster than int32
+        image_hsv = image_hsv.astype(np.int16)
+        # np.mod() works also as required here for negative values
+        image_hsv[..., 0] = np.mod(image_hsv[..., 0] + hue, 180)
+        image_hsv[..., 1] = np.clip(
+            image_hsv[..., 1] + saturation, 0, 255)
+        return image_hsv
+
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         return keypoints_on_images
 
     def get_parameters(self):

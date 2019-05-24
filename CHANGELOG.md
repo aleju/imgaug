@@ -25,7 +25,12 @@
     * Added `augmenters.pooling.MaxPooling`. #317
     * Added `augmenters.pooling.MinPooling`. #317
     * Added `augmenters.pooling.MedianPooling`. #317
-* Refactored `augmenters/weather.py` (general code and docstring cleanup).
+* [rarely breaking] Refactored `AddToHueAndSaturation` to clean it up.
+  Re-running old code with the same seeds will now produce different images.
+  The `value` parameter is now interpreted by the augmenter to return first the
+  hue and then the saturation value to add, instead of the other way round.
+  (This shouldn't affect anybody.) #319
+* Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
 
 ## Fixes
  
