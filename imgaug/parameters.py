@@ -1540,6 +1540,10 @@ class Divide(StochasticParameter):
         return "Divide(%s, %s, %s)" % (str(self.other_param), str(self.val), self.elementwise)
 
 
+# TODO sampling (N,) from something like 10+Uniform(0, 1) will return
+#      N times the same value as (N,) values will be sampled from 10, but only
+#      one from Uniform() unless elementwise=True is explicitly set. That
+#      seems unintuitive. How can this be prevented?
 class Add(StochasticParameter):
     """
     Parameter to add to other parameter's results.
@@ -1568,6 +1572,7 @@ class Add(StochasticParameter):
     Converts a uniform range ``[0.0, 1.0)`` to ``[1.0, 2.0)``.
 
     """
+
     def __init__(self, other_param, val, elementwise=False):
         super(Add, self).__init__()
 

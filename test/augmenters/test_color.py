@@ -58,16 +58,17 @@ class TestAddToHueAndSaturation(unittest.TestCase):
     @classmethod
     def _add_hue_saturation(cls, img, value=None, value_hue=None,
                             value_saturation=None):
-        assert (
-            value is not None
-            or (value_hue is not None and value_saturation is not None)
-        )
-        assert not (value is not None and value_hue is not None)
-        assert not (value is not None and value_saturation is not None)
+        if value is not None:
+            assert value_hue is None and value_saturation is None
+        else:
+            assert value_hue is not None or value_saturation is not None
 
         if value is not None:
             value_hue = value
             value_saturation = value
+        else:
+            value_hue = value_hue or 0
+            value_saturation = value_saturation or 0
 
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         img_hsv = img_hsv.astype(np.int32)
@@ -77,6 +78,36 @@ class TestAddToHueAndSaturation(unittest.TestCase):
             img_hsv[..., 1] + value_saturation, 0, 255)
         img_hsv = img_hsv.astype(np.uint8)
         return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
+
+    def test___init__(self):
+        aug = iaa.AddToHueAndSaturation((-20, 20))
+        assert isinstance(aug.value, iap.DiscreteUniform)
+        assert aug.value.a.value == -20
+        assert aug.value.b.value == 20
+        assert aug.value_hue is None
+        assert aug.value_saturation is None
+        assert isinstance(aug.per_channel, iap.Deterministic)
+        assert aug.per_channel.value == 0
+
+    def test___init___value_none(self):
+        aug = iaa.AddToHueAndSaturation(value_hue=(-20, 20),
+                                        value_saturation=[0, 5, 10])
+        assert aug.value is None
+        assert isinstance(aug.value_hue, iap.DiscreteUniform)
+        assert isinstance(aug.value_saturation, iap.Choice)
+        assert aug.value_hue.a.value == -20
+        assert aug.value_hue.b.value == 20
+        assert aug.value_saturation.a == [0, 5, 10]
+        assert isinstance(aug.per_channel, iap.Deterministic)
+        assert aug.per_channel.value == 0
+
+    def test___init___per_channel(self):
+        aug = iaa.AddToHueAndSaturation(per_channel=0.5)
+        assert aug.value is None
+        assert aug.value_hue is None
+        assert aug.value_saturation is None
+        assert isinstance(aug.per_channel, iap.Binomial)
+        assert np.isclose(aug.per_channel.p.value, 0.5)
 
     def test_augment_images(self):
         base_img = np.zeros((2, 2, 3), dtype=np.uint8)
@@ -211,6 +242,103 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         n_exp_tol = nb_iterations * 0.1
         assert all([n_exp - n_exp_tol < v < n_exp + n_exp_tol
                     for v in seen.values()])
+
+    def test_augment_images__value_hue(self):
+        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
+        base_img[..., 0] += 20
+        base_img[..., 1] += 40
+        base_img[..., 2] += 60
+
+        class _DummyParam(iap.StochasticParameter):
+            def _draw_samples(self, size, random_state):
+                return np.float32([10, 20, 30])
+
+        aug = iaa.AddToHueAndSaturation(value_hue=_DummyParam())
+
+        img_expected1 = self._add_hue_saturation(base_img, value_hue=10)
+        img_expected2 = self._add_hue_saturation(base_img, value_hue=20)
+        img_expected3 = self._add_hue_saturation(base_img, value_hue=30)
+
+        img_observed1, img_observed2, img_observed3 = \
+            aug.augment_images([base_img] * 3)
+
+        assert np.array_equal(img_observed1, img_expected1)
+        assert np.array_equal(img_observed2, img_expected2)
+        assert np.array_equal(img_observed3, img_expected3)
+
+    def test_augment_images__value_saturation(self):
+        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
+        base_img[..., 0] += 20
+        base_img[..., 1] += 40
+        base_img[..., 2] += 60
+
+        class _DummyParam(iap.StochasticParameter):
+            def _draw_samples(self, size, random_state):
+                return np.float32([10, 20, 30])
+
+        aug = iaa.AddToHueAndSaturation(value_saturation=_DummyParam())
+
+        img_expected1 = self._add_hue_saturation(base_img, value_saturation=10)
+        img_expected2 = self._add_hue_saturation(base_img, value_saturation=20)
+        img_expected3 = self._add_hue_saturation(base_img, value_saturation=30)
+
+        img_observed1, img_observed2, img_observed3 = \
+            aug.augment_images([base_img] * 3)
+
+        assert np.array_equal(img_observed1, img_expected1)
+        assert np.array_equal(img_observed2, img_expected2)
+        assert np.array_equal(img_observed3, img_expected3)
+
+    def test_augment_images__value_hue_and_value_saturation(self):
+        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
+        base_img[..., 0] += 20
+        base_img[..., 1] += 40
+        base_img[..., 2] += 60
+
+        class _DummyParam(iap.StochasticParameter):
+            def _draw_samples(self, size, random_state):
+                return np.float32([10, 20, 30])
+
+        aug = iaa.AddToHueAndSaturation(value_hue=_DummyParam(),
+                                        value_saturation=_DummyParam()+40)
+
+        img_expected1 = self._add_hue_saturation(base_img, value_hue=10,
+                                                 value_saturation=40+10)
+        img_expected2 = self._add_hue_saturation(base_img, value_hue=20,
+                                                 value_saturation=40+20)
+        img_expected3 = self._add_hue_saturation(base_img, value_hue=30,
+                                                 value_saturation=40+30)
+
+        img_observed1, img_observed2, img_observed3 = \
+            aug.augment_images([base_img] * 3)
+
+        assert np.array_equal(img_observed1, img_expected1)
+        assert np.array_equal(img_observed2, img_expected2)
+        assert np.array_equal(img_observed3, img_expected3)
+
+    def test_get_parameters(self):
+        aug = iaa.AddToHueAndSaturation((-20, 20), per_channel=0.5)
+        params = aug.get_parameters()
+        assert isinstance(params[0], iap.DiscreteUniform)
+        assert params[0].a.value == -20
+        assert params[0].b.value == 20
+        assert params[1] is None
+        assert params[2] is None
+        assert isinstance(params[3], iap.Binomial)
+        assert np.isclose(params[3].p.value, 0.5)
+
+    def test_get_parameters_value_hue_and_value_saturation(self):
+        aug = iaa.AddToHueAndSaturation(value_hue=(-20, 20),
+                                        value_saturation=5)
+        params = aug.get_parameters()
+        assert params[0] is None
+        assert isinstance(params[1], iap.DiscreteUniform)
+        assert params[1].a.value == -20
+        assert params[1].b.value == 20
+        assert isinstance(params[2], iap.Deterministic)
+        assert params[2].value == 5
+        assert isinstance(params[3], iap.Deterministic)
+        assert params[3].value == 0
 
 
 def test_Grayscale():

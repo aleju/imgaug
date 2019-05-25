@@ -30,6 +30,22 @@
   The `value` parameter is now interpreted by the augmenter to return first the
   hue and then the saturation value to add, instead of the other way round.
   (This shouldn't affect anybody.) #319
+* `AddToHueAndSaturation`
+    * [rarely breaking] Refactored `AddToHueAndSaturation` to clean it up.
+      Re-running old code with the same seeds will now produce different
+      images. #319
+    * [rarely breaking] The `value` parameter is now interpreted by the
+      augmenter to return first the hue and then the saturation value to add,
+      instead of the other way round.
+      (This shouldn't affect anybody.) #319
+    * [rarely breaking] Added `value_hue` and `value_saturation` arguments,
+      which allow to set individual parameters for hue and saturation
+      instead of having to use one parameter for both (they may not be set
+      if `value` is already set).
+      This changes the order of arguments of the augmenter and code that relied
+      on that order will now break.
+      This also changes the output of
+      `AddToHueAndSaturation.get_parameters()`. #319
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
 
 ## Fixes

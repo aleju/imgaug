@@ -241,9 +241,45 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     Parameters
     ----------
-    value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        Value to add to the saturation and hue of all pixels.
+    value : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to the hue *and* saturation of all pixels.
+        It is expected to be in the range ``-255`` to ``+255``.
 
+            * If this is ``None``, `value_hue` and/or `value_saturation`
+              may be set to values other than ``None``.
+            * If an integer, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    value_hue : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to the hue of all pixels.
+        This is expected to be in the range ``-255`` to ``+255`` and will
+        automatically be projected to an angular representation using
+        ``(hue/255) * (360/2)`` (OpenCV's hue representation is in the
+        range ``[0, 180]`` instead of ``[0, 360]``).
+        Only this or `value` may be set, not both.
+
+            * If this and `value_saturation` are both ``None``, `value` may
+              be set to a non-``None`` value.
+            * If an integer, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    value_saturation : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to the saturation of all pixels.
+        It is expected to be in the range ``-255`` to ``+255``.
+        Only this or `value` may be set, not both.
+
+            * If this and `value_hue` are both ``None``, `value` may
+              be set to a non-``None`` value.
             * If an integer, then that value will be used for all images.
             * If a tuple ``(a, b)``, then a value from the discrete
               range ``[a, b]`` will be sampled per image.
@@ -253,13 +289,14 @@ class AddToHueAndSaturation(meta.Augmenter):
               parameter per image.
 
     per_channel : bool or float, optional
-        Whether to sample per image only one value and use it for both hue
-        and saturation (``False``) or to sample independently one value
-        for hue and one for saturation (``True``). Note that the hue value
-        will be projected to an angular representation using
-        ``(hue/255) * (360/2)``.
+        Whether to sample per image only one value from `value` and use it for
+        both hue and saturation (``False``) or to sample independently one
+        value for hue and one for saturation (``True``).
         If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as ``True``, otherwise as ``False``.
+
+        This parameter has no effect is `value_hue` and/or `value_saturation`
+        are used instead of `value`.
 
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
@@ -287,54 +324,71 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     _LUT_CACHE = None
 
-    def __init__(self, value=0, per_channel=False, from_colorspace="RGB", name=None, deterministic=False,
-                 random_state=None):
-        super(AddToHueAndSaturation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, value=None, value_hue=None, value_saturation=None,
+                 per_channel=False, from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        super(AddToHueAndSaturation, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
-        self.value = iap.handle_discrete_param(value, "value", value_range=(-255, 255), tuple_to_uniform=True,
-                                               list_to_choice=True, allow_floats=False)
-        self.per_channel = iap.handle_probability_param(per_channel, "per_channel")
+        self.value = self._handle_value_arg(value, value_hue, value_saturation)
+        self.value_hue = self._handle_value_hue_arg(value_hue)
+        self.value_saturation = self._handle_value_saturation_arg(
+            value_saturation)
+        self.per_channel = iap.handle_probability_param(per_channel,
+                                                        "per_channel")
 
-        # we don't change these in a modified to_deterministic() here, because they are called in _augment_images()
-        # with random states
-        self.colorspace_changer = ChangeColorspace(from_colorspace=from_colorspace, to_colorspace="HSV")
-        self.colorspace_changer_inv = ChangeColorspace(from_colorspace="HSV", to_colorspace=from_colorspace)
+        # we don't change these in a modified to_deterministic() here,
+        # because they are called in _augment_images() with random states
+        self.colorspace_changer = ChangeColorspace(
+            from_colorspace=from_colorspace, to_colorspace="HSV")
+        self.colorspace_changer_inv = ChangeColorspace(
+            from_colorspace="HSV", to_colorspace=from_colorspace)
 
         self.backend = "cv2"
 
         # precompute tables for cv2.LUT
         if self.backend == "cv2" and self._LUT_CACHE is None:
-            self._LUT_CACHE = (np.zeros((256*2, 256), dtype=np.int8),
-                               np.zeros((256*2, 256), dtype=np.int8))
-            value_range = np.arange(0, 256, dtype=np.int16)
-            # this could be done slightly faster by vectorizing the loop
-            for i in sm.xrange(-255, 255+1):
-                table_hue = np.mod(value_range + i, 180)
-                table_saturation = np.clip(value_range + i, 0, 255)
-                self._LUT_CACHE[0][i, :] = table_hue
-                self._LUT_CACHE[1][i, :] = table_saturation
+            self._LUT_CACHE = self._generate_lut_table()
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = ia.derive_random_states(random_state, 3)
+        rss = ia.derive_random_states(random_state, 2)
 
-        per_channel = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[2])
-        per_channel = (per_channel > 0.5)
+        if self.value is not None:
+            per_channel = self.per_channel.draw_samples(
+                (nb_images,), random_state=rss[0])
+            per_channel = (per_channel > 0.5)
 
-        samples = self.value.draw_samples(
-            (nb_images, 2), random_state=rss[1]).astype(np.int32)
-        ia.do_assert(-255 <= samples[0, 0] <= 255)
+            samples = self.value.draw_samples(
+                (nb_images, 2), random_state=rss[1]).astype(np.int32)
+            assert (-255 <= samples[0, 0] <= 255), (
+                "Expected values sampled from `value` in AddToHueAndSaturation "
+                "to be in range [-255, 255], but got %.8f." % (samples[0, 0])
+            )
 
-        samples_hue = samples[:, 0]
+            samples_hue = samples[:, 0]
+            samples_saturation = np.copy(samples[:, 0])
+            samples_saturation[per_channel] = samples[per_channel, 1]
+        else:
+            if self.value_hue is not None:
+                samples_hue = self.value_hue.draw_samples(
+                    (nb_images,), random_state=rss[0]).astype(np.int32)
+            else:
+                samples_hue = np.zeros((nb_images,), dtype=np.int32)
+
+            if self.value_saturation is not None:
+                samples_saturation = self.value_saturation.draw_samples(
+                    (nb_images,), random_state=rss[1]).astype(np.int32)
+            else:
+                samples_saturation = np.zeros((nb_images,), dtype=np.int32)
+
+        # project hue to angular representation
+        # OpenCV uses range [0, 180] for the hue
         samples_hue = (
             (samples_hue.astype(np.float32) / 255.0) * (360/2)
         ).astype(np.int32)
 
-        samples_saturation = samples[:, 0]
-        samples_saturation[per_channel] = samples[per_channel, 1]
-
-        return samples_hue, samples_saturation, per_channel
+        return samples_hue, samples_saturation
 
     def _augment_images(self, images, random_state, parents, hooks):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
@@ -354,14 +408,13 @@ class AddToHueAndSaturation(meta.Augmenter):
         samples = self._draw_samples(images, rss[1])
         hues = samples[0]
         saturations = samples[1]
-        per_channels = samples[2]
         rs_inv = rss[2]
 
         # this is needed if no cache for LUT is used:
         # value_range = np.arange(0, 256, dtype=np.int16)
 
-        gen = enumerate(zip(images_hsv, hues, saturations, per_channels))
-        for i, (image_hsv, hue_i, saturation_i, per_channel_i) in gen:
+        gen = enumerate(zip(images_hsv, hues, saturations))
+        for i, (image_hsv, hue_i, saturation_i) in gen:
             assert image_hsv.dtype.name == "uint8"
 
             if self.backend == "cv2":
@@ -420,7 +473,61 @@ class AddToHueAndSaturation(meta.Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.value, self.per_channel]
+        return [self.value, self.value_hue, self.value_saturation,
+                self.per_channel]
+
+    @classmethod
+    def _handle_value_arg(cls, value, value_hue, value_saturation):
+        if value is not None:
+            assert value_hue is None, (
+                "`value_hue` may not be set if `value` is set. "
+                "It is set to: %s (type: %s)." % (
+                    str(value_hue), type(value_hue))
+            )
+            assert value_saturation is None, (
+                "`value_saturation` may not be set if `value` is set. "
+                "It is set to: %s (type: %s)." % (
+                    str(value_saturation), type(value_saturation))
+            )
+            return iap.handle_discrete_param(
+                value, "value", value_range=(-255, 255), tuple_to_uniform=True,
+                list_to_choice=True, allow_floats=False)
+
+        return None
+
+    @classmethod
+    def _handle_value_hue_arg(cls, value_hue):
+        if value_hue is not None:
+            # we don't have to verify here the value is None, as the
+            # exclusivity was already ensured in _handle_value_arg()
+            return iap.handle_discrete_param(
+                value_hue, "value_hue", value_range=(-255, 255),
+                tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+
+        return None
+
+    @classmethod
+    def _handle_value_saturation_arg(cls, value_saturation):
+        if value_saturation is not None:
+            # we don't have to verify here the value is None, as the
+            # exclusivity was already ensured in _handle_value_arg()
+            return iap.handle_discrete_param(
+                value_saturation, "value_saturation", value_range=(-255, 255),
+                tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        return None
+
+    @classmethod
+    def _generate_lut_table(cls):
+        table = (np.zeros((256*2, 256), dtype=np.int8),
+                  np.zeros((256*2, 256), dtype=np.int8))
+        value_range = np.arange(0, 256, dtype=np.int16)
+        # this could be done slightly faster by vectorizing the loop
+        for i in sm.xrange(-255, 255+1):
+            table_hue = np.mod(value_range + i, 180)
+            table_saturation = np.clip(value_range + i, 0, 255)
+            table[0][i, :] = table_hue
+            table[1][i, :] = table_saturation
+        return table
 
 
 # TODO tests
