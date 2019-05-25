@@ -242,18 +242,35 @@ class AddToHueAndSaturation(meta.Augmenter):
     Parameters
     ----------
     value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
+        Value to add to the saturation and hue of all pixels.
+
+            * If an integer, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
 
     per_channel : bool or float, optional
-        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
+        Whether to sample per image only one value and use it for both hue
+        and saturation (``False``) or to sample independently one value
+        for hue and one for saturation (``True``). Note that the hue value
+        will be projected to an angular representation using
+        ``(hue/255) * (360/2)``.
+        If this value is a float ``p``, then for ``p`` percent of all images
+        `per_channel` will be treated as ``True``, otherwise as ``False``.
 
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
 
-    channels : int or list of int or None, optional
-        See :func:`imgaug.augmenters.meta.WithChannels.__init__()`.
-
     name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -263,7 +280,8 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     Adds random values between -20 and 20 to the hue and saturation
     (independently per channel and the same value for all pixels within
-    that channel).
+    that channel). The hue will be automatically projected to an angular
+    representation.
 
     """
 
