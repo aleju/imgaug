@@ -19,6 +19,8 @@ List of augmenters:
     * WithColorspace
     * WithHueAndSaturation
     * MultiplyHueAndSaturation
+    * MultiplyHue
+    * MultiplySaturation
     * AddToHueAndSaturation
     * AddToHue
     * AddToSaturation
@@ -377,21 +379,13 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
     the pixel values in the H and S channels and afterwards converts back to
     RGB.
 
+    This augmenter is a wrapper around ``WithHueAndSaturation``.
+    The performance is expected to be worse than the one
+    of ``AddToHueAndSaturation``.
+
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: no
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: no
-        * ``int16``: no
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: no
-        * ``float32``: no
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: no
+        See `imgaug.augmenters.color.WithHueAndSaturation`.
 
     Parameters
     ----------
@@ -455,7 +449,7 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
         are used instead of `value`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -564,6 +558,128 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
     # mul, mul_hue and mul_saturation were all None
     return meta.Noop(name=name, random_state=rss[4],
                      deterministic=deterministic)
+
+
+def MultiplyHue(mul=None, from_colorspace="RGB", name=None,
+                deterministic=False, random_state=None):
+    """
+    Augmenter that multiplies the hue of images by random values.
+
+    The augmenter first transforms images to HSV colorspace, then multiplies
+    the pixel values in the H channel and afterwards converts back to
+    RGB.
+
+    This augmenter is a shortcut for ``MultiplyHueAndSaturation(mul_hue=...)``.
+
+    dtype support::
+
+        See `imgaug.augmenters.color.MultiplyHueAndSaturation`.
+
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Multiplier with which to multiply all hue values.
+        This is expected to be in the range ``-10.0`` to ``+10.0`` and will
+        automatically be projected to an angular representation using
+        ``(hue/255) * (360/2)`` (OpenCV's hue representation is in the
+        range ``[0, 180]`` instead of ``[0, 360]``).
+        Only this or `mul` may be set, not both.
+
+            * If a number, then that multiplier will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the continuous
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplyHue((0.5, 1.5))
+
+    Multiplies the hue with random values between 0.5 and 1.5.
+    The hue will be automatically projected to an angular representation.
+
+    """
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+    return MultiplyHueAndSaturation(mul_hue=mul,
+                                    from_colorspace=from_colorspace,
+                                    name=name,
+                                    deterministic=deterministic,
+                                    random_state=random_state)
+
+
+def MultiplySaturation(mul=None, from_colorspace="RGB", name=None,
+                       deterministic=False, random_state=None):
+    """
+    Augmenter that multiplies the saturation of images by random values.
+
+    The augmenter first transforms images to HSV colorspace, then multiplies
+    the pixel values in the H channel and afterwards converts back to
+    RGB.
+
+    This augmenter is a shortcut for
+    ``MultiplyHueAndSaturation(mul_saturation=...)``.
+
+    dtype support::
+
+        See `imgaug.augmenters.color.MultiplyHueAndSaturation`.
+
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Multiplier with which to multiply all saturation values.
+        It is expected to be in the range ``0.0`` to ``+10.0``.
+
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the continuous
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplySaturation((0.5, 1.5))
+
+    Multiplies the saturation with random values between 0.5 and 1.5.
+
+    """
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+    return MultiplyHueAndSaturation(mul_saturation=mul,
+                                    from_colorspace=from_colorspace,
+                                    name=name,
+                                    deterministic=deterministic,
+                                    random_state=random_state)
 
 
 # TODO removed deterministic and random_state here as parameters, because this
@@ -950,6 +1066,8 @@ def AddToHue(value, from_colorspace="RGB", name=None, deterministic=False,
     to use ``AddToHueAndSaturation`` as otherwise the image will be
     converted twice to HSV and back to RGB.
 
+    This augmenter is a shortcut for ``AddToHueAndSaturation(value_hue=...)``.
+
     dtype support::
 
         See `imgaug.augmenters.color.AddToHueAndSaturation`.
@@ -1015,6 +1133,9 @@ def AddToSaturation(value, from_colorspace="RGB", name=None,
     If you want to change both the hue and the saturation, it is recommended
     to use ``AddToHueAndSaturation`` as otherwise the image will be
     converted twice to HSV and back to RGB.
+
+    This augmenter is a shortcut for
+    ``AddToHueAndSaturation(value_saturation=...)``.
 
     dtype support::
 

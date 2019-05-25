@@ -496,6 +496,41 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
                 assert not equal
 
 
+class TestMultiplyToHue(unittest.TestCase):
+    def test_returns_correct_class(self):
+        # this test is practically identical to
+        # TestMultiplyToHueAndSaturation.test_returns_correct_objects__mul_hue
+        aug = iaa.MultiplyHue((0.9, 1.1))
+        assert isinstance(aug, iaa.WithHueAndSaturation)
+        assert isinstance(aug.children, iaa.Sequential)
+        assert len(aug.children) == 1
+        assert isinstance(aug.children[0], iaa.WithChannels)
+        assert aug.children[0].channels == [0]
+        assert len(aug.children[0].children) == 1
+        assert isinstance(aug.children[0].children[0], iaa.Multiply)
+        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
+        assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
+
+
+class TestMultiplyToSaturation(unittest.TestCase):
+    def test_returns_correct_class(self):
+        # this test is practically identical to
+        # TestMultiplyToHueAndSaturation
+        #     .test_returns_correct_objects__mul_saturation
+        aug = iaa.MultiplySaturation((0.9, 1.1))
+        assert isinstance(aug, iaa.WithHueAndSaturation)
+        assert isinstance(aug.children, iaa.Sequential)
+        assert len(aug.children) == 1
+        assert isinstance(aug.children[0], iaa.WithChannels)
+        assert aug.children[0].channels == [1]
+        assert len(aug.children[0].children) == 1
+        assert isinstance(aug.children[0].children[0], iaa.Multiply)
+        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
+        assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
+
+
 class TestAddToHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()

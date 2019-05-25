@@ -47,6 +47,8 @@
   `AddToHueAndSaturation(value_saturation=...)`. #319
 * Added `imgaug.augmenters.color.WithHueAndSaturation`. #319
 * Added `imgaug.augmenters.color.MultiplyHueAndSaturation`. #319
+* Added `imgaug.augmenters.color.MultiplyHue`. #319
+* Added `imgaug.augmenters.color.MultiplySaturation`. #19
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
 
 
