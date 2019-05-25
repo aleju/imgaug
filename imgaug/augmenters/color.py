@@ -519,7 +519,7 @@ class AddToHueAndSaturation(meta.Augmenter):
     @classmethod
     def _generate_lut_table(cls):
         table = (np.zeros((256*2, 256), dtype=np.int8),
-                  np.zeros((256*2, 256), dtype=np.int8))
+                 np.zeros((256*2, 256), dtype=np.int8))
         value_range = np.arange(0, 256, dtype=np.int16)
         # this could be done slightly faster by vectorizing the loop
         for i in sm.xrange(-255, 255+1):
@@ -528,6 +528,72 @@ class AddToHueAndSaturation(meta.Augmenter):
             table[0][i, :] = table_hue
             table[1][i, :] = table_saturation
         return table
+
+
+def AddToHue(value, from_colorspace="RGB", name=None, deterministic=False,
+             random_state=None):
+    """
+    Add random value to image's hue.
+
+    The augmenter first transforms images to HSV colorspace, then adds random
+    values to the H channel and afterwards converts back to RGB.
+
+    If you want to change both the hue and the saturation, it is recommended
+    to use ``AddToHueAndSaturation`` as otherwise the image will be
+    converted twice to HSV and back to RGB.
+
+    dtype support::
+
+        See `imgaug.augmenters.color.AddToHueAndSaturation`.
+
+    Parameters
+    ----------
+    value : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to the hue of all pixels.
+        This is expected to be in the range ``-255`` to ``+255`` and will
+        automatically be projected to an angular representation using
+        ``(hue/255) * (360/2)`` (OpenCV's hue representation is in the
+        range ``[0, 180]`` instead of ``[0, 360]``).
+
+            * If an integer, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.AddToHue((-20, 20))
+
+    Samples random values from the discrete uniform range ``[-20..20]``,
+    converts them to angular representation and adds them to the hue, i.e.
+    to the H channel in HSV colorspace.
+
+    """
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
+    return AddToHueAndSaturation(
+        value_hue=value,
+        from_colorspace=from_colorspace,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state)
 
 
 # TODO tests
