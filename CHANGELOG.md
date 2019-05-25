@@ -25,12 +25,7 @@
     * Added `augmenters.pooling.MaxPooling`. #317
     * Added `augmenters.pooling.MinPooling`. #317
     * Added `augmenters.pooling.MedianPooling`. #317
-* [rarely breaking] Refactored `AddToHueAndSaturation` to clean it up.
-  Re-running old code with the same seeds will now produce different images.
-  The `value` parameter is now interpreted by the augmenter to return first the
-  hue and then the saturation value to add, instead of the other way round.
-  (This shouldn't affect anybody.) #319
-* `AddToHueAndSaturation`
+* `imgaug.augmenters.color.AddToHueAndSaturation`
     * [rarely breaking] Refactored `AddToHueAndSaturation` to clean it up.
       Re-running old code with the same seeds will now produce different
       images. #319
@@ -46,9 +41,11 @@
       on that order will now break.
       This also changes the output of
       `AddToHueAndSaturation.get_parameters()`. #319
-* Added `AddToHue`, a shortcut for `AddToHueAndSaturation(value_hue=...)`. #319
-* Added `AddToSaturation`, a shortcut for
+* Added `imgaug.augmenters.color.AddToHue`, a shortcut for
+  `AddToHueAndSaturation(value_hue=...)`. #319
+* Added `imgaug.augmenters.color.AddToSaturation`, a shortcut for
   `AddToHueAndSaturation(value_saturation=...)`. #319
+* Added `imgaug.augmenters.color.WithHueAndSaturation`. #319
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
 
 
