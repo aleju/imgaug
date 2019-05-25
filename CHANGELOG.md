@@ -47,6 +47,8 @@
       This also changes the output of
       `AddToHueAndSaturation.get_parameters()`. #319
 * Added `AddToHue`, a shortcut for `AddToHueAndSaturation(value_hue=...)`. #319
+* Added `AddToSaturation`, a shortcut for
+  `AddToHueAndSaturation(value_saturation=...)`. #319
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
 
 

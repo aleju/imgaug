@@ -533,7 +533,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 def AddToHue(value, from_colorspace="RGB", name=None, deterministic=False,
              random_state=None):
     """
-    Add random value to image's hue.
+    Add random values to the hue of images.
 
     The augmenter first transforms images to HSV colorspace, then adds random
     values to the H channel and afterwards converts back to RGB.
@@ -590,6 +590,68 @@ def AddToHue(value, from_colorspace="RGB", name=None, deterministic=False,
 
     return AddToHueAndSaturation(
         value_hue=value,
+        from_colorspace=from_colorspace,
+        name=name,
+        deterministic=deterministic,
+        random_state=random_state)
+
+
+def AddToSaturation(value, from_colorspace="RGB", name=None,
+                    deterministic=False, random_state=None):
+    """
+    Add random values to the saturation of images.
+
+    The augmenter first transforms images to HSV colorspace, then adds random
+    values to the S channel and afterwards converts back to RGB.
+
+    If you want to change both the hue and the saturation, it is recommended
+    to use ``AddToHueAndSaturation`` as otherwise the image will be
+    converted twice to HSV and back to RGB.
+
+    dtype support::
+
+        See `imgaug.augmenters.color.AddToHueAndSaturation`.
+
+    Parameters
+    ----------
+    value : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Value to add to the saturation of all pixels.
+        It is expected to be in the range ``-255`` to ``+255``.
+
+            * If an integer, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.AddToSaturation((-20, 20))
+
+    Samples random values from the discrete uniform range ``[-20..20]``,
+    and adds them to the saturation, i.e. to the S channel in HSV colorspace.
+
+    """
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
+    return AddToHueAndSaturation(
+        value_saturation=value,
         from_colorspace=from_colorspace,
         name=name,
         deterministic=deterministic,

@@ -350,6 +350,15 @@ class TestAddToHue(unittest.TestCase):
         assert aug.value_hue.b.value == 20
 
 
+class TestAddToSaturation(unittest.TestCase):
+    def test_returns_correct_class(self):
+        aug = iaa.AddToSaturation((-20, 20))
+        assert isinstance(aug, iaa.AddToHueAndSaturation)
+        assert isinstance(aug.value_saturation, iap.DiscreteUniform)
+        assert aug.value_saturation.a.value == -20
+        assert aug.value_saturation.b.value == 20
+
+
 def test_Grayscale():
     reseed()
 
