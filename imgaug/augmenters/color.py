@@ -263,7 +263,16 @@ class WithHueAndSaturation(meta.Augmenter):
         self._internal_dtype = np.int16
 
     def _augment_images(self, images, random_state, parents, hooks):
-        # TODO gate
+        iadt.gate_dtypes(
+            images,
+            allowed=["uint8"],
+            disallowed=[
+                "bool",
+                "uint16", "uint32", "uint64", "uint128", "uint256",
+                "int32", "int64", "int128", "int256",
+                "float16", "float32", "float64", "float96", "float128",
+                "float256"],
+            augmenter=self)
 
         result = images
         if hooks is None or hooks.is_propagating(images, augmenter=self,
@@ -915,6 +924,17 @@ class AddToHueAndSaturation(meta.Augmenter):
         return samples_hue, samples_saturation
 
     def _augment_images(self, images, random_state, parents, hooks):
+        iadt.gate_dtypes(
+            images,
+            allowed=["uint8"],
+            disallowed=[
+                "bool",
+                "uint16", "uint32", "uint64", "uint128", "uint256",
+                "int32", "int64", "int128", "int256",
+                "float16", "float32", "float64", "float96", "float128",
+                "float256"],
+            augmenter=self)
+
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
