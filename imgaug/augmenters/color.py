@@ -18,6 +18,7 @@ List of augmenters:
     * InColorspace (deprecated)
     * WithColorspace
     * WithHueAndSaturation
+    * MultiplyHueAndSaturation
     * AddToHueAndSaturation
     * AddToHue
     * AddToSaturation
@@ -33,6 +34,7 @@ import six.moves as sm
 
 from . import meta
 from . import blend
+from . import arithmetic
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
@@ -166,6 +168,8 @@ class WithColorspace(meta.Augmenter):
 
 # TODO Merge this into WithColorspace? A bit problematic due to int16
 #      conversion that would make WithColorspace less flexible.
+# TODO add option to choose overflow behaviour for hue and saturation channels,
+#      e.g. clip, modulo or wrap
 class WithHueAndSaturation(meta.Augmenter):
     """
     Apply child augmenters to hue and saturation channels.
@@ -362,6 +366,206 @@ class WithHueAndSaturation(meta.Augmenter):
         )
 
 
+def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
+                             per_channel=False, from_colorspace="RGB",
+                             name=None, deterministic=False,
+                             random_state=None):
+    """
+    Augmenter that multiplies hue and saturation by random values.
+
+    The augmenter first transforms images to HSV colorspace, then multiplies
+    the pixel values in the H and S channels and afterwards converts back to
+    RGB.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    mul : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Multiplier with which to multiply all hue *and* saturation values of
+        all pixels.
+        It is expected to be in the range ``-10.0`` to ``+10.0``.
+        Note that values of ``0.0`` or lower will remove all saturation.
+
+            * If this is ``None``, `mul_hue` and/or `mul_saturation`
+              may be set to values other than ``None``.
+            * If a number, then that multiplier will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the continuous
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    mul_hue : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Multiplier with which to multiply all hue values.
+        This is expected to be in the range ``-10.0`` to ``+10.0`` and will
+        automatically be projected to an angular representation using
+        ``(hue/255) * (360/2)`` (OpenCV's hue representation is in the
+        range ``[0, 180]`` instead of ``[0, 360]``).
+        Only this or `mul` may be set, not both.
+
+            * If this and `mul_saturation` are both ``None``, `mul` may
+              be set to a non-``None`` value.
+            * If a number, then that multiplier will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the continuous
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    mul_saturation : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Multiplier with which to multiply all saturation values.
+        It is expected to be in the range ``0.0`` to ``+10.0``.
+        Only this or `mul` may be set, not both.
+
+            * If this and `mul_hue` are both ``None``, `mul` may
+              be set to a non-``None`` value.
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the continuous
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+
+    per_channel : bool or float, optional
+        Whether to sample per image only one value from `mul` and use it for
+        both hue and saturation (``False``) or to sample independently one
+        value for hue and one for saturation (``True``).
+        If this value is a float ``p``, then for ``p`` percent of all images
+        `per_channel` will be treated as ``True``, otherwise as ``False``.
+
+        This parameter has no effect is `mul_hue` and/or `mul_saturation`
+        are used instead of `value`.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplyHueAndSaturation((0.5, 1.5), per_channel=True)
+
+    Multiplies the hue and saturation with random values between 0.5 and 1.5
+    (independently per channel and the same value for all pixels within
+    that channel). The hue will be automatically projected to an angular
+    representation.
+
+    """
+    if mul is not None:
+        assert mul_hue is None, (
+            "`mul_hue` may not be set if `mul` is set. "
+            "It is set to: %s (type: %s)." % (
+                str(mul_hue), type(mul_hue))
+        )
+        assert mul_saturation is None, (
+            "`mul_saturation` may not be set if `mul` is set. "
+            "It is set to: %s (type: %s)." % (
+                str(mul_saturation), type(mul_saturation))
+        )
+        mul = iap.handle_continuous_param(
+            mul, "mul", value_range=(-10.0, 10.0), tuple_to_uniform=True,
+            list_to_choice=True)
+    else:
+        if mul_hue is not None:
+            mul_hue = iap.handle_continuous_param(
+                mul_hue, "mul_hue", value_range=(-10.0, 10.0),
+                tuple_to_uniform=True, list_to_choice=True)
+        if mul_saturation is not None:
+            mul_saturation = iap.handle_continuous_param(
+                mul_saturation, "mul_saturation", value_range=(0.0, 10.0),
+                tuple_to_uniform=True, list_to_choice=True)
+
+    if name is None:
+        name = "Unnamed%s" % (ia.caller_name(),)
+
+    if random_state is None:
+        rss = [None] * 5
+    else:
+        rss = ia.derive_random_states(random_state, 5)
+
+    children = []
+    if mul is not None:
+        children.append(
+            arithmetic.Multiply(
+                mul,
+                per_channel=per_channel,
+                name="%s-Multiply" % (name,),
+                random_state=rss[0],
+                deterministic=deterministic
+            )
+        )
+    else:
+        if mul_hue is not None:
+            children.append(
+                meta.WithChannels(
+                    0,
+                    arithmetic.Multiply(
+                        mul_hue,
+                        name="%s-MultiplyHue" % (name,),
+                        random_state=rss[0],
+                        deterministic=deterministic
+                    ),
+                    name="%s-WithChannelsHue" % (name,),
+                    random_state=rss[1],
+                    deterministic=deterministic
+                )
+            )
+        if mul_saturation is not None:
+            children.append(
+                meta.WithChannels(
+                    1,
+                    arithmetic.Multiply(
+                        mul_saturation,
+                        name="%s-MultiplySaturation" % (name,),
+                        random_state=rss[2],
+                        deterministic=deterministic
+                    ),
+                    name="%s-WithChannelsSaturation" % (name,),
+                    random_state=rss[3],
+                    deterministic=deterministic
+                )
+            )
+
+    if children:
+        return WithHueAndSaturation(
+            children,
+            from_colorspace=from_colorspace,
+            name=name,
+            random_state=rss[4],
+            deterministic=deterministic
+        )
+
+    # mul, mul_hue and mul_saturation were all None
+    return meta.Noop(name=name, random_state=rss[4],
+                     deterministic=deterministic)
+
+
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
@@ -419,8 +623,11 @@ class AddToHueAndSaturation(meta.Augmenter):
     """
     Augmenter that increases/decreases hue and saturation by random values.
 
-    The augmenter first transforms images to HSV colorspace, then adds random values to the H and S channels
-    and afterwards converts back to RGB.
+    The augmenter first transforms images to HSV colorspace, then adds random
+    values to the H and S channels and afterwards converts back to RGB.
+
+    This augmenter is faster than using ``WithHueAndSaturation`` in combination
+    with ``Add``.
 
     TODO add float support
 
@@ -699,7 +906,7 @@ class AddToHueAndSaturation(meta.Augmenter):
     @classmethod
     def _handle_value_hue_arg(cls, value_hue):
         if value_hue is not None:
-            # we don't have to verify here the value is None, as the
+            # we don't have to verify here that value is None, as the
             # exclusivity was already ensured in _handle_value_arg()
             return iap.handle_discrete_param(
                 value_hue, "value_hue", value_range=(-255, 255),
@@ -710,7 +917,7 @@ class AddToHueAndSaturation(meta.Augmenter):
     @classmethod
     def _handle_value_saturation_arg(cls, value_saturation):
         if value_saturation is not None:
-            # we don't have to verify here the value is None, as the
+            # we don't have to verify here that value is None, as the
             # exclusivity was already ensured in _handle_value_arg()
             return iap.handle_discrete_param(
                 value_saturation, "value_saturation", value_range=(-255, 255),

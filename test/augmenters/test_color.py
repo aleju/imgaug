@@ -229,6 +229,273 @@ class TestWithHueAndSaturation(unittest.TestCase):
         assert observed == expected
 
 
+class TestMultiplyHueAndSaturation(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_returns_correct_objects__mul(self):
+        aug = iaa.MultiplyHueAndSaturation(
+            (0.9, 1.1), per_channel=True)
+        assert isinstance(aug, iaa.WithHueAndSaturation)
+        assert isinstance(aug.children, iaa.Sequential)
+        assert len(aug.children) == 1
+        assert isinstance(aug.children[0], iaa.Multiply)
+        assert isinstance(aug.children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[0].mul.a.value, 0.9)
+        assert np.isclose(aug.children[0].mul.b.value, 1.1)
+        assert isinstance(aug.children[0].per_channel, iap.Deterministic)
+        assert aug.children[0].per_channel.value == 1
+
+    def test_returns_correct_objects__mul_hue(self):
+        aug = iaa.MultiplyHueAndSaturation(mul_hue=(0.9, 1.1))
+        assert isinstance(aug, iaa.WithHueAndSaturation)
+        assert isinstance(aug.children, iaa.Sequential)
+        assert len(aug.children) == 1
+        assert isinstance(aug.children[0], iaa.WithChannels)
+        assert aug.children[0].channels == [0]
+        assert len(aug.children[0].children) == 1
+        assert isinstance(aug.children[0].children[0], iaa.Multiply)
+        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
+        assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
+
+    def test_returns_correct_objects__mul_saturation(self):
+        aug = iaa.MultiplyHueAndSaturation(mul_saturation=(0.9, 1.1))
+        assert isinstance(aug, iaa.WithHueAndSaturation)
+        assert isinstance(aug.children, iaa.Sequential)
+        assert len(aug.children) == 1
+        assert isinstance(aug.children[0], iaa.WithChannels)
+        assert aug.children[0].channels == [1]
+        assert len(aug.children[0].children) == 1
+        assert isinstance(aug.children[0].children[0], iaa.Multiply)
+        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
+        assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
+
+    def test_returns_correct_objects__mul_hue_and_mul_saturation(self):
+        aug = iaa.MultiplyHueAndSaturation(mul_hue=(0.9, 1.1),
+                                           mul_saturation=(0.8, 1.2))
+        assert isinstance(aug, iaa.WithHueAndSaturation)
+        assert isinstance(aug.children, iaa.Sequential)
+        assert len(aug.children) == 2
+
+        assert isinstance(aug.children[0], iaa.WithChannels)
+        assert aug.children[0].channels == [0]
+        assert len(aug.children[0].children) == 1
+        assert isinstance(aug.children[0].children[0], iaa.Multiply)
+        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
+        assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
+
+        assert isinstance(aug.children[1], iaa.WithChannels)
+        assert aug.children[1].channels == [1]
+        assert len(aug.children[0].children) == 1
+        assert isinstance(aug.children[1].children[0], iaa.Multiply)
+        assert isinstance(aug.children[1].children[0].mul, iap.Uniform)
+        assert np.isclose(aug.children[1].children[0].mul.a.value, 0.8)
+        assert np.isclose(aug.children[1].children[0].mul.b.value, 1.2)
+
+    def test_augment_images__mul(self):
+        aug = iaa.MultiplyHueAndSaturation(1.5)
+
+        # example image
+        image = np.arange(0, 255).reshape((1, 255, 1)).astype(np.uint8)
+        image = np.tile(image, (1, 1, 3))
+        image[..., 0] += 0
+        image[..., 1] += 5
+        image[..., 2] += 10
+
+        # compute expected output
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        image_hsv = image_hsv.astype(np.int16)  # simulate WithHueAndSaturation
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/180)*255).astype(np.int16)
+        image_hsv = image_hsv.astype(np.float32)  # simulate Multiply
+
+        image_hsv[..., 0] *= 1.5
+        image_hsv[..., 1] *= 1.5
+        image_hsv = np.round(image_hsv).astype(np.int16)
+
+        image_hsv[..., 0] = np.mod(image_hsv[..., 0], 255)
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/255)*180).astype(np.int16)
+        image_hsv[..., 1] = np.clip(image_hsv[..., 1], 0, 255)
+
+        image_hsv = image_hsv.astype(np.uint8)
+        image_expected = cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
+        assert not np.array_equal(image_expected, image)
+
+        # augment and verify
+        images_aug = aug.augment_images(np.stack([image, image], axis=0))
+        assert ia.is_np_array(images_aug)
+        for image_aug in images_aug:
+            assert image_aug.shape == (1, 255, 3)
+            diff = np.abs(image_aug.astype(np.int16) - image_expected)
+            assert np.all(diff <= 1)
+
+    def test_augment_images__mul_hue(self):
+        # this is almost identical to test_augment_images__mul
+        # only
+        #     aug = ...
+        # and
+        #     image_hsv[...] *= 1.2
+        # have been changed
+
+        aug = iaa.MultiplyHueAndSaturation(mul_hue=1.5)  # changed over __mul
+
+        # example image
+        image = np.arange(0, 255).reshape((1, 255, 1)).astype(np.uint8)
+        image = np.tile(image, (1, 1, 3))
+        image[..., 0] += 0
+        image[..., 1] += 5
+        image[..., 2] += 10
+
+        # compute expected output
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        image_hsv = image_hsv.astype(np.int16)  # simulate WithHueAndSaturation
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/180)*255).astype(np.int16)
+        image_hsv = image_hsv.astype(np.float32)  # simulate Multiply
+
+        image_hsv[..., 0] *= 1.5
+        image_hsv[..., 1] *= 1.0  # changed over __mul
+        image_hsv = np.round(image_hsv).astype(np.int16)
+
+        image_hsv[..., 0] = np.mod(image_hsv[..., 0], 255)
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/255)*180).astype(np.int16)
+        image_hsv[..., 1] = np.clip(image_hsv[..., 1], 0, 255)
+
+        image_hsv = image_hsv.astype(np.uint8)
+        image_expected = cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
+        assert not np.array_equal(image_expected, image)
+
+        # augment and verify
+        images_aug = aug.augment_images(np.stack([image, image], axis=0))
+        assert ia.is_np_array(images_aug)
+        for image_aug in images_aug:
+            assert image_aug.shape == (1, 255, 3)
+            diff = np.abs(image_aug.astype(np.int16) - image_expected)
+            assert np.all(diff <= 1)
+
+    def test_augment_images__mul_saturation(self):
+        # this is almost identical to test_augment_images__mul
+        # only
+        #     aug = ...
+        # and
+        #     image_hsv[...] *= 1.2
+        # have been changed
+
+        aug = iaa.MultiplyHueAndSaturation(mul_saturation=1.5)  # changed
+
+        # example image
+        image = np.arange(0, 255).reshape((1, 255, 1)).astype(np.uint8)
+        image = np.tile(image, (1, 1, 3))
+        image[..., 0] += 0
+        image[..., 1] += 5
+        image[..., 2] += 10
+
+        # compute expected output
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        image_hsv = image_hsv.astype(np.int16)  # simulate WithHueAndSaturation
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/180)*255).astype(np.int16)
+        image_hsv = image_hsv.astype(np.float32)  # simulate Multiply
+
+        image_hsv[..., 0] *= 1.0  # changed over __mul
+        image_hsv[..., 1] *= 1.5
+        image_hsv = np.round(image_hsv).astype(np.int16)
+
+        image_hsv[..., 0] = np.mod(image_hsv[..., 0], 255)
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/255)*180).astype(np.int16)
+        image_hsv[..., 1] = np.clip(image_hsv[..., 1], 0, 255)
+
+        image_hsv = image_hsv.astype(np.uint8)
+        image_expected = cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
+        assert not np.array_equal(image_expected, image)
+
+        # augment and verify
+        images_aug = aug.augment_images(np.stack([image, image], axis=0))
+        assert ia.is_np_array(images_aug)
+        for image_aug in images_aug:
+            assert image_aug.shape == (1, 255, 3)
+            diff = np.abs(image_aug.astype(np.int16) - image_expected)
+            assert np.all(diff <= 1)
+
+    def test_augment_images__mul_hue_and_mul_saturation(self):
+        # this is almost identical to test_augment_images__mul
+        # only
+        #     aug = ...
+        # and
+        #     image_hsv[...] *= 1.2
+        # have been changed
+
+        aug = iaa.MultiplyHueAndSaturation(mul_hue=1.5,
+                                           mul_saturation=1.6)  # changed
+
+        # example image
+        image = np.arange(0, 255).reshape((1, 255, 1)).astype(np.uint8)
+        image = np.tile(image, (1, 1, 3))
+        image[..., 0] += 0
+        image[..., 1] += 5
+        image[..., 2] += 10
+
+        # compute expected output
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        image_hsv = image_hsv.astype(np.int16)  # simulate WithHueAndSaturation
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/180)*255).astype(np.int16)
+        image_hsv = image_hsv.astype(np.float32)  # simulate Multiply
+
+        image_hsv[..., 0] *= 1.5
+        image_hsv[..., 1] *= 1.6  # changed over __mul
+        image_hsv = np.round(image_hsv).astype(np.int16)
+
+        image_hsv[..., 0] = np.mod(image_hsv[..., 0], 255)
+        image_hsv[..., 0] = (
+            (image_hsv[..., 0].astype(np.float32)/255)*180).astype(np.int16)
+        image_hsv[..., 1] = np.clip(image_hsv[..., 1], 0, 255)
+
+        image_hsv = image_hsv.astype(np.uint8)
+        image_expected = cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
+        assert not np.array_equal(image_expected, image)
+
+        # augment and verify
+        images_aug = aug.augment_images(np.stack([image, image], axis=0))
+        assert ia.is_np_array(images_aug)
+        for image_aug in images_aug:
+            assert image_aug.shape == (1, 255, 3)
+            diff = np.abs(image_aug.astype(np.int16) - image_expected)
+            assert np.all(diff <= 1)
+
+    def test_augment_images__deterministic(self):
+        rs = np.random.RandomState(1)
+        images = rs.randint(0, 255, size=(32, 4, 4, 3), dtype=np.uint8)
+
+        for deterministic in [False, True]:
+            aug = iaa.MultiplyHueAndSaturation(mul=(0.1, 5.0),
+                                               deterministic=deterministic)
+            images_aug1 = aug.augment_images(images)
+            images_aug2 = aug.augment_images(images)
+            equal = np.array_equal(images_aug1, images_aug2)
+            if deterministic:
+                assert equal
+            else:
+                assert not equal
+
+            aug = iaa.MultiplyHueAndSaturation(mul_hue=(0.1, 5.0),
+                                               mul_saturation=(0.1, 5.0),
+                                               deterministic=deterministic)
+            images_aug1 = aug.augment_images(images)
+            images_aug2 = aug.augment_images(images)
+            equal = np.array_equal(images_aug1, images_aug2)
+            if deterministic:
+                assert equal
+            else:
+                assert not equal
+
+
 class TestAddToHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()
