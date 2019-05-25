@@ -569,7 +569,7 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
                      deterministic=deterministic)
 
 
-def MultiplyHue(mul=None, from_colorspace="RGB", name=None,
+def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
                 deterministic=False, random_state=None):
     """
     Augmenter that multiplies the hue of images by random values.
@@ -632,7 +632,7 @@ def MultiplyHue(mul=None, from_colorspace="RGB", name=None,
                                     random_state=random_state)
 
 
-def MultiplySaturation(mul=None, from_colorspace="RGB", name=None,
+def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
                        deterministic=False, random_state=None):
     """
     Augmenter that multiplies the saturation of images by random values.
@@ -1074,7 +1074,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         return table
 
 
-def AddToHue(value, from_colorspace="RGB", name=None, deterministic=False,
+def AddToHue(value=(-255, 255), from_colorspace="RGB", name=None, deterministic=False,
              random_state=None):
     """
     Add random values to the hue of images.
@@ -1142,7 +1142,7 @@ def AddToHue(value, from_colorspace="RGB", name=None, deterministic=False,
         random_state=random_state)
 
 
-def AddToSaturation(value, from_colorspace="RGB", name=None,
+def AddToSaturation(value=(-75, 75), from_colorspace="RGB", name=None,
                     deterministic=False, random_state=None):
     """
     Add random values to the saturation of images.

@@ -31,6 +31,12 @@ def main():
     images_aug = iaa.AddToHueAndSaturation(value=(-255, 255), per_channel=True).augment_images([image] * 64)
     ia.imshow(ia.draw_grid(images_aug))
 
+    image = ia.quokka_square((128, 128))
+    images_aug = []
+    images_aug.extend(iaa.AddToHue().augment_images([image] * 10))
+    images_aug.extend(iaa.AddToSaturation().augment_images([image] * 10))
+    ia.imshow(ia.draw_grid(images_aug, rows=2))
+
 
 if __name__ == "__main__":
     main()
