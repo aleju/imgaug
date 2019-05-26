@@ -1,5 +1,5 @@
 """
-Augmenters that apply color space oriented changes.
+Augmenters that affect image colors or image colorspaces.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead ::
@@ -43,10 +43,11 @@ from .. import dtypes as iadt
 
 
 @ia.deprecated(alt_func="WithColorspace")
-def InColorspace(to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False,
-                 random_state=None):
+def InColorspace(to_colorspace, from_colorspace="RGB", children=None,
+                 name=None, deterministic=False, random_state=None):
     """Convert images to another colorspace."""
-    return WithColorspace(to_colorspace, from_colorspace, children, name, deterministic, random_state)
+    return WithColorspace(to_colorspace, from_colorspace, children, name,
+                          deterministic, random_state)
 
 
 class WithColorspace(meta.Augmenter):
@@ -96,6 +97,7 @@ class WithColorspace(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.WithColorspace(to_colorspace="HSV", from_colorspace="RGB",
     >>>                          children=iaa.WithChannels(0, iaa.Add(10)))
 
@@ -104,9 +106,10 @@ class WithColorspace(meta.Augmenter):
 
     """
 
-    def __init__(self, to_colorspace, from_colorspace="RGB", children=None, name=None, deterministic=False,
-                 random_state=None):
-        super(WithColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, to_colorspace, from_colorspace="RGB", children=None,
+                 name=None, deterministic=False, random_state=None):
+        super(WithColorspace, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
         self.to_colorspace = to_colorspace
         self.from_colorspace = from_colorspace
@@ -114,7 +117,8 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(images, augmenter=self,
+                                                 parents=parents, default=True):
             result = ChangeColorspace(
                 to_colorspace=self.to_colorspace,
                 from_colorspace=self.from_colorspace
@@ -132,7 +136,8 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self,
+                                                 parents=parents, default=True):
             result = self.children.augment_heatmaps(
                 result,
                 parents=parents + [self],
@@ -140,9 +145,12 @@ class WithColorspace(meta.Augmenter):
             )
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = keypoints_on_images
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
+        if hooks is None or hooks.is_propagating(keypoints_on_images,
+                                                 augmenter=self,
+                                                 parents=parents, default=True):
             result = self.children.augment_keypoints(
                 result,
                 parents=parents + [self],
@@ -164,8 +172,12 @@ class WithColorspace(meta.Augmenter):
         return [self.children]
 
     def __str__(self):
-        return "WithColorspace(from_colorspace=%s, to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" % (
-            self.from_colorspace, self.to_colorspace, self.name, self.children, self.deterministic)
+        return (
+            "WithColorspace(from_colorspace=%s, "
+            "to_colorspace=%s, name=%s, children=[%s], deterministic=%s)" % (
+                self.from_colorspace, self.to_colorspace, self.name,
+                self.children, self.deterministic)
+        )
 
 
 # TODO Merge this into WithColorspace? A bit problematic due to int16
@@ -694,11 +706,14 @@ def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
 # TODO removed deterministic and random_state here as parameters, because this
 # function creates multiple child augmenters. not sure if this is sensible
 # (give them all the same random state instead?)
-# TODO this is for now deactivated, because HSV images returned by opencv have value range 0-180 for the hue channel
-# and are supposed to be angular representations, i.e. if values go below 0 or above 180 they are supposed to overflow
-# to 180 and 0
+# TODO this is for now deactivated, because HSV images returned by opencv have
+#      value range 0-180 for the hue channel
+#      and are supposed to be angular representations, i.e. if values go below
+#      0 or above 180 they are supposed to overflow
+#      to 180 and 0
 """
-def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB", channels=[0, 1], name=None):  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
+def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB",
+                          channels=[0, 1], name=None):  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
     ""
     Augmenter that transforms images into HSV space, selects the H and S
     channels and then adds a given range of values to these.
@@ -1074,8 +1089,8 @@ class AddToHueAndSaturation(meta.Augmenter):
         return table
 
 
-def AddToHue(value=(-255, 255), from_colorspace="RGB", name=None, deterministic=False,
-             random_state=None):
+def AddToHue(value=(-255, 255), from_colorspace="RGB", name=None,
+             deterministic=False, random_state=None):
     """
     Add random values to the hue of images.
 
@@ -1208,17 +1223,21 @@ def AddToSaturation(value=(-75, 75), from_colorspace="RGB", name=None,
 
 
 # TODO tests
-# Note: Not clear whether this class will be kept (for anything aside from grayscale)
-# other colorspaces dont really make sense and they also might not work correctly
-# due to having no clearly limited range (like 0-255 or 0-1)
-# TODO rename to ChangeColorspace3D and then introduce ChangeColorspace, which does not enforce 3d images?
+# Note: Not clear whether this class will be kept (for anything aside from
+# grayscale)
+# other colorspaces dont really make sense and they also might not work
+# correctly due to having no clearly limited range (like 0-255 or 0-1)
+# TODO rename to ChangeColorspace3D and then introduce ChangeColorspace, which
+#      does not enforce 3d images?
 class ChangeColorspace(meta.Augmenter):
     """
     Augmenter to change the colorspace of images.
 
-    NOTE: This augmenter is not tested. Some colorspaces might work, others might not.
+    **Note**: This augmenter is not tested. Some colorspaces might work, others
+    might not.
 
-    NOTE: This augmenter tries to project the colorspace value range on 0-255. It outputs dtype=uint8 images.
+    **Note**: This augmenter tries to project the colorspace value range on
+    0-255. It outputs dtype=uint8 images.
 
     TODO check dtype support
 
@@ -1242,8 +1261,10 @@ class ChangeColorspace(meta.Augmenter):
     ----------
     to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
         The target colorspace.
-        Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``, ``HSV``, ``HLS``, ``Lab``, ``Luv``.
-        These are also accessible via ``ChangeColorspace.<NAME>``, e.g. ``ChangeColorspace.YCrCb``.
+        Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``,
+        ``HSV``, ``HLS``, ``Lab``, ``Luv``.
+        These are also accessible via ``ChangeColorspace.<NAME>``,
+        e.g. ``ChangeColorspace.YCrCb``.
 
             * If a string, it must be among the allowed colorspaces.
             * If a list, it is expected to be a list of strings, each one
@@ -1263,8 +1284,8 @@ class ChangeColorspace(meta.Augmenter):
         old image is visible.
 
             * If an int or float, exactly that value will be used.
-            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
-              be sampled per image.
+            * If a tuple ``(a, b)``, a random value from the range
+              ``a <= x <= b`` will be sampled per image.
             * If a list, then a random value will be sampled from that list
               per image.
             * If a StochasticParameter, a value will be sampled from the
@@ -1291,7 +1312,8 @@ class ChangeColorspace(meta.Augmenter):
     Lab = "Lab"
     Luv = "Luv"
     COLORSPACES = {RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv}
-    # TODO access cv2 COLOR_ variables directly instead of indirectly via dictionary mapping
+    # TODO access cv2 COLOR_ variables directly instead of indirectly via
+    #      dictionary mapping
     CV_VARS = {
         # RGB
         "RGB2BGR": cv2.COLOR_RGB2BGR,
@@ -1318,42 +1340,54 @@ class ChangeColorspace(meta.Augmenter):
         "HLS2RGB": cv2.COLOR_HLS2RGB,
         "HLS2BGR": cv2.COLOR_HLS2BGR,
         # Lab
-        "Lab2RGB": cv2.COLOR_Lab2RGB if hasattr(cv2, "COLOR_Lab2RGB") else cv2.COLOR_LAB2RGB,
-        "Lab2BGR": cv2.COLOR_Lab2BGR if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR
+        "Lab2RGB": (
+            cv2.COLOR_Lab2RGB
+            if hasattr(cv2, "COLOR_Lab2RGB") else cv2.COLOR_LAB2RGB),
+        "Lab2BGR": (
+            cv2.COLOR_Lab2BGR
+            if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR)
     }
 
-    def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0, name=None, deterministic=False,
-                 random_state=None):
-        super(ChangeColorspace, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0,
+                 name=None, deterministic=False, random_state=None):
+        super(ChangeColorspace, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
         # TODO somehow merge this with Alpha augmenter?
-        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
-                                                 list_to_choice=True)
+        self.alpha = iap.handle_continuous_param(
+            alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,
+            list_to_choice=True)
 
         if ia.is_string(to_colorspace):
             ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
             self.to_colorspace = iap.Deterministic(to_colorspace)
         elif ia.is_iterable(to_colorspace):
-            ia.do_assert(all([ia.is_string(colorspace) for colorspace in to_colorspace]))
-            ia.do_assert(all([(colorspace in ChangeColorspace.COLORSPACES) for colorspace in to_colorspace]))
+            ia.do_assert(all([ia.is_string(colorspace)
+                              for colorspace in to_colorspace]))
+            ia.do_assert(all([(colorspace in ChangeColorspace.COLORSPACES)
+                              for colorspace in to_colorspace]))
             self.to_colorspace = iap.Choice(to_colorspace)
         elif isinstance(to_colorspace, iap.StochasticParameter):
             self.to_colorspace = to_colorspace
         else:
-            raise Exception("Expected to_colorspace to be string, list of strings or StochasticParameter, got %s." % (
-                type(to_colorspace),))
+            raise Exception("Expected to_colorspace to be string, list of "
+                            "strings or StochasticParameter, got %s." % (
+                                type(to_colorspace),))
 
         self.from_colorspace = from_colorspace
         ia.do_assert(self.from_colorspace in ChangeColorspace.COLORSPACES)
         ia.do_assert(from_colorspace != ChangeColorspace.GRAY)
 
-        self.eps = 0.001  # epsilon value to check if alpha is close to 1.0 or 0.0
+        # epsilon value to check if alpha is close to 1.0 or 0.0
+        self.eps = 0.001
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
-        alphas = self.alpha.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
-        to_colorspaces = self.to_colorspace.draw_samples((nb_images,), random_state=ia.copy_random_state(random_state))
+        alphas = self.alpha.draw_samples(
+            (nb_images,), random_state=ia.copy_random_state(random_state))
+        to_colorspaces = self.to_colorspace.draw_samples(
+            (nb_images,), random_state=ia.copy_random_state(random_state))
         for i in sm.xrange(nb_images):
             alpha = alphas[i]
             to_colorspace = to_colorspaces[i]
@@ -1365,34 +1399,39 @@ class ChangeColorspace(meta.Augmenter):
             if alpha == 0 or self.from_colorspace == to_colorspace:
                 pass  # no change necessary
             else:
-                # some colorspaces here should use image/255.0 according to the docs,
-                # but at least for conversion to grayscale that results in errors,
-                # ie uint8 is expected
+                # some colorspaces here should use image/255.0 according to
+                # the docs, but at least for conversion to grayscale that
+                # results in errors, ie uint8 is expected
 
                 if image.ndim != 3:
                     import warnings
                     warnings.warn(
                         "Received an image with %d dimensions in "
-                        "ChangeColorspace._augment_image(), but expected 3 dimensions, i.e. shape "
+                        "ChangeColorspace._augment_image(), but expected 3 "
+                        "dimensions, i.e. shape "
                         "(height, width, channels)." % (image.ndim,)
                     )
                 elif image.shape[2] != 3:
                     import warnings
                     warnings.warn(
                         "Received an image with shape (H, W, C) and C=%d in "
-                        "ChangeColorspace._augment_image(). Expected C to usually be 3 -- any "
-                        "other value will likely result in errors. (Note that this function is "
-                        "e.g. called during grayscale conversion and hue/saturation "
+                        "ChangeColorspace._augment_image(). Expected C to "
+                        "usually be 3 -- any other value will likely result in "
+                        "errors. (Note that this function is e.g. called "
+                        "during grayscale conversion and hue/saturation "
                         "changes.)" % (image.shape[2],)
                     )
 
-                if self.from_colorspace in [ChangeColorspace.RGB, ChangeColorspace.BGR]:
-                    from_to_var_name = "%s2%s" % (self.from_colorspace, to_colorspace)
+                if self.from_colorspace in [ChangeColorspace.RGB,
+                                            ChangeColorspace.BGR]:
+                    from_to_var_name = "%s2%s" % (
+                        self.from_colorspace, to_colorspace)
                     from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
                     img_to_cs = cv2.cvtColor(image, from_to_var)
                 else:
                     # convert to RGB
-                    from_to_var_name = "%s2%s" % (self.from_colorspace, ChangeColorspace.RGB)
+                    from_to_var_name = "%s2%s" % (
+                        self.from_colorspace, ChangeColorspace.RGB)
                     from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
                     img_rgb = cv2.cvtColor(image, from_to_var)
 
@@ -1400,16 +1439,19 @@ class ChangeColorspace(meta.Augmenter):
                         img_to_cs = img_rgb
                     else:
                         # convert from RGB to desired target colorspace
-                        from_to_var_name = "%s2%s" % (ChangeColorspace.RGB, to_colorspace)
+                        from_to_var_name = "%s2%s" % (
+                            ChangeColorspace.RGB, to_colorspace)
                         from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
                         img_to_cs = cv2.cvtColor(img_rgb, from_to_var)
 
-                # this will break colorspaces that have values outside 0-255 or 0.0-1.0
+                # this will break colorspaces that have values outside 0-255
+                # or 0.0-1.0
                 # TODO dont convert to uint8
                 if ia.is_integer_array(img_to_cs):
                     img_to_cs = np.clip(img_to_cs, 0, 255).astype(np.uint8)
                 else:
-                    img_to_cs = np.clip(img_to_cs * 255, 0, 255).astype(np.uint8)
+                    img_to_cs = np.clip(img_to_cs * 255, 0, 255).astype(
+                        np.uint8)
 
                 # for grayscale: covnert from (H, W) to (H, W, 3)
                 if len(img_to_cs.shape) == 2:
@@ -1423,7 +1465,8 @@ class ChangeColorspace(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return heatmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         return keypoints_on_images
 
     def get_parameters(self):
@@ -1431,11 +1474,13 @@ class ChangeColorspace(meta.Augmenter):
 
 
 # TODO rename to Grayscale3D and add Grayscale that keeps the image at 1D?
-def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, random_state=None):
+def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False,
+              random_state=None):
     """
     Augmenter to convert images to their grayscale versions.
 
-    NOTE: Number of output channels is still 3, i.e. this augmenter just "removes" color.
+    NOTE: Number of output channels is still 3, i.e. this augmenter just
+    "removes" color.
 
     TODO check dtype support
 
@@ -1464,15 +1509,17 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
         old image is visible.
 
             * If a number, exactly that value will always be used.
-            * If a tuple ``(a, b)``, a random value from the range ``a <= x <= b`` will
-              be sampled per image.
-            * If a list, then a random value will be sampled from that list per image.
+            * If a tuple ``(a, b)``, a random value from the range
+              ``a <= x <= b`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
             * If a StochasticParameter, a value will be sampled from the
               parameter per image.
 
     from_colorspace : str, optional
         The source colorspace (of the input images).
-        Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``, ``HSV``, ``HLS``, ``Lab``, ``Luv``.
+        Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``,
+        ``HSV``, ``HLS``, ``Lab``, ``Luv``.
         See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
 
     name : None or str, optional
@@ -1486,13 +1533,15 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Grayscale(alpha=1.0)
 
-    creates an augmenter that turns images to their grayscale versions.
+    Creates an augmenter that turns images to their grayscale versions.
 
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Grayscale(alpha=(0.0, 1.0))
 
-    creates an augmenter that turns images to their grayscale versions with
+    Creates an augmenter that turns images to their grayscale versions with
     an alpha value in the range ``0 <= alpha <= 1``. An alpha value of 0.5 would
     mean, that the output image is 50 percent of the input image and 50
     percent of the grayscale image (i.e. 50 percent of color removed).
@@ -1501,5 +1550,9 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False, ra
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY, alpha=alpha, from_colorspace=from_colorspace,
-                            name=name, deterministic=deterministic, random_state=random_state)
+    return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY,
+                            alpha=alpha,
+                            from_colorspace=from_colorspace,
+                            name=name,
+                            deterministic=deterministic,
+                            random_state=random_state)
