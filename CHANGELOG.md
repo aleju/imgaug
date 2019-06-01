@@ -18,6 +18,7 @@
 * Renamed `imgaug/external/poly_point_isect.py` to `imgaug/external/poly_point_isect_py3.py.bak`.
   The file is in the library only for completeness and contains python3 syntax.
   `poly_point_isect_py2py3.py` is actually used.
+* Added dtype gating to `dtypes.clip_()`.
 
 ## Fixes
  
