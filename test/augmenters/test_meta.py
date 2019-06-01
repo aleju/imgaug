@@ -1884,22 +1884,23 @@ def test_Augmenter_augment_keypoints():
 
     aug = iaa.Rot90(1, keep_size=False)
     kpsoi_aug = aug.augment_keypoints(kpsoi)
-    # TODO -1 here added because that is done in Rot90, but will have to be fixed
-    assert np.allclose(kpsoi_aug.keypoints[0].x, 5 - 2 - 1)
+    # set offset to -1 if Rot90 uses int-based coordinate transformation
+    kp_offset = 0
+    assert np.allclose(kpsoi_aug.keypoints[0].x, 5 - 2 + kp_offset)
     assert np.allclose(kpsoi_aug.keypoints[0].y, 1)
-    assert np.allclose(kpsoi_aug.keypoints[1].x, 5 - 5 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[1].x, 5 - 5 + kp_offset)
     assert np.allclose(kpsoi_aug.keypoints[1].y, 2)
-    assert np.allclose(kpsoi_aug.keypoints[2].x, 5 - 3 - 1)
+    assert np.allclose(kpsoi_aug.keypoints[2].x, 5 - 3 + kp_offset)
     assert np.allclose(kpsoi_aug.keypoints[2].y, 3)
 
     aug = iaa.Rot90(1, keep_size=False)
     kpsoi_aug = aug.augment_keypoints([kpsoi, kpsoi, kpsoi])
     for i in range(3):
-        assert np.allclose(kpsoi_aug[i].keypoints[0].x, 5 - 2 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[0].x, 5 - 2 + kp_offset)
         assert np.allclose(kpsoi_aug[i].keypoints[0].y, 1)
-        assert np.allclose(kpsoi_aug[i].keypoints[1].x, 5 - 5 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[1].x, 5 - 5 + kp_offset)
         assert np.allclose(kpsoi_aug[i].keypoints[1].y, 2)
-        assert np.allclose(kpsoi_aug[i].keypoints[2].x, 5 - 3 - 1)
+        assert np.allclose(kpsoi_aug[i].keypoints[2].x, 5 - 3 + kp_offset)
         assert np.allclose(kpsoi_aug[i].keypoints[2].y, 3)
 
 
@@ -1920,27 +1921,28 @@ def test_Augmenter_augment_bounding_boxes():
 
     aug = iaa.Rot90(1, keep_size=False)
     bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-    # TODO -1 here added because that is done in Rot90, but will have to be fixed
+    # set offset to -1 if Rot90 uses int-based coordinate transformation
+    kp_offset = 0
     # Note here that the new coordinates are minima/maxima of the BB, so not as
     # straight forward to compute the new coords as for keypoint augmentation
-    assert np.allclose(bbsoi_aug.bounding_boxes[0].x1, 5 - 5 - 1)
-    assert np.allclose(bbsoi_aug.bounding_boxes[0].x2, 5 - 4 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].x1, 5 - 5 + kp_offset)
+    assert np.allclose(bbsoi_aug.bounding_boxes[0].x2, 5 - 4 + kp_offset)
     assert np.allclose(bbsoi_aug.bounding_boxes[0].y1, 1)
     assert np.allclose(bbsoi_aug.bounding_boxes[0].y2, 3)
-    assert np.allclose(bbsoi_aug.bounding_boxes[1].x1, 5 - 2 - 1)
-    assert np.allclose(bbsoi_aug.bounding_boxes[1].x2, 5 - 0 - 1)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].x1, 5 - 2 + kp_offset)
+    assert np.allclose(bbsoi_aug.bounding_boxes[1].x2, 5 - 0 + kp_offset)
     assert np.allclose(bbsoi_aug.bounding_boxes[1].y1, 2.5)
     assert np.allclose(bbsoi_aug.bounding_boxes[1].y2, 3)
 
     aug = iaa.Rot90(1, keep_size=False)
     bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi, bbsoi])
     for i in range(3):
-        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x1, 5 - 5 - 1)
-        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x2, 5 - 4 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x1, 5 - 5 + kp_offset)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[0].x2, 5 - 4 + kp_offset)
         assert np.allclose(bbsoi_aug[i].bounding_boxes[0].y1, 1)
         assert np.allclose(bbsoi_aug[i].bounding_boxes[0].y2, 3)
-        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x1, 5 - 2 - 1)
-        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x2, 5 - 0 - 1)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x1, 5 - 2 + kp_offset)
+        assert np.allclose(bbsoi_aug[i].bounding_boxes[1].x2, 5 - 0 + kp_offset)
         assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y1, 2.5)
         assert np.allclose(bbsoi_aug[i].bounding_boxes[1].y2, 3)
 
@@ -1983,24 +1985,25 @@ def test_Augmenter_augment_polygons():
     assert isinstance(poly_ois_aug[0], ia.PolygonsOnImage)
     assert len(poly_ois_aug[0].polygons) == 2
     assert len(poly_ois_aug[1].polygons) == 2
+    kp_offset = 0
     assert np.allclose(
         poly_ois_aug[0].polygons[0].exterior,
-        [(9, 0), (9, 5), (4, 5)],
+        [(10-0+kp_offset, 0), (10-0+kp_offset, 5), (10-5+kp_offset, 5)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         poly_ois_aug[0].polygons[1].exterior,
-        [(8, 1), (8, 6), (3, 6)],
+        [(10-1+kp_offset, 1), (10-1+kp_offset, 6), (10-6+kp_offset, 6)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         poly_ois_aug[1].polygons[0].exterior,
-        [(7, 2), (7, 7), (2, 7)],
+        [(10-2+kp_offset, 2), (10-2+kp_offset, 7), (10-7+kp_offset, 7)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         poly_ois_aug[1].polygons[1].exterior,
-        [(6, 3), (6, 8), (1, 8)],
+        [(10-3+kp_offset, 3), (10-3+kp_offset, 8), (10-8+kp_offset, 8)],
         atol=1e-4, rtol=0
     )
     assert poly_ois_aug[0].shape == (10, 10, 3)
@@ -2076,9 +2079,9 @@ def test_Augmenter_augment_polygons():
     image_rots = [iaa.Rot90(k, keep_size=False).augment_image(image) for k in [0, 1, 2, 3]]
     polys_rots = [
         [(0, 0), (10, 0), (10, 20)],
-        [(9, 0), (9, 10), (-11, 10)],
-        [(19, 9), (9, 9), (9, -11)],
-        [(0, 19), (0, 9), (20, 9)]
+        [(10-0+kp_offset, 0), (10-0+kp_offset, 10), (10-20+kp_offset, 10)],
+        [(20-0+kp_offset, 10), (20-10+kp_offset, 10), (20-10+kp_offset, -10)],
+        [(10-10+kp_offset, 20), (10-10+kp_offset, 10), (10-(-10)+kp_offset, 10)]
     ]
 
     poly_ois = [ia.PolygonsOnImage([poly], shape=image.shape) for _ in sm.xrange(50)]
@@ -2087,12 +2090,20 @@ def test_Augmenter_augment_polygons():
     poly_ois_aug = aug_det.augment_polygons(poly_ois)
     seen = set()
     for image_aug, poly_oi_aug in zip(images_aug, poly_ois_aug):
+        found_image = False
         for img_rot_idx, img_rot in enumerate(image_rots):
             if image_aug.shape == img_rot.shape and np.allclose(image_aug, img_rot):
+                found_image = True
                 break
+
+        found_poly = False
         for poly_rot_idx, poly_rot in enumerate(polys_rots):
             if np.allclose(poly_oi_aug.polygons[0].exterior, poly_rot):
+                found_poly = True
                 break
+
+        assert found_image
+        assert found_poly
         assert img_rot_idx == poly_rot_idx
         seen.add((img_rot_idx, poly_rot_idx))
     assert 2 <= len(seen) <= 4  # assert not always the same rot
@@ -2198,24 +2209,25 @@ def test_Augmenter_augment_line_strings():
     assert isinstance(ls_ois_aug[0], ia.LineStringsOnImage)
     assert len(ls_ois_aug[0].line_strings) == 2
     assert len(ls_ois_aug[1].line_strings) == 2
+    kp_offset = 0
     assert np.allclose(
         ls_ois_aug[0].line_strings[0].coords,
-        [(9, 0), (9, 5), (4, 5)],
+        [(10-0+kp_offset, 0), (10-0+kp_offset, 5), (10-5+kp_offset, 5)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         ls_ois_aug[0].line_strings[1].coords,
-        [(8, 1), (8, 6), (3, 6)],
+        [(10-1+kp_offset, 1), (10-1+kp_offset, 6), (10-6+kp_offset, 6)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         ls_ois_aug[1].line_strings[0].coords,
-        [(7, 2), (7, 7), (2, 7)],
+        [(10-2+kp_offset, 2), (10-2+kp_offset, 7), (10-7+kp_offset, 7)],
         atol=1e-4, rtol=0
     )
     assert np.allclose(
         ls_ois_aug[1].line_strings[1].coords,
-        [(6, 3), (6, 8), (1, 8)],
+        [(10-3+kp_offset, 3), (10-3+kp_offset, 8), (10-8+kp_offset, 8)],
         atol=1e-4, rtol=0
     )
     assert ls_ois_aug[0].shape == (10, 10, 3)
@@ -2291,9 +2303,9 @@ def test_Augmenter_augment_line_strings():
     image_rots = [iaa.Rot90(k, keep_size=False).augment_image(image) for k in [0, 1, 2, 3]]
     lss_rots = [
         [(0, 0), (10, 0), (10, 20)],
-        [(9, 0), (9, 10), (-11, 10)],
-        [(19, 9), (9, 9), (9, -11)],
-        [(0, 19), (0, 9), (20, 9)]
+        [(10, 0), (10, 10), (-10, 10)],
+        [(20, 10), (10, 10), (10, -10)],
+        [(0, 20), (0, 10), (20, 10)]
     ]
 
     ls_ois = [ia.LineStringsOnImage([ls], shape=image.shape) for _ in sm.xrange(50)]
@@ -2302,12 +2314,20 @@ def test_Augmenter_augment_line_strings():
     ls_ois_aug = aug_det.augment_line_strings(ls_ois)
     seen = set()
     for image_aug, ls_oi_aug in zip(images_aug, ls_ois_aug):
+        found_image = False
         for img_rot_idx, img_rot in enumerate(image_rots):
             if image_aug.shape == img_rot.shape and np.allclose(image_aug, img_rot):
+                found_image = True
                 break
+
+        found_ls = False
         for ls_rot_idx, ls_rot in enumerate(lss_rots):
             if np.allclose(ls_oi_aug.line_strings[0].coords, ls_rot):
+                found_ls = True
                 break
+
+        assert found_image
+        assert found_ls
         assert img_rot_idx == ls_rot_idx
         seen.add((img_rot_idx, ls_rot_idx))
     assert 2 <= len(seen) <= 4  # assert not always the same rot

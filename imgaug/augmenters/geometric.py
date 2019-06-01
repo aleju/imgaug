@@ -3202,9 +3202,11 @@ class Rot90(meta.Augmenter):
                     yr, xr = y, x
                     wr, hr = w, h
                     for _ in sm.xrange(k_i):
-                        # FIXME using ((hr - 1) - yr) here seems wrong for float-based coordinates, should likely be
-                        #       (hr - yr). Same problem as in horizontal flipping.
-                        xr, yr = (hr - 1) - yr, xr
+                        # for int coordinates this would instead be
+                        #   xr, yr = (hr - 1) - yr, xr
+                        # here we assume that coordinates are always
+                        # subpixel-accurate
+                        xr, yr = hr - yr, xr
                         wr, hr = hr, wr
                     kps_aug.append(kp.deepcopy(x=xr, y=yr))
 
