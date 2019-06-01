@@ -5,6 +5,6 @@ scipy
 Pillow
 matplotlib
 scikit-image
-opencv-python
+opencv-python-headless
 imageio
 Shapely
