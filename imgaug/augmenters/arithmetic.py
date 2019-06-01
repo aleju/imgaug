@@ -1924,7 +1924,7 @@ class Invert(meta.Augmenter):
             * ``uint8``: yes; fully tested
             * ``uint16``: yes; tested
             * ``uint32``: yes; tested
-            * ``uint64``: yes; tested
+            * ``uint64``: no (1)
             * ``int8``: yes; tested
             * ``int16``: yes; tested
             * ``int32``: yes; tested
@@ -1935,9 +1935,11 @@ class Invert(meta.Augmenter):
             * ``float128``: no (2)
             * ``bool``: no (3)
 
-            - (1) Not allowed as int/float have to be increased in resolution when using min/max values.
-            - (2) Not tested.
-            - (3) Makes no sense when using min/max values.
+            - (1) Not allowed due to numpy's clip converting from uint64 to
+                  float64.
+            - (2) Not allowed as int/float have to be increased in resolution when using min/max values.
+            - (3) Not tested.
+            - (4) Makes no sense when using min/max values.
 
     Parameters
     ----------
@@ -1993,11 +1995,12 @@ class Invert(meta.Augmenter):
     # - bool makes no sense, not allowed
     # - int and float must be increased in resolution if custom min/max values are chosen,
     #   hence they are limited to 32 bit and below
+    # - uint64 is converted by numpy's clip to float64, hence loss of accuracy
     # - float16 seems to not be perfectly accurate, but still ok-ish -- was off by 10 for center value of
     #   range (float 16 min, 16), where float 16 min is around -65500
     ALLOW_DTYPES_CUSTOM_MINMAX = [
         np.dtype(dt) for dt in [
-            np.uint8, np.uint16, np.uint32, np.uint64,
+            np.uint8, np.uint16, np.uint32,
             np.int8, np.int16, np.int32,
             np.float16, np.float32
         ]
@@ -2133,7 +2136,7 @@ class Invert(meta.Augmenter):
         # this happens especially for values close to the float dtype's maxima
         if arr.dtype.kind == "f":
             arr_modify = np.clip(arr_modify, min_value, max_value)
-        elif arr.dtype.kind in ["i", "f"]:
+        if arr.dtype.kind in ["i", "f"]:
             arr_modify = iadt.restore_dtypes_(arr_modify, [arr.dtype], clip=False)
         return arr_modify
 

@@ -2658,23 +2658,41 @@ def test_Invert():
 
     observed = iaa.Invert(p=1.0).augment_image(zeros + 255)
     expected = zeros
+    assert observed.dtype.name == "uint8"
     assert np.array_equal(observed, expected)
 
     observed = iaa.Invert(p=0.0).augment_image(zeros + 255)
     expected = zeros + 255
+    assert observed.dtype.name == "uint8"
     assert np.array_equal(observed, expected)
 
     observed = iaa.Invert(p=1.0, max_value=200).augment_image(zeros + 200)
     expected = zeros
+    assert observed.dtype.name == "uint8"
     assert np.array_equal(observed, expected)
 
     observed = iaa.Invert(p=1.0, max_value=200, min_value=100).augment_image(zeros + 200)
     expected = zeros + 100
+    assert observed.dtype.name == "uint8"
     assert np.array_equal(observed, expected)
 
     observed = iaa.Invert(p=1.0, max_value=200, min_value=100).augment_image(zeros + 100)
     expected = zeros + 200
+    assert observed.dtype.name == "uint8"
     assert np.array_equal(observed, expected)
+
+    # with min/max and float inputs
+    zeros_f32 = zeros.astype(np.float32)
+    observed = iaa.Invert(p=1.0, max_value=200, min_value=100).augment_image(zeros_f32 + 200)
+    expected = zeros_f32 + 100
+    assert observed.dtype.name == "float32"
+    assert np.array_equal(observed, expected)
+
+    observed = iaa.Invert(p=1.0, max_value=200, min_value=100).augment_image(zeros_f32 + 100)
+    expected = zeros_f32 + 200
+    assert observed.dtype.name == "float32"
+    assert np.array_equal(observed, expected)
+    # --
 
     nb_iterations = 1000
     nb_inverted = 0
@@ -2840,7 +2858,7 @@ def test_Invert():
 
     # with p=1.0 and min_value
     aug = iaa.Invert(p=1.0, min_value=1)
-    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
+    dtypes = [np.uint8, np.uint16, np.uint32,
               np.int8, np.int16, np.int32,
               np.float16, np.float32]
     for dtype in dtypes:
@@ -2877,7 +2895,7 @@ def test_Invert():
 
     # with p=1.0 and max_value
     aug = iaa.Invert(p=1.0, max_value=16)
-    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
+    dtypes = [np.uint8, np.uint16, np.uint32,
               np.int8, np.int16, np.int32,
               np.float16, np.float32]
     for dtype in dtypes:

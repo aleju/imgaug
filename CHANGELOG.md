@@ -29,6 +29,10 @@
   I.e. any coordinate `(x, y)` will be mapped to `(H-y, x)` for a rotation by 90deg.
   Previously, an integer-based remapping to `(H-y-1, x)` was used.
   Coordinates are e.g. used by keypoints, bounding boxes or polygons.
+* `Invert`
+    * `[rarely breaking]` If `min_value` and/or `max_value` arguments were set, `uint64` is no longer a valid input array dtype for `Invert`.
+      This is due to a conversion to `float64` resulting in loss of resolution.
+    * Fixed `Invert` in rare cases restoring dtypes improperly.
 
 
 # 0.2.9
