@@ -6,6 +6,15 @@
   maximum RAM demands).
 * Increased `max_distance` thresholds for `almost_equals()`, `exterior_almost_equals()` and `coords_almost_equals()` in `Polygon` and `LineString` from `1e-6` to `1e-4`.
   This should fix false-negative problems related to float inaccuracies.
+* Added module `imgaug.augmenters.edges`.
+* Added interface `BinaryImageColorizerIf` to `imgaug.augmenters.edges`, which
+  contains the interface for classes used to convert binary images to RGB
+  images.
+* Added `RandomColorsBinaryImageColorizer` to `imgaug.augmenters.edges`, which
+  converts binary images to RGB images by sampling uniformly RGB colors for
+  `True` and `False` values.
+* Added augmenter `Canny`, which applies canny edge detection with alpha
+  blending and random coloring to images.
 
 ## Fixes
  
