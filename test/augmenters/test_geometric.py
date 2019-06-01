@@ -4093,7 +4093,7 @@ def test_Rot90():
             image_aug = aug.augment_image(image)
             assert image_aug.dtype == np.dtype(dtype)
             assert _allclose(image_aug[0, 0], 0)
-            assert _allclose(image_aug[2, 2], float(value))
+            assert _allclose(image_aug[2, 2], np.float128(value))
 
 
 if __name__ == "__main__":

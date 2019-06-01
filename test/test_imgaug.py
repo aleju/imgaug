@@ -1582,13 +1582,13 @@ def test_pool():
                 y = np.array(arr_pooled, dtype=dt, copy=False, subok=True)
                 assert arr_pooled.shape == (2, 2)
                 assert arr_pooled.dtype == np.dtype(dtype)
-                assert _allclose(arr_pooled, float(value))
+                assert _allclose(arr_pooled, np.float128(value))
 
                 arr = np.full((4, 4, 3), value, dtype=dtype)
                 arr_pooled = ia.pool(arr, 2, func)
                 assert arr_pooled.shape == (2, 2, 3)
                 assert arr_pooled.dtype == np.dtype(dtype)
-                assert _allclose(arr_pooled, float(value))
+                assert _allclose(arr_pooled, np.float128(value))
 
     # ----
     # bool
