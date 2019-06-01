@@ -236,10 +236,15 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
     if len(disallowed) > 0:
         assert ia.is_string(disallowed[0])
 
-    if ia.is_np_array(dtypes):
+    # don't use is_np_array() here, because this is supposed to handle numpy
+    # scalars too
+    if hasattr(dtypes, "dtype"):
         dtypes = [dtypes.dtype]
     else:
-        dtypes = [np.dtype(dtype) if not ia.is_np_array(dtype) else dtype.dtype for dtype in dtypes]
+        dtypes = [dtype
+                  if not hasattr(dtype, "dtype") else dtype.dtype
+                  for dtype in dtypes]
+
     for dtype in dtypes:
         if dtype.name in allowed:
             pass

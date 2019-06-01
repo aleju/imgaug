@@ -33,6 +33,7 @@
     * `[rarely breaking]` If `min_value` and/or `max_value` arguments were set, `uint64` is no longer a valid input array dtype for `Invert`.
       This is due to a conversion to `float64` resulting in loss of resolution.
     * Fixed `Invert` in rare cases restoring dtypes improperly.
+* Fixed `dtypes.gate_dtypes()` crashing if the input was one or more numpy scalars instead of numpy arrays or dtypes.
 
 
 # 0.2.9
