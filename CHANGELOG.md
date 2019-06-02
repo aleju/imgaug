@@ -22,6 +22,10 @@
   which would lead to exceptions if a polygon had overlap with an image,
   but not a single one of its points was inside that image plane. 
 * Fixed `imgaug.multicore` falsely not accepting `imgaug.augmentables.batches.UnnormalizedBatch`.
+* `Rot90` now uses subpixel-based coordinate remapping.
+  I.e. any coordinate `(x, y)` will be mapped to `(H-y, x)` for a rotation by 90deg.
+  Previously, an integer-based remapping to `(H-y-1, x)` was used.
+  Coordinates are e.g. used by keypoints, bounding boxes or polygons.
 
 
 # 0.2.9
