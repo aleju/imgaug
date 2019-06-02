@@ -1,3 +1,12 @@
+#############################################################################
+# This file uses python3 syntax. The actually used version of this library is
+# in "(...)_py2py3.py". This (original) file is added for completeness.
+# To avoid fatal errors related to the test environment in python2.7, it
+# ends in ".py.bak", so that the file is always ignored.
+# (There are probably more elegant ways to achieve this.)
+#############################################################################
+
+
 # BentleyOttmann sweep-line implementation
 # (for finding all intersections in a set of line segments)
 

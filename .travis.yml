@@ -29,7 +29,9 @@ install:
 #  - virtualenv venv
 #  - . venv/bin/activate
   - pip install -r requirements.txt
-  - pip install -r test/requirements.txt
+  # Added --upgrade, because at least pytest already came from some other
+  # install command and so version was never checked
+  - pip install --upgrade -r test/requirements.txt
   - pip install coverage codecov pytest-cov codacy-coverage
   - pip install .
 
