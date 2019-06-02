@@ -3255,16 +3255,19 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
 
     Examples
     --------
-    >>> imgs = [np.ones((10, 10))]
+    >>> import imgaug.augmenters as iaa
+    >>> images = [np.ones((10, 10), dtype=np.uint8)]
     >>> seq = iaa.OneOf([
     >>>     iaa.Fliplr(1.0),
     >>>     iaa.Flipud(1.0)
     >>> ])
-    >>> imgs_aug = seq.augment_images(imgs)
+    >>> imgs_aug = seq.augment_images(images)
 
-    flips each image either horizontally or vertically.
+    Flips each image either horizontally or vertically.
 
 
+    >>> import imgaug.augmenters as iaa
+    >>> images = [np.ones((10, 10), dtype=np.uint8)]
     >>> seq = iaa.OneOf([
     >>>     iaa.Fliplr(1.0),
     >>>     iaa.Sequential([
@@ -3274,9 +3277,9 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
     >>>     ]),
     >>>     iaa.Noop()
     >>> ])
-    >>> imgs_aug = seq.augment_images(imgs)
+    >>> imgs_aug = seq.augment_images(images)
 
-    either flips each image horizontally, or adds blur+dropout+noise or does
+    Either flips each image horizontally, or adds blur+dropout+noise or does
     nothing.
 
     """
