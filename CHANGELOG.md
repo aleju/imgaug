@@ -18,6 +18,7 @@
 * Renamed `imgaug/external/poly_point_isect.py` to `imgaug/external/poly_point_isect_py3.py.bak`.
   The file is in the library only for completeness and contains python3 syntax.
   `poly_point_isect_py2py3.py` is actually used.
+* Added dtype gating to `dtypes.clip_()`.
 
 ## Fixes
  
@@ -29,6 +30,11 @@
   I.e. any coordinate `(x, y)` will be mapped to `(H-y, x)` for a rotation by 90deg.
   Previously, an integer-based remapping to `(H-y-1, x)` was used.
   Coordinates are e.g. used by keypoints, bounding boxes or polygons.
+* `Invert`
+    * `[rarely breaking]` If `min_value` and/or `max_value` arguments were set, `uint64` is no longer a valid input array dtype for `Invert`.
+      This is due to a conversion to `float64` resulting in loss of resolution.
+    * Fixed `Invert` in rare cases restoring dtypes improperly.
+* Fixed `dtypes.gate_dtypes()` crashing if the input was one or more numpy scalars instead of numpy arrays or dtypes.
 
 
 # 0.2.9

@@ -182,6 +182,16 @@ def get_value_range_of_dtype(dtype):
 
 # TODO call this function wherever data is clipped
 def clip_(array, min_value, max_value):
+    # uint64 is disallowed, because numpy's clip seems to convert it to float64
+    # TODO find the cause for that
+    gate_dtypes(array,
+                allowed=["bool",
+                         "uint8", "uint16", "uint32",
+                         "int8", "int16", "int32", "int64",
+                         "float16", "float32", "float64", "float128"],
+                disallowed=["uint64"],
+                augmenter=None)
+
     # If the min of the input value range is above the allowed min, we do not
     # have to clip to the allowed min as we cannot exceed it anyways.
     # Analogous for max. In fact, we must not clip then to min/max as that can
@@ -236,10 +246,15 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
     if len(disallowed) > 0:
         assert ia.is_string(disallowed[0])
 
-    if ia.is_np_array(dtypes):
+    # don't use is_np_array() here, because this is supposed to handle numpy
+    # scalars too
+    if hasattr(dtypes, "dtype"):
         dtypes = [dtypes.dtype]
     else:
-        dtypes = [np.dtype(dtype) if not ia.is_np_array(dtype) else dtype.dtype for dtype in dtypes]
+        dtypes = [dtype
+                  if not hasattr(dtype, "dtype") else dtype.dtype
+                  for dtype in dtypes]
+
     for dtype in dtypes:
         if dtype.name in allowed:
             pass
