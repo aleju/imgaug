@@ -19,6 +19,12 @@
   The file is in the library only for completeness and contains python3 syntax.
   `poly_point_isect_py2py3.py` is actually used.
 * Added dtype gating to `dtypes.clip_()`.
+* Added module `augmenters.pooling`. #317
+    * Added `augmenters.pooling._AbstractPoolingBase`. #317
+    * Added `augmenters.pooling.AveragePooling`. #317
+    * Added `augmenters.pooling.MaxPooling`. #317
+    * Added `augmenters.pooling.MinPooling`. #317
+    * Added `augmenters.pooling.MedianPooling`. #317
 
 ## Fixes
  

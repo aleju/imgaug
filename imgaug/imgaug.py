@@ -1616,6 +1616,7 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     return arr_reduced
 
 
+# TODO does OpenCV have a faster avg pooling method?
 def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
     """
     Resize an array using average pooling.
