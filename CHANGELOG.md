@@ -53,6 +53,7 @@
 * Added `augmenters.color.MultiplyHue`. #319
 * Added `augmenters.color.MultiplySaturation`. #319
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
+* Refactored `augmenters/convolutional.py` (general code and docstring cleanup). #335
 * [rarely breaking] Added argument `polygon_recoverer` to
   `augmenters.geometric.PerspectiveTransform`. This changes the order of
   arguments of the augmenter and code that relied on that order will now
@@ -66,7 +67,6 @@
 * Added the library to ``conda-forge`` so it can now be installed via
   ``conda install imgaug`` (provided the conda-forge channel was added
   before that). #320 #339
-
 
 ## Fixes
  
