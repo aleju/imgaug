@@ -157,8 +157,8 @@ class Convolve(meta.Augmenter):
                                      "int32", "int64", "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
+        rss = ia.derive_random_states(random_state, len(images))
 
-        seed = random_state.randint(0, 10**6, 1)[0]
         for i, image in enumerate(images):
             _height, _width, nb_channels = images[i].shape
 
@@ -173,8 +173,7 @@ class Convolve(meta.Augmenter):
             elif self.matrix_type == "constant":
                 matrices = [self.matrix] * nb_channels
             elif self.matrix_type == "function":
-                matrices = self.matrix(
-                    images[i], nb_channels, ia.new_random_state(seed+i))
+                matrices = self.matrix(images[i], nb_channels, rss[i])
                 if ia.is_np_array(matrices) and matrices.ndim == 2:
                     matrices = np.tile(
                         matrices[..., np.newaxis],
