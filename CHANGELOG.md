@@ -100,6 +100,8 @@
 * Fixed errors caused by `external/poly_point_isect_py2py3.py` related to
   floating point inaccuracies (changed an epsilon from `1e-10` to `1e-4`,
   rounded some floats). #338
+* Fixed `Superpixels` breaking when a sampled `n_segments` was `<=0`.
+  `n_segments` is now treated as `1` in these cases.
 
 
 # 0.2.9

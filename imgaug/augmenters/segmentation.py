@@ -185,8 +185,14 @@ class Superpixels(meta.Augmenter):
         n_segments_samples = self.n_segments.draw_samples(
             (nb_images,), random_state=rss[0])
 
+        # We cant reduce images to 0 or less segments, hence we pick the
+        # lowest possible value in these cases (i.e. 1). The alternative
+        # would be to not perform superpixel detection in these cases
+        # (akin to n_segments=#pixels).
+        # TODO add test for this
+        n_segments_samples = np.clip(n_segments_samples, 1, None)
+
         for i, (image, rs) in enumerate(zip(images, rss[1:])):
-            # TODO this results in an error when n_segments is 0
             replace_samples = self.p_replace.draw_samples(
                 (n_segments_samples[i],), random_state=rs)
 
