@@ -1,6 +1,16 @@
 from __future__ import print_function, division, absolute_import
 
-import time
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -13,381 +23,480 @@ from imgaug import dtypes as iadt
 from imgaug.testutils import reseed
 
 
-def main():
-    time_start = time.time()
-
-    test_Convolve()
-    test_Sharpen()
-    test_Emboss()
-    # TODO EdgeDetect
-    # TODO DirectedEdgeDetect
-
-    time_end = time.time()
-    print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+# TODO add tests for EdgeDetect
+# TODO add tests for DirectedEdgeDetect
 
 
-def test_Convolve():
-    reseed()
+# TODO add test for keypoints once their handling was improved in Convolve
+class TestConvolve(unittest.TestCase):
+    def setUp(self):
+        reseed()
 
-    img = [
-        [1, 2, 3],
-        [4, 5, 6],
-        [7, 8, 9]
-    ]
-    img = np.uint8(img)
+    @property
+    def img(self):
+        return np.array([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9]
+        ], dtype=np.uint8)
 
-    # matrix is None
-    aug = iaa.Convolve(matrix=None)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, img)
+    def test_matrix_is_none(self):
+        aug = iaa.Convolve(matrix=None)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, self.img)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: [None])
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, img)
+    def test_matrix_is_lambda_none(self):
+        aug = iaa.Convolve(
+            matrix=lambda _img, nb_channels, random_state: [None])
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, self.img)
 
-    # matrix is [[1]]
-    aug = iaa.Convolve(matrix=np.float32([[1]]))
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, img)
+    def test_matrix_is_1x1_identity(self):
+        # matrix is [[1]]
+        aug = iaa.Convolve(matrix=np.float32([[1]]))
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, self.img)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: np.float32([[1]]))
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, img)
+    def test_matrix_is_lambda_1x1_identity(self):
+        aug = iaa.Convolve(
+            matrix=lambda _img, nb_channels, random_state: np.float32([[1]]))
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, self.img)
 
-    # matrix is [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
-    m = np.float32([
-        [0, 0, 0],
-        [0, 1, 0],
-        [0, 0, 0]
-    ])
-    aug = iaa.Convolve(matrix=m)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, img)
+    def test_matrix_is_3x3_identity(self):
+        m = np.float32([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ])
+        aug = iaa.Convolve(matrix=m)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, self.img)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, img)
+    def test_matrix_is_lambda_3x3_identity(self):
+        m = np.float32([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ])
+        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, self.img)
 
-    # matrix is [[0, 0, 0], [0, 2, 0], [0, 0, 0]]
-    m = np.float32([
-        [0, 0, 0],
-        [0, 2, 0],
-        [0, 0, 0]
-    ])
-    aug = iaa.Convolve(matrix=m)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, 2*img)
+    def test_matrix_is_3x3_two_in_center(self):
+        m = np.float32([
+            [0, 0, 0],
+            [0, 2, 0],
+            [0, 0, 0]
+        ])
+        aug = iaa.Convolve(matrix=m)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, 2*self.img)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, 2*img)
+    def test_matrix_is_lambda_3x3_two_in_center(self):
+        m = np.float32([
+            [0, 0, 0],
+            [0, 2, 0],
+            [0, 0, 0]
+        ])
+        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, 2*self.img)
 
-    # matrix is [[0, 0, 0], [0, 2, 0], [0, 0, 0]]
-    # with 3 channels
-    m = np.float32([
-        [0, 0, 0],
-        [0, 2, 0],
-        [0, 0, 0]
-    ])
-    img3 = np.tile(img[..., np.newaxis], (1, 1, 3))
-    aug = iaa.Convolve(matrix=m)
-    observed = aug.augment_image(img3)
-    assert np.array_equal(observed, 2*img3)
+    def test_matrix_is_3x3_two_in_center_3_channels(self):
+        m = np.float32([
+            [0, 0, 0],
+            [0, 2, 0],
+            [0, 0, 0]
+        ])
+        aug = iaa.Convolve(matrix=m)
+        img3 = np.tile(self.img[..., np.newaxis], (1, 1, 3))  # 3 channels
+        observed = aug.augment_image(img3)
+        assert np.array_equal(observed, 2*img3)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
-    observed = aug.augment_image(img3)
-    assert np.array_equal(observed, 2*img3)
+    def test_matrix_is_lambda_3x3_two_in_center_3_channels(self):
+        m = np.float32([
+            [0, 0, 0],
+            [0, 2, 0],
+            [0, 0, 0]
+        ])
+        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        img3 = np.tile(self.img[..., np.newaxis], (1, 1, 3))  # 3 channels
+        observed = aug.augment_image(img3)
+        assert np.array_equal(observed, 2*img3)
 
-    # matrix is [[0, -1, 0], [0, 10, 0], [0, 0, 0]]
-    m = np.float32([
-        [0, -1, 0],
-        [0, 10, 0],
-        [0, 0, 0]
-    ])
-    expected = np.uint8([
-        [10*1+(-1)*4, 10*2+(-1)*5, 10*3+(-1)*6],
-        [10*4+(-1)*1, 10*5+(-1)*2, 10*6+(-1)*3],
-        [10*7+(-1)*4, 10*8+(-1)*5, 10*9+(-1)*6]
-    ])
+    def test_matrix_is_3x3_with_multiple_nonzero_values(self):
+        m = np.float32([
+            [0, -1, 0],
+            [0, 10, 0],
+            [0, 0, 0]
+        ])
+        expected = np.uint8([
+            [10*1+(-1)*4, 10*2+(-1)*5, 10*3+(-1)*6],
+            [10*4+(-1)*1, 10*5+(-1)*2, 10*6+(-1)*3],
+            [10*7+(-1)*4, 10*8+(-1)*5, 10*9+(-1)*6]
+        ])
 
-    aug = iaa.Convolve(matrix=m)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, expected)
+        aug = iaa.Convolve(matrix=m)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, expected)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
-    observed = aug.augment_image(img)
-    assert np.array_equal(observed, expected)
+    def test_matrix_is_lambda_3x3_with_multiple_nonzero_values(self):
+        m = np.float32([
+            [0, -1, 0],
+            [0, 10, 0],
+            [0, 0, 0]
+        ])
+        expected = np.uint8([
+            [10*1+(-1)*4, 10*2+(-1)*5, 10*3+(-1)*6],
+            [10*4+(-1)*1, 10*5+(-1)*2, 10*6+(-1)*3],
+            [10*7+(-1)*4, 10*8+(-1)*5, 10*9+(-1)*6]
+        ])
 
-    # changing matrices when using callable
-    expected = []
-    for i in sm.xrange(5):
-        expected.append(img * i)
+        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        observed = aug.augment_image(self.img)
+        assert np.array_equal(observed, expected)
 
-    aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: np.float32([[random_state.randint(0, 5)]]))
-    seen = [False] * 5
-    for _ in sm.xrange(200):
-        observed = aug.augment_image(img)
-        found = False
-        for i, expected_i in enumerate(expected):
-            if np.array_equal(observed, expected_i):
-                seen[i] = True
-                found = True
+    def test_lambda_with_changing_matrices(self):
+        # changing matrices when using callable
+        expected = []
+        for i in sm.xrange(5):
+            expected.append(self.img * i)
+
+        aug = iaa.Convolve(
+            matrix=lambda _img, nb_channels, random_state:
+                np.float32([[random_state.randint(0, 5)]])
+        )
+        seen = [False] * 5
+        for _ in sm.xrange(200):
+            observed = aug.augment_image(self.img)
+            found = False
+            for i, expected_i in enumerate(expected):
+                if np.array_equal(observed, expected_i):
+                    seen[i] = True
+                    found = True
+                    break
+            assert found
+            if all(seen):
                 break
-        assert found
-        if all(seen):
-            break
-    assert all(seen)
+        assert all(seen)
 
-    # bad datatype for matrix
-    got_exception = False
-    try:
-        aug = iaa.Convolve(matrix=False)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
-
-    # get_parameters()
-    matrix = np.int32([[1]])
-    aug = iaa.Convolve(matrix=matrix)
-    params = aug.get_parameters()
-    assert np.array_equal(params[0], matrix)
-    assert params[1] == "constant"
-
-    # TODO add test for keypoints once their handling was improved in Convolve
-
-    ###################
-    # test other dtypes
-    ###################
-    identity_matrix = np.int64([[1]])
-    aug = iaa.Convolve(matrix=identity_matrix)
-
-    image = np.zeros((3, 3), dtype=bool)
-    image[1, 1] = True
-    image_aug = aug.augment_image(image)
-    assert image.dtype.type == np.bool_
-    assert np.all(image_aug == image)
-
-    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100
-        image_aug = aug.augment_image(image)
-        assert image.dtype.type == dtype
-        assert np.all(image_aug == image)
-
-    for dtype in [np.float16, np.float32, np.float64]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100.0
-        image_aug = aug.augment_image(image)
-        assert image.dtype.type == dtype
-        assert np.allclose(image_aug, image)
-
-    # ----
-    # non-identity matrix
-    # ----
-    matrix = np.float64([
-        [0, 0.6, 0],
-        [0, 0.4, 0],
-        [0,   0, 0]
-    ])
-    aug = iaa.Convolve(matrix=matrix)
-
-    image = np.zeros((3, 3), dtype=bool)
-    image[1, 1] = True
-    image[2, 1] = True
-    expected = np.zeros((3, 3), dtype=bool)
-    expected[0, 1] = True
-    expected[2, 1] = True
-    image_aug = aug.augment_image(image)
-    assert image.dtype.type == np.bool_
-    assert np.all(image_aug == expected)
-
-    matrix = np.float64([
-        [0, 0.5, 0],
-        [0, 0.5, 0],
-        [0,   0, 0]
-    ])
-    aug = iaa.Convolve(matrix=matrix)
-
-    # uint, int
-    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100
-        image[2, 1] = 100
-        image_aug = aug.augment_image(image)
-
-        expected = np.zeros((3, 3), dtype=dtype)
-        expected[0, 1] = int(np.round(100 * 0.5))
-        expected[1, 1] = int(np.round(100 * 0.5))
-        expected[2, 1] = int(np.round(100 * 0.5 + 100 * 0.5))
-
-        diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
-        assert image_aug.dtype.type == dtype
-        assert np.max(diff) <= 2
-
-    # float
-    for dtype in [np.float16, np.float32, np.float64]:
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = 100.0
-        image[2, 1] = 100.0
-        image_aug = aug.augment_image(image)
-
-        expected = np.zeros((3, 3), dtype=dtype)
-        expected[0, 1] = 100 * 0.5
-        expected[1, 1] = 100 * 0.5
-        expected[2, 1] = 100 * 0.5 + 100 * 0.5
-
-        diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
-        assert image_aug.dtype.type == dtype
-        assert np.max(diff) < 1.0
-
-    # ----
-    # non-identity matrix, higher values
-    # ----
-    matrix = np.float64([
-        [0, 0.5, 0],
-        [0, 0.5, 0],
-        [0,   0, 0]
-    ])
-    aug = iaa.Convolve(matrix=matrix)
-
-    # uint, int
-    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
-        _min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
-        value = int(center_value + 0.4 * max_value)
-
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = value
-        image[2, 1] = value
-        image_aug = aug.augment_image(image)
-
-        expected = np.zeros((3, 3), dtype=dtype)
-        expected[0, 1] = int(np.round(value * 0.5))
-        expected[1, 1] = int(np.round(value * 0.5))
-        expected[2, 1] = int(np.round(value * 0.5 + value * 0.5))
-
-        diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
-        assert image_aug.dtype.type == dtype
-        assert np.max(diff) <= 2
-
-    # float
-    for dtype, value in zip([np.float16, np.float32, np.float64], [5000, 1000*1000, 1000*1000*1000]):
-        image = np.zeros((3, 3), dtype=dtype)
-        image[1, 1] = value
-        image[2, 1] = value
-        image_aug = aug.augment_image(image)
-
-        expected = np.zeros((3, 3), dtype=dtype)
-        expected[0, 1] = value * 0.5
-        expected[1, 1] = value * 0.5
-        expected[2, 1] = value * 0.5 + value * 0.5
-
-        diff = np.abs(image_aug.astype(np.float128) - expected.astype(np.float128))
-        assert image_aug.dtype.type == dtype
-        assert np.max(diff) < 1.0
-
-    # assert failure on invalid dtypes
-    aug = iaa.Convolve(matrix=identity_matrix)
-    for dt in [np.uint32, np.uint64, np.int32, np.int64]:
+    def test_matrix_has_bad_datatype(self):
+        # don't use assertRaisesRegex, because it doesnt exist in 2.7
         got_exception = False
         try:
-            _ = aug.augment_image(np.zeros((1, 1), dtype=dt))
+            _aug = iaa.Convolve(matrix=False)
         except Exception as exc:
-            assert "forbidden dtype" in str(exc)
+            assert "Expected " in str(exc)
             got_exception = True
         assert got_exception
 
+    def test_get_parameters(self):
+        matrix = np.int32([[1]])
+        aug = iaa.Convolve(matrix=matrix)
+        params = aug.get_parameters()
+        assert np.array_equal(params[0], matrix)
+        assert params[1] == "constant"
 
-def test_Sharpen():
-    reseed()
+    def test_other_dtypes_bool_identity_matrix(self):
+        identity_matrix = np.int64([[1]])
+        aug = iaa.Convolve(matrix=identity_matrix)
 
-    def _compute_sharpened_base_img(lightness, m):
-        base_img_sharpened = np.zeros((3, 3), dtype=np.float32)
+        image = np.zeros((3, 3), dtype=bool)
+        image[1, 1] = True
+        image_aug = aug.augment_image(image)
+        assert image.dtype.type == np.bool_
+        assert np.all(image_aug == image)
+
+    def test_other_dtypes_uint_int_identity_matrix(self):
+        identity_matrix = np.int64([[1]])
+        aug = iaa.Convolve(matrix=identity_matrix)
+
+        for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = 100
+            image_aug = aug.augment_image(image)
+            assert image.dtype.type == dtype
+            assert np.all(image_aug == image)
+
+    def test_other_dtypes_float_identity_matrix(self):
+        identity_matrix = np.int64([[1]])
+        aug = iaa.Convolve(matrix=identity_matrix)
+
+        for dtype in [np.float16, np.float32, np.float64]:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = 100.0
+            image_aug = aug.augment_image(image)
+            assert image.dtype.type == dtype
+            assert np.allclose(image_aug, image)
+
+    def test_other_dtypes_bool_non_identity_matrix_with_small_values(self):
+        matrix = np.float64([
+            [0, 0.6, 0],
+            [0, 0.4, 0],
+            [0,   0, 0]
+        ])
+        aug = iaa.Convolve(matrix=matrix)
+
+        image = np.zeros((3, 3), dtype=bool)
+        image[1, 1] = True
+        image[2, 1] = True
+        expected = np.zeros((3, 3), dtype=bool)
+        expected[0, 1] = True
+        expected[2, 1] = True
+        image_aug = aug.augment_image(image)
+        assert image.dtype.type == np.bool_
+        assert np.all(image_aug == expected)
+
+    def test_other_dtypes_uint_int_non_identity_matrix_with_small_values(self):
+        matrix = np.float64([
+            [0, 0.5, 0],
+            [0, 0.5, 0],
+            [0,   0, 0]
+        ])
+        aug = iaa.Convolve(matrix=matrix)
+
+        for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = 100
+            image[2, 1] = 100
+            image_aug = aug.augment_image(image)
+
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[0, 1] = int(np.round(100 * 0.5))
+            expected[1, 1] = int(np.round(100 * 0.5))
+            expected[2, 1] = int(np.round(100 * 0.5 + 100 * 0.5))
+
+            diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+            assert image_aug.dtype.type == dtype
+            assert np.max(diff) <= 2
+
+    def test_other_dtypes_float_non_identity_matrix_with_small_values(self):
+        matrix = np.float64([
+            [0, 0.5, 0],
+            [0, 0.5, 0],
+            [0,   0, 0]
+        ])
+        aug = iaa.Convolve(matrix=matrix)
+
+        for dtype in [np.float16, np.float32, np.float64]:
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = 100.0
+            image[2, 1] = 100.0
+            image_aug = aug.augment_image(image)
+
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[0, 1] = 100 * 0.5
+            expected[1, 1] = 100 * 0.5
+            expected[2, 1] = 100 * 0.5 + 100 * 0.5
+
+            diff = np.abs(
+                image_aug.astype(np.float128) - expected.astype(np.float128))
+            assert image_aug.dtype.type == dtype
+            assert np.max(diff) < 1.0
+
+    def test_other_dtypes_uint_int_non_identity_matrix_with_large_values(self):
+        matrix = np.float64([
+            [0, 0.5, 0],
+            [0, 0.5, 0],
+            [0,   0, 0]
+        ])
+        aug = iaa.Convolve(matrix=matrix)
+
+        for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            _min_value, center_value, max_value = \
+                iadt.get_value_range_of_dtype(dtype)
+
+            value = int(center_value + 0.4 * max_value)
+
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = value
+            image[2, 1] = value
+            image_aug = aug.augment_image(image)
+
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[0, 1] = int(np.round(value * 0.5))
+            expected[1, 1] = int(np.round(value * 0.5))
+            expected[2, 1] = int(np.round(value * 0.5 + value * 0.5))
+
+            diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+            assert image_aug.dtype.type == dtype
+            assert np.max(diff) <= 2
+
+    def test_other_dtypes_float_non_identity_matrix_with_large_values(self):
+        matrix = np.float64([
+            [0, 0.5, 0],
+            [0, 0.5, 0],
+            [0,   0, 0]
+        ])
+        aug = iaa.Convolve(matrix=matrix)
+
+        for dtype, value in zip([np.float16, np.float32, np.float64],
+                                [5000, 1000*1000, 1000*1000*1000]):
+            image = np.zeros((3, 3), dtype=dtype)
+            image[1, 1] = value
+            image[2, 1] = value
+            image_aug = aug.augment_image(image)
+
+            expected = np.zeros((3, 3), dtype=dtype)
+            expected[0, 1] = value * 0.5
+            expected[1, 1] = value * 0.5
+            expected[2, 1] = value * 0.5 + value * 0.5
+
+            diff = np.abs(
+                image_aug.astype(np.float128) - expected.astype(np.float128))
+            assert image_aug.dtype.type == dtype
+            assert np.max(diff) < 1.0
+
+    def test_failure_on_invalid_dtypes(self):
+        # don't use assertRaisesRegex, because it doesnt exist in 2.7
+        identity_matrix = np.int64([[1]])
+        aug = iaa.Convolve(matrix=identity_matrix)
+        for dt in [np.uint32, np.uint64, np.int32, np.int64]:
+            got_exception = False
+            try:
+                _ = aug.augment_image(np.zeros((1, 1), dtype=dt))
+            except Exception as exc:
+                assert "forbidden dtype" in str(exc)
+                got_exception = True
+            assert got_exception
+
+
+class TestSharpen(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @classmethod
+    def _compute_sharpened_base_img(cls, lightness, m):
+        img = np.zeros((3, 3), dtype=np.float32)
         k = 1
         # note that cv2 uses reflection padding by default
-        base_img_sharpened[0, 0] = (m[1, 1] + lightness)/k * 10 + 4 * (m[0, 0]/k) * 10 + 4 * (m[2, 2]/k) * 20
-        base_img_sharpened[0, 2] = base_img_sharpened[0, 0]
-        base_img_sharpened[2, 0] = base_img_sharpened[0, 0]
-        base_img_sharpened[2, 2] = base_img_sharpened[0, 0]
-        base_img_sharpened[0, 1] = (m[1, 1] + lightness)/k * 10 + 6 * (m[0, 1]/k) * 10 + 2 * (m[2, 2]/k) * 20
-        base_img_sharpened[1, 0] = base_img_sharpened[0, 1]
-        base_img_sharpened[1, 2] = base_img_sharpened[0, 1]
-        base_img_sharpened[2, 1] = base_img_sharpened[0, 1]
-        base_img_sharpened[1, 1] = (m[1, 1] + lightness)/k * 20 + 8 * (m[0, 1]/k) * 10
+        img[0, 0] = (
+            (m[1, 1] + lightness)/k * 10
+            + 4 * (m[0, 0]/k) * 10
+            + 4 * (m[2, 2]/k) * 20
+        )
+        img[0, 2] = img[0, 0]
+        img[2, 0] = img[0, 0]
+        img[2, 2] = img[0, 0]
+        img[0, 1] = (
+            (m[1, 1] + lightness)/k * 10
+            + 6 * (m[0, 1]/k) * 10
+            + 2 * (m[2, 2]/k) * 20
+        )
+        img[1, 0] = img[0, 1]
+        img[1, 2] = img[0, 1]
+        img[2, 1] = img[0, 1]
+        img[1, 1] = (
+            (m[1, 1] + lightness)/k * 20
+            + 8 * (m[0, 1]/k) * 10
+        )
 
-        base_img_sharpened = np.clip(base_img_sharpened, 0, 255).astype(np.uint8)
+        img = np.clip(img, 0, 255).astype(np.uint8)
 
-        return base_img_sharpened
+        return img
 
-    base_img = [[10, 10, 10],
+    @property
+    def base_img(self):
+        base_img = [[10, 10, 10],
                 [10, 20, 10],
                 [10, 10, 10]]
-    base_img = np.uint8(base_img)
-    m = np.float32([[-1, -1, -1],
-                    [-1, 8, -1],
-                    [-1, -1, -1]])
-    m_noop = np.float32([[0, 0, 0],
+        base_img = np.uint8(base_img)
+        return base_img
+
+    @property
+    def base_img_sharpened(self):
+        return self._compute_sharpened_base_img(1, self.m)
+
+    @property
+    def m(self):
+        return np.array([[-1, -1, -1],
+                         [-1, 8, -1],
+                         [-1, -1, -1]], dtype=np.float32)
+
+    @property
+    def m_noop(self):
+        return np.array([[0, 0, 0],
                          [0, 1, 0],
-                         [0, 0, 0]])
-    base_img_sharpened = _compute_sharpened_base_img(1, m)
+                         [0, 0, 0]], dtype=np.float32)
 
-    aug = iaa.Sharpen(alpha=0, lightness=1)
-    observed = aug.augment_image(base_img)
-    expected = base_img
-    assert np.allclose(observed, expected)
+    def test_alpha_zero(self):
+        aug = iaa.Sharpen(alpha=0, lightness=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self.base_img
+        assert np.allclose(observed, expected)
 
-    aug = iaa.Sharpen(alpha=1.0, lightness=1)
-    observed = aug.augment_image(base_img)
-    expected = base_img_sharpened
-    assert np.allclose(observed, expected)
+    def test_alpha_one(self):
+        aug = iaa.Sharpen(alpha=1.0, lightness=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self.base_img_sharpened
+        assert np.allclose(observed, expected)
 
-    aug = iaa.Sharpen(alpha=0.5, lightness=1)
-    observed = aug.augment_image(base_img)
-    expected = _compute_sharpened_base_img(0.5*1, 0.5 * m_noop + 0.5 * m)
-    assert np.allclose(observed, expected.astype(np.uint8))
+    def test_alpha_050(self):
+        aug = iaa.Sharpen(alpha=0.5, lightness=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_sharpened_base_img(
+            0.5*1, 0.5 * self.m_noop + 0.5 * self.m)
+        assert np.allclose(observed, expected.astype(np.uint8))
 
-    aug = iaa.Sharpen(alpha=0.75, lightness=1)
-    observed = aug.augment_image(base_img)
-    expected = _compute_sharpened_base_img(0.75*1, 0.25 * m_noop + 0.75 * m)
-    assert np.allclose(observed, expected)
+    def test_alpha_075(self):
+        aug = iaa.Sharpen(alpha=0.75, lightness=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_sharpened_base_img(
+            0.75*1, 0.25 * self.m_noop + 0.75 * self.m)
+        assert np.allclose(observed, expected)
 
-    aug = iaa.Sharpen(alpha=iap.Choice([0.5, 1.0]), lightness=1)
-    observed = aug.augment_image(base_img)
-    expected1 = _compute_sharpened_base_img(0.5*1, m)
-    expected2 = _compute_sharpened_base_img(1.0*1, m)
-    assert np.allclose(observed, expected1) or np.allclose(observed, expected2)
+    def test_alpha_is_stochastic_parameter(self):
+        aug = iaa.Sharpen(alpha=iap.Choice([0.5, 1.0]), lightness=1)
+        observed = aug.augment_image(self.base_img)
+        expected1 = self._compute_sharpened_base_img(0.5*1, self.m)
+        expected2 = self._compute_sharpened_base_img(1.0*1, self.m)
+        assert (
+            np.allclose(observed, expected1)
+            or np.allclose(observed, expected2)
+        )
 
-    got_exception = False
-    try:
-        _ = iaa.Sharpen(alpha="test", lightness=1)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+    def test_failure_if_alpha_has_bad_datatype(self):
+        # don't use assertRaisesRegex, because it doesnt exist in 2.7
+        got_exception = False
+        try:
+            _ = iaa.Sharpen(alpha="test", lightness=1)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
 
-    aug = iaa.Sharpen(alpha=1.0, lightness=2)
-    observed = aug.augment_image(base_img)
-    expected = _compute_sharpened_base_img(1.0*2, m)
-    assert np.allclose(observed, expected)
+    def test_alpha_1_lightness_2(self):
+        aug = iaa.Sharpen(alpha=1.0, lightness=2)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_sharpened_base_img(1.0*2, self.m)
+        assert np.allclose(observed, expected)
 
-    aug = iaa.Sharpen(alpha=1.0, lightness=3)
-    observed = aug.augment_image(base_img)
-    expected = _compute_sharpened_base_img(1.0*3, m)
-    assert np.allclose(observed, expected)
+    def test_alpha_1_lightness_3(self):
+        aug = iaa.Sharpen(alpha=1.0, lightness=3)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_sharpened_base_img(1.0*3, self.m)
+        assert np.allclose(observed, expected)
 
-    aug = iaa.Sharpen(alpha=1.0, lightness=iap.Choice([1.0, 1.5]))
-    observed = aug.augment_image(base_img)
-    expected1 = _compute_sharpened_base_img(1.0*1.0, m)
-    expected2 = _compute_sharpened_base_img(1.0*1.5, m)
-    assert np.allclose(observed, expected1) or np.allclose(observed, expected2)
+    def test_alpha_1_lightness_is_stochastic_parameter(self):
+        aug = iaa.Sharpen(alpha=1.0, lightness=iap.Choice([1.0, 1.5]))
+        observed = aug.augment_image(self.base_img)
+        expected1 = self._compute_sharpened_base_img(1.0*1.0, self.m)
+        expected2 = self._compute_sharpened_base_img(1.0*1.5, self.m)
+        assert (
+            np.allclose(observed, expected1)
+            or np.allclose(observed, expected2)
+        )
 
-    got_exception = False
-    try:
-        _ = iaa.Sharpen(alpha=1.0, lightness="test")
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+    def test_failure_if_lightness_has_bad_datatype(self):
+        # don't use assertRaisesRegex, because it doesnt exist in 2.7
+        got_exception = False
+        try:
+            _ = iaa.Sharpen(alpha=1.0, lightness="test")
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
 
     # this part doesnt really work so far due to nonlinearities resulting from clipping to uint8
     """
@@ -445,15 +554,12 @@ def test_Sharpen():
     """
 
 
-def test_Emboss():
-    reseed()
+class TestEmboss(unittest.TestCase):
+    def setUp(self):
+        reseed()
 
-    base_img = [[10, 10, 10],
-                [10, 20, 10],
-                [10, 10, 15]]
-    base_img = np.uint8(base_img)
-
-    def _compute_embossed_base_img(img, alpha, strength):
+    @classmethod
+    def _compute_embossed_base_img(cls, img, alpha, strength):
         img = np.copy(img)
         base_img_embossed = np.zeros((3, 3), dtype=np.float32)
 
@@ -483,74 +589,114 @@ def test_Emboss():
                         inputs = img[inputs_i, inputs_j]
                         base_img_embossed[i, j] += inputs * weight
 
-        return np.clip((1-alpha) * img + alpha * base_img_embossed, 0, 255).astype(np.uint8)
+        return np.clip(
+            (1-alpha) * img
+            + alpha * base_img_embossed,
+            0,
+            255
+        ).astype(np.uint8)
 
-    def _allclose(a, b):
-        return np.max(a.astype(np.float32) - b.astype(np.float32)) <= 2.1
+    @classmethod
+    def _allclose(cls, a, b):
+        return np.max(
+            a.astype(np.float32)
+            - b.astype(np.float32)
+        ) <= 2.1
 
-    aug = iaa.Emboss(alpha=0, strength=1)
-    observed = aug.augment_image(base_img)
-    expected = base_img
-    assert _allclose(observed, expected)
+    @property
+    def base_img(self):
+        return np.array([[10, 10, 10],
+                         [10, 20, 10],
+                         [10, 10, 15]], dtype=np.uint8)
 
-    aug = iaa.Emboss(alpha=1.0, strength=1)
-    observed = aug.augment_image(base_img)
-    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=1)
-    assert _allclose(observed, expected)
+    def test_alpha_0_strength_1(self):
+        aug = iaa.Emboss(alpha=0, strength=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self.base_img
+        assert self._allclose(observed, expected)
 
-    aug = iaa.Emboss(alpha=0.5, strength=1)
-    observed = aug.augment_image(base_img)
-    expected = _compute_embossed_base_img(base_img, alpha=0.5, strength=1)
-    assert _allclose(observed, expected.astype(np.uint8))
+    def test_alpha_1_strength_1(self):
+        aug = iaa.Emboss(alpha=1.0, strength=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=1)
+        assert self._allclose(observed, expected)
 
-    aug = iaa.Emboss(alpha=0.75, strength=1)
-    observed = aug.augment_image(base_img)
-    expected = _compute_embossed_base_img(base_img, alpha=0.75, strength=1)
-    assert _allclose(observed, expected)
+    def test_alpha_050_strength_1(self):
+        aug = iaa.Emboss(alpha=0.5, strength=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_embossed_base_img(
+            self.base_img, alpha=0.5, strength=1)
+        assert self._allclose(observed, expected.astype(np.uint8))
 
-    aug = iaa.Emboss(alpha=iap.Choice([0.5, 1.0]), strength=1)
-    observed = aug.augment_image(base_img)
-    expected1 = _compute_embossed_base_img(base_img, alpha=0.5, strength=1)
-    expected2 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1)
-    assert _allclose(observed, expected1) or np.allclose(observed, expected2)
+    def test_alpha_075_strength_1(self):
+        aug = iaa.Emboss(alpha=0.75, strength=1)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_embossed_base_img(
+            self.base_img, alpha=0.75, strength=1)
+        assert self._allclose(observed, expected)
 
-    got_exception = False
-    try:
-        _ = iaa.Emboss(alpha="test", strength=1)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+    def test_alpha_stochastic_parameter_strength_1(self):
+        aug = iaa.Emboss(alpha=iap.Choice([0.5, 1.0]), strength=1)
+        observed = aug.augment_image(self.base_img)
+        expected1 = self._compute_embossed_base_img(
+            self.base_img, alpha=0.5, strength=1)
+        expected2 = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=1)
+        assert (
+            self._allclose(observed, expected1)
+            or self._allclose(observed, expected2)
+        )
 
-    aug = iaa.Emboss(alpha=1.0, strength=2)
-    observed = aug.augment_image(base_img)
-    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=2)
-    assert _allclose(observed, expected)
+    def test_failure_on_invalid_datatype_for_alpha(self):
+        # don't use assertRaisesRegex, because it doesnt exist in 2.7
+        got_exception = False
+        try:
+            _ = iaa.Emboss(alpha="test", strength=1)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
 
-    aug = iaa.Emboss(alpha=1.0, strength=3)
-    observed = aug.augment_image(base_img)
-    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=3)
-    assert _allclose(observed, expected)
+    def test_alpha_1_strength_2(self):
+        aug = iaa.Emboss(alpha=1.0, strength=2)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=2)
+        assert self._allclose(observed, expected)
 
-    aug = iaa.Emboss(alpha=1.0, strength=6)
-    observed = aug.augment_image(base_img)
-    expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=6)
-    assert _allclose(observed, expected)
+    def test_alpha_1_strength_3(self):
+        aug = iaa.Emboss(alpha=1.0, strength=3)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=3)
+        assert self._allclose(observed, expected)
 
-    aug = iaa.Emboss(alpha=1.0, strength=iap.Choice([1.0, 2.5]))
-    observed = aug.augment_image(base_img)
-    expected1 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1.0)
-    expected2 = _compute_embossed_base_img(base_img, alpha=1.0, strength=2.5)
-    assert _allclose(observed, expected1) or _allclose(observed, expected2)
+    def test_alpha_1_strength_6(self):
+        aug = iaa.Emboss(alpha=1.0, strength=6)
+        observed = aug.augment_image(self.base_img)
+        expected = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=6)
+        assert self._allclose(observed, expected)
 
-    got_exception = False
-    try:
-        _ = iaa.Emboss(alpha=1.0, strength="test")
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+    def test_alpha_1_strength_stochastic_parameter(self):
+        aug = iaa.Emboss(alpha=1.0, strength=iap.Choice([1.0, 2.5]))
+        observed = aug.augment_image(self.base_img)
+        expected1 = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=1.0)
+        expected2 = self._compute_embossed_base_img(
+            self.base_img, alpha=1.0, strength=2.5)
+        assert (
+            self._allclose(observed, expected1)
+            or self._allclose(observed, expected2)
+        )
 
-
-if __name__ == "__main__":
-    main()
+    def test_failure_on_invalid_datatype_for_strength(self):
+        # don't use assertRaisesRegex, because it doesnt exist in 2.7
+        got_exception = False
+        try:
+            _ = iaa.Emboss(alpha=1.0, strength="test")
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
