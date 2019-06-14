@@ -4,18 +4,21 @@
   and `multicore.Pool.imap_batches_unordered()` to control the maximum number
   of batches in the background augmentation pipeline (allows to limit
   maximum RAM demands).
-* Increased `max_distance` thresholds for `almost_equals()`, `exterior_almost_equals()` and `coords_almost_equals()` in `Polygon` and `LineString` from `1e-6` to `1e-4`.
+* Increased `max_distance` thresholds for `almost_equals()`,
+  `exterior_almost_equals()` and `coords_almost_equals()` in `Polygon` and
+  `LineString` from `1e-6` to `1e-4`.
   This should fix false-negative problems related to float inaccuracies.
 * Added module `imgaug.augmenters.edges`.
-* Added interface `BinaryImageColorizerIf` to `imgaug.augmenters.edges`, which
+* Added interface `augmenters.edges.BinaryImageColorizerIf`, which
   contains the interface for classes used to convert binary images to RGB
   images.
-* Added `RandomColorsBinaryImageColorizer` to `imgaug.augmenters.edges`, which
+* Added `augmenters.edges.RandomColorsBinaryImageColorizer`, which
   converts binary images to RGB images by sampling uniformly RGB colors for
   `True` and `False` values.
-* Added augmenter `Canny`, which applies canny edge detection with alpha
+* Added `augmenters.edges.Canny`, which applies canny edge detection with alpha
   blending and random coloring to images.
-* Renamed `imgaug/external/poly_point_isect.py` to `imgaug/external/poly_point_isect_py3.py.bak`.
+* Renamed `imgaug/external/poly_point_isect.py` to
+  `imgaug/external/poly_point_isect_py3.py.bak`.
   The file is in the library only for completeness and contains python3 syntax.
   `poly_point_isect_py2py3.py` is actually used.
 * Added dtype gating to `dtypes.clip_()`.
@@ -25,23 +28,52 @@
     * Added `augmenters.pooling.MaxPooling`. #317
     * Added `augmenters.pooling.MinPooling`. #317
     * Added `augmenters.pooling.MedianPooling`. #317
-* Refactored `augmenters/weather.py` (general code and docstring cleanup).
+* `augmenters.color.AddToHueAndSaturation`
+    * [rarely breaking] Refactored `AddToHueAndSaturation` to clean it up.
+      Re-running old code with the same seeds will now produce different
+      images. #319
+    * [rarely breaking] The `value` parameter is now interpreted by the
+      augmenter to return first the hue and then the saturation value to add,
+      instead of the other way round.
+      (This shouldn't affect anybody.) #319
+    * [rarely breaking] Added `value_hue` and `value_saturation` arguments,
+      which allow to set individual parameters for hue and saturation
+      instead of having to use one parameter for both (they may not be set
+      if `value` is already set).
+      This changes the order of arguments of the augmenter and code that relied
+      on that order will now break.
+      This also changes the output of
+      `AddToHueAndSaturation.get_parameters()`. #319
+* Added `augmenters.color.AddToHue`, a shortcut for
+  `AddToHueAndSaturation(value_hue=...)`. #319
+* Added `augmenters.color.AddToSaturation`, a shortcut for
+  `AddToHueAndSaturation(value_saturation=...)`. #319
+* Added `augmenters.color.WithHueAndSaturation`. #319
+* Added `augmenters.color.MultiplyHueAndSaturation`. #319
+* Added `augmenters.color.MultiplyHue`. #319
+* Added `augmenters.color.MultiplySaturation`. #319
+* Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
+
 
 ## Fixes
  
 * Fixed an issue with `Polygon.clip_out_of_image()`,
   which would lead to exceptions if a polygon had overlap with an image,
   but not a single one of its points was inside that image plane. 
-* Fixed `imgaug.multicore` falsely not accepting `imgaug.augmentables.batches.UnnormalizedBatch`.
+* Fixed `multicore` methods falsely not accepting
+  `augmentables.batches.UnnormalizedBatch`.
 * `Rot90` now uses subpixel-based coordinate remapping.
-  I.e. any coordinate `(x, y)` will be mapped to `(H-y, x)` for a rotation by 90deg.
+  I.e. any coordinate `(x, y)` will be mapped to `(H-y, x)` for a rotation by
+  90deg.
   Previously, an integer-based remapping to `(H-y-1, x)` was used.
   Coordinates are e.g. used by keypoints, bounding boxes or polygons.
-* `Invert`
-    * `[rarely breaking]` If `min_value` and/or `max_value` arguments were set, `uint64` is no longer a valid input array dtype for `Invert`.
+* `augmenters.arithmetic.Invert`
+    * [rarely breaking] If `min_value` and/or `max_value` arguments were
+      set, `uint64` is no longer a valid input array dtype for `Invert`.
       This is due to a conversion to `float64` resulting in loss of resolution.
     * Fixed `Invert` in rare cases restoring dtypes improperly.
-* Fixed `dtypes.gate_dtypes()` crashing if the input was one or more numpy scalars instead of numpy arrays or dtypes.
+* Fixed `dtypes.gate_dtypes()` crashing if the input was one or more numpy
+  scalars instead of numpy arrays or dtypes.
 
 
 # 0.2.9
