@@ -53,6 +53,9 @@
 * Added `augmenters.color.MultiplyHue`. #319
 * Added `augmenters.color.MultiplySaturation`. #319
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
+* [rarely breaking] Added argument `polygon_recoverer` to
+  `augmenters.geometric.PerspectiveTransform`. This changes the order of
+  arguments of the augmenter and code that relied on that order will now break.
 
 
 ## Fixes
@@ -74,6 +77,8 @@
     * Fixed `Invert` in rare cases restoring dtypes improperly.
 * Fixed `dtypes.gate_dtypes()` crashing if the input was one or more numpy
   scalars instead of numpy arrays or dtypes.
+* Fixed `augmenters.geometric.PerspectiveTransform` producing invalid
+  polygons (more often with higher `scale` values).
 
 
 # 0.2.9
