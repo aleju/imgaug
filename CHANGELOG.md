@@ -25,6 +25,7 @@
     * Added `augmenters.pooling.MaxPooling`. #317
     * Added `augmenters.pooling.MinPooling`. #317
     * Added `augmenters.pooling.MedianPooling`. #317
+* Refactored `augmenters/weather.py` (general code and docstring cleanup).
 
 ## Fixes
  
