@@ -79,6 +79,8 @@
   scalars instead of numpy arrays or dtypes.
 * Fixed `augmenters.geometric.PerspectiveTransform` producing invalid
   polygons (more often with higher `scale` values).
+* Fixed errors caused by `external/poly_point_isect_py2py3.py` related to
+  floating point inaccuracies (changed an epsilon from `1e-10` to `1e-4`). 
 
 
 # 0.2.9
