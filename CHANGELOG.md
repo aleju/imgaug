@@ -53,6 +53,16 @@
 * Added `augmenters.color.MultiplyHue`. #319
 * Added `augmenters.color.MultiplySaturation`. #319
 * Refactored `augmenters/weather.py` (general code and docstring cleanup). #336
+* [rarely breaking] Added argument `polygon_recoverer` to
+  `augmenters.geometric.PerspectiveTransform`. This changes the order of
+  arguments of the augmenter and code that relied on that order will now
+  break. #338
+* Changed `_ConcavePolygonRecoverer` to not search for segment intersection
+  points in polygons with very large absolute coordinate values.
+  This prevents rare errors due to floating point inaccuracies. #338
+* Changed `_ConcavePolygonRecoverer` to raise warnings instead of throwing
+  exceptions when the underlying search for segment intersection points
+  crashes. #338
 
 
 ## Fixes
@@ -74,6 +84,11 @@
     * Fixed `Invert` in rare cases restoring dtypes improperly.
 * Fixed `dtypes.gate_dtypes()` crashing if the input was one or more numpy
   scalars instead of numpy arrays or dtypes.
+* Fixed `augmenters.geometric.PerspectiveTransform` producing invalid
+  polygons (more often with higher `scale` values). #338
+* Fixed errors caused by `external/poly_point_isect_py2py3.py` related to
+  floating point inaccuracies (changed an epsilon from `1e-10` to `1e-4`,
+  rounded some floats). #338
 
 
 # 0.2.9

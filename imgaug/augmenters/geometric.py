@@ -2091,6 +2091,15 @@ class PerspectiveTransform(meta.Augmenter):
               parameter per image, i.e. it must return only the above mentioned
               strings.
 
+    polygon_recoverer : 'auto' or None or imgaug.augmentables.polys._ConcavePolygonRecoverer, optional
+        The class to use to repair invalid polygons.
+        If ``"auto"``, a new instance of
+        ``imgaug.augmentables.polys._ConcavePolygonRecoverer`` will be created.
+        If ``None``, no polygon recoverer will be used.
+        If an object, then that object will be used and must provide a
+        ``recover_from()`` method, similar to
+        ``imgaug.augmentables.polys._ConcavePolygonRecoverer``.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -2111,7 +2120,9 @@ class PerspectiveTransform(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=0, cval=0, mode='constant', keep_size=True, name=None, deterministic=False, random_state=None):
+    def __init__(self, scale=0, cval=0, mode='constant', keep_size=True,
+                 polygon_recoverer="auto",
+                 name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
         self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -2121,6 +2132,8 @@ class PerspectiveTransform(meta.Augmenter):
 
         # setting these to 1x1 caused problems for large scales and polygon
         # augmentation
+        # TODO there is now a recoverer for polygons - are these minima still
+        #      needed/sensible?
         self.min_width = 2
         self.min_height = 2
         self.shift_step_size = 0.5
@@ -2156,6 +2169,10 @@ class PerspectiveTransform(meta.Augmenter):
         else:
             raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or "
                             + "StochasticParameter, got %s." % (type(mode),))
+
+        self.polygon_recoverer = polygon_recoverer
+        if polygon_recoverer == "auto":
+            self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
@@ -2297,8 +2314,11 @@ class PerspectiveTransform(meta.Augmenter):
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
+        # large scale values cause invalid polygons (unclear why that happens),
+        # hence the recoverer
         return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+            polygons_on_images, random_state, parents, hooks,
+            recoverer=self.polygon_recoverer)
 
     def _create_matrices(self, shapes, random_state):
         # TODO change these to class attributes

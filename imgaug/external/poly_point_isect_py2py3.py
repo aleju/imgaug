@@ -50,7 +50,11 @@ NUMBER_TYPE = 'native'
 
 if NUMBER_TYPE == 'native':
     Real = float
-    NUM_EPS = Real("1e-10")
+    ########################################################################
+    # decreased 1e-10 to 1e-4 here, otherwise large float values of 10k+
+    # caused not found errors in remove()
+    NUM_EPS = Real("1e-4")
+    ########################################################################
     NUM_INF = Real(float("inf"))
 elif NUMBER_TYPE == 'decimal':
     # Not passing tests!
@@ -197,13 +201,22 @@ class Event:
         return 0
 
     def __repr__(self):
-        return ("Event(0x%x, s0=%r, s1=%r, p=%r, type=%d, slope=%r)" % (
-            id(self),
-            self.segment[0], self.segment[1],
-            self.point,
-            self.type,
-            self.slope,
-            ))
+        if self.segment is not None:
+            return ("Event(0x%x, s0=%r, s1=%r, p=%r, type=%d, slope=%r)" % (
+                id(self),
+                self.segment[0], self.segment[1],
+                self.point,
+                self.type,
+                self.slope,
+                ))
+        else:
+            return ("Event(0x%x, s0=%r, s1=%r, p=%r, type=%d, slope=%r)" % (
+                id(self),
+                "None", "None",
+                self.point,
+                self.type,
+                self.slope,
+                ))
 
 
 class SweepLine:

@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import copy
 import warnings
+import traceback
 
 import numpy as np
 import scipy.spatial.distance
@@ -1340,6 +1341,18 @@ class _ConcavePolygonRecoverer(object):
         # number).
         self.fit_n_candidates_before_sort_max = 100
 
+        # If abs(x) or abs(y) of any coordinate of a polygon is beyond this
+        # value, no intersection points will be computed anymore. That is done,
+        # because the underlying library to find these points uses float
+        # values as keys and may therefore start to encounter inaccuracies
+        # leading to exceptions within that library.
+        self.limit_coords_values_for_inter_search = 50000
+
+        # Rounding of coordinates to use before feeding them into the
+        # library to search for intersection points. Note that the library
+        # was set to also use a corresponding eps of 1e-4.
+        self.decimals = 4
+
     def recover_from(self, new_exterior, old_polygon, random_state=0):
         assert isinstance(new_exterior, list) or (
                 ia.is_np_array(new_exterior)
@@ -1368,7 +1381,8 @@ class _ConcavePolygonRecoverer(object):
         new_exterior = self._jitter_duplicate_points(new_exterior, rss[1])
 
         # generate intersection points
-        segment_add_points = self._generate_intersection_points(new_exterior)
+        segment_add_points = self._generate_intersection_points(
+            new_exterior, decimals=self.decimals)
 
         # oversample points around intersections
         if self.oversampling is not None and self.oversampling > 0:
@@ -1495,7 +1509,25 @@ class _ConcavePolygonRecoverer(object):
             points_matrix[:, 0:2] - points_matrix[:, 2:4], axis=1)
         return np.sum(distances)
 
-    def _generate_intersection_points(self, exterior, one_point_per_intersection=True):
+    def _generate_intersection_points(self, exterior, one_point_per_intersection=True, decimals=4):
+        largest_value = np.max(np.abs(np.array(exterior, dtype=np.float32)))
+        too_large_values = (
+                largest_value > self.limit_coords_values_for_inter_search)
+        if too_large_values:
+            warnings.warn(
+                "Encountered during polygon repair a polygon with extremely "
+                "large coordinate values beyond %d. Will skip intersection "
+                "point computation for that polygon. This avoids exceptions "
+                "and is -- due to the extreme distortion -- likely pointless "
+                "anyways (i.e. the polygon is already broken beyond repair). "
+                "Try using weaker augmentation parameters to avoid such "
+                "large coordinate values." % (
+                    self.limit_coords_values_for_inter_search,)
+            )
+            return [[] for _ in range(len(exterior))]
+
+        if ia.is_np_array(exterior):
+            exterior = list(exterior)
         assert isinstance(exterior, list)
         assert all([len(point) == 2 for point in exterior])
         if len(exterior) <= 0:
@@ -1506,15 +1538,36 @@ class _ConcavePolygonRecoverer(object):
         # is required by isect_segments_include_segments
         segments = [
             (
-                (exterior[i][0], exterior[i][1]),
-                (exterior[(i + 1) % len(exterior)][0], exterior[(i + 1) % len(exterior)][1])
+                (
+                    round(float(exterior[i][0]), decimals),
+                    round(float(exterior[i][1]), decimals)
+                ),
+                (
+                    round(float(exterior[(i + 1) % len(exterior)][0]), decimals),
+                    round(float(exterior[(i + 1) % len(exterior)][1]), decimals)
+                )
             )
             for i in range(len(exterior))
         ]
 
         # returns [(point, [(segment_p0, segment_p1), ..]), ...]
         from imgaug.external.poly_point_isect_py2py3 import isect_segments_include_segments
-        intersections = isect_segments_include_segments(segments)
+        try:
+            intersections = isect_segments_include_segments(segments)
+        except Exception as exc:
+            # Exceptions in the segment intersection search can at least
+            # happen due to large float coords (the library uses
+            # floats as indices, which is bound to cause inaccuracies).
+            # Usually such exceptions should not appear, as too large
+            # coordinate values are already caught at the start of this
+            # function. For the case that there are more errors, this block
+            # will prevent a full crash.
+            warnings.warn(
+                "Encountered exception %s during polygon repair in segment "
+                "intersection computation. Will skip that step." % (
+                    str(exc),))
+            traceback.print_exc()
+            return [[] for _ in range(len(exterior))]
 
         # estimate to which segment the found intersection points belong
         segments_add_points = [[] for _ in range(len(segments))]
