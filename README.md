@@ -123,7 +123,19 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 The library supports python 2.7 and 3.4+.
 
-To install the library, first install all requirements:
+### Installation: Anaconda
+
+To install the library in anaconda, perform the following commands:
+```bash
+conda config --add channels conda-forge
+conda install imgaug
+```
+
+You can deinstall the library again via `conda remove imgaug`.
+
+### Installation: pip
+
+To install the library via pip, first install all requirements:
 ```bash
 pip install six numpy scipy Pillow matplotlib scikit-image opencv-python imageio Shapely
 ```
@@ -138,10 +150,17 @@ or install the latest version directly from github:
 pip install git+https://github.com/aleju/imgaug.git
 ```
 
-Alternatively, you can download the repository via `git clone https://github.com/aleju/imgaug` and install manually
-via `cd imgaug && python setup.py install`.
+In rare cases, `Shapely` can cause issues to install.
+You can skip the package in these cases -- but note that at least polygon and
+line string augmentation will crash without it.
 
 To deinstall the library, just execute `pip uninstall imgaug`.
+
+### Installation: From Source
+
+Alternatively, you can download the repository via
+`git clone https://github.com/aleju/imgaug` and install manually via
+`cd imgaug && python setup.py install`.
 
 
 <a name="documentation"/>
