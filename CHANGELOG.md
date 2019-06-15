@@ -63,6 +63,9 @@
 * Changed `_ConcavePolygonRecoverer` to raise warnings instead of throwing
   exceptions when the underlying search for segment intersection points
   crashes. #338
+* Added the library to ``conda-forge`` so it can now be installed via
+  ``conda install imgaug`` (provided the conda-forge channel was added
+  before that). #320 #339
 
 
 ## Fixes
