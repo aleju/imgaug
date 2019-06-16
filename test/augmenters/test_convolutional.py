@@ -537,11 +537,11 @@ def test_Emboss():
     expected = _compute_embossed_base_img(base_img, alpha=1.0, strength=6)
     assert _allclose(observed, expected)
 
-    aug = iaa.Emboss(alpha=1.0, strength=iap.Choice([1.0, 1.5]))
+    aug = iaa.Emboss(alpha=1.0, strength=iap.Choice([1.0, 2.5]))
     observed = aug.augment_image(base_img)
     expected1 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1.0)
-    expected2 = _compute_embossed_base_img(base_img, alpha=1.0, strength=1.5)
-    assert _allclose(observed, expected1) or np.allclose(observed, expected2)
+    expected2 = _compute_embossed_base_img(base_img, alpha=1.0, strength=2.5)
+    assert _allclose(observed, expected1) or _allclose(observed, expected2)
 
     got_exception = False
     try:
