@@ -870,7 +870,7 @@ for _ in range(nb_batches):
 # Show the augmented images.
 # Note that augment_batches() returns a generator.
 for images_aug in augseq.augment_batches(batches, background=True):
-    ia.imshow(ia.draw_grid(images_aug, cols=8))
+    ia.imshow(ia.draw_grid(images_aug.images_aug, cols=8))
 ```
 
 If you need a bit more control over the background augmentation process, you can work with `augmenter.pool()`,
