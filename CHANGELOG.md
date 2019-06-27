@@ -72,6 +72,8 @@
 * Added the library to ``conda-forge`` so it can now be installed via
   ``conda install imgaug`` (provided the conda-forge channel was added
   before that). #320 #339
+* Changed dependency `opencv-python` to `opencv-python-headless`.
+  This should improve support for some system without GUIs.
 
 ## Fixes
  
