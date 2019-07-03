@@ -964,7 +964,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False, size_px_max=(2
             aggregation_method=aggregation_method
         )
 
-    if sigmoid is False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
+    if sigmoid is True or (ia.is_single_number(sigmoid) and sigmoid >= 0.01):
         noise = iap.Sigmoid.create_for_noise(
             noise,
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
@@ -1176,7 +1176,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=F
             aggregation_method=aggregation_method
         )
 
-    if sigmoid is False or (ia.is_single_number(sigmoid) and sigmoid <= 0.01):
+    if sigmoid is True or (ia.is_single_number(sigmoid) and sigmoid >= 0.01):
         noise = iap.Sigmoid.create_for_noise(
             noise,
             threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
