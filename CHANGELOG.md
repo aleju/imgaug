@@ -75,6 +75,7 @@
 * Changed dependency `opencv-python` to `opencv-python-headless`.
   This should improve support for some system without GUIs.
 * Refactored code in `augmenters.segmentation` (general code and docstring cleanup). #334
+* Refactored code in `augmenters.arithmetic` (general code and docstring cleanup). #328
 
 ## Fixes
  
