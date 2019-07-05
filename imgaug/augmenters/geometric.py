@@ -2372,7 +2372,7 @@ class PerspectiveTransform(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         result = segmaps
 
-        matrices, max_heights, max_widths = self._create_matrices(
+        matrices, max_heights, max_widths, _, _ = self._create_matrices(
             [segmaps_i.arr.shape for segmaps_i in segmaps],
             ia.copy_random_state(random_state)
         )
@@ -2383,7 +2383,7 @@ class PerspectiveTransform(meta.Augmenter):
         if self.keep_size:
             max_heights_imgs, max_widths_imgs = max_heights, max_widths
         else:
-            _, max_heights_imgs, max_widths_imgs = self._create_matrices(
+            _, max_heights_imgs, max_widths_imgs, _, _ = self._create_matrices(
                 [segmaps_i.shape for segmaps_i in segmaps],
                 ia.copy_random_state(random_state)
             )
