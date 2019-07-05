@@ -399,8 +399,8 @@ class TestSharpen(unittest.TestCase):
     @property
     def base_img(self):
         base_img = [[10, 10, 10],
-                [10, 20, 10],
-                [10, 10, 10]]
+                    [10, 20, 10],
+                    [10, 10, 10]]
         base_img = np.uint8(base_img)
         return base_img
 
@@ -449,8 +449,10 @@ class TestSharpen(unittest.TestCase):
     def test_alpha_is_stochastic_parameter(self):
         aug = iaa.Sharpen(alpha=iap.Choice([0.5, 1.0]), lightness=1)
         observed = aug.augment_image(self.base_img)
-        expected1 = self._compute_sharpened_base_img(0.5*1, self.m)
-        expected2 = self._compute_sharpened_base_img(1.0*1, self.m)
+        expected1 = self._compute_sharpened_base_img(
+            0.5*1, 0.5 * self.m_noop + 0.5 * self.m)
+        expected2 = self._compute_sharpened_base_img(
+            1.0*1, 0.0 * self.m_noop + 1.0 * self.m)
         assert (
             np.allclose(observed, expected1)
             or np.allclose(observed, expected2)
