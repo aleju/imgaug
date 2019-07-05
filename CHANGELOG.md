@@ -189,67 +189,104 @@
   images (instead of only height/width). #349
 
 
-# Segmentation Maps
-
-## Improved Segmentation Map Augmentation
+## Improved Segmentation Map Augmentation #302
 
 Augmentation of Segmentation Maps is now faster and more memory efficient.
 This required some breaking changes to `SegmentationMapOnImage`.
-To adapt to the new version, the following steps should be sufficient for most users:
-* Rename all calls of `SegmentationMapOnImage` to `SegmentationMapsOnImage` (Map -> Maps).
-* Rename all calls of `SegmentationMapsOnImage.get_arr_int()` to `SegmentationMapsOnImage.get_arr()`.
-* Remove the argument `nb_classes` from all calls of `SegmentationMapsOnImage`.
-* Remove the arguments `background_id` and `background_threshold` from all calls as these are no longer supported.
-* Ensure that the input array to `SegmentationMapsOnImage` is always an int-like (int, uint or bool).
-  Float arrays are no longer accepted.
-* Ensure that if `SegmentationMapsOnImage.arr` is accessed anywhere, the respective code can handle the new `int32` `(H,W,#maps)` array form.
-  Previously it was `float32` and the channel-axis had the same size as the max class id (+1) that could appear in the map.
+To adapt to the new version, the following steps should be sufficient for most
+users:
 
+* Rename all calls of `SegmentationMapOnImage` to `SegmentationMapsOnImage`
+  (Map -> Maps).
+* Rename all calls of `SegmentationMapsOnImage.get_arr_int()` to
+  `SegmentationMapsOnImage.get_arr()`.
+* Remove the argument `nb_classes` from all calls of `SegmentationMapsOnImage`.
+* Remove the arguments `background_id` and `background_threshold` from all
+  calls as these are no longer supported.
+* Ensure that the input array to `SegmentationMapsOnImage` is always an
+  int-like (int, uint or bool).
+  Float arrays are no longer accepted.
+* Ensure that if `SegmentationMapsOnImage.arr` is accessed anywhere, the
+  respective code can handle the new `int32` `(H,W,#maps)` array form.
+  Previously it was `float32` and the channel-axis had the same size as the
+  max class id (+1) that could appear in the map.
 
 Changes:
 
 - Changes to class `SegmentationMapOnImage`:
     - Renamed `SegmentationMapOnImage` to plural `SegmentationMapsOnImage`
       and deprecated the old name.
-      This was changed due to the input array now being allowed to contain several
-      channels, with each such channel containing one full segmentation map.
-    - **[rarely breaking]** Changed `SegmentationMapsOnImage.__init__` to no longer accept float arrays as `arr` argument.
-    - **[breaking]** Changed `SegmentationMapsOnImage.__init__` to no longer accept `uint32` and larger itemsizes as `arr` argument, only `uint16` and below is accepted.
-      For `int` the maximum is `int32`.
-    - Changed `SegmentationMapsOnImage.__init__` to always accept `(H,W,C)` `arr` arguments.
-    - **[breaking]** Changed  `SegmentationMapsOnImage.arr` to always be `int32` `(H,W,#maps)` (previously: `float32` `(H,W,#nb_classes)`).
+      This was changed due to the input array now being allowed to contain
+      several channels, with each such channel containing one full segmentation
+      map.
+    - **[rarely breaking]** Changed `SegmentationMapsOnImage.__init__` to no
+      longer accept float arrays as `arr` argument.
+    - **[breaking]** Changed `SegmentationMapsOnImage.__init__` to no longer
+      accept `uint32` and larger itemsizes as `arr` argument, only `uint16`
+      and below is accepted. For `int` the maximum is `int32`.
+    - Changed `SegmentationMapsOnImage.__init__` to always accept `(H,W,C)`
+      `arr` arguments.
+    - **[breaking]** Changed  `SegmentationMapsOnImage.arr` to always be
+      `int32` `(H,W,#maps)` (previously: `float32` `(H,W,#nb_classes)`).
     - Deprecated `nb_classes` argument in `SegmentationMapsOnImage.__init__`.
       The argument is now ignored.
-    - Added `SegmentationMapsOnImage.get_arr()`, which always returns a segmentation map array with similar dtype and number of dimensions as was originally input when creating a class instance.
+    - Added `SegmentationMapsOnImage.get_arr()`, which always returns a
+      segmentation map array with similar dtype and number of dimensions as
+      was originally input when creating a class instance.
     - Deprecated `SegmentationMapsOnImage.get_arr_int()`.
       The method is now an alias for `get_arr()`.
     - `SegmentationMapsOnImage.draw()`:
         - **[breaking]** Removed argument `return_foreground_mask`.
         - **[breaking]** Removed optional output for foreground masks.
-        - **[breaking]** Changed output of drawn image to be a list of arrays instead of a single array (one per `C` in input array `(H,W,C)`).
-        - Refactored to be a wrapper around `SegmentationMapsOnImage.draw_on_image()`.
+        - **[breaking]** Changed output of drawn image to be a list of arrays
+          instead of a single array (one per `C` in input array `(H,W,C)`).
+        - Refactored to be a wrapper around
+          `SegmentationMapsOnImage.draw_on_image()`.
     - `SegmentationMapsOnImage.draw_on_image()`:
         - **[breaking]** Removed argument `background_class_id`.
         - **[breaking]** Removed argument `background_threshold`.
-        - **[breaking]** Changed output of drawn image to be a list of arrays instead of a single array (one per `C` in input array `(H,W,C)`).
-    - Changed `SegmentationMapsOnImage.resize()` to use nearest neighbour interpolaton by default.
-    - **[rarely breaking]** Changed `SegmentationMapsOnImage.copy()` to create a shallow copy instead of being an alias for `deepcopy()`.
-    - Added optional arguments `arr` and `shape` to `SegmentationMapsOnImage.copy()`.
-    - Added optional arguments `arr` and `shape` to `SegmentationMapsOnImage.deepcopy()`.
-    - Refactored `SegmentationMapsOnImage.pad()`, `SegmentationMapsOnImage.pad_to_aspect_ratio()`
-      and `SegmentationMapsOnImage.resize()` to generate new object instances via
+        - **[breaking]** Changed output of drawn image to be a list of arrays
+          instead of a single array (one per `C` in input array `(H,W,C)`).
+    - Changed `SegmentationMapsOnImage.resize()` to use nearest neighbour
+      interpolaton by default.
+    - **[rarely breaking]** Changed `SegmentationMapsOnImage.copy()` to create
+      a shallow copy instead of being an alias for `deepcopy()`.
+    - Added optional arguments `arr` and `shape` to
+      `SegmentationMapsOnImage.copy()`.
+    - Added optional arguments `arr` and `shape` to
       `SegmentationMapsOnImage.deepcopy()`.
-    - **[rarely breaking]** Renamed `SegmentationMapsOnImage.input_was` to `SegmentationMapsOnImage._input_was`.
-    - **[rarely breaking]** Changed `SegmentationMapsOnImage._input_was` to always save `(input array dtype, input array ndim)` instead of mixtures of strings/ints that varied by dtype kind.
-    - **[rarely breaking]** Restrict `shape` argument in `SegmentationMapsOnImage.__init__` to tuples instead of accepting all iterables.
-    - **[breaking]** Removed `SegmentationMapsOnImage.to_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
-    - **[breaking]** Removed `SegmentationMapsOnImage.from_heatmaps()` as the new segmentation map class is too different to sustain the old heatmap conversion methods.
+    - Refactored `SegmentationMapsOnImage.pad()`,
+      `SegmentationMapsOnImage.pad_to_aspect_ratio()` and
+      `SegmentationMapsOnImage.resize()` to generate new object instances via
+      `SegmentationMapsOnImage.deepcopy()`.
+    - **[rarely breaking]** Renamed `SegmentationMapsOnImage.input_was` to
+      `SegmentationMapsOnImage._input_was`.
+    - **[rarely breaking]** Changed `SegmentationMapsOnImage._input_was` to
+      always save `(input array dtype, input array ndim)` instead of mixtures
+      of strings/ints that varied by dtype kind.
+    - **[rarely breaking]** Restrict `shape` argument in
+      `SegmentationMapsOnImage.__init__` to tuples instead of accepting all
+      iterables.
+    - **[breaking]** Removed `SegmentationMapsOnImage.to_heatmaps()` as the
+      new segmentation map class is too different to sustain the old heatmap
+      conversion methods.
+    - **[breaking]** Removed `SegmentationMapsOnImage.from_heatmaps()` as the
+      new segmentation map class is too different to sustain the old heatmap
+      conversion methods.
 - Changes to class `Augmenter`:
-    - **[breaking]** Automatic segmentation map normalization from arrays or lists of arrays now expects a single `(N,H,W,C)` array (before: `(N,H,W)`) or a list of `(H,W,C)` arrays (before: `(H,W)`).
-      This affects valid segmentation map inputs for `Augmenter.augment()` and its alias `Augmenter.__call__()`, `imgaug.augmentables.batches.UnnormalizedBatch()` and `imgaug.augmentables.normalization.normalize_segmentation_maps()`.
+    - **[breaking]** Automatic segmentation map normalization from arrays or
+      lists of arrays now expects a single `(N,H,W,C)` array (before:
+      `(N,H,W)`) or a list of `(H,W,C)` arrays (before: `(H,W)`).
+      This affects valid segmentation map inputs for `Augmenter.augment()`
+      and its alias `Augmenter.__call__()`,
+      `imgaug.augmentables.batches.UnnormalizedBatch()` and
+      `imgaug.augmentables.normalization.normalize_segmentation_maps()`.
     - Added `Augmenter._augment_segmentation_maps()`.
-    - Changed `Augmenter.augment_segmentation_maps()` to no longer be a wrapper around `Augmenter.augment_heatmaps()` and instead call `Augmenter._augment_segmentation_maps()`.
-- Added special segmentation map handling to all augmenters that modified segmentation maps
+    - Changed `Augmenter.augment_segmentation_maps()` to no longer be a
+    wrapper around `Augmenter.augment_heatmaps()` and instead call
+    `Augmenter._augment_segmentation_maps()`.
+- Added special segmentation map handling to all augmenters that modified
+  segmentation maps
   (`Sequential`, `SomeOf`, `Sometimes`, `WithChannels`,
    `Lambda`, `AssertLambda`, `AssertShape`,
    `Alpha`, `AlphaElementwise`, `WithColorspace`, `Fliplr`, `Flipud`, `Affine`,
