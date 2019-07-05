@@ -149,8 +149,12 @@ class TestClouds(unittest.TestCase):
     def setUp(self):
         reseed()
 
-    def test_very_roughly(self):
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
+    @classmethod
+    def _test_very_roughly(cls, nb_channels):
+        if nb_channels is None:
+            img = np.zeros((100, 100), dtype=np.uint8)
+        else:
+            img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
         img_aug = iaa.Clouds().augment_image(img)
         assert 20 < np.average(img_aug) < 250
         assert np.max(img_aug) > 150
@@ -162,6 +166,15 @@ class TestClouds(unittest.TestCase):
         assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
         assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
 
+    def test_very_roughly_three_channels(self):
+        self._test_very_roughly(3)
+
+    def test_very_roughly_one_channel(self):
+        self._test_very_roughly(1)
+
+    def test_very_roughly_no_channel(self):
+        self._test_very_roughly(None)
+
 
 # only a very rough test here currently, because the augmenter is fairly hard
 # to test
@@ -170,8 +183,12 @@ class TestFog(unittest.TestCase):
     def setUp(self):
         reseed()
 
-    def test_very_roughly(self):
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
+    @classmethod
+    def _test_very_roughly(cls, nb_channels):
+        if nb_channels is None:
+            img = np.zeros((100, 100), dtype=np.uint8)
+        else:
+            img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
         img_aug = iaa.Clouds().augment_image(img)
         assert 50 < np.average(img_aug) < 255
         assert np.max(img_aug) > 100
@@ -183,6 +200,15 @@ class TestFog(unittest.TestCase):
         assert np.sum(np.abs(grad_x)) > 1 * img.shape[1]
         assert np.sum(np.abs(grad_y)) > 1 * img.shape[0]
 
+    def test_very_roughly_three_channels(self):
+        self._test_very_roughly(3)
+
+    def test_very_roughly_one_channel(self):
+        self._test_very_roughly(1)
+
+    def test_very_roughly_no_channel(self):
+        self._test_very_roughly(None)
+
 
 # only a very rough test here currently, because the augmenter is fairly hard
 # to test
@@ -191,8 +217,12 @@ class TestSnowflakes(unittest.TestCase):
     def setUp(self):
         reseed()
 
-    def test_very_roughly(self):
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
+    def _test_very_roughly(self, nb_channels):
+        if nb_channels is None:
+            img = np.zeros((100, 100), dtype=np.uint8)
+        else:
+            img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
+
         img_aug = iaa.Snowflakes().augment_image(img)
         assert 0.01 < np.average(img_aug) < 100
         assert np.max(img_aug) > 100
@@ -225,6 +255,15 @@ class TestSnowflakes(unittest.TestCase):
             self._measure_uniformity(img_aug_ununiform)
             < self._measure_uniformity(img_aug_uniform)
         )
+
+    def test_very_roughly_three_channels(self):
+        self._test_very_roughly(3)
+
+    def test_very_roughly_one_channel(self):
+        self._test_very_roughly(1)
+
+    def test_very_roughly_no_channels(self):
+        self._test_very_roughly(None)
 
     @classmethod
     def _measure_uniformity(cls, image, patch_size=5, n_patches=100):
