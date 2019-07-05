@@ -1066,7 +1066,7 @@ class SnowflakesLayer(meta.Augmenter):
         blur_sigma_fraction_sample = self.blur_sigma_fraction.draw_sample(
             random_state)
 
-        height, width = image.shape[0:2]
+        height, width, nb_channels = image.shape
         downscale_factor = np.clip(1.0 - flake_size_sample, 0.001, 1.0)
         height_down = int(height*downscale_factor)
         width_down = int(width*downscale_factor)
@@ -1106,7 +1106,7 @@ class SnowflakesLayer(meta.Augmenter):
             noise_small_blur)
         noise_small_blur = noise_small_blur.astype(np.float32) * gain_adj
         noise_small_blur_rgb = np.tile(
-            noise_small_blur[..., np.newaxis], (1, 1, 3))
+            noise_small_blur[..., np.newaxis], (1, 1, nb_channels))
 
         # blend:
         # sum for a bit of glowy, hardly visible flakes
