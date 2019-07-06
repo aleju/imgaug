@@ -77,7 +77,7 @@
 * Refactored code in `augmenters.segmentation` (general code and docstring cleanup). #334
 * Refactored code in `augmenters.arithmetic` (general code and docstring cleanup). #328
 * Added check to `dtypes.gate_dtypes()` verifying that arguments `allowed`
-  and `disallowed` have no intersection.
+  and `disallowed` have no intersection. #346
 
 ## Fixes
  
@@ -105,7 +105,7 @@
   rounded some floats). #338
 * Fixed `Superpixels` breaking when a sampled `n_segments` was `<=0`.
   `n_segments` is now treated as `1` in these cases.
-* Fixed `ReplaceElementwise` both allowing and disallowing dtype `int64`.
+* Fixed `ReplaceElementwise` both allowing and disallowing dtype `int64`. #346
 
 
 # 0.2.9
