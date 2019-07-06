@@ -1603,7 +1603,7 @@ class ReplaceElementwise(meta.Augmenter):
                                   "int8", "int16", "int32", "int64",
                                   "float16", "float32", "float64"],
                          disallowed=["uint64", "uint128", "uint256",
-                                     "int64", "int128", "int256",
+                                     "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
 

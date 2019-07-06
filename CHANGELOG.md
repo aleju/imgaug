@@ -103,6 +103,7 @@
   rounded some floats). #338
 * Fixed `Superpixels` breaking when a sampled `n_segments` was `<=0`.
   `n_segments` is now treated as `1` in these cases.
+* Fixed `ReplaceElementwise` both allowing and disallowing dtype `int64`.
 
 
 # 0.2.9
