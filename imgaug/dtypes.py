@@ -246,6 +246,18 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
     if len(disallowed) > 0:
         assert ia.is_string(disallowed[0])
 
+    # verify that "allowed" and "disallowed" do not contain overlapping
+    # dtypes
+    inters = set(allowed).intersection(set(disallowed))
+    nb_overlapping = len(inters)
+    assert nb_overlapping == 0, (
+        "Expected 'allowed' and 'disallowed' to not contain the same dtypes, "
+        "but %d appeared in both arguments. Got allowed: %s, "
+        "disallowed: %s, intersection: %s" % (
+            nb_overlapping, ", ".join(allowed), ", ".join(disallowed),
+            ", ".join(inters))
+    )
+
     # don't use is_np_array() here, because this is supposed to handle numpy
     # scalars too
     if hasattr(dtypes, "dtype"):
