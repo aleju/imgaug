@@ -119,7 +119,7 @@ class TestSuperpixels(unittest.TestCase):
                     "expected image.")
             if all(seen.values()):
                 break
-        assert all(seen.values())
+        assert np.all(seen.values())
 
     def test_failure_on_invalid_datatype_for_p_replace(self):
         # note that assertRaisesRegex does not exist in 2.7

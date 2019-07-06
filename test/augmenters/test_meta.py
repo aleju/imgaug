@@ -1045,9 +1045,9 @@ def test_clip_augmented_images_():
         images[i][0, 2] = 30
     images_clipped = iaa.clip_augmented_images_(images, min_value=15, max_value=25)
     assert isinstance(images_clipped, list)
-    assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
-    assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
-    assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
+    assert np.all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
+    assert np.all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
+    assert np.all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
 
 
 def test_clip_augmented_images():
@@ -1067,9 +1067,9 @@ def test_clip_augmented_images():
         images[i][0, 2] = 30
     images_clipped = iaa.clip_augmented_images(images, min_value=15, max_value=25)
     assert isinstance(images_clipped, list)
-    assert all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
-    assert all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
-    assert all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
+    assert np.all([images_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
+    assert np.all([images_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
+    assert np.all([images_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
 
 
 def test_reduce_to_nonempty():
@@ -1120,7 +1120,7 @@ def test_invert_reduce_to_nonempty():
     assert kpsois_recovered == ["foo1", "foo2", "foo3"]
 
     kpsois_recovered = iaa.invert_reduce_to_nonempty(kpsois, [1], ["foo1"])
-    assert all([isinstance(kpsoi, ia.KeypointsOnImage) for kpsoi in kpsois]) # assert original list not changed
+    assert np.all([isinstance(kpsoi, ia.KeypointsOnImage) for kpsoi in kpsois]) # assert original list not changed
     assert kpsois_recovered == [kpsois[0], "foo1", kpsois[2]]
 
     kpsois_recovered = iaa.invert_reduce_to_nonempty(kpsois, [], [])
@@ -1246,7 +1246,7 @@ def test_Augmenter():
             seen[0] += 1
         else:
             seen[1] += 1
-        assert all([image.ndim == 3 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62 and image.shape[2] == 3 for image in observed])
+        assert np.all([image.ndim == 3 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62 and image.shape[2] == 3 for image in observed])
     assert seen[0] <= 3
     assert seen[1] >= 17
 
@@ -1260,7 +1260,7 @@ def test_Augmenter():
             seen[0] += 1
         else:
             seen[1] += 1
-        assert all([image.ndim == 3 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62  and image.shape[2] == 1 for image in observed])
+        assert np.all([image.ndim == 3 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62  and image.shape[2] == 1 for image in observed])
     assert seen[0] <= 3
     assert seen[1] >= 17
 
@@ -1274,7 +1274,7 @@ def test_Augmenter():
             seen[0] += 1
         else:
             seen[1] += 1
-        assert all([image.ndim == 2 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62 for image in observed])
+        assert np.all([image.ndim == 2 and 48 <= image.shape[0] <= 62 and 48 <= image.shape[1] <= 62 for image in observed])
     assert seen[0] <= 3
     assert seen[1] >= 17
 
@@ -3729,7 +3729,7 @@ def test_Sequential():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # None as children
     aug = iaa.Sequential(children=None)
@@ -3986,9 +3986,9 @@ def test_SomeOf():
     observed1 = iaa.SomeOf(n=1, children=augs).augment_heatmaps([heatmaps])[0]
     observed2 = iaa.SomeOf(n=2, children=augs).augment_heatmaps([heatmaps])[0]
     observed3 = iaa.SomeOf(n=3, children=augs).augment_heatmaps([heatmaps])[0]
-    assert all([obs.shape == (3, 3, 3) for obs in [observed0, observed1, observed2, observed3]])
-    assert all([0 - 1e-6 < obs.min_value < 0 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
-    assert all([1 - 1e-6 < obs.max_value < 1 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
+    assert np.all([obs.shape == (3, 3, 3) for obs in [observed0, observed1, observed2, observed3]])
+    assert np.all([0 - 1e-6 < obs.min_value < 0 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
+    assert np.all([1 - 1e-6 < obs.max_value < 1 + 1e-6 for obs in [observed0, observed1, observed2, observed3]])
     obs_lst = [observed0, observed1, observed2, observed3]
     heatmaps_lst = [heatmaps_arr0, heatmaps_arr1, heatmaps_arr2, heatmaps_arr3]
     for obs, exp in zip(obs_lst, heatmaps_lst):
@@ -4078,7 +4078,7 @@ def test_SomeOf():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # images and polygons aligned?
     img = np.zeros((3, 3), dtype=np.uint8)
@@ -4122,7 +4122,7 @@ def test_SomeOf():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # invalid argument for children
     got_exception = False
@@ -4203,19 +4203,19 @@ def test_SomeOf():
     for _ in sm.xrange(10):
         observed = aug.augment_images(np.uint8([image, image, image, image]))
         assert isinstance(observed, list)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
         assert isinstance(observed, list)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_image(image)
         assert ia.is_np_array(image)
@@ -4230,19 +4230,19 @@ def test_SomeOf():
     for _ in sm.xrange(10):
         observed = aug.augment_images(np.uint8([image, image, image, image]))
         assert ia.is_np_array(observed)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
         assert ia.is_np_array(observed)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_image(image)
         assert ia.is_np_array(observed)
@@ -4751,20 +4751,20 @@ def test_Sometimes():
         observed = aug.augment_images(np.uint8([image, image, image, image]))
         assert isinstance(observed, list) \
             or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
         assert isinstance(observed, list) \
             or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(4, 8, 3), (6, 8, 3)] for img in observed])
 
         observed = aug.augment_image(image)
         assert ia.is_np_array(image)
@@ -4780,20 +4780,20 @@ def test_Sometimes():
         observed = aug.augment_images(np.uint8([image, image, image, image]))
         assert isinstance(observed, list) \
             or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
-        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+        assert np.all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
         assert isinstance(observed, list)
-        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+        assert np.all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
         assert isinstance(observed, list) \
             or (ia.is_np_array(observed) and len(set([img.shape for img in observed])) == 1)
-        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+        assert np.all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_images([image])
         assert isinstance(observed, list)
-        assert all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
+        assert np.all([16 <= img.shape[0] <= 30 and img.shape[1:] == (32, 3) for img in observed])
 
         observed = aug.augment_image(image)
         assert ia.is_np_array(image)
@@ -4808,19 +4808,19 @@ def test_Sometimes():
     for _ in sm.xrange(10):
         observed = aug.augment_images(np.uint8([image, image, image, image]))
         assert ia.is_np_array(observed)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
         assert ia.is_np_array(observed)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_image(image)
         assert ia.is_np_array(observed)
@@ -4835,19 +4835,19 @@ def test_Sometimes():
     for _ in sm.xrange(10):
         observed = aug.augment_images(np.uint8([image, image, image, image]))
         assert ia.is_np_array(observed)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image, image, image, image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images(np.uint8([image]))
         assert ia.is_np_array(observed)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_images([image])
         assert isinstance(observed, list)
-        assert all([img.shape in [(8, 8, 3)] for img in observed])
+        assert np.all([img.shape in [(8, 8, 3)] for img in observed])
 
         observed = aug.augment_image(image)
         assert ia.is_np_array(observed)
@@ -4902,7 +4902,7 @@ def test_Sometimes():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
         min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
@@ -4924,7 +4924,7 @@ def test_Sometimes():
                 assert False
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
     for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
                             [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
@@ -4945,7 +4945,7 @@ def test_Sometimes():
                 assert False
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
 
 def test_WithChannels():
@@ -5190,7 +5190,7 @@ def test_ChannelShuffle():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # p=0
     aug = iaa.ChannelShuffle(p=0)
@@ -5217,7 +5217,7 @@ def test_ChannelShuffle():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # check p parsing
     aug = iaa.ChannelShuffle(p=0.9, channels=[0, 2])
@@ -5278,7 +5278,7 @@ def test_ChannelShuffle():
             assert False
         if all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int32, np.int64]:
         min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
@@ -5300,7 +5300,7 @@ def test_ChannelShuffle():
                 assert False
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
     for dtype, value in zip([np.float16, np.float32, np.float64, np.float128],
                             [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]):
@@ -5321,7 +5321,7 @@ def test_ChannelShuffle():
                 assert False
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
 
 def test_2d_inputs():
