@@ -1784,10 +1784,12 @@ class KMeansColorQuantization(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        # pylint: disable=no-self-use
         return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
+        # pylint: disable=no-self-use
         return keypoints_on_images
 
     def get_parameters(self):
