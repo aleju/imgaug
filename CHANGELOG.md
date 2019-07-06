@@ -137,6 +137,9 @@
 * Renamed argument `cval` to `pad_cval` in `imgaug.pool()`,
   `imgaug.avg_pool()` and `imgaug.max_pool()`. The old name `cval` is now
   deprecated.
+* Added `augmenters.color.KMeansColorQuantization` and corresponding
+  `augmenters.color.quantize_colors_kmeans()`. Both deal with quantizing
+  similar colors using k-Means clustering. #347
 
 ## Fixes
  
