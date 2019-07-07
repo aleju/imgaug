@@ -15,12 +15,20 @@ and then e.g. ::
 List of augmenters:
 
     * Superpixels
+    * Voronoi
 
 """
 from __future__ import print_function, division, absolute_import
 
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
-from skimage import segmentation, measure
+# use skimage.segmentation instead from ... import segmentation here,
+# because otherwise unittest seems to mix up imgaug.augmenters.segmentation
+# with skimage.segmentation for whatever reason
+import skimage.segmentation
+import skimage.measure
+import six
 import six.moves as sm
 
 from . import meta
