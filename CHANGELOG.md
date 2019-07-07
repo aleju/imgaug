@@ -168,11 +168,12 @@
 * Added `imgaug.augmenters.segmentation.segment_voronoi()`. A function that
   converts an image into a voronoi image, i.e. averages the colors within
   voronoi cells placed on the image.
-  * Also added in the same module the functions
-    `_match_pixels_with_voronoi_cells()`, `_generate_pixel_coords()`,
-    `_compute_avg_segment_colors()`, `_render_segments()`.
+    * Also added in the same module the functions
+      `_match_pixels_with_voronoi_cells()`, `_generate_pixel_coords()`,
+      `_compute_avg_segment_colors()`, `_render_segments()`.
 * Added `imgaug.augmenters.segmentation.Voronoi`. An augmenter that converts
   an image to a voronoi image. 
+    * Added a check script for `Voronoi` in `checks/check_voronoi.py`.
 
 ## Fixes
  
