@@ -148,7 +148,7 @@
   similar colors using k-Means clustering. #347
     * Added a check script for `UniformColorQuantization` under
       `checks/check_uniform_color_quantization.py`. #347
-
+* Added `imgaug.imgaug.normalize_random_state()`.
 
 ## Fixes
  

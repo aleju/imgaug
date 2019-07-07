@@ -342,6 +342,34 @@ def seed(seedval):
     CURRENT_RANDOM_STATE.seed(seedval)
 
 
+# TODO add tests
+def normalize_random_state(random_state):
+    """
+    Normalize various inputs to a numpy random state.
+
+    Parameters
+    ----------
+    random_state : None or numpy.random.RandomState or int or float
+        RandomState to normalize.
+        If this is ``None``, the global random state will be returned.
+        If this is an instance of numpy's ``RandomState``, it will be returned
+        without any change. If it is anything else it is assumed to be a
+        seed value and a new ``RandomState`` using that seed will be returned.
+
+    Returns
+    -------
+    numpy.random.RandomState
+        Normalized random state.
+
+    """
+    if random_state is None:
+        return CURRENT_RANDOM_STATE
+    elif isinstance(random_state, np.random.RandomState):
+        return random_state
+    # seed given
+    return np.random.RandomState(random_state)
+
+
 def current_random_state():
     """
     Returns the current/global random state of the library.
