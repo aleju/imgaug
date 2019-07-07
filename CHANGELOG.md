@@ -155,6 +155,9 @@
 * Added `imgaug.augmenters.segmentation._verify_sample_points_images()`.
 * Added `imgaug.augmenters.segmentation.RegularGridPointsSampler`. A class
   used to generate regular grids of `rows x columns` points on images.
+* Added `imgaug.augmenters.segmentation.RelativeRegularGridPointsSampler`.
+  Similar to `RegularGridPointsSampler`, but number of rows/columns is set
+  as fractions of image sizes, leading to more rows/columns for larger images.
 
 ## Fixes
  

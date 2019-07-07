@@ -483,3 +483,92 @@ class RegularGridPointsSampler(PointsSamplerIf):
         xx, yy = np.meshgrid(xx, yy)
         grid = np.vstack([xx.ravel(), yy.ravel()]).T
         return grid
+
+
+class RelativeRegularGridPointsSampler(PointsSamplerIf):
+    """Regular grid coordinate sampler; places more points on larger images.
+
+    This is similar to ``RegularGridPointSampler``, but the number of rows
+    and columns is given as fractions of each image's height and width.
+    Hence, more coordinates are generated for larger images.
+
+    Parameters
+    ----------
+    n_rows_frac : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Relative number of coordinates to place on the y-axis. For a value
+        ``y`` and image height ``H`` the number of actually placed coordinates
+        (i.e. computed rows) is given by ``int(round(y*H))``.
+        Note that for each image, the number of coordinates is clipped to the
+        interval ``[1,H]``, where ``H`` is the image height.
+
+            * If a single number, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the interval
+              ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    n_cols_frac : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Relative number of coordinates to place on the x-axis. For a value
+        ``x`` and image height ``W`` the number of actually placed coordinates
+        (i.e. computed columns) is given by ``int(round(x*W))``.
+        Note that for each image, the number of coordinates is clipped to the
+        interval ``[1,W]``, where ``W`` is the image width.
+
+            * If a single number, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the interval
+              ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> sampler = iaa.RelativeRegularGridPointsSampler(
+    >>>     n_rows_frac=(0.01, 0.1),
+    >>>     n_cols_frac=0.2)
+
+    Creates a point sampler that generates regular grids of points. These grids
+    contain ``round(y*H)`` points on the y-axis, where ``y`` is sampled
+    uniformly from the interval ``[0.01, 0.1]`` per image and ``H`` is the
+    image height. On the x-axis, the grids always contain ``0.2*W`` points,
+    where ``W`` is the image width.
+
+    """
+
+    def __init__(self, n_rows_frac, n_cols_frac):
+        eps = 1e-4
+        self.n_rows_frac = iap.handle_continuous_param(
+            n_rows_frac, "n_rows_frac", value_range=(0.0+eps, 1.0),
+            tuple_to_uniform=True, list_to_choice=True)
+        self.n_cols_frac = iap.handle_continuous_param(
+            n_cols_frac, "n_cols_frac", value_range=(0.0+eps, 1.0),
+            tuple_to_uniform=True, list_to_choice=True)
+
+    def sample_points(self, images, random_state):
+        random_state = ia.normalize_random_state(random_state)
+        _verify_sample_points_images(images)
+
+        n_rows, n_cols = self._draw_samples(images, random_state)
+        return RegularGridPointsSampler._generate_point_grids(images,
+                                                              n_rows, n_cols)
+
+    def _draw_samples(self, images, random_state):
+        n_augmentables = len(images)
+        rss = ia.derive_random_states(random_state, 2)
+        n_rows_frac = self.n_rows_frac.draw_samples(n_augmentables,
+                                                    random_state=rss[0])
+        n_cols_frac = self.n_cols_frac.draw_samples(n_augmentables,
+                                                    random_state=rss[1])
+        heights = np.int32([image.shape[0] for image in images])
+        widths = np.int32([image.shape[1] for image in images])
+
+        n_rows = np.round(n_rows_frac * heights)
+        n_cols = np.round(n_cols_frac * widths)
+        n_rows, n_cols = RegularGridPointsSampler._clip_rows_and_cols(
+            n_rows, n_cols, images)
+
+        return n_rows.astype(np.int32), n_cols.astype(np.int32)
