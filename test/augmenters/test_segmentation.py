@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import sys
+import warnings
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
     import unittest2 as unittest
@@ -240,3 +241,175 @@ class TestSuperpixels(unittest.TestCase):
                 img_aug = aug.augment_image(img)
                 assert img_aug.dtype == np.dtype(dtype)
                 assert _allclose(img_aug, (7/8)*v2 + (1/8)*v1)
+
+
+class Test_segment_voronoi(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_cell_coordinates_is_empty_integrationtest(self):
+        image = np.arange(2*2*3).astype(np.uint8).reshape((2, 2, 3))
+        cell_coordinates = np.zeros((0, 2), dtype=np.float32)
+        replace_mask = np.zeros((0,), dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image, image_seg)
+
+    @classmethod
+    def _test_image_n_channels_integrationtest(cls, nb_channels):
+        image = np.uint8([
+            [0, 1, 200, 201],
+            [2, 3, 202, 203]
+        ])
+        if nb_channels is not None:
+            image = np.tile(image[:, :, np.newaxis], (1, 1, nb_channels))
+            for c in sm.xrange(nb_channels):
+                image[..., c] += c
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = np.array([True, True], dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        pixels1 = image[0:2, 0:2]
+        pixels2 = image[0:2, 2:4]
+        avg_color1 = np.average(pixels1.astype(np.float32), axis=(0, 1))
+        avg_color2 = np.average(pixels2.astype(np.float32), axis=(0, 1))
+        image_expected = np.uint8([
+            [avg_color1, avg_color1, avg_color2, avg_color2],
+            [avg_color1, avg_color1, avg_color2, avg_color2],
+        ])
+
+        assert np.array_equal(image_seg, image_expected)
+
+    def test_image_has_no_channels_integrationtest(self):
+        self._test_image_n_channels_integrationtest(None)
+
+    def test_image_has_one_channel_integrationtest(self):
+        self._test_image_n_channels_integrationtest(1)
+
+    def test_image_has_three_channels_integrationtest(self):
+        self._test_image_n_channels_integrationtest(3)
+
+    def test_replace_mask_is_all_false_integrationtest(self):
+        image = np.uint8([
+            [0, 1, 200, 201],
+            [2, 3, 202, 203]
+        ])
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = np.array([False, False], dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image_seg, image)
+
+    def test_replace_mask_is_mixed_integrationtest(self):
+        image = np.uint8([
+            [0, 1, 200, 201],
+            [2, 3, 202, 203]
+        ])
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = np.array([False, True], dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        pixels2 = image[0:2, 2:4]
+        avg_color2 = np.sum(pixels2).astype(np.float32) / pixels2.size
+        image_expected = np.uint8([
+            [0, 1, avg_color2, avg_color2],
+            [2, 3, avg_color2, avg_color2],
+        ])
+        assert np.array_equal(image_seg, image_expected)
+
+    def test_replace_mask_is_none_integrationtest(self):
+        image = np.uint8([
+            [0, 1, 200, 201],
+            [2, 3, 202, 203]
+        ])
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = None
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        pixels1 = image[0:2, 0:2]
+        pixels2 = image[0:2, 2:4]
+        avg_color1 = np.sum(pixels1).astype(np.float32) / pixels1.size
+        avg_color2 = np.sum(pixels2).astype(np.float32) / pixels2.size
+        image_expected = np.uint8([
+            [avg_color1, avg_color1, avg_color2, avg_color2],
+            [avg_color1, avg_color1, avg_color2, avg_color2],
+        ])
+        assert np.array_equal(image_seg, image_expected)
+
+    def test_no_cell_coordinates_provided_and_no_channel_integrationtest(self):
+        image = np.uint8([
+            [0, 1, 200, 201],
+            [2, 3, 202, 203]
+        ])
+        cell_coordinates = np.zeros((0, 2), dtype=np.float32)
+        replace_mask = np.zeros((0,), dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image_seg, image)
+
+    def test_no_cell_coordinates_provided_and_3_channels_integrationtest(self):
+        image = np.uint8([
+            [0, 1, 200, 201],
+            [2, 3, 202, 203]
+        ])
+        image = np.tile(image[..., np.newaxis], (1, 1, 3))
+        cell_coordinates = np.zeros((0, 2), dtype=np.float32)
+        replace_mask = np.zeros((0,), dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image_seg, image)
+
+    def test_image_with_zero_height(self):
+        image = np.zeros((0, 4, 3), dtype=np.uint8)
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = np.array([True, True], dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image_seg, image)
+
+    def test_image_with_zero_width(self):
+        image = np.zeros((4, 0, 3), dtype=np.uint8)
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = np.array([True, True], dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image_seg, image)
+
+    def test_image_with_zero_size(self):
+        image = np.zeros((0, 0), dtype=np.uint8)
+        cell_coordinates = np.float32([
+            [1.0, 1.0],
+            [3.0, 1.0]
+        ])
+        replace_mask = np.array([True, True], dtype=bool)
+
+        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+
+        assert np.array_equal(image_seg, image)
