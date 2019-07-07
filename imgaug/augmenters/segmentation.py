@@ -685,3 +685,70 @@ class DropoutPointsSampler(PointsSamplerIf):
                 poi_dropped = points_on_image[keep_mask, :]
             points_on_images_dropped.append(poi_dropped)
         return points_on_images_dropped
+
+
+class SubsamplingPointsSampler(PointsSamplerIf):
+    """Ensure that the number of sampled points is below a maximum.
+
+    This point sampler will sample points from another sampler and
+    then -- in case more points were generated than an allowed maximum --
+    will randomly pick `n_points_max` of these.
+
+    Parameters
+    ----------
+    other_points_sampler : PointsSamplerIf
+        Another point sampler that is queried to generate a list of points.
+        The dropout operation will be applied to that list.
+
+    n_points_max : int
+        Maximum number of allowed points. If `other_points_sampler` generates
+        more points than this maximum, a random subset of size `n_points_max`
+        will be selected.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> sampler = iaa.SubsamplingPointsSampler(
+    >>>     iaa.RelativeRegularGridPointsSampler(0.1, 0.2),
+    >>>     50
+    >>> )
+
+    Creates a points sampler that places ``y*H`` points on the y-axis (with
+    ``y`` being ``0.1`` and ``H`` being an image's height) and ``x*W`` on
+    the x-axis (analogous). Then, if that number of placed points exceeds
+    ``50`` (can easily happen for larger images), a random subset of ``50``
+    points will be picked and returned.
+
+    """
+
+    def __init__(self, other_points_sampler, n_points_max):
+        assert isinstance(other_points_sampler, PointsSamplerIf), (
+            "Expected to get an instance of PointsSamplerIf as argument "
+            "'other_points_sampler', got type %s." % (
+                type(other_points_sampler),))
+        self.other_points_sampler = other_points_sampler
+        self.n_points_max = np.clip(n_points_max, -1, None)
+        if self.n_points_max == 0:
+            import warnings
+            warnings.warn("Got n_points_max=0 in SubsamplingPointsSampler. "
+                          "This will result in no points ever getting "
+                          "returned.")
+
+    def sample_points(self, images, random_state):
+        random_state = ia.normalize_random_state(random_state)
+        _verify_sample_points_images(images)
+
+        rss = ia.derive_random_states(random_state, len(images) + 1)
+        points_on_images = self.other_points_sampler.sample_points(
+            images, rss[-1])
+        return [self._subsample(points_on_image, self.n_points_max, rs)
+                for points_on_image, rs
+                in zip(points_on_images, rss[:-1])]
+
+    @classmethod
+    def _subsample(cls, points_on_image, n_points_max, random_state):
+        if len(points_on_image) <= n_points_max:
+            return points_on_image
+        indices = np.arange(len(points_on_image))
+        indices_to_keep = random_state.permutation(indices)[0:n_points_max]
+        return points_on_image[indices_to_keep]

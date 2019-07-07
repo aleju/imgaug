@@ -161,6 +161,10 @@
 * Added `imgaug.augmenters.segmentation.DropoutPointsSampler`. A class
   used to randomly drop `p` percent of all coordinates sampled by another
   another points sampler.
+* Added `imgaug.augmenters.segmentation.SubsamplingPointsSampler`. A class
+  that ensures that another points sampler does not produce more than
+  `N` points by subsampling a random subset of the produced points if `N`
+  is exceeded.
 
 ## Fixes
  
