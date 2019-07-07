@@ -752,3 +752,9 @@ class SubsamplingPointsSampler(PointsSamplerIf):
         indices = np.arange(len(points_on_image))
         indices_to_keep = random_state.permutation(indices)[0:n_points_max]
         return points_on_image[indices_to_keep]
+
+
+# TODO Add points subsampler that drops points close to each other first
+# TODO Add poisson points sampler
+# TODO Add jitter points sampler that moves points around
+# for both see https://codegolf.stackexchange.com/questions/50299/draw-an-image-as-a-voronoi-map/50345#50345
