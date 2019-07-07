@@ -149,6 +149,8 @@
     * Added a check script for `UniformColorQuantization` under
       `checks/check_uniform_color_quantization.py`. #347
 * Added `imgaug.imgaug.normalize_random_state()`.
+* Added `imgaug.augmenters.PointsSamplerIf`. An interface for classes used for
+  sampling (usually random) coordinate arrays on images.
 
 ## Fixes
  

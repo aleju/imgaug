@@ -314,3 +314,41 @@ class Superpixels(meta.Augmenter):
     def get_parameters(self):
         return [self.p_replace, self.n_segments, self.max_size,
                 self.interpolation]
+
+
+@six.add_metaclass(ABCMeta)
+class PointsSamplerIf(object):
+    """Interface for all point samplers.
+
+    Point samplers return coordinate arrays of shape ``Nx2``.
+    These coordinates can be used in other augmenters, see e.g. ``Voronoi``.
+
+    """
+
+    @abstractmethod
+    def sample_points(self, images, random_state):
+        """Generate coordinates of points on images.
+
+        Parameters
+        ----------
+        images : ndarray or list of ndarray
+            One or more images for which to generate points.
+            If this is a list of arrays, each one of them is expected to
+            have three dimensions.
+            If this is an array, it must be four-dimensional and the first
+            axis is expected to denote the image index. For ``RGB`` images
+            the array would hence have to be of shape ``(N, H, W, 3)``.
+
+        random_state : None or numpy.random.RandomState or int or float
+            A random state to use for any probabilistic function required
+            during the point sampling.
+            See :func:`imgaug.imgaug.normalize_random_state` for details.
+
+        Returns
+        -------
+        ndarray
+            An ``(N,2)`` ``float32`` array containing ``(x,y)`` subpixel
+            coordinates, all of which being within the intervals
+            ``[0.0, width]`` and ``[0.0, height]``.
+
+        """
