@@ -1294,6 +1294,7 @@ def Dropout(p=0, per_channel=False,
     active for ``50`` percent of all images.
 
     """
+    # TODO add list as an option
     if ia.is_single_number(p):
         p2 = iap.Binomial(1 - p)
     elif ia.is_iterable(p):
