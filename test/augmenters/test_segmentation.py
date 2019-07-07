@@ -663,3 +663,393 @@ def _all_arrays_identical(arrs):
 def _array_lists_elementwise_identical(arrs1, arrs2):
     return np.all([np.array_equal(arr1, arr2)
                    for arr1, arr2 in zip(arrs1, arrs2)])
+
+
+# TODO verify behaviours when image height/width is zero
+class TestRegularGridPointSampler(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___(self):
+        sampler = iaa.RegularGridPointsSampler((1, 10), 20)
+        assert isinstance(sampler.n_rows, iap.DiscreteUniform)
+        assert sampler.n_rows.a.value == 1
+        assert sampler.n_rows.b.value == 10
+        assert sampler.n_cols.value == 20
+
+    def test_sample_single_point(self):
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        assert len(points) == 1
+        assert np.allclose(points[0], [10.0, 5.0])
+
+    def test_sample_points(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(2, 2)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        assert len(points) == 4
+        assert np.allclose(points, [
+            [0.0, 0.0],
+            [10.0, 0.0],
+            [0.0, 10.0],
+            [10.0, 10.0]
+        ])
+
+    def test_sample_points_stochastic(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, iap.Choice([1, 2]))
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [5.0, 5.0]
+        ])
+        matches_two_points = np.allclose(points, [
+            [0.0, 5.0],
+            [10.0, 5.0]
+        ])
+
+        assert len(points) in [1, 2]
+        assert matches_single_point or matches_two_points
+
+    def test_sample_points_cols_is_zero(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(iap.Deterministic(0), 1)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [5.0, 5.0]
+        ])
+
+        assert len(points) == 1
+        assert matches_single_point
+
+    def test_sample_points_rows_is_zero(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, iap.Deterministic(0))
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [5.0, 5.0]
+        ])
+
+        assert len(points) == 1
+        assert matches_single_point
+
+    def test_sample_points_rows_is_more_than_image_height(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(2, 1)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [0.5, 0.5]
+        ])
+
+        assert len(points) == 1
+        assert matches_single_point
+
+    def test_sample_points_cols_is_more_than_image_width(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, 2)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [0.5, 0.5]
+        ])
+
+        assert len(points) == 1
+        assert matches_single_point
+
+    def test_determinism(self):
+        image = np.zeros((500, 500, 1), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler((1, 500), (1, 500))
+        points_seed1_1 = sampler.sample_points([image], 1)[0]
+        points_seed1_2 = sampler.sample_points([image], 1)[0]
+        points_seed2_1 = sampler.sample_points([image], 2)[0]
+
+        assert points_seed1_1.shape == points_seed1_2.shape
+        assert points_seed1_1.shape != points_seed2_1.shape
+
+
+class TestRelativeRegularGridPointSampler(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___(self):
+        sampler = iaa.RelativeRegularGridPointsSampler((0.1, 0.2), 0.1)
+        assert isinstance(sampler.n_rows_frac, iap.Uniform)
+        assert np.isclose(sampler.n_rows_frac.a.value, 0.1)
+        assert np.isclose(sampler.n_rows_frac.b.value, 0.2)
+        assert np.isclose(sampler.n_cols_frac.value, 0.1)
+
+    def test_sample_single_point(self):
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = iaa.RelativeRegularGridPointsSampler(0.001, 0.001)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        assert len(points) == 1
+        assert np.allclose(points[0], [10.0, 5.0])
+
+    def test_sample_points(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RelativeRegularGridPointsSampler(0.2, 0.2)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        assert len(points) == 4
+        assert np.allclose(points, [
+            [0.0, 0.0],
+            [10.0, 0.0],
+            [0.0, 10.0],
+            [10.0, 10.0]
+        ])
+
+    def test_sample_points_stochastic(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RelativeRegularGridPointsSampler(0.1,
+                                                       iap.Choice([0.1, 0.2]))
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [5.0, 5.0]
+        ])
+        matches_two_points = np.allclose(points, [
+            [0.0, 5.0],
+            [10.0, 5.0]
+        ])
+
+        assert len(points) in [1, 2]
+        assert matches_single_point or matches_two_points
+
+    def test_sample_points_cols_is_zero(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RelativeRegularGridPointsSampler(iap.Deterministic(0.001),
+                                                       0.1)
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [5.0, 5.0]
+        ])
+
+        assert len(points) == 1
+        assert matches_single_point
+
+    def test_sample_points_rows_is_zero(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.RelativeRegularGridPointsSampler(0.1,
+                                                       iap.Deterministic(0.001))
+        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+
+        matches_single_point = np.allclose(points, [
+            [5.0, 5.0]
+        ])
+
+        assert len(points) == 1
+        assert matches_single_point
+
+    def test_determinism(self):
+        image = np.zeros((500, 500, 1), dtype=np.uint8)
+        sampler = iaa.RelativeRegularGridPointsSampler((0.01, 1.0), (0.1, 1.0))
+        points_seed1_1 = sampler.sample_points([image], 1)[0]
+        points_seed1_2 = sampler.sample_points([image], 1)[0]
+        points_seed2_1 = sampler.sample_points([image], 2)[0]
+
+        assert points_seed1_1.shape == points_seed1_2.shape
+        assert points_seed1_1.shape != points_seed2_1.shape
+
+
+class _FixedPointsSampler(iaa.PointsSamplerIf):
+    def __init__(self, points):
+        self.points = np.float32(np.copy(points))
+        self.last_random_state = None
+
+    def sample_points(self, images, random_state):
+        self.last_random_state = random_state
+        return np.tile(self.points[np.newaxis, ...], (len(images), 1))
+
+
+class TestDropoutPointsSampler(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        other = iaa.RegularGridPointsSampler(1, 1)
+        sampler = iaa.DropoutPointsSampler(other, 0.5)
+        assert sampler.other_points_sampler is other
+        assert isinstance(sampler.p_drop, iap.Binomial)
+        assert np.isclose(sampler.p_drop.p.value, 0.5)
+
+    def test_p_drop_is_0_percent(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        points = np.linspace(0.0, 1000.0, num=100000)
+        points = np.stack([points, points], axis=-1)
+        other = _FixedPointsSampler(points)
+        sampler = iaa.DropoutPointsSampler(other, 0.0)
+
+        observed = sampler.sample_points([image], 1)[0]
+
+        assert np.allclose(observed, points)
+
+    def test_p_drop_is_100_percent(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        points = np.linspace(0.0+0.9, 1000.0-0.9, num=100000)
+        points = np.stack([points, points], axis=-1)
+        other = _FixedPointsSampler(points)
+        sampler = iaa.DropoutPointsSampler(other, 1.0)
+
+        observed = sampler.sample_points([image], 1)[0]
+
+        eps = 1e-4
+        assert len(observed) == 1
+        assert 0.0 + 0.9 - eps <= observed[0][0] <= 1000.0 - 0.9 + eps
+        assert 0.0 + 0.9 - eps <= observed[0][1] <= 1000.0 - 0.9 + eps
+
+    def test_p_drop_is_50_percent(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        points = np.linspace(0.0+0.9, 1000.0-0.9, num=100000)
+        points = np.stack([points, points], axis=-1)
+        other = _FixedPointsSampler(points)
+        sampler = iaa.DropoutPointsSampler(other, 0.5)
+
+        observed = sampler.sample_points([image], 1)[0]
+
+        assert 50000 - 1000 <= len(observed) <= 50000 + 1000
+
+    def test_determinism(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        points = np.linspace(0.0+0.9, 1000.0-0.9, num=100000)
+        points = np.stack([points, points], axis=-1)
+        other = _FixedPointsSampler(points)
+        sampler = iaa.DropoutPointsSampler(other, (0.3, 0.7))
+
+        observed_s1_1 = sampler.sample_points([image], 1)[0]
+        observed_s1_2 = sampler.sample_points([image], 1)[0]
+        observed_s2_1 = sampler.sample_points([image], 2)[0]
+
+        assert np.allclose(observed_s1_1, observed_s1_2)
+        assert (observed_s1_1.shape != observed_s2_1.shape
+                or not np.allclose(observed_s1_1, observed_s2_1))
+
+    def test_random_state_propagates(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        points = np.linspace(0.0+0.9, 1000.0-0.9, num=1)
+        points = np.stack([points, points], axis=-1)
+        other = _FixedPointsSampler(points)
+        sampler = iaa.DropoutPointsSampler(other, 0.5)
+
+        _ = sampler.sample_points([image], 1)[0]
+        rs_s1_1 = other.last_random_state
+        _ = sampler.sample_points([image], 1)[0]
+        rs_s1_2 = other.last_random_state
+        _ = sampler.sample_points([image], 2)[0]
+        rs_s2_1 = other.last_random_state
+
+        # get_state() returns: tuple(str, ndarray of 624 uints, int, int,
+        #                            float)
+        # we compare the non-floats here
+        all_s1_identical = True
+        all_s1s2_identical = True
+        for i in sm.xrange(1, 4):
+            all_s1_identical = (
+                all_s1_identical
+                and np.array_equal(rs_s1_1.get_state()[i],
+                                   rs_s1_2.get_state()[i]))
+
+            all_s1s2_identical = (
+                all_s1s2_identical
+                and np.array_equal(rs_s1_1.get_state()[i],
+                                   rs_s2_1.get_state()[i]))
+
+        assert all_s1_identical
+        assert not all_s1s2_identical
+
+
+class TestSubsamplingPointSampler(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        other = iaa.RegularGridPointsSampler(1, 1)
+        sampler = iaa.SubsamplingPointsSampler(other, 100)
+        assert sampler.other_points_sampler is other
+        assert sampler.n_points_max == 100
+
+    def test_max_is_zero(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        other = iaa.RegularGridPointsSampler(2, 2)
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            sampler = iaa.SubsamplingPointsSampler(other, 0)
+
+        observed = sampler.sample_points([image], 1)[0]
+
+        assert len(observed) == 0
+        assert len(caught_warnings) == 1
+        assert "n_points_max=0" in str(caught_warnings[-1].message)
+
+    def test_max_is_above_point_count(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        other = iaa.RegularGridPointsSampler(2, 2)
+        sampler = iaa.SubsamplingPointsSampler(other, 100)
+
+        observed = sampler.sample_points([image], 1)[0]
+
+        assert len(observed) == 4
+        assert np.allclose(observed, [
+            [0.0, 0.0],
+            [10.0, 0.0],
+            [0.0, 10.0],
+            [10.0, 10.0]
+        ])
+
+    def test_max_is_below_point_count(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        other = iaa.RegularGridPointsSampler(5, 5)
+        sampler = iaa.SubsamplingPointsSampler(other, 1000)
+
+        observed = sampler.sample_points([image], 1)[0]
+
+        assert len(observed) == 5*5
+
+    def test_max_is_sometimes_below_point_count(self):
+        image = np.zeros((1, 10, 3), dtype=np.uint8)
+        other = iaa.RegularGridPointsSampler(1, (9, 11))
+        sampler = iaa.SubsamplingPointsSampler(other, 1000)
+
+        observed = sampler.sample_points([image] * 100, 1)
+        counts = [len(observed_i) for observed_i in observed]
+        counts_uq = set(counts)
+
+        assert 9 in counts_uq
+        assert 10 in counts_uq
+        assert 11 not in counts_uq
+
+    def test_random_state_propagates(self):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        points = np.linspace(0.0+0.9, 1000.0-0.9, num=1)
+        points = np.stack([points, points], axis=-1)
+        other = _FixedPointsSampler(points)
+        sampler = iaa.SubsamplingPointsSampler(other, 100)
+
+        _ = sampler.sample_points([image], 1)[0]
+        rs_s1_1 = other.last_random_state
+        _ = sampler.sample_points([image], 1)[0]
+        rs_s1_2 = other.last_random_state
+        _ = sampler.sample_points([image], 2)[0]
+        rs_s2_1 = other.last_random_state
+
+        # get_state() returns: tuple(str, ndarray of 624 uints, int, int,
+        #                            float)
+        # we compare the non-floats here
+        all_s1_identical = True
+        all_s1s2_identical = True
+        for i in sm.xrange(1, 4):
+            all_s1_identical = (
+                all_s1_identical
+                and np.array_equal(rs_s1_1.get_state()[i],
+                                   rs_s1_2.get_state()[i]))
+
+            all_s1s2_identical = (
+                all_s1s2_identical
+                and np.array_equal(rs_s1_1.get_state()[i],
+                                   rs_s2_1.get_state()[i]))
+
+        assert all_s1_identical
+        assert not all_s1s2_identical
