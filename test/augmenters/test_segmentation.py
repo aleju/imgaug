@@ -413,3 +413,253 @@ class Test_segment_voronoi(unittest.TestCase):
         image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
 
         assert np.array_equal(image_seg, image)
+
+
+class TestVoronoi(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___defaults(self):
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler)
+        assert aug.point_sampler is sampler
+        assert isinstance(aug.p_replace, iap.Deterministic)
+        assert aug.p_replace.value == 1
+        assert aug.max_size == 128
+        assert aug.interpolation == "linear"
+
+    def test___init___custom_arguments(self):
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler, p_replace=0.5, max_size=None,
+                          interpolation="cubic")
+        assert aug.point_sampler is sampler
+        assert isinstance(aug.p_replace, iap.Binomial)
+        assert np.isclose(aug.p_replace.p.value, 0.5)
+        assert aug.max_size is None
+        assert aug.interpolation == "cubic"
+
+    def test_max_size_is_none(self):
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler, max_size=None)
+
+        mock_imresize = mock.MagicMock()
+        mock_imresize.return_value = image
+
+        fname = "imgaug.imresize_single_image"
+        with mock.patch(fname, mock_imresize):
+            _image_aug = aug(image=image)
+
+        assert mock_imresize.call_count == 0
+
+    def test_max_size_is_int_image_not_too_large(self):
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler, max_size=100)
+
+        mock_imresize = mock.MagicMock()
+        mock_imresize.return_value = image
+
+        fname = "imgaug.imresize_single_image"
+        with mock.patch(fname, mock_imresize):
+            _image_aug = aug(image=image)
+
+        assert mock_imresize.call_count == 0
+
+    def test_max_size_is_int_image_too_large(self):
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler, max_size=10)
+
+        mock_imresize = mock.MagicMock()
+        mock_imresize.return_value = image
+
+        fname = "imgaug.imresize_single_image"
+        with mock.patch(fname, mock_imresize):
+            _image_aug = aug(image=image)
+
+        assert mock_imresize.call_count == 1
+        assert mock_imresize.call_args_list[0][0][1] == (5, 10)
+
+    def test_interpolation(self):
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler, max_size=10, interpolation="cubic")
+
+        mock_imresize = mock.MagicMock()
+        mock_imresize.return_value = image
+
+        fname = "imgaug.imresize_single_image"
+        with mock.patch(fname, mock_imresize):
+            _image_aug = aug(image=image)
+
+        assert mock_imresize.call_count == 1
+        assert mock_imresize.call_args_list[0][1]["interpolation"] == "cubic"
+
+    def test_point_sampler_called(self):
+        class LoggedPointSampler(iaa.PointsSamplerIf):
+            def __init__(self, other):
+                self.other = other
+                self.call_count = 0
+
+            def sample_points(self, images, random_state):
+                self.call_count += 1
+                return self.other.sample_points(images, random_state)
+
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = LoggedPointSampler(iaa.RegularGridPointsSampler(1, 1))
+        aug = iaa.Voronoi(sampler)
+
+        _image_aug = aug(image=image)
+
+        assert sampler.call_count == 1
+
+    def test_point_sampler_returns_no_points_integrationtest(self):
+        class NoPointsPointSampler(iaa.PointsSamplerIf):
+            def sample_points(self, images, random_state):
+                return [np.zeros((0, 2), dtype=np.float32)]
+
+        image = np.zeros((10, 20, 3), dtype=np.uint8)
+        sampler = NoPointsPointSampler()
+        aug = iaa.Voronoi(sampler)
+
+        image_aug = aug(image=image)
+
+        assert np.array_equal(image_aug, image)
+
+    @classmethod
+    def _test_image_with_n_channels(cls, nb_channels):
+        image = np.zeros((10, 20), dtype=np.uint8)
+        if nb_channels is not None:
+            image = image[..., np.newaxis]
+            image = np.tile(image, (1, 1, nb_channels))
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler)
+
+        mock_segment_voronoi = mock.MagicMock()
+        if nb_channels is None:
+            mock_segment_voronoi.return_value = image[..., np.newaxis]
+        else:
+            mock_segment_voronoi.return_value = image
+
+        fname = "imgaug.augmenters.segmentation.segment_voronoi"
+        with mock.patch(fname, mock_segment_voronoi):
+            image_aug = aug(image=image)
+
+        assert image_aug.shape == image.shape
+
+    def test_image_with_no_channels(self):
+        self._test_image_with_n_channels(None)
+
+    def test_image_with_one_channel(self):
+        self._test_image_with_n_channels(1)
+
+    def test_image_with_three_channels(self):
+        self._test_image_with_n_channels(3)
+
+    def test_p_replace_is_zero(self):
+        image = np.zeros((50, 50), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(50, 50)
+        aug = iaa.Voronoi(sampler, p_replace=0.0)
+
+        mock_segment_voronoi = mock.MagicMock()
+        mock_segment_voronoi.return_value = image[..., np.newaxis]
+
+        fname = "imgaug.augmenters.segmentation.segment_voronoi"
+        with mock.patch(fname, mock_segment_voronoi):
+            _image_aug = aug(image=image)
+
+        replace_mask = mock_segment_voronoi.call_args_list[0][0][2]
+        assert not np.any(replace_mask)
+
+    def test_p_replace_is_one(self):
+        image = np.zeros((50, 50), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(50, 50)
+        aug = iaa.Voronoi(sampler, p_replace=1.0)
+
+        mock_segment_voronoi = mock.MagicMock()
+        mock_segment_voronoi.return_value = image[..., np.newaxis]
+
+        fname = "imgaug.augmenters.segmentation.segment_voronoi"
+        with mock.patch(fname, mock_segment_voronoi):
+            _image_aug = aug(image=image)
+
+        replace_mask = mock_segment_voronoi.call_args_list[0][0][2]
+        assert np.all(replace_mask)
+
+    def test_p_replace_is_50_percent(self):
+        image = np.zeros((200, 200), dtype=np.uint8)
+        sampler = iaa.RegularGridPointsSampler(200, 200)
+        aug = iaa.Voronoi(sampler, p_replace=0.5)
+
+        mock_segment_voronoi = mock.MagicMock()
+        mock_segment_voronoi.return_value = image[..., np.newaxis]
+
+        fname = "imgaug.augmenters.segmentation.segment_voronoi"
+        with mock.patch(fname, mock_segment_voronoi):
+            _image_aug = aug(image=image)
+
+        replace_mask = mock_segment_voronoi.call_args_list[0][0][2]
+        replace_fraction = np.average(replace_mask.astype(np.float32))
+        assert 0.4 <= replace_fraction <= 0.6
+
+    def test_determinism_integrationtest(self):
+        image = np.arange(10*20).astype(np.uint8).reshape((10, 20, 1))
+        image = np.tile(image, (1, 1, 3))
+        image[:, :, 1] += 5
+        image[:, :, 2] += 10
+        sampler = iaa.DropoutPointsSampler(
+            iaa.RegularGridPointsSampler((1, 10), (1, 20)),
+            0.5
+        )
+        aug = iaa.Voronoi(sampler, p_replace=(0.0, 1.0))
+        aug_det = aug.to_deterministic()
+
+        images_aug_a1 = aug(images=[image] * 50)
+        images_aug_a2 = aug(images=[image] * 50)
+
+        images_aug_b1 = aug_det(images=[image] * 50)
+        images_aug_b2 = aug_det(images=[image] * 50)
+
+        same_within_a1 = _all_arrays_identical(images_aug_a1)
+        same_within_a2 = _all_arrays_identical(images_aug_a2)
+
+        same_within_b1 = _all_arrays_identical(images_aug_b1)
+        same_within_b2 = _all_arrays_identical(images_aug_b2)
+
+        same_between_a1_a2 = _array_lists_elementwise_identical(images_aug_a1,
+                                                                images_aug_a2)
+        same_between_b1_b2 = _array_lists_elementwise_identical(images_aug_b1,
+                                                                images_aug_b2)
+
+        assert not same_within_a1
+        assert not same_within_a2
+        assert not same_within_b1
+        assert not same_within_b2
+
+        assert not same_between_a1_a2
+        assert same_between_b1_b2
+
+    def test_get_parameters(self):
+        sampler = iaa.RegularGridPointsSampler(1, 1)
+        aug = iaa.Voronoi(sampler, p_replace=0.5, max_size=None,
+                          interpolation="cubic")
+        params = aug.get_parameters()
+        assert params[0] is sampler
+        assert isinstance(params[1], iap.Binomial)
+        assert np.isclose(params[1].p.value, 0.5)
+        assert params[2] is None
+        assert params[3] == "cubic"
+
+
+def _all_arrays_identical(arrs):
+    if len(arrs) == 1:
+        return True
+
+    return np.all([np.array_equal(arrs[0], arr_other)
+                   for arr_other in arrs[1:]])
+
+
+def _array_lists_elementwise_identical(arrs1, arrs2):
+    return np.all([np.array_equal(arr1, arr2)
+                   for arr1, arr2 in zip(arrs1, arrs2)])
