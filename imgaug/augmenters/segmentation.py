@@ -37,6 +37,42 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
+# TODO merge this into imresize?
+def _ensure_image_max_size(image, max_size, interpolation):
+    """Ensure that images do not exceed a required maximum sidelength.
+
+    This downscales to `max_size` if any side violates that maximum.
+    The other side is downscaled too so that the aspect ratio is maintained.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.imresize_single_image`.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image to potentially downscale.
+
+    max_size : int
+        Maximum length of any side of the image.
+
+    interpolation : string or int
+        See :func:`imgaug.imgaug.imresize_single_image`.
+
+    """
+    if max_size is not None:
+        size = max(image.shape[0], image.shape[1])
+        if size > max_size:
+            resize_factor = max_size / size
+            new_height = int(image.shape[0] * resize_factor)
+            new_width = int(image.shape[1] * resize_factor)
+            image = ia.imresize_single_image(
+                image,
+                (new_height, new_width),
+                interpolation=interpolation)
+    return image
+
+
 # TODO add compactness parameter
 class Superpixels(meta.Augmenter):
     """
@@ -72,24 +108,25 @@ class Superpixels(meta.Augmenter):
 
             minimum of (
                 ``imgaug.augmenters.segmentation.Superpixels(image size <= max_size)``,
-                :func:`imgaug.imgaug.imresize_many_images`
+                :func:`imgaug.augmenters.segmentation._ensure_image_max_size`
             )
 
     Parameters
     ----------
     p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Defines for any superpixel the probability that the pixels within
-        it are replaced by their average color (otherwise, the pixels are not
-        changed). Examples:
+        Defines for any segment the probability that the pixels within that
+        segment are replaced by their average color (otherwise, the pixels
+        are not changed).
+        Examples:
 
             * A probability of ``0.0`` would mean, that the pixels in no
-              superpixel are replaced by their average color (image is not
+              segment are replaced by their average color (image is not
               changed at all).
             * A probability of ``0.5`` would mean, that around half of all
-              superpixels are replaced by their average color.
-            * A probability of ``1.0`` would mean, that all superpixels are
-              replaced by their average color (resulting in a standard
-              superpixel image).
+              segments are replaced by their average color.
+            * A probability of ``1.0`` would mean, that all segments are
+              replaced by their average color (resulting in a voronoi
+              image).
 
         Behaviour based on chosen datatypes for this parameter:
 
@@ -100,7 +137,7 @@ class Superpixels(meta.Augmenter):
               image.
             * If a ``StochasticParameter``, it is expected to return
               values between ``0.0`` and ``1.0`` and will be queried *for each
-              individual superpixel* to determine whether it is supposed to
+              individual segment* to determine whether it is supposed to
               be averaged (``>0.5``) or not (``<=0.5``).
               Recommended to be some form of ``Binomial(...)``.
 
@@ -120,13 +157,14 @@ class Superpixels(meta.Augmenter):
               queried to draw one value per image.
 
     max_size : int or None, optional
-        Maximum image size at which the superpixels are generated.
+        Maximum image size at which the augmentation is performed.
         If the width or height of an image exceeds this value, it will be
-        downscaled for the superpixel detection so that the longest side
+        downscaled before the augmentation so that the longest side
         matches `max_size`.
-        This is done to speed up the superpixel algorithm. The final output
-        (superpixel) image has the same size as the input image.
-        Use ``None`` to apply no downscaling.
+        This is done to speed up the process. The final output image has the
+        same size as the input image. Note that in case `p_replace` is below
+        ``1.0``, the down-/upscaling will affect the not-replaced pixels too.
+        Use ``None`` to apply no down-/upscaling.
 
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
@@ -212,10 +250,9 @@ class Superpixels(meta.Augmenter):
             image = images[i]
 
             orig_shape = image.shape
-            image = self._ensure_max_size(
-                image, self.max_size, self.interpolation)
+            image = _ensure_image_max_size(image, self.max_size, self.interpolation)
 
-            segments = segmentation.slic(
+            segments = skimage.segmentation.slic(
                 image, n_segments=n_segments_samples[i], compactness=10)
 
             image_aug = self._replace_segments(image, segments, replace_samples)
@@ -230,20 +267,6 @@ class Superpixels(meta.Augmenter):
         return images
 
     @classmethod
-    def _ensure_max_size(cls, image, max_size, interpolation):
-        if max_size is not None:
-            size = max(image.shape[0], image.shape[1])
-            if size > max_size:
-                resize_factor = max_size / size
-                new_height = int(image.shape[0] * resize_factor)
-                new_width = int(image.shape[1] * resize_factor)
-                image = ia.imresize_single_image(
-                    image,
-                    (new_height, new_width),
-                    interpolation=interpolation)
-        return image
-
-    @classmethod
     def _replace_segments(cls, image, segments, replace_samples):
         min_value, _center_value, max_value = \
                 iadt.get_value_range_of_dtype(image.dtype)
@@ -253,7 +276,7 @@ class Superpixels(meta.Augmenter):
         for c in sm.xrange(nb_channels):
             # segments+1 here because otherwise regionprops always
             # misses the last label
-            regions = measure.regionprops(
+            regions = skimage.measure.regionprops(
                 segments+1, intensity_image=image[..., c])
             for ridx, region in enumerate(regions):
                 # with mod here, because slic can sometimes create more
