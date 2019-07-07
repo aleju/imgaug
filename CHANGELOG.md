@@ -171,6 +171,8 @@
   * Also added in the same module the functions
     `_match_pixels_with_voronoi_cells()`, `_generate_pixel_coords()`,
     `_compute_avg_segment_colors()`, `_render_segments()`.
+* Added `imgaug.augmenters.segmentation.Voronoi`. An augmenter that converts
+  an image to a voronoi image. 
 
 ## Fixes
  

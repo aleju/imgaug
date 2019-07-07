@@ -433,6 +433,214 @@ def _render_segments(image, ids_of_nearest_segments, avg_segment_colors,
     return data
 
 
+# TODO this can be reduced down to a similar problem as Superpixels:
+#      generate an integer-based class id map of segments, then replace all
+#      segments with the same class id by the average color within that
+#      segment
+class Voronoi(meta.Augmenter):
+    """Average colors of an image within Voronoi cells.
+
+    This augmenter performs the following steps:
+
+        1. Query `point_sampler` to sample random coordinates of cell
+           centers. On the image.
+        2. Estimate for each pixel to which voronoi cell (i.e. segment)
+           it belongs. Each pixel belongs to the cell with the closest center
+           coordinate (euclidean distance).
+        3. Compute for each cell the average color of the pixels within it.
+        4. Replace the pixels of `p_replace` percent of all cells by their
+           average color. Do not change the pixels of ``(1 - p_replace)``
+           percent of all cells. (The percentages are average values over
+           many images. Some images may get more/less cells replaced by
+           their average color.)
+
+    This code is very loosely based on
+    https://codegolf.stackexchange.com/questions/50299/draw-an-image-as-a-voronoi-map/50345#50345
+
+    dtype support::
+
+        if (image size <= max_size)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: no; not tested
+            * ``uint32``: no; not tested
+            * ``uint64``: no; not tested
+            * ``int8``: no; not tested
+            * ``int16``: no; not tested
+            * ``int32``: no; not tested
+            * ``int64``: no; not tested
+            * ``float16``: no; not tested
+            * ``float32``: no; not tested
+            * ``float64``: no; not tested
+            * ``float128``: no; not tested
+            * ``bool``: no; not tested
+
+        if (image size > max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.segmentation.Voronoi(image size <= max_size)``,
+                :func:`imgaug.augmenters.segmentation._ensure_image_max_size`
+            )
+
+    Parameters
+    ----------
+    point_sampler : PointSamplerIf
+        A point sampler which will be queried per image to generate the
+        coordinates of the centers of voronoi cells.
+
+    p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Defines for any segment the probability that the pixels within that
+        segment are replaced by their average color (otherwise, the pixels
+        are not changed).
+        Examples:
+
+            * A probability of ``0.0`` would mean, that the pixels in no
+              segment are replaced by their average color (image is not
+              changed at all).
+            * A probability of ``0.5`` would mean, that around half of all
+              segments are replaced by their average color.
+            * A probability of ``1.0`` would mean, that all segments are
+              replaced by their average color (resulting in a voronoi
+              image).
+
+        Behaviour based on chosen datatypes for this parameter:
+
+            * If a number, then that number will always be used.
+            * If tuple ``(a, b)``, then a random probability will be sampled
+              from the interval ``[a, b]`` per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
+            * If a ``StochasticParameter``, it is expected to return
+              values between ``0.0`` and ``1.0`` and will be queried *for each
+              individual segment* to determine whether it is supposed to
+              be averaged (``>0.5``) or not (``<=0.5``).
+              Recommended to be some form of ``Binomial(...)``.
+
+    max_size : int or None, optional
+        Maximum image size at which the augmentation is performed.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the process. The final output image has the
+        same size as the input image. Note that in case `p_replace` is below
+        ``1.0``, the down-/upscaling will affect the not-replaced pixels too.
+        Use ``None`` to apply no down-/upscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> point_sampler = iaa.RegularGridPointsSampler(n_cols=10, n_rows=20)
+    >>> aug = Voronoi(point_sampler)
+
+    Creates an augmenter that places a ``10x20`` (``HxW``) grid of cells on
+    the image and replaces all pixels within each cell by the cell's average
+    color. The process is performed at an image size not exceeding 128px on
+    any side. If necessary, the downscaling is performed using linear
+    interpolation.
+
+    >>> import imgaug.augmenters as iaa
+    >>> point_sampler = iaa.DropoutPointsSampler(
+    >>>     iaa.RelativeRegularGridPointsSampler(
+    >>>         n_cols_frac=(0.01, 0.1),
+    >>>         n_rows_frac=0.1),
+    >>>     0.2)
+    >>> aug = Voronoi(point_sampler, p_replace=0.9, max_size=None)
+
+    Creates a voronoi augmenter that generates a grid of cells dynamically
+    adapted to the image size. Larger images get more cells. On the x-axis,
+    the distance between two cells is ``w * W`` pixels, where ``W`` is the
+    width of the image and ``w`` is always ``0.1``. On the y-axis,
+    the distance between two cells is ``h * H`` pixels, where ``H`` is the
+    height of the image and ``h`` is sampled uniformly from the interval
+    ``[0.01, 0.1]``. To make the voronoi pattern less regular, about ``20``
+    percent of the cell coordinates are randomly dropped (i.e. the remaining
+    cells grow in size). In contrast to the first example, the image is not
+    resized (if it was, the sampling would happen *after* the resizing,
+    which would affect ``W`` and ``H``). Not all voronoi cells are replaced
+    by their average color, only around ``90`` percent of them. The
+    remaining ``10`` percent's pixels remain unchanged.
+
+    """
+    def __init__(self, point_sampler, p_replace=1.0, max_size=128,
+                 interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        super(Voronoi, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+
+        assert isinstance(point_sampler, PointsSamplerIf)
+        self.point_sampler = point_sampler
+
+        self.p_replace = iap.handle_probability_param(
+            p_replace, "p_replace", tuple_to_uniform=True, list_to_choice=True)
+
+        self.max_size = max_size
+        self.interpolation = interpolation
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        iadt.gate_dtypes(images,
+                         allowed=["uint8"],
+                         disallowed=["bool",
+                                     "uint16", "uint32", "uint64", "uint128",
+                                     "uint256",
+                                     "int8", "int16", "int32", "int64",
+                                     "int128", "int256",
+                                     "float16", "float32", "float64",
+                                     "float96", "float128", "float256"],
+                         augmenter=self)
+
+        rss = ia.derive_random_states(random_state, len(images))
+        for i, (image, rs) in enumerate(zip(images, rss)):
+            images[i] = self._augment_single_image(image, rs)
+        return images
+
+    def _augment_single_image(self, image, random_state):
+        rss = ia.derive_random_states(random_state, 2)
+        orig_shape = image.shape
+        image = _ensure_image_max_size(image, self.max_size, self.interpolation)
+
+        cell_coordinates = self.point_sampler.sample_points([image], rss[0])[0]
+        p_replace = self.p_replace.draw_samples((len(cell_coordinates),),
+                                                rss[1])
+        replace_mask = (p_replace > 0.5)
+
+        image_aug = segment_voronoi(image, cell_coordinates, replace_mask)
+
+        if orig_shape != image_aug.shape:
+            image_aug = ia.imresize_single_image(
+                image_aug,
+                orig_shape[0:2],
+                interpolation=self.interpolation)
+
+        return image_aug
+
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        # pylint: disable=no-self-use
+        return heatmaps
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
+        # pylint: disable=no-self-use
+        return keypoints_on_images
+
+    def get_parameters(self):
+        return [self.point_sampler, self.p_replace, self.max_size,
+                self.interpolation]
+
+
 @six.add_metaclass(ABCMeta)
 class PointsSamplerIf(object):
     """Interface for all point samplers.
