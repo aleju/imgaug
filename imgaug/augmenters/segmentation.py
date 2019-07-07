@@ -316,6 +316,123 @@ class Superpixels(meta.Augmenter):
                 self.interpolation]
 
 
+# TODO don't average the alpha channel for RGBA?
+def segment_voronoi(image, cell_coordinates, replace_mask=None):
+    """Average colors within voronoi cells of an image.
+
+    Parameters
+    ----------
+    image : ndarray
+        The image to convert to a voronoi image. May be ``HxW`` or
+        ``HxWxC``. Note that for ``RGBA`` images the alpha channel
+        will currently also by averaged.
+
+    cell_coordinates : ndarray
+        A ``Nx2`` float array containing the center coordinates of voronoi
+        cells on the image. Values are expected to be in the interval
+        ``[0.0, height-1.0]`` for the y-axis (x-axis analogous).
+        If this array contains no coordinate, the image will not be
+        changed.
+
+    replace_mask : None or ndarray, optional
+        Boolean mask of the same length as `cell_coordinates`, denoting
+        for each cell whether its pixels are supposed to be replaced
+        by the cell's average color (``True``) or left untouched (``False``).
+        If this is set to ``None``, all cells will be replaced.
+
+    Returns
+    -------
+    ndarray
+        Voronoi image.
+
+    """
+    input_dims = image.ndim
+    if input_dims == 2:
+        image = image[..., np.newaxis]
+
+    if len(cell_coordinates) <= 0:
+        if input_dims == 2:
+            return image[..., 0]
+        return image
+
+    height, width = image.shape[0:2]
+    pixel_coords, ids_of_nearest_cells = \
+        _match_pixels_with_voronoi_cells(height, width, cell_coordinates)
+    cell_colors = _compute_avg_segment_colors(
+        image, pixel_coords, ids_of_nearest_cells,
+        len(cell_coordinates))
+
+    image_aug = _render_segments(image, ids_of_nearest_cells, cell_colors,
+                                 replace_mask)
+
+    if input_dims == 2:
+        return image_aug[..., 0]
+    return image_aug
+
+
+def _match_pixels_with_voronoi_cells(height, width, cell_coordinates):
+    # deferred import so that scipy is an optional dependency
+    from scipy.spatial import cKDTree as KDTree  # TODO add scipy for reqs
+    tree = KDTree(cell_coordinates)
+    pixel_coords = _generate_pixel_coords(height, width)
+    pixel_coords_subpixel = pixel_coords.astype(np.float32) + 0.5
+    ids_of_nearest_cells = tree.query(pixel_coords_subpixel)[1]
+    return pixel_coords, ids_of_nearest_cells
+
+
+def _generate_pixel_coords(height, width):
+    xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+    return np.c_[xx.ravel(), yy.ravel()]
+
+
+def _compute_avg_segment_colors(image, pixel_coords, ids_of_nearest_segments,
+                                nb_segments):
+    nb_channels = image.shape[2]
+    cell_colors = np.zeros((nb_segments, nb_channels), dtype=np.float64)
+    cell_counters = np.zeros((nb_segments,), dtype=np.uint32)
+
+    # TODO vectorize
+    for pixel_coord, id_of_nearest_cell in zip(pixel_coords,
+                                               ids_of_nearest_segments):
+        # pixel_coord is (x,y), so we have to swap it to access the HxW image
+        pixel_coord_yx = pixel_coord[::-1]
+        cell_colors[id_of_nearest_cell] += image[tuple(pixel_coord_yx)]
+        cell_counters[id_of_nearest_cell] += 1
+
+    # cells without associated pixels can have a count of 0, we clip
+    # here to 1 as the result for these cells doesn't matter
+    cell_counters = np.clip(cell_counters, 1, None)
+
+    cell_colors = cell_colors / cell_counters[:, np.newaxis]
+
+    return cell_colors.astype(np.uint8)
+
+
+def _render_segments(image, ids_of_nearest_segments, avg_segment_colors,
+                     replace_mask):
+    ids_of_nearest_segments = np.copy(ids_of_nearest_segments)
+    height, width, nb_channels = image.shape
+
+    # without replace_mask we could reduce this down to:
+    # data = cell_colors[ids_of_nearest_cells, :].reshape(
+    #     (width, height, 3))
+    # data = np.transpose(data, (1, 0, 2))
+
+    keep_mask = (~replace_mask) if replace_mask is not None else None
+    if keep_mask is None or not np.any(keep_mask):
+        data = avg_segment_colors[ids_of_nearest_segments, :]
+    else:
+        ids_to_keep = np.nonzero(keep_mask)[0]
+        indices_to_keep = np.where(
+            np.isin(ids_of_nearest_segments, ids_to_keep))[0]
+        data = avg_segment_colors[ids_of_nearest_segments, :]
+
+        image_data = image.reshape((height*width, -1))
+        data[indices_to_keep] = image_data[indices_to_keep, :]
+    data = data.reshape((height, width, nb_channels))
+    return data
+
+
 @six.add_metaclass(ABCMeta)
 class PointsSamplerIf(object):
     """Interface for all point samplers.

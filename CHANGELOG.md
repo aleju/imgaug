@@ -165,6 +165,12 @@
   that ensures that another points sampler does not produce more than
   `N` points by subsampling a random subset of the produced points if `N`
   is exceeded.
+* Added `imgaug.augmenters.segmentation.segment_voronoi()`. A function that
+  converts an image into a voronoi image, i.e. averages the colors within
+  voronoi cells placed on the image.
+  * Also added in the same module the functions
+    `_match_pixels_with_voronoi_cells()`, `_generate_pixel_coords()`,
+    `_compute_avg_segment_colors()`, `_render_segments()`.
 
 ## Fixes
  
