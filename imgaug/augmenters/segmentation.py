@@ -572,3 +572,116 @@ class RelativeRegularGridPointsSampler(PointsSamplerIf):
             n_rows, n_cols, images)
 
         return n_rows.astype(np.int32), n_cols.astype(np.int32)
+
+
+class DropoutPointsSampler(PointsSamplerIf):
+    """Remove a defined fraction of sampled points.
+
+    Parameters
+    ----------
+    other_points_sampler : PointSamplerIf
+        Another point sampler that is queried to generate a list of points.
+        The dropout operation will be applied to that list.
+
+    p_drop : number or tuple of number or imgaug.parameters.StochasticParameter, optional
+        The probability of any pixel being dropped (i.e. to set it to zero).
+        A value of ``1.0`` would mean that (on average) ``100`` percent of all
+        coordinates will be dropped, while ``0.0`` denotes ``0`` percent.
+        Note that this sampler will always ensure that at least one coordinate
+        is left after the dropout operation, i.e. even ``1.0`` will only
+        drop all *except one* coordinate.
+
+            * If a float, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
+              the interval ``[a, b]`` per image.
+            * If a ``StochasticParameter``, then this parameter will be used to
+              determine per coordinate whether it should be *kept* (sampled
+              value of ``>0.5``) or shouldn't be kept (sampled value of
+              ``<=0.5``). If you instead want to provide the probability as
+              a stochastic parameter, you can usually do
+              ``imgaug.parameters.Binomial(1-p)`` to convert parameter `p` to
+              a 0/1 representation.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> sampler = iaa.DropoutPointsSampler(
+    >>>     iaa.RegularGridPointsSampler(10, 20),
+    >>>     0.2)
+
+    Creates a point sampler that first generates points following a regular
+    grid of 10 rows and 20 columns, then randomly drops ``20`` percent of these
+    points.
+
+    """
+
+    def __init__(self, other_points_sampler, p_drop):
+        assert isinstance(other_points_sampler, PointsSamplerIf), (
+            "Expected to get an instance of PointsSamplerIf as argument "
+            "'other_points_sampler', got type %s." % (
+                type(other_points_sampler),))
+        self.other_points_sampler = other_points_sampler
+        self.p_drop = self._convert_p_drop_to_inverted_mask_param(p_drop)
+
+    @classmethod
+    def _convert_p_drop_to_inverted_mask_param(cls, p_drop):
+        # TODO this is the same as in Dropout, make DRY
+        # TODO add list as an option
+        if ia.is_single_number(p_drop):
+            p_drop = iap.Binomial(1 - p_drop)
+        elif ia.is_iterable(p_drop):
+            assert len(p_drop) == 2
+            assert p_drop[0] < p_drop[1]
+            assert 0 <= p_drop[0] <= 1.0
+            assert 0 <= p_drop[1] <= 1.0
+            p_drop = iap.Binomial(iap.Uniform(1 - p_drop[1], 1 - p_drop[0]))
+        elif isinstance(p_drop, iap.StochasticParameter):
+            pass
+        else:
+            raise Exception(
+                "Expected p_drop to be float or int or StochasticParameter, "
+                "got %s." % (type(p_drop),))
+        return p_drop
+
+    def sample_points(self, images, random_state):
+        random_state = ia.normalize_random_state(random_state)
+        _verify_sample_points_images(images)
+
+        rss = ia.derive_random_states(random_state, 2)
+        points_on_images = self.other_points_sampler.sample_points(images,
+                                                                   rss[0])
+        drop_masks = self._draw_samples(points_on_images, rss[1])
+        return self._apply_dropout_masks(points_on_images, drop_masks)
+
+    def _draw_samples(self, points_on_images, random_state):
+        rss = ia.derive_random_states(random_state, len(points_on_images))
+        drop_masks = [self._draw_samples_for_image(points_on_image, rs)
+                      for points_on_image, rs
+                      in zip(points_on_images, rss)]
+        return drop_masks
+
+    def _draw_samples_for_image(self, points_on_image, random_state):
+        drop_samples = self.p_drop.draw_samples((len(points_on_image),),
+                                                random_state)
+        keep_mask = (drop_samples > 0.5)
+        return keep_mask
+
+    @classmethod
+    def _apply_dropout_masks(cls, points_on_images, keep_masks):
+        points_on_images_dropped = []
+        for points_on_image, keep_mask in zip(points_on_images, keep_masks):
+            if len(points_on_image) == 0:
+                # other sampler didn't provide any points
+                poi_dropped = points_on_image
+            else:
+                if not np.any(keep_mask):
+                    # keep at least one point if all were supposed to be
+                    # dropped
+                    # TODO this could also be moved into its own point sampler,
+                    #      like AtLeastOnePoint(...)
+                    idx = (len(points_on_image) - 1) // 2
+                    keep_mask = np.copy(keep_mask)
+                    keep_mask[idx] = True
+                poi_dropped = points_on_image[keep_mask, :]
+            points_on_images_dropped.append(poi_dropped)
+        return points_on_images_dropped

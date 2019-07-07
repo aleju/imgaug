@@ -158,6 +158,9 @@
 * Added `imgaug.augmenters.segmentation.RelativeRegularGridPointsSampler`.
   Similar to `RegularGridPointsSampler`, but number of rows/columns is set
   as fractions of image sizes, leading to more rows/columns for larger images.
+* Added `imgaug.augmenters.segmentation.DropoutPointsSampler`. A class
+  used to randomly drop `p` percent of all coordinates sampled by another
+  another points sampler.
 
 ## Fixes
  
