@@ -140,6 +140,8 @@
 * Added `augmenters.color.KMeansColorQuantization` and corresponding
   `augmenters.color.quantize_colors_kmeans()`. Both deal with quantizing
   similar colors using k-Means clustering. #347
+    * Added a check script for `KMeansColorQuantization` under
+      `checks/check_kmeans_color_quantization.py`. #347
 
 ## Fixes
  
