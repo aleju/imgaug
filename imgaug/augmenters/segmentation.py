@@ -352,3 +352,134 @@ class PointsSamplerIf(object):
             ``[0.0, width]`` and ``[0.0, height]``.
 
         """
+
+
+def _verify_sample_points_images(images):
+    assert len(images) > 0, "Expected at least one image, got zero."
+    if isinstance(images, list):
+        assert all([ia.is_np_array(image) for image in images]), (
+            "Expected list of numpy arrays, got list of types %s." % (
+                ", ".join([str(type(image)) for image in images]),))
+        assert all([image.ndim == 3 for image in images]), (
+            "Expected each image to have three dimensions, "
+            "got dimensions %s." % (
+                ", ".join([str(image.ndim) for image in images]),))
+    else:
+        assert ia.is_np_array(images), (
+            "Expected either a list of numpy arrays or a single numpy "
+            "array of shape NxHxWxC. Got type %s." % (type(images),))
+        assert images.ndim == 4, (
+            "Expected a four-dimensional array of shape NxHxWxC. "
+            "Got shape %d dimensions (shape: %s)." % (
+                images.ndim, images.shape))
+
+
+class RegularGridPointsSampler(PointsSamplerIf):
+    """Sampler that generates a regular grid of coordinates on an image.
+
+    'Regular grid' here means that on each axis all coordinates have the
+    same distance from each other. Note that the distance may change between
+    axis.
+
+    Parameters
+    ----------
+    n_rows : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of rows of coordinates to place on each image, i.e. the number
+        of coordinates on the y-axis. Note that for each image, the sampled
+        value is clipped to the interval ``[1..H]``, where ``H`` is the image
+        height.
+
+            * If a single int, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    n_cols : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of columns of coordinates to place on each image, i.e. the number
+        of coordinates on the x-axis. Note that for each image, the sampled
+        value is clipped to the interval ``[1..W]``, where ``W`` is the image
+        width.
+
+            * If a single int, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> sampler = iaa.RegularGridPointsSampler(
+    >>>     n_rows=(5, 20),
+    >>>     n_cols=50)
+
+    Creates a point sampler that generates regular grids of points. These grids
+    contain ``r`` points on the y-axis, where ``r`` is sampled
+    uniformly from the discrete interval ``[5..20]`` per image.
+    On the x-axis, the grids always contain ``50`` points.
+
+    """
+
+    def __init__(self, n_rows, n_cols):
+        self.n_rows = iap.handle_discrete_param(
+            n_rows, "n_rows", value_range=(1, None),
+            tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.n_cols = iap.handle_discrete_param(
+            n_cols, "n_cols", value_range=(1, None),
+            tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+
+    def sample_points(self, images, random_state):
+        random_state = ia.normalize_random_state(random_state)
+        _verify_sample_points_images(images)
+
+        n_rows_lst, n_cols_lst = self._draw_samples(images, random_state)
+        return self._generate_point_grids(images, n_rows_lst, n_cols_lst)
+
+    def _draw_samples(self, images, random_state):
+        rss = ia.derive_random_states(random_state, 2)
+        n_rows_lst = self.n_rows.draw_samples(len(images), random_state=rss[0])
+        n_cols_lst = self.n_cols.draw_samples(len(images), random_state=rss[1])
+        return self._clip_rows_and_cols(n_rows_lst, n_cols_lst, images)
+
+    @classmethod
+    def _clip_rows_and_cols(cls, n_rows_lst, n_cols_lst, images):
+        heights = np.int32([image.shape[0] for image in images])
+        widths = np.int32([image.shape[1] for image in images])
+        # We clip intentionally not to H-1 or W-1 here. If e.g. an image has
+        # a width of 1, we want to get a maximum of 1 column of coordinates.
+        n_rows_lst = np.clip(n_rows_lst, 1, heights)
+        n_cols_lst = np.clip(n_cols_lst, 1, widths)
+        return n_rows_lst, n_cols_lst
+
+    @classmethod
+    def _generate_point_grids(cls, images, n_rows_lst, n_cols_lst):
+        grids = []
+        for image, n_rows_i, n_cols_i in zip(images, n_rows_lst, n_cols_lst):
+            grids.append(cls._generate_point_grid(image, n_rows_i, n_cols_i))
+        return grids
+
+    @classmethod
+    def _generate_point_grid(cls, image, n_rows, n_cols):
+        height, width = image.shape[0:2]
+
+        # We do not have to subtract 1 here from height/width as these are
+        # subpixel coordinates. Technically, we could also place the cell
+        # centers outside of the image plane.
+        if n_rows == 1:
+            yy = np.float32([float(height)/2])
+        else:
+            yy = np.linspace(0.0, height, num=n_rows)
+
+        if n_cols == 1:
+            xx = np.float32([float(width)/2])
+        else:
+            xx = np.linspace(0.0, width, num=n_cols)
+
+        xx, yy = np.meshgrid(xx, yy)
+        grid = np.vstack([xx.ravel(), yy.ravel()]).T
+        return grid
