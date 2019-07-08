@@ -142,6 +142,7 @@
   similar colors using k-Means clustering. #347
     * Added a check script for `KMeansColorQuantization` under
       `checks/check_kmeans_color_quantization.py`. #347
+* Added `augmenters.color._AbstractColorQuantization`. #347
 
 ## Fixes
  
