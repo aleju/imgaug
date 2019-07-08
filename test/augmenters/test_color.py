@@ -901,7 +901,6 @@ def test_Grayscale():
         assert density_expected - density_tolerance < density < density_expected + density_tolerance
 
 
-"""
 class TestKMeansColorQuantization(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -1219,7 +1218,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
 
         for image_quantized in images_quantized[1:]:
             assert np.array_equal(image_quantized, images_quantized[0])
-"""
+
 
 if __name__ == "__main__":
     main()
