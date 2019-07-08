@@ -27,12 +27,16 @@ List of augmenters:
     * ChangeColorspace
     * Grayscale
     * KMeansColorQuantization
+    * UniformColorQuantization
 
 """
 from __future__ import print_function, division, absolute_import
 
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
 import cv2
+import six
 import six.moves as sm
 
 from . import meta
@@ -1574,125 +1578,16 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False,
                             random_state=random_state)
 
 
-class KMeansColorQuantization(meta.Augmenter):
-    """
-    Augmenter to quantize colors using k-Means clustering.
-
-    **Note**: This augmenter expects input images to be either grayscale
-    or to have 3 or 4 channels and use colorspace `from_colorspace`. If images
-    have 4 channels, it is assumed that the 4th channel is an alpha channel
-    and it will not be quantized.
-
-    dtype support::
-
-        if (image size <= max_size)::
-
-            minimum of (
-                ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_kmeans`
-            )
-
-        if (image size > max_size)::
-
-            minimum of (
-                ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_kmeans`,
-                :func:`imgaug.imgaug.imresize_single_image`
-            )
-
-    Parameters
-    ----------
-    n_colors : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        Number of colors to use in the generated output image.
-        This corresponds to the number of clusters in k-Means, i.e. ``k``.
-        Sampled values below ``2`` will always be clipped to ``2``.
-
-            * If a number, exactly that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete
-              interval ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
-            * If a ``StochasticParameter``, then a value will be sampled per
-              image from that parameter.
-
-    to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
-        The colorspace in which to perform the k-Means clustering.
-        See ``ChangeColorspace`` for valid values.
-        This will be ignored for grayscale input images.
-
-            * If a string, it must be among the allowed colorspaces.
-            * If a list, it is expected to be a list of strings, each one
-              being an allowed colorspace. A random element from the list
-              will be chosen per image.
-            * If a StochasticParameter, it is expected to return string. A new
-              sample will be drawn per image.
-
-    from_colorspace : str, optional
-        The colorspace of the input images.
-        See `to_colorspace`. Only a single string is allowed.
-
-    max_size : int or None, optional
-        Maximum image size at which to perform the augmentation.
-        If the width or height of an image exceeds this value, it will be
-        downscaled for before running the augmentation so that the longest side
-        matches `max_size`.
-        This is done to speed up the augmentation. The final output image has
-        the same size as the input image. Use ``None`` to apply no downscaling.
-
-    interpolation : int or str, optional
-        Interpolation method to use during downscaling when `max_size` is
-        exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
-
-    name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    Examples
-    --------
-    >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.KMeansColorQuantization()
-
-    Creates an augmenter to apply color quantization to images using a
-    random amount of color between 2 and 16. It assumes the input image
-    colorspace to be ``RGB`` and clusters colors randomly in ``RGB`` or
-    ``Lab`` colorspace.
-
-    >>> aug = iaa.KMeansColorQuantization(n_colors=8)
-
-    Creates an augmenter that quantizes images to (up to) eight colors.
-
-    >>> aug = iaa.KMeansColorQuantization(n_colors=(4, 32))
-
-    Creates an augmenter that quantizes images to (up to) ``n`` colors,
-    where ``n`` is randomly and uniformly sampled from the discrete interval
-    ``[4, 32]``.
-
-    >>> aug = iaa.KMeansColorQuantization(
-    >>>     from_colorspace=iaa.ChangeColorspace.BGR)
-
-    Creates an augmenter that quantizes images that are in ``BGR`` colorspace.
-
-    >>> aug = iaa.KMeansColorQuantization(
-    >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
-
-    Creates an augmenter that quantizes images by clustering colors randomly
-    in either ``RGB`` or ``HSV`` colorspace. The assumed input colorspace
-    of images is ``RGB``.
-
-    """
-
-    def __init__(self, n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
+@six.add_metaclass(ABCMeta)
+class _AbstractColorQuantization(meta.Augmenter):
+    def __init__(self,
+                 n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
                  to_colorspace=[ChangeColorspace.RGB, ChangeColorspace.Lab],
-                 max_size=128, interpolation="linear",
+                 max_size=128,
+                 interpolation="linear",
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
-        super(KMeansColorQuantization, self).__init__(
+        super(_AbstractColorQuantization, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
         self.n_colors = iap.handle_discrete_param(
@@ -1707,9 +1602,9 @@ class KMeansColorQuantization(meta.Augmenter):
         n_colors = self.n_colors.draw_samples((n_augmentables,), random_state)
 
         # Quantizing down to less than 2 colors does not make any sense.
-        # We could get <2 here despite the value range constraint in __init__
-        # if a StochasticParameter was provided, e.g. Deterministic(1) is
-        # currently not verified.
+        # Note that we canget <2 here despite the value range constraint
+        # in __init__ if a StochasticParameter was provided, e.g.
+        # Deterministic(1) is currently not verified.
         n_colors = np.clip(n_colors, 2, None)
 
         return n_colors
@@ -1731,57 +1626,63 @@ class KMeansColorQuantization(meta.Augmenter):
 
         result = images
         for i, image in enumerate(images):
-            assert image.shape[-1] in [1, 3, 4], (
-                "Expected image with 1, 3 or 4 channels, "
-                "got %d (shape: %s)." % (image.shape[-1], image.shape)
-            )
-
-            orig_shape = image.shape
-            image = self._ensure_max_size(
-                image, self.max_size, self.interpolation)
-
-            if image.shape[-1] == 1:
-                # 2D image
-                image_aug = quantize_colors_kmeans(image, n_colors[i])
-            else:
-                # 3D image with 3 or 4 channels
-                alpha_channel = None
-                if image.shape[-1] == 4:
-                    alpha_channel = image[:, :, 3:4]
-                    image = image[:, :, 0:3]
-
-                # TODO quite hacky to recover the sampled to_colorspace here
-                #      by accessing _draw_samples(). Would be better to have
-                #      an inverse augmentation method in ChangeColorspace.
-                cs = ChangeColorspace(
-                    from_colorspace=self.from_colorspace,
-                    to_colorspace=self.to_colorspace,
-                    random_state=ia.copy_random_state(rss[i]),
-                    deterministic=True)
-                _, to_colorspaces = cs._draw_samples(
-                    1, ia.copy_random_state(rss[i]))
-                cs_inv = ChangeColorspace(
-                    from_colorspace=to_colorspaces[0],
-                    to_colorspace=self.from_colorspace,
-                    random_state=ia.copy_random_state(rss[i]),
-                    deterministic=True)
-
-                image_tf = cs.augment_image(image)
-                image_tf_aug = quantize_colors_kmeans(image_tf, n_colors[i])
-                image_aug = cs_inv.augment_image(image_tf_aug)
-
-                if alpha_channel is not None:
-                    image_aug = np.concatenate(
-                        [image_aug, alpha_channel], axis=2)
-
-            if orig_shape != image_aug.shape:
-                image_aug = ia.imresize_single_image(
-                    image_aug,
-                    orig_shape[0:2],
-                    interpolation=self.interpolation)
-
-            result[i] = image_aug
+            result[i] = self._augment_single_image(image, n_colors[i], rss[i])
         return result
+
+    def _augment_single_image(self, image, n_colors, random_state):
+        assert image.shape[-1] in [1, 3, 4], (
+            "Expected image with 1, 3 or 4 channels, "
+            "got %d (shape: %s)." % (image.shape[-1], image.shape)
+        )
+
+        orig_shape = image.shape
+        image = self._ensure_max_size(
+            image, self.max_size, self.interpolation)
+
+        if image.shape[-1] == 1:
+            # 2D image
+            image_aug = self._quantize(image, n_colors)
+        else:
+            # 3D image with 3 or 4 channels
+            alpha_channel = None
+            if image.shape[-1] == 4:
+                alpha_channel = image[:, :, 3:4]
+                image = image[:, :, 0:3]
+
+            # TODO quite hacky to recover the sampled to_colorspace here
+            #      by accessing _draw_samples(). Would be better to have
+            #      an inverse augmentation method in ChangeColorspace.
+            cs = ChangeColorspace(
+                from_colorspace=self.from_colorspace,
+                to_colorspace=self.to_colorspace,
+                random_state=ia.copy_random_state(random_state),
+                deterministic=True)
+            _, to_colorspaces = cs._draw_samples(
+                1, ia.copy_random_state(random_state))
+            cs_inv = ChangeColorspace(
+                from_colorspace=to_colorspaces[0],
+                to_colorspace=self.from_colorspace,
+                random_state=ia.copy_random_state(random_state),
+                deterministic=True)
+
+            image_tf = cs.augment_image(image)
+            image_tf_aug = self._quantize(image_tf, n_colors)
+            image_aug = cs_inv.augment_image(image_tf_aug)
+
+            if alpha_channel is not None:
+                image_aug = np.concatenate([image_aug, alpha_channel], axis=2)
+
+        if orig_shape != image_aug.shape:
+            image_aug = ia.imresize_single_image(
+                image_aug,
+                orig_shape[0:2],
+                interpolation=self.interpolation)
+
+        return image_aug
+
+    @abstractmethod
+    def _quantize(self, image, n_colors):
+        """Apply the augmenter-specific quantization function to an image."""
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         # pylint: disable=no-self-use
@@ -1814,6 +1715,136 @@ class KMeansColorQuantization(meta.Augmenter):
                     (new_height, new_width),
                     interpolation=interpolation)
         return image
+
+
+class KMeansColorQuantization(_AbstractColorQuantization):
+    """
+    Augmenter to quantize colors using k-Means clustering.
+
+    **Note**: This augmenter expects input images to be either grayscale
+    or to have 3 or 4 channels and use colorspace `from_colorspace`. If images
+    have 4 channels, it is assumed that the 4th channel is an alpha channel
+    and it will not be quantized.
+
+    dtype support::
+
+        if (image size <= max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_kmeans`
+            )
+
+        if (image size > max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_kmeans`,
+                :func:`imgaug.imgaug.imresize_single_image`
+            )
+
+    Parameters
+    ----------
+    n_colors : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Target number of colors in the generated output image.
+        This corresponds to the number of clusters in k-Means, i.e. ``k``.
+        Sampled values below ``2`` will always be clipped to ``2``.
+
+            * If a number, exactly that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a value will be sampled per
+              image from that parameter.
+
+    to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
+        The colorspace in which to perform the quantization.
+        See ``ChangeColorspace`` for valid values.
+        This will be ignored for grayscale input images.
+
+            * If a string, it must be among the allowed colorspaces.
+            * If a list, it is expected to be a list of strings, each one
+              being an allowed colorspace. A random element from the list
+              will be chosen per image.
+            * If a StochasticParameter, it is expected to return string. A new
+              sample will be drawn per image.
+
+    from_colorspace : str, optional
+        The colorspace of the input images.
+        See `to_colorspace`. Only a single string is allowed.
+
+    max_size : int or None, optional
+        Maximum image size at which to perform the augmentation.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before running the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the augmentation. The final output image has
+        the same size as the input image. Use ``None`` to apply no downscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.KMeansColorQuantization()
+
+    Creates an augmenter to apply k-Means color quantization to images using a
+    random amount of colors, sampled uniformly from the interval ``[2..16]``.
+    It assumes the input image colorspace to be ``RGB`` and clusters colors
+    randomly in ``RGB`` or ``Lab`` colorspace.
+
+    >>> aug = iaa.KMeansColorQuantization(n_colors=8)
+
+    Creates an augmenter that quantizes images to (up to) eight colors.
+
+    >>> aug = iaa.KMeansColorQuantization(n_colors=(4, 32))
+
+    Creates an augmenter that quantizes images to (up to) ``n`` colors,
+    where ``n`` is randomly and uniformly sampled from the discrete interval
+    ``[4, 32]``.
+
+    >>> aug = iaa.KMeansColorQuantization(
+    >>>     from_colorspace=iaa.ChangeColorspace.BGR)
+
+    Creates an augmenter that quantizes images that are in ``BGR`` colorspace.
+
+    >>> aug = iaa.KMeansColorQuantization(
+    >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
+
+    Creates an augmenter that quantizes images by clustering colors randomly
+    in either ``RGB`` or ``HSV`` colorspace. The assumed input colorspace
+    of images is ``RGB``.
+
+    """
+
+    def __init__(self, n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
+                 to_colorspace=[ChangeColorspace.RGB, ChangeColorspace.Lab],
+                 max_size=128, interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        super(KMeansColorQuantization, self).__init__(
+            n_colors=n_colors,
+            from_colorspace=from_colorspace,
+            to_colorspace=to_colorspace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _quantize(self, image, n_colors):
+        return quantize_colors_kmeans(image, n_colors)
 
 
 def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
@@ -1866,11 +1897,12 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_colors_kmeans(image, 2)
+    >>> image_quantized = iaa.quantize_colors_kmeans(image, 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
-    values from 0 to ``4*4*3``, leading to the same number of colors. These
-    colors are then quantized so that only ``2`` are remaining.
+    values from ``0`` to ``4*4*3``, leading to an equal number of colors.
+    These colors are then quantized so that only ``6`` are remaining. Note
+    that the six remaining colors do have to appear in the input image.
 
     """
     assert image.ndim in [2, 3], (
@@ -1878,7 +1910,9 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
         "got shape %s." % (image.shape,))
     assert image.dtype.name == "uint8", "Expected uint8 image, got %s." % (
         image.dtype.name,)
-    assert n_colors >= 2, "Expected n_colors>=2, got %d." % (n_colors,)
+    assert 2 <= n_colors <= 256, (
+        "Expected n_colors to be in the discrete interval [2..256]. "
+        "Got a value of %d instead." % (n_colors,))
 
     # without this check, kmeans throws an exception
     n_pixels = np.prod(image.shape[0:2])
@@ -1912,3 +1946,202 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     centers_uint8 = np.array(centers, dtype=image.dtype)
     quantized_flat = centers_uint8[labels.flatten()]
     return quantized_flat.reshape(image.shape)
+
+
+class UniformColorQuantization(_AbstractColorQuantization):
+    """Augmenter to quantize colors into N bins with regular distance.
+
+    For ``uint8`` images the equation is ``floor(v/q)*q + q/2`` with
+    ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
+    the target number of colors after quantization.
+
+    **Note**: This augmenter expects input images to be either grayscale
+    or to have 3 or 4 channels and use colorspace `from_colorspace`. If images
+    have 4 channels, it is assumed that the 4th channel is an alpha channel
+    and it will not be quantized.
+
+    dtype support::
+
+        if (image size <= max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_uniform`
+            )
+
+        if (image size > max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_uniform`,
+                :func:`imgaug.imgaug.imresize_single_image`
+            )
+
+    Parameters
+    ----------
+    n_colors : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Target number of colors to use in the generated output image.
+
+            * If a number, exactly that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a value will be sampled per
+              image from that parameter.
+
+    to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
+        The colorspace in which to perform the quantization.
+        See ``ChangeColorspace`` for valid values.
+        This will be ignored for grayscale input images.
+
+            * If a string, it must be among the allowed colorspaces.
+            * If a list, it is expected to be a list of strings, each one
+              being an allowed colorspace. A random element from the list
+              will be chosen per image.
+            * If a StochasticParameter, it is expected to return string. A new
+              sample will be drawn per image.
+
+    from_colorspace : str, optional
+        The colorspace of the input images.
+        See `to_colorspace`. Only a single string is allowed.
+
+    max_size : None or int, optional
+        Maximum image size at which to perform the augmentation.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before running the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the augmentation. The final output image has
+        the same size as the input image. Use ``None`` to apply no downscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.UniformColorQuantization()
+
+    Creates an augmenter to apply uniform color quantization to images using a
+    random amount of colors, sampled uniformly from the interval ``[2..16]``.
+    It assumes the input image colorspace to be ``RGB`` and clusters colors
+    randomly in ``RGB`` or ``Lab`` colorspace.
+
+    >>> aug = iaa.UniformColorQuantization(n_colors=8)
+
+    Creates an augmenter that quantizes images to (up to) eight colors.
+
+    >>> aug = iaa.UniformColorQuantization(n_colors=(4, 32))
+
+    Creates an augmenter that quantizes images to (up to) ``n`` colors,
+    where ``n`` is randomly and uniformly sampled from the discrete interval
+    ``[4, 32]``.
+
+    >>> aug = iaa.UniformColorQuantization(
+    >>>     from_colorspace=iaa.ChangeColorspace.BGR)
+
+    Creates an augmenter that quantizes images that are in ``BGR`` colorspace.
+
+    >>> aug = iaa.UniformColorQuantization(
+    >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
+
+    Creates an augmenter that quantizes images by clustering colors randomly
+    in either ``RGB`` or ``HSV`` colorspace. The assumed input colorspace
+    of images is ``RGB``.
+
+    """
+
+    def __init__(self, n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
+                 to_colorspace=[ChangeColorspace.RGB, ChangeColorspace.Lab],
+                 max_size=None, interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        super(UniformColorQuantization, self).__init__(
+            n_colors=n_colors,
+            from_colorspace=from_colorspace,
+            to_colorspace=to_colorspace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _quantize(self, image, n_colors):
+        return quantize_colors_uniform(image, n_colors)
+
+
+def quantize_colors_uniform(image, n_colors):
+    """Quantize colors into N bins with regular distance.
+
+    For ``uint8`` images the equation is ``floor(v/q)*q + q/2`` with
+    ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
+    the target number of colors after quantization.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    image : ndarray
+        Image in which to quantize colors. Expected to be of shape ``(H,W)``
+        or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+
+    n_colors : int
+        Maximum number of output colors.
+
+    Returns
+    -------
+    ndarray
+        Image with quantized colors.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> import numpy as np
+    >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
+    >>> image_quantized = iaa.quantize_colors_uniform(image, 6)
+
+    Generates a ``4x4`` image with ``3`` channels, containing consecutive
+    values from ``0`` to ``4*4*3``, leading to an equal number of colors.
+    These colors are then quantized so that only ``6`` are remaining. Note
+    that the six remaining colors do have to appear in the input image.
+
+    """
+    assert image.dtype.name == "uint8", "Expected uint8 image, got %s." % (
+        image.dtype.name,)
+    assert 2 <= n_colors <= 256, (
+        "Expected n_colors to be in the discrete interval [2..256]. "
+        "Got a value of %d instead." % (n_colors,))
+
+    n_colors = np.clip(n_colors, 2, 256)
+
+    if n_colors == 256:
+        return np.copy(image)
+
+    q = 256 / n_colors
+    image_aug = np.floor(image.astype(np.float32) / q) * q + q/2
+
+    image_aug_uint8 = np.clip(np.round(image_aug), 0, 255).astype(np.uint8)
+    return image_aug_uint8

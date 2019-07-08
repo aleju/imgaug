@@ -125,7 +125,7 @@
 * [rarely breaking] Added a `pad_mode` argument to `imgaug.pool()`,
   `imgaug.avg_pool()`, `imgaug.max_pool()`, `imgaug.min_pool()` and
   `imgaug.median_pool()`. This breaks code relying on the order of the
-  functions arguments.
+  functions arguments.s
   * Changed the default `pad_mode` of `avg_pool` from `constant` (`cval=128`)
     to `reflect`.
   * Changed the default `pad_mode` of `max_pool` from `constant` (`cval=0`)
@@ -137,12 +137,18 @@
 * Renamed argument `cval` to `pad_cval` in `imgaug.pool()`,
   `imgaug.avg_pool()` and `imgaug.max_pool()`. The old name `cval` is now
   deprecated.
+* Added `augmenters.color._AbstractColorQuantization`. #347
 * Added `augmenters.color.KMeansColorQuantization` and corresponding
   `augmenters.color.quantize_colors_kmeans()`. Both deal with quantizing
   similar colors using k-Means clustering. #347
     * Added a check script for `KMeansColorQuantization` under
       `checks/check_kmeans_color_quantization.py`. #347
-* Added `augmenters.color._AbstractColorQuantization`. #347
+* Added `augmenters.color.UniformColorQuantization` and corresponding
+  `augmenters.color.quantize_colors_uniform()`. Both deal with quantizing
+  similar colors using k-Means clustering. #347
+    * Added a check script for `UniformColorQuantization` under
+      `checks/check_uniform_color_quantization.py`. #347
+
 
 ## Fixes
  
