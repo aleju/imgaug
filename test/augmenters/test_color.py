@@ -1263,9 +1263,7 @@ class UniformColorQuantization(TestKMeansColorQuantization):
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
         assert aug.from_colorspace == iaa.ChangeColorspace.RGB
-        assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.RGB,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace is None
         assert aug.max_size is None
         assert aug.interpolation == "linear"
 
@@ -1355,6 +1353,30 @@ class UniformColorQuantization(TestKMeansColorQuantization):
         observed = aug(image=image)
 
         assert np.array_equal(observed, expected)
+
+    def test_from_colorspace(self):
+        # Actual to_colorspace doesn't matter here as it is overwritten
+        # via return_value. Important is just to set it to a non-None value
+        # so that a colorspace conversion actually happens.
+        aug = self.augmenter(from_colorspace="BGR",
+                             to_colorspace="Lab")
+        mock_change_colorspace = mock.MagicMock()
+        mock_change_colorspace.return_value = mock_change_colorspace
+        mock_change_colorspace.augment_image.side_effect = lambda img: img
+        mock_change_colorspace._draw_samples.return_value = (None, ["foo"])
+
+        fname = "imgaug.augmenters.color.ChangeColorspace"
+        with mock.patch(fname, mock_change_colorspace):
+            _ = aug.augment_image(np.zeros((4, 4, 3), dtype=np.uint8))
+
+        # call 0, kwargs, argument 'from_colorspace'
+        assert (
+            mock_change_colorspace.call_args_list[0][1]["from_colorspace"]
+            == "BGR")
+        # call 1, kwargs, argument 'from_colorspace' (inverse transform)
+        assert (
+            mock_change_colorspace.call_args_list[1][1]["from_colorspace"]
+            == "foo")
 
 
 class Test_quantize_colors_uniform(unittest.TestCase):

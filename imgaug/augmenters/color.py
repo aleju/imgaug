@@ -1824,7 +1824,9 @@ class KMeansColorQuantization(_AbstractColorQuantization):
     >>> aug = iaa.KMeansColorQuantization(
     >>>     from_colorspace=iaa.ChangeColorspace.BGR)
 
-    Creates an augmenter that quantizes images that are in ``BGR`` colorspace.
+    Creates an augmenter that quantizes input images that are in
+    ``BGR`` colorspace. The quantization happens in ``RGB`` or ``Lab``
+    colorspace into which the images are temporarily converted.
 
     >>> aug = iaa.KMeansColorQuantization(
     >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
@@ -2041,8 +2043,6 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
     Creates an augmenter to apply uniform color quantization to images using a
     random amount of colors, sampled uniformly from the interval ``[2..16]``.
-    It assumes the input image colorspace to be ``RGB`` and clusters colors
-    randomly in ``RGB`` or ``Lab`` colorspace.
 
     >>> aug = iaa.UniformColorQuantization(n_colors=8)
 
@@ -2055,22 +2055,21 @@ class UniformColorQuantization(_AbstractColorQuantization):
     ``[4, 32]``.
 
     >>> aug = iaa.UniformColorQuantization(
-    >>>     from_colorspace=iaa.ChangeColorspace.BGR)
-
-    Creates an augmenter that quantizes images that are in ``BGR`` colorspace.
-
-    >>> aug = iaa.UniformColorQuantization(
+    >>>     from_colorspace=iaa.ChangeColorspace.BGR,
     >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
 
-    Creates an augmenter that quantizes images by clustering colors randomly
-    in either ``RGB`` or ``HSV`` colorspace. The assumed input colorspace
-    of images is ``RGB``.
+    Creates an augmenter that uniformly quantizes images in either ``RGB``
+    or ``HSV`` colorspace (randomly picked per image). The input colorspace
+    of all images has to be ``BGR``.
 
     """
 
-    def __init__(self, n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
-                 to_colorspace=[ChangeColorspace.RGB, ChangeColorspace.Lab],
-                 max_size=None, interpolation="linear",
+    def __init__(self,
+                 n_colors=(2, 16),
+                 from_colorspace=ChangeColorspace.RGB,
+                 to_colorspace=None,
+                 max_size=None,
+                 interpolation="linear",
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
         super(UniformColorQuantization, self).__init__(
