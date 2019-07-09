@@ -989,6 +989,20 @@ class TestKMeansColorQuantization(unittest.TestCase):
         assert np.array_equal(mock_quantize_func.call_args_list[0][0][0],
                               expected)
 
+    def test_to_colorspace_is_none(self):
+        image = np.arange(3*3*3, dtype=np.uint8).reshape((3, 3, 3))
+        aug = self.augmenter(to_colorspace=None)
+        mock_quantize_func = mock.MagicMock(
+            return_value=np.zeros((4, 4, 3), dtype=np.uint8))
+
+        fname = self.quantization_func_name
+        with mock.patch(fname, mock_quantize_func):
+            _ = aug.augment_image(image)
+
+        # call 0, kwargs, argument 'to_colorspace'
+        assert np.array_equal(mock_quantize_func.call_args_list[0][0][0],
+                              image)
+
     def test_from_colorspace(self):
         aug = self.augmenter(from_colorspace="BGR")
         mock_change_colorspace = mock.MagicMock()

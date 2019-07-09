@@ -1649,21 +1649,25 @@ class _AbstractColorQuantization(meta.Augmenter):
                 alpha_channel = image[:, :, 3:4]
                 image = image[:, :, 0:3]
 
-            # TODO quite hacky to recover the sampled to_colorspace here
-            #      by accessing _draw_samples(). Would be better to have
-            #      an inverse augmentation method in ChangeColorspace.
-            cs = ChangeColorspace(
-                from_colorspace=self.from_colorspace,
-                to_colorspace=self.to_colorspace,
-                random_state=ia.copy_random_state(random_state),
-                deterministic=True)
-            _, to_colorspaces = cs._draw_samples(
-                1, ia.copy_random_state(random_state))
-            cs_inv = ChangeColorspace(
-                from_colorspace=to_colorspaces[0],
-                to_colorspace=self.from_colorspace,
-                random_state=ia.copy_random_state(random_state),
-                deterministic=True)
+            if self.to_colorspace is None:
+                cs = meta.Noop()
+                cs_inv = meta.Noop()
+            else:
+                # TODO quite hacky to recover the sampled to_colorspace here
+                #      by accessing _draw_samples(). Would be better to have
+                #      an inverse augmentation method in ChangeColorspace.
+                cs = ChangeColorspace(
+                    from_colorspace=self.from_colorspace,
+                    to_colorspace=self.to_colorspace,
+                    random_state=ia.copy_random_state(random_state),
+                    deterministic=True)
+                _, to_colorspaces = cs._draw_samples(
+                    1, ia.copy_random_state(random_state))
+                cs_inv = ChangeColorspace(
+                    from_colorspace=to_colorspaces[0],
+                    to_colorspace=self.from_colorspace,
+                    random_state=ia.copy_random_state(random_state),
+                    deterministic=True)
 
             image_tf = cs.augment_image(image)
             image_tf_aug = self._quantize(image_tf, n_colors)
@@ -1758,11 +1762,12 @@ class KMeansColorQuantization(_AbstractColorQuantization):
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
 
-    to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
+    to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
         See ``ChangeColorspace`` for valid values.
         This will be ignored for grayscale input images.
 
+            * If ``None`` the colorspace of input images will not be changed.
             * If a string, it must be among the allowed colorspaces.
             * If a list, it is expected to be a list of strings, each one
               being an allowed colorspace. A random element from the list
@@ -1990,11 +1995,12 @@ class UniformColorQuantization(_AbstractColorQuantization):
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
 
-    to_colorspace : str or list of str or imgaug.parameters.StochasticParameter
+    to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
         See ``ChangeColorspace`` for valid values.
         This will be ignored for grayscale input images.
 
+            * If ``None`` the colorspace of input images will not be changed.
             * If a string, it must be among the allowed colorspaces.
             * If a list, it is expected to be a list of strings, each one
               being an allowed colorspace. A random element from the list
