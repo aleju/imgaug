@@ -177,6 +177,8 @@
 * Added `imgaug.augmenters.segmentation.Voronoi`. An augmenter that converts
   an image to a voronoi image. 
     * Added a check script for `Voronoi` in `checks/check_voronoi.py`.
+* Added `imgaug.augmenters.segmentation.UniformVoronoi`, a shortcut for
+  `Voronoi(UniformPointsSamper)`.
 
 ## Fixes
  

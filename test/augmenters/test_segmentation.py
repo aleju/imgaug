@@ -665,6 +665,55 @@ def _array_lists_elementwise_identical(arrs1, arrs2):
                    for arr1, arr2 in zip(arrs1, arrs2)])
 
 
+class TestUniformVoronoi(unittest.TestCase):
+    def test___init___(self):
+        rs = np.random.RandomState(10)
+
+        mock_voronoi = mock.MagicMock()
+        mock_voronoi.return_value = mock_voronoi
+        fname = "imgaug.augmenters.segmentation.Voronoi.__init__"
+        with mock.patch(fname, mock_voronoi):
+            _ = iaa.UniformVoronoi(
+                100,
+                p_replace=0.5,
+                max_size=5,
+                interpolation="cubic",
+                name="foo",
+                deterministic=True,
+                random_state=rs
+            )
+
+        assert mock_voronoi.call_count == 1
+        assert isinstance(mock_voronoi.call_args_list[0][1]["points_sampler"],
+                          iaa.UniformPointsSampler)
+        assert np.isclose(mock_voronoi.call_args_list[0][1]["p_replace"],
+                          0.5)
+        assert mock_voronoi.call_args_list[0][1]["max_size"] == 5
+        assert mock_voronoi.call_args_list[0][1]["interpolation"] == "cubic"
+        assert mock_voronoi.call_args_list[0][1]["name"] == "foo"
+        assert mock_voronoi.call_args_list[0][1]["deterministic"] is True
+        assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
+
+    def test___init___integrationtest(self):
+        rs = np.random.RandomState(10)
+        aug = iaa.UniformVoronoi(
+            100,
+            p_replace=0.5,
+            max_size=5,
+            interpolation="cubic",
+            name=None,
+            deterministic=True,
+            random_state=rs
+        )
+        assert aug.points_sampler.n_points.value == 100
+        assert np.isclose(aug.p_replace.p.value, 0.5)
+        assert aug.max_size == 5
+        assert aug.interpolation == "cubic"
+        assert aug.name == "UnnamedUniformVoronoi"
+        assert aug.deterministic is True
+        assert aug.random_state is rs
+
+
 # TODO verify behaviours when image height/width is zero
 class TestRegularGridPointSampler(unittest.TestCase):
     def setUp(self):

@@ -442,7 +442,7 @@ class Voronoi(meta.Augmenter):
 
     This augmenter performs the following steps:
 
-        1. Query `point_sampler` to sample random coordinates of cell
+        1. Query `points_sampler` to sample random coordinates of cell
            centers. On the image.
         2. Estimate for each pixel to which voronoi cell (i.e. segment)
            it belongs. Each pixel belongs to the cell with the closest center
@@ -484,8 +484,8 @@ class Voronoi(meta.Augmenter):
 
     Parameters
     ----------
-    point_sampler : PointSamplerIf
-        A point sampler which will be queried per image to generate the
+    points_sampler : PointSamplerIf
+        A points sampler which will be queried per image to generate the
         coordinates of the centers of voronoi cells.
 
     p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -543,8 +543,8 @@ class Voronoi(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> point_sampler = iaa.RegularGridPointsSampler(n_cols=10, n_rows=20)
-    >>> aug = Voronoi(point_sampler)
+    >>> points_sampler = iaa.RegularGridPointsSampler(n_cols=10, n_rows=20)
+    >>> aug = iaa.Voronoi(points_sampler)
 
     Creates an augmenter that places a ``10x20`` (``HxW``) grid of cells on
     the image and replaces all pixels within each cell by the cell's average
@@ -553,12 +553,12 @@ class Voronoi(meta.Augmenter):
     interpolation.
 
     >>> import imgaug.augmenters as iaa
-    >>> point_sampler = iaa.DropoutPointsSampler(
+    >>> points_sampler = iaa.DropoutPointsSampler(
     >>>     iaa.RelativeRegularGridPointsSampler(
     >>>         n_cols_frac=(0.01, 0.1),
     >>>         n_rows_frac=0.1),
     >>>     0.2)
-    >>> aug = Voronoi(point_sampler, p_replace=0.9, max_size=None)
+    >>> aug = iaa.Voronoi(points_sampler, p_replace=0.9, max_size=None)
 
     Creates a voronoi augmenter that generates a grid of cells dynamically
     adapted to the image size. Larger images get more cells. On the x-axis,
@@ -575,14 +575,14 @@ class Voronoi(meta.Augmenter):
     remaining ``10`` percent's pixels remain unchanged.
 
     """
-    def __init__(self, point_sampler, p_replace=1.0, max_size=128,
+    def __init__(self, points_sampler, p_replace=1.0, max_size=128,
                  interpolation="linear",
                  name=None, deterministic=False, random_state=None):
         super(Voronoi, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        assert isinstance(point_sampler, PointsSamplerIf)
-        self.point_sampler = point_sampler
+        assert isinstance(points_sampler, PointsSamplerIf)
+        self.points_sampler = points_sampler
 
         self.p_replace = iap.handle_probability_param(
             p_replace, "p_replace", tuple_to_uniform=True, list_to_choice=True)
@@ -612,7 +612,7 @@ class Voronoi(meta.Augmenter):
         orig_shape = image.shape
         image = _ensure_image_max_size(image, self.max_size, self.interpolation)
 
-        cell_coordinates = self.point_sampler.sample_points([image], rss[0])[0]
+        cell_coordinates = self.points_sampler.sample_points([image], rss[0])[0]
         p_replace = self.p_replace.draw_samples((len(cell_coordinates),),
                                                 rss[1])
         replace_mask = (p_replace > 0.5)
@@ -637,8 +637,124 @@ class Voronoi(meta.Augmenter):
         return keypoints_on_images
 
     def get_parameters(self):
-        return [self.point_sampler, self.p_replace, self.max_size,
+        return [self.points_sampler, self.p_replace, self.max_size,
                 self.interpolation]
+
+
+class UniformVoronoi(Voronoi):
+    """Uniformly sample voronoi cells on images and average colors within them.
+
+    This augmenter is a shortcut for the combination of ``Voronoi`` with
+    ``UniformPointsSampler``. Hence, it generates a fixed amount of ``N``
+    random coordinates of voronoi cells on each image. The cell coordinates
+    are sampled uniformly using the image height and width as maxima.
+
+    dtype support::
+
+        See ``imgaug.augmenters.segmentation.Voronoi``.
+
+    Parameters
+    ----------
+    n_points : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of points to sample on each image.
+
+            * If a single int, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Defines for any segment the probability that the pixels within that
+        segment are replaced by their average color (otherwise, the pixels
+        are not changed).
+        Examples:
+
+            * A probability of ``0.0`` would mean, that the pixels in no
+              segment are replaced by their average color (image is not
+              changed at all).
+            * A probability of ``0.5`` would mean, that around half of all
+              segments are replaced by their average color.
+            * A probability of ``1.0`` would mean, that all segments are
+              replaced by their average color (resulting in a voronoi
+              image).
+
+        Behaviour based on chosen datatypes for this parameter:
+
+            * If a number, then that number will always be used.
+            * If tuple ``(a, b)``, then a random probability will be sampled
+              from the interval ``[a, b]`` per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
+            * If a ``StochasticParameter``, it is expected to return
+              values between ``0.0`` and ``1.0`` and will be queried *for each
+              individual segment* to determine whether it is supposed to
+              be averaged (``>0.5``) or not (``<=0.5``).
+              Recommended to be some form of ``Binomial(...)``.
+
+    max_size : int or None, optional
+        Maximum image size at which the augmentation is performed.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the process. The final output image has the
+        same size as the input image. Note that in case `p_replace` is below
+        ``1.0``, the down-/upscaling will affect the not-replaced pixels too.
+        Use ``None`` to apply no down-/upscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.UniformVoronoi((100, 500))
+
+    Samples for each image uniformly the number of voronoi cells ``N`` from the
+    interval ``[100, 500]``. Then generates ``N`` coordinates by sampling
+    uniformly the x-coordinates from ``[0, W]`` and the y-coordinates from
+    ``[0, H]``, where ``H`` is the image height and ``W`` the image width.
+    Then uses these coordinates to group the image pixels into voronoi
+    cells and averages the colors within them. The process is performed at an
+    image size not exceeding 128px on any side. If necessary, the downscaling
+    is performed using linear interpolation.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.UniformVoronoi(250, p_replace=0.9, max_size=None)
+
+    Same as above, but always samples ``N=250`` cells, replaces only
+    ``90`` percent of them with their average color (the pixels of the
+    remaining ``10`` percent are not changed) and performs the transformation
+    at the original image size.
+
+    """
+    def __init__(self, n_points, p_replace=1.0, max_size=128,
+                 interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        # name doesn't use ia.caller_name() here because that returns
+        # "__init__" instead of "Voronoi"
+        super(UniformVoronoi, self).__init__(
+            points_sampler=UniformPointsSampler(n_points),
+            p_replace=p_replace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 @six.add_metaclass(ABCMeta)
