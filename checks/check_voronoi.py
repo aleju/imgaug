@@ -11,9 +11,14 @@ def main():
         0.5
     )
 
+    uniform_sampler = iaa.UniformPointsSampler(50*50)
+
     aug = iaa.Voronoi(point_sampler=reggrid_sampler, p_replace=1.0,
                       max_size=128)
+    ia.imshow(aug(image=image))
 
+    aug = iaa.Voronoi(point_sampler=uniform_sampler, p_replace=1.0,
+                      max_size=128)
     ia.imshow(aug(image=image))
 
 

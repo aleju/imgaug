@@ -1012,6 +1012,81 @@ class DropoutPointsSampler(PointsSamplerIf):
         return points_on_images_dropped
 
 
+class UniformPointsSampler(PointsSamplerIf):
+    """Sample points uniformly on images.
+
+    This point sampler generates `n_points` points per image. The x- and
+    y-coordinates are both sampled from uniform distributions matching the
+    respective image width and height.
+
+    Parameters
+    ----------
+    n_points : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of points to sample on each image.
+
+            * If a single int, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> sampler = iaa.UniformPointsSampler(500)
+
+    Creates a point sampler that generates an array of 500 random points for
+    each input image. The x- and y-coordinates of each point are sampled
+    from uniform distributions.
+
+    """
+
+    def __init__(self, n_points):
+        self.n_points = iap.handle_discrete_param(
+            n_points, "n_points", value_range=(1, None),
+            tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+
+    def sample_points(self, images, random_state):
+        random_state = ia.normalize_random_state(random_state)
+        _verify_sample_points_images(images)
+
+        rss = ia.derive_random_states(random_state, 2)
+        n_points_imagewise = self._draw_samples(len(images), rss[0])
+
+        n_points_total = np.sum(n_points_imagewise)
+        n_components_total = 2 * n_points_total
+        coords_relative = rss[1].uniform(0.0, 1.0, n_components_total)
+        coords_relative_xy = coords_relative.reshape(n_points_total, 2)
+
+        return self._convert_relative_coords_to_absolute(
+            coords_relative_xy, n_points_imagewise, images)
+
+    def _draw_samples(self, n_augmentables, random_state):
+        n_points = self.n_points.draw_samples((n_augmentables,),
+                                              random_state=random_state)
+        n_points_clipped = np.clip(n_points, 1, None)
+        return n_points_clipped
+
+    @classmethod
+    def _convert_relative_coords_to_absolute(cls, coords_rel_xy,
+                                             n_points_imagewise, images):
+        coords_absolute = []
+        i = 0
+        for image, n_points_image in zip(images, n_points_imagewise):
+            height, width = image.shape[0:2]
+            xx = coords_rel_xy[i:i+n_points_image, 0]
+            yy = coords_rel_xy[i:i+n_points_image, 1]
+
+            xx_int = np.clip(np.round(xx * width), 0, width)
+            yy_int = np.clip(np.round(yy * height), 0, height)
+
+            coords_absolute.append(np.stack([xx_int, yy_int], axis=-1))
+            i += n_points_image
+        return coords_absolute
+
+
 class SubsamplingPointsSampler(PointsSamplerIf):
     """Ensure that the number of sampled points is below a maximum.
 

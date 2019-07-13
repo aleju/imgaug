@@ -961,6 +961,149 @@ class TestDropoutPointsSampler(unittest.TestCase):
         assert not all_s1s2_identical
 
 
+class TestUniformPointsSampler(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        sampler = iaa.UniformPointsSampler(100)
+        assert isinstance(sampler.n_points, iap.Deterministic)
+        assert sampler.n_points.value == 100
+
+    def test_sampled_points_not_identical(self):
+        sampler = iaa.UniformPointsSampler(3)
+        images = [np.zeros((1000, 1000, 3), dtype=np.uint8)]
+
+        points = sampler.sample_points(images, 1)[0]
+        points_tpls = [tuple(point) for point in points]
+        n_points = len(points)
+        n_points_uq = len(set(points_tpls))
+
+        assert n_points == 3
+        assert n_points_uq == 3
+
+    def test_sampled_points_uniformly_distributed_by_quadrants(self):
+        # split image into 2x2 quadrants, group all points per quadrant,
+        # assume that at least around N_points/(2*2) points are in each
+        # quadrant
+        sampler = iaa.UniformPointsSampler(10000)
+        images = [np.zeros((1000, 3000, 1), dtype=np.uint8)]
+
+        points = sampler.sample_points(images, 1)[0]
+        points_rel = points.astype(np.float32)
+        points_rel[:, 1] /= 1000
+        points_rel[:, 0] /= 3000
+
+        points_quadrants = np.clip(
+            np.floor(points_rel * 2),
+            0, 1
+        ).astype(np.int32)
+        n_points_per_quadrant = np.zeros((2, 2), dtype=np.int32)
+        np.add.at(
+            n_points_per_quadrant,
+            (points_quadrants[:, 1], points_quadrants[:, 0]),
+            1)
+
+        assert np.all(n_points_per_quadrant > 0.8*(10000/4))
+
+    def test_sampled_points_uniformly_distributed_by_distance_from_origin(self):
+        # Sample N points, compute distances from origin each axis,
+        # split into B bins, assume that each bin contains at least around
+        # N/B points.
+        sampler = iaa.UniformPointsSampler(10000)
+        images = [np.zeros((1000, 3000, 1), dtype=np.uint8)]
+
+        points = sampler.sample_points(images, 1)[0]
+        points_rel = points.astype(np.float32)
+        points_rel[:, 1] /= 1000
+        points_rel[:, 0] /= 3000
+
+        points_bins = np.clip(
+            np.floor(points_rel * 10),
+            0, 1
+        ).astype(np.int32)
+
+        # Don't use euclidean (2d) distance here, but instead axis-wise (1d)
+        # distance. The euclidean distance leads to non-uniform density of
+        # distances, because points on the same "circle" have the same
+        # distance, and there are less points close/far away from the origin
+        # that fall on the same circle.
+        points_bincounts_x = np.bincount(points_bins[:, 0])
+        points_bincounts_y = np.bincount(points_bins[:, 1])
+
+        assert np.all(points_bincounts_x > 0.8*(10000/10))
+        assert np.all(points_bincounts_y > 0.8*(10000/10))
+
+    def test_many_images(self):
+        sampler = iaa.UniformPointsSampler(1000)
+        images = [
+            np.zeros((100, 500, 3), dtype=np.uint8),
+            np.zeros((500, 100, 1), dtype=np.uint8)
+        ]
+
+        points = sampler.sample_points(images, 1)
+
+        assert len(points) == 2
+        assert len(points[0]) == 1000
+        assert len(points[1]) == 1000
+        assert not np.allclose(points[0], points[1])
+        assert np.any(points[0][:, 1] < 20)
+        assert np.any(points[0][:, 1] > 0.9*100)
+        assert np.any(points[0][:, 0] < 20)
+        assert np.any(points[0][:, 0] > 0.9*500)
+        assert np.any(points[1][:, 1] < 20)
+        assert np.any(points[1][:, 1] > 0.9*500)
+        assert np.any(points[1][:, 0] < 20)
+        assert np.any(points[1][:, 0] > 0.9*100)
+
+    def test_always_at_least_one_point(self):
+        sampler = iaa.UniformPointsSampler(iap.Deterministic(0))
+        images = [np.zeros((10, 10, 1), dtype=np.uint8)]
+
+        points = sampler.sample_points(images, 1)[0]
+
+        assert len(points) == 1
+
+    def test_n_points_can_vary_between_calls(self):
+        sampler = iaa.UniformPointsSampler(iap.Choice([1, 10]))
+        images = [np.zeros((10, 10, 1), dtype=np.uint8)]
+
+        seen = {1: False, 10: False}
+        for i in sm.xrange(50):
+            points = sampler.sample_points(images, i)[0]
+            seen[len(points)] = True
+            if all(seen.values()):
+                break
+
+        assert len(list(seen.keys())) == 2
+        assert all(seen.values())
+
+    def test_n_points_can_vary_between_images(self):
+        sampler = iaa.UniformPointsSampler(iap.Choice([1, 10]))
+        images = [
+            np.zeros((10, 10, 1), dtype=np.uint8)
+            for _ in sm.xrange(50)]
+
+        points = sampler.sample_points(images, 1)
+        point_counts = set([len(points_i) for points_i in points])
+
+        assert len(points) == 50
+        assert len(list(point_counts)) == 2
+        assert 1 in point_counts
+        assert 10 in point_counts
+
+    def test_determinism(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        sampler = iaa.UniformPointsSampler(100)
+
+        observed_s1_1 = sampler.sample_points([image], 1)[0]
+        observed_s1_2 = sampler.sample_points([image], 1)[0]
+        observed_s2_1 = sampler.sample_points([image], 2)[0]
+
+        assert np.allclose(observed_s1_1, observed_s1_2)
+        assert not np.allclose(observed_s1_1, observed_s2_1)
+
+
 class TestSubsamplingPointSampler(unittest.TestCase):
     def setUp(self):
         reseed()
