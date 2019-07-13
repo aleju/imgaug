@@ -744,10 +744,165 @@ class UniformVoronoi(Voronoi):
     def __init__(self, n_points, p_replace=1.0, max_size=128,
                  interpolation="linear",
                  name=None, deterministic=False, random_state=None):
-        # name doesn't use ia.caller_name() here because that returns
-        # "__init__" instead of "Voronoi"
         super(UniformVoronoi, self).__init__(
             points_sampler=UniformPointsSampler(n_points),
+            p_replace=p_replace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class RegularGridVoronoi(Voronoi):
+    """Sample and voronoi cells from regular grids and color-average them.
+
+    This augmenter is a shortcut for the combination of ``Voronoi``,
+    ``RegularGridPointsSampler`` and ``DropoutPointsSampler``. Hence, it
+    generates a regular grid with ``R`` rows and ``C`` columns of coordinates
+    on each image. Then, it drops ``p`` percent of the ``R*C`` coordinates
+    to randomize the grid. Each image pixel then belongs to the voronoi
+    cell with the closest coordinate.
+
+    dtype support::
+
+        See ``imgaug.augmenters.segmentation.Voronoi``.
+
+    Parameters
+    ----------
+    n_rows : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of rows of coordinates to place on each image, i.e. the number
+        of coordinates on the y-axis. Note that for each image, the sampled
+        value is clipped to the interval ``[1..H]``, where ``H`` is the image
+        height.
+
+            * If a single int, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    n_cols : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of columns of coordinates to place on each image, i.e. the number
+        of coordinates on the x-axis. Note that for each image, the sampled
+        value is clipped to the interval ``[1..W]``, where ``W`` is the image
+        width.
+
+            * If a single int, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    p_drop_points : number or tuple of number or imgaug.parameters.StochasticParameter, optional
+        The probability that a coordinate will be removed from the list
+        of all sampled coordinates. A value of ``1.0`` would mean that (on
+        average) ``100`` percent of all coordinates will be dropped,
+        while ``0.0`` denotes ``0`` percent. Note that this sampler will
+        always ensure that at least one coordinate is left after the dropout
+        operation, i.e. even ``1.0`` will only drop all *except one*
+        coordinate.
+
+            * If a float, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
+              the interval ``[a, b]`` per image.
+            * If a ``StochasticParameter``, then this parameter will be used to
+              determine per coordinate whether it should be *kept* (sampled
+              value of ``>0.5``) or shouldn't be kept (sampled value of
+              ``<=0.5``). If you instead want to provide the probability as
+              a stochastic parameter, you can usually do
+              ``imgaug.parameters.Binomial(1-p)`` to convert parameter `p` to
+              a 0/1 representation.
+
+    p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Defines for any segment the probability that the pixels within that
+        segment are replaced by their average color (otherwise, the pixels
+        are not changed).
+        Examples:
+
+            * A probability of ``0.0`` would mean, that the pixels in no
+              segment are replaced by their average color (image is not
+              changed at all).
+            * A probability of ``0.5`` would mean, that around half of all
+              segments are replaced by their average color.
+            * A probability of ``1.0`` would mean, that all segments are
+              replaced by their average color (resulting in a voronoi
+              image).
+
+        Behaviour based on chosen datatypes for this parameter:
+
+            * If a number, then that number will always be used.
+            * If tuple ``(a, b)``, then a random probability will be sampled
+              from the interval ``[a, b]`` per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
+            * If a ``StochasticParameter``, it is expected to return
+              values between ``0.0`` and ``1.0`` and will be queried *for each
+              individual segment* to determine whether it is supposed to
+              be averaged (``>0.5``) or not (``<=0.5``).
+              Recommended to be some form of ``Binomial(...)``.
+
+    max_size : int or None, optional
+        Maximum image size at which the augmentation is performed.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the process. The final output image has the
+        same size as the input image. Note that in case `p_replace` is below
+        ``1.0``, the down-/upscaling will affect the not-replaced pixels too.
+        Use ``None`` to apply no down-/upscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.RegularGridVoronoi(10, 20)
+
+    Places a regular grid of ``10x20`` (``height x width``) coordinates on
+    each image. Randomly drops on average ``20`` percent of these points
+    to create a less regular pattern. Then uses the remaining coordinates
+    to group the image pixels into voronoi cells and averages the colors
+    within them. The process is performed at an image size not exceeding
+    128px on any side. If necessary, the downscaling is performed using
+    linear interpolation.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.RegularGridVoronoi(
+    >>>     (10, 30), 20, p_drop_points=0.0, p_replace=0.9, max_size=None)
+
+    Same as above, generates a grid with randomly ``10`` to ``30`` rows,
+    drops none of the generates points, replaces only ``90`` percent of
+    the voronoi cells with their average color (the pixels of the remaining
+    ``10`` percent are not changed) and performs the transformation
+    at the original image size.
+
+    """
+    def __init__(self, n_rows, n_cols, p_drop_points=0.4, p_replace=1.0,
+                 max_size=128, interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        super(RegularGridVoronoi, self).__init__(
+            points_sampler=DropoutPointsSampler(
+                RegularGridPointsSampler(n_rows, n_cols),
+                p_drop_points
+            ),
             p_replace=p_replace,
             max_size=max_size,
             interpolation=interpolation,
@@ -1024,13 +1179,14 @@ class DropoutPointsSampler(PointsSamplerIf):
         Another point sampler that is queried to generate a list of points.
         The dropout operation will be applied to that list.
 
-    p_drop : number or tuple of number or imgaug.parameters.StochasticParameter, optional
-        The probability of any pixel being dropped (i.e. to set it to zero).
-        A value of ``1.0`` would mean that (on average) ``100`` percent of all
-        coordinates will be dropped, while ``0.0`` denotes ``0`` percent.
-        Note that this sampler will always ensure that at least one coordinate
-        is left after the dropout operation, i.e. even ``1.0`` will only
-        drop all *except one* coordinate.
+    p_drop : number or tuple of number or imgaug.parameters.StochasticParameter
+        The probability that a coordinate will be removed from the list
+        of all sampled coordinates. A value of ``1.0`` would mean that (on
+        average) ``100`` percent of all coordinates will be dropped,
+        while ``0.0`` denotes ``0`` percent. Note that this sampler will
+        always ensure that at least one coordinate is left after the dropout
+        operation, i.e. even ``1.0`` will only drop all *except one*
+        coordinate.
 
             * If a float, then that value will be used for all images.
             * If a tuple ``(a, b)``, then a value ``p`` will be sampled from

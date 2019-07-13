@@ -20,7 +20,9 @@ def main():
                     max_size=128),
         iaa.Voronoi(points_sampler=uniform_sampler, p_replace=1.0,
                     max_size=128),
-        iaa.UniformVoronoi(50*50, p_replace=1.0, max_size=128)
+        iaa.UniformVoronoi(50*50, p_replace=1.0, max_size=128),
+        iaa.RegularGridVoronoi(50, 50, p_drop_points=0.4, p_replace=1.0,
+                               max_size=128),
     ]
 
     images = [aug(image=image) for aug in augs]

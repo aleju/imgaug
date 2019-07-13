@@ -179,6 +179,8 @@
     * Added a check script for `Voronoi` in `checks/check_voronoi.py`.
 * Added `imgaug.augmenters.segmentation.UniformVoronoi`, a shortcut for
   `Voronoi(UniformPointsSamper)`.
+* Added `imgaug.augmenters.segmentation.RegularGridVoronoi`, a shortcut for
+  `Voronoi(DropoutPointsSampler(RegularGridPointsSampler))`
 
 ## Fixes
  
