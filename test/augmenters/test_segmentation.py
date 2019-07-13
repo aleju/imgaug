@@ -881,6 +881,16 @@ class TestRegularGridPointSampler(unittest.TestCase):
         assert points_seed1_1.shape == points_seed1_2.shape
         assert points_seed1_1.shape != points_seed2_1.shape
 
+    def test_conversion_to_string(self):
+        sampler = iaa.RegularGridPointsSampler(10, (10, 30))
+        expected = (
+            "RegularGridPointsSampler("
+            "Deterministic(int 10), "
+            "DiscreteUniform(Deterministic(int 10), Deterministic(int 30))"
+            ")"
+        )
+        assert sampler.__str__() == sampler.__repr__() == expected
+
 
 class TestRelativeRegularGridPointSampler(unittest.TestCase):
     def setUp(self):
@@ -964,6 +974,19 @@ class TestRelativeRegularGridPointSampler(unittest.TestCase):
 
         assert points_seed1_1.shape == points_seed1_2.shape
         assert points_seed1_1.shape != points_seed2_1.shape
+
+    def test_conversion_to_string(self):
+        sampler = iaa.RelativeRegularGridPointsSampler(0.01, (0.01, 0.05))
+        expected = (
+            "RelativeRegularGridPointsSampler("
+            "Deterministic(float 0.01000000), "
+            "Uniform("
+            "Deterministic(float 0.01000000), "
+            "Deterministic(float 0.05000000)"
+            ")"
+            ")"
+        )
+        assert sampler.__str__() == sampler.__repr__() == expected
 
 
 class _FixedPointsSampler(iaa.PointsSamplerIf):
@@ -1070,6 +1093,22 @@ class TestDropoutPointsSampler(unittest.TestCase):
 
         assert all_s1_identical
         assert not all_s1s2_identical
+
+    def test_conversion_to_string(self):
+        sampler = iaa.DropoutPointsSampler(
+            iaa.RegularGridPointsSampler(10, 20),
+            0.2
+        )
+        expected = (
+            "DropoutPointsSampler("
+            "RegularGridPointsSampler("
+            "Deterministic(int 10), "
+            "Deterministic(int 20)"
+            "), "
+            "Binomial(Deterministic(float 0.80000000))"
+            ")"
+        )
+        assert sampler.__str__() == sampler.__repr__() == expected
 
 
 class TestUniformPointsSampler(unittest.TestCase):
@@ -1214,6 +1253,11 @@ class TestUniformPointsSampler(unittest.TestCase):
         assert np.allclose(observed_s1_1, observed_s1_2)
         assert not np.allclose(observed_s1_1, observed_s2_1)
 
+    def test_conversion_to_string(self):
+        sampler = iaa.UniformPointsSampler(10)
+        expected = "UniformPointsSampler(Deterministic(int 10))"
+        assert sampler.__str__() == sampler.__repr__() == expected
+
 
 class TestSubsamplingPointSampler(unittest.TestCase):
     def setUp(self):
@@ -1307,3 +1351,19 @@ class TestSubsamplingPointSampler(unittest.TestCase):
 
         assert all_s1_identical
         assert not all_s1s2_identical
+
+    def test_conversion_to_string(self):
+        sampler = iaa.SubsamplingPointsSampler(
+            iaa.RegularGridPointsSampler(10, 20),
+            10
+        )
+        expected = (
+            "SubsamplingPointsSampler("
+            "RegularGridPointsSampler("
+            "Deterministic(int 10), "
+            "Deterministic(int 20)"
+            "), "
+            "10"
+            ")"
+        )
+        assert sampler.__str__() == sampler.__repr__() == expected

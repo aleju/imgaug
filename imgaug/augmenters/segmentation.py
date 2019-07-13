@@ -1080,6 +1080,12 @@ class RegularGridPointsSampler(PointsSamplerIf):
         grid = np.vstack([xx.ravel(), yy.ravel()]).T
         return grid
 
+    def __repr__(self):
+        return "RegularGridPointsSampler(%s, %s)" % (self.n_rows, self.n_cols)
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class RelativeRegularGridPointsSampler(PointsSamplerIf):
     """Regular grid coordinate sampler; places more points on larger images.
@@ -1168,6 +1174,13 @@ class RelativeRegularGridPointsSampler(PointsSamplerIf):
             n_rows, n_cols, images)
 
         return n_rows.astype(np.int32), n_cols.astype(np.int32)
+
+    def __repr__(self):
+        return "RelativeRegularGridPointsSampler(%s, %s)" % (
+            self.n_rows_frac, self.n_cols_frac)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class DropoutPointsSampler(PointsSamplerIf):
@@ -1283,6 +1296,13 @@ class DropoutPointsSampler(PointsSamplerIf):
             points_on_images_dropped.append(poi_dropped)
         return points_on_images_dropped
 
+    def __repr__(self):
+        return "DropoutPointsSampler(%s, %s)" % (self.other_points_sampler,
+                                                 self.p_drop)
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class UniformPointsSampler(PointsSamplerIf):
     """Sample points uniformly on images.
@@ -1358,6 +1378,12 @@ class UniformPointsSampler(PointsSamplerIf):
             i += n_points_image
         return coords_absolute
 
+    def __repr__(self):
+        return "UniformPointsSampler(%s)" % (self.n_points,)
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class SubsamplingPointsSampler(PointsSamplerIf):
     """Ensure that the number of sampled points is below a maximum.
@@ -1424,6 +1450,13 @@ class SubsamplingPointsSampler(PointsSamplerIf):
         indices = np.arange(len(points_on_image))
         indices_to_keep = random_state.permutation(indices)[0:n_points_max]
         return points_on_image[indices_to_keep]
+
+    def __repr__(self):
+        return "SubsamplingPointsSampler(%s, %d)" % (self.other_points_sampler,
+                                                     self.n_points_max)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 # TODO Add points subsampler that drops points close to each other first
