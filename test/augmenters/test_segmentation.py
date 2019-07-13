@@ -422,7 +422,7 @@ class TestVoronoi(unittest.TestCase):
     def test___init___defaults(self):
         sampler = iaa.RegularGridPointsSampler(1, 1)
         aug = iaa.Voronoi(sampler)
-        assert aug.point_sampler is sampler
+        assert aug.points_sampler is sampler
         assert isinstance(aug.p_replace, iap.Deterministic)
         assert aug.p_replace.value == 1
         assert aug.max_size == 128
@@ -432,7 +432,7 @@ class TestVoronoi(unittest.TestCase):
         sampler = iaa.RegularGridPointsSampler(1, 1)
         aug = iaa.Voronoi(sampler, p_replace=0.5, max_size=None,
                           interpolation="cubic")
-        assert aug.point_sampler is sampler
+        assert aug.points_sampler is sampler
         assert isinstance(aug.p_replace, iap.Binomial)
         assert np.isclose(aug.p_replace.p.value, 0.5)
         assert aug.max_size is None
