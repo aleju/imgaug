@@ -29,18 +29,6 @@ from imgaug.testutils import reseed
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
-def main():
-    time_start = time.time()
-
-    test_BatchLoader()
-    # test_BackgroundAugmenter.get_batch()
-    test_BackgroundAugmenter__augment_images_worker()
-    # test_BackgroundAugmenter.terminate()
-
-    time_end = time.time()
-    print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
-
-
 class TestPool(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -52,7 +40,9 @@ class TestPool(unittest.TestCase):
         mock_Pool.join.return_value = None
         with mock.patch("multiprocessing.Pool", mock_Pool):
             augseq = iaa.Noop()
-            with multicore.Pool(augseq, processes=1, maxtasksperchild=4, seed=123) as pool:
+            pool_config = multicore.Pool(
+                augseq, processes=1, maxtasksperchild=4, seed=123)
+            with pool_config as pool:
                 assert pool.processes == 1
             assert pool._pool is None
         assert mock_Pool.call_count == 1
@@ -66,7 +56,12 @@ class TestPool(unittest.TestCase):
         augseq = iaa.Noop()
         mock_Pool = mock.MagicMock()
         mock_cpu_count = mock.Mock()
-        with mock.patch("multiprocessing.Pool", mock_Pool), mock.patch("multiprocessing.cpu_count", mock_cpu_count):
+
+        patch_pool = mock.patch("multiprocessing.Pool", mock_Pool)
+        patch_cpu_count = mock.patch("multiprocessing.cpu_count",
+                                     mock_cpu_count)
+        with patch_pool, patch_cpu_count:
+            # (cpu cores available, processes requested, processes started)
             combos = [
                 (1, 1, 1),
                 (2, 1, 1),
@@ -82,17 +77,21 @@ class TestPool(unittest.TestCase):
                 (4, -2, 2)
             ]
 
-            for ret_val, inputs, expected in combos:
-                mock_cpu_count.return_value = ret_val
-                with multicore.Pool(augseq, processes=inputs) as _pool:
-                    pass
+            for cores_available, processes_req, expected in combos:
+                with self.subTest(cpu_count_available=cores_available,
+                                  processes_requested=processes_req):
+                    mock_cpu_count.return_value = cores_available
+                    with multicore.Pool(augseq,
+                                        processes=processes_req) as _pool:
+                        pass
 
-                if expected is None:
-                    assert mock_Pool.call_args[0][0] is None
-                else:
-                    assert mock_Pool.call_args[0][0] == expected
+                    if expected is None:
+                        assert mock_Pool.call_args[0][0] is None
+                    else:
+                        assert mock_Pool.call_args[0][0] == expected
 
-    def _test_map_batches_both(self, call_async):
+    @classmethod
+    def _test_map_batches_both(cls, call_async):
         for clazz in [Batch, UnnormalizedBatch]:
             augseq = iaa.Noop()
             mock_Pool = mock.MagicMock()
@@ -116,16 +115,29 @@ class TestPool(unittest.TestCase):
                     to_check = mock_Pool.map
 
                 assert to_check.call_count == 1
+
                 # args, arg 0
                 assert to_check.call_args[0][0] == multicore._Pool_starworker
-                # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
+
+                # args, arg 1 (batches with ids), tuple 0,
+                # entry 0 in tuple (=> batch id)
                 assert to_check.call_args[0][1][0][0] == 0
-                # args, arg 1 (batches with ids), tuple 0, entry 1 in tuple (=> batch)
-                assert np.array_equal(to_check.call_args[0][1][0][1].images_unaug, batches[0].images_unaug)
-                # args, arg 1 (batches with ids), tuple 1, entry 0 in tuple (=> batch id)
+
+                # args, arg 1 (batches with ids), tuple 0,
+                # entry 1 in tuple (=> batch)
+                assert np.array_equal(
+                    to_check.call_args[0][1][0][1].images_unaug,
+                    batches[0].images_unaug)
+
+                # args, arg 1 (batches with ids), tuple 1,
+                # entry 0 in tuple (=> batch id)
                 assert to_check.call_args[0][1][1][0] == 1
-                # args, arg 1 (batches with ids), tuple 1, entry 1 in tuple (=> batch)
-                assert np.array_equal(to_check.call_args[0][1][1][1].images_unaug, batches[1].images_unaug)
+
+                # args, arg 1 (batches with ids), tuple 1,
+                # entry 1 in tuple (=> batch)
+                assert np.array_equal(
+                    to_check.call_args[0][1][1][1].images_unaug,
+                    batches[1].images_unaug)
 
     def test_map_batches(self):
         self._test_map_batches_both(call_async=False)
@@ -133,7 +145,8 @@ class TestPool(unittest.TestCase):
     def test_map_batches_async(self):
         self._test_map_batches_both(call_async=True)
 
-    def _test_imap_batches_both(self, call_unordered):
+    @classmethod
+    def _test_imap_batches_both(cls, call_unordered):
         for clazz in [Batch, UnnormalizedBatch]:
             batches = [clazz(images=[ia.quokka()]),
                        clazz(images=[ia.quokka()+1])]
@@ -161,21 +174,35 @@ class TestPool(unittest.TestCase):
                     to_check = mock_Pool.imap
 
                 assert to_check.call_count == 1
+
                 assert to_check.call_args[0][0] == multicore._Pool_starworker
-                arg_batches = list(to_check.call_args[0][1])  # convert generator to list, make it subscriptable
-                # args, arg 1 (batches with ids), tuple 0, entry 0 in tuple (=> batch id)
+
+                # convert generator to list, make it subscriptable
+                arg_batches = list(to_check.call_args[0][1])
+
+                # args, arg 1 (batches with ids), tuple 0,
+                # entry 0 in tuple (=> batch id)
                 assert arg_batches[0][0] == 0
+
                 # tuple 0, entry 1 in tuple (=> batch)
-                assert np.array_equal(arg_batches[0][1].images_unaug, batches[0].images_unaug)
+                assert np.array_equal(
+                    arg_batches[0][1].images_unaug,
+                    batches[0].images_unaug)
+
                 # tuple 1, entry 0 in tuple (=> batch id)
                 assert arg_batches[1][0] == 1
-                # tuple 1, entry 1 in tuple (=> batch)
-                assert np.array_equal(arg_batches[1][1].images_unaug, batches[1].images_unaug)
 
-    def _test_imap_batches_both_output_buffer_size(self, call_unordered, timeout=0.075):
-        batches = [ia.Batch(images=[
-                       np.full((1, 1), i, dtype=np.uint8)
-                   ]) for i in range(8)]
+                # tuple 1, entry 1 in tuple (=> batch)
+                assert np.array_equal(
+                    arg_batches[1][1].images_unaug,
+                    batches[1].images_unaug)
+
+    @classmethod
+    def _test_imap_batches_both_output_buffer_size(cls, call_unordered,
+                                                   timeout=0.075):
+        batches = [
+            ia.Batch(images=[np.full((1, 1), i, dtype=np.uint8)])
+            for i in range(8)]
 
         def _generate_batches(times):
             for batch in batches:
@@ -183,12 +210,14 @@ class TestPool(unittest.TestCase):
                 times.append(time.time())
 
         def callfunc(pool, gen, output_buffer_size):
-            if call_unordered:
-                for v in pool.imap_batches_unordered(gen, output_buffer_size=output_buffer_size):
-                    yield v
-            else:
-                for v in pool.imap_batches(gen, output_buffer_size=output_buffer_size):
-                    yield v
+            func = (
+                pool.imap_batches_unordered
+                if call_unordered
+                else pool.imap_batches
+            )
+
+            for v in func(gen, output_buffer_size=output_buffer_size):
+                yield v
 
         def contains_all_ids(inputs):
             arrs = np.uint8([batch.images_aug for batch in inputs])
@@ -258,7 +287,8 @@ class TestPool(unittest.TestCase):
     def test_imap_batches_unordered_output_buffer_size(self):
         self._test_imap_batches_both_output_buffer_size(call_unordered=True)
 
-    def _assert_each_augmentation_not_more_than_once(self, batches_aug):
+    @classmethod
+    def _assert_each_augmentation_not_more_than_once(cls, batches_aug):
         sum_to_vecs = defaultdict(list)
         for batch in batches_aug:
             assert not np.array_equal(batch.images_aug[0], batch.images_aug[1])
@@ -278,7 +308,8 @@ class TestPool(unittest.TestCase):
         batches = [batch.deepcopy() for _ in sm.xrange(60)]
 
         # seed=1
-        with multicore.Pool(augseq, processes=2, maxtasksperchild=30, seed=1) as pool:
+        with multicore.Pool(augseq, processes=2, maxtasksperchild=30,
+                            seed=1) as pool:
             batches_aug1 = pool.map_batches(batches, chunksize=2)
         # seed=1
         with multicore.Pool(augseq, processes=2, seed=1) as pool:
@@ -308,22 +339,24 @@ class TestPool(unittest.TestCase):
             # augmentations for different seeds are different
             assert not np.array_equal(b1.images_aug, b3.images_aug)
 
-        # make sure that batches for the two pools with same seed did not repeat within results (only between the
-        # results of the two pools)
+        # make sure that batches for the two pools with same seed did not
+        # repeat within results (only between the results of the two pools)
         for batches_aug in [batches_aug1, batches_aug2, batches_aug3]:
             self._assert_each_augmentation_not_more_than_once(batches_aug)
 
     def test_augmentations_with_seed_match_for_images_and_keypoints(self):
         augseq = iaa.AddElementwise((0, 255))
         image = np.zeros((10, 10, 1), dtype=np.uint8)
-        # keypoints here will not be changed by augseq, but they will induce deterministic mode to start in
-        # augment_batches() as each batch contains images AND keypoints
+        # keypoints here will not be changed by augseq, but they will induce
+        # deterministic mode to start in augment_batches() as each batch
+        # contains images AND keypoints
         kps = ia.KeypointsOnImage([ia.Keypoint(x=2, y=0)], shape=(10, 10, 1))
         batch = ia.Batch(images=np.uint8([image, image]), keypoints=[kps, kps])
         batches = [batch.deepcopy() for _ in sm.xrange(60)]
 
         # seed=1
-        with multicore.Pool(augseq, processes=2, maxtasksperchild=30, seed=1) as pool:
+        with multicore.Pool(augseq, processes=2, maxtasksperchild=30,
+                            seed=1) as pool:
             batches_aug1 = pool.map_batches(batches, chunksize=2)
         # seed=1
         with multicore.Pool(augseq, processes=2, seed=1) as pool:
@@ -359,8 +392,8 @@ class TestPool(unittest.TestCase):
             # augmentations for different seeds are different
             assert not np.array_equal(b1.images_aug, b3.images_aug)
 
-        # make sure that batches for the two pools with same seed did not repeat within results (only between the
-        # results of the two pools)
+        # make sure that batches for the two pools with same seed did not
+        # repeat within results (only between the results of the two pools)
         for batches_aug in [batches_aug1, batches_aug2, batches_aug3]:
             self._assert_each_augmentation_not_more_than_once(batches_aug)
 
@@ -369,6 +402,7 @@ class TestPool(unittest.TestCase):
         image = np.zeros((10, 10, 1), dtype=np.uint8)
         batch = ia.Batch(images=np.uint8([image, image]))
         batches = [batch.deepcopy() for _ in sm.xrange(20)]
+
         with multicore.Pool(augseq, processes=2, maxtasksperchild=5) as pool:
             batches_aug = pool.map_batches(batches, chunksize=2)
         with multicore.Pool(augseq, processes=2) as pool:
@@ -381,11 +415,13 @@ class TestPool(unittest.TestCase):
     def test_augmentations_without_seed_differ_for_images_and_keypoints(self):
         augseq = iaa.AddElementwise((0, 255))
         image = np.zeros((10, 10, 1), dtype=np.uint8)
-        # keypoints here will not be changed by augseq, but they will induce deterministic mode to start in
-        # augment_batches() as each batch contains images AND keypoints
+        # keypoints here will not be changed by augseq, but they will
+        # induce deterministic mode to start in augment_batches() as each
+        # batch contains images AND keypoints
         kps = ia.KeypointsOnImage([ia.Keypoint(x=2, y=0)], shape=(10, 10, 1))
         batch = ia.Batch(images=np.uint8([image, image]), keypoints=[kps, kps])
         batches = [batch.deepcopy() for _ in sm.xrange(20)]
+
         with multicore.Pool(augseq, processes=2, maxtasksperchild=5) as pool:
             batches_aug = pool.map_batches(batches, chunksize=2)
         with multicore.Pool(augseq, processes=2) as pool:
@@ -423,15 +459,19 @@ class TestPool(unittest.TestCase):
 
         augseq = iaa.Noop()
         image = np.zeros((1, 1, 1), dtype=np.uint8)
-        # creates batches containing images with ids from 0 to 199 (one pair of consecutive ids per batch)
-        batches = [ia.Batch(images=np.uint8([image + b_idx*2, image + b_idx*2+1]))
-                   for b_idx in sm.xrange(100)]
+        # creates batches containing images with ids from 0 to 199 (one pair
+        # of consecutive ids per batch)
+        batches = [
+            ia.Batch(images=np.uint8([image + b_idx*2, image + b_idx*2+1]))
+            for b_idx
+            in sm.xrange(100)]
 
         with multicore.Pool(augseq, processes=2, maxtasksperchild=25) as pool:
             batches_aug = pool.map_batches(batches)
             _assert_contains_all_ids(batches_aug)
 
-        with multicore.Pool(augseq, processes=2, maxtasksperchild=25, seed=1) as pool:
+        with multicore.Pool(augseq, processes=2, maxtasksperchild=25,
+                            seed=1) as pool:
             batches_aug = pool.map_batches(batches)
             _assert_contains_all_ids(batches_aug)
 
@@ -463,113 +503,135 @@ class TestPool(unittest.TestCase):
             pool.join()
 
 
-def test_BatchLoader():
-    reseed()
+# Note that BatchLoader is deprecated
+class TestBatchLoader(unittest.TestCase):
+    def setUp(self):
+        reseed()
 
-    def _load_func():
-        for _ in sm.xrange(20):
-            yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
+    def test_basic_functionality(self):
+        def _load_func():
+            for _ in sm.xrange(20):
+                yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
 
-    warnings.simplefilter("always")
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        for nb_workers in [1, 2]:
-            # repeat these tests many times to catch rarer race conditions
-            for _ in sm.xrange(5):
-                loader = multicore.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=True)
-                loaded = []
-                counter = 0
-                while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
-                    try:
-                        batch = loader.queue.get(timeout=0.001)
-                        loaded.append(batch)
-                    except:
-                        pass
-                    counter += 1
-                assert len(loaded) == 20*nb_workers, \
-                    "Expected %d to be loaded by threads, got %d for %d workers at counter %d." % (
-                        20*nb_workers, len(loaded), nb_workers, counter
-                    )
+        warnings.simplefilter("always")
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            for nb_workers in [1, 2]:
+                # repeat these tests many times to catch rarer race conditions
+                for _ in sm.xrange(5):
+                    loader = multicore.BatchLoader(
+                        _load_func, queue_size=2, nb_workers=nb_workers,
+                        threaded=True)
+                    loaded = []
+                    counter = 0
+                    while ((not loader.all_finished()
+                            or not loader.queue.empty())
+                            and counter < 1000):
+                        try:
+                            batch = loader.queue.get(timeout=0.001)
+                            loaded.append(batch)
+                        except:
+                            pass
+                        counter += 1
+                    assert len(loaded) == 20*nb_workers, \
+                        "Expected %d to be loaded by threads, got %d for %d " \
+                        "workers at counter %d." % (
+                            20*nb_workers, len(loaded), nb_workers, counter
+                        )
 
-                loader = multicore.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=True)
-                loader.terminate()
-                assert loader.all_finished()
+                    loader = multicore.BatchLoader(
+                        _load_func, queue_size=200, nb_workers=nb_workers,
+                        threaded=True)
+                    loader.terminate()
+                    assert loader.all_finished()
 
-                loader = multicore.BatchLoader(_load_func, queue_size=2, nb_workers=nb_workers, threaded=False)
-                loaded = []
-                counter = 0
-                while (not loader.all_finished() or not loader.queue.empty()) and counter < 1000:
-                    try:
-                        batch = loader.queue.get(timeout=0.001)
-                        loaded.append(batch)
-                    except:
-                        pass
-                    counter += 1
-                assert len(loaded) == 20*nb_workers, \
-                    "Expected %d to be loaded by background processes, got %d for %d workers at counter %d." % (
-                        20*nb_workers, len(loaded), nb_workers, counter
-                    )
+                    loader = multicore.BatchLoader(
+                        _load_func, queue_size=2, nb_workers=nb_workers,
+                        threaded=False)
+                    loaded = []
+                    counter = 0
+                    while ((not loader.all_finished()
+                            or not loader.queue.empty())
+                            and counter < 1000):
+                        try:
+                            batch = loader.queue.get(timeout=0.001)
+                            loaded.append(batch)
+                        except:
+                            pass
+                        counter += 1
+                    assert len(loaded) == 20*nb_workers, \
+                        "Expected %d to be loaded by background processes, " \
+                        "got %d for %d workers at counter %d." % (
+                            20*nb_workers, len(loaded), nb_workers, counter
+                        )
 
-                loader = multicore.BatchLoader(_load_func, queue_size=200, nb_workers=nb_workers, threaded=False)
-                loader.terminate()
-                assert loader.all_finished()
+                    loader = multicore.BatchLoader(
+                        _load_func, queue_size=200, nb_workers=nb_workers,
+                        threaded=False)
+                    loader.terminate()
+                    assert loader.all_finished()
+
+            assert len(caught_warnings) > 0
+            for warning in caught_warnings:
+                assert "is deprecated" in str(warning.message)
+
+
+# Note that BackgroundAugmenter is deprecated
+class TestBackgroundAugmenter(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_augment_images_worker(self):
+        warnings.simplefilter("always")
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            def gen():
+                yield ia.Batch(images=np.zeros((1, 4, 4, 3), dtype=np.uint8))
+            bl = multicore.BatchLoader(gen(), queue_size=2)
+            bgaug = multicore.BackgroundAugmenter(bl, iaa.Noop(),
+                                                  queue_size=1, nb_workers=1)
+
+            queue_source = multiprocessing.Queue(2)
+            queue_target = multiprocessing.Queue(2)
+            queue_source.put(
+                pickle.dumps(
+                    ia.Batch(images=np.zeros((1, 4, 8, 3), dtype=np.uint8)),
+                    protocol=-1
+                )
+            )
+            queue_source.put(pickle.dumps(None, protocol=-1))
+            bgaug._augment_images_worker(iaa.Add(1), queue_source,
+                                         queue_target, 1)
+
+            batch_aug = pickle.loads(queue_target.get())
+            assert isinstance(batch_aug, ia.Batch)
+            assert batch_aug.images_unaug is not None
+            assert batch_aug.images_unaug.dtype == np.uint8
+            assert batch_aug.images_unaug.shape == (1, 4, 8, 3)
+            assert np.array_equal(
+                batch_aug.images_unaug,
+                np.zeros((1, 4, 8, 3), dtype=np.uint8))
+            assert batch_aug.images_aug is not None
+            assert batch_aug.images_aug.dtype == np.uint8
+            assert batch_aug.images_aug.shape == (1, 4, 8, 3)
+            assert np.array_equal(
+                batch_aug.images_aug,
+                np.zeros((1, 4, 8, 3), dtype=np.uint8) + 1)
+
+            finished_signal = pickle.loads(queue_target.get())
+            assert finished_signal is None
+
+            source_finished_signal = pickle.loads(queue_source.get())
+            assert source_finished_signal is None
+
+            assert queue_source.empty()
+            assert queue_target.empty()
+
+            queue_source.close()
+            queue_target.close()
+            queue_source.join_thread()
+            queue_target.join_thread()
+            bl.terminate()
+            bgaug.terminate()
 
         assert len(caught_warnings) > 0
         for warning in caught_warnings:
             assert "is deprecated" in str(warning.message)
-
-
-def test_BackgroundAugmenter__augment_images_worker():
-    reseed()
-
-    warnings.simplefilter("always")
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        def gen():
-            yield ia.Batch(images=np.zeros((1, 4, 4, 3), dtype=np.uint8))
-        bl = multicore.BatchLoader(gen(), queue_size=2)
-        bgaug = multicore.BackgroundAugmenter(bl, iaa.Noop(), queue_size=1, nb_workers=1)
-
-        queue_source = multiprocessing.Queue(2)
-        queue_target = multiprocessing.Queue(2)
-        queue_source.put(
-            pickle.dumps(
-                ia.Batch(images=np.zeros((1, 4, 8, 3), dtype=np.uint8)),
-                protocol=-1
-            )
-        )
-        queue_source.put(pickle.dumps(None, protocol=-1))
-        bgaug._augment_images_worker(iaa.Add(1), queue_source, queue_target, 1)
-
-        batch_aug = pickle.loads(queue_target.get())
-        assert isinstance(batch_aug, ia.Batch)
-        assert batch_aug.images_unaug is not None
-        assert batch_aug.images_unaug.dtype == np.uint8
-        assert batch_aug.images_unaug.shape == (1, 4, 8, 3)
-        assert np.array_equal(batch_aug.images_unaug, np.zeros((1, 4, 8, 3), dtype=np.uint8))
-        assert batch_aug.images_aug is not None
-        assert batch_aug.images_aug.dtype == np.uint8
-        assert batch_aug.images_aug.shape == (1, 4, 8, 3)
-        assert np.array_equal(batch_aug.images_aug, np.zeros((1, 4, 8, 3), dtype=np.uint8) + 1)
-
-        finished_signal = pickle.loads(queue_target.get())
-        assert finished_signal is None
-
-        source_finished_signal = pickle.loads(queue_source.get())
-        assert source_finished_signal is None
-
-        assert queue_source.empty()
-        assert queue_target.empty()
-
-        queue_source.close()
-        queue_target.close()
-        queue_source.join_thread()
-        queue_target.join_thread()
-        bl.terminate()
-        bgaug.terminate()
-
-    assert len(caught_warnings) > 0
-    for warning in caught_warnings:
-        assert "is deprecated" in str(warning.message)
-
-
-if __name__ == "__main__":
-    main()
