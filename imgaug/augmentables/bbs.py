@@ -767,7 +767,7 @@ class BoundingBox(object):
             x2=self.x2 if x2 is None else x2,
             y1=self.y1 if y1 is None else y1,
             y2=self.y2 if y2 is None else y2,
-            label=self.label if label is None else label
+            label=copy.deepcopy(self.label) if label is None else label
         )
 
     def deepcopy(self, x1=None, y1=None, x2=None, y2=None, label=None):
