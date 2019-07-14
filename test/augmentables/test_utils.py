@@ -16,18 +16,14 @@ import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
-from imgaug.testutils import reseed
 from imgaug.augmentables.utils import (
     interpolate_points, interpolate_point_pair,
     interpolate_points_by_max_distance
 )
 
 
-class TestUtils(unittest.TestCase):
-    def setUp(self):
-        reseed()
-
-    def test_interpolate_point_pair(self):
+class Test_interpolate_point_pair(unittest.TestCase):
+    def test_1_step(self):
         point_a = (0, 0)
         point_b = (1, 2)
         inter = interpolate_point_pair(point_a, point_b, 1)
@@ -38,6 +34,9 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_2_steps(self):
+        point_a = (0, 0)
+        point_b = (1, 2)
         inter = interpolate_point_pair(point_a, point_b, 2)
         assert np.allclose(
             inter,
@@ -47,16 +46,22 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_0_steps(self):
+        point_a = (0, 0)
+        point_b = (1, 2)
         inter = interpolate_point_pair(point_a, point_b, 0)
         assert len(inter) == 0
 
-    def test_interpolate_points(self):
-        # 2 points
+
+class Test_interpolate_points(unittest.TestCase):
+    def test_2_points_0_steps(self):
         points = [
             (0, 0),
             (1, 2)
         ]
+
         inter = interpolate_points(points, 0)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -65,7 +70,14 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_2_points_1_step(self):
+        points = [
+            (0, 0),
+            (1, 2)
+        ]
+
         inter = interpolate_points(points, 1)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -76,7 +88,14 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_2_points_1_step_not_closed(self):
+        points = [
+            (0, 0),
+            (1, 2)
+        ]
+
         inter = interpolate_points(points, 1, closed=False)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -86,7 +105,7 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
-        # 3 points
+    def test_3_points_0_steps(self):
         points = [
             (0, 0),
             (1, 2),
@@ -94,6 +113,7 @@ class TestUtils(unittest.TestCase):
         ]
 
         inter = interpolate_points(points, 0)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -103,7 +123,15 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_3_points_1_step(self):
+        points = [
+            (0, 0),
+            (1, 2),
+            (0.5, 3)
+        ]
+
         inter = interpolate_points(points, 1)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -116,7 +144,15 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_3_points_1_step_not_closed(self):
+        points = [
+            (0, 0),
+            (1, 2),
+            (0.5, 3)
+        ]
+
         inter = interpolate_points(points, 1, closed=False)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -128,21 +164,18 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
-        # 0 points
+    def test_0_points_1_step(self):
         points = []
+
         inter = interpolate_points(points, 1)
+
         assert len(inter) == 0
 
-        # 1 point
+    def test_1_point_0_steps(self):
         points = [(0, 0)]
+
         inter = interpolate_points(points, 0)
-        assert np.allclose(
-            inter,
-            np.float32([
-                [0, 0]
-            ])
-        )
-        inter = interpolate_points(points, 1)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -150,19 +183,41 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
-    def test_interpolate_points_by_max_distance(self):
-        # 2 points
+    def test_1_point_1_step(self):
+        points = [(0, 0)]
+
+        inter = interpolate_points(points, 1)
+
+        assert np.allclose(
+            inter,
+            np.float32([
+                [0, 0]
+            ])
+        )
+
+
+class Test_interpolate_points_by_max_distance(unittest.TestCase):
+    def test_2_points_dist_10000(self):
         points = [
             (0, 0),
             (0, 2)
         ]
+
         inter = interpolate_points_by_max_distance(points, 10000)
+
         assert np.allclose(
             inter,
             points
         )
 
+    def test_2_points_dist_1(self):
+        points = [
+            (0, 0),
+            (0, 2)
+        ]
+
         inter = interpolate_points_by_max_distance(points, 1.0)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -173,7 +228,14 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_2_points_dist_1_not_closed(self):
+        points = [
+            (0, 0),
+            (0, 2)
+        ]
+
         inter = interpolate_points_by_max_distance(points, 1.0, closed=False)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -183,7 +245,7 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
-        # 3 points
+    def test_3_points_dist_1(self):
         points = [
             (0, 0),
             (0, 2),
@@ -203,7 +265,15 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
+    def test_3_points_dist_1_not_closed(self):
+        points = [
+            (0, 0),
+            (0, 2),
+            (2, 0)
+        ]
+
         inter = interpolate_points_by_max_distance(points, 1.0, closed=False)
+
         assert np.allclose(
             inter,
             np.float32([
@@ -215,15 +285,18 @@ class TestUtils(unittest.TestCase):
             ])
         )
 
-        # 0 points
+    def test_0_points_dist_1(self):
         points = []
+
         inter = interpolate_points_by_max_distance(points, 1.0)
+
         assert len(inter) == 0
 
-        # 1 points
+    def test_1_point_dist_1(self):
         points = [(0, 0)]
 
         inter = interpolate_points_by_max_distance(points, 1.0)
+
         assert np.allclose(
             inter,
             np.float32([
