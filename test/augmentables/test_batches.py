@@ -1,6 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import time
 import warnings
 import sys
 # unittest only added in 3.4 self.subTest()
@@ -22,28 +21,22 @@ import imgaug as ia
 from imgaug.testutils import reseed
 
 
-def main():
-    time_start = time.time()
-
-    # test_Batch()
-
-    time_end = time.time()
-    print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+ATTR_NAMES = ["images", "heatmaps", "segmentation_maps", "keypoints",
+              "bounding_boxes", "polygons", "line_strings"]
 
 
 class TestBatch(unittest.TestCase):
     def setUp(self):
         reseed()
 
-    def test_init(self):
-        attr_names = ["images", "heatmaps", "segmentation_maps", "keypoints",
-                      "bounding_boxes", "polygons", "line_strings"]
+    def test___init___no_arguments(self):
         batch = ia.Batch()
-        for attr_name in attr_names:
+        for attr_name in ATTR_NAMES:
             assert getattr(batch, "%s_unaug" % (attr_name,)) is None
             assert getattr(batch, "%s_aug" % (attr_name,)) is None
         assert batch.data is None
 
+    def test___init___all_arguments_provided(self):
         # we exploit here that Batch() init does not verify its inputs
         batch = ia.Batch(
             images=0,
@@ -55,38 +48,26 @@ class TestBatch(unittest.TestCase):
             line_strings=6,
             data=7
         )
-        for i, attr_name in enumerate(attr_names):
+        for i, attr_name in enumerate(ATTR_NAMES):
             assert getattr(batch, "%s_unaug" % (attr_name,)) == i
             assert getattr(batch, "%s_aug" % (attr_name,)) is None
         assert batch.data == 7
 
-    def test_property_warnings(self):
+    def test_warnings_for_deprecated_properties(self):
         batch = ia.Batch()
         # self.assertWarns does not exist in py2.7
-        with warnings.catch_warnings(record=True) as caught_warnings:
-            warnings.simplefilter("always")
+        deprecated_attr_names = ["images", "heatmaps", "segmentation_maps",
+                                 "keypoints", "bounding_boxes"]
+        for attr_name in deprecated_attr_names:
+            with self.subTest(attr_name=attr_name),\
+                    warnings.catch_warnings(record=True) as caught_warnings:
+                warnings.simplefilter("always")
 
-            _ = batch.images
-            assert len(caught_warnings) == 1
-            assert "is deprecated" in str(caught_warnings[-1].message)
+                _ = getattr(batch, attr_name)
+                assert len(caught_warnings) == 1
+                assert "is deprecated" in str(caught_warnings[-1].message)
 
-            _ = batch.heatmaps
-            assert len(caught_warnings) == 2
-            assert "is deprecated" in str(caught_warnings[-1].message)
-
-            _ = batch.segmentation_maps
-            assert len(caught_warnings) == 3
-            assert "is deprecated" in str(caught_warnings[-1].message)
-
-            _ = batch.keypoints
-            assert len(caught_warnings) == 4
-            assert "is deprecated" in str(caught_warnings[-1].message)
-
-            _ = batch.bounding_boxes
-            assert len(caught_warnings) == 5
-            assert "is deprecated" in str(caught_warnings[-1].message)
-
-    def test_deepcopy(self):
+    def test_deepcopy_no_arguments(self):
         batch = ia.Batch()
         observed = batch.deepcopy()
         keys = list(observed.__dict__.keys())
@@ -94,51 +75,76 @@ class TestBatch(unittest.TestCase):
         for attr_name in keys:
             assert getattr(observed, attr_name) is None
 
-        batch = ia.Batch(images=np.zeros((1, 1, 3), dtype=np.uint8))
+    def test_deepcopy_only_images_provided(self):
+        images = np.zeros((1, 1, 3), dtype=np.uint8)
+        batch = ia.Batch(images=images)
         observed = batch.deepcopy()
         for attr_name in observed.__dict__.keys():
             if attr_name != "images_unaug":
                 assert getattr(observed, attr_name) is None
         assert ia.is_np_array(observed.images_unaug)
 
+    def test_deepcopy_every_argument_provided(self):
+        images = np.zeros((1, 1, 1, 3), dtype=np.uint8)
+        heatmaps = [ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
+                                       shape=(4, 4, 3))]
+        segmentation_maps = [
+            ia.SegmentationMapOnImage(np.zeros((1, 1), dtype=np.int32),
+                                      shape=(5, 5, 3), nb_classes=20)]
+        keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)],
+                                         shape=(6, 6, 3))]
+        bounding_boxes = [
+            ia.BoundingBoxesOnImage([
+                ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
+            ], shape=(7, 7, 3))]
+        polygons = [
+            ia.PolygonsOnImage([
+                ia.Polygon([(0, 0), (10, 0), (10, 10)])
+            ], shape=(100, 100, 3))]
+        line_strings = [
+            ia.LineStringsOnImage([
+                ia.LineString([(1, 1), (11, 1), (11, 11)])
+            ], shape=(101, 101, 3))]
+        data = {"test": 123, "foo": "bar", "test2": [1, 2, 3]}
+
         batch = ia.Batch(
-            images=np.zeros((1, 1, 3), dtype=np.uint8),
-            heatmaps=[
-                ia.HeatmapsOnImage(np.zeros((1, 1, 1), dtype=np.float32),
-                                   shape=(4, 4, 3))
-            ],
-            segmentation_maps=[
-                ia.SegmentationMapOnImage(np.zeros((1, 1), dtype=np.int32),
-                                          shape=(5, 5, 3),
-                                          nb_classes=20)
-            ],
-            keypoints=[
-                ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)], shape=(6, 6, 3))
-            ],
-            bounding_boxes=[
-                ia.BoundingBoxesOnImage([
-                    ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)],
-                    shape=(7, 7, 3))
-            ],
-            polygons=[
-                ia.PolygonsOnImage([
-                    ia.Polygon([(0, 0), (10, 0), (10, 10)])
-                ], shape=(100, 100, 3))
-            ],
-            line_strings=[
-                ia.LineStringsOnImage([
-                    ia.LineString([(1, 1), (11, 1), (11, 11)])
-                ], shape=(101, 101, 3))
-            ],
-            data={"test": 123, "foo": "bar", "test2": [1, 2, 3]}
+            images=images,
+            heatmaps=heatmaps,
+            segmentation_maps=segmentation_maps,
+            keypoints=keypoints,
+            bounding_boxes=bounding_boxes,
+            polygons=polygons,
+            line_strings=line_strings,
+            data=data
         )
         observed = batch.deepcopy()
+
         for attr_name in observed.__dict__.keys():
             if "_unaug" not in attr_name and attr_name != "data":
                 assert getattr(observed, attr_name) is None
 
+        # must not be identical
+        assert observed.images_unaug is not images
+        assert observed.heatmaps_unaug is not heatmaps
+        assert observed.segmentation_maps_unaug is not segmentation_maps
+        assert observed.keypoints_unaug is not keypoints
+        assert observed.bounding_boxes_unaug is not bounding_boxes
+        assert observed.polygons_unaug is not polygons
+        assert observed.line_strings_unaug is not line_strings
+        assert observed.data is not data
+
+        # verify that lists were not shallow-copied
+        assert observed.heatmaps_unaug[0] is not heatmaps[0]
+        assert observed.segmentation_maps_unaug[0] is not segmentation_maps[0]
+        assert observed.keypoints_unaug[0] is not keypoints[0]
+        assert observed.bounding_boxes_unaug[0] is not bounding_boxes[0]
+        assert observed.polygons_unaug[0] is not polygons[0]
+        assert observed.line_strings_unaug[0] is not line_strings[0]
+        assert observed.data["test2"] is not data["test2"]
+
+        # but must be equal
         assert ia.is_np_array(observed.images_unaug)
-        assert observed.images_unaug.shape == (1, 1, 3)
+        assert observed.images_unaug.shape == (1, 1, 1, 3)
         assert isinstance(observed.heatmaps_unaug[0], ia.HeatmapsOnImage)
         assert isinstance(observed.segmentation_maps_unaug[0],
                           ia.SegmentationMapOnImage)
