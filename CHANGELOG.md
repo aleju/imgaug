@@ -78,12 +78,9 @@
 * Refactored code in `augmenters.arithmetic` (general code and docstring cleanup). #328
 * Added check to `dtypes.gate_dtypes()` verifying that arguments `allowed`
   and `disallowed` have no intersection. #346
-* Added dependency `pytest-subtests` for the library's unittests.
-* [rarely breaking] Removed argument `affects` from
-  `dtypes.promote_array_dtypes_()` as it was unnecessary and not used anywhere
-  in the library.
-* Added `imgaug.is_np_scalar()`, analogous to `imgaug.is_np_array()`.
-* Reworked and refactored code in `dtypes.py` (general code cleanup).
+* Added dependency `pytest-subtests` for the library's unittests. #366
+* Added `imgaug.is_np_scalar()`, analogous to `imgaug.is_np_array()`. #366
+* Reworked and refactored code in `dtypes.py` (general code cleanup). #366
   * Added `dtypes.normalize_dtypes()`.
   * Added `dtypes.normaliz_dtypes()`.
   * Refactored `dtypes.promote_array_dtypes_()` to use
@@ -109,6 +106,9 @@
     function was not used anywhere in the library.
   * Changed `dtypes.get_value_range_of_dtype()` to return a float as the center
     value of `uint` dtypes.
+  * [rarely breaking] Removed argument `affects` from
+    `dtypes.promote_array_dtypes_()` as it was unnecessary and not used anywhere
+    in the library. #366
 
 ## Fixes
  
@@ -138,12 +138,12 @@
   `n_segments` is now treated as `1` in these cases.
 * Fixed `ReplaceElementwise` both allowing and disallowing dtype `int64`. #346
 * Fixed `BoundingBox.deepcopy()` creating only shallow copies of labels. #356
-* Fixed `dtypes.change_dtypes_()`
+* Fixed `dtypes.change_dtypes_()` #366
     * Fixed argument `round` being ignored if input images were a list.
     * Fixed failure if input images were a list and dtypes a single numpy
       dtype function.
 * Fixed `dtypes.get_minimal_dtype()` failing if argument `arrays` contained
-  not *exactly* two items.
+  not *exactly* two items. #366
 
 
 # 0.2.9
