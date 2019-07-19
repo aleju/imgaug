@@ -125,6 +125,10 @@ class AveragePooling(_AbstractPoolingBase):
     to the kernel size, with optional upscaling afterwards. The upscaling
     is configured to create "pixelated"/"blocky" images by default.
 
+    dtype support::
+
+        See :func:`imgaug.imgaug.avg_pool`.
+
     Attributes
     ----------
     kernel_size : int or tuple of int or list of int \
@@ -238,6 +242,10 @@ class MaxPooling(_AbstractPoolingBase):
     This augmenter does not affect heatmaps, segmentation maps or
     coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
 
+    dtype support::
+
+        See :func:`imgaug.imgaug.max_pool`.
+
     Attributes
     ----------
     kernel_size : int or tuple of int or list of int \
@@ -350,6 +358,10 @@ class MinPooling(_AbstractPoolingBase):
 
     This augmenter does not affect heatmaps, segmentation maps or
     coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pool`.
 
     Attributes
     ----------
@@ -467,6 +479,10 @@ class MedianPooling(_AbstractPoolingBase):
 
     This augmenter does not affect heatmaps, segmentation maps or
     coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pool`.
 
     Attributes
     ----------
