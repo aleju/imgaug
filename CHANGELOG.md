@@ -78,6 +78,37 @@
 * Refactored code in `augmenters.arithmetic` (general code and docstring cleanup). #328
 * Added check to `dtypes.gate_dtypes()` verifying that arguments `allowed`
   and `disallowed` have no intersection. #346
+* Added dependency `pytest-subtests` for the library's unittests.
+* [rarely breaking] Removed argument `affects` from
+  `dtypes.promote_array_dtypes_()` as it was unnecessary and not used anywhere
+  in the library.
+* Added `imgaug.is_np_scalar()`, analogous to `imgaug.is_np_array()`.
+* Reworked and refactored code in `dtypes.py` (general code cleanup).
+  * Added `dtypes.normalize_dtypes()`.
+  * Added `dtypes.normaliz_dtypes()`.
+  * Refactored `dtypes.promote_array_dtypes_()` to use
+    `dtypes.change_dtypes_()`.
+  * Reworked dtype normalization. All functions in the module that required
+    dtype inputs accept now dtypes, dtype functions, dtype names, ndarrays
+    or numpy scalars.
+  * [rarely breaking] `dtypes.restore_dtypes_()`
+    * Improved error messages.
+    * Changed so that if `images` is a list of length `N` and `dtypes` is a
+      list of length `M` and `N!=M`, the function now raises an
+      `AssertionError`.
+    * The argument `round` is now ignored if the input array does not have
+      a float dtype.
+  * Renamed `dtypes.restore_dtypes_()` to `dtypes.change_dtypes_()` (old name
+    still exists too and redirects to new name).
+  * Added `dtypes.change_dtype_()`, analogous to `dtypes.change_dtypes_()`.
+  * Added `dtypes.increase_itemsize_of_dtype()`.
+      * Refactored `dtypes.get_minimal_dtype()` to use that new function.
+  * [rarely breaking] Removed `dtypes.get_minimal_dtype_for_values()`. The
+    function was not used anywhere in the library.
+  * [rarely breaking] Removed `dtypes.get_minimal_dtype_by_value_range()`. The
+    function was not used anywhere in the library.
+  * Changed `dtypes.get_value_range_of_dtype()` to return a float as the center
+    value of `uint` dtypes.
 
 ## Fixes
  
@@ -107,6 +138,12 @@
   `n_segments` is now treated as `1` in these cases.
 * Fixed `ReplaceElementwise` both allowing and disallowing dtype `int64`. #346
 * Fixed `BoundingBox.deepcopy()` creating only shallow copies of labels. #356
+* Fixed `dtypes.change_dtypes_()`
+    * Fixed argument `round` being ignored if input images were a list.
+    * Fixed failure if input images were a list and dtypes a single numpy
+      dtype function.
+* Fixed `dtypes.get_minimal_dtype()` failing if argument `arrays` contained
+  not *exactly* two items.
 
 
 # 0.2.9
