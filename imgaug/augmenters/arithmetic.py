@@ -2627,7 +2627,7 @@ class Invert(meta.Augmenter):
             arr_modify = np.clip(arr_modify, min_value, max_value)
         if arr.dtype.kind in ["i", "f"]:
             arr_modify = iadt.restore_dtypes_(
-                arr_modify, [arr.dtype], clip=False)
+                arr_modify, arr.dtype, clip=False)
         return arr_modify
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):

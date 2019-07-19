@@ -298,6 +298,8 @@ def adjust_contrast_linear(arr, alpha):
     # like `d` was 0 for CV_8S, causing that to fail
     if arr.dtype.name == "uint8":
         min_value, center_value, max_value = iadt.get_value_range_of_dtype(arr.dtype)
+        # TODO get rid of this int(...)
+        center_value = int(center_value)
 
         value_range = np.arange(0, 256, dtype=np.float32)
         # 127 + alpha*(I_ij-127)
@@ -311,6 +313,7 @@ def adjust_contrast_linear(arr, alpha):
     else:
         input_dtype = arr.dtype
         _min_value, center_value, _max_value = iadt.get_value_range_of_dtype(input_dtype)
+        # TODO get rid of this int(...)
         if input_dtype.kind in ["u", "i"]:
             center_value = int(center_value)
         image_aug = center_value + alpha * (arr.astype(np.float64)-center_value)
