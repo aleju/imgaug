@@ -434,18 +434,17 @@ class Test_handle_probability_param(unittest.TestCase):
 class Test_force_np_float_dtype(unittest.TestCase):
     def test_common_dtypes(self):
         dtypes = [
-            (np.float16, np.float16),
-            (np.float32, np.float32),
-            (np.float64, np.float64),
-            (np.uint8, np.float64),
-            (np.int32, np.float64)
+            ("float16", "float16"),
+            ("float32", "float32"),
+            ("float64", "float64"),
+            ("uint8", "float64"),
+            ("int32", "float64")
         ]
-        for i, (dtype_in, dtype_out) in enumerate(dtypes):
-            assert (
-                iap.force_np_float_dtype(np.zeros((1,), dtype=dtype_in)).dtype
-                == dtype_out,
-                "force_np_float_dtype() failed at %d" % (i,)
-            )
+        for dtype_in, expected in dtypes:
+            with self.subTest(dtype_in=dtype_in):
+                arr = np.zeros((1,), dtype=dtype_in)
+                observed = iap.force_np_float_dtype(arr).dtype
+                assert observed.name == expected
 
 
 class Test_both_np_float_if_one_is_float(unittest.TestCase):
