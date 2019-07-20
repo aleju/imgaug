@@ -1477,6 +1477,98 @@ def test_pad_to_aspect_ratio():
     # TODO add tests for return_pad_values=True
 
 
+class Test_compute_paddings_to_reach_multiples_of(unittest.TestCase):
+    def test_zero_height_array(self):
+        arr = np.zeros((0, 2, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, 2)
+        assert paddings == (1, 0, 1, 0)
+
+    def test_zero_width_array(self):
+        arr = np.zeros((2, 0, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, 2)
+        assert paddings == (0, 1, 0, 1)
+
+    def test_both_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, None, None)
+        assert paddings == (0, 0, 0, 0)
+
+    def test_height_is_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, None, 2)
+        assert paddings == (0, 1, 0, 0)
+
+    def test_width_is_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, None)
+        assert paddings == (0, 0, 1, 0)
+
+    def test_height_is_one(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 1, 2)
+        assert paddings == (0, 1, 0, 0)
+
+    def test_width_is_one(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, 1)
+        assert paddings == (0, 0, 1, 0)
+
+    def test_various_widths(self):
+        nb_channels_lst = [None, 1, 3, 4]
+        amounts = [2, 3, 4, 5, 6, 7, 8, 9]
+        expecteds = [
+            (0, 1, 0, 0),
+            (0, 1, 0, 0),
+            (0, 2, 0, 1),
+            (0, 0, 0, 0),
+            (0, 1, 0, 0),
+            (0, 1, 0, 1),
+            (0, 2, 0, 1),
+            (0, 2, 0, 2)
+        ]
+
+        for amount, expected in zip(amounts, expecteds):
+            for nb_channels in nb_channels_lst:
+                with self.subTest(width_multiple=amount,
+                                  nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.zeros((3, 5), dtype=np.uint8)
+                    else:
+                        arr = np.zeros((3, 5, nb_channels), dtype=np.uint8)
+
+                    paddings = ia.compute_paddings_to_reach_multiples_of(
+                        arr, None, amount)
+
+                    assert paddings == expected
+
+    def test_various_heights(self):
+        nb_channels_lst = [None, 1, 3, 4]
+        amounts = [2, 3, 4, 5, 6, 7, 8, 9]
+        expecteds = [
+            (0, 0, 1, 0),
+            (0, 0, 1, 0),
+            (1, 0, 2, 0),
+            (0, 0, 0, 0),
+            (0, 0, 1, 0),
+            (1, 0, 1, 0),
+            (1, 0, 2, 0),
+            (2, 0, 2, 0)
+        ]
+        for amount, expected in zip(amounts, expecteds):
+            for nb_channels in nb_channels_lst:
+                with self.subTest(height_multiple=amount,
+                                  nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.zeros((5, 3), dtype=np.uint8)
+                    else:
+                        arr = np.zeros((5, 3, nb_channels), dtype=np.uint8)
+
+                    paddings = ia.compute_paddings_to_reach_multiples_of(
+                        arr, amount, None)
+
+                    assert paddings == expected
+
+
 def test_pool():
     # -----
     # uint, int

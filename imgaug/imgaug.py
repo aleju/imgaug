@@ -1556,6 +1556,66 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
         return arr_padded
 
 
+# TODO allow shape as input instead of array
+def compute_paddings_to_reach_multiples_of(arr, height_multiple,
+                                           width_multiple):
+    """
+    Compute pad amounts until height/width are multiples of given values.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array for which to compute pad amounts.
+
+    height_multiple : None or int
+        The desired multiple of the height. The computed padding amount will
+        reflect a padding that increases the y axis size until it is a multiple
+        of this value.
+
+    width_multiple : None or int
+        The desired multiple of the width. The computed padding amount will
+        reflect a padding that increases the x axis size until it is a multiple
+        of this value.
+
+    Returns
+    -------
+    result : tuple of int
+        Required padding amounts to reach multiples of the provided values,
+        given as a tuple of the form ``(top, right, bottom, left)``.
+
+    """
+    def _compute_axis_value(axis_size, multiple):
+        if multiple is None:
+            return 0, 0
+        if axis_size == 0:
+            to_pad = multiple
+        elif axis_size % multiple == 0:
+            to_pad = 0
+        else:
+            to_pad = multiple - (axis_size % multiple)
+        return int(np.floor(to_pad/2)), int(np.ceil(to_pad/2))
+
+    assert arr.ndim in [2, 3], (
+        "Can only pad arrays with 2 or 3 axis, got %d axis." % (arr.ndim,))
+    if height_multiple is not None:
+        assert height_multiple > 0, (
+            "Can only pad to multiples of 1 or larger, got %d." % (
+                height_multiple,))
+    if width_multiple is not None:
+        assert width_multiple > 0, (
+            "Can only pad to multiples of 1 or larger, got %d." % (
+                height_multiple,))
+
+    height, width = arr.shape[0:2]
+
+    pad_top, pad_bottom = _compute_axis_value(height, height_multiple)
+    pad_left, pad_right = _compute_axis_value(width, width_multiple)
+
+    return pad_top, pad_right, pad_bottom, pad_left
+
+
+
+
 def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     """
     Resize an array by pooling values within blocks.
