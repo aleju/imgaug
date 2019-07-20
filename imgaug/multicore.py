@@ -71,14 +71,29 @@ class Pool(object):
         assert Pool._WORKER_AUGSEQ is None, (
             "_WORKER_AUGSEQ was already set when calling Pool.__init__(). "
             "Did you try to instantiate a Pool within a Pool?")
-        assert processes is None or processes != 0
+        assert processes is None or processes != 0, (
+            "Expected `processes` to be `None` (\"use as many cores as "
+            "available\") or a negative integer (\"use as many as available "
+            "MINUS this number\") or an integer>1 (\"use exactly that many "
+            "processes\"). Got type %s, value %s instead." % (
+                type(processes), str(processes))
+        )
 
         self.augseq = augseq
         self.processes = processes
         self.maxtasksperchild = maxtasksperchild
+
+        if seed is not None:
+            assert ia.SEED_MIN_VALUE <= seed <= ia.SEED_MAX_VALUE, (
+                "Expected `seed` to be either `None` or a value between "
+                "%d and %d. Got type %s, value %s instead." % (
+                    ia.SEED_MIN_VALUE,
+                    ia.SEED_MAX_VALUE,
+                    type(seed),
+                    str(seed)
+                )
+            )
         self.seed = seed
-        if self.seed is not None:
-            assert ia.SEED_MIN_VALUE <= self.seed <= ia.SEED_MAX_VALUE
 
         # multiprocessing.Pool instance
         self._pool = None
@@ -155,9 +170,7 @@ class Pool(object):
             Augmented batches.
 
         """
-        assert isinstance(batches, list), (
-            "Expected to get a list as 'batches', got type %s. Call "
-            "imap_batches() if you use generators.") % (type(batches),)
+        self._assert_batches_is_list(batches)
         return self.pool.map(
             _Pool_starworker,
             self._handle_batch_ids(batches),
@@ -189,15 +202,19 @@ class Pool(object):
             Asynchonous result. See ``multiprocessing.Pool``.
 
         """
-        assert isinstance(batches, list), (
-            "Expected to get a list as 'batches', got type %s. Call "
-            "imap_batches() if you use generators.") % (type(batches),)
+        self._assert_batches_is_list(batches)
         return self.pool.map_async(
             _Pool_starworker,
             self._handle_batch_ids(batches),
             chunksize=chunksize,
             callback=callback,
             error_callback=error_callback)
+
+    @classmethod
+    def _assert_batches_is_list(cls, batches):
+        assert isinstance(batches, list), (
+            "Expected `batches` to be a list, got type %s. Call "
+            "imap_batches() if you use generators.") % (type(batches),)
 
     def imap_batches(self, batches, chunksize=1, output_buffer_size=None):
         """
@@ -234,9 +251,7 @@ class Pool(object):
             Augmented batch.
 
         """
-        assert ia.is_generator(batches), (
-            "Expected to get a generator as 'batches', got type %s. Call "
-            "map_batches() if you use lists.") % (type(batches),)
+        self._assert_batches_is_generator(batches)
 
         # buffer is either None or a Semaphore
         output_buffer_left = _create_output_buffer_left(output_buffer_size)
@@ -290,9 +305,7 @@ class Pool(object):
             Augmented batch.
 
         """
-        assert ia.is_generator(batches), (
-            "Expected to get a generator as 'batches', got type %s. Call "
-            "map_batches() if you use lists.") % (type(batches),)
+        self._assert_batches_is_generator(batches)
 
         # buffer is either None or a Semaphore
         output_buffer_left = _create_output_buffer_left(output_buffer_size)
@@ -310,6 +323,12 @@ class Pool(object):
             yield batch
             if output_buffer_left is not None:
                 output_buffer_left.release()
+
+    @classmethod
+    def _assert_batches_is_generator(cls, batches):
+        assert ia.is_generator(batches), (
+            "Expected `batches` to be generator, got type %s. Call "
+            "map_batches() if you use lists.") % (type(batches),)
 
     def __enter__(self):
         assert self._pool is None, (
@@ -372,8 +391,8 @@ def _create_output_buffer_left(output_buffer_size):
     output_buffer_left = None
     if output_buffer_size:
         assert output_buffer_size > 0, (
-            ("Expected non-zero buffer size, "
-             + "but got %d") % (output_buffer_size,))
+            "Expected buffer size to be greater than zero, but got size %d "
+            "instead." % (output_buffer_size,))
         output_buffer_left = multiprocessing.Semaphore(output_buffer_size)
     return output_buffer_left
 
@@ -405,9 +424,20 @@ def _Pool_initialize_worker(augseq, seed_start):
 # This could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that
 # leads to pickle errors.
 def _Pool_worker(batch_idx, batch):
-    assert ia.is_single_integer(batch_idx)
-    assert isinstance(batch, (UnnormalizedBatch, Batch))
-    assert Pool._WORKER_AUGSEQ is not None
+    assert ia.is_single_integer(batch_idx), (
+        "Expected `batch_idx` to be an integer. Got type %s instead." % (
+            type(batch_idx)
+        ))
+    assert isinstance(batch, (UnnormalizedBatch, Batch)), (
+        "Expected `batch` to be either an instance of "
+        "`imgaug.augmentables.batches.UnnormalizedBatch` or "
+        "`imgaug.augmentables.batches.Batch`. Got type %s instead." % (
+            type(batch)
+        ))
+    assert Pool._WORKER_AUGSEQ is not None, (
+        "Expected `Pool._WORKER_AUGSEQ` to NOT be `None`. Did you manually "
+        "call _Pool_worker()?")
+
     augseq = Pool._WORKER_AUGSEQ
     # TODO why is this if here? _WORKER_SEED_START should always be set?
     if Pool._WORKER_SEED_START is not None:
