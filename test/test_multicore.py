@@ -570,7 +570,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
         assert augseq.localize_random_state_.call_count == 1
 
     @mock.patch.object(sys, 'version_info')
-    @mock.patch("time.time_ns")
+    @mock.patch("time.time_ns", create=True)  # doesnt exist in <=3.6
     @mock.patch("imgaug.imgaug.seed")
     @mock.patch("multiprocessing.current_process")
     def test_without_seed_start_simulate_py37_or_higher(self,
