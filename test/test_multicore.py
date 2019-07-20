@@ -33,6 +33,12 @@ class TestPool(unittest.TestCase):
     def setUp(self):
         reseed()
 
+    def test___init___seed_out_of_bounds(self):
+        augseq = iaa.Noop()
+        with self.assertRaises(AssertionError) as context:
+            _ = multicore.Pool(augseq, seed=ia.SEED_MAX_VALUE + 100)
+        assert "Expected `seed` to be" in str(context.exception)
+
     def test_property_pool(self):
         mock_Pool = mock.MagicMock()
         mock_Pool.return_value = mock_Pool
@@ -89,6 +95,31 @@ class TestPool(unittest.TestCase):
                         assert mock_Pool.call_args[0][0] is None
                     else:
                         assert mock_Pool.call_args[0][0] == expected
+
+    @mock.patch("multiprocessing.cpu_count")
+    @mock.patch("multiprocessing.Pool")
+    def test_cpu_count_does_not_exist(self, mock_pool, mock_cpu_count):
+        def _side_effect():
+            raise NotImplementedError
+
+        mock_cpu_count.side_effect = _side_effect
+
+        augseq = iaa.Noop()
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+            with multicore.Pool(augseq, processes=-1):
+                pass
+
+        assert mock_cpu_count.call_count == 1
+        assert mock_pool.call_count == 1
+        # 'processes' arg to Pool was expected to be set to None as cpu_count
+        # produced an error
+        assert mock_pool.call_args_list[0][0][0] is None
+
+        assert len(caught_warnings) == 1
+        assert (
+            "Could not find method multiprocessing.cpu_count(). "
+            in str(caught_warnings[-1].message))
 
     @classmethod
     def _test_map_batches_both(cls, call_async):
@@ -501,6 +532,198 @@ class TestPool(unittest.TestCase):
         with multicore.Pool(augseq, processes=2) as pool:
             pool.close()
             pool.join()
+
+    @mock.patch("multiprocessing.Pool")
+    def test_join_via_mock(self, mock_pool):
+        # According to codecov, the join() does not get beyond its initial
+        # if statement in the test_join() test, even though it should be.
+        # Might be a simple travis multicore problem?
+        # It is tested here again via some mocking.
+        mock_pool.return_value = mock_pool
+        mock_pool.join.return_value = True
+        with multicore.Pool(iaa.Noop(), processes=2) as pool:
+            pool.join()
+
+            # Make sure that __exit__ does not call close(), which would then
+            # call join() again and we would get a call_count of 2
+            pool._pool = None
+
+        assert mock_pool.join.call_count == 1
+
+
+# This should already be part of the Pool tests, but according to codecov
+# it is not tested. Likely some travis error related to running multiple
+# python processes.
+class Test_Pool_initialize_worker(unittest.TestCase):
+    def tearDown(self):
+        # without this, other tests can break as e.g. the functions in
+        # multicore assert that _WORKER_AUGSEQ is None
+        multicore.Pool._WORKER_AUGSEQ = None
+        multicore.Pool._WORKER_SEED_START = None
+
+    @mock.patch("imgaug.multicore.Pool")
+    def test_with_seed_start(self, mock_ia_pool):
+        augseq = mock.MagicMock()
+        multicore._Pool_initialize_worker(augseq, 1)
+        assert mock_ia_pool._WORKER_SEED_START == 1
+        assert mock_ia_pool._WORKER_AUGSEQ is augseq
+        assert augseq.localize_random_state_.call_count == 1
+
+    @mock.patch.object(sys, 'version_info')
+    @mock.patch("time.time_ns", create=True)  # doesnt exist in <=3.6
+    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("multiprocessing.current_process")
+    def test_without_seed_start_simulate_py37_or_higher(self,
+                                                        mock_cp,
+                                                        mock_ia_seed,
+                                                        mock_time_ns,
+                                                        mock_vi):
+        def version_info(index):
+            return 3 if index == 0 else 7
+
+        mock_vi.__getitem__.side_effect = version_info
+        mock_time_ns.return_value = 1
+        mock_cp.return_value = mock.MagicMock()
+        mock_cp.return_value.name = "foo"
+        augseq = mock.MagicMock()
+
+        multicore._Pool_initialize_worker(augseq, None)
+
+        assert mock_time_ns.call_count == 1
+        assert mock_ia_seed.call_count == 1
+        assert augseq.reseed.call_count == 1
+
+        seed_global = mock_ia_seed.call_args_list[0][0][0]
+        seed_local = augseq.reseed.call_args_list[0][0][0]
+        assert seed_global != seed_local
+
+    @mock.patch.object(sys, 'version_info')
+    @mock.patch("time.time")
+    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("multiprocessing.current_process")
+    def test_without_seed_start_simulate_py36_or_lower(self,
+                                                       mock_cp,
+                                                       mock_ia_seed,
+                                                       mock_time,
+                                                       mock_vi):
+        def version_info(index):
+            return 3 if index == 0 else 6
+
+        mock_vi.__getitem__.side_effect = version_info
+        mock_time.return_value = 1
+        mock_cp.return_value = mock.MagicMock()
+        mock_cp.return_value.name = "foo"
+        augseq = mock.MagicMock()
+
+        multicore._Pool_initialize_worker(augseq, None)
+
+        assert mock_time.call_count == 1
+        assert mock_ia_seed.call_count == 1
+        assert augseq.reseed.call_count == 1
+
+        seed_global = mock_ia_seed.call_args_list[0][0][0]
+        seed_local = augseq.reseed.call_args_list[0][0][0]
+        assert seed_global != seed_local
+
+    @mock.patch("imgaug.imgaug.seed")
+    def test_without_seed_start(self, mock_ia_seed):
+        augseq = mock.MagicMock()
+
+        multicore._Pool_initialize_worker(augseq, None)
+        time.sleep(0.01)
+        multicore._Pool_initialize_worker(augseq, None)
+
+        seed_global_call_1 = mock_ia_seed.call_args_list[0][0][0]
+        seed_local_call_1 = augseq.reseed.call_args_list[0][0][0]
+        seed_global_call_2 = mock_ia_seed.call_args_list[0][0][0]
+        seed_local_call_2 = augseq.reseed.call_args_list[0][0][0]
+        assert (
+            seed_global_call_1
+            != seed_local_call_1
+            != seed_global_call_2
+            != seed_local_call_2
+        ), "Got seeds: %d, %d, %d, %d" % (
+            seed_global_call_1, seed_local_call_1,
+            seed_global_call_2, seed_local_call_2)
+        assert mock_ia_seed.call_count == 2
+        assert augseq.reseed.call_count == 2
+
+
+# This should already be part of the Pool tests, but according to codecov
+# it is not tested. Likely some travis error related to running multiple
+# python processes.
+class Test_Pool_worker(unittest.TestCase):
+    def tearDown(self):
+        # without this, other tests can break as e.g. the functions in
+        # multicore assert that _WORKER_AUGSEQ is None
+        multicore.Pool._WORKER_AUGSEQ = None
+        multicore.Pool._WORKER_SEED_START = None
+
+    def test_without_seed_start(self):
+        augseq = mock.MagicMock()
+        augseq.augment_batch.return_value = "augmented_batch"
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        batch = UnnormalizedBatch(images=[image])
+
+        multicore.Pool._WORKER_AUGSEQ = augseq
+        result = multicore._Pool_worker(1, batch)
+
+        assert result == "augmented_batch"
+        assert augseq.augment_batch.call_count == 1
+        augseq.augment_batch.assert_called_once_with(batch)
+
+    @mock.patch("imgaug.imgaug.seed")
+    def test_with_seed_start(self, mock_ia_seed):
+        augseq = mock.MagicMock()
+        augseq.augment_batch.return_value = "augmented_batch"
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        batch = UnnormalizedBatch(images=[image])
+        batch_idx = 1
+        seed_start = 10
+
+        multicore.Pool._WORKER_AUGSEQ = augseq
+        multicore.Pool._WORKER_SEED_START = seed_start
+        result = multicore._Pool_worker(batch_idx, batch)
+
+        # expected seeds used
+        seed = seed_start + batch_idx
+        seed_global_expected = (
+            ia.SEED_MIN_VALUE
+            + (seed - 10**9) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        )
+        seed_local_expected = (
+            ia.SEED_MIN_VALUE
+            + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        )
+
+        assert result == "augmented_batch"
+        assert augseq.augment_batch.call_count == 1
+        augseq.augment_batch.assert_called_once_with(batch)
+        mock_ia_seed.assert_called_once_with(seed_global_expected)
+        augseq.reseed.assert_called_once_with(seed_local_expected)
+
+
+# This should already be part of the Pool tests, but according to codecov
+# it is not tested. Likely some travis error related to running multiple
+# python processes.
+class Test_Pool_starworker(unittest.TestCase):
+    def tearDown(self):
+        # without this, other tests can break as e.g. the functions in
+        # multicore assert that _WORKER_AUGSEQ is None
+        multicore.Pool._WORKER_AUGSEQ = None
+        multicore.Pool._WORKER_SEED_START = None
+
+    @mock.patch("imgaug.multicore._Pool_worker")
+    def test_simple_call(self, mock_worker):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        batch = UnnormalizedBatch(images=[image])
+        batch_idx = 1
+        mock_worker.return_value = "returned_batch"
+
+        result = multicore._Pool_starworker((batch_idx, batch))
+
+        assert result == "returned_batch"
+        mock_worker.assert_called_once_with(batch_idx, batch)
 
 
 # Note that BatchLoader is deprecated

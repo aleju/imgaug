@@ -2066,6 +2066,27 @@ class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
     pass
 
 
+def warn(msg, category=UserWarning, stacklevel=2):
+    """Generate a a warning with stacktrace.
+
+    Parameters
+    ----------
+    msg : str
+        The message of the warning.
+
+    category : class
+        The class of the warning to produce.
+
+    stacklevel : int, optional
+        How many steps above this function to "jump" in the stacktrace for
+        the displayed file and line number of the error message.
+        Usually 2.
+
+    """
+    import warnings
+    warnings.warn(msg, category=category, stacklevel=stacklevel)
+
+
 def warn_deprecated(msg, stacklevel=2):
     """Generate a non-silent deprecation warning with stacktrace.
 
@@ -2082,10 +2103,7 @@ def warn_deprecated(msg, stacklevel=2):
         Usually 2.
 
     """
-    import warnings
-    warnings.warn(msg,
-                  category=DeprecationWarning,
-                  stacklevel=stacklevel)
+    warn(msg, category=DeprecationWarning, stacklevel=stacklevel)
 
 
 class deprecated(object):
