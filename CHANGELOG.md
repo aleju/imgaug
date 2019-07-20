@@ -118,6 +118,7 @@
 * Added `imgaug.min_pool()`.
   * Refactored `augmenters.pooling.MinPooling` to use `imgaug.min_pool()`.
 * Added `imgaug.median_pool()`.
+  * Refactored `augmenters.pooling.MedianPooling` to use `imgaug.median_pool()`.
 
 ## Fixes
  
