@@ -73,6 +73,28 @@ def is_np_array(val):
     return isinstance(val, np.ndarray)
 
 
+def is_np_scalar(val):
+    """
+    Checks whether a variable is a numpy scalar.
+
+    Parameters
+    ----------
+    val
+        The variable to check.
+
+    Returns
+    -------
+    out : bool
+        True if the variable is a numpy scalar. Otherwise False.
+
+    """
+    # Note that isscalar() alone also fires for thinks like python strings
+    # or booleans.
+    # The isscalar() was added to make this function not fire for non-scalar
+    # numpy types. Not sure if it is necessary.
+    return isinstance(val, np.generic) and np.isscalar(val)
+
+
 def is_single_integer(val):
     """
     Checks whether a variable is an integer.

@@ -511,7 +511,6 @@ def test_adjust_contrast_linear():
         ]
         img = np.array(img, dtype=dtype)
 
-        # alphas [0, 1, 2, 4, 100]
         alphas = [0, 1, 2, 4]
         if dtype not in [np.uint8, np.int8, np.float16]:
             alphas.append(100)
@@ -522,6 +521,7 @@ def test_adjust_contrast_linear():
                 [cv-1*alpha, cv+0*alpha, cv+1*alpha],
                 [cv+2*alpha, cv+3*alpha, cv+4*alpha]
             ]
+
             expected = np.array(expected, dtype=dtype)
             observed = contrast_lib.adjust_contrast_linear(img, alpha=alpha)
             assert observed.dtype == np.dtype(dtype)
