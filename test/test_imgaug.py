@@ -1864,13 +1864,41 @@ def test_pool():
         [4, 5, 6],
         [8, 9, 10]
     ])
-    arr_pooled = ia.pool(arr, 2, np.average, cval=22)
+    arr_pooled = ia.pool(arr, 2, np.average, pad_cval=22)
     assert arr_pooled.shape == (2, 2)
     assert arr_pooled.dtype == arr.dtype.type
     assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
     assert arr_pooled[0, 1] == int(np.average([2, 22, 6, 22]))
     assert arr_pooled[1, 0] == int(np.average([8, 9, 22, 22]))
     assert arr_pooled[1, 1] == int(np.average([10, 22, 22, 22]))
+
+    # padding mode
+    arr = np.uint8([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, pad_mode="edge")
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 2, 6, 6]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 8, 9]))
+    assert arr_pooled[1, 1] == int(np.average([10, 10, 10, 10]))
+
+    # same as above, but with float32 to make averages more accurate
+    arr = np.float32([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, pad_mode="edge")
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert np.isclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
+    assert np.isclose(arr_pooled[0, 1], np.average([2, 2, 6, 6]))
+    assert np.isclose(arr_pooled[1, 0], np.average([8, 9, 8, 9]))
+    assert np.isclose(arr_pooled[1, 1], np.average([10, 10, 10, 10]))
 
 
 def test_avg_pool():

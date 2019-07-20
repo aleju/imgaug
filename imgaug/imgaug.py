@@ -1726,7 +1726,8 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
     return arr_padded
 
 
-def pool(arr, block_size, func, cval=0, preserve_dtype=True):
+def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
+         preserve_dtype=True, cval=None):
     """
     Resize an array by pooling values within blocks.
 
@@ -1767,13 +1768,20 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
         Function to apply to a given block in order to convert it to a single number,
         e.g. :func:`numpy.average`, :func:`numpy.min`, :func:`numpy.max`.
 
-    cval : number, optional
-        Value to use in order to pad the array along its border if the array cannot be divided
-        by `block_size` without remainder.
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder. See :func:`imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details.
 
     preserve_dtype : bool, optional
         Whether to convert the array back to the input datatype if it is changed away from
         that in the pooling process.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
 
     Returns
     -------
@@ -1790,6 +1798,11 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
                                  "float256"],
                      augmenter=None)
 
+    if cval is not None:
+        warn_deprecated("`cval` is a deprecated argument in pool(). "
+                        "Use `pad_cval` instead.")
+        pad_cval = cval
+
     do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
@@ -1801,15 +1814,27 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     if len(block_size) < arr.ndim:
         block_size = list(block_size) + [1]
 
+    # We use custom padding here instead of the one from block_reduce(),
+    # because (1) it is expected to be faster and (2) it allows us more
+    # flexibility wrt to padding modes.
+    arr = pad_to_multiples_of(
+        arr,
+        height_multiple=block_size[0],
+        width_multiple=block_size[1],
+        mode=pad_mode,
+        cval=pad_cval
+    )
+
     input_dtype = arr.dtype
-    arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func, cval=cval)
+    arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func,
+                                               cval=cval)
     if preserve_dtype and arr_reduced.dtype.type != input_dtype:
         arr_reduced = arr_reduced.astype(input_dtype)
     return arr_reduced
 
 
 # TODO does OpenCV have a faster avg pooling method?
-def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
+def avg_pool(arr, block_size, pad_cval=128, preserve_dtype=True, cval=None):
     """
     Resize an array using average pooling.
 
@@ -1825,11 +1850,14 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool. See :func:`imgaug.pool` for details.
 
-    cval : number, optional
+    pad_cval : number, optional
         Padding value. See :func:`imgaug.pool` for details.
 
     preserve_dtype : bool, optional
         Whether to preserve the input array dtype. See :func:`imgaug.pool` for details.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
 
     Returns
     -------
@@ -1837,10 +1865,11 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
         Array after average pooling.
 
     """
-    return pool(arr, block_size, np.average, cval=cval, preserve_dtype=preserve_dtype)
+    return pool(arr, block_size, np.average, pad_cval=pad_cval,
+                preserve_dtype=preserve_dtype, cval=cval)
 
 
-def max_pool(arr, block_size, cval=0, preserve_dtype=True):
+def max_pool(arr, block_size, pad_cval=0, preserve_dtype=True, cval=None):
     """
     Resize an array using max-pooling.
 
@@ -1856,11 +1885,14 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool. See `imgaug.pool` for details.
 
-    cval : number, optional
+    pad_cval : number, optional
         Padding value. See :func:`imgaug.pool` for details.
 
     preserve_dtype : bool, optional
         Whether to preserve the input array dtype. See :func:`imgaug.pool` for details.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
 
     Returns
     -------
@@ -1868,13 +1900,14 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
         Array after max-pooling.
 
     """
-    return pool(arr, block_size, np.max, cval=cval, preserve_dtype=preserve_dtype)
+    return pool(arr, block_size, np.max, pad_cval=pad_cval,
+                preserve_dtype=preserve_dtype, cval=cval)
 
 
 # TODO The cval 255 is geared towards uint8. Once imgaug.py has been split up,
 #      call dtypes.get_value_range() instead to find the dtype max of arr
 #      and use that value instead.
-def min_pool(arr, block_size, cval=255, preserve_dtype=True):
+def min_pool(arr, block_size, pad_cval=255, preserve_dtype=True):
     """
     Resize an array using min-pooling.
 
@@ -1890,7 +1923,7 @@ def min_pool(arr, block_size, cval=255, preserve_dtype=True):
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool. See `imgaug.pool` for details.
 
-    cval : number, optional
+    pad_cval : number, optional
         Padding value. See :func:`imgaug.pool` for details.
         Defaults to ``255`` so that padded pixels are never chosen as
         the minimum at any spatial location (unless all image pixels also
@@ -1906,11 +1939,11 @@ def min_pool(arr, block_size, cval=255, preserve_dtype=True):
         Array after min-pooling.
 
     """
-    return pool(arr, block_size, np.min, cval=cval,
+    return pool(arr, block_size, np.min, pad_cval=pad_cval,
                 preserve_dtype=preserve_dtype)
 
 
-def median_pool(arr, block_size, cval=128, preserve_dtype=True):
+def median_pool(arr, block_size, pad_cval=128, preserve_dtype=True):
     """
     Resize an array using median-pooling.
 
@@ -1926,7 +1959,7 @@ def median_pool(arr, block_size, cval=128, preserve_dtype=True):
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool. See `imgaug.pool` for details.
 
-    cval : number, optional
+    pad_cval : number, optional
         Padding value. See :func:`imgaug.pool` for details.
         Defaults to ``128`` so that padded pixels influence the resulting
         array as little as possible (optimized for ``uint8``).
@@ -1941,7 +1974,7 @@ def median_pool(arr, block_size, cval=128, preserve_dtype=True):
         Array after min-pooling.
 
     """
-    return pool(arr, block_size, np.median, cval=cval,
+    return pool(arr, block_size, np.median, pad_cval=pad_cval,
                 preserve_dtype=preserve_dtype)
 
 

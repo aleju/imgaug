@@ -223,8 +223,7 @@ class AveragePooling(_AbstractPoolingBase):
         #      to reflection padding
         return ia.avg_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1)),
-            cval=128
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
         )
 
 
@@ -340,8 +339,7 @@ class MaxPooling(_AbstractPoolingBase):
         #      to reflection padding
         return ia.max_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1)),
-            cval=0
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
         )
 
 
