@@ -583,7 +583,8 @@ class BatchLoader(object):
         self.queue.put(pickle.dumps(None, protocol=-1))
         time.sleep(0.01)
 
-    def _load_batches(self, load_batch_func, queue_internal, join_signal,
+    @classmethod
+    def _load_batches(cls, load_batch_func, queue_internal, join_signal,
                       seedval):
         if seedval is not None:
             random.seed(seedval)
@@ -773,7 +774,8 @@ class BackgroundAugmenter(object):
             else:
                 return self.get_batch()
 
-    def _augment_images_worker(self, augseq, queue_source, queue_result,
+    @classmethod
+    def _augment_images_worker(cls, augseq, queue_source, queue_result,
                                seedval):
         """
         Augment endlessly images in the source queue.
