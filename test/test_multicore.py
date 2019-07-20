@@ -33,6 +33,12 @@ class TestPool(unittest.TestCase):
     def setUp(self):
         reseed()
 
+    def test___init___seed_out_of_bounds(self):
+        augseq = iaa.Noop()
+        with self.assertRaises(AssertionError) as context:
+            _ = multicore.Pool(augseq, seed=ia.SEED_MAX_VALUE + 100)
+        assert "Expected `seed` to be" in str(context.exception)
+
     def test_property_pool(self):
         mock_Pool = mock.MagicMock()
         mock_Pool.return_value = mock_Pool
