@@ -110,6 +110,9 @@
     `dtypes.promote_array_dtypes_()` as it was unnecessary and not used anywhere
     in the library. #366
 * Added `imgaug.warn()` function.
+* Changed `multicore.Pool` to produce a warning if it cannot find or call the
+  function `multiprocessing.cpu_count()` instead of silently failing.
+  (In both cases it falls back to a default value.)
 
 ## Fixes
  

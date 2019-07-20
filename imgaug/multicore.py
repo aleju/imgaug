@@ -93,11 +93,26 @@ class Pool(object):
         if self._pool is None:
             processes = self.processes
             if processes is not None and processes < 0:
+                # cpu count returns the number of logical cpu cores, i.e.
+                # including hyperthreads could also use
+                # os.sched_getaffinity(0) here, which seems to not exist on
+                # BSD though.
+                # In python 3.4+, there is also os.cpu_count(), which
+                # multiprocessing.cpu_count() then redirects to.
+                # At least one guy on stackoverflow.com/questions/1006289
+                # reported that only os.* existed, not the multiprocessing
+                # method.
+                # TODO make this also check if os.cpu_count exists as a
+                #      fallback
                 try:
-                    # cpu count includes the hyperthreads, e.g. 8 for 4 cores + hyperthreading
                     processes = multiprocessing.cpu_count() - abs(processes)
                     processes = max(processes, 1)
                 except (ImportError, NotImplementedError):
+                    ia.warn(
+                        "Could not find method multiprocessing.cpu_count(). "
+                        "This will likely lead to more CPU cores being used "
+                        "for the background augmentation than originally "
+                        "intended.")
                     processes = None
 
             self._pool = multiprocessing.Pool(processes,
@@ -294,11 +309,14 @@ class Pool(object):
             self._pool.join()
             self._pool = None
 
+    # TODO why does this function exist if it may only be called after
+    #      close/terminate and both of these two already call join() themselves
     def join(self):
         """
         Wait for the workers to exit.
 
-        This may only be called after calling :func:`imgaug.multicore.Pool.join` or
+        This may only be called after first calling
+        :func:`imgaug.multicore.Pool.close` or
         :func:`imgaug.multicore.Pool.terminate`.
 
         """
@@ -365,6 +383,7 @@ def _Pool_worker(batch_idx, batch):
     assert isinstance(batch, (UnnormalizedBatch, Batch))
     assert Pool._WORKER_AUGSEQ is not None
     aug = Pool._WORKER_AUGSEQ
+    # TODO why is this if here? _WORKER_SEED_START should always be set?
     if Pool._WORKER_SEED_START is not None:
         seed = Pool._WORKER_SEED_START + batch_idx
         seed_global = ia.SEED_MIN_VALUE + (seed - 10**9) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
