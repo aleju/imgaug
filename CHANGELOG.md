@@ -113,6 +113,8 @@
 * Changed `multicore.Pool` to produce a warning if it cannot find or call the
   function `multiprocessing.cpu_count()` instead of silently failing.
   (In both cases it falls back to a default value.)
+* Refactored code in `multicore` (general code and docstring cleanup).
+  * Improved error messages in `multicore`.
 
 ## Fixes
  
