@@ -67,6 +67,7 @@ def main():
     test_pool()
     test_avg_pool()
     test_max_pool()
+    test_min_pool()
     test_draw_grid()
     # test_show_grid()
     # test_do_assert()
@@ -1737,7 +1738,8 @@ def test_avg_pool():
 
 
 def test_max_pool():
-    # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
+    # very basic test, as max_pool() just calls pool(), which is tested in
+    # test_pool()
     arr = np.uint8([
         [0, 1, 2, 3],
         [4, 5, 6, 7],
@@ -1751,6 +1753,26 @@ def test_max_pool():
     assert arr_pooled[0, 1] == int(np.max([2, 3, 6, 7]))
     assert arr_pooled[1, 0] == int(np.max([8, 9, 12, 13]))
     assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
+
+
+def test_min_pool():
+    # very basic test, as min_pool() just calls pool(), which is tested in
+    # test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+
+    arr_pooled = ia.min_pool(arr, 2)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.min([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.min([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.min([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.min([10, 11, 14, 15]))
 
 
 def test_draw_grid():

@@ -1701,6 +1701,45 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
     return pool(arr, block_size, np.max, cval=cval, preserve_dtype=preserve_dtype)
 
 
+# TODO The cval 255 is geared towards uint8. Once imgaug.py has been split up,
+#      call dtypes.get_value_range() instead to find the dtype max of arr
+#      and use that value instead.
+def min_pool(arr, block_size, cval=255, preserve_dtype=True):
+    """
+    Resize an array using min-pooling.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pool`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. See :func:`imgaug.pool` for details.
+
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool. See `imgaug.pool` for details.
+
+    cval : number, optional
+        Padding value. See :func:`imgaug.pool` for details.
+        Defaults to ``255`` so that padded pixels are never chosen as
+        the minimum at any spatial location (unless all image pixels also
+        have the ``uint8`` maximum).
+
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for
+        details.
+
+    Returns
+    -------
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
+        Array after min-pooling.
+
+    """
+    return pool(arr, block_size, np.min, cval=cval,
+                preserve_dtype=preserve_dtype)
+
+
 def draw_grid(images, rows=None, cols=None):
     """
     Converts multiple input images into a single image showing them in a grid.

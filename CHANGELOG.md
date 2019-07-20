@@ -115,6 +115,7 @@
   (In both cases it falls back to a default value.) #367
 * Refactored code in `multicore` (general code and docstring cleanup). #367
   * Improved error messages in `multicore`.
+* Added `imgaug.min_pool()`.
 
 ## Fixes
  
