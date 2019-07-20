@@ -1338,8 +1338,8 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         * ``float128``: yes; fully tested (2) (3)
         * ``bool``: yes; tested (2) (3)
 
-        - (1) Uses ``cv2`` if `mode` is one of: ``"constant"``, ``"edge"``, ``"reflect"``, ``"symmetric"``.
-              Otherwise uses ``numpy``.
+        - (1) Uses ``cv2`` if `mode` is one of: ``"constant"``, ``"edge"``,
+              ``"reflect"``, ``"symmetric"``. Otherwise uses ``numpy``.
         - (2) Uses ``numpy``.
         - (3) Rejected by ``cv2``.
 
@@ -1349,32 +1349,38 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         Image-like array to pad.
 
     top : int, optional
-        Amount of pixels to add at the top side of the image. Must be 0 or greater.
+        Amount of pixels to add at the top side of the image. Must be 0 or
+        greater.
 
     right : int, optional
-        Amount of pixels to add at the right side of the image. Must be 0 or greater.
+        Amount of pixels to add at the right side of the image. Must be 0 or
+        greater.
 
     bottom : int, optional
-        Amount of pixels to add at the bottom side of the image. Must be 0 or greater.
+        Amount of pixels to add at the bottom side of the image. Must be 0 or
+        greater.
 
     left : int, optional
-        Amount of pixels to add at the left side of the image. Must be 0 or greater.
+        Amount of pixels to add at the left side of the image. Must be 0 or
+        greater.
 
     mode : str, optional
         Padding mode to use. See :func:`numpy.pad` for details.
-        In case of mode ``constant``, the parameter `cval` will be used as the ``constant_values``
-        parameter to :func:`numpy.pad`.
-        In case of mode ``linear_ramp``, the parameter `cval` will be used as the ``end_values``
-        parameter to :func:`numpy.pad`.
+        In case of mode ``constant``, the parameter `cval` will be used as
+        the ``constant_values`` parameter to :func:`numpy.pad`.
+        In case of mode ``linear_ramp``, the parameter `cval` will be used as
+        the ``end_values`` parameter to :func:`numpy.pad`.
 
     cval : number, optional
-        Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
-        The cval is expected to match the input array's dtype and value range.
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details. The cval is expected to match the
+        input array's dtype and value range.
 
     Returns
     -------
     arr_pad : (H',W') ndarray or (H',W',C) ndarray
-        Padded array with height ``H'=H+top+bottom`` and width ``W'=W+left+right``.
+        Padded array with height ``H'=H+top+bottom`` and width
+        ``W'=W+left+right``.
 
     """
     do_assert(arr.ndim in [2, 3])
@@ -1401,19 +1407,29 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         }
         bad_mode_cv2 = mapping_mode_np_to_cv2.get(mode, None) is None
 
-        # these datatypes all simply generate a "TypeError: src data type = X is not supported" error
-        bad_datatype_cv2 = arr.dtype.name in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
+        # these datatypes all simply generate a "TypeError: src data type = X
+        # is not supported" error
+        bad_datatype_cv2 = (
+            arr.dtype.name
+            in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
+        )
 
         if not bad_datatype_cv2 and not bad_mode_cv2:
-            cval = float(cval) if arr.dtype.kind == "f" else int(cval)  # results in TypeError otherwise for np inputs
+            cval = (
+                float(cval)
+                if arr.dtype.kind == "f"
+                else int(cval)
+            )  # results in TypeError otherwise for np inputs
 
             if arr.ndim == 2 or arr.shape[2] <= 4:
-                # without this, only the first channel is padded with the cval, all following channels with 0
+                # without this, only the first channel is padded with the cval,
+                # all following channels with 0
                 if arr.ndim == 3:
                     cval = tuple([cval] * arr.shape[2])
 
-                arr_pad = cv2.copyMakeBorder(arr, top=top, bottom=bottom, left=left, right=right,
-                                             borderType=mapping_mode_np_to_cv2[mode], value=cval)
+                arr_pad = cv2.copyMakeBorder(
+                    arr, top=top, bottom=bottom, left=left, right=right,
+                    borderType=mapping_mode_np_to_cv2[mode], value=cval)
                 if arr.ndim == 3 and arr_pad.ndim == 2:
                     arr_pad = arr_pad[..., np.newaxis]
             else:
@@ -1422,21 +1438,27 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
                 while channel_start_idx < arr.shape[2]:
                     arr_c = arr[..., channel_start_idx:channel_start_idx+4]
                     cval_c = tuple([cval] * arr_c.shape[2])
-                    arr_pad_c = cv2.copyMakeBorder(arr_c, top=top, bottom=bottom, left=left, right=right,
-                                                   borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
+                    arr_pad_c = cv2.copyMakeBorder(
+                        arr_c, top=top, bottom=bottom, left=left, right=right,
+                        borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
                     arr_pad_c = np.atleast_3d(arr_pad_c)
                     result.append(arr_pad_c)
                     channel_start_idx += 4
                 arr_pad = np.concatenate(result, axis=2)
         else:
-            paddings_np = [(top, bottom), (left, right)]  # paddings for 2d case
+            # paddings for 2d case
+            paddings_np = [(top, bottom), (left, right)]
+
+            # add paddings for 3d case
             if arr.ndim == 3:
-                paddings_np.append((0, 0))  # add paddings for 3d case
+                paddings_np.append((0, 0))
 
             if mode == "constant":
-                arr_pad = np.pad(arr, paddings_np, mode=mode, constant_values=cval)
+                arr_pad = np.pad(arr, paddings_np, mode=mode,
+                                 constant_values=cval)
             elif mode == "linear_ramp":
-                arr_pad = np.pad(arr, paddings_np, mode=mode, end_values=cval)
+                arr_pad = np.pad(arr, paddings_np, mode=mode,
+                                 end_values=cval)
             else:
                 arr_pad = np.pad(arr, paddings_np, mode=mode)
 
@@ -1447,12 +1469,21 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 # TODO allow shape as input instead of array
 def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     """
-    Compute the amount of pixels by which an array has to be padded to fulfill an aspect ratio.
+    Compute pad amounts required to fulfill an aspect ratio.
 
-    The aspect ratio is given as width/height.
-    Depending on which dimension is smaller (height or width), only the corresponding
-    sides (left/right or top/bottom) will be padded. In each case, both of the sides will
-    be padded equally.
+    "Pad amounts" here denotes the number of pixels that have to be added to
+    each side to fulfill the desired constraint.
+
+    The aspect ratio is given as ``ratio = width / height``.
+    Depending on which dimension is smaller (height or width), only the
+    corresponding sides (top/bottom or left/right) will be padded.
+
+    The axis-wise padding amounts are always distributed equally over the
+    sides of the respective axis (i.e. left and right, top and bottom). For
+    odd pixel amounts, one pixel will be left over after the equal
+    distribution and could be added to either side of the axis. This function
+    will always add such a left over pixel to the bottom (y-axis) or
+    right (x-axis) side.
 
     Parameters
     ----------
@@ -1460,14 +1491,14 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         Image-like array for which to compute pad amounts.
 
     aspect_ratio : float
-        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
-        as much width as height.
+        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image
+        having twice as much width as height.
 
     Returns
     -------
     result : tuple of int
-        Required paddign amounts to reach the target aspect ratio, given as a tuple
-        of the form ``(top, right, bottom, left)``.
+        Required padding amounts to reach the target aspect ratio, given as a
+        tuple of the form ``(top, right, bottom, left)``.
 
     """
     do_assert(arr.ndim in [2, 3])
@@ -1495,13 +1526,14 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     return pad_top, pad_right, pad_bottom, pad_left
 
 
-def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
+def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
+                        return_pad_amounts=False):
     """
-    Pad an image-like array on its sides so that it matches a target aspect ratio.
+    Pad an image array on its sides so that it matches a target aspect ratio.
 
-    Depending on which dimension is smaller (height or width), only the corresponding
-    sides (left/right or top/bottom) will be padded. In each case, both of the sides will
-    be padded equally.
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
 
     dtype support::
 
@@ -1513,33 +1545,38 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
         Image-like array to pad.
 
     aspect_ratio : float
-        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
-        as much width as height.
+        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image
+        having twice as much width as height.
 
     mode : str, optional
-        Padding mode to use. See :func:`numpy.pad` for details.
+        Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
 
     cval : number, optional
-        Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details.
 
     return_pad_amounts : bool, optional
-        If False, then only the padded image will be returned. If True, a tuple with two
-        entries will be returned, where the first entry is the padded image and the second
-        entry are the amounts by which each image side was padded. These amounts are again a
-        tuple of the form (top, right, bottom, left), with each value being an integer.
+        If False, then only the padded image will be returned. If True, a
+        tuple with two entries will be returned, where the first entry is the
+        padded image and the second entry are the amounts by which each image
+        side was padded. These amounts are again a tuple of the form ``(top,
+        right, bottom, left)``, with each value being an integer.
 
     Returns
     -------
     arr_padded : (H',W') ndarray or (H',W',C) ndarray
-        Padded image as (H',W') or (H',W',C) ndarray, fulfulling the given aspect_ratio.
+        Padded image as (H',W') or (H',W',C) ndarray, fulfilling the given
+        `aspect_ratio`.
 
     tuple of int
-        Amounts by which the image was padded on each side, given as a tuple ``(top, right, bottom, left)``.
-        This tuple is only returned if `return_pad_amounts` was set to True.
-        Otherwise only ``arr_padded`` is returned.
+        Amounts by which the image was padded on each side, given as a tuple
+        ``(top, right, bottom, left)``. This tuple is only returned if
+        `return_pad_amounts` was set to ``True``.
+        Otherwise, only ``arr_padded`` is returned.
 
     """
-    pad_top, pad_right, pad_bottom, pad_left = compute_paddings_for_aspect_ratio(arr, aspect_ratio)
+    pad_top, pad_right, pad_bottom, pad_left = \
+        compute_paddings_for_aspect_ratio(arr, aspect_ratio)
     arr_padded = pad(
         arr,
         top=pad_top,
@@ -1552,15 +1589,18 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
     if return_pad_amounts:
         return arr_padded, (pad_top, pad_right, pad_bottom, pad_left)
-    else:
-        return arr_padded
+    return arr_padded
 
 
 # TODO allow shape as input instead of array
 def compute_paddings_to_reach_multiples_of(arr, height_multiple,
                                            width_multiple):
     """
-    Compute pad amounts until height/width are multiples of given values.
+    Compute pad amounts until img height/width are multiples of given values.
+
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
 
     Parameters
     ----------
@@ -1619,6 +1659,10 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
     """
     Pad an image array until its side lengths are multiples of given values.
 
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
+
     dtype support::
 
         See :func:`imgaug.imgaug.pad`.
@@ -1639,7 +1683,7 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
         of this value.
 
     mode : str, optional
-        Padding mode to use. See :func:`numpy.pad` for details.
+        Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
 
     cval : number, optional
         Value to use for padding if `mode` is ``constant``.
