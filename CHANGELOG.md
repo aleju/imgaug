@@ -116,6 +116,7 @@
 * Refactored code in `multicore` (general code and docstring cleanup). #367
   * Improved error messages in `multicore`.
 * Added `imgaug.min_pool()`.
+  * Refactored `augmenters.pooling.MinPooling` to use `imgaug.min_pool()`.
 
 ## Fixes
  
