@@ -117,6 +117,7 @@
   * Improved error messages in `multicore`.
 * Added `imgaug.min_pool()`.
   * Refactored `augmenters.pooling.MinPooling` to use `imgaug.min_pool()`.
+* Added `imgaug.median_pool()`.
 
 ## Fixes
  

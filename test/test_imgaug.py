@@ -1775,6 +1775,26 @@ def test_min_pool():
     assert arr_pooled[1, 1] == int(np.min([10, 11, 14, 15]))
 
 
+def test_median_pool():
+    # very basic test, as median_pool() just calls pool(), which is tested in
+    # test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+
+    arr_pooled = ia.median_pool(arr, 2)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.median([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.median([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.median([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.median([10, 11, 14, 15]))
+
+
 def test_draw_grid():
     # bool
     dtype = bool

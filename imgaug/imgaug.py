@@ -1740,6 +1740,41 @@ def min_pool(arr, block_size, cval=255, preserve_dtype=True):
                 preserve_dtype=preserve_dtype)
 
 
+def median_pool(arr, block_size, cval=128, preserve_dtype=True):
+    """
+    Resize an array using median-pooling.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pool`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. See :func:`imgaug.pool` for details.
+
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool. See `imgaug.pool` for details.
+
+    cval : number, optional
+        Padding value. See :func:`imgaug.pool` for details.
+        Defaults to ``128`` so that padded pixels influence the resulting
+        array as little as possible (optimized for ``uint8``).
+
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for
+        details.
+
+    Returns
+    -------
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
+        Array after min-pooling.
+
+    """
+    return pool(arr, block_size, np.median, cval=cval,
+                preserve_dtype=preserve_dtype)
+
+
 def draw_grid(images, rows=None, cols=None):
     """
     Converts multiple input images into a single image showing them in a grid.
