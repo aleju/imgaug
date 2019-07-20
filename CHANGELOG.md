@@ -180,7 +180,9 @@
 * Added `imgaug.augmenters.segmentation.UniformVoronoi`, a shortcut for
   `Voronoi(UniformPointsSamper)`.
 * Added `imgaug.augmenters.segmentation.RegularGridVoronoi`, a shortcut for
-  `Voronoi(DropoutPointsSampler(RegularGridPointsSampler))`
+  `Voronoi(DropoutPointsSampler(RegularGridPointsSampler))`.
+* Added `imgaug.augmenters.segmentation.RelativeRegularGridVoronoi`, a shortcut
+  for `Voronoi(DropoutPointsSampler(RelativeRegularGridPointsSampler))`.
 
 ## Fixes
  

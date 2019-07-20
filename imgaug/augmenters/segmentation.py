@@ -642,7 +642,7 @@ class Voronoi(meta.Augmenter):
 
 
 class UniformVoronoi(Voronoi):
-    """Uniformly sample voronoi cells on images and average colors within them.
+    """Uniformly sample Voronoi cells on images and average colors within them.
 
     This augmenter is a shortcut for the combination of ``Voronoi`` with
     ``UniformPointsSampler``. Hence, it generates a fixed amount of ``N``
@@ -756,7 +756,7 @@ class UniformVoronoi(Voronoi):
 
 
 class RegularGridVoronoi(Voronoi):
-    """Sample and voronoi cells from regular grids and color-average them.
+    """Sample Voronoi cells from regular grids and color-average them.
 
     This augmenter is a shortcut for the combination of ``Voronoi``,
     ``RegularGridPointsSampler`` and ``DropoutPointsSampler``. Hence, it
@@ -901,6 +901,177 @@ class RegularGridVoronoi(Voronoi):
         super(RegularGridVoronoi, self).__init__(
             points_sampler=DropoutPointsSampler(
                 RegularGridPointsSampler(n_rows, n_cols),
+                p_drop_points
+            ),
+            p_replace=p_replace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class RelativeRegularGridVoronoi(Voronoi):
+    """Sample Voronoi cells from image-dependent grids and color-average them.
+
+    This augmenter is a shortcut for the combination of ``Voronoi``,
+    ``RegularGridPointsSampler`` and ``DropoutPointsSampler``. Hence, it
+    generates a regular grid with ``R`` rows and ``C`` columns of coordinates
+    on each image. Then, it drops ``p`` percent of the ``R*C`` coordinates
+    to randomize the grid. Each image pixel then belongs to the voronoi
+    cell with the closest coordinate.
+
+    **Note**: In contrast to the other Voronoi augmenters, this one uses
+    ``None`` as the default value for `max_size`, i.e. the color averaging
+    is always performed at full resolution. This enables the augmenter to
+    make most use of the added points for larger images. It does however slow
+    down the augmentation process.
+
+    dtype support::
+
+        See ``imgaug.augmenters.segmentation.Voronoi``.
+
+    Parameters
+    ----------
+    n_rows_frac : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Relative number of coordinates to place on the y-axis. For a value
+        ``y`` and image height ``H`` the number of actually placed coordinates
+        (i.e. computed rows) is given by ``int(round(y*H))``.
+        Note that for each image, the number of coordinates is clipped to the
+        interval ``[1,H]``, where ``H`` is the image height.
+
+            * If a single number, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the interval
+              ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    n_cols_frac : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Relative number of coordinates to place on the x-axis. For a value
+        ``x`` and image height ``W`` the number of actually placed coordinates
+        (i.e. computed columns) is given by ``int(round(x*W))``.
+        Note that for each image, the number of coordinates is clipped to the
+        interval ``[1,W]``, where ``W`` is the image width.
+
+            * If a single number, then that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the interval
+              ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
+
+    p_drop_points : number or tuple of number or imgaug.parameters.StochasticParameter, optional
+        The probability that a coordinate will be removed from the list
+        of all sampled coordinates. A value of ``1.0`` would mean that (on
+        average) ``100`` percent of all coordinates will be dropped,
+        while ``0.0`` denotes ``0`` percent. Note that this sampler will
+        always ensure that at least one coordinate is left after the dropout
+        operation, i.e. even ``1.0`` will only drop all *except one*
+        coordinate.
+
+            * If a float, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
+              the interval ``[a, b]`` per image.
+            * If a ``StochasticParameter``, then this parameter will be used to
+              determine per coordinate whether it should be *kept* (sampled
+              value of ``>0.5``) or shouldn't be kept (sampled value of
+              ``<=0.5``). If you instead want to provide the probability as
+              a stochastic parameter, you can usually do
+              ``imgaug.parameters.Binomial(1-p)`` to convert parameter `p` to
+              a 0/1 representation.
+
+    p_replace : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Defines for any segment the probability that the pixels within that
+        segment are replaced by their average color (otherwise, the pixels
+        are not changed).
+        Examples:
+
+            * A probability of ``0.0`` would mean, that the pixels in no
+              segment are replaced by their average color (image is not
+              changed at all).
+            * A probability of ``0.5`` would mean, that around half of all
+              segments are replaced by their average color.
+            * A probability of ``1.0`` would mean, that all segments are
+              replaced by their average color (resulting in a voronoi
+              image).
+
+        Behaviour based on chosen datatypes for this parameter:
+
+            * If a number, then that number will always be used.
+            * If tuple ``(a, b)``, then a random probability will be sampled
+              from the interval ``[a, b]`` per image.
+            * If a list, then a random value will be sampled from that list per
+              image.
+            * If a ``StochasticParameter``, it is expected to return
+              values between ``0.0`` and ``1.0`` and will be queried *for each
+              individual segment* to determine whether it is supposed to
+              be averaged (``>0.5``) or not (``<=0.5``).
+              Recommended to be some form of ``Binomial(...)``.
+
+    max_size : int or None, optional
+        Maximum image size at which the augmentation is performed.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the process. The final output image has the
+        same size as the input image. Note that in case `p_replace` is below
+        ``1.0``, the down-/upscaling will affect the not-replaced pixels too.
+        Use ``None`` to apply no down-/upscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.RelativeRegularGridVoronoi(0.01, 0.1)
+
+    Places a regular grid of ``R x C`` coordinates on each image, where
+    ``R`` is the number of rows and computed as ``R=0.01*H`` with ``H`` being
+    the height of the input image. ``C`` is the number of columns and
+    analogously estimated from the image width ``W`` as ``C=0.1*W``.
+    Larger images will lead to larger ``R`` and ``C`` values.
+    On average, ``20`` percent of these grid coordinates are randomly
+    dropped to create a less regular pattern. Then, the remaining coordinates
+    are used to group the image pixels into voronoi cells and the colors
+    within them are averaged.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.RelativeRegularGridVoronoi(
+    >>>     (0.01, 0.1), 0.1, p_drop_points=0.0, p_replace=0.9, max_size=512)
+
+    Same as above, generates a grid with randomly ``R=r*H`` rows, where
+    ``r`` is sampled uniformly from the interval ``[0.01, 0.1]`` and
+    ``C=0.1*W`` rows. No points are dropped. The augmenter replaces only
+    ``90`` percent of the voronoi cells with their average color (the pixels
+    of the remaining ``10`` percent are not changed). Images larger than
+    ``512px`` are temporarily downscaled (*before* sampling the grid points)
+    so that no side exceeds ``512px``. This improves performance, but
+    degrades the quality of the resulting image.
+
+    """
+
+    def __init__(self, n_rows_frac, n_cols_frac, p_drop_points=0.4,
+                 p_replace=1.0, max_size=None, interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        super(RelativeRegularGridVoronoi, self).__init__(
+            points_sampler=DropoutPointsSampler(
+                RelativeRegularGridPointsSampler(n_rows_frac, n_cols_frac),
                 p_drop_points
             ),
             p_replace=p_replace,

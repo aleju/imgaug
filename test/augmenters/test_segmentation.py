@@ -776,6 +776,69 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert aug.random_state is rs
 
 
+class TestRelativeRegularGridVoronoi(unittest.TestCase):
+    def test___init___(self):
+        rs = np.random.RandomState(10)
+
+        mock_voronoi = mock.MagicMock()
+        mock_voronoi.return_value = mock_voronoi
+        fname = "imgaug.augmenters.segmentation.Voronoi.__init__"
+        with mock.patch(fname, mock_voronoi):
+            _ = iaa.RelativeRegularGridVoronoi(
+                0.1,
+                0.2,
+                p_drop_points=0.6,
+                p_replace=0.5,
+                max_size=5,
+                interpolation="cubic",
+                name="foo",
+                deterministic=True,
+                random_state=rs
+            )
+
+        assert mock_voronoi.call_count == 1
+        ps = mock_voronoi.call_args_list[0][1]["points_sampler"]
+        assert isinstance(ps, iaa.DropoutPointsSampler)
+        assert isinstance(ps.other_points_sampler,
+                          iaa.RelativeRegularGridPointsSampler)
+        assert np.isclose(ps.p_drop.p.value, 1-0.6)
+        assert np.isclose(ps.other_points_sampler.n_rows_frac.value, 0.1)
+        assert np.isclose(ps.other_points_sampler.n_cols_frac.value, 0.2)
+        assert np.isclose(mock_voronoi.call_args_list[0][1]["p_replace"],
+                          0.5)
+        assert mock_voronoi.call_args_list[0][1]["max_size"] == 5
+        assert mock_voronoi.call_args_list[0][1]["interpolation"] == "cubic"
+        assert mock_voronoi.call_args_list[0][1]["name"] == "foo"
+        assert mock_voronoi.call_args_list[0][1]["deterministic"] is True
+        assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
+
+    def test___init___integrationtest(self):
+        rs = np.random.RandomState(10)
+        aug = iaa.RelativeRegularGridVoronoi(
+            0.1,
+            (0.1, 0.3),
+            p_replace=0.5,
+            max_size=5,
+            interpolation="cubic",
+            name=None,
+            deterministic=True,
+            random_state=rs
+        )
+
+        ps = aug.points_sampler
+        assert np.isclose(aug.points_sampler.p_drop.p.value, 1-0.4)
+        assert np.isclose(ps.other_points_sampler.n_rows_frac.value, 0.1)
+        assert isinstance(ps.other_points_sampler.n_cols_frac, iap.Uniform)
+        assert np.isclose(ps.other_points_sampler.n_cols_frac.a.value, 0.1)
+        assert np.isclose(ps.other_points_sampler.n_cols_frac.b.value, 0.3)
+        assert np.isclose(aug.p_replace.p.value, 0.5)
+        assert aug.max_size == 5
+        assert aug.interpolation == "cubic"
+        assert aug.name == "UnnamedRelativeRegularGridVoronoi"
+        assert aug.deterministic is True
+        assert aug.random_state is rs
+
+
 # TODO verify behaviours when image height/width is zero
 class TestRegularGridPointSampler(unittest.TestCase):
     def setUp(self):
