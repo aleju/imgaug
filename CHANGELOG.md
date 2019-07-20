@@ -109,11 +109,11 @@
   * [rarely breaking] Removed argument `affects` from
     `dtypes.promote_array_dtypes_()` as it was unnecessary and not used anywhere
     in the library. #366
-* Added `imgaug.warn()` function.
+* Added `imgaug.warn()` function. #367
 * Changed `multicore.Pool` to produce a warning if it cannot find or call the
   function `multiprocessing.cpu_count()` instead of silently failing.
-  (In both cases it falls back to a default value.)
-* Refactored code in `multicore` (general code and docstring cleanup).
+  (In both cases it falls back to a default value.) #367
+* Refactored code in `multicore` (general code and docstring cleanup). #367
   * Improved error messages in `multicore`.
 
 ## Fixes
