@@ -2189,6 +2189,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         """
         ia.do_assert(isinstance(deterministic_too, bool))
 
+        # TODO replace by ia.normalize_random_state()
         if random_state is None:
             random_state = ia.current_random_state()
         elif isinstance(random_state, np.random.RandomState):
