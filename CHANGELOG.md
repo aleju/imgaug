@@ -109,6 +109,7 @@
   * [rarely breaking] Removed argument `affects` from
     `dtypes.promote_array_dtypes_()` as it was unnecessary and not used anywhere
     in the library. #366
+* Added `imgaug.warn()` function.
 
 ## Fixes
  
