@@ -120,6 +120,7 @@
 * Added `imgaug.median_pool()`.
   * Refactored `augmenters.pooling.MedianPooling` to use `imgaug.median_pool()`.
 * Added `imgaug.compute_paddings_to_reach_multiples_of()`.
+* Added `imgaug.pad_to_multiples_of()`.
 
 ## Fixes
  

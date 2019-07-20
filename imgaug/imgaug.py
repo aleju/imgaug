@@ -1614,6 +1614,72 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
     return pad_top, pad_right, pad_bottom, pad_left
 
 
+def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
+                        cval=0, return_pad_amounts=False):
+    """
+    Pad an image array until its side lengths are multiples of given values.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pad`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pad.
+
+    height_multiple : None or int
+        The desired multiple of the height. The computed padding amount will
+        reflect a padding that increases the y axis size until it is a multiple
+        of this value.
+
+    width_multiple : None or int
+        The desired multiple of the width. The computed padding amount will
+        reflect a padding that increases the x axis size until it is a multiple
+        of this value.
+
+    mode : str, optional
+        Padding mode to use. See :func:`numpy.pad` for details.
+
+    cval : number, optional
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details.
+
+    return_pad_amounts : bool, optional
+        If False, then only the padded image will be returned. If True, a
+        tuple with two entries will be returned, where the first entry is the
+        padded image and the second entry are the amounts by which each image
+        side was padded. These amounts are again a tuple of the form ``(top,
+        right, bottom, left)``, with each value being an integer.
+
+    Returns
+    -------
+    arr_padded : (H',W') ndarray or (H',W',C) ndarray
+        Padded image as (H',W') or (H',W',C) ndarray.
+
+    tuple of int
+        Amounts by which the image was padded on each side, given as a
+        tuple ``(top, right, bottom, left)``. This tuple is only returned
+        if `return_pad_amounts` was set to ``True``.
+        Otherwise, only ``arr_padded`` is returned.
+
+    """
+    pad_top, pad_right, pad_bottom, pad_left = \
+        compute_paddings_to_reach_multiples_of(
+            arr, height_multiple, width_multiple)
+    arr_padded = pad(
+        arr,
+        top=pad_top,
+        right=pad_right,
+        bottom=pad_bottom,
+        left=pad_left,
+        mode=mode,
+        cval=cval
+    )
+
+    if return_pad_amounts:
+        return arr_padded, (pad_top, pad_right, pad_bottom, pad_left)
+    return arr_padded
 
 
 def pool(arr, block_size, func, cval=0, preserve_dtype=True):

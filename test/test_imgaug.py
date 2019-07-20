@@ -1569,6 +1569,67 @@ class Test_compute_paddings_to_reach_multiples_of(unittest.TestCase):
                     assert paddings == expected
 
 
+class Test_pad_to_multiples_of(unittest.TestCase):
+    @mock.patch("imgaug.imgaug.compute_paddings_to_reach_multiples_of")
+    @mock.patch("imgaug.imgaug.pad")
+    def test_mocked(self, mock_pad, mock_compute_pads):
+        mock_compute_pads.return_value = (1, 2, 3, 4)
+        mock_pad.return_value = "padded_array"
+
+        arr = np.ones((3, 5, 1), dtype=np.uint8)
+
+        arr_padded = ia.pad_to_multiples_of(
+            arr, 10, 20, mode="foo", cval=100)
+
+        mock_compute_pads.assert_called_once_with(arr, 10, 20)
+        mock_pad.assert_called_once_with(arr, top=1, right=2, bottom=3,
+                                         left=4, mode="foo", cval=100)
+        assert arr_padded == "padded_array"
+
+    @mock.patch("imgaug.imgaug.compute_paddings_to_reach_multiples_of")
+    @mock.patch("imgaug.imgaug.pad")
+    def test_mocked_return_pad_amounts(self, mock_pad, mock_compute_pads):
+        mock_compute_pads.return_value = (1, 2, 3, 4)
+        mock_pad.return_value = "padded_array"
+
+        arr = np.ones((3, 5, 1), dtype=np.uint8)
+
+        arr_padded, paddings = ia.pad_to_multiples_of(
+            arr, 10, 20, mode="foo", cval=100, return_pad_amounts=True)
+
+        mock_compute_pads.assert_called_once_with(arr, 10, 20)
+        mock_pad.assert_called_once_with(arr, top=1, right=2, bottom=3,
+                                         left=4, mode="foo", cval=100)
+        assert arr_padded == "padded_array"
+        assert paddings == (1, 2, 3, 4)
+
+    def test_integrationtest(self):
+        dtypes = [np.uint8, np.int32, np.float32]
+        nb_channels_lst = [None, 1, 3, 4]
+
+        for dtype in dtypes:
+            dtype = np.dtype(dtype)
+            for nb_channels in nb_channels_lst:
+                with self.subTest(dtype=dtype.name, nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.ones((3, 5), dtype=dtype)
+                    else:
+                        arr = np.ones((3, 5, nb_channels), dtype=dtype)
+
+                    arr_padded = ia.pad_to_multiples_of(arr, 7, 11, cval=2)
+
+                    if nb_channels is None:
+                        base_area = 3*5
+                        new_area = 7*11 - base_area
+                        assert arr_padded.shape == (7, 11)
+                        assert np.sum(arr_padded) == 1*base_area + 2*new_area
+                    else:
+                        base_area = 3*5*nb_channels
+                        new_area = 7*11*nb_channels - base_area
+                        assert arr_padded.shape == (7, 11, nb_channels)
+                        assert np.sum(arr_padded) == 1*base_area + 2*new_area
+
+
 def test_pool():
     # -----
     # uint, int
