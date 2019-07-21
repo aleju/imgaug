@@ -262,6 +262,7 @@ class TestMinPooling(unittest.TestCase):
         assert np.all(diff <= 1)
 
 
+# TODO add test that checks the padding behaviour
 # We don't have many tests here, because MedianPooling and AveragePooling
 # derive from the same base class, i.e. they share most of the methods, which
 # are then tested via TestAveragePooling.

@@ -132,6 +132,8 @@
     to `edge`.
   * Changed the default `pad_mode` of `min_pool` from `constant` (`cval=255`)
     to `edge`.
+  * Changed the default `pad_mode` of `median_pool` from `constant`
+    (`cval=128`) to `reflect`.
 * Renamed argument `cval` to `pad_cval` in `imgaug.pool()`,
   `imgaug.avg_pool()` and `imgaug.max_pool()`. The old name `cval` is now
   deprecated.

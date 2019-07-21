@@ -1959,6 +1959,7 @@ def test_min_pool():
     assert arr_pooled[1, 1] == int(np.min([10, 11, 14, 15]))
 
 
+# TODO add test that verifies the default padding mode
 def test_median_pool():
     # very basic test, as median_pool() just calls pool(), which is tested in
     # test_pool()

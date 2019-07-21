@@ -1955,7 +1955,7 @@ def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
                 preserve_dtype=preserve_dtype)
 
 
-def median_pool(arr, block_size, pad_mode="constant", pad_cval=128,
+def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
                 preserve_dtype=True):
     """
     Resize an array using median-pooling.
