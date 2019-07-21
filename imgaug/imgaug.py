@@ -1874,7 +1874,7 @@ def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
                 pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
 
 
-def max_pool(arr, block_size, pad_mode="constant", pad_cval=0,
+def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
              preserve_dtype=True, cval=None):
     """
     Resize an array using max-pooling.

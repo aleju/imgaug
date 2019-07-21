@@ -1919,6 +1919,7 @@ def test_avg_pool():
     assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
 
 
+# TODO add test that verifies the default padding mode
 def test_max_pool():
     # very basic test, as max_pool() just calls pool(), which is tested in
     # test_pool()

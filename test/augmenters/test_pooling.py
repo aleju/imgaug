@@ -172,6 +172,7 @@ class TestAveragePooling(unittest.TestCase):
         assert params[0][1] is None
 
 
+# TODO add test that checks the padding behaviour
 # We don't have many tests here, because MaxPooling and AveragePooling derive
 # from the same base class, i.e. they share most of the methods, which are then
 # tested via TestAveragePooling.
