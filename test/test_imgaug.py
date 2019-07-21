@@ -1938,6 +1938,7 @@ def test_max_pool():
     assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
 
 
+# TODO add test that verifies the default padding mode
 def test_min_pool():
     # very basic test, as min_pool() just calls pool(), which is tested in
     # test_pool()

@@ -1914,10 +1914,7 @@ def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
                 pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
 
 
-# TODO The cval 255 is geared towards uint8. Once imgaug.py has been split up,
-#      call dtypes.get_value_range() instead to find the dtype max of arr
-#      and use that value instead.
-def min_pool(arr, block_size, pad_mode="constant", pad_cval=255,
+def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
              preserve_dtype=True):
     """
     Resize an array using min-pooling.
