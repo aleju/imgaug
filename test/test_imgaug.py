@@ -1901,6 +1901,7 @@ def test_pool():
     assert np.isclose(arr_pooled[1, 1], np.average([10, 10, 10, 10]))
 
 
+# TODO add test that verifies the default padding mode
 def test_avg_pool():
     # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
     arr = np.uint8([

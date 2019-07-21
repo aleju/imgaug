@@ -126,6 +126,8 @@
   `imgaug.avg_pool()`, `imgaug.max_pool()`, `imgaug.min_pool()` and
   `imgaug.median_pool()`. This breaks code relying on the order of the
   functions arguments.
+  * Changed the default `pad_mode` of `avg_pool` from `constant` (`cval=128`)
+    to `reflect`.
 * Renamed argument `cval` to `pad_cval` in `imgaug.pool()`,
   `imgaug.avg_pool()` and `imgaug.max_pool()`. The old name `cval` is now
   deprecated.

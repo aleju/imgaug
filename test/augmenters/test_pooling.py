@@ -21,6 +21,7 @@ from imgaug import parameters as iap
 from imgaug.testutils import reseed
 
 
+# TODO add test that checks the padding behaviour
 class TestAveragePooling(unittest.TestCase):
     def setUp(self):
         reseed()

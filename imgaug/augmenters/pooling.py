@@ -219,8 +219,6 @@ class AveragePooling(_AbstractPoolingBase):
             name=name, deterministic=deterministic, random_state=random_state)
 
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
-        # TODO extend avg_pool to support pad_mode and set it here
-        #      to reflection padding
         return ia.avg_pool(
             image,
             (max(kernel_size_h, 1), max(kernel_size_w, 1))
