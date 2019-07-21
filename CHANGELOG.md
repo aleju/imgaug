@@ -122,8 +122,10 @@
 * Added `imgaug.compute_paddings_to_reach_multiples_of()`.
 * Added `imgaug.pad_to_multiples_of()`.
 * Refactored `imgaug.pool()` to use `imgaug.pad()` for image padding.
-* [rarely breaking] Added a `pad_mode` argument to `imgaug.pool()`. This breaks
-  code relying on the order of the functions arguments.
+* [rarely breaking] Added a `pad_mode` argument to `imgaug.pool()`,
+  `imgaug.avg_pool()`, `imgaug.max_pool()`, `imgaug.min_pool()` and
+  `imgaug.median_pool()`. This breaks code relying on the order of the
+  functions arguments.
 * Renamed argument `cval` to `pad_cval` in `imgaug.pool()`,
   `imgaug.avg_pool()` and `imgaug.max_pool()`. The old name `cval` is now
   deprecated.
