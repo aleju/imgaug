@@ -367,14 +367,14 @@ def test_Resize():
     assert observed3d.shape == (int(12 * (1/aspect_ratio3d)), 12, 3)
 
     # change short axis, keep long axis at same aspect ration
-    aug = iaa.Resize({"short": 6, "long": "keep-aspect-ratio"})
+    aug = iaa.Resize({"shorter-side": 6, "longer-side": "keep-aspect-ratio"})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (6, int(6 * aspect_ratio2d))
     assert observed3d.shape == (6, int(6 * aspect_ratio3d), 3)
 
     # change long axis, keep short axis at same aspect ration
-    aug = iaa.Resize({"long": 6, "short": "keep-aspect-ratio"})
+    aug = iaa.Resize({"longer-side": 6, "shorter-side": "keep-aspect-ratio"})
     observed2d = aug.augment_image(base_img2d)
     observed3d = aug.augment_image(base_img3d)
     assert observed2d.shape == (int(6 * (1/aspect_ratio2d)), 6)

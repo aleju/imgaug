@@ -200,7 +200,7 @@ class Resize(meta.Augmenter):
               be queried once per image. The resulting value will be used
               for both height and width.
             * If this is a dictionary, it may contain the keys "height" and
-              "width" or the keys "short" and "long". Each key may have the
+              "width" or the keys "shorter-side" and "longer-side". Each key may have the
               same datatypes as above and describes the scaling on x and y-axis
               or the shorter and longer-axis, respectively. Both axis are sampled
               independently. Additionally, one of the keys may have the value
@@ -275,7 +275,7 @@ class Resize(meta.Augmenter):
     resizes all images to a height of 32 pixels and resizes the x-axis
     (width) so that the aspect ratio is maintained.
 
-    >>> aug = iaa.Resize({"short": 224, "long": "keep-aspect-ratio"})
+    >>> aug = iaa.Resize({"shorter-side": 224, "longer-side": "keep-aspect-ratio"})
 
     resizes all images to a height/width of 224 pixels depending on which axis is shorter
     and resizes the other axis so that the aspect ratio is maintained.
@@ -324,13 +324,13 @@ class Resize(meta.Augmenter):
                             entry = iap.Deterministic("keep")
                         size_tuple.append(entry)
                     return tuple(size_tuple)
-                elif any([key in ["short", "long"] for key in val.keys()]):
-                    ia.do_assert(all([key in ["short", "long"] for key in val.keys()]))
-                    if "short" in val and "long" in val:
-                        ia.do_assert(val["short"] != "keep-aspect-ratio" or val["long"] != "keep-aspect-ratio")
+                elif any([key in ["shorter-side", "longer-side"] for key in val.keys()]):
+                    ia.do_assert(all([key in ["shorter-side", "longer-side"] for key in val.keys()]))
+                    if "shorter-side" in val and "longer-side" in val:
+                        ia.do_assert(val["shorter-side"] != "keep-aspect-ratio" or val["longer-side"] != "keep-aspect-ratio")
 
                     size_tuple = []
-                    for k in ["short", "long"]:
+                    for k in ["shorter-side", "longer-side"]:
                         if k in val:
                             if val[k] == "keep-aspect-ratio" or val[k] == "keep":
                                 entry = iap.Deterministic(val[k])
@@ -363,12 +363,13 @@ class Resize(meta.Augmenter):
             raise Exception(
                 "Expected number, tuple of two numbers, list of numbers, dictionary of "
                 "form {'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
-                "'width': <analogous>}, dictionary of form {'short': number/tuple/list/'keep-aspect-ratio'/'keep', "
-                "'long': <analogous>}, or StochasticParameter, got %s." % (type(val),)
+                "'width': <analogous>}, dictionary of form {'shorter-side': number/tuple/list"
+                "/'keep-aspect-ratio'/'keep', 'longer-side': <analogous>},"
+                " or StochasticParameter, got %s." % (type(val),)
             )
 
         self.size = handle(size, True)
-        self.size_order = 'SL' if (isinstance(size, dict) and 'short' in size) else 'HW'
+        self.size_order = 'SL' if (isinstance(size, dict) and 'shorter-side' in size) else 'HW'
 
         if interpolation == ia.ALL:
             self.interpolation = iap.Choice(["nearest", "linear", "area", "cubic"])
