@@ -429,7 +429,7 @@ class Resize(meta.Augmenter):
         for i in sm.xrange(nb_segmaps):
             segmaps_i = segmaps[i]
             sample_h, sample_w = samples_h[i], samples_w[i]
-            h_img, w_img = self._compute_height_width(segmaps_i.shape, sample_h, sample_w)
+            h_img, w_img = self._compute_height_width(segmaps_i.shape, sample_h, sample_w, self.size_order)
             h = int(np.round(h_img * (segmaps_i.arr.shape[0] / segmaps_i.shape[0])))
             w = int(np.round(w_img * (segmaps_i.arr.shape[1] / segmaps_i.shape[1])))
             h = max(h, 1)
