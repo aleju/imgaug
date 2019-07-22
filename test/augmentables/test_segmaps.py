@@ -20,6 +20,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug as ia
+import imgaug.augmentables.segmaps as segmapslib
 
 
 def main():
@@ -38,6 +39,23 @@ def main():
 
     time_end = time.time()
     print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
+
+
+# old style segmentation maps (class name differs to new style by "Map"
+# instead of "Maps")
+class TestSegmentationMapOnImage(unittest.TestCase):
+    def test_warns_that_it_is_deprecated(self):
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+            segmap = segmapslib.SegmentationMapOnImage(
+                np.zeros((1, 1, 1), dtype=np.int32),
+                shape=(1, 1, 3)
+            )
+            assert segmap.arr.dtype.name == "int32"
+            assert segmap.arr.shape == (1, 1, 1)
+            assert segmap.shape == (1, 1, 3)
+        assert len(caught_warnings) == 1
+        assert "is deprecated" in str(caught_warnings[0].message)
 
 
 def test_SegmentationMapsOnImage___init__():
@@ -115,6 +133,47 @@ def test_SegmentationMapsOnImage___init__():
         assert "only uint8 and uint16 " in str(exc)
         got_exception = True
     assert got_exception
+
+
+def test_SegmentationMapsOnImage___init___float32_2d():
+    arr = np.array([0.4, 0.6], dtype=np.float32).reshape((1, 2))
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        segmap = segmapslib.SegmentationMapsOnImage(arr, shape=(1, 1, 3))
+
+        arr_expected = np.array([0, 1], dtype=np.int32).reshape((1, 2, 1))
+        assert np.array_equal(segmap.arr, arr_expected)
+        assert segmap.shape == (1, 1, 3)
+
+    assert len(caught_warnings) == 1
+    assert (
+        "Got a float array as the segmentation map in"
+        in str(caught_warnings[0].message)
+    )
+
+
+def test_SegmentationMapsOnImage___init___float32_3d():
+    arr = np.array([
+        [
+            [0.4, 0.6],
+            [0.2, 0.1]
+        ]
+    ], dtype=np.float32).reshape((1, 2, 2))
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        segmap = segmapslib.SegmentationMapsOnImage(arr, shape=(1, 1, 3))
+
+        arr_expected = np.array([
+            [1, 0]
+        ], dtype=np.int32).reshape((1, 2, 1))
+        assert np.array_equal(segmap.arr, arr_expected)
+        assert segmap.shape == (1, 1, 3)
+
+    assert len(caught_warnings) == 1
+    assert (
+        "Got a float array as the segmentation map in"
+        in str(caught_warnings[0].message)
+    )
 
 
 def test_SegmentationMapsOnImage_bool():

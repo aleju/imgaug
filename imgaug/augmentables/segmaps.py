@@ -92,6 +92,20 @@ class SegmentationMapsOnImage(object):
                      "Expected to get numpy array, got %s." % (type(arr),))
         assert isinstance(shape, tuple)
 
+        if arr.dtype.kind == "f":
+            ia.warn_deprecated(
+                "Got a float array as the segmentation map in "
+                "SegmentationMapsOnImage. That is deprecated. Please provide "
+                "instead a (H,W,[C]) array of dtype bool_, int or uint, where "
+                "C denotes the segmentation map index."
+            )
+
+            if arr.ndim == 2:
+                arr = (arr > 0.5)
+            else:
+                assert arr.ndim == 3
+                arr = np.argmax(arr, axis=2).astype(np.int32)
+
         if arr.dtype.name == "bool":
             ia.do_assert(arr.ndim in [2, 3])
             self._input_was = (arr.dtype, arr.ndim)

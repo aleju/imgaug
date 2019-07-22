@@ -219,8 +219,8 @@ Changes:
       This was changed due to the input array now being allowed to contain
       several channels, with each such channel containing one full segmentation
       map.
-    - **[rarely breaking]** Changed `SegmentationMapsOnImage.__init__` to no
-      longer accept float arrays as `arr` argument.
+    - Changed `SegmentationMapsOnImage.__init__` to produce a deprecation
+      warning for float arrays as `arr` argument.
     - **[breaking]** Changed `SegmentationMapsOnImage.__init__` to no longer
       accept `uint32` and larger itemsizes as `arr` argument, only `uint16`
       and below is accepted. For `int` the maximum is `int32`.
@@ -236,8 +236,11 @@ Changes:
     - Deprecated `SegmentationMapsOnImage.get_arr_int()`.
       The method is now an alias for `get_arr()`.
     - `SegmentationMapsOnImage.draw()`:
-        - **[breaking]** Removed argument `return_foreground_mask`.
-        - **[breaking]** Removed optional output for foreground masks.
+        - **[breaking]** Removed argument `return_foreground_mask` and
+          corresponding optional output. To generate a foreground mask
+          for the `c`-th segmentation map on a given image (usually `c=0`),
+          use `segmentation_map.arr[:, :, c] != 0`, assuming that `0` is
+          the integer index of your background class. 
         - **[breaking]** Changed output of drawn image to be a list of arrays
           instead of a single array (one per `C` in input array `(H,W,C)`).
         - Refactored to be a wrapper around
@@ -248,7 +251,7 @@ Changes:
         - **[breaking]** Changed output of drawn image to be a list of arrays
           instead of a single array (one per `C` in input array `(H,W,C)`).
     - Changed `SegmentationMapsOnImage.resize()` to use nearest neighbour
-      interpolaton by default.
+      interpolation by default.
     - **[rarely breaking]** Changed `SegmentationMapsOnImage.copy()` to create
       a shallow copy instead of being an alias for `deepcopy()`.
     - Added optional arguments `arr` and `shape` to
