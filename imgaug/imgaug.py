@@ -1338,8 +1338,8 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         * ``float128``: yes; fully tested (2) (3)
         * ``bool``: yes; tested (2) (3)
 
-        - (1) Uses ``cv2`` if `mode` is one of: ``"constant"``, ``"edge"``, ``"reflect"``, ``"symmetric"``.
-              Otherwise uses ``numpy``.
+        - (1) Uses ``cv2`` if `mode` is one of: ``"constant"``, ``"edge"``,
+              ``"reflect"``, ``"symmetric"``. Otherwise uses ``numpy``.
         - (2) Uses ``numpy``.
         - (3) Rejected by ``cv2``.
 
@@ -1349,32 +1349,38 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         Image-like array to pad.
 
     top : int, optional
-        Amount of pixels to add at the top side of the image. Must be 0 or greater.
+        Amount of pixels to add at the top side of the image. Must be 0 or
+        greater.
 
     right : int, optional
-        Amount of pixels to add at the right side of the image. Must be 0 or greater.
+        Amount of pixels to add at the right side of the image. Must be 0 or
+        greater.
 
     bottom : int, optional
-        Amount of pixels to add at the bottom side of the image. Must be 0 or greater.
+        Amount of pixels to add at the bottom side of the image. Must be 0 or
+        greater.
 
     left : int, optional
-        Amount of pixels to add at the left side of the image. Must be 0 or greater.
+        Amount of pixels to add at the left side of the image. Must be 0 or
+        greater.
 
     mode : str, optional
         Padding mode to use. See :func:`numpy.pad` for details.
-        In case of mode ``constant``, the parameter `cval` will be used as the ``constant_values``
-        parameter to :func:`numpy.pad`.
-        In case of mode ``linear_ramp``, the parameter `cval` will be used as the ``end_values``
-        parameter to :func:`numpy.pad`.
+        In case of mode ``constant``, the parameter `cval` will be used as
+        the ``constant_values`` parameter to :func:`numpy.pad`.
+        In case of mode ``linear_ramp``, the parameter `cval` will be used as
+        the ``end_values`` parameter to :func:`numpy.pad`.
 
     cval : number, optional
-        Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
-        The cval is expected to match the input array's dtype and value range.
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details. The cval is expected to match the
+        input array's dtype and value range.
 
     Returns
     -------
     arr_pad : (H',W') ndarray or (H',W',C) ndarray
-        Padded array with height ``H'=H+top+bottom`` and width ``W'=W+left+right``.
+        Padded array with height ``H'=H+top+bottom`` and width
+        ``W'=W+left+right``.
 
     """
     do_assert(arr.ndim in [2, 3])
@@ -1401,19 +1407,29 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         }
         bad_mode_cv2 = mapping_mode_np_to_cv2.get(mode, None) is None
 
-        # these datatypes all simply generate a "TypeError: src data type = X is not supported" error
-        bad_datatype_cv2 = arr.dtype.name in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
+        # these datatypes all simply generate a "TypeError: src data type = X
+        # is not supported" error
+        bad_datatype_cv2 = (
+            arr.dtype.name
+            in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
+        )
 
         if not bad_datatype_cv2 and not bad_mode_cv2:
-            cval = float(cval) if arr.dtype.kind == "f" else int(cval)  # results in TypeError otherwise for np inputs
+            cval = (
+                float(cval)
+                if arr.dtype.kind == "f"
+                else int(cval)
+            )  # results in TypeError otherwise for np inputs
 
             if arr.ndim == 2 or arr.shape[2] <= 4:
-                # without this, only the first channel is padded with the cval, all following channels with 0
+                # without this, only the first channel is padded with the cval,
+                # all following channels with 0
                 if arr.ndim == 3:
                     cval = tuple([cval] * arr.shape[2])
 
-                arr_pad = cv2.copyMakeBorder(arr, top=top, bottom=bottom, left=left, right=right,
-                                             borderType=mapping_mode_np_to_cv2[mode], value=cval)
+                arr_pad = cv2.copyMakeBorder(
+                    arr, top=top, bottom=bottom, left=left, right=right,
+                    borderType=mapping_mode_np_to_cv2[mode], value=cval)
                 if arr.ndim == 3 and arr_pad.ndim == 2:
                     arr_pad = arr_pad[..., np.newaxis]
             else:
@@ -1422,21 +1438,27 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
                 while channel_start_idx < arr.shape[2]:
                     arr_c = arr[..., channel_start_idx:channel_start_idx+4]
                     cval_c = tuple([cval] * arr_c.shape[2])
-                    arr_pad_c = cv2.copyMakeBorder(arr_c, top=top, bottom=bottom, left=left, right=right,
-                                                   borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
+                    arr_pad_c = cv2.copyMakeBorder(
+                        arr_c, top=top, bottom=bottom, left=left, right=right,
+                        borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
                     arr_pad_c = np.atleast_3d(arr_pad_c)
                     result.append(arr_pad_c)
                     channel_start_idx += 4
                 arr_pad = np.concatenate(result, axis=2)
         else:
-            paddings_np = [(top, bottom), (left, right)]  # paddings for 2d case
+            # paddings for 2d case
+            paddings_np = [(top, bottom), (left, right)]
+
+            # add paddings for 3d case
             if arr.ndim == 3:
-                paddings_np.append((0, 0))  # add paddings for 3d case
+                paddings_np.append((0, 0))
 
             if mode == "constant":
-                arr_pad = np.pad(arr, paddings_np, mode=mode, constant_values=cval)
+                arr_pad = np.pad(arr, paddings_np, mode=mode,
+                                 constant_values=cval)
             elif mode == "linear_ramp":
-                arr_pad = np.pad(arr, paddings_np, mode=mode, end_values=cval)
+                arr_pad = np.pad(arr, paddings_np, mode=mode,
+                                 end_values=cval)
             else:
                 arr_pad = np.pad(arr, paddings_np, mode=mode)
 
@@ -1447,12 +1469,21 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 # TODO allow shape as input instead of array
 def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     """
-    Compute the amount of pixels by which an array has to be padded to fulfill an aspect ratio.
+    Compute pad amounts required to fulfill an aspect ratio.
 
-    The aspect ratio is given as width/height.
-    Depending on which dimension is smaller (height or width), only the corresponding
-    sides (left/right or top/bottom) will be padded. In each case, both of the sides will
-    be padded equally.
+    "Pad amounts" here denotes the number of pixels that have to be added to
+    each side to fulfill the desired constraint.
+
+    The aspect ratio is given as ``ratio = width / height``.
+    Depending on which dimension is smaller (height or width), only the
+    corresponding sides (top/bottom or left/right) will be padded.
+
+    The axis-wise padding amounts are always distributed equally over the
+    sides of the respective axis (i.e. left and right, top and bottom). For
+    odd pixel amounts, one pixel will be left over after the equal
+    distribution and could be added to either side of the axis. This function
+    will always add such a left over pixel to the bottom (y-axis) or
+    right (x-axis) side.
 
     Parameters
     ----------
@@ -1460,14 +1491,14 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         Image-like array for which to compute pad amounts.
 
     aspect_ratio : float
-        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
-        as much width as height.
+        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image
+        having twice as much width as height.
 
     Returns
     -------
     result : tuple of int
-        Required paddign amounts to reach the target aspect ratio, given as a tuple
-        of the form ``(top, right, bottom, left)``.
+        Required padding amounts to reach the target aspect ratio, given as a
+        tuple of the form ``(top, right, bottom, left)``.
 
     """
     do_assert(arr.ndim in [2, 3])
@@ -1495,13 +1526,14 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     return pad_top, pad_right, pad_bottom, pad_left
 
 
-def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
+def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
+                        return_pad_amounts=False):
     """
-    Pad an image-like array on its sides so that it matches a target aspect ratio.
+    Pad an image array on its sides so that it matches a target aspect ratio.
 
-    Depending on which dimension is smaller (height or width), only the corresponding
-    sides (left/right or top/bottom) will be padded. In each case, both of the sides will
-    be padded equally.
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
 
     dtype support::
 
@@ -1513,33 +1545,38 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
         Image-like array to pad.
 
     aspect_ratio : float
-        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
-        as much width as height.
+        Target aspect ratio, given as width/height. E.g. 2.0 denotes the image
+        having twice as much width as height.
 
     mode : str, optional
-        Padding mode to use. See :func:`numpy.pad` for details.
+        Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
 
     cval : number, optional
-        Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details.
 
     return_pad_amounts : bool, optional
-        If False, then only the padded image will be returned. If True, a tuple with two
-        entries will be returned, where the first entry is the padded image and the second
-        entry are the amounts by which each image side was padded. These amounts are again a
-        tuple of the form (top, right, bottom, left), with each value being an integer.
+        If False, then only the padded image will be returned. If True, a
+        tuple with two entries will be returned, where the first entry is the
+        padded image and the second entry are the amounts by which each image
+        side was padded. These amounts are again a tuple of the form ``(top,
+        right, bottom, left)``, with each value being an integer.
 
     Returns
     -------
     arr_padded : (H',W') ndarray or (H',W',C) ndarray
-        Padded image as (H',W') or (H',W',C) ndarray, fulfulling the given aspect_ratio.
+        Padded image as (H',W') or (H',W',C) ndarray, fulfilling the given
+        `aspect_ratio`.
 
     tuple of int
-        Amounts by which the image was padded on each side, given as a tuple ``(top, right, bottom, left)``.
-        This tuple is only returned if `return_pad_amounts` was set to True.
-        Otherwise only ``arr_padded`` is returned.
+        Amounts by which the image was padded on each side, given as a tuple
+        ``(top, right, bottom, left)``. This tuple is only returned if
+        `return_pad_amounts` was set to ``True``.
+        Otherwise, only ``arr_padded`` is returned.
 
     """
-    pad_top, pad_right, pad_bottom, pad_left = compute_paddings_for_aspect_ratio(arr, aspect_ratio)
+    pad_top, pad_right, pad_bottom, pad_left = \
+        compute_paddings_for_aspect_ratio(arr, aspect_ratio)
     arr_padded = pad(
         arr,
         top=pad_top,
@@ -1552,11 +1589,145 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0, return_pad_a
 
     if return_pad_amounts:
         return arr_padded, (pad_top, pad_right, pad_bottom, pad_left)
-    else:
-        return arr_padded
+    return arr_padded
 
 
-def pool(arr, block_size, func, cval=0, preserve_dtype=True):
+# TODO allow shape as input instead of array
+def compute_paddings_to_reach_multiples_of(arr, height_multiple,
+                                           width_multiple):
+    """
+    Compute pad amounts until img height/width are multiples of given values.
+
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array for which to compute pad amounts.
+
+    height_multiple : None or int
+        The desired multiple of the height. The computed padding amount will
+        reflect a padding that increases the y axis size until it is a multiple
+        of this value.
+
+    width_multiple : None or int
+        The desired multiple of the width. The computed padding amount will
+        reflect a padding that increases the x axis size until it is a multiple
+        of this value.
+
+    Returns
+    -------
+    result : tuple of int
+        Required padding amounts to reach multiples of the provided values,
+        given as a tuple of the form ``(top, right, bottom, left)``.
+
+    """
+    def _compute_axis_value(axis_size, multiple):
+        if multiple is None:
+            return 0, 0
+        if axis_size == 0:
+            to_pad = multiple
+        elif axis_size % multiple == 0:
+            to_pad = 0
+        else:
+            to_pad = multiple - (axis_size % multiple)
+        return int(np.floor(to_pad/2)), int(np.ceil(to_pad/2))
+
+    assert arr.ndim in [2, 3], (
+        "Can only pad arrays with 2 or 3 axis, got %d axis." % (arr.ndim,))
+    if height_multiple is not None:
+        assert height_multiple > 0, (
+            "Can only pad to multiples of 1 or larger, got %d." % (
+                height_multiple,))
+    if width_multiple is not None:
+        assert width_multiple > 0, (
+            "Can only pad to multiples of 1 or larger, got %d." % (
+                height_multiple,))
+
+    height, width = arr.shape[0:2]
+
+    pad_top, pad_bottom = _compute_axis_value(height, height_multiple)
+    pad_left, pad_right = _compute_axis_value(width, width_multiple)
+
+    return pad_top, pad_right, pad_bottom, pad_left
+
+
+def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
+                        cval=0, return_pad_amounts=False):
+    """
+    Pad an image array until its side lengths are multiples of given values.
+
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pad`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pad.
+
+    height_multiple : None or int
+        The desired multiple of the height. The computed padding amount will
+        reflect a padding that increases the y axis size until it is a multiple
+        of this value.
+
+    width_multiple : None or int
+        The desired multiple of the width. The computed padding amount will
+        reflect a padding that increases the x axis size until it is a multiple
+        of this value.
+
+    mode : str, optional
+        Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
+
+    cval : number, optional
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details.
+
+    return_pad_amounts : bool, optional
+        If False, then only the padded image will be returned. If True, a
+        tuple with two entries will be returned, where the first entry is the
+        padded image and the second entry are the amounts by which each image
+        side was padded. These amounts are again a tuple of the form ``(top,
+        right, bottom, left)``, with each value being an integer.
+
+    Returns
+    -------
+    arr_padded : (H',W') ndarray or (H',W',C) ndarray
+        Padded image as (H',W') or (H',W',C) ndarray.
+
+    tuple of int
+        Amounts by which the image was padded on each side, given as a
+        tuple ``(top, right, bottom, left)``. This tuple is only returned
+        if `return_pad_amounts` was set to ``True``.
+        Otherwise, only ``arr_padded`` is returned.
+
+    """
+    pad_top, pad_right, pad_bottom, pad_left = \
+        compute_paddings_to_reach_multiples_of(
+            arr, height_multiple, width_multiple)
+    arr_padded = pad(
+        arr,
+        top=pad_top,
+        right=pad_right,
+        bottom=pad_bottom,
+        left=pad_left,
+        mode=mode,
+        cval=cval
+    )
+
+    if return_pad_amounts:
+        return arr_padded, (pad_top, pad_right, pad_bottom, pad_left)
+    return arr_padded
+
+
+def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
+         preserve_dtype=True, cval=None):
     """
     Resize an array by pooling values within blocks.
 
@@ -1577,9 +1748,10 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
         * ``bool``: yes; tested
 
         - (1) results too inaccurate (at least when using np.average as func)
-        - (2) Note that scikit-image documentation says that the wrapped pooling function converts
-              inputs to float64. Actual tests showed no indication of that happening (at least when
-              using preserve_dtype=True).
+        - (2) Note that scikit-image documentation says that the wrapped
+              pooling function converts inputs to ``float64``. Actual tests
+              showed no indication of that happening (at least when using
+              preserve_dtype=True).
 
     Parameters
     ----------
@@ -1588,22 +1760,34 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
 
     block_size : int or tuple of int
         Spatial size of each group of values to pool, aka kernel size.
-        If a single integer, then a symmetric block of that size along height and width will be used.
-        If a tuple of two values, it is assumed to be the block size along height and width of the image-like,
-        with pooling happening per channel.
-        If a tuple of three values, it is assumed to be the block size along height, width and channels.
+
+          * If a single integer, then a symmetric block of that size along
+            height and width will be used.
+          * If a tuple of two values, it is assumed to be the block size
+            along height and width of the image-like, with pooling happening
+            per channel.
+          * If a tuple of three values, it is assumed to be the block size
+            along height, width and channels.
 
     func : callable
-        Function to apply to a given block in order to convert it to a single number,
-        e.g. :func:`numpy.average`, :func:`numpy.min`, :func:`numpy.max`.
+        Function to apply to a given block in order to convert it to a single
+        number, e.g. :func:`numpy.average`, :func:`numpy.min`,
+        :func:`numpy.max`.
 
-    cval : number, optional
-        Value to use in order to pad the array along its border if the array cannot be divided
-        by `block_size` without remainder.
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder. See :func:`imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
+        Value to use for padding if `mode` is ``constant``.
+        See :func:`numpy.pad` for details.
 
     preserve_dtype : bool, optional
-        Whether to convert the array back to the input datatype if it is changed away from
-        that in the pooling process.
+        Whether to convert the array back to the input datatype if it is
+        changed away from that in the pooling process.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
 
     Returns
     -------
@@ -1614,11 +1798,19 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     # TODO find better way to avoid circular import
     from . import dtypes as iadt
     iadt.gate_dtypes(arr,
-                     allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+                     allowed=["bool",
+                              "uint8", "uint16", "uint32",
+                              "int8", "int16", "int32",
                               "float16", "float32", "float64", "float128"],
-                     disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
+                     disallowed=["uint64", "uint128", "uint256",
+                                 "int64", "int128", "int256",
                                  "float256"],
                      augmenter=None)
+
+    if cval is not None:
+        warn_deprecated("`cval` is a deprecated argument in pool(). "
+                        "Use `pad_cval` instead.")
+        pad_cval = cval
 
     do_assert(arr.ndim in [2, 3])
     is_valid_int = is_single_integer(block_size) and block_size >= 1
@@ -1631,15 +1823,28 @@ def pool(arr, block_size, func, cval=0, preserve_dtype=True):
     if len(block_size) < arr.ndim:
         block_size = list(block_size) + [1]
 
+    # We use custom padding here instead of the one from block_reduce(),
+    # because (1) it is expected to be faster and (2) it allows us more
+    # flexibility wrt to padding modes.
+    arr = pad_to_multiples_of(
+        arr,
+        height_multiple=block_size[0],
+        width_multiple=block_size[1],
+        mode=pad_mode,
+        cval=pad_cval
+    )
+
     input_dtype = arr.dtype
-    arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func, cval=cval)
+    arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func,
+                                               cval=cval)
     if preserve_dtype and arr_reduced.dtype.type != input_dtype:
         arr_reduced = arr_reduced.astype(input_dtype)
     return arr_reduced
 
 
 # TODO does OpenCV have a faster avg pooling method?
-def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
+def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
+             preserve_dtype=True, cval=None):
     """
     Resize an array using average pooling.
 
@@ -1653,13 +1858,22 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
         Image-like array to pool. See :func:`imgaug.pool` for details.
 
     block_size : int or tuple of int or tuple of int
-        Size of each block of values to pool. See :func:`imgaug.pool` for details.
+        Size of each block of values to pool. See :func:`imgaug.pool` for
+        details.
 
-    cval : number, optional
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder. See :func:`imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
         Padding value. See :func:`imgaug.pool` for details.
 
     preserve_dtype : bool, optional
-        Whether to preserve the input array dtype. See :func:`imgaug.pool` for details.
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for
+        details.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
 
     Returns
     -------
@@ -1667,10 +1881,12 @@ def avg_pool(arr, block_size, cval=0, preserve_dtype=True):
         Array after average pooling.
 
     """
-    return pool(arr, block_size, np.average, cval=cval, preserve_dtype=preserve_dtype)
+    return pool(arr, block_size, np.average, pad_mode=pad_mode,
+                pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
 
 
-def max_pool(arr, block_size, cval=0, preserve_dtype=True):
+def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
+             preserve_dtype=True, cval=None):
     """
     Resize an array using max-pooling.
 
@@ -1684,13 +1900,22 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
         Image-like array to pool. See :func:`imgaug.pool` for details.
 
     block_size : int or tuple of int or tuple of int
-        Size of each block of values to pool. See `imgaug.pool` for details.
+        Size of each block of values to pool. See :func:`imgaug.pool` for
+        details.
 
-    cval : number, optional
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder. See :func:`imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
         Padding value. See :func:`imgaug.pool` for details.
 
     preserve_dtype : bool, optional
-        Whether to preserve the input array dtype. See :func:`imgaug.pool` for details.
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for
+        details.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
 
     Returns
     -------
@@ -1698,7 +1923,91 @@ def max_pool(arr, block_size, cval=0, preserve_dtype=True):
         Array after max-pooling.
 
     """
-    return pool(arr, block_size, np.max, cval=cval, preserve_dtype=preserve_dtype)
+    return pool(arr, block_size, np.max, pad_mode=pad_mode,
+                pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
+
+
+def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
+             preserve_dtype=True):
+    """
+    Resize an array using min-pooling.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pool`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. See :func:`imgaug.pool` for details.
+
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool. See :func:`imgaug.pool` for
+        details.
+
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder. See :func:`imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
+        Padding value. See :func:`imgaug.pool` for details.
+        Defaults to ``255`` so that padded pixels are never chosen as
+        the minimum at any spatial location (unless all image pixels also
+        have the ``uint8`` maximum).
+
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for
+        details.
+
+    Returns
+    -------
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
+        Array after min-pooling.
+
+    """
+    return pool(arr, block_size, np.min, pad_mode=pad_mode, pad_cval=pad_cval,
+                preserve_dtype=preserve_dtype)
+
+
+def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
+                preserve_dtype=True):
+    """
+    Resize an array using median-pooling.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.pool`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool. See :func:`imgaug.pool` for details.
+
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool. See :func:`imgaug.pool` for
+        details.
+
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder. See :func:`imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
+        Padding value. See :func:`imgaug.pool` for details.
+        Defaults to ``128`` so that padded pixels influence the resulting
+        array as little as possible (optimized for ``uint8``).
+
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype. See :func:`imgaug.pool` for
+        details.
+
+    Returns
+    -------
+    arr_reduced : (H',W') ndarray or (H',W',C') ndarray
+        Array after min-pooling.
+
+    """
+    return pool(arr, block_size, np.median, pad_mode=pad_mode,
+                pad_cval=pad_cval, preserve_dtype=preserve_dtype)
 
 
 def draw_grid(images, rows=None, cols=None):

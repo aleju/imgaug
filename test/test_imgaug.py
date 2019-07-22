@@ -67,6 +67,7 @@ def main():
     test_pool()
     test_avg_pool()
     test_max_pool()
+    test_min_pool()
     test_draw_grid()
     # test_show_grid()
     # test_do_assert()
@@ -1476,6 +1477,159 @@ def test_pad_to_aspect_ratio():
     # TODO add tests for return_pad_values=True
 
 
+class Test_compute_paddings_to_reach_multiples_of(unittest.TestCase):
+    def test_zero_height_array(self):
+        arr = np.zeros((0, 2, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, 2)
+        assert paddings == (1, 0, 1, 0)
+
+    def test_zero_width_array(self):
+        arr = np.zeros((2, 0, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, 2)
+        assert paddings == (0, 1, 0, 1)
+
+    def test_both_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, None, None)
+        assert paddings == (0, 0, 0, 0)
+
+    def test_height_is_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, None, 2)
+        assert paddings == (0, 1, 0, 0)
+
+    def test_width_is_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, None)
+        assert paddings == (0, 0, 1, 0)
+
+    def test_height_is_one(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 1, 2)
+        assert paddings == (0, 1, 0, 0)
+
+    def test_width_is_one(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = ia.compute_paddings_to_reach_multiples_of(arr, 2, 1)
+        assert paddings == (0, 0, 1, 0)
+
+    def test_various_widths(self):
+        nb_channels_lst = [None, 1, 3, 4]
+        amounts = [2, 3, 4, 5, 6, 7, 8, 9]
+        expecteds = [
+            (0, 1, 0, 0),
+            (0, 1, 0, 0),
+            (0, 2, 0, 1),
+            (0, 0, 0, 0),
+            (0, 1, 0, 0),
+            (0, 1, 0, 1),
+            (0, 2, 0, 1),
+            (0, 2, 0, 2)
+        ]
+
+        for amount, expected in zip(amounts, expecteds):
+            for nb_channels in nb_channels_lst:
+                with self.subTest(width_multiple=amount,
+                                  nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.zeros((3, 5), dtype=np.uint8)
+                    else:
+                        arr = np.zeros((3, 5, nb_channels), dtype=np.uint8)
+
+                    paddings = ia.compute_paddings_to_reach_multiples_of(
+                        arr, None, amount)
+
+                    assert paddings == expected
+
+    def test_various_heights(self):
+        nb_channels_lst = [None, 1, 3, 4]
+        amounts = [2, 3, 4, 5, 6, 7, 8, 9]
+        expecteds = [
+            (0, 0, 1, 0),
+            (0, 0, 1, 0),
+            (1, 0, 2, 0),
+            (0, 0, 0, 0),
+            (0, 0, 1, 0),
+            (1, 0, 1, 0),
+            (1, 0, 2, 0),
+            (2, 0, 2, 0)
+        ]
+        for amount, expected in zip(amounts, expecteds):
+            for nb_channels in nb_channels_lst:
+                with self.subTest(height_multiple=amount,
+                                  nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.zeros((5, 3), dtype=np.uint8)
+                    else:
+                        arr = np.zeros((5, 3, nb_channels), dtype=np.uint8)
+
+                    paddings = ia.compute_paddings_to_reach_multiples_of(
+                        arr, amount, None)
+
+                    assert paddings == expected
+
+
+class Test_pad_to_multiples_of(unittest.TestCase):
+    @mock.patch("imgaug.imgaug.compute_paddings_to_reach_multiples_of")
+    @mock.patch("imgaug.imgaug.pad")
+    def test_mocked(self, mock_pad, mock_compute_pads):
+        mock_compute_pads.return_value = (1, 2, 3, 4)
+        mock_pad.return_value = "padded_array"
+
+        arr = np.ones((3, 5, 1), dtype=np.uint8)
+
+        arr_padded = ia.pad_to_multiples_of(
+            arr, 10, 20, mode="foo", cval=100)
+
+        mock_compute_pads.assert_called_once_with(arr, 10, 20)
+        mock_pad.assert_called_once_with(arr, top=1, right=2, bottom=3,
+                                         left=4, mode="foo", cval=100)
+        assert arr_padded == "padded_array"
+
+    @mock.patch("imgaug.imgaug.compute_paddings_to_reach_multiples_of")
+    @mock.patch("imgaug.imgaug.pad")
+    def test_mocked_return_pad_amounts(self, mock_pad, mock_compute_pads):
+        mock_compute_pads.return_value = (1, 2, 3, 4)
+        mock_pad.return_value = "padded_array"
+
+        arr = np.ones((3, 5, 1), dtype=np.uint8)
+
+        arr_padded, paddings = ia.pad_to_multiples_of(
+            arr, 10, 20, mode="foo", cval=100, return_pad_amounts=True)
+
+        mock_compute_pads.assert_called_once_with(arr, 10, 20)
+        mock_pad.assert_called_once_with(arr, top=1, right=2, bottom=3,
+                                         left=4, mode="foo", cval=100)
+        assert arr_padded == "padded_array"
+        assert paddings == (1, 2, 3, 4)
+
+    def test_integrationtest(self):
+        dtypes = [np.uint8, np.int32, np.float32]
+        nb_channels_lst = [None, 1, 3, 4]
+
+        for dtype in dtypes:
+            dtype = np.dtype(dtype)
+            for nb_channels in nb_channels_lst:
+                with self.subTest(dtype=dtype.name, nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.ones((3, 5), dtype=dtype)
+                    else:
+                        arr = np.ones((3, 5, nb_channels), dtype=dtype)
+
+                    arr_padded = ia.pad_to_multiples_of(arr, 7, 11, cval=2)
+
+                    if nb_channels is None:
+                        base_area = 3*5
+                        new_area = 7*11 - base_area
+                        assert arr_padded.shape == (7, 11)
+                        assert np.sum(arr_padded) == 1*base_area + 2*new_area
+                    else:
+                        base_area = 3*5*nb_channels
+                        new_area = 7*11*nb_channels - base_area
+                        assert arr_padded.shape == (7, 11, nb_channels)
+                        assert np.sum(arr_padded) == 1*base_area + 2*new_area
+
+
 def test_pool():
     # -----
     # uint, int
@@ -1710,7 +1864,7 @@ def test_pool():
         [4, 5, 6],
         [8, 9, 10]
     ])
-    arr_pooled = ia.pool(arr, 2, np.average, cval=22)
+    arr_pooled = ia.pool(arr, 2, np.average, pad_cval=22)
     assert arr_pooled.shape == (2, 2)
     assert arr_pooled.dtype == arr.dtype.type
     assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
@@ -1718,7 +1872,36 @@ def test_pool():
     assert arr_pooled[1, 0] == int(np.average([8, 9, 22, 22]))
     assert arr_pooled[1, 1] == int(np.average([10, 22, 22, 22]))
 
+    # padding mode
+    arr = np.uint8([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, pad_mode="edge")
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.average([2, 2, 6, 6]))
+    assert arr_pooled[1, 0] == int(np.average([8, 9, 8, 9]))
+    assert arr_pooled[1, 1] == int(np.average([10, 10, 10, 10]))
 
+    # same as above, but with float32 to make averages more accurate
+    arr = np.float32([
+        [0, 1, 2],
+        [4, 5, 6],
+        [8, 9, 10]
+    ])
+    arr_pooled = ia.pool(arr, 2, np.average, pad_mode="edge")
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert np.isclose(arr_pooled[0, 0], np.average([0, 1, 4, 5]))
+    assert np.isclose(arr_pooled[0, 1], np.average([2, 2, 6, 6]))
+    assert np.isclose(arr_pooled[1, 0], np.average([8, 9, 8, 9]))
+    assert np.isclose(arr_pooled[1, 1], np.average([10, 10, 10, 10]))
+
+
+# TODO add test that verifies the default padding mode
 def test_avg_pool():
     # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
     arr = np.uint8([
@@ -1736,8 +1919,10 @@ def test_avg_pool():
     assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
 
 
+# TODO add test that verifies the default padding mode
 def test_max_pool():
-    # very basic test, as avg_pool() just calls pool(), which is tested in test_pool()
+    # very basic test, as max_pool() just calls pool(), which is tested in
+    # test_pool()
     arr = np.uint8([
         [0, 1, 2, 3],
         [4, 5, 6, 7],
@@ -1751,6 +1936,48 @@ def test_max_pool():
     assert arr_pooled[0, 1] == int(np.max([2, 3, 6, 7]))
     assert arr_pooled[1, 0] == int(np.max([8, 9, 12, 13]))
     assert arr_pooled[1, 1] == int(np.max([10, 11, 14, 15]))
+
+
+# TODO add test that verifies the default padding mode
+def test_min_pool():
+    # very basic test, as min_pool() just calls pool(), which is tested in
+    # test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+
+    arr_pooled = ia.min_pool(arr, 2)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.min([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.min([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.min([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.min([10, 11, 14, 15]))
+
+
+# TODO add test that verifies the default padding mode
+def test_median_pool():
+    # very basic test, as median_pool() just calls pool(), which is tested in
+    # test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+
+    arr_pooled = ia.median_pool(arr, 2)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.median([0, 1, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.median([2, 3, 6, 7]))
+    assert arr_pooled[1, 0] == int(np.median([8, 9, 12, 13]))
+    assert arr_pooled[1, 1] == int(np.median([10, 11, 14, 15]))
 
 
 def test_draw_grid():

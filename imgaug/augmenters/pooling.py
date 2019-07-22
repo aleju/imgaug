@@ -219,12 +219,9 @@ class AveragePooling(_AbstractPoolingBase):
             name=name, deterministic=deterministic, random_state=random_state)
 
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
-        # TODO extend avg_pool to support pad_mode and set it here
-        #      to reflection padding
         return ia.avg_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1)),
-            cval=128
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
         )
 
 
@@ -340,8 +337,7 @@ class MaxPooling(_AbstractPoolingBase):
         #      to reflection padding
         return ia.max_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1)),
-            cval=0
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
         )
 
 
@@ -455,15 +451,10 @@ class MinPooling(_AbstractPoolingBase):
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
         # TODO extend pool to support pad_mode and set it here
         #      to reflection padding
-
-        # we use cval=255 here so that the minimum is always a pixel value,
-        # even if the image was automatically padded
-        return ia.pool(
+        return ia.min_pool(
             image,
-            (kernel_size_h, kernel_size_w),
-            np.min,
-            cval=255,
-            preserve_dtype=True)
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+        )
 
 
 class MedianPooling(_AbstractPoolingBase):
@@ -576,12 +567,7 @@ class MedianPooling(_AbstractPoolingBase):
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
         # TODO extend pool to support pad_mode and set it here
         #      to reflection padding
-
-        # we use cval=128 here to decrease the likelihood of unrepresentative
-        # results around the border
-        return ia.pool(
+        return ia.median_pool(
             image,
-            (kernel_size_h, kernel_size_w),
-            np.median,
-            cval=128,
-            preserve_dtype=True)
+            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+        )

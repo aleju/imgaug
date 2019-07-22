@@ -331,7 +331,7 @@ class HeatmapsOnImage(object):
             Heatmaps after average pooling.
 
         """
-        arr_0to1_reduced = ia.avg_pool(self.arr_0to1, block_size, cval=0.0)
+        arr_0to1_reduced = ia.avg_pool(self.arr_0to1, block_size, pad_cval=0.0)
         return HeatmapsOnImage.from_0to1(arr_0to1_reduced, shape=self.shape, min_value=self.min_value,
                                          max_value=self.max_value)
 
