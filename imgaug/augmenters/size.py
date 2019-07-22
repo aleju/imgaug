@@ -200,8 +200,9 @@ class Resize(meta.Augmenter):
               be queried once per image. The resulting value will be used
               for both height and width.
             * If this is a dictionary, it may contain the keys "height" and
-              "width". Each key may have the same datatypes as above and
-              describes the scaling on x and y-axis. Both axis are sampled
+              "width" or the keys "shorter-side" and "longer-side". Each key may have the
+              same datatypes as above and describes the scaling on x and y-axis
+              or the shorter and longer-axis, respectively. Both axis are sampled
               independently. Additionally, one of the keys may have the value
               "keep-aspect-ratio", which means that the respective side of the
               image will be resized so that the original aspect ratio is kept.
@@ -274,6 +275,11 @@ class Resize(meta.Augmenter):
     resizes all images to a height of 32 pixels and resizes the x-axis
     (width) so that the aspect ratio is maintained.
 
+    >>> aug = iaa.Resize({"shorter-side": 224, "longer-side": "keep-aspect-ratio"})
+
+    resizes all images to a height/width of 224 pixels depending on which axis is shorter
+    and resizes the other axis so that the aspect ratio is maintained.
+
     >>> aug = iaa.Resize({"height": (0.5, 0.75), "width": [16, 32, 64]})
 
     resizes all images to a height of ``H*v``, where ``H`` is the original height
@@ -302,7 +308,7 @@ class Resize(meta.Augmenter):
             elif allow_dict and isinstance(val, dict):
                 if len(val.keys()) == 0:
                     return iap.Deterministic("keep")
-                else:
+                elif any([key in ["height", "width"] for key in val.keys()]):
                     ia.do_assert(all([key in ["height", "width"] for key in val.keys()]))
                     if "height" in val and "width" in val:
                         ia.do_assert(val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio")
@@ -318,6 +324,23 @@ class Resize(meta.Augmenter):
                             entry = iap.Deterministic("keep")
                         size_tuple.append(entry)
                     return tuple(size_tuple)
+                elif any([key in ["shorter-side", "longer-side"] for key in val.keys()]):
+                    ia.do_assert(all([key in ["shorter-side", "longer-side"] for key in val.keys()]))
+                    if "shorter-side" in val and "longer-side" in val:
+                        ia.do_assert(val["shorter-side"] != "keep-aspect-ratio" or val["longer-side"] != "keep-aspect-ratio")
+
+                    size_tuple = []
+                    for k in ["shorter-side", "longer-side"]:
+                        if k in val:
+                            if val[k] == "keep-aspect-ratio" or val[k] == "keep":
+                                entry = iap.Deterministic(val[k])
+                            else:
+                                entry = handle(val[k], False)
+                        else:
+                            entry = iap.Deterministic("keep")
+                        size_tuple.append(entry)
+                    return tuple(size_tuple)
+
             elif isinstance(val, tuple):
                 ia.do_assert(len(val) == 2)
                 ia.do_assert(val[0] > 0 and val[1] > 0)
@@ -336,14 +359,17 @@ class Resize(meta.Augmenter):
                     return iap.Choice(val)
             elif isinstance(val, iap.StochasticParameter):
                 return val
-            else:
-                raise Exception(
-                    "Expected number, tuple of two numbers, list of numbers, dictionary of "
-                    "form {'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
-                    "'width': <analogous>}, or StochasticParameter, got %s." % (type(val),)
-                )
+
+            raise Exception(
+                "Expected number, tuple of two numbers, list of numbers, dictionary of "
+                "form {'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
+                "'width': <analogous>}, dictionary of form {'shorter-side': number/tuple/list"
+                "/'keep-aspect-ratio'/'keep', 'longer-side': <analogous>},"
+                " or StochasticParameter, got %s." % (type(val),)
+            )
 
         self.size = handle(size, True)
+        self.size_order = 'SL' if (isinstance(size, dict) and 'shorter-side' in size) else 'HW'
 
         if interpolation == ia.ALL:
             self.interpolation = iap.Choice(["nearest", "linear", "area", "cubic"])
@@ -362,11 +388,11 @@ class Resize(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
-        samples_h, samples_w, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
+        samples_a, samples_b, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
-            sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
-            h, w = self._compute_height_width(image.shape, sample_h, sample_w)
+            sample_a, sample_b, sample_ip = samples_a[i], samples_b[i], samples_ip[i]
+            h, w = self._compute_height_width(image.shape, sample_a, sample_b, self.size_order)
             image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
             result.append(image_rs)
 
@@ -380,11 +406,11 @@ class Resize(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = []
         nb_heatmaps = len(heatmaps)
-        samples_h, samples_w, samples_ip = self._draw_samples(nb_heatmaps, random_state, do_sample_ip=True)
+        samples_a, samples_b, samples_ip = self._draw_samples(nb_heatmaps, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
-            sample_h, sample_w, sample_ip = samples_h[i], samples_w[i], samples_ip[i]
-            h_img, w_img = self._compute_height_width(heatmaps_i.shape, sample_h, sample_w)
+            sample_a, sample_b, sample_ip = samples_a[i], samples_b[i], samples_ip[i]
+            h_img, w_img = self._compute_height_width(heatmaps_i.shape, sample_a, sample_b, self.size_order)
             h = int(np.round(h_img * (heatmaps_i.arr_0to1.shape[0] / heatmaps_i.shape[0])))
             w = int(np.round(w_img * (heatmaps_i.arr_0to1.shape[1] / heatmaps_i.shape[1])))
             h = max(h, 1)
@@ -398,11 +424,11 @@ class Resize(meta.Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        samples_h, samples_w, _samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
+        samples_a, samples_b, _samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            sample_h, sample_w = samples_h[i], samples_w[i]
-            h, w = self._compute_height_width(keypoints_on_image.shape, sample_h, sample_w)
+            sample_a, sample_b = samples_a[i], samples_b[i]
+            h, w = self._compute_height_width(keypoints_on_image.shape, sample_a, sample_b, self.size_order)
             new_shape = (h, w) + keypoints_on_image.shape[2:]
             keypoints_on_image_rs = keypoints_on_image.on(new_shape)
 
@@ -430,9 +456,19 @@ class Resize(meta.Augmenter):
         return samples_h, samples_w, samples_ip
 
     @classmethod
-    def _compute_height_width(cls, image_shape, sample_h, sample_w):
+    def _compute_height_width(cls, image_shape, sample_a, sample_b, size_order):
         imh, imw = image_shape[0:2]
-        h, w = sample_h, sample_w
+
+        if size_order == 'SL':
+            # size order: short, long
+            if imh < imw:
+                h, w = sample_a, sample_b
+            else:
+                w, h = sample_a, sample_b
+
+        else:
+            # size order: height, width
+            h, w = sample_a, sample_b
 
         if ia.is_single_float(h):
             ia.do_assert(0 < h)
@@ -460,7 +496,7 @@ class Resize(meta.Augmenter):
         return h, w
 
     def get_parameters(self):
-        return [self.size, self.interpolation]
+        return [self.size, self.interpolation, self.size_order]
 
 
 class CropAndPad(meta.Augmenter):
