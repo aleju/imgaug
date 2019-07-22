@@ -198,7 +198,8 @@ class SegmentationMapsOnImage(object):
         )
 
     def draw_on_image(self, image, alpha=0.75, resize="segmentation_map",
-                      colors=None, draw_background=False):
+                      colors=None, draw_background=False,
+                      background_class_id=None, background_threshold=None):
         """
         Draw the segmentation map as an overlay over an image.
 
@@ -225,6 +226,16 @@ class SegmentationMapsOnImage(object):
             will be identical with the image's RGB color at the corresponding spatial location
             and no color overlay will be applied.
 
+        background_threshold : None, optional
+            Deprecated.
+            This value is ignored. Setting it will produce a deprecation
+            warning.
+
+        background_class_id : None, optional
+            Deprecated.
+            This value is ignored. Setting it will produce a deprecation
+            warning.
+
         Returns
         -------
         list of (H,W,3) ndarray
@@ -232,6 +243,16 @@ class SegmentationMapsOnImage(object):
             segmentation map array.
 
         """
+        if background_threshold is not None:
+            ia.warn_deprecated(
+                "The argument `background_threshold` is deprecated and "
+                "ignored. Please don't use it anymore.")
+
+        if background_class_id is not None:
+            ia.warn_deprecated(
+                "The argument `background_class_id` is deprecated and "
+                "ignored. Please don't use it anymore.")
+
         ia.do_assert(image.ndim == 3)
         ia.do_assert(image.shape[2] == 3)
         ia.do_assert(image.dtype.name == "uint8")

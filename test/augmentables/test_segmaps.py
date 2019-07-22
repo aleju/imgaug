@@ -323,6 +323,37 @@ def test_SegmentationMapsOnImage_draw():
     assert np.array_equal(observed[2], expected_channel_3)
 
 
+def test_SegmentationMapsOnImage_draw_on_image_background_threshold_deprec():
+    arr = np.zeros((1, 1, 1), dtype=np.int32)
+    segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _ = segmap.draw_on_image(image, background_threshold=0.01)
+
+    assert len(caught_warnings) == 1
+    assert (
+        "The argument `background_threshold` is deprecated"
+        in str(caught_warnings[0].message)
+    )
+
+
+def test_SegmentationMapsOnImage_draw_on_image_background_class_id_deprecated():
+    arr = np.zeros((1, 1, 1), dtype=np.int32)
+    segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _ = segmap.draw_on_image(image, background_class_id=1)
+
+    assert len(caught_warnings) == 1
+    assert (
+        "The argument `background_class_id` is deprecated"
+        in str(caught_warnings[0].message)
+    )
+
 def test_SegmentationMapsOnImage_draw_on_image():
     arr = np.int32([
         [0, 1, 1],
