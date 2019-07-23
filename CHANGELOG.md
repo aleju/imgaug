@@ -226,6 +226,7 @@
 * Fixed calls of `CloudLayer.get_parameters()` resulting in errors. #309
 * Fixed `SimplexNoiseAlpha` and `FrequencyNoiseAlpha` not handling
   `sigmoid` argument correctly. #343
+* Fixed `SnowflakesLayer` crashing for grayscale images. #345
 
 
 # 0.2.9
