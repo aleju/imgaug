@@ -115,17 +115,18 @@
   (In both cases it falls back to a default value.) #367
 * Refactored code in `multicore` (general code and docstring cleanup). #367
   * Improved error messages in `multicore`.
-* Added `imgaug.min_pool()`.
+* Added `imgaug.min_pool()`. #369
   * Refactored `augmenters.pooling.MinPooling` to use `imgaug.min_pool()`.
-* Added `imgaug.median_pool()`.
-  * Refactored `augmenters.pooling.MedianPooling` to use `imgaug.median_pool()`.
-* Added `imgaug.compute_paddings_to_reach_multiples_of()`.
-* Added `imgaug.pad_to_multiples_of()`.
-* Refactored `imgaug.pool()` to use `imgaug.pad()` for image padding.
+* Added `imgaug.median_pool()`. #369
+  * Refactored `augmenters.pooling.MedianPooling` to use
+    `imgaug.median_pool()`.
+* Added `imgaug.compute_paddings_to_reach_multiples_of()`. #369
+* Added `imgaug.pad_to_multiples_of()`. #369
+* Refactored `imgaug.pool()` to use `imgaug.pad()` for image padding. #369
 * [rarely breaking] Added a `pad_mode` argument to `imgaug.pool()`,
   `imgaug.avg_pool()`, `imgaug.max_pool()`, `imgaug.min_pool()` and
   `imgaug.median_pool()`. This breaks code relying on the order of the
-  functions arguments.s
+  functions arguments. #369
   * Changed the default `pad_mode` of `avg_pool` from `constant` (`cval=128`)
     to `reflect`.
   * Changed the default `pad_mode` of `max_pool` from `constant` (`cval=0`)
@@ -136,7 +137,7 @@
     (`cval=128`) to `reflect`.
 * Renamed argument `cval` to `pad_cval` in `imgaug.pool()`,
   `imgaug.avg_pool()` and `imgaug.max_pool()`. The old name `cval` is now
-  deprecated.
+  deprecated. #369
 * Added `augmenters.color._AbstractColorQuantization`. #347
 * Added `augmenters.color.KMeansColorQuantization` and corresponding
   `augmenters.color.quantize_colors_kmeans()`. Both deal with quantizing
