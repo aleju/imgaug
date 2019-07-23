@@ -69,8 +69,8 @@
 * Changed `_ConcavePolygonRecoverer` to raise warnings instead of throwing
   exceptions when the underlying search for segment intersection points
   crashes. #338
-* Added the library to ``conda-forge`` so it can now be installed via
-  ``conda install imgaug`` (provided the conda-forge channel was added
+* Added the library to `conda-forge` so it can now be installed via
+  `conda install imgaug` (provided the conda-forge channel was added
   before that). #320 #339
 * Changed dependency `opencv-python` to `opencv-python-headless`.
   This should improve support for some system without GUIs.
@@ -148,7 +148,42 @@
   similar colors using k-Means clustering. #347
     * Added a check script for `UniformColorQuantization` under
       `checks/check_uniform_color_quantization.py`. #347
-
+* Added `imgaug.imgaug.normalize_random_state()`. #348
+* Added `imgaug.augmenters.segmentation._ensure_image_max_size()`. #348
+* Added `imgaug.augmenters.segmentation.PointsSamplerIf`. An interface for
+  classes used for sampling (usually random) coordinate arrays on images.
+* Added `imgaug.augmenters.segmentation._verify_sample_points_images()`. #348
+* Added `imgaug.augmenters.segmentation.RegularGridPointsSampler`. A class
+  used to generate regular grids of `rows x columns` points on images. #348
+* Added `imgaug.augmenters.segmentation.RelativeRegularGridPointsSampler`.
+  Similar to `RegularGridPointsSampler`, but number of rows/columns is set
+  as fractions of image sizes, leading to more rows/columns for larger
+  images. #348
+* Added `imgaug.augmenters.segmentation.DropoutPointsSampler`. A class
+  used to randomly drop `p` percent of all coordinates sampled by another
+  another points sampler. #348
+* Added `imgaug.augmenters.segmentation.UniformPointsSampler`. A class used
+  to sample `N` points on each image with y-/x-coordinates uniformly sampled
+  using the corresponding image height/width. #348 
+* Added `imgaug.augmenters.segmentation.SubsamplingPointsSampler`. A class
+  that ensures that another points sampler does not produce more than
+  `N` points by subsampling a random subset of the produced points if `N`
+  is exceeded. #348
+* Added `imgaug.augmenters.segmentation.segment_voronoi()`. A function that
+  converts an image into a voronoi image, i.e. averages the colors within
+  voronoi cells placed on the image. #348
+    * Also added in the same module the functions
+      `_match_pixels_with_voronoi_cells()`, `_generate_pixel_coords()`,
+      `_compute_avg_segment_colors()`, `_render_segments()`.
+* Added `imgaug.augmenters.segmentation.Voronoi`. An augmenter that converts
+  an image to a voronoi image.  #348
+    * Added a check script for `Voronoi` in `checks/check_voronoi.py`.
+* Added `imgaug.augmenters.segmentation.UniformVoronoi`, a shortcut for
+  `Voronoi(UniformPointsSamper)`. #348
+* Added `imgaug.augmenters.segmentation.RegularGridVoronoi`, a shortcut for
+  `Voronoi(DropoutPointsSampler(RegularGridPointsSampler))`. #348
+* Added `imgaug.augmenters.segmentation.RelativeRegularGridVoronoi`, a shortcut
+  for `Voronoi(DropoutPointsSampler(RelativeRegularGridPointsSampler))`. #348
 
 ## Fixes
  
