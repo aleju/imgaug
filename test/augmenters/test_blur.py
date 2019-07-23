@@ -778,7 +778,7 @@ class TestAverageBlur(unittest.TestCase):
                     nb_seen[key] += 1
         # dont check sum here, because 0xX and Xx0 are all the same, i.e. much
         # higher sum than nb_iterations
-        assert all([v > 0 for v in nb_seen.values()])
+        assert np.all([v > 0 for v in nb_seen.values()])
 
     def test_keypoints_dont_change(self):
         # keypoints shouldnt be changed
@@ -1008,7 +1008,7 @@ class TestMedianBlur(unittest.TestCase):
                 raise Exception("Unexpected result in MedianBlur@1")
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
     def test_k_is_stochastic_parameter(self):
         # k as stochastic parameter
@@ -1024,7 +1024,7 @@ class TestMedianBlur(unittest.TestCase):
                 raise Exception("Unexpected result in MedianBlur@2")
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
     def test_keypoints_not_changed(self):
         # keypoints shouldnt be changed

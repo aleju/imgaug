@@ -516,7 +516,7 @@ class TestCanny(unittest.TestCase):
             assert len(seen.keys()) == 4
             if all(seen.values()):
                 break
-        assert all(seen.values())
+        assert np.all(seen.values())
 
     def test_augment_images__random_values(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
@@ -575,7 +575,7 @@ class TestCanny(unittest.TestCase):
             assert len(seen.keys()) == len(images_canny_uint8.keys())
             if all(seen.values()):
                 break
-        assert all(seen.values())
+        assert np.all(seen.values())
 
     def test_get_parameters(self):
         alpha = iap.Deterministic(0.2)

@@ -439,7 +439,7 @@ def test_Polygon_cut_out_of_image():
         _test_Polygon_cut_clip(lambda poly, image: poly.cut_out_of_image(image))
         # Verify
         # get multiple warnings here, one for each function call
-        assert all([
+        assert np.all([
             "is deprecated" in str(msg.message)
             for msg in caught_warnings])
 
@@ -1945,7 +1945,7 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
                     )
                     if dist < 0.01:
                         found[i] = True
-            assert all(found)
+            assert np.all(found)
 
         # line
         poly = [(0, 0), (1, 0), (2, 0)]
@@ -1961,7 +1961,7 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
                 )
                 if dist < 0.025:
                     found[i] = True
-        assert all(found)
+        assert np.all(found)
 
         # duplicate points
         poly = [(0, 0), (1, 0), (1, 0), (1, 1)]
@@ -1977,7 +1977,7 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
                 )
                 if dist < 0.01:
                     found[i] = True
-        assert all(found)
+        assert np.all(found)
 
         # other broken poly
         poly = [(0, 0), (0.5, 0), (0.5, 1.2), (1, 0), (1, 1), (0, 1)]
@@ -1993,7 +1993,7 @@ class Test_ConcavePolygonRecoverer(unittest.TestCase):
                 )
                 if dist < 0.025:
                     found[i] = True
-        assert all(found)
+        assert np.all(found)
 
     def test_recover_from_random_polygons(self):
         cpr = _ConcavePolygonRecoverer()

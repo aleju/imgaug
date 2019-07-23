@@ -179,7 +179,7 @@ class TestConvolve(unittest.TestCase):
             assert found
             if all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
     def test_matrix_has_bad_datatype(self):
         # don't use assertRaisesRegex, because it doesnt exist in 2.7

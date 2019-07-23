@@ -210,15 +210,15 @@ class Superpixels(meta.Augmenter):
             segments = segmentation.slic(
                 image, n_segments=n_segments_samples[i], compactness=10)
 
-            image_sp = self._replace_segments(image, segments, replace_samples)
+            image_aug = self._replace_segments(image, segments, replace_samples)
 
-            if orig_shape != image.shape:
-                image_sp = ia.imresize_single_image(
-                    image_sp,
+            if orig_shape != image_aug.shape:
+                image_aug = ia.imresize_single_image(
+                    image_aug,
                     orig_shape[0:2],
                     interpolation=self.interpolation)
 
-            images[i] = image_sp
+            images[i] = image_aug
         return images
 
     @classmethod

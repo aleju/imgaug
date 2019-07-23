@@ -267,8 +267,8 @@ def test_Resize():
             seen3d[1] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # images with stochastic parameter (uniform)
     aug = iaa.Resize((12, 14))
@@ -293,8 +293,8 @@ def test_Resize():
             seen3d[2] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # test "keep"
     aug = iaa.Resize("keep")
@@ -399,8 +399,8 @@ def test_Resize():
             seen3d[1] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # change height deterministically, width randomly
     aug = iaa.Resize({"height": 12, "width": [12, 14]})
@@ -421,8 +421,8 @@ def test_Resize():
             seen3d[1] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # change height deterministically, width randomly
     aug = iaa.Resize({"height": 12, "width": iap.Choice([12, 14])})
@@ -443,8 +443,8 @@ def test_Resize():
             seen3d[1] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # change height randomly, width deterministically
     aug = iaa.Resize({"height": (12, 14), "width": 12})
@@ -469,8 +469,8 @@ def test_Resize():
             seen3d[2] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # increase size by a factor of 2.0
     aug = iaa.Resize(2.0)
@@ -502,8 +502,8 @@ def test_Resize():
             seen3d[1] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # increase size by a random factor
     aug = iaa.Resize(iap.Choice([2.0, 4.0]))
@@ -526,8 +526,8 @@ def test_Resize():
             seen3d[1] = True
         if all(seen2d) and all(seen3d):
             break
-    assert all(seen2d)
-    assert all(seen3d)
+    assert np.all(seen2d)
+    assert np.all(seen3d)
 
     # decrease size by a random factor
     base_img2d = base_img2d[0:4, 0:4]
@@ -895,20 +895,20 @@ def test_Pad():
             seen[2] += 1
         else:
             assert False
-    assert all([100 - 50 < v < 100 + 50 for v in seen])
+    assert np.all([100 - 50 < v < 100 + 50 for v in seen])
 
     aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=ia.ALL, pad_cval=0, keep_size=False)
     expected = ["constant", "edge", "linear_ramp", "maximum", "mean", "median", "minimum", "reflect",
                 "symmetric", "wrap"]
     assert isinstance(aug.pad_mode, iap.Choice)
     assert len(aug.pad_mode.a) == len(expected)
-    assert all([v in aug.pad_mode.a for v in expected])
+    assert np.all([v in aug.pad_mode.a for v in expected])
 
     aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode=["constant", "maximum"], pad_cval=0, keep_size=False)
     expected = ["constant", "maximum"]
     assert isinstance(aug.pad_mode, iap.Choice)
     assert len(aug.pad_mode.a) == len(expected)
-    assert all([v in aug.pad_mode.a for v in expected])
+    assert np.all([v in aug.pad_mode.a for v in expected])
 
     got_exception = False
     try:
@@ -941,13 +941,13 @@ def test_Pad():
             seen[1] += 1
         else:
             assert False
-    assert all([100 - 50 < v < 100 + 50 for v in seen])
+    assert np.all([100 - 50 < v < 100 + 50 for v in seen])
 
     aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=[50, 100], keep_size=False)
     expected = [50, 100]
     assert isinstance(aug.pad_cval, iap.Choice)
     assert len(aug.pad_cval.a) == len(expected)
-    assert all([v in aug.pad_cval.a for v in expected])
+    assert np.all([v in aug.pad_cval.a for v in expected])
 
     image = np.zeros((1, 1), dtype=np.uint8)
     aug = iaa.Pad(px=(0, 1, 0, 0), pad_mode="constant", pad_cval=(50, 52), keep_size=False)
@@ -962,7 +962,7 @@ def test_Pad():
             seen[2] += 1
         else:
             assert False
-    assert all([100 - 50 < v < 100 + 50 for v in seen])
+    assert np.all([100 - 50 < v < 100 + 50 for v in seen])
 
     got_exception = False
     try:
@@ -1175,7 +1175,7 @@ def test_Pad():
     # and 4px) padding have half the probability of occuring compared to the other values.
     # E.g. 0px is padded if sampled p falls in range [0, 0.125). 1px is padded if sampled p
     # falls in range [0.125, 0.375].
-    assert all([v > 30 for v in seen])
+    assert np.all([v > 30 for v in seen])
 
     aug = iaa.Pad(percent=(0, (0, 1.0), 0, 0), keep_size=False)
     seen = [0, 0, 0, 0, 0]
@@ -1186,7 +1186,7 @@ def test_Pad():
             n_padded += 1
             observed = observed[:, 0:-1]
         seen[n_padded] += 1
-    assert all([v > 30 for v in seen])
+    assert np.all([v > 30 for v in seen])
 
     # test pad by list of percentages
     aug = iaa.Pad(percent=([0.0, 1.0], 0, 0, 0), keep_size=False)
@@ -1704,7 +1704,7 @@ def test_Crop():
     # and 4px) have half the probability of occuring compared to the other values.
     # E.g. 0px is cropped if sampled p falls in range [0, 0.125). 1px is cropped if sampled p
     # falls in range [0.125, 0.375].
-    assert all([v > 30 for v in seen])
+    assert np.all([v > 30 for v in seen])
 
     aug = iaa.Crop(percent=(0, (0, 0.1), 0, 0), keep_size=False)
     seen = [0, 0, 0, 0, 0]
@@ -1712,7 +1712,7 @@ def test_Crop():
         observed = aug.augment_image(np.zeros((40, 40), dtype=np.uint8) + 255)
         n_cropped = 40 - observed.shape[1]
         seen[n_cropped] += 1
-    assert all([v > 30 for v in seen])
+    assert np.all([v > 30 for v in seen])
 
     # test crop by list of percentages
     aug = iaa.Crop(percent=([0.0, 0.1], 0, 0, 0), keep_size=False)
