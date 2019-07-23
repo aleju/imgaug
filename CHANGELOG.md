@@ -185,6 +185,9 @@
   `Voronoi(DropoutPointsSampler(RegularGridPointsSampler))`. #348
 * Added `imgaug.augmenters.segmentation.RelativeRegularGridVoronoi`, a shortcut
   for `Voronoi(DropoutPointsSampler(RelativeRegularGridPointsSampler))`. #348
+* Add to `Resize` the ability to resize the shorter and longer sides of
+  images (instead of only height/width). #349
+
 
 ## Fixes
  
