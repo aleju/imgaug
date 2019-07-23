@@ -223,6 +223,7 @@
       dtype function.
 * Fixed `dtypes.get_minimal_dtype()` failing if argument `arrays` contained
   not *exactly* two items. #366
+* Fixed calls of `CloudLayer.get_parameters()` resulting in errors. #309
 
 
 # 0.2.9
