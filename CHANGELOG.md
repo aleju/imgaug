@@ -206,6 +206,11 @@ users:
 * Ensure that the input array to `SegmentationMapsOnImage` is always an
   int-like (int, uint or bool).
   Float arrays are no longer accepted.
+* Adapt all calls `SegmentationMapsOnImage.draw()` and
+  `SegmentationMapsOnImage.draw_on_image()`, as both of these now return a
+  list of drawn images instead of a single array. (For a segmentation map
+  array of shape `(H,W,C)` they return `C` drawn images. In most cases `C=1`,
+  so simply call `draw()[0]` or `draw_on_image()[0]`.)
 * Ensure that if `SegmentationMapsOnImage.arr` is accessed anywhere, the
   respective code can handle the new `int32` `(H,W,#maps)` array form.
   Previously it was `float32` and the channel-axis had the same size as the
