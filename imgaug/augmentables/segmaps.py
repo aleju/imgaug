@@ -120,6 +120,13 @@ class SegmentationMapsOnImage(object):
                     "When using uint arrays as segmentation maps, only uint8 "
                     "and uint16 are allowed. Got dtype %s." % (arr.dtype.name,)
                 )
+            elif arr.dtype.kind == "i":
+                # allow only <=uint16 due to conversion to int32
+                assert arr.dtype.itemsize <= 4, (
+                    "When using int arrays as segmentation maps, only int8, "
+                    "int16 and int32 are allowed. Got dtype %s." % (
+                        arr.dtype.name,)
+                )
 
             self._input_was = (arr.dtype, arr.ndim)
             if arr.ndim == 2:

@@ -228,7 +228,7 @@ Changes:
       warning for float arrays as `arr` argument.
     - **[breaking]** Changed `SegmentationMapsOnImage.__init__` to no longer
       accept `uint32` and larger itemsizes as `arr` argument, only `uint16`
-      and below is accepted. For `int` the maximum is `int32`.
+      and below is accepted. For `int` the allowed maximum is `int32`.
     - Changed `SegmentationMapsOnImage.__init__` to always accept `(H,W,C)`
       `arr` arguments.
     - **[breaking]** Changed  `SegmentationMapsOnImage.arr` to always be

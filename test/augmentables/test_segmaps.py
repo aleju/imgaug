@@ -134,6 +134,20 @@ def test_SegmentationMapsOnImage___init__():
         got_exception = True
     assert got_exception
 
+    # int64 is not allowed
+    got_exception = False
+    try:
+        arr = np.array([
+            [0, 0, 1],
+            [0, 2, 1],
+            [1, 3, 1]
+        ], dtype=np.int64)
+        _segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3, 3))
+    except Exception as exc:
+        assert "only int8, int16 and int32 " in str(exc)
+        got_exception = True
+    assert got_exception
+
 
 def test_SegmentationMapsOnImage___init___float32_2d():
     arr = np.array([0.4, 0.6], dtype=np.float32).reshape((1, 2))
