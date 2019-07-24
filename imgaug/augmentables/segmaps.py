@@ -306,7 +306,7 @@ class SegmentationMapsOnImage(object):
             segmaps_drawn.append(mix)
         return segmaps_drawn
 
-    def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0.0):
+    def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         """
         Pad the segmentation map on its top/right/bottom/left side.
 
