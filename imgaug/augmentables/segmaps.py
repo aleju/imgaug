@@ -156,7 +156,9 @@ class SegmentationMapsOnImage(object):
 
         """
         input_dtype, input_ndim = self._input_was
-        arr_input = iadt.restore_dtypes_(np.copy(self.arr), input_dtype)
+        # The internally used int32 has a wider value range than any other
+        # input dtype, hence we can simply convert via astype() here.
+        arr_input = self.arr.astype(input_dtype)
         if input_ndim == 2:
             assert arr_input.shape[2] == 1
             return arr_input[:, :, 0]
