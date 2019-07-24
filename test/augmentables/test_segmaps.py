@@ -272,11 +272,38 @@ def test_SegmentationMapsOnImage_draw():
     assert np.array_equal(observed[0], expected)
 
     # same example, with resizing to 2x the size
-    observed = segmap.draw(size=(6, 6))
-    expected = ia.imresize_single_image(expected, (6, 6), interpolation="nearest")
-    assert isinstance(observed, list)
-    assert len(observed) == 1
-    assert np.array_equal(observed[0], expected)
+    double_size_args = [
+        (6, 6),
+        (2.0, 2.0),
+        6,
+        2.0
+    ]
+    expected = ia.imresize_single_image(expected,
+                                        (6, 6),
+                                        interpolation="nearest")
+    for double_size_arg in double_size_args:
+        observed = segmap.draw(size=double_size_arg)
+        assert isinstance(observed, list)
+        assert len(observed) == 1
+        assert np.array_equal(observed[0], expected)
+
+    # same example, keeps size at 3x3 via None and (int)3 or (float)1.0
+    size_args = [
+        None,
+        (None, None),
+        (3, None),
+        (None, 3),
+        (1.0, None),
+        (None, 1.0)
+    ]
+    expected = ia.imresize_single_image(expected,
+                                        (3, 3),
+                                        interpolation="nearest")
+    for size_arg in size_args:
+        observed = segmap.draw(size=size_arg)
+        assert isinstance(observed, list)
+        assert len(observed) == 1
+        assert np.array_equal(observed[0], expected)
 
     # custom choice of colors
     col0 = (10, 10, 10)

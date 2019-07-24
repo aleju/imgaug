@@ -250,6 +250,10 @@ Changes:
           instead of a single array (one per `C` in input array `(H,W,C)`).
         - Refactored to be a wrapper around
           `SegmentationMapsOnImage.draw_on_image()`.
+        - The `size` argument may now be any of: A single `None` (keep shape),
+          a single integer (use as height and width), a single float (relative
+          change to shape) or a tuple of these values. ("shape" here denotes
+          the value of the `.shape` attribute.)
     - `SegmentationMapsOnImage.draw_on_image()`:
         - **[breaking]** The argument `background_threshold` is now deprecated
           and ignored. Providing it will lead to a deprecation warning.

@@ -196,8 +196,26 @@ class SegmentationMapsOnImage(object):
             One per ``C`` in the original input array ``(H,W,C)``.
 
         """
-        size = self.arr.shape[0:2] if size is None else size[0:2]
-        image = np.zeros((size[0], size[1], 3), dtype=np.uint8)
+        def _handle_sizeval(sizeval, arr_axis_size):
+            if sizeval is None:
+                return arr_axis_size
+            elif ia.is_single_float(sizeval):
+                return max(int(arr_axis_size * sizeval), 1)
+            elif ia.is_single_integer(sizeval):
+                return sizeval
+            else:
+                raise ValueError("Expected float or int, got %s." % (
+                    type(sizeval),))
+
+        if size is None:
+            size = [size, size]
+        elif not ia.is_iterable(size):
+            size = [size, size]
+
+        height = _handle_sizeval(size[0], self.arr.shape[0])
+        width = _handle_sizeval(size[1], self.arr.shape[1])
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+
         return self.draw_on_image(
             image,
             alpha=1.0,
