@@ -346,7 +346,7 @@ class SegmentationMapsOnImage(object):
                             left=left, mode=mode, cval=cval)
         return self.deepcopy(arr=arr_padded)
 
-    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0.0, return_pad_amounts=False):
+    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
         """
         Pad the segmentation map on its sides so that its matches a target aspect ratio.
 
