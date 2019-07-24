@@ -140,7 +140,7 @@ class SegmentationMapsOnImage(object):
 
         if nb_classes is not None:
             ia.warn_deprecated(
-                "Providing nb_classes to SegmentationMapOnImage is no longer "
+                "Providing nb_classes to SegmentationMapsOnImage is no longer "
                 "necessary and hence deprecated. The argument is ignored "
                 "and can be safely removed.")
 
