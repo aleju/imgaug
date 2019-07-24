@@ -251,8 +251,6 @@ Changes:
         - Refactored to be a wrapper around
           `SegmentationMapsOnImage.draw_on_image()`.
     - `SegmentationMapsOnImage.draw_on_image()`:
-        - **[breaking]** The argument `background_class_id` is now deprecated
-          and ignored. Providing it will lead to a deprecation warning.
         - **[breaking]** The argument `background_threshold` is now deprecated
           and ignored. Providing it will lead to a deprecation warning.
         - **[breaking]** Changed output of drawn image to be a list of arrays

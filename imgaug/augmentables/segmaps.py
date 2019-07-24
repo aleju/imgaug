@@ -201,7 +201,7 @@ class SegmentationMapsOnImage(object):
 
     def draw_on_image(self, image, alpha=0.75, resize="segmentation_map",
                       colors=None, draw_background=False,
-                      background_class_id=None, background_threshold=None):
+                      background_class_id=0, background_threshold=None):
         """
         Draw the segmentation map as an overlay over an image.
 
@@ -228,12 +228,11 @@ class SegmentationMapsOnImage(object):
             will be identical with the image's RGB color at the corresponding spatial location
             and no color overlay will be applied.
 
-        background_threshold : None, optional
-            Deprecated.
-            This value is ignored. Setting it will produce a deprecation
-            warning.
+        background_class_id : int, optional
+            Class id to interpret as the background class. See
+            `draw_background`.
 
-        background_class_id : None, optional
+        background_threshold : None, optional
             Deprecated.
             This value is ignored. Setting it will produce a deprecation
             warning.
@@ -248,11 +247,6 @@ class SegmentationMapsOnImage(object):
         if background_threshold is not None:
             ia.warn_deprecated(
                 "The argument `background_threshold` is deprecated and "
-                "ignored. Please don't use it anymore.")
-
-        if background_class_id is not None:
-            ia.warn_deprecated(
-                "The argument `background_class_id` is deprecated and "
                 "ignored. Please don't use it anymore.")
 
         ia.do_assert(image.ndim == 3)
@@ -299,7 +293,9 @@ class SegmentationMapsOnImage(object):
                 mix = segmap_on_image
             else:
                 foreground_mask = ia.imresize_single_image(
-                    (arr != 0), image.shape[0:2], interpolation="nearest")
+                    (arr != background_class_id),
+                    image.shape[0:2],
+                    interpolation="nearest")
                 # without this, the merge below does nothing
                 foreground_mask = np.atleast_3d(foreground_mask)
 

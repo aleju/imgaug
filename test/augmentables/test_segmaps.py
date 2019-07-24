@@ -338,22 +338,6 @@ def test_SegmentationMapsOnImage_draw_on_image_background_threshold_deprec():
         in str(caught_warnings[0].message)
     )
 
-
-def test_SegmentationMapsOnImage_draw_on_image_background_class_id_deprecated():
-    arr = np.zeros((1, 1, 1), dtype=np.int32)
-    segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
-    image = np.zeros((1, 1, 3), dtype=np.uint8)
-
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        warnings.simplefilter("always")
-        _ = segmap.draw_on_image(image, background_class_id=1)
-
-    assert len(caught_warnings) == 1
-    assert (
-        "The argument `background_class_id` is deprecated"
-        in str(caught_warnings[0].message)
-    )
-
 def test_SegmentationMapsOnImage_draw_on_image():
     arr = np.int32([
         [0, 1, 1],
@@ -454,6 +438,24 @@ def test_SegmentationMapsOnImage_draw_on_image():
         [image[0, 0, :], a0*image[0, 1, :] + a1*col1, a0*image[0, 2, :] + a1*col1],
         [image[1, 0, :], a0*image[1, 1, :] + a1*col1, a0*image[1, 2, :] + a1*col1],
         [image[2, 0, :], a0*image[2, 1, :] + a1*col1, a0*image[2, 2, :] + a1*col1]
+    ])
+    d_max = np.max(np.abs(observed[0].astype(np.float32) - expected))
+    assert isinstance(observed, list)
+    assert len(observed) == 1
+    assert observed[0].shape == expected.shape
+    assert d_max <= 1.0 + 1e-4
+
+    # overlay without background drawn
+    # different background class id
+    a1 = 0.7
+    a0 = 1.0 - a1
+    observed = segmap.draw_on_image(image, alpha=a1, draw_background=False,
+                                    background_class_id=1)
+    col0 = np.uint8(ia.SegmentationMapsOnImage.DEFAULT_SEGMENT_COLORS[0])
+    expected = np.float32([
+        [a0*image[0, 0, :] + a1*col0, image[0, 1, :], image[0, 2, :]],
+        [a0*image[1, 0, :] + a1*col0, image[1, 1, :], image[1, 2, :]],
+        [a0*image[2, 0, :] + a1*col0, image[2, 1, :], image[2, 2, :]]
     ])
     d_max = np.max(np.abs(observed[0].astype(np.float32) - expected))
     assert isinstance(observed, list)
