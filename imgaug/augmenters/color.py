@@ -1040,10 +1040,14 @@ class AddToHueAndSaturation(meta.Augmenter):
         # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
 
         # code with using cache (at best maybe 10% faster for 64x64):
+        table_hue = self._LUT_CACHE[0]
+        table_saturation = self._LUT_CACHE[1]
+
         image_hsv[..., 0] = cv2.LUT(
-            image_hsv[..., 0], self._LUT_CACHE[0][int(hue)])
+            image_hsv[..., 0], table_hue[255+int(hue)])
         image_hsv[..., 1] = cv2.LUT(
-            image_hsv[..., 1], self._LUT_CACHE[1][int(saturation)])
+            image_hsv[..., 1], table_saturation[255+int(saturation)])
+
         return image_hsv
 
     @classmethod
@@ -1111,16 +1115,20 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     @classmethod
     def _generate_lut_table(cls):
-        # FIXME is int8 here correct? shouldn't these be uint8?
-        table = (np.zeros((256*2, 256), dtype=np.int8),
-                 np.zeros((256*2, 256), dtype=np.int8))
+        # TODO Changing the dtype here to int8 makes gen test for this method
+        #      fail, but all other tests still succeed. How can this be?
+        #      The dtype was verified to remain int8, having min & max at
+        #      -128 & 127.
+        dt = np.uint8
+        table = (np.zeros((256*2, 256), dtype=dt),
+                 np.zeros((256*2, 256), dtype=dt))
         value_range = np.arange(0, 256, dtype=np.int16)
         # this could be done slightly faster by vectorizing the loop
         for i in sm.xrange(-255, 255+1):
             table_hue = np.mod(value_range + i, 180)
             table_saturation = np.clip(value_range + i, 0, 255)
-            table[0][i, :] = table_hue
-            table[1][i, :] = table_saturation
+            table[0][255+i, :] = table_hue
+            table[1][255+i, :] = table_saturation
         return table
 
 

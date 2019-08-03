@@ -535,6 +535,28 @@ class TestAddToHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()
 
+    @classmethod
+    def create_base_image(cls):
+        base_img = np.zeros((4, 2, 3), dtype=np.uint8)
+
+        base_img[0, :, 0] += 0
+        base_img[0, :, 1] += 1
+        base_img[0, :, 2] += 2
+
+        base_img[1, :, 0] += 20
+        base_img[1, :, 1] += 40
+        base_img[1, :, 2] += 60
+
+        base_img[2, :, 0] += 255
+        base_img[2, :, 1] += 128
+        base_img[2, :, 2] += 0
+
+        base_img[3, :, 0] += 255
+        base_img[3, :, 1] += 255
+        base_img[3, :, 2] += 255
+
+        return base_img
+
     # interestingly, when using this RGB2HSV and HSV2RGB conversion from
     # skimage, the results differ quite a bit from the cv2 ones
     """
@@ -562,7 +584,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         img_hsv = img_hsv.astype(np.int32)
         img_hsv[..., 0] = np.mod(
-            img_hsv[..., 0] + (value_hue/255.0) * (360/2), 180)
+            img_hsv[..., 0] + int((value_hue/255.0) * (360/2)), 180)
         img_hsv[..., 1] = np.clip(
             img_hsv[..., 1] + value_saturation, 0, 255)
         img_hsv = img_hsv.astype(np.uint8)
@@ -598,11 +620,55 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert isinstance(aug.per_channel, iap.Binomial)
         assert np.isclose(aug.per_channel.p.value, 0.5)
 
+    def test__generate_lut_table(self):
+        def _hue(v):
+            return np.mod(v, 180)
+
+        def _sat(v):
+            return np.clip(v, 0, 255)
+
+        tables = iaa.AddToHueAndSaturation._generate_lut_table()
+        table_hue, table_saturation = tables
+
+        intensity_values = [0, 1, 128, 254, 255]  # = pixel values
+        for iv in intensity_values:
+            with self.subTest(intensity=iv):
+                assert table_hue[0, iv] == _hue(iv-255)  # add value: -255
+                assert table_hue[1, iv] == _hue(iv-254)  # add value: -254
+                assert table_hue[254, iv] == _hue(iv-1)  # add value: -1
+                assert table_hue[255, iv] == _hue(iv-0)  # add value: 0
+                assert table_hue[256, iv] == _hue(iv+1)  # add value: 1
+                assert table_hue[509, iv] == _hue(iv+254)  # add value: 254
+                assert table_hue[510, iv] == _hue(iv+255)  # add value: 255
+
+                assert table_saturation[0, iv] == _sat(iv-255)  # input: -255
+                assert table_saturation[1, iv] == _sat(iv-254)  # input: -254
+                assert table_saturation[254, iv] == _sat(iv-1)  # input: -1
+                assert table_saturation[255, iv] == _sat(iv+0)  # input: 0
+                assert table_saturation[256, iv] == _sat(iv+1)  # input: 1
+                assert table_saturation[509, iv] == _sat(iv+254)  # input: 254
+                assert table_saturation[510, iv] == _sat(iv+255)  # input: 255
+
+    def test_augment_images_compare_backends(self):
+        base_img = self.create_base_image()
+        gen = itertools.product([False, True], [-255, -100, -1, 0, 1, 100, 255])
+        for per_channel, value in gen:
+            with self.subTest(value=value, per_channel=per_channel):
+                aug_cv2 = iaa.AddToHueAndSaturation(value,
+                                                    per_channel=per_channel)
+                aug_cv2.backend = "cv2"
+
+                aug_numpy = iaa.AddToHueAndSaturation(value,
+                                                      per_channel=per_channel)
+                aug_numpy.backend = "numpy"
+
+                img_observed1 = aug_cv2(image=base_img)
+                img_observed2 = aug_numpy(image=base_img)
+
+                assert np.array_equal(img_observed1, img_observed2)
+
     def test_augment_images(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
 
         gen = itertools.product([False, True], ["cv2", "numpy"])
         for per_channel, backend in gen:
@@ -635,10 +701,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
                 assert np.all(diff <= 1)
 
     def test_augment_images__different_hue_and_saturation__no_per_channel(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
 
         class _DummyParam(iap.StochasticParameter):
             def _draw_samples(self, size, random_state):
@@ -652,10 +715,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert np.array_equal(img_observed, img_expected)
 
     def test_augment_images__different_hue_and_saturation__per_channel(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
 
         class _DummyParam(iap.StochasticParameter):
             def _draw_samples(self, size, random_state):
@@ -670,10 +730,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert np.array_equal(img_observed, img_expected)
 
     def test_augment_images__different_hue_and_saturation__mixed_perchan(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
 
         class _DummyParamValue(iap.StochasticParameter):
             def _draw_samples(self, size, random_state):
@@ -703,13 +760,10 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert np.array_equal(img_observed3, img_expected3)
 
     def test_augment_images__list_as_value(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
 
         aug = iaa.AddToHueAndSaturation([0, 10, 20])
-        base_img = base_img[0:1, 0:1, :]
+        base_img = base_img[1:2, 0:1, :]
         expected_imgs = [
             iaa.AddToHueAndSaturation(0).augment_image(base_img),
             iaa.AddToHueAndSaturation(10).augment_image(base_img),
@@ -719,6 +773,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert not np.array_equal(expected_imgs[0], expected_imgs[1])
         assert not np.array_equal(expected_imgs[1], expected_imgs[2])
         assert not np.array_equal(expected_imgs[0], expected_imgs[2])
+
         nb_iterations = 300
         seen = dict([(i, 0) for i, _ in enumerate(expected_imgs)])
         for _ in sm.xrange(nb_iterations):
@@ -733,10 +788,21 @@ class TestAddToHueAndSaturation(unittest.TestCase):
                     for v in seen.values()])
 
     def test_augment_images__value_hue(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
+
+        for value_hue in [-255, -254, -128, -64, -10, -1,
+                          0, 1, 10, 64, 128, 254, 255]:
+            with self.subTest(value_hue=value_hue):
+                aug = iaa.AddToHueAndSaturation(value_hue=value_hue)
+                img_expected = self._add_hue_saturation(
+                    base_img, value_hue=value_hue)
+
+                img_observed = aug(image=base_img)
+
+                assert np.array_equal(img_observed, img_expected)
+
+    def test_augment_images__value_hue__multi_image_sampling(self):
+        base_img = self.create_base_image()
 
         class _DummyParam(iap.StochasticParameter):
             def _draw_samples(self, size, random_state):
@@ -756,10 +822,22 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert np.array_equal(img_observed3, img_expected3)
 
     def test_augment_images__value_saturation(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
+
+        for value_saturation in [-255, -254, -128, -64, -10,
+                                 0, 10, 64, 128, 254, 255]:
+            with self.subTest(value_hue=value_saturation):
+                aug = iaa.AddToHueAndSaturation(
+                    value_saturation=value_saturation)
+                img_expected = self._add_hue_saturation(
+                    base_img, value_saturation=value_saturation)
+
+                img_observed = aug(image=base_img)
+
+                assert np.array_equal(img_observed, img_expected)
+
+    def test_augment_images__value_saturation__multi_image_sampling(self):
+        base_img = self.create_base_image()
 
         class _DummyParam(iap.StochasticParameter):
             def _draw_samples(self, size, random_state):
@@ -779,10 +857,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert np.array_equal(img_observed3, img_expected3)
 
     def test_augment_images__value_hue_and_value_saturation(self):
-        base_img = np.zeros((2, 2, 3), dtype=np.uint8)
-        base_img[..., 0] += 20
-        base_img[..., 1] += 40
-        base_img[..., 2] += 60
+        base_img = self.create_base_image()
 
         class _DummyParam(iap.StochasticParameter):
             def _draw_samples(self, size, random_state):
