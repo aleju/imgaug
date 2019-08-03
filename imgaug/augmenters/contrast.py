@@ -182,6 +182,7 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
 
 
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
+# TODO add dtype gating
 def adjust_contrast_log(arr, gain):
     """
     Adjust contrast by scaling each pixel value to ``255 * gain * log_2(1 + I_ij/255)``.
@@ -190,12 +191,12 @@ def adjust_contrast_log(arr, gain):
 
         * ``uint8``: yes; fully tested (1) (2) (3)
         * ``uint16``: yes; tested (2) (3)
-        * ``uint32``: yes; tested (2) (3)
-        * ``uint64``: yes; tested (2) (3) (4)
+        * ``uint32``: no; tested (2) (3) (8)
+        * ``uint64``: no; tested (2) (3) (4) (8)
         * ``int8``: limited; tested (2) (3) (5)
         * ``int16``: limited; tested (2) (3) (5)
-        * ``int32``: limited; tested (2) (3) (5)
-        * ``int64``: limited; tested (2) (3) (4) (5)
+        * ``int32``: no; tested (2) (3) (5) (8)
+        * ``int64``: no; tested (2) (3) (4) (5) (8)
         * ``float16``: limited; tested (5)
         * ``float32``: limited; tested (5)
         * ``float64``: limited; tested (5)
@@ -215,6 +216,8 @@ def adjust_contrast_log(arr, gain):
         - (5) Must not contain negative values. Values >=0 are fully supported.
         - (6) Leads to error in scikit-image.
         - (7) Does not make sense for contrast adjustments.
+        - (8) No longer supported since numpy 1.17. Previously: 'yes' for
+              ``uint32``, ``uint64``; 'limited' for ``int32``, ``int64``.
 
     Parameters
     ----------

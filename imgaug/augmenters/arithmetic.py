@@ -55,18 +55,21 @@ class Add(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested
+        * ``int16``: limited; tested
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested
+        * ``float32``: limited; tested
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -235,10 +238,15 @@ class Add(meta.Augmenter):
                 value = iadt.clip_to_dtype_value_range_(
                     value, dtype_target, validate=True)
 
+                # Itemsize is currently reduced from 2 to 1 due to clip no
+                # longer supporting int64, which can cause issues with int32
+                # samples (32*2 = 64bit).
+                # TODO limit value ranges of samples to int16/uint16 for
+                #      security
                 image, value = iadt.promote_array_dtypes_(
                     [image, value],
                     dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=2)
+                    increase_itemsize_factor=1)
                 image = np.add(image, value, out=image, casting="no")
 
                 image = iadt.restore_dtypes_(image, input_dtype)
@@ -272,18 +280,21 @@ class AddElementwise(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested (1)
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested (1)
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -423,10 +434,11 @@ class AddElementwise(meta.Augmenter):
                 if value.shape[2] == 1:
                     value = np.tile(value, (1, 1, nb_channels))
 
+                # Decreased itemsize from 2 to 1 here, see explanation in Add.
                 image, value = iadt.promote_array_dtypes_(
                     [image, value],
                     dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=2)
+                    increase_itemsize_factor=1)
                 image = np.add(image, value, out=image, casting="no")
                 image = iadt.restore_dtypes_(image, input_dtype)
                 images[i] = image
@@ -782,18 +794,18 @@ class Multiply(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested (1)
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested (1)
 
         Note: tests were only conducted for rather small multipliers, around
         -10.0 to +10.0.
@@ -805,6 +817,9 @@ class Multiply(meta.Augmenter):
         the value range of ``float16``, as it has the same number of
         bytes (two) as ``uint16``. This is done to make overflows less likely
         to occur.
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
+              +/-inf.
 
     Parameters
     ----------
@@ -956,11 +971,13 @@ class Multiply(meta.Augmenter):
                 else:
                     mul = mul_samples_i[0:1].reshape((1, 1, 1))
 
-                mul_min = np.min(mul)
-                mul_max = np.max(mul)
-                is_not_increasing_value_range = (
-                        (-1 <= mul_min <= 1)
-                        and (-1 <= mul_max <= 1))
+                # deactivated itemsize increase due to clip causing problems
+                # with int64, see Add
+                # mul_min = np.min(mul)
+                # mul_max = np.max(mul)
+                # is_not_increasing_value_range = (
+                #         (-1 <= mul_min <= 1)
+                #         and (-1 <= mul_max <= 1))
 
                 # We limit here the value range of the mul parameter to the
                 # bytes in the image's dtype. This prevents overflow problems
@@ -980,8 +997,9 @@ class Multiply(meta.Augmenter):
                 image, mul = iadt.promote_array_dtypes_(
                     [image, mul],
                     dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=(
-                        1 if is_not_increasing_value_range else 2)
+                    # increase_itemsize_factor=(
+                    #     1 if is_not_increasing_value_range else 2)
+                    increase_itemsize_factor=1
                 )
                 image = np.multiply(image, mul, out=image, casting="no")
 
@@ -1015,18 +1033,18 @@ class MultiplyElementwise(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested (1)
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested (1)
 
         Note: tests were only conducted for rather small multipliers, around
         -10.0 to +10.0.
@@ -1038,6 +1056,9 @@ class MultiplyElementwise(meta.Augmenter):
         the value range of ``float16``, as it has the same number of
         bytes (two) as ``uint16``. This is done to make overflows less likely
         to occur.
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -1172,10 +1193,12 @@ class MultiplyElementwise(meta.Augmenter):
                 # TODO maybe introduce to stochastic parameters some way to
                 #      get the possible min/max values, could make things
                 #      faster for dropout to get 0/1 min/max from the binomial
+                # itemsize decrease is currently deactivated due to issues
+                # with clip and int64, see Add
                 mul_min = np.min(mul)
                 mul_max = np.max(mul)
-                is_not_increasing_value_range = (
-                    (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1))
+                # is_not_increasing_value_range = (
+                #     (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1))
 
                 # We limit here the value range of the mul parameter to the
                 # bytes in the image's dtype. This prevents overflow problems
@@ -1199,8 +1222,9 @@ class MultiplyElementwise(meta.Augmenter):
                 image, mul = iadt.promote_array_dtypes_(
                     [image, mul],
                     dtypes=[image, dtype_target],
-                    increase_itemsize_factor=(
-                        1 if is_not_increasing_value_range else 2)
+                    increase_itemsize_factor=1
+                    # increase_itemsize_factor=(
+                    #     1 if is_not_increasing_value_range else 2)
                 )
                 image = np.multiply(image, mul, out=image, casting="no")
                 image = iadt.restore_dtypes_(image, input_dtype)
@@ -1513,7 +1537,7 @@ class ReplaceElementwise(meta.Augmenter):
         * ``int8``: yes; tested
         * ``int16``: yes; tested
         * ``int32``: yes; tested
-        * ``int64``: yes; tested
+        * ``int64``: no (2)
         * ``float16``: yes; tested
         * ``float32``: yes; tested
         * ``float64``: yes; tested
@@ -1524,6 +1548,8 @@ class ReplaceElementwise(meta.Augmenter):
               :func:`imgaug.dtypes.clip_to_dtype_value_range_()` does not
               support it, which again is because numpy.clip() seems to not
               support it.
+        - (2) `int64` is disallowed due to being converted to `float64`
+              by :func:`numpy.clip` since 1.17 (possibly also before?).
 
     Parameters
     ----------
@@ -1631,10 +1657,10 @@ class ReplaceElementwise(meta.Augmenter):
         iadt.gate_dtypes(images,
                          allowed=["bool",
                                   "uint8", "uint16", "uint32",
-                                  "int8", "int16", "int32", "int64",
+                                  "int8", "int16", "int32",
                                   "float16", "float32", "float64"],
                          disallowed=["uint64", "uint128", "uint256",
-                                     "int128", "int256",
+                                     "int64", "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
 

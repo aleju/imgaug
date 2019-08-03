@@ -3828,7 +3828,7 @@ def test_Sequential():
             seen[1] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -3857,9 +3857,9 @@ def test_Sequential():
             seen[1] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # None as children
     aug = iaa.Sequential(children=None)
@@ -4150,7 +4150,7 @@ def test_SomeOf():
     observed1 = iaa.SomeOf(n=1, children=augs).augment_segmentation_maps([segmaps])[0]
     observed2 = iaa.SomeOf(n=2, children=augs).augment_segmentation_maps([segmaps])[0]
     observed3 = iaa.SomeOf(n=3, children=augs).augment_segmentation_maps([segmaps])[0]
-    assert all([obs.shape == (3, 3, 3) for obs in [observed0, observed1, observed2, observed3]])
+    assert np.all([obs.shape == (3, 3, 3) for obs in [observed0, observed1, observed2, observed3]])
     obs_lst = [observed0, observed1, observed2, observed3]
     segmaps_lst = [segmaps_arr0, segmaps_arr1, segmaps_arr2, segmaps_arr3]
     for obs, exp in zip(obs_lst, segmaps_lst):
@@ -4238,7 +4238,7 @@ def test_SomeOf():
             seen[3] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -4282,7 +4282,7 @@ def test_SomeOf():
             seen[3] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -5081,7 +5081,7 @@ def test_Sometimes():
             seen[1] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -5103,7 +5103,7 @@ def test_Sometimes():
                 seen[1] = True
             else:
                 assert False
-            if all(seen):
+            if np.all(seen):
                 break
         assert np.all(seen)
 
@@ -5124,7 +5124,7 @@ def test_Sometimes():
                 seen[1] = True
             else:
                 assert False
-            if all(seen):
+            if np.all(seen):
                 break
         assert np.all(seen)
 
@@ -5415,7 +5415,7 @@ def test_ChannelShuffle():
             seen[1] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -5442,7 +5442,7 @@ def test_ChannelShuffle():
             seen[1] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -5511,7 +5511,7 @@ def test_ChannelShuffle():
             seen[1] = True
         else:
             assert False
-        if all(seen):
+        if np.all(seen):
             break
     assert np.all(seen)
 
@@ -5533,7 +5533,7 @@ def test_ChannelShuffle():
                 seen[1] = True
             else:
                 assert False
-            if all(seen):
+            if np.all(seen):
                 break
         assert np.all(seen)
 
@@ -5554,7 +5554,7 @@ def test_ChannelShuffle():
                 seen[1] = True
             else:
                 assert False
-            if all(seen):
+            if np.all(seen):
                 break
         assert np.all(seen)
 

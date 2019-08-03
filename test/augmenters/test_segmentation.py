@@ -118,7 +118,7 @@ class TestSuperpixels(unittest.TestCase):
                 raise Exception(
                     "Generated superpixels image does not match any "
                     "expected image.")
-            if all(seen.values()):
+            if np.all(seen.values()):
                 break
         assert np.all(seen.values())
 
@@ -1285,11 +1285,11 @@ class TestUniformPointsSampler(unittest.TestCase):
         for i in sm.xrange(50):
             points = sampler.sample_points(images, i)[0]
             seen[len(points)] = True
-            if all(seen.values()):
+            if np.all(seen.values()):
                 break
 
         assert len(list(seen.keys())) == 2
-        assert all(seen.values())
+        assert np.all(seen.values())
 
     def test_n_points_can_vary_between_images(self):
         sampler = iaa.UniformPointsSampler(iap.Choice([1, 10]))

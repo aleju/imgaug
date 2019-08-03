@@ -2592,10 +2592,10 @@ class TestMultiply(unittest.TestCase):
                 samples = p.draw_samples((2, 3))
 
                 assert p.draw_sample() == v1 * v2
-                assert samples.dtype == np.int64
+                assert samples.dtype.name == "int32"
                 assert np.array_equal(
                     samples,
-                    np.zeros((2, 3), dtype=np.int64) + v1 * v2
+                    np.zeros((2, 3), dtype=np.int32) + v1 * v2
                 )
 
     def test_multiply_example_float_values(self):
@@ -2607,11 +2607,11 @@ class TestMultiply(unittest.TestCase):
                 sample = p.draw_sample()
                 samples = p.draw_samples((2, 3))
 
-                assert v1 * v2 - _eps(sample) < sample < v1 * v2 + _eps(sample)
+                assert np.isclose(sample, v1 * v2, atol=1e-3, rtol=0)
                 assert samples.dtype.kind == "f"
                 assert np.allclose(
                     samples,
-                    np.zeros((2, 3), dtype=np.float64) + v1 * v2
+                    np.zeros((2, 3), dtype=np.float32) + v1 * v2
                 )
 
     def test_multiply_example_float_values_both_deterministic(self):
@@ -2623,11 +2623,11 @@ class TestMultiply(unittest.TestCase):
                 sample = p.draw_sample()
                 samples = p.draw_samples((2, 3))
 
-                assert v1 * v2 - _eps(sample) < sample < v1 * v2 + _eps(sample)
+                assert np.isclose(sample, v1 * v2, atol=1e-3, rtol=0)
                 assert samples.dtype.kind == "f"
                 assert np.allclose(
                     samples,
-                    np.zeros((2, 3), dtype=np.float64) + v1 * v2
+                    np.zeros((2, 3), dtype=np.float32) + v1 * v2
                 )
 
     def test_multiply_by_stochastic_parameter(self):
@@ -2910,7 +2910,7 @@ class TestAdd(unittest.TestCase):
                 assert samples.dtype.kind == "i"
                 assert np.array_equal(
                     samples,
-                    np.zeros((2, 3), dtype=np.int64) + v1 + v2
+                    np.zeros((2, 3), dtype=np.int32) + v1 + v2
                 )
 
     def test_add_integers_both_deterministic(self):
@@ -2927,7 +2927,7 @@ class TestAdd(unittest.TestCase):
                 assert samples.dtype.kind == "i"
                 assert np.array_equal(
                     samples,
-                    np.zeros((2, 3), dtype=np.int64) + v1 + v2
+                    np.zeros((2, 3), dtype=np.int32) + v1 + v2
                 )
 
     def test_add_floats(self):
@@ -2939,11 +2939,11 @@ class TestAdd(unittest.TestCase):
                 sample = p.draw_sample()
                 samples = p.draw_samples((2, 3))
 
-                assert v1 + v2 - _eps(sample) < sample < v1 + v2 + _eps(sample)
+                assert np.isclose(sample, v1 + v2, atol=1e-3, rtol=0)
                 assert samples.dtype.kind == "f"
                 assert np.allclose(
                     samples,
-                    np.zeros((2, 3), dtype=np.float64) + v1 + v2
+                    np.zeros((2, 3), dtype=np.float32) + v1 + v2
                 )
 
     def test_add_floats_both_deterministic(self):
@@ -2955,11 +2955,11 @@ class TestAdd(unittest.TestCase):
                 sample = p.draw_sample()
                 samples = p.draw_samples((2, 3))
 
-                assert v1 + v2 - _eps(sample) < sample < v1 + v2 + _eps(sample)
+                assert np.isclose(sample, v1 + v2, atol=1e-3, rtol=0)
                 assert samples.dtype.kind == "f"
                 assert np.allclose(
                     samples,
-                    np.zeros((2, 3), dtype=np.float64) + v1 + v2
+                    np.zeros((2, 3), dtype=np.float32) + v1 + v2
                 )
 
     def test_add_stochastic_parameter(self):

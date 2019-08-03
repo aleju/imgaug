@@ -188,6 +188,53 @@
 * Add to `Resize` the ability to resize the shorter and longer sides of
   images (instead of only height/width). #349
 * Improved the docstrings of most augmenters and added code examples. #302
+* Changes to support numpy 1.17 #302
+    * [rarely breaking] Deactivated support for `int64` in
+      `imgaug.dtypes.clip_()`. This is due to numpy 1.17 turning `int64` to
+      `float64` in `numpy.clip()` (possible that this happened in some way
+      before 1.17 too).
+    * [rarely breaking] Changed `imgaug.dtypes.clip()` to never clip `int32`
+      in-place, as `numpy.clip()` turns it into `float64` since 1.17 (possible
+      that this happend in some way before 1.17 too).
+    * [rarely breaking] Deactivated support for `int64` in
+      `ReplaceElementwise`. See `clip` issue above.
+    * [rarely breaking] Changed `parameters.DiscreteUniform` to always return
+      arrays of dtype `int32`. Previously it would automatically return
+      `int64`.
+    * [rarely breaking] Changed `parameters.Deterministic` to always return
+      `int32` for integers and always `float32` for floats.
+    * [rarely breaking] Changed `parameters.Choice` to limit integer
+      dtypes to `int32` or lower, uints to `uint32` or lower and floats
+      to `float32` or lower. 
+    * [rarely breaking] Changed `parameters.Binomial` and `parameters.Poisson`
+      to always return `int32`.
+    * [rarely breaking] Changed `parameters.Normal`,
+      `parameters.TruncatedNormal`, `parameters.Laplace`,
+      `parameters.ChiSquare`, `parameters.Weibull`, `parameters.Uniform` and
+      `parameters.Beta` to always return `float32`.
+    * [rarely breaking] Changed `augmenters.arithmetic.Add`,
+      `augmenters.arithmetic.AddElementwise`, `augmenters.arithmetic.Multiply`
+      and `augmenters.arithmetic.MultiplyElementwise` to no longer internally
+      increase itemsize of dtypes by a factor of 2 for
+      dtypes `uint16`, `int8` and `uint16`. For `Multiply*` this also
+      covers `float16` and `float32`. This protects against crashes due to
+      clipping `int64` or `uint64` data. In rare cases this can lead to
+      overflows if `image + random samples` or `image * random samples`
+      exceeds the value range of `int32` or `uint32`. This change may affect
+      various other augmenters that are wrappers around the mentioned ones,
+      e.g. `AdditiveGaussianNoise`.
+    * [rarely breaking] Decreased support of dtypes `uint16`, `int8`,
+      `int16`, `float16`, `float32` and `bool` in `augmenters.arithmetic.Add`,
+      `AddElementwise`, `Multiply` and `MultiplyElementwise` from "yes" to
+      "limited".
+    * [rarely breaking] Decreased support of dtype `int64` in
+      `augmenters.arithmetic.ReplaceElementwise` from "yes" to "no". This also
+      affects all `*Noise` augmenters (e.g. `AdditiveGaussianNoise`,
+      `ImpulseNoise`), all `Dropout` augmenters, all `Salt` augmenters and
+      all `Pepper` augmenters.
+    * [rarely breaking] Changed `augmenters.contrast.adjust_contrast_log`
+      and thereby `LogContrast` to no longer support dtypes `uint32`, `uint64`,
+      `int32` and `int64`.
 
 
 ## Improved Segmentation Map Augmentation #302

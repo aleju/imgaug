@@ -78,7 +78,7 @@ def test_GammaContrast():
     # check that list to choice works
     aug = iaa.GammaContrast([1, 2])
     assert isinstance(aug.params1d[0], iap.Choice)
-    assert all([val in aug.params1d[0].a for val in [1, 2]])
+    assert np.all([val in aug.params1d[0].a for val in [1, 2]])
 
     # check that per_channel at 50% prob works
     aug = iaa.GammaContrast((0.5, 2.0), per_channel=0.5)
@@ -92,9 +92,9 @@ def test_GammaContrast():
             seen[0] = True
         else:
             seen[1] = True
-        if all(seen):
+        if np.all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # check that keypoints are not changed
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
@@ -227,9 +227,9 @@ def test_SigmoidContrast():
     # the order of skimage's function
     aug = iaa.SigmoidContrast(gain=[1, 2], cutoff=[0.25, 0.75])
     assert isinstance(aug.params1d[0], iap.Choice)
-    assert all([val in aug.params1d[0].a for val in [1, 2]])
+    assert np.all([val in aug.params1d[0].a for val in [1, 2]])
     assert isinstance(aug.params1d[1], iap.Choice)
-    assert all([np.allclose(val, val_choice) for val, val_choice in zip([0.25, 0.75], aug.params1d[1].a)])
+    assert np.all([np.allclose(val, val_choice) for val, val_choice in zip([0.25, 0.75], aug.params1d[1].a)])
 
     # check that per_channel at 50% prob works
     aug = iaa.SigmoidContrast(gain=(1, 10), cutoff=(0.25, 0.75), per_channel=0.5)
@@ -243,9 +243,9 @@ def test_SigmoidContrast():
             seen[0] = True
         else:
             seen[1] = True
-        if all(seen):
+        if np.all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # check that keypoints are not changed
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
@@ -345,7 +345,7 @@ def test_LogContrast():
     # check that list to choice works
     aug = iaa.LogContrast([1, 2])
     assert isinstance(aug.params1d[0], iap.Choice)
-    assert all([val in aug.params1d[0].a for val in [1, 2]])
+    assert np.all([val in aug.params1d[0].a for val in [1, 2]])
 
     # check that per_channel at 50% prob works
     aug = iaa.LogContrast((0.5, 2.0), per_channel=0.5)
@@ -359,9 +359,9 @@ def test_LogContrast():
             seen[0] = True
         else:
             seen[1] = True
-        if all(seen):
+        if np.all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # check that keypoints are not changed
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
@@ -376,8 +376,12 @@ def test_LogContrast():
     ###################
     # test other dtypes
     ###################
+    # support before 1.17:
+    #   [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]
+    # support beginning with 1.17:
+    #   [np.uint8, np.uint16, np.int8, np.int16]
     # uint, int
-    for dtype in [np.uint8, np.uint16, np.uint32, np.uint64, np.int8, np.int16, np.int32, np.int64]:
+    for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
         min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
         gains = [0.5, 0.75, 1.0, 1.1]
@@ -402,7 +406,9 @@ def test_LogContrast():
     # float
     for dtype in [np.float16, np.float32, np.float64]:
         def _allclose(a, b):
-            atol = 1e-2 if dtype == np.float16 else 1e-8
+            # since numpy 1.17 this needs for some reason at least 1e-5 as the
+            # tolerance, previously 1e-8 worked
+            atol = 1e-2 if dtype == np.float16 else 1e-5
             return np.allclose(a, b, atol=atol, rtol=0)
 
         gains = [0.5, 0.75, 1.0, 1.1]
@@ -454,7 +460,7 @@ def test_LinearContrast():
     # check that list to choice works
     aug = iaa.LinearContrast([1, 2])
     assert isinstance(aug.params1d[0], iap.Choice)
-    assert all([val in aug.params1d[0].a for val in [1, 2]])
+    assert np.all([val in aug.params1d[0].a for val in [1, 2]])
 
     # check that per_channel at 50% prob works
     aug = iaa.LinearContrast((0.5, 2.0), per_channel=0.5)
@@ -470,9 +476,9 @@ def test_LinearContrast():
             seen[0] = True
         else:
             seen[1] = True
-        if all(seen):
+        if np.all(seen):
             break
-    assert all(seen)
+    assert np.all(seen)
 
     # check that keypoints are not changed
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(1, 1)], shape=(3, 3, 3))
@@ -689,9 +695,9 @@ class TestAllChannelsCLAHE(unittest.TestCase):
                 seen[0] = True
             else:
                 seen[1] = True
-            if all(seen):
+            if np.all(seen):
                 break
-        assert all(seen)
+        assert np.all(seen)
 
     def test_unit_sized_kernels(self):
         img = np.zeros((1, 1), dtype=np.uint8)
@@ -801,7 +807,7 @@ class TestAllChannelsCLAHE(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.AllChannelsCLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2, per_channel=True)
         params = aug.get_parameters()
-        assert all([isinstance(params[i], iap.Deterministic) for i in [0, 3]])
+        assert np.all([isinstance(params[i], iap.Deterministic) for i in [0, 3]])
         assert params[0].value == 1
         assert params[1][0].value == 3
         assert params[1][1] is None
