@@ -4,7 +4,6 @@ import numpy as np
 import six.moves as sm
 
 from .. import imgaug as ia
-from .. import dtypes as iadt
 from ..augmenters import blend as blendlib
 
 
