@@ -80,6 +80,10 @@ class Superpixels(meta.Augmenter):
 
     This implementation uses skimage's version of the SLIC algorithm.
 
+    .. note::
+
+        This augmenter is fairly slow. See :ref:`performance`.
+
     dtype support::
 
         if (image size <= max_size)::
@@ -543,30 +547,29 @@ class Voronoi(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> points_sampler = iaa.RegularGridPointsSampler(n_cols=10, n_rows=20)
+    >>> points_sampler = iaa.RegularGridPointsSampler(n_cols=20, n_rows=40)
     >>> aug = iaa.Voronoi(points_sampler)
 
-    Creates an augmenter that places a ``10x20`` (``HxW``) grid of cells on
+    Create an augmenter that places a ``20x40`` (``HxW``) grid of cells on
     the image and replaces all pixels within each cell by the cell's average
     color. The process is performed at an image size not exceeding 128px on
     any side. If necessary, the downscaling is performed using linear
     interpolation.
 
-    >>> import imgaug.augmenters as iaa
     >>> points_sampler = iaa.DropoutPointsSampler(
     >>>     iaa.RelativeRegularGridPointsSampler(
-    >>>         n_cols_frac=(0.01, 0.1),
+    >>>         n_cols_frac=(0.05, 0.2),
     >>>         n_rows_frac=0.1),
     >>>     0.2)
     >>> aug = iaa.Voronoi(points_sampler, p_replace=0.9, max_size=None)
 
-    Creates a voronoi augmenter that generates a grid of cells dynamically
+    Create a voronoi augmenter that generates a grid of cells dynamically
     adapted to the image size. Larger images get more cells. On the x-axis,
     the distance between two cells is ``w * W`` pixels, where ``W`` is the
     width of the image and ``w`` is always ``0.1``. On the y-axis,
     the distance between two cells is ``h * H`` pixels, where ``H`` is the
     height of the image and ``h`` is sampled uniformly from the interval
-    ``[0.01, 0.1]``. To make the voronoi pattern less regular, about ``20``
+    ``[0.05, 0.2]``. To make the voronoi pattern less regular, about ``20``
     percent of the cell coordinates are randomly dropped (i.e. the remaining
     cells grow in size). In contrast to the first example, the image is not
     resized (if it was, the sampling would happen *after* the resizing,
@@ -723,16 +726,15 @@ class UniformVoronoi(Voronoi):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.UniformVoronoi((100, 500))
 
-    Samples for each image uniformly the number of voronoi cells ``N`` from the
-    interval ``[100, 500]``. Then generates ``N`` coordinates by sampling
+    Sample for each image uniformly the number of voronoi cells ``N`` from the
+    interval ``[100, 500]``. Then generate ``N`` coordinates by sampling
     uniformly the x-coordinates from ``[0, W]`` and the y-coordinates from
     ``[0, H]``, where ``H`` is the image height and ``W`` the image width.
-    Then uses these coordinates to group the image pixels into voronoi
-    cells and averages the colors within them. The process is performed at an
+    Then use these coordinates to group the image pixels into voronoi
+    cells and average the colors within them. The process is performed at an
     image size not exceeding 128px on any side. If necessary, the downscaling
     is performed using linear interpolation.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.UniformVoronoi(250, p_replace=0.9, max_size=None)
 
     Same as above, but always samples ``N=250`` cells, replaces only
@@ -876,15 +878,14 @@ class RegularGridVoronoi(Voronoi):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.RegularGridVoronoi(10, 20)
 
-    Places a regular grid of ``10x20`` (``height x width``) coordinates on
-    each image. Randomly drops on average ``20`` percent of these points
-    to create a less regular pattern. Then uses the remaining coordinates
-    to group the image pixels into voronoi cells and averages the colors
+    Place a regular grid of ``10x20`` (``height x width``) coordinates on
+    each image. Randomly drop on average ``20`` percent of these points
+    to create a less regular pattern. Then use the remaining coordinates
+    to group the image pixels into voronoi cells and average the colors
     within them. The process is performed at an image size not exceeding
     128px on any side. If necessary, the downscaling is performed using
     linear interpolation.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.RegularGridVoronoi(
     >>>     (10, 30), 20, p_drop_points=0.0, p_replace=0.9, max_size=None)
 
@@ -922,11 +923,12 @@ class RelativeRegularGridVoronoi(Voronoi):
     to randomize the grid. Each image pixel then belongs to the voronoi
     cell with the closest coordinate.
 
-    **Note**: In contrast to the other Voronoi augmenters, this one uses
-    ``None`` as the default value for `max_size`, i.e. the color averaging
-    is always performed at full resolution. This enables the augmenter to
-    make most use of the added points for larger images. It does however slow
-    down the augmentation process.
+    .. note::
+        In contrast to the other Voronoi augmenters, this one uses
+        ``None`` as the default value for `max_size`, i.e. the color averaging
+        is always performed at full resolution. This enables the augmenter to
+        make most use of the added points for larger images. It does however
+        slow down the augmentation process.
 
     dtype support::
 
@@ -1039,24 +1041,23 @@ class RelativeRegularGridVoronoi(Voronoi):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.RelativeRegularGridVoronoi(0.01, 0.1)
+    >>> aug = iaa.RelativeRegularGridVoronoi(0.1, 0.25)
 
-    Places a regular grid of ``R x C`` coordinates on each image, where
-    ``R`` is the number of rows and computed as ``R=0.01*H`` with ``H`` being
+    Place a regular grid of ``R x C`` coordinates on each image, where
+    ``R`` is the number of rows and computed as ``R=0.1*H`` with ``H`` being
     the height of the input image. ``C`` is the number of columns and
-    analogously estimated from the image width ``W`` as ``C=0.1*W``.
+    analogously estimated from the image width ``W`` as ``C=0.25*W``.
     Larger images will lead to larger ``R`` and ``C`` values.
     On average, ``20`` percent of these grid coordinates are randomly
     dropped to create a less regular pattern. Then, the remaining coordinates
     are used to group the image pixels into voronoi cells and the colors
     within them are averaged.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.RelativeRegularGridVoronoi(
-    >>>     (0.01, 0.1), 0.1, p_drop_points=0.0, p_replace=0.9, max_size=512)
+    >>>     (0.03, 0.1), 0.1, p_drop_points=0.0, p_replace=0.9, max_size=512)
 
     Same as above, generates a grid with randomly ``R=r*H`` rows, where
-    ``r`` is sampled uniformly from the interval ``[0.01, 0.1]`` and
+    ``r`` is sampled uniformly from the interval ``[0.03, 0.1]`` and
     ``C=0.1*W`` rows. No points are dropped. The augmenter replaces only
     ``90`` percent of the voronoi cells with their average color (the pixels
     of the remaining ``10`` percent are not changed). Images larger than

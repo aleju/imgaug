@@ -110,12 +110,14 @@ class UnnormalizedBatch(object):
         required for valid polygons).
         The following datatypes will be interpreted as a single polygon on a
         single image:
+
           * ``imgaug.augmentables.polys.Polygon``
           * ``iterable of tuple of number``
           * ``iterable of imgaug.augmentables.kps.Keypoint``
 
         The following datatypes will be interpreted as multiple polygons on a
         single image:
+
           * ``imgaug.augmentables.polys.PolygonsOnImage``
           * ``iterable of imgaug.augmentables.polys.Polygon``
           * ``iterable of iterable of tuple of number``
@@ -124,6 +126,7 @@ class UnnormalizedBatch(object):
 
         The following datatypes will be interpreted as multiple polygons on
         multiple images:
+
           * ``(N,#polys,#points,2) ndarray``
           * ``iterable of (#polys,#points,2) ndarray``
           * ``iterable of iterable of (#points,2) ndarray``

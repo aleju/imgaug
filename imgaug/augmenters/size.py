@@ -521,10 +521,16 @@ class Resize(meta.Augmenter):
 
 class CropAndPad(meta.Augmenter):
     """
-    Augmenter that crops/pads images by defined amounts in pixels or
-    percent (relative to input image size).
+    Crop/pad images by pixel amounts or fractions of image sizes.
+
     Cropping removes pixels at the sides (i.e. extracts a subimage from
     a given full image). Padding adds pixels to the sides (e.g. black pixels).
+
+    .. note ::
+
+        This augmenter automatically resizes images back to their original size
+        after it has augmented them. To deactivate this, add the
+        parameter ``keep_size=False``.
 
     dtype support::
 
@@ -1083,7 +1089,7 @@ class CropAndPad(meta.Augmenter):
 def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True,
         name=None, deterministic=False, random_state=None):
     """
-    Augmenter that pads images, i.e. adds columns/rows to them.
+    Pad images, i.e. adds columns/rows of pixels to them.
 
     dtype support::
 
@@ -1282,7 +1288,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
 def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
          name=None, deterministic=False, random_state=None):
     """
-    Augmenter that crops/cuts away pixels at the sides of the image.
+    Crop images, i.e. remove columns/rows of pixels at the sides of images.
 
     That allows to cut out subimages from given (full) input images.
     The number of pixels to cut off may be defined in absolute values or
@@ -1431,18 +1437,22 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
 # TODO maybe rename this to PadToMinimumSize?
 # TODO this is very similar to CropAndPad, maybe add a way to generate crop values imagewise via a callback in
 #      in CropAndPad?
+# TODO why is padding mode and cval here called pad_mode, pad_cval but in other
+#      cases mode/cval?
 class PadToFixedSize(meta.Augmenter):
     """
     Pad images to minimum width/height.
 
-    If images are already at the minimum width/height or are larger, they will not be padded.
-    Note: This also means that images will not be cropped if they exceed the required width/height.
+    If images are already at the minimum width/height or are larger, they will
+    not be padded. Note that this also means that images will not be cropped if
+    they exceed the required width/height.
 
-    The augmenter randomly decides per image how to distribute the required padding amounts
-    over the image axis. E.g. if 2px have to be padded on the left or right to reach the
-    required width, the augmenter will sometimes add 2px to the left and 0px to the right,
-    sometimes add 2px to the right and 0px to the left and sometimes add 1px to both sides.
-    Set `position` to ``center`` to prevent that.
+    The augmenter randomly decides per image how to distribute the required
+    padding amounts over the image axis. E.g. if 2px have to be padded on the
+    left or right to reach the required width, the augmenter will sometimes
+    add 2px to the left and 0px to the right, sometimes add 2px to the right
+    and 0px to the left and sometimes add 1px to both sides. Set `position`
+    to ``center`` to prevent that.
 
     dtype support::
 
@@ -1503,24 +1513,36 @@ class PadToFixedSize(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.PadToFixedSize(width=100, height=100)
 
-    For edges smaller than 100 pixels, pads to 100 pixels. Does nothing for the other edges.
-    The padding is randomly (uniformly) distributed over the sides, so that e.g. sometimes most of the required padding
-    is applied to the left, sometimes to the right (analogous top/bottom).
+    For image sides smaller than ``100`` pixels, pad to ``100`` pixels. Do
+    nothing for the other edges. The padding is randomly (uniformly)
+    distributed over the sides, so that e.g. sometimes most of the required
+    padding is applied to the left, sometimes to the right (analogous
+    top/bottom).
 
     >>> aug = iaa.PadToFixedSize(width=100, height=100, position="center")
 
-    For edges smaller than 100 pixels, pads to 100 pixels. Does nothing for the other edges.
-    The padding is always equally distributed over the left/right and top/bottom sides.
+    For image sides smaller than ``100`` pixels, pad to ``100`` pixels. Do
+    nothing for the other image sides. The padding is always equally
+    distributed over the left/right and top/bottom sides.
+
+    >>> aug = iaa.PadToFixedSize(width=100, height=100, pad_mode=ia.ALL)
+
+    For image sides smaller than ``100`` pixels, pad to ``100`` pixels and
+    use any possible padding mode for that. Do nothing for the other image
+    sides. The padding is always equally distributed over the left/right and
+    top/bottom sides.
 
     >>> aug = iaa.Sequential([
     >>>     iaa.PadToFixedSize(width=100, height=100),
     >>>     iaa.CropToFixedSize(width=100, height=100)
     >>> ])
 
-    Pads to ``100x100`` pixel for smaller images, and crops to ``100x100`` pixel for larger images.
-    The output images have fixed size, ``100x100`` pixel.
+    Pad images smaller than ``100x100`` until they reach ``100x100``.
+    Analogously, crop images larger than ``100x100`` until they reach
+    ``100x100``. The output images therefore have a fixed size of ``100x100``.
 
     """
 
@@ -1699,16 +1721,18 @@ class PadToFixedSize(meta.Augmenter):
 # TODO add crop() function in imgaug, similar to pad
 class CropToFixedSize(meta.Augmenter):
     """
-    Augmenter that crops down to a fixed maximum width/height.
+    Crop images down to a fixed maximum width/height.
 
-    If images are already at the maximum width/height or are smaller, they will not be cropped.
-    Note: This also means that images will not be padded if they are below the required width/height.
+    If images are already at the maximum width/height or are smaller, they
+    will not be cropped. Note that this also means that images will not be
+    padded if they are below the required width/height.
 
-    The augmenter randomly decides per image how to distribute the required cropping amounts
-    over the image axis. E.g. if 2px have to be cropped on the left or right to reach the
-    required width, the augmenter will sometimes remove 2px from the left and 0px from the right,
-    sometimes remove 2px from the right and 0px from the left and sometimes remove 1px from both
-    sides. Set `position` to ``center`` to prevent that.
+    The augmenter randomly decides per image how to distribute the required
+    cropping amounts over the image axis. E.g. if 2px have to be cropped on
+    the left or right to reach the required width, the augmenter will
+    sometimes remove 2px from the left and 0px from the right, sometimes
+    remove 2px from the right and 0px from the left and sometimes remove 1px
+    from both sides. Set `position` to ``center`` to prevent that.
 
     dtype support::
 
@@ -1774,24 +1798,27 @@ class CropToFixedSize(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CropToFixedSize(width=100, height=100)
 
-    For sides larger than 100 pixels, crops to 100 pixels. Does nothing for the other sides.
-    The cropping amounts are randomly (and uniformly) distributed over the sides of the image.
+    For image sides larger than ``100`` pixels, crop to ``100`` pixels. Do
+    nothing for the other sides. The cropping amounts are randomly (and
+    uniformly) distributed over the sides of the image.
 
     >>> aug = iaa.CropToFixedSize(width=100, height=100, position="center")
 
-    For sides larger than 100 pixels, crops to 100 pixels. Does nothing for the other sides.
-    The cropping amounts are always equally distributed over the left/right sides of the image (and analogously
-    for top/bottom).
+    For sides larger than ``100`` pixels, crop to ``100`` pixels. Do nothing
+    for the other sides. The cropping amounts are always equally distributed
+    over the left/right sides of the image (and analogously for top/bottom).
 
     >>> aug = iaa.Sequential([
     >>>     iaa.PadToFixedSize(width=100, height=100),
     >>>     iaa.CropToFixedSize(width=100, height=100)
     >>> ])
 
-    pads to ``100x100`` pixel for smaller images, and crops to ``100x100`` pixel for larger images.
-    The output images have fixed size, ``100x100`` pixel.
+    Pad images smaller than ``100x100`` until they reach ``100x100``.
+    Analogously, crop images larger than ``100x100`` until they reach
+    ``100x100``. The output images therefore have a fixed size of ``100x100``.
 
     """
 
@@ -1984,10 +2011,14 @@ class CropToFixedSize(meta.Augmenter):
 
 class KeepSizeByResize(meta.Augmenter):
     """
-    Augmenter that resizes images before/after augmentation so that they retain their original height and width.
+    Resize images back to their input sizes after applying child augmenters.
 
-    This can e.g. be placed after a cropping operation. Some augmenters have a ``keep_size`` parameter that does
-    mostly the same if set to True, though this augmenter offers control over the interpolation mode.
+    Combining this with e.g. a cropping augmenter as the child will lead to
+    images being resized back to the input size after the crop operation was
+    applied. Some augmenters have a ``keep_size`` argument that achieves the
+    same goal (if set to ``True``), though this augmenter offers control over
+    the interpolation mode and which augmentables to resize (images, heatmaps,
+    segmentation maps).
 
     dtype support::
 
@@ -2041,6 +2072,38 @@ class KeepSizeByResize(meta.Augmenter):
 
     random_state : None or int or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.KeepSizeByResize(
+    >>>     iaa.Crop((20, 40), keep_size=False)
+    >>> )
+
+    Apply random cropping to input images, then resize them back to their
+    original input sizes. The resizing is done using this augmenter instead
+    of the corresponding internal resizing operation in ``Crop``.
+
+    >>> aug = iaa.KeepSizeByResize(
+    >>>     iaa.Crop((20, 40), keep_size=False),
+    >>>     interpolation="nearest"
+    >>> )
+
+    Same as in the previous example, but images are now always resized using
+    nearest neighbour interpolation.
+
+    >>> aug = iaa.KeepSizeByResize(
+    >>>     iaa.Crop((20, 40), keep_size=False),
+    >>>     interpolation=["nearest", "cubic"],
+    >>>     interpolation_heatmaps=iaa.KeepSizeByResize.SAME_AS_IMAGES,
+    >>>     interpolation_segmaps=iaa.KeepSizeByResize.NO_RESIZE
+    >>> )
+
+    Similar to the previous example, but images are now sometimes resized
+    using linear interpolation and sometimes using nearest neighbour
+    interpolation. Heatmaps are resized using the same interpolation as was
+    used for the corresponding image. Segmentation maps are not resized and
+    will therefore remain at their size after cropping.
 
     """
 

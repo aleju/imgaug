@@ -1583,6 +1583,36 @@ class ReplaceElementwise(meta.Augmenter):
     Replaces ``5`` percent of all pixels in each image by either ``0``
     or ``255``.
 
+    >>> import imgaug.augmenters as iaa
+    >>> aug = ReplaceElementwise(0.1, [0, 255], per_channel=0.5)
+
+    For ``50%`` of all images, replace ``10%`` of all pixels with either the
+    value ``0`` or the value ``255`` (same as in the previous example). For
+    the other ``50%`` of all images, replace *channelwise* ``10%`` of all
+    pixels with either the value ``0`` or the value ``255``. So, it will be
+    very rare for each pixel to have all channels replaced by ``255`` or
+    ``0``.
+
+    >>> import imgaug.augmenters as iaa
+    >>> import imgaug.parameters as iap
+    >>> aug = ReplaceElementwise(0.1, iap.Normal(128, 0.4*128), per_channel=0.5)
+
+    Replace ``10%`` of all pixels by gaussian noise centered around ``128``.
+    Both the replacement mask and the gaussian noise are sampled channelwise
+    for ``50%`` of all images.
+
+    >>> import imgaug.augmenters as iaa
+    >>> import imgaug.parameters as iap
+    >>> aug = ReplaceElementwise(
+    >>>     iap.FromLowerResolution(iap.Binomial(0.1), size_px=8),
+    >>>     iap.Normal(128, 0.4*128),
+    >>>     per_channel=0.5)
+
+    Replace ``10%`` of all pixels by gaussian noise centered around ``128``.
+    Sample the replacement mask at a lower resolution (``8x8`` pixels) and
+    upscale it to the image size, resulting in coarse areas being replaced by
+    gaussian noise.
+
     """
 
     def __init__(self, mask, replacement, per_channel=False,
@@ -1702,7 +1732,7 @@ class ReplaceElementwise(meta.Augmenter):
 
 def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
     """
-    Apply impulse noise to images.
+    Add impulse noise to images.
 
     This is identical to ``SaltAndPepper``, except that `per_channel` is
     always set to ``True``.
@@ -1710,6 +1740,37 @@ def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
     dtype support::
 
         See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
+
+    Parameters
+    ----------
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of replacing a pixel to impulse noise.
+
+            * If a float, then that value will always be used as the
+              probability.
+            * If a tuple ``(a, b)``, then a probability will be sampled
+              uniformly per image from the interval ``[a, b]``.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a image-sized mask will be
+              sampled from that parameter per image. Any value ``>0.5`` in
+              that mask will be replaced with impulse noise noise.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ImpulseNoise(0.1)
+
+    Replace ``10%`` of all pixels with impulse noise.
 
     """
     return SaltAndPepper(
@@ -1769,8 +1830,13 @@ def SaltAndPepper(p=0, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.SaltAndPepper(0.05)
 
-    Replaces ``5`` percent of all pixels with salt and pepper noise (white-ish
-    and black-ish colors).
+    Replace ``5%`` of all pixels with salt and pepper noise.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.SaltAndPepper(0.05, per_channel=True)
+
+    Replace *channelwise* ``5%`` of all pixels with salt and pepper
+    noise.
 
     """
     if name is None:
@@ -1890,11 +1956,23 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CoarseSaltAndPepper(0.05, size_percent=(0.01, 0.1))
 
-    Marks ``5`` percent of all pixels in a mask to be replaced by salt/pepper
-    noise. The mask has ``1`` to ``10`` percent the size of the input image.
+    Marks ``5%`` of all pixels in a mask to be replaced by salt/pepper
+    noise. The mask has ``1%`` to ``10%`` the size of the input image.
     The mask is then upscaled to the input image size, leading to large
     rectangular areas being marked as to be replaced. These areas are then
     replaced in the input image by salt/pepper noise.
+
+    >>> aug = iaa.CoarseSaltAndPepper(0.05, size_px=(4, 16))
+
+    Same as in the previous example, but the replacement mask before upscaling
+    has a size between ``4x4`` and ``16x16`` pixels (the axis sizes are sampled
+    independently, i.e. the mask may be rectangular).
+
+    >>> aug = iaa.CoarseSaltAndPepper(
+    >>>    0.05, size_percent=(0.01, 0.1), per_channel=True)
+
+    Same as in the first example, but mask and replacement are each sampled
+    independently per image channel.
 
     """
     mask = iap.handle_probability_param(
@@ -1928,6 +2006,9 @@ def Salt(p=0, per_channel=False,
          name=None, deterministic=False, random_state=None):
     """
     Replace pixels in images with salt noise, i.e. white-ish pixels.
+
+    This augmenter is similar to ``SaltAndPepper``, but adds no pepper noise to
+    images.
 
     dtype support::
 
@@ -1973,7 +2054,7 @@ def Salt(p=0, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Salt(0.05)
 
-    Replaces ``5`` percent of all pixels with salt noise (white-ish colors).
+    Replace ``5%`` of all pixels with salt noise (white-ish colors).
 
     """
 
@@ -2093,8 +2174,8 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CoarseSalt(0.05, size_percent=(0.01, 0.1))
 
-    Marks ``5`` percent of all pixels in a mask to be replaced by salt
-    noise. The mask has ``1`` to ``10`` percent the size of the input image.
+    Mark ``5%`` of all pixels in a mask to be replaced by salt
+    noise. The mask has ``1%`` to ``10%`` the size of the input image.
     The mask is then upscaled to the input image size, leading to large
     rectangular areas being marked as to be replaced. These areas are then
     replaced in the input image by salt noise.
@@ -2136,8 +2217,11 @@ def Pepper(p=0, per_channel=False,
     """
     Replace pixels in images with pepper noise, i.e. black-ish pixels.
 
-    This is similar to dropout, but slower and the black pixels are not
-    uniformly black.
+    This augmenter is similar to ``SaltAndPepper``, but adds no salt noise to
+    images.
+
+    This augmenter is similar to ``Dropout``, but slower and the black pixels
+    are not uniformly black.
 
     dtype support::
 
@@ -2183,7 +2267,7 @@ def Pepper(p=0, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Pepper(0.05)
 
-    Replaces ``5`` percent of all pixels with pepper noise (black-ish colors).
+    Replace ``5%`` of all pixels with pepper noise (black-ish colors).
 
     """
 
@@ -2301,8 +2385,8 @@ def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CoarsePepper(0.05, size_percent=(0.01, 0.1))
 
-    Marks ``5`` percent of all pixels in a mask to be replaced by pepper
-    noise. The mask has ``1`` to ``10`` percent the size of the input image.
+    Mark ``5%`` of all pixels in a mask to be replaced by pepper
+    noise. The mask has ``1%`` to ``10%`` the size of the input image.
     The mask is then upscaled to the input image size, leading to large
     rectangular areas being marked as to be replaced. These areas are then
     replaced in the input image by pepper noise.
@@ -2716,7 +2800,7 @@ def ContrastNormalization(alpha=1.0, per_channel=False,
 # TODO try adding per channel somehow
 class JpegCompression(meta.Augmenter):
     """
-    Degrade image quality by applying JPEG compression to it.
+    Degrade the quality of images by JPEG-compressing them.
 
     During JPEG compression, high frequency components (e.g. edges) are removed.
     With low compression (strength) only the highest frequency components are
@@ -2763,7 +2847,7 @@ class JpegCompression(meta.Augmenter):
               per image and used as the compression.
             * If a ``StochasticParameter``, then ``N`` samples will be drawn
               from that parameter per ``N`` input images, each representing the
-              compression for the ``n``th image.
+              compression for the ``n``-th image.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2777,12 +2861,12 @@ class JpegCompression(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.JpegCompression(compression=(80, 95))
+    >>> aug = iaa.JpegCompression(compression=(70, 99))
 
-    Removes high frequency components in images based on JPEG compression with
-    a *compression strength* between ``80`` and ``95`` (randomly and
+    Remove high frequency components in images via JPEG compression with
+    a *compression strength* between ``70`` and ``99`` (randomly and
     uniformly sampled per image). This corresponds to a (very low) *quality*
-    setting of 5 to 20.
+    setting of ``1`` to ``30``.
 
     """
     def __init__(self, compression=50,

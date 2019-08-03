@@ -187,6 +187,7 @@
   for `Voronoi(DropoutPointsSampler(RelativeRegularGridPointsSampler))`. #348
 * Add to `Resize` the ability to resize the shorter and longer sides of
   images (instead of only height/width). #349
+* Improved the docstrings of most augmenters and added code examples. #302
 
 
 ## Improved Segmentation Map Augmentation #302

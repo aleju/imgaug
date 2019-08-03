@@ -1605,17 +1605,21 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         a tuple of augmentables. It will return the same types of augmentables
         (only augmented) as input into the method. This behaviour
         is partly specific to the python version:
-          * In _python 3.6+_ (if ``return_batch=False``):
+
+          * In **python 3.6+** (if ``return_batch=False``):
+
             * Three or more augmentables may be used as input.
             * The return order matches the order of the named arguments, e.g.
-              ``B, D, C = augment(B=x, D=y, C=z)``.
+              ``x_aug, y_aug, z_aug = augment(X=x, Y=y, Z=z)``.
             * None of the provided named arguments has to be `image` or `images`.
-          * In _python <3.6_  (if ``return_batch=False``):
+
+          * In **python <3.6** (if ``return_batch=False``):
+
             * One or two augmentables may be used as input, not more than that.
-            * At least one the augmentables has to be `image` or `images`.
+            * At least one of the augmentables has to be `image` or `images`.
             * The augmented images are always returned first.
 
-        If `return_batch` was not set to ``False``, an instance of
+        If `return_batch` was set to ``True``, an instance of
         ``UnnormalizedBatch`` will be returned. The output is the same for
         all python version and any number or combination of augmentables may
         be provided.
@@ -1632,7 +1636,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             optional
             The image to augment. Only this or `images` can be set, not both.
             If `return_batch` is ``False`` and the python version is below 3.6,
-            either this or `images` _must_ be provided.
+            either this or `images` **must** be provided.
 
         images : None \
             or (N,H,W,C) ndarray \
@@ -1642,7 +1646,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             optional
             The images to augment. Only this or `image` can be set, not both.
             If `return_batch` is ``False`` and the python version is below 3.6,
-            either this or `image` _must_ be provided.
+            either this or `image` **must** be provided.
 
         heatmaps : None \
             or (N,H,W,C) ndarray \
@@ -1735,12 +1739,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             required for valid polygons).
             The following datatypes will be interpreted as a single polygon on
             a single image:
+
               * ``imgaug.augmentables.polys.Polygon``
               * ``iterable of tuple of number``
               * ``iterable of imgaug.augmentables.kps.Keypoint``
 
             The following datatypes will be interpreted as multiple polygons
             on a single image:
+
               * ``imgaug.augmentables.polys.PolygonsOnImage``
               * ``iterable of imgaug.augmentables.polys.Polygon``
               * ``iterable of iterable of tuple of number``
@@ -1749,6 +1755,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
             The following datatypes will be interpreted as multiple polygons on
             multiple images:
+
               * ``(N,#polys,#points,2) ndarray``
               * ``iterable of (#polys,#points,2) ndarray``
               * ``iterable of iterable of (#points,2) ndarray``
@@ -4136,6 +4143,7 @@ def AssertLambda(func_images=None, func_heatmaps=None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
+# FIXME check_segmentation_maps is not used
 def AssertShape(shape, check_images=True, check_heatmaps=True,
                 check_segmentation_maps=True, check_keypoints=True,
                 check_polygons=True,
@@ -4348,7 +4356,7 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
 
 class ChannelShuffle(Augmenter):
     """
-    Augmenter that randomly shuffles the channels in images.
+    Randomize the order of channels in input images.
 
     dtype support::
 
@@ -4389,13 +4397,17 @@ class ChannelShuffle(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.ChannelShuffle(0.25)
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ChannelShuffle(0.35)
 
-    Shuffles channels for 25% of all images.
+    Shuffle all channels of 35% of all images.
 
-    >>> aug = iaa.ChannelShuffle(0.25, channels=[0, 1])
+    >>> aug = iaa.ChannelShuffle(0.35, channels=[0, 1])
 
-    Shuffles channels 0 and 1 with each other for 25% of all images.
+    Shuffle only channels ``0`` and ``1`` of 35% of all images. As the new
+    channel orders ``0, 1`` and ``1, 0`` are both valid outcomes of the
+    shuffling, it means that for ``0.35 * 0.5 = 0.175`` or 17.5% of all images
+    the order of channels ``0`` and ``1`` is inverted.
 
     """
 

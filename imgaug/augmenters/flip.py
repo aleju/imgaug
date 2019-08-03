@@ -41,6 +41,12 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
     """
     Flip/mirror input images horizontally.
 
+    .. note ::
+
+        The default value for the probability is ``0.0``.
+        So, to flip *all* input image use ``Fliplr(1.0)`` and *not* just
+        ``Fliplr()``.
+
     dtype support::
 
         * ``uint8``: yes; fully tested
@@ -144,6 +150,12 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
+
+    .. note ::
+
+        The default value for the probability is ``0.0``.
+        So, to flip *all* input image use ``Flipud(1.0)`` and *not* just
+        ``Flipud()``.
 
     dtype support::
 

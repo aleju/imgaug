@@ -1609,12 +1609,27 @@ class AffineCv2(meta.Augmenter):
 
 class PiecewiseAffine(meta.Augmenter):
     """
-    Augmenter that places a regular grid of points on an image and randomly
+    Apply affine transformations that differ between local neighbourhoods.
+
+    This augmenter places a regular grid of points on an image and randomly
     moves the neighbourhood of these point around via affine transformations.
     This leads to local distortions.
 
-    This is mostly a wrapper around scikit-image's PiecewiseAffine.
-    See also the Affine augmenter for a similar technique.
+    This is mostly a wrapper around scikit-image's ``PiecewiseAffine``.
+    See also ``Affine`` for a similar technique.
+
+    .. note::
+
+        This augmenter is very slow. See :ref:`performance`.
+        Try to use ``ElasticTransformation`` instead, which is at least 10x
+        faster.
+
+    .. note::
+
+        For coordinate-based inputs (keypoints, bounding boxes, polygons,
+        ...), this augmenter still has to perform an image-based augmentation,
+        which will make it significantly slower for such inputs than other
+        augmenters. See :ref:`performance`.
 
     dtype support::
 
@@ -2068,16 +2083,17 @@ class PiecewiseAffine(meta.Augmenter):
 # TODO add args for interpolation, borderMode, borderValue
 class PerspectiveTransform(meta.Augmenter):
     """
-    Augmenter that performs a random four point perspective transform.
+    Apply random four point perspective transformations to images.
 
     Each of the four points is placed on the image using a random distance from
     its respective corner. The distance is sampled from a normal distribution.
-    As a result, most transformations don't change very much, while some
-    "focus" on polygons far inside the image.
+    As a result, most transformations don't change the image very much, while
+    some "focus" on polygons far inside the image.
 
-    The results of this augmenter have some similarity with Crop.
+    The results of this augmenter have some similarity with ``Crop``.
 
-    Code partially from http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/ .
+    Code partially from
+    http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
 
     dtype support::
 
@@ -2195,12 +2211,20 @@ class PerspectiveTransform(meta.Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.10))
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.15))
 
-    Applies perspective transformations using a random scale between 0.01 and
-    0.1 per image, where the scale is roughly a measure of how far the
-    perspective transform's corner points may be distanced from the original
-    image's corner points.
+    Apply perspective transformations using a random scale between ``0.01``
+    and ``0.15`` per image, where the scale is roughly a measure of how far
+    the perspective transformation's corner points may be distanced from the
+    image's corner points. Higher scale values lead to stronger "zoom-in"
+    effects (and thereby stronger distortions).
+
+    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.15), keep_size=False)
+
+    Same as in the previous example, but images are not resized back to
+    the input image size after augmentation. This will lead to smaller
+    output images.
 
     """
 
@@ -2587,19 +2611,21 @@ class PerspectiveTransform(meta.Augmenter):
 # TODO add backend arg
 class ElasticTransformation(meta.Augmenter):
     """
-    Augmenter to transform images by moving pixels locally around using displacement fields.
+    Transform images by moving pixels locally around using displacement fields.
 
-    The augmenter has the parameters ``alpha`` and ``sigma``. ``alpha`` controls the strength of the
-    displacement: higher values mean that pixels are moved further. ``sigma`` controls the
-    smoothness of the displacement: higher values lead to smoother patterns -- as if the
-    image was below water -- while low values will cause indivdual pixels to be moved very
+    The augmenter has the parameters ``alpha`` and ``sigma``. ``alpha``
+    controls the strength of the displacement: higher values mean that pixels
+    are moved further. ``sigma`` controls the smoothness of the displacement:
+    higher values lead to smoother patterns -- as if the image was below water
+    -- while low values will cause indivdual pixels to be moved very
     differently from their neighbours, leading to noisy and pixelated images.
 
-    A relation of 10:1 seems to be good for ``alpha`` and ``sigma``, e.g. ``alpha=10`` and ``sigma=1`` or
-    ``alpha=50``, ``sigma=5``. For ``128x128`` a setting of ``alpha=(0, 70.0)``, ``sigma=(4.0, 6.0)`` may be a
-    good choice and will lead to a water-like effect.
+    A relation of 10:1 seems to be good for ``alpha`` and ``sigma``, e.g.
+    ``alpha=10`` and ``sigma=1`` or ``alpha=50``, ``sigma=5``. For ``128x128``
+    a setting of ``alpha=(0, 70.0)``, ``sigma=(4.0, 6.0)`` may be a good
+    choice and will lead to a water-like effect.
 
-    See ::
+    For a detailed explanation, see ::
 
         Simard, Steinkraus and Platt
         Best Practices for Convolutional Neural Networks applied to Visual
@@ -2607,7 +2633,12 @@ class ElasticTransformation(meta.Augmenter):
         in Proc. of the International Conference on Document Analysis and
         Recognition, 2003
 
-    for a detailed explanation.
+    .. note::
+
+        For coordinate-based inputs (keypoints, bounding boxes, polygons,
+        ...), this augmenter still has to perform an image-based augmentation,
+        which will make it significantly slower for such inputs than other
+        augmenters. See :ref:`performance`.
 
     dtype support::
 
@@ -3250,9 +3281,10 @@ class ElasticTransformation(meta.Augmenter):
 
 class Rot90(meta.Augmenter):
     """
-    Augmenter to rotate images clockwise by multiples of 90 degrees.
+    Rotate images clockwise by multiples of 90 degrees.
 
-    This could also be achieved using ``Affine``, but Rot90 is significantly more efficient.
+    This could also be achieved using ``Affine``, but ``Rot90`` is
+    significantly more efficient.
 
     dtype support::
 
@@ -3312,28 +3344,33 @@ class Rot90(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Rot90(1)
 
-    Rotates all images by 90 degrees.
-    Resizes all images afterwards to keep the size that they had before augmentation.
+    Rotate all images by 90 degrees.
+    Resize these images afterwards to keep the size that they had before
+    augmentation.
     This may cause the images to look distorted.
 
     >>> aug = iaa.Rot90([1, 3])
 
-    Rotates all images by 90 or 270 degrees.
-    Resizes all images afterwards to keep the size that they had before augmentation.
+    Rotate all images by 90 or 270 degrees.
+    Resize these images afterwards to keep the size that they had before
+    augmentation.
     This may cause the images to look distorted.
 
     >>> aug = iaa.Rot90((1, 3))
 
-    Rotates all images by 90, 180 or 270 degrees.
-    Resizes all images afterwards to keep the size that they had before augmentation.
+    Rotate all images by 90, 180 or 270 degrees.
+    Resize these images afterwards to keep the size that they had before
+    augmentation.
     This may cause the images to look distorted.
 
     >>> aug = iaa.Rot90((1, 3), keep_size=False)
 
-    Rotates all images by 90, 180 or 270 degrees.
-    Does not resize to the original image size afterwards, i.e. each image's size may change.
+    Rotate all images by 90, 180 or 270 degrees.
+    Does not resize to the original image size afterwards, i.e. each image's
+    size may change.
 
     """
 
