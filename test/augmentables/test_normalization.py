@@ -1198,8 +1198,11 @@ class TestNormalization(unittest.TestCase):
         # array
         # ----
         for dt in [np.dtype("int32"), np.dtype("uint16"), np.dtype(bool)]:
+            # NOTE: use np.full(shape, 1, dtype=dt) here and below instead of
+            # np.zeros(shape, dtype=dt) + 1, because the latter one converts
+            # dtype bool_ to int64.
             segmaps_norm = normalization.normalize_segmentation_maps(
-                np.zeros((1, 1, 1, 1), dtype=dt) + 1,
+                np.full((1, 1, 1, 1), 1, dtype=dt),
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(segmaps_norm, list)
@@ -1207,7 +1210,7 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(segmaps_norm[0].arr[..., 0], 1)
 
             segmaps_norm = normalization.normalize_segmentation_maps(
-                np.zeros((1, 1, 1, 1), dtype=dt) + 1,
+                np.full((1, 1, 1, 1), 1, dtype=dt),
                 shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(segmaps_norm, list)
@@ -1217,21 +1220,21 @@ class TestNormalization(unittest.TestCase):
             # --> segmaps for too many images
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
-                    np.zeros((2, 1, 1), dtype=dt) + 1,
+                    np.full((2, 1, 1), 1, dtype=dt),
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
 
             # --> too few segmaps
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
-                    np.zeros((1, 1, 1), dtype=dt) + 1,
+                    np.full((1, 1, 1), 1, dtype=dt),
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
-                    np.zeros((1, 1, 1), dtype=dt) + 1,
+                    np.full((1, 1, 1), 1, dtype=dt),
                     shapes=None
                 )
 
@@ -1240,7 +1243,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         segmaps_norm = normalization.normalize_segmentation_maps(
             ia.SegmentationMapsOnImage(
-                np.zeros((1, 1, 1), dtype=np.int32) + 1,
+                np.full((1, 1, 1), 1, dtype=np.int32),
                 shape=(1, 1, 3)),
             shapes=None
         )
@@ -1261,7 +1264,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         for dt in [np.dtype("int32"), np.dtype("uint16"), np.dtype(bool)]:
             segmaps_norm = normalization.normalize_segmentation_maps(
-                [np.zeros((1, 1, 1), dtype=dt) + 1],
+                [np.full((1, 1, 1), 1, dtype=dt)],
                 shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
             )
             assert isinstance(segmaps_norm, list)
@@ -1269,7 +1272,7 @@ class TestNormalization(unittest.TestCase):
             assert np.allclose(segmaps_norm[0].arr[..., 0], 1)
 
             segmaps_norm = normalization.normalize_segmentation_maps(
-                [np.zeros((1, 1, 1), dtype=dt) + 1],
+                [np.full((1, 1, 1), 1, dtype=dt)],
                 shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
             )
             assert isinstance(segmaps_norm, list)
@@ -1280,8 +1283,8 @@ class TestNormalization(unittest.TestCase):
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
                     [
-                        np.zeros((1, 1, 1), dtype=np.int32) + 1,
-                        np.zeros((1, 1, 1), dtype=np.int32) + 1
+                        np.full((1, 1, 1), 1, dtype=np.int32),
+                        np.full((1, 1, 1), 1, dtype=np.int32)
                     ],
                     shapes=[np.zeros((1, 1, 3), dtype=np.uint8)]
                 )
@@ -1289,21 +1292,21 @@ class TestNormalization(unittest.TestCase):
             # --> too few segmaps
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
-                    [np.zeros((1, 1, 1), dtype=np.int32) + 1],
+                    [np.full((1, 1, 1), 1, dtype=np.int32)],
                     shapes=np.zeros((2, 1, 1, 3), dtype=np.uint8)
                 )
 
             # --> images None
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
-                    [np.zeros((1, 1, 1), dtype=np.int32) + 1],
+                    [np.full((1, 1, 1), 1, dtype=np.int32)],
                     shapes=None
                 )
 
             # --> wrong number of dimensions
             with self.assertRaises(ValueError):
                 _segmaps_norm = normalization.normalize_segmentation_maps(
-                    [np.zeros((1, 1, 1, 1), dtype=np.int32) + 1],
+                    [np.full((1, 1, 1, 1), 1, dtype=np.int32)],
                     shapes=np.zeros((1, 1, 1, 3), dtype=np.uint8)
                 )
 
@@ -1312,7 +1315,7 @@ class TestNormalization(unittest.TestCase):
         # ----
         segmaps_norm = normalization.normalize_segmentation_maps(
             [ia.SegmentationMapsOnImage(
-                np.zeros((1, 1, 1), dtype=np.int32) + 1,
+                np.full((1, 1, 1), 1, dtype=np.int32),
                 shape=(1, 1, 3))],
             shapes=None
         )
