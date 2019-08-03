@@ -4143,7 +4143,7 @@ def AssertLambda(func_images=None, func_heatmaps=None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
-# FIXME check_segmentation_maps is not used
+# TODO add tests for segmaps
 def AssertShape(shape, check_images=True, check_heatmaps=True,
                 check_segmentation_maps=True, check_keypoints=True,
                 check_polygons=True,
@@ -4304,7 +4304,7 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
         return heatmaps
 
     def func_segmentation_maps(segmaps, _random_state, _parents, _hooks):
-        if check_heatmaps:
+        if check_segmentation_maps:
             if shape[0] is not None:
                 compare(len(segmaps), shape[0], 0, "ALL")
 
