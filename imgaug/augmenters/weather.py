@@ -108,8 +108,7 @@ class FastSnowyLandscape(meta.Augmenter):
 
     Search for all pixels in the image with a lightness value in HLS
     colorspace of less than ``140`` and increase their lightness by a factor
-    of ``2.5``. This is the configuration proposed in the original
-    article (see link above).
+    of ``2.5``.
 
     >>> aug = iaa.FastSnowyLandscape(
     >>>     lightness_threshold=[128, 200],
@@ -127,7 +126,7 @@ class FastSnowyLandscape(meta.Augmenter):
     >>>     lightness_multiplier=(1.0, 4.0)
     >>> )
 
-    Similar to above, but the lightness threshold is sampled
+    Similar to the previous example, but the lightness threshold is sampled
     from ``uniform(100, 255)`` (per image) and the multiplier
     from ``uniform(1.0, 4.0)`` (per image). This seems to produce good and
     varied results.
@@ -245,7 +244,7 @@ def Clouds(name=None, deterministic=False, random_state=None):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Clouds()
 
-    Creates an augmenter that adds clouds to images.
+    Create an augmenter that adds clouds to images.
 
     """
     if name is None:
@@ -334,7 +333,7 @@ def Fog(name=None, deterministic=False, random_state=None):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Fog()
 
-    Creates an augmenter that adds fog to images.
+    Create an augmenter that adds fog to images.
 
     """
     if name is None:
@@ -356,6 +355,7 @@ def Fog(name=None, deterministic=False, random_state=None):
     )
 
 
+# TODO add examples and add these to the overview docs
 # TODO add perspective transform to each cloud layer to make them look more distant?
 # TODO alpha_mean and density overlap - remove one of them
 class CloudLayer(meta.Augmenter):
@@ -801,15 +801,15 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Snowflakes(flake_size=(0.1, 0.4), speed=(0.01, 0.05))
 
-    Adds snowflakes to small images (around ``96x128``).
+    Add snowflakes to small images (around ``96x128``).
 
     >>> aug = iaa.Snowflakes(flake_size=(0.2, 0.7), speed=(0.007, 0.03))
 
-    Adds snowflakes to medium-sized images (around ``192x256``).
+    Add snowflakes to medium-sized images (around ``192x256``).
 
     >>> aug = iaa.Snowflakes(flake_size=(0.7, 0.95), speed=(0.001, 0.03))
 
-    Adds snowflakes to large images (around ``960x1280``).
+    Add snowflakes to large images (around ``960x1280``).
 
     """
     if name is None:
@@ -835,6 +835,7 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
     )
 
 
+# TODO add examples and add these to the overview docs
 # TODO snowflakes are all almost 100% white, add some grayish tones and
 #      maybe color to them
 class SnowflakesLayer(meta.Augmenter):

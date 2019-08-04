@@ -103,11 +103,18 @@ class WithColorspace(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.WithColorspace(to_colorspace="HSV", from_colorspace="RGB",
-    >>>                          children=iaa.WithChannels(0, iaa.Add(10)))
+    >>> aug = iaa.WithColorspace(
+    >>>     to_colorspace="HSV",
+    >>>     from_colorspace="RGB",
+    >>>     children=iaa.WithChannels(
+    >>>         0,
+    >>>         iaa.Add((0, 50))
+    >>>     )
+    >>> )
 
-    This augmenter will add 10 to Hue value in HSV colorspace,
-    then change the colorspace back to the original (RGB).
+    Convert to ``HSV`` colorspace, add a value between ``0`` and ``50``
+    (uniformly sampled per image) to the Hue channel, then convert back to the
+    input colorspace (``RGB``).
 
     """
 
@@ -144,6 +151,16 @@ class WithColorspace(meta.Augmenter):
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self,
                                                  parents=parents, default=True):
             result = self.children.augment_heatmaps(
+                result,
+                parents=parents + [self],
+                hooks=hooks,
+            )
+        return result
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        result = segmaps
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            result = self.children.augment_segmentation_maps(
                 result,
                 parents=parents + [self],
                 hooks=hooks,
@@ -242,13 +259,15 @@ class WithHueAndSaturation(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.WithHueAndSaturation(iaa.WithChannels(0, iaa.Add(10)))
+    >>> aug = iaa.WithHueAndSaturation(
+    >>>     iaa.WithChannels(0, iaa.Add((0, 50)))
+    >>> )
 
-    This creates an augmenter that will add 10 to the hue value in HSV
-    colorspace. It automatically accounts for the hue being in angular
-    representation, i.e. if the angle goes beyond 360deg, it will start again
-    at 0deg. The colorspace is finally converted back to RGB (the default
-    setting).
+    Create an augmenter that will add a random value between ``0`` and ``50``
+    (uniformly sampled per image) hue channel in HSV colorspace. It
+    automatically accounts for the hue being in angular representation, i.e.
+    if the angle goes beyond 360 degrees, it will start again at 0 degrees.
+    The colorspace is finally converted back to ``RGB`` (default setting).
 
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.WithHueAndSaturation([
@@ -259,11 +278,11 @@ class WithHueAndSaturation(meta.Augmenter):
     >>>     ])
     >>> ])
 
-    Creates an augmenter that adds a random value sampled from uniformly
+    Create an augmenter that adds a random value sampled uniformly
     from the range ``[-30, 10]`` to the hue and multiplies the saturation
     by a random factor sampled uniformly from ``[0.5, 1.5]``. It also
     modifies the contrast of the saturation channel. After these steps,
-    the HSV image is converted back to RGB.
+    the ``HSV`` image is converted back to ``RGB``.
 
     """
 
@@ -399,15 +418,13 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
                              name=None, deterministic=False,
                              random_state=None):
     """
-    Augmenter that multiplies hue and saturation by random values.
+    Multipy hue and saturation by random values.
 
     The augmenter first transforms images to HSV colorspace, then multiplies
     the pixel values in the H and S channels and afterwards converts back to
     RGB.
 
     This augmenter is a wrapper around ``WithHueAndSaturation``.
-    The performance is expected to be worse than the one
-    of ``AddToHueAndSaturation``.
 
     dtype support::
 
@@ -471,8 +488,8 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
         If this value is a float ``p``, then for ``p`` percent of all images
         `per_channel` will be treated as ``True``, otherwise as ``False``.
 
-        This parameter has no effect is `mul_hue` and/or `mul_saturation`
-        are used instead of `value`.
+        This parameter has no effect if `mul_hue` and/or `mul_saturation`
+        are used instead of `mul`.
 
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
@@ -491,10 +508,20 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.MultiplyHueAndSaturation((0.5, 1.5), per_channel=True)
 
-    Multiplies the hue and saturation with random values between 0.5 and 1.5
+    Multiply hue and saturation by random values between ``0.5`` and ``1.5``
     (independently per channel and the same value for all pixels within
     that channel). The hue will be automatically projected to an angular
     representation.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplyHueAndSaturation(mul_hue=(0.5, 1.5))
+
+    Multiply only the hue by random values between ``0.5`` and ``1.5``.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplyHueAndSaturation(mul_saturation=(0.5, 1.5))
+
+    Multiply only the saturation by random values between ``0.5`` and ``1.5``.
 
     """
     if mul is not None:
@@ -589,7 +616,7 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
 def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
                 deterministic=False, random_state=None):
     """
-    Augmenter that multiplies the hue of images by random values.
+    Multiply the hue of images by random values.
 
     The augmenter first transforms images to HSV colorspace, then multiplies
     the pixel values in the H channel and afterwards converts back to
@@ -636,8 +663,8 @@ def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.MultiplyHue((0.5, 1.5))
 
-    Multiplies the hue with random values between 0.5 and 1.5.
-    The hue will be automatically projected to an angular representation.
+    Multiply the hue channel of images using random values between ``0.5``
+    and ``1.5``.
 
     """
     if name is None:
@@ -652,7 +679,7 @@ def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
 def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
                        deterministic=False, random_state=None):
     """
-    Augmenter that multiplies the saturation of images by random values.
+    Multiply the saturation of images by random values.
 
     The augmenter first transforms images to HSV colorspace, then multiplies
     the pixel values in the H channel and afterwards converts back to
@@ -696,7 +723,8 @@ def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.MultiplySaturation((0.5, 1.5))
 
-    Multiplies the saturation with random values between 0.5 and 1.5.
+    Multiply the saturation channel of images using random values between
+    ``0.5`` and ``1.5``.
 
     """
     if name is None:
@@ -766,7 +794,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB",
 
 class AddToHueAndSaturation(meta.Augmenter):
     """
-    Augmenter that increases/decreases hue and saturation by random values.
+    Increases or decreases hue and saturation by random values.
 
     The augmenter first transforms images to HSV colorspace, then adds random
     values to the H and S channels and afterwards converts back to RGB.
@@ -866,12 +894,11 @@ class AddToHueAndSaturation(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.AddToHueAndSaturation((-20, 20), per_channel=True)
+    >>> aug = iaa.AddToHueAndSaturation((-50, 50), per_channel=True)
 
-    Adds random values between -20 and 20 to the hue and saturation
+    Add random values between ``-50`` and ``50`` to the hue and saturation
     (independently per channel and the same value for all pixels within
-    that channel). The hue will be automatically projected to an angular
-    representation.
+    that channel).
 
     """
 
@@ -1013,10 +1040,14 @@ class AddToHueAndSaturation(meta.Augmenter):
         # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
 
         # code with using cache (at best maybe 10% faster for 64x64):
+        table_hue = self._LUT_CACHE[0]
+        table_saturation = self._LUT_CACHE[1]
+
         image_hsv[..., 0] = cv2.LUT(
-            image_hsv[..., 0], self._LUT_CACHE[0][int(hue)])
+            image_hsv[..., 0], table_hue[255+int(hue)])
         image_hsv[..., 1] = cv2.LUT(
-            image_hsv[..., 1], self._LUT_CACHE[1][int(saturation)])
+            image_hsv[..., 1], table_saturation[255+int(saturation)])
+
         return image_hsv
 
     @classmethod
@@ -1084,15 +1115,20 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     @classmethod
     def _generate_lut_table(cls):
-        table = (np.zeros((256*2, 256), dtype=np.int8),
-                 np.zeros((256*2, 256), dtype=np.int8))
+        # TODO Changing the dtype here to int8 makes gen test for this method
+        #      fail, but all other tests still succeed. How can this be?
+        #      The dtype was verified to remain int8, having min & max at
+        #      -128 & 127.
+        dt = np.uint8
+        table = (np.zeros((256*2, 256), dtype=dt),
+                 np.zeros((256*2, 256), dtype=dt))
         value_range = np.arange(0, 256, dtype=np.int16)
         # this could be done slightly faster by vectorizing the loop
         for i in sm.xrange(-255, 255+1):
             table_hue = np.mod(value_range + i, 180)
             table_saturation = np.clip(value_range + i, 0, 255)
-            table[0][i, :] = table_hue
-            table[1][i, :] = table_saturation
+            table[0][255+i, :] = table_hue
+            table[1][255+i, :] = table_saturation
         return table
 
 
@@ -1146,11 +1182,11 @@ def AddToHue(value=(-255, 255), from_colorspace="RGB", name=None,
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.AddToHue((-20, 20))
+    >>> aug = iaa.AddToHue((-50, 50))
 
-    Samples random values from the discrete uniform range ``[-20..20]``,
-    converts them to angular representation and adds them to the hue, i.e.
-    to the H channel in HSV colorspace.
+    Sample random values from the discrete uniform range ``[-50..50]``,
+    convert them to angular representation and add them to the hue, i.e.
+    to the ``H`` channel in ``HSV`` colorspace.
 
     """
     if name is None:
@@ -1212,10 +1248,11 @@ def AddToSaturation(value=(-75, 75), from_colorspace="RGB", name=None,
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.AddToSaturation((-20, 20))
+    >>> aug = iaa.AddToSaturation((-50, 50))
 
-    Samples random values from the discrete uniform range ``[-20..20]``,
-    and adds them to the saturation, i.e. to the S channel in HSV colorspace.
+    Sample random values from the discrete uniform range ``[-50..50]``,
+    and add them to the saturation, i.e. to the ``S`` channel in ``HSV``
+    colorspace.
 
     """
     if name is None:
@@ -1723,12 +1760,21 @@ class _AbstractColorQuantization(meta.Augmenter):
 
 class KMeansColorQuantization(_AbstractColorQuantization):
     """
-    Augmenter to quantize colors using k-Means clustering.
+    Quantize colors using k-Means clustering.
 
-    **Note**: This augmenter expects input images to be either grayscale
-    or to have 3 or 4 channels and use colorspace `from_colorspace`. If images
-    have 4 channels, it is assumed that the 4th channel is an alpha channel
-    and it will not be quantized.
+    This "collects" the colors from the input image, groups them into
+    ``k`` clusters using k-Means clustering and replaces the colors in the
+    input image using the cluster centroids.
+
+    This is slower than ``UniformColorQuantization``, but adapts dynamically
+    to the color range in the input image.
+
+    .. note::
+
+        This augmenter expects input images to be either grayscale
+        or to have 3 or 4 channels and use colorspace `from_colorspace`. If
+        images have 4 channels, it is assumed that the 4th channel is an alpha
+        channel and it will not be quantized.
 
     dtype support::
 
@@ -1806,32 +1852,32 @@ class KMeansColorQuantization(_AbstractColorQuantization):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.KMeansColorQuantization()
 
-    Creates an augmenter to apply k-Means color quantization to images using a
+    Create an augmenter to apply k-Means color quantization to images using a
     random amount of colors, sampled uniformly from the interval ``[2..16]``.
     It assumes the input image colorspace to be ``RGB`` and clusters colors
     randomly in ``RGB`` or ``Lab`` colorspace.
 
     >>> aug = iaa.KMeansColorQuantization(n_colors=8)
 
-    Creates an augmenter that quantizes images to (up to) eight colors.
+    Create an augmenter that quantizes images to (up to) eight colors.
 
-    >>> aug = iaa.KMeansColorQuantization(n_colors=(4, 32))
+    >>> aug = iaa.KMeansColorQuantization(n_colors=(4, 16))
 
-    Creates an augmenter that quantizes images to (up to) ``n`` colors,
+    Create an augmenter that quantizes images to (up to) ``n`` colors,
     where ``n`` is randomly and uniformly sampled from the discrete interval
-    ``[4, 32]``.
+    ``[4..16]``.
 
     >>> aug = iaa.KMeansColorQuantization(
     >>>     from_colorspace=iaa.ChangeColorspace.BGR)
 
-    Creates an augmenter that quantizes input images that are in
+    Create an augmenter that quantizes input images that are in
     ``BGR`` colorspace. The quantization happens in ``RGB`` or ``Lab``
-    colorspace into which the images are temporarily converted.
+    colorspace, into which the images are temporarily converted.
 
     >>> aug = iaa.KMeansColorQuantization(
     >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
 
-    Creates an augmenter that quantizes images by clustering colors randomly
+    Create an augmenter that quantizes images by clustering colors randomly
     in either ``RGB`` or ``HSV`` colorspace. The assumed input colorspace
     of images is ``RGB``.
 
@@ -1941,6 +1987,7 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     # is non-deterministic (tested). In C++ the function has an rgn argument,
     # but not in python. In python there also seems to be no way to read out
     # cv2's RNG state, so we can't set it back after executing this function.
+    # TODO this is quite hacky
     cv2.setRNGSeed(1)
     _compactness, labels, centers = cv2.kmeans(
         colors, n_colors, None, criteria, attempts, cv2.KMEANS_RANDOM_CENTERS)
@@ -1956,16 +2003,23 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
 
 
 class UniformColorQuantization(_AbstractColorQuantization):
-    """Augmenter to quantize colors into N bins with regular distance.
+    """Quantize colors into N bins with regular distance.
 
     For ``uint8`` images the equation is ``floor(v/q)*q + q/2`` with
     ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
     the target number of colors after quantization.
 
-    **Note**: This augmenter expects input images to be either grayscale
-    or to have 3 or 4 channels and use colorspace `from_colorspace`. If images
-    have 4 channels, it is assumed that the 4th channel is an alpha channel
-    and it will not be quantized.
+    This augmenter is faster than ``KMeansColorQuantization``, but the
+    set of possible output colors is constant (i.e. independent of the
+    input images). It may produce unsatisfying outputs for input images
+    that are made up of very similar colors.
+
+    .. note::
+
+        This augmenter expects input images to be either grayscale
+        or to have 3 or 4 channels and use colorspace `from_colorspace`. If
+        images have 4 channels, it is assumed that the 4th channel is an alpha
+        channel and it will not be quantized.
 
     dtype support::
 
@@ -2041,24 +2095,25 @@ class UniformColorQuantization(_AbstractColorQuantization):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.UniformColorQuantization()
 
-    Creates an augmenter to apply uniform color quantization to images using a
-    random amount of colors, sampled uniformly from the interval ``[2..16]``.
+    Create an augmenter to apply uniform color quantization to images using a
+    random amount of colors, sampled uniformly from the discrete interval
+    ``[2..16]``.
 
     >>> aug = iaa.UniformColorQuantization(n_colors=8)
 
-    Creates an augmenter that quantizes images to (up to) eight colors.
+    Create an augmenter that quantizes images to (up to) eight colors.
 
-    >>> aug = iaa.UniformColorQuantization(n_colors=(4, 32))
+    >>> aug = iaa.UniformColorQuantization(n_colors=(4, 16))
 
-    Creates an augmenter that quantizes images to (up to) ``n`` colors,
+    Create an augmenter that quantizes images to (up to) ``n`` colors,
     where ``n`` is randomly and uniformly sampled from the discrete interval
-    ``[4, 32]``.
+    ``[4..16]``.
 
     >>> aug = iaa.UniformColorQuantization(
     >>>     from_colorspace=iaa.ChangeColorspace.BGR,
     >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
 
-    Creates an augmenter that uniformly quantizes images in either ``RGB``
+    Create an augmenter that uniformly quantizes images in either ``RGB``
     or ``HSV`` colorspace (randomly picked per image). The input colorspace
     of all images has to be ``BGR``.
 

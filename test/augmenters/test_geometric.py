@@ -13,6 +13,8 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
+from imgaug.augmentables.heatmaps import HeatmapsOnImage
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 
 def main():
@@ -562,6 +564,38 @@ def test_Affine():
     assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
 
     # ---------------------
+    # translate segmaps
+    # ---------------------
+    segmaps = SegmentationMapsOnImage(
+        np.int32([
+            [0, 1, 2],
+            [0, 1, 2],
+            [2, 2, 2],
+        ]),
+        shape=(3, 3, 3)
+    )
+    arr_expected_1px_right = np.int32([
+        [0, 0, 1],
+        [0, 0, 1],
+        [0, 2, 2],
+    ])
+    aug = iaa.Affine(translate_px={"x": 1})
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # should still use mode=constant cval=0 even when other settings chosen
+    aug = iaa.Affine(translate_px={"x": 1}, cval=255)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    aug = iaa.Affine(translate_px={"x": 1}, mode="edge", cval=255)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # ---------------------
     # rotate
     # ---------------------
     # rotate by 90 degrees
@@ -828,7 +862,7 @@ def test_Affine():
         img[-5:, 0:5] = 255
         img[0:5, -5:] = 255
         img[-5:, -5:] = 255
-        hm = ia.HeatmapsOnImage(
+        hm = HeatmapsOnImage(
             ia.imresize_single_image(img, (40, 40), interpolation="cubic").astype(np.float32)/255,
             shape=(80, 80)
         )
@@ -845,6 +879,34 @@ def test_Affine():
         img_aug_mask = img_aug > 255*0.1
         hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic") > 0.1
         same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert (same / img_aug_mask.size) >= 0.95
+
+        # fit_output with differently sized segmaps
+        aug = iaa.Affine(rotate=45, fit_output=True, backend=backend)
+        img = np.zeros((80, 80), dtype=np.uint8)
+        img[0:5, 0:5] = 255
+        img[-5:, 0:5] = 255
+        img[0:5, -5:] = 255
+        img[-5:, -5:] = 255
+        segmap = SegmentationMapsOnImage(
+            (ia.imresize_single_image(
+                img, (40, 40), interpolation="cubic") > 100).astype(np.int32),
+            shape=(80, 80)
+        )
+        img_aug = aug.augment_image(img)
+        segmap_aug = aug.augment_segmentation_maps([segmap])[0]
+        # these asserts are deactivated because the image size can change under fit_output=True
+        # assert segmap_aug.shape == (80, 80)
+        # assert segmap_aug.arr_0to1.shape == (40, 40, 1)
+        _labels, nb_labels = skimage.morphology.label(img_aug > 100, return_num=True, connectivity=2)
+        assert nb_labels == 4
+        _labels, nb_labels = skimage.morphology.label(segmap_aug.arr > 0, return_num=True, connectivity=2)
+        assert nb_labels == 4
+
+        img_aug_mask = img_aug > 100
+        segmap_aug_mask = ia.imresize_single_image(
+            segmap_aug.arr, img_aug.shape[0:2], interpolation="nearest") > 0
+        same = np.sum(img_aug_mask == segmap_aug_mask[:, :, 0])
         assert (same / img_aug_mask.size) >= 0.95
 
         # verify that shape in KeypointsOnImages changes
@@ -1831,7 +1893,7 @@ def test_AffineCv2():
     # ---------------------
     # translate heatmaps
     # ---------------------
-    heatmaps = ia.HeatmapsOnImage(
+    heatmaps = HeatmapsOnImage(
         np.float32([
             [0.0, 0.5, 0.75],
             [0.0, 0.5, 0.75],
@@ -1864,6 +1926,38 @@ def test_AffineCv2():
     assert observed.shape == heatmaps.shape
     assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
     assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # ---------------------
+    # translate segmaps
+    # ---------------------
+    segmaps = SegmentationMapsOnImage(
+        np.int32([
+            [0, 1, 2],
+            [0, 1, 2],
+            [2, 2, 2],
+        ]),
+        shape=(3, 3, 3)
+    )
+    arr_expected_1px_right = np.int32([
+        [0, 0, 1],
+        [0, 0, 1],
+        [0, 2, 2],
+    ])
+    aug = iaa.AffineCv2(translate_px={"x": 1})
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    # should still use mode=constant cval=0 even when other settings chosen
+    aug = iaa.AffineCv2(translate_px={"x": 1}, cval=255)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
+
+    aug = iaa.AffineCv2(translate_px={"x": 1}, mode="replicate", cval=255)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
     assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
 
     # ---------------------
@@ -2164,8 +2258,12 @@ def test_PiecewiseAffine():
     img[:, 9:11+1] = 255
     img[:, 69:71+1] = 255
     mask = img > 0
-    heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=(60, 80, 3))
+    heatmaps = HeatmapsOnImage((img / 255.0).astype(np.float32),
+                                  shape=(60, 80, 3))
     heatmaps_arr = heatmaps.get_arr()
+    segmaps = SegmentationMapsOnImage((img > 0).astype(np.int32),
+                                      shape=(60, 80, 3))
+    segmaps_arr = segmaps.get_arr()
 
     # -----
     # scale
@@ -2174,7 +2272,7 @@ def test_PiecewiseAffine():
     aug = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
     observed = aug.augment_image(img)
     assert 100.0 < np.average(observed[mask]) < np.average(img[mask])
-    assert 75.0 > np.average(observed[~mask]) > np.average(img[~mask])
+    assert 100.0-75.0 > np.average(observed[~mask]) > np.average(img[~mask])
 
     # basic test, heatmaps
     aug = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -2184,7 +2282,21 @@ def test_PiecewiseAffine():
     assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
     assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
     assert 100.0/255.0 < np.average(observed_arr[mask]) < np.average(heatmaps_arr[mask])
-    assert 75.0/255.0 > np.average(observed_arr[~mask]) > np.average(heatmaps_arr[~mask])
+    assert (100.0-75.0)/255.0 > np.average(observed_arr[~mask]) > np.average(heatmaps_arr[~mask])
+
+    # basic test, segmaps
+    aug = iaa.PiecewiseAffine(scale=0.001, nb_rows=12, nb_cols=4)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    observed_arr = observed.get_arr()
+    # For some reason piecewiseaffine moves the right column one to the right,
+    # even at very low scales. Looks like a scikit-image problem. We extract
+    # here the columns and move the right column one to the right to compensate.
+    observed_arr_left_col = observed_arr[:, 9:11+1]
+    observed_arr_right_col = observed_arr[:, 69+1:71+1+1]
+    assert observed.shape == segmaps.shape
+    assert np.average(observed_arr_left_col == 1) > 0.98
+    assert np.average(observed_arr_right_col == 1) > 0.98
+    assert np.average(observed_arr[~mask] == 0) > 0.9
 
     # scale 0
     aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
@@ -2199,6 +2311,13 @@ def test_PiecewiseAffine():
     assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
     assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
     assert np.array_equal(observed_arr, heatmaps_arr)
+
+    # scale 0, segmaps
+    aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    observed_arr = observed.get_arr()
+    assert observed.shape == segmaps.shape
+    assert np.array_equal(observed_arr, segmaps_arr)
 
     # scale 0, keypoints
     aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
@@ -2232,18 +2351,40 @@ def test_PiecewiseAffine():
     assert heatmaps.max_value - 1e-6 < observed2.max_value < heatmaps.max_value + 1e-6
     assert np.average(observed1_arr[~mask]) < np.average(observed2_arr[~mask])
 
+    # stronger scale should lead to stronger changes, segmaps
+    aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
+    aug2 = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    observed1 = aug1.augment_segmentation_maps([segmaps])[0]
+    observed1_arr = observed1.get_arr()
+    observed2 = aug2.augment_segmentation_maps([segmaps])[0]
+    observed2_arr = observed2.get_arr()
+    assert observed1.shape == segmaps.shape
+    assert observed2.shape == segmaps.shape
+    assert np.average(observed1_arr[~mask] == 0) > np.average(observed2_arr[~mask] == 0)
+
     # strong scale, measure alignment between images and heatmaps
     aug = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
     aug_det = aug.to_deterministic()
     img_aug = aug_det.augment_image(img)
     hm_aug = aug_det.augment_heatmaps([heatmaps])[0]
     assert hm_aug.shape == (60, 80, 3)
-    assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
-    assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
+    assert heatmaps.min_value - 1e-6 < hm_aug.min_value < heatmaps.min_value + 1e-6
+    assert heatmaps.max_value - 1e-6 < hm_aug.max_value < heatmaps.max_value + 1e-6
     img_aug_mask = img_aug > 255*0.1
     hm_aug_mask = hm_aug.arr_0to1 > 0.1
     same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
     assert (same / img_aug_mask.size) >= 0.98
+
+    # strong scale, measure alignment between images and segmaps
+    aug = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+    aug_det = aug.to_deterministic()
+    img_aug = aug_det.augment_image(img)
+    segmap_aug = aug_det.augment_segmentation_maps([segmaps])[0]
+    assert segmap_aug.shape == (60, 80, 3)
+    img_aug_mask = (img_aug > 255*0.1)
+    segmap_aug_mask = (segmap_aug.arr == 1)
+    same = np.sum(img_aug_mask == segmap_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.9
 
     # strong scale, measure alignment between images and heatmaps
     # heatmaps here smaller than image
@@ -2260,6 +2401,26 @@ def test_PiecewiseAffine():
     hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, (60, 80), interpolation="cubic") > 0.1
     same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
     assert (same / img_aug_mask.size) >= 0.9  # seems to be 0.948 actually
+
+    # strong scale, measure alignment between images and segmaps
+    # segmaps here smaller than image
+    aug_det = aug.to_deterministic()
+    segmaps_small = SegmentationMapsOnImage(
+        (ia.imresize_single_image(
+            img, (30, 40+10), interpolation="cubic") > 100).astype(np.int32),
+        shape=(60, 80, 3)
+    )
+    img_aug = aug_det.augment_image(img)
+    segmaps_aug = aug_det.augment_segmentation_maps([segmaps_small])[0]
+    assert segmaps_aug.shape == (60, 80, 3)
+    assert segmaps_aug.arr.shape == (30, 40+10, 1)
+    img_aug_mask = img_aug > 255*0.1
+    segmaps_aug_mask = (
+            ia.imresize_single_image(segmaps_aug.arr, (60, 80),
+                                     interpolation="nearest")
+            == 1)
+    same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.9
 
     # strong scale, measure alignment between images and keypoints
     aug = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
@@ -2463,7 +2624,7 @@ def test_PiecewiseAffine():
     # bad datatype for cols
     got_exception = False
     try:
-        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=False)
+        _aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=False)
     except Exception as exc:
         assert "Expected " in str(exc)
         got_exception = True
@@ -2511,10 +2672,18 @@ def test_PiecewiseAffine():
     assert np.sum([observed[:, :] == [0, 0, 0]]) > 0
 
     # cval as deterministic, heatmaps should always use cval=0
-    heatmaps = ia.HeatmapsOnImage(np.zeros((50, 50, 1), dtype=np.float32), shape=(50, 50, 3))
+    heatmaps = HeatmapsOnImage(
+        np.zeros((50, 50, 1), dtype=np.float32), shape=(50, 50, 3))
     aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10, mode="constant", cval=255)
     observed = aug.augment_heatmaps([heatmaps])[0]
     assert np.sum([observed.get_arr()[:, :] >= 0.01]) == 0
+
+    # cval as deterministic, segmaps should always use cval=0
+    segmaps = SegmentationMapsOnImage(
+        np.zeros((50, 50, 1), dtype=np.int32), shape=(50, 50, 3))
+    aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10, mode="constant", cval=255)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert np.sum([observed.get_arr()[:, :] > 0]) == 0
 
     # cval as list
     img = np.zeros((20, 20), dtype=np.uint8) + 255
@@ -2778,7 +2947,8 @@ def test_PerspectiveTransform():
 
     img = np.zeros((30, 30), dtype=np.uint8)
     img[10:20, 10:20] = 255
-    heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
+    heatmaps = HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
+    segmaps = SegmentationMapsOnImage((img > 0).astype(np.int32), shape=img.shape)
 
     # without keep_size
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
@@ -2796,7 +2966,7 @@ def test_PerspectiveTransform():
     # due to interpolation
     assert np.average(np.abs(observed.astype(np.int32) - expected.astype(np.int32))) < 30.0
 
-    hm = ia.HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(30, 30))
+    hm = HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(30, 30))
     hm_aug = aug.augment_heatmaps([hm])[0]
     expected = (y2 - y1, x2 - x1)
     assert all([abs(s1-s2) <= 1 for s1, s2 in zip(hm_aug.shape, expected)])
@@ -2804,6 +2974,16 @@ def test_PerspectiveTransform():
     img_aug_mask = observed > 255*0.1
     hm_aug_mask = hm_aug.arr_0to1 > 0.1
     same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.99
+
+    segmaps = SegmentationMapsOnImage((img > 100).astype(np.int32), shape=(30, 30))
+    segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+    expected = (y2 - y1, x2 - x1)
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(segmaps_aug.shape, expected)])
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(segmaps_aug.arr.shape, expected + (1,))])
+    img_aug_mask = observed > 255*0.5
+    segmaps_aug_mask = segmaps_aug.arr > 0
+    same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
     assert (same / img_aug_mask.size) >= 0.99
 
     # without keep_size, different heatmap size
@@ -2830,6 +3010,31 @@ def test_PerspectiveTransform():
     same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
     assert (same / img_aug_mask.size) >= 0.96
 
+    # without keep_size, different segmap size
+    img_small = ia.imresize_single_image(img, (20, 25), interpolation="cubic")
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+    aug.jitter = iap.Deterministic(0.2)
+    img_aug = aug.augment_image(img)
+    y1 = int(30*0.2)
+    y2 = int(30*0.8)
+    x1 = int(30*0.2)
+    x2 = int(30*0.8)
+    x1_small = int(25*0.2)
+    x2_small = int(25*0.8)
+    y1_small = int(20*0.2)
+    y2_small = int(20*0.8)
+    seg = SegmentationMapsOnImage((img_small > 100).astype(np.int32), shape=(30, 30))
+    seg_aug = aug.augment_segmentation_maps([seg])[0]
+    expected = (y2 - y1, x2 - x1)
+    expected_small = (y2_small - y1_small, x2_small - x1_small, 1)
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(seg_aug.shape, expected)])
+    assert all([abs(s1-s2) <= 1 for s1, s2 in zip(seg_aug.arr.shape, expected_small)])
+    img_aug_mask = img_aug > 255*0.5
+    seg_aug_mask = ia.imresize_single_image(
+        seg_aug.arr, img_aug.shape[0:2], interpolation="nearest") > 0
+    same = np.sum(img_aug_mask == seg_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.92
+
     # with keep_size
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
     aug.jitter = iap.Deterministic(0.2)
@@ -2854,6 +3059,16 @@ def test_PerspectiveTransform():
     # differences seem to mainly appear around the border of the inner rectangle, possibly
     # due to interpolation
     assert np.average(np.abs(observed.get_arr() - expected)) < 30.0
+
+    # with keep_size, segmaps
+    aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+    aug.jitter = iap.Deterministic(0.2)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    expected = segmaps.get_arr()[int(30*0.2):int(30*0.8), int(30*0.2):int(30*0.8)]
+    expected = ia.imresize_single_image((expected*255).astype(np.uint8), img.shape[0:2], interpolation="cubic")
+    expected = (expected > 255*0.5).astype(np.int32)
+    assert observed.shape == segmaps.shape
+    assert np.average(observed.get_arr() != expected) < 0.05
 
     # with keep_size, RGB images
     aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
@@ -3192,7 +3407,8 @@ def test_ElasticTransformation():
     img = np.zeros((50, 50), dtype=np.uint8) + 255
     img = np.pad(img, ((100, 100), (100, 100)), mode="constant", constant_values=0)
     mask = img > 0
-    heatmaps = ia.HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
+    heatmaps = HeatmapsOnImage((img / 255.0).astype(np.float32), shape=img.shape)
+    segmaps = SegmentationMapsOnImage((img > 0).astype(np.int32), shape=img.shape)
 
     img_nonsquare = np.zeros((50, 100), dtype=np.uint8) + 255
     img_nonsquare = np.pad(img_nonsquare, ((100, 100), (100, 100)), mode="constant", constant_values=0)
@@ -3221,6 +3437,14 @@ def test_ElasticTransformation():
     assert np.sum(observed.get_arr()[mask]) < np.sum(heatmaps.get_arr()[mask])
     assert np.sum(observed.get_arr()[~mask]) > np.sum(heatmaps.get_arr()[~mask])
 
+    # test basic funtionality, segmaps
+    # alpha=1.5 instead of 0.5 as above here, because otherwise nothing is moved
+    aug = iaa.ElasticTransformation(alpha=1.5, sigma=0.25)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.sum(observed.get_arr()[mask]) < np.sum(segmaps.get_arr()[mask])
+    assert np.sum(observed.get_arr()[~mask]) > np.sum(segmaps.get_arr()[~mask])
+
     # test effects of increased alpha strength
     aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
     aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
@@ -3244,6 +3468,16 @@ def test_ElasticTransformation():
     assert heatmaps.max_value - 1e-6 < observed1.max_value < heatmaps.max_value + 1e-6
     assert heatmaps.min_value - 1e-6 < observed2.min_value < heatmaps.min_value + 1e-6
     assert heatmaps.max_value - 1e-6 < observed2.max_value < heatmaps.max_value + 1e-6
+    assert np.sum(observed1.get_arr()[mask]) > np.sum(observed2.get_arr()[mask])
+    assert np.sum(observed1.get_arr()[~mask]) < np.sum(observed2.get_arr()[~mask])
+
+    # test effects of increased alpha strength, segmaps
+    aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
+    aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
+    observed1 = aug1.augment_segmentation_maps([segmaps])[0]
+    observed2 = aug2.augment_segmentation_maps([segmaps])[0]
+    assert observed1.shape == segmaps.shape
+    assert observed2.shape == segmaps.shape
     assert np.sum(observed1.get_arr()[mask]) > np.sum(observed2.get_arr()[mask])
     assert np.sum(observed1.get_arr()[~mask]) < np.sum(observed2.get_arr()[~mask])
 
@@ -3414,13 +3648,22 @@ def test_ElasticTransformation():
     assert got_exception
 
     # cval with heatmaps
-    heatmaps = ia.HeatmapsOnImage(np.zeros((32, 32, 1), dtype=np.float32), shape=(32, 32, 3))
+    heatmaps = HeatmapsOnImage(
+        np.zeros((32, 32, 1), dtype=np.float32), shape=(32, 32, 3))
     aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant", cval=255)
     observed = aug.augment_heatmaps([heatmaps])[0]
     assert observed.shape == heatmaps.shape
     assert heatmaps.min_value - 1e-6 < observed.min_value < heatmaps.min_value + 1e-6
     assert heatmaps.max_value - 1e-6 < observed.max_value < heatmaps.max_value + 1e-6
     assert np.sum(observed.get_arr() > 0.01) == 0
+
+    # cval with segmaps
+    segmaps = SegmentationMapsOnImage(
+        np.zeros((32, 32, 1), dtype=np.int32), shape=(32, 32, 3))
+    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant", cval=255)
+    observed = aug.augment_segmentation_maps([segmaps])[0]
+    assert observed.shape == segmaps.shape
+    assert np.sum(observed.get_arr() > 0) == 0
 
     # mode
     # no proper tests here, because unclear how to test
@@ -3650,7 +3893,7 @@ def test_ElasticTransformation():
     img = np.zeros((80, 80), dtype=np.uint8)
     img[:, 30:50] = 255
     img[30:50, :] = 255
-    hm = ia.HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
+    hm = HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
     aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant", cval=0)
     aug_det = aug.to_deterministic()
     img_aug = aug_det.augment_image(img)
@@ -3668,7 +3911,7 @@ def test_ElasticTransformation():
     img[:, 30:50] = 255
     img[30:50, :] = 255
     img_small = ia.imresize_single_image(img, (40, 40), interpolation="nearest")
-    hm = ia.HeatmapsOnImage(img_small.astype(np.float32)/255.0, shape=(80, 80))
+    hm = HeatmapsOnImage(img_small.astype(np.float32)/255.0, shape=(80, 80))
     aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant", cval=0)
     aug_det = aug.to_deterministic()
     img_aug = aug_det.augment_image(img)
@@ -3678,6 +3921,44 @@ def test_ElasticTransformation():
     img_aug_mask = img_aug > 255*0.1
     hm_aug_mask = ia.imresize_single_image(hm_aug.arr_0to1, (80, 80), interpolation="nearest") > 0.1
     same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.94
+
+    # -----------
+    # segmaps
+    # -----------
+    # test alignment between images and segmaps
+    img = np.zeros((80, 80), dtype=np.uint8)
+    img[:, 30:50] = 255
+    img[30:50, :] = 255
+    segmaps = SegmentationMapsOnImage((img > 0).astype(np.int32), shape=(80, 80))
+    aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant", cval=0, order=0)
+    aug_det = aug.to_deterministic()
+    img_aug = aug_det.augment_image(img)
+    segmaps_aug = aug_det.augment_segmentation_maps([segmaps])[0]
+    assert segmaps_aug.shape == (80, 80)
+    assert segmaps_aug.arr.shape == (80, 80, 1)
+    img_aug_mask = img_aug > 255*0.1
+    segmaps_aug_mask = segmaps_aug.arr > 0
+    same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
+    assert (same / img_aug_mask.size) >= 0.99
+
+    # test alignment between images and segmaps
+    # here with segmaps that are smaller than the image
+    img = np.zeros((80, 80), dtype=np.uint8)
+    img[:, 30:50] = 255
+    img[30:50, :] = 255
+    img_small = ia.imresize_single_image(img, (40, 40), interpolation="nearest")
+    segmaps = SegmentationMapsOnImage((img_small > 0).astype(np.int32), shape=(80, 80))
+    aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant", cval=0, order=0)
+    aug_det = aug.to_deterministic()
+    img_aug = aug_det.augment_image(img)
+    segmaps_aug = aug_det.augment_segmentation_maps([segmaps])[0]
+    assert segmaps_aug.shape == (80, 80)
+    assert segmaps_aug.arr.shape == (40, 40, 1)
+    img_aug_mask = img_aug > 255*0.1
+    segmaps_aug_mask = ia.imresize_single_image(
+        segmaps_aug.arr, (80, 80), interpolation="nearest") > 0
+    same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
     assert (same / img_aug_mask.size) >= 0.94
 
     # -----------
@@ -3806,8 +4087,13 @@ def test_ElasticTransformation():
 
 def test_Rot90():
     img = np.arange(4*4*3).reshape((4, 4, 3)).astype(np.uint8)
-    hms = ia.HeatmapsOnImage(img[..., 0:1].astype(np.float32) / 255, shape=(4, 4, 3))
-    hms_smaller = ia.HeatmapsOnImage(np.float32([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]), shape=(4, 8, 3))
+    hms = HeatmapsOnImage(img[..., 0:1].astype(np.float32) / 255, shape=(4, 4, 3))
+    hms_smaller = HeatmapsOnImage(
+        np.float32([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]), shape=(4, 8, 3))
+    segmaps = SegmentationMapsOnImage(
+        img[..., 0:1].astype(np.int32), shape=(4, 4, 3))
+    segmaps_smaller = SegmentationMapsOnImage(
+        np.int32([[0, 1, 2], [3, 4, 5]]), shape=(4, 8, 3))
     kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=3)], shape=(4, 8, 3))
     psoi = ia.PolygonsOnImage(
         [ia.Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])],
@@ -3830,6 +4116,11 @@ def test_Rot90():
         assert hms_aug.arr_0to1.dtype == hms.arr_0to1.dtype
         assert np.allclose(hms_aug.arr_0to1, hms.arr_0to1)
         assert hms_aug.shape == hms.shape
+
+        segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+        assert segmaps_aug.arr.dtype == segmaps.arr.dtype
+        assert np.allclose(segmaps_aug.arr, segmaps.arr)
+        assert segmaps_aug.shape == segmaps.shape
 
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
         assert kpsoi_aug.shape == kpsoi.shape
@@ -3860,6 +4151,17 @@ def test_Rot90():
         assert hms_smaller_aug.arr_0to1.dtype == hms_smaller.arr_0to1.dtype
         assert np.allclose(hms_smaller_aug.arr_0to1, np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0)))
         assert hms_smaller_aug.shape == (8, 4, 3)
+
+        segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+        assert segmaps_aug.arr.dtype == segmaps.arr.dtype
+        assert np.allclose(segmaps_aug.arr, np.rot90(segmaps.arr, 1, axes=(1, 0)))
+        assert segmaps_aug.shape == (4, 4, 3)
+
+        segmaps_smaller_aug = aug.augment_segmentation_maps([segmaps_smaller])[0]
+        assert segmaps_smaller_aug.arr.dtype == segmaps_smaller.arr.dtype
+        assert np.allclose(segmaps_smaller_aug.arr,
+                           np.rot90(segmaps_smaller.arr, 1, axes=(1, 0)))
+        assert segmaps_smaller_aug.shape == (8, 4, 3)
 
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
         assert kpsoi_aug.shape == (8, 4, 3)
@@ -3895,6 +4197,17 @@ def test_Rot90():
     assert np.allclose(hms_smaller_aug.arr_0to1, np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
     assert hms_smaller_aug.shape == (4, 8, 3)
 
+    segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+    assert segmaps_aug.arr.dtype == segmaps.arr.dtype
+    assert np.allclose(segmaps_aug.arr, np.rot90(segmaps.arr, 2, axes=(1, 0)))
+    assert segmaps_aug.shape == (4, 4, 3)
+
+    segmaps_smaller_aug = aug.augment_segmentation_maps([segmaps_smaller])[0]
+    assert segmaps_smaller_aug.arr.dtype == segmaps_smaller.arr.dtype
+    assert np.allclose(segmaps_smaller_aug.arr,
+                       np.rot90(segmaps_smaller.arr, 2, axes=(1, 0)))
+    assert segmaps_smaller_aug.shape == (4, 8, 3)
+
     kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
     assert kpsoi_aug.shape == (4, 8, 3)
     expected_k2_kps = [(8-expected_k1_kps[0][1]+kp_offset, expected_k1_kps[0][0]),
@@ -3929,6 +4242,18 @@ def test_Rot90():
         assert hms_smaller_aug.arr_0to1.dtype == hms_smaller.arr_0to1.dtype
         assert np.allclose(hms_smaller_aug.arr_0to1, np.rot90(hms_smaller.arr_0to1, 3, axes=(1, 0)))
         assert hms_smaller_aug.shape == (8, 4, 3)
+
+        segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+        assert segmaps_aug.arr.dtype == segmaps.arr.dtype
+        assert np.allclose(segmaps_aug.arr,
+                           np.rot90(segmaps.arr, 3, axes=(1, 0)))
+        assert segmaps_aug.shape == (4, 4, 3)
+
+        segmaps_smaller_aug = aug.augment_segmentation_maps([segmaps_smaller])[0]
+        assert segmaps_smaller_aug.arr.dtype == segmaps_smaller.arr.dtype
+        assert np.allclose(segmaps_smaller_aug.arr,
+                           np.rot90(segmaps_smaller.arr, 3, axes=(1, 0)))
+        assert segmaps_smaller_aug.shape == (8, 4, 3)
 
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
         assert kpsoi_aug.shape == (8, 4, 3)
@@ -3976,6 +4301,20 @@ def test_Rot90():
     hms_smaller_rot = np.clip(ia.imresize_single_image(hms_smaller_rot, (2, 3), interpolation="cubic"), 0.0, 1.0)
     assert np.allclose(hms_smaller_aug.arr_0to1, hms_smaller_rot)
     assert hms_smaller_aug.shape == (4, 8, 3)
+
+    segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+    assert segmaps_aug.arr.dtype == segmaps.arr.dtype
+    assert np.allclose(segmaps_aug.arr,
+                       np.rot90(segmaps.arr, 1, axes=(1, 0)))
+    assert segmaps_aug.shape == (4, 4, 3)
+
+    segmaps_smaller_aug = aug.augment_segmentation_maps([segmaps_smaller])[0]
+    assert segmaps_smaller_aug.arr.dtype == segmaps_smaller.arr.dtype
+    segmaps_smaller_rot = np.rot90(segmaps_smaller.arr, 1, axes=(1, 0))
+    segmaps_smaller_rot = ia.imresize_single_image(segmaps_smaller_rot, (2, 3),
+                                                   interpolation="nearest")
+    assert np.allclose(segmaps_smaller_aug.arr, segmaps_smaller_rot)
+    assert segmaps_smaller_aug.shape == (4, 8, 3)
 
     kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
     assert kpsoi_aug.shape == (4, 8, 3)
@@ -4027,6 +4366,16 @@ def test_Rot90():
     assert np.allclose(hms_aug[1].arr_0to1, np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
     assert np.allclose(hms_aug[2].arr_0to1, np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0)))
     assert np.allclose(hms_aug[3].arr_0to1, np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
+
+    segmaps_aug = aug.augment_segmentation_maps([segmaps_smaller] * 4)
+    assert segmaps_aug[0].shape == (8, 4, 3)
+    assert segmaps_aug[1].shape == (4, 8, 3)
+    assert segmaps_aug[2].shape == (8, 4, 3)
+    assert segmaps_aug[3].shape == (4, 8, 3)
+    assert np.allclose(segmaps_aug[0].arr, np.rot90(segmaps_smaller.arr, 1, axes=(1, 0)))
+    assert np.allclose(segmaps_aug[1].arr, np.rot90(segmaps_smaller.arr, 2, axes=(1, 0)))
+    assert np.allclose(segmaps_aug[2].arr, np.rot90(segmaps_smaller.arr, 1, axes=(1, 0)))
+    assert np.allclose(segmaps_aug[3].arr, np.rot90(segmaps_smaller.arr, 2, axes=(1, 0)))
 
     kpsoi_aug = aug.augment_keypoints([kpsoi] * 4)
     assert kpsoi_aug[0].shape == (8, 4, 3)

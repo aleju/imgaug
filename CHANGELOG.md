@@ -187,7 +187,175 @@
   for `Voronoi(DropoutPointsSampler(RelativeRegularGridPointsSampler))`. #348
 * Add to `Resize` the ability to resize the shorter and longer sides of
   images (instead of only height/width). #349
+* Improved the docstrings of most augmenters and added code examples. #302
+* Changes to support numpy 1.17 #302
+    * [rarely breaking] Deactivated support for `int64` in
+      `imgaug.dtypes.clip_()`. This is due to numpy 1.17 turning `int64` to
+      `float64` in `numpy.clip()` (possible that this happened in some way
+      before 1.17 too).
+    * [rarely breaking] Changed `imgaug.dtypes.clip()` to never clip `int32`
+      in-place, as `numpy.clip()` turns it into `float64` since 1.17 (possible
+      that this happend in some way before 1.17 too).
+    * [rarely breaking] Deactivated support for `int64` in
+      `ReplaceElementwise`. See `clip` issue above.
+    * [rarely breaking] Changed `parameters.DiscreteUniform` to always return
+      arrays of dtype `int32`. Previously it would automatically return
+      `int64`.
+    * [rarely breaking] Changed `parameters.Deterministic` to always return
+      `int32` for integers and always `float32` for floats.
+    * [rarely breaking] Changed `parameters.Choice` to limit integer
+      dtypes to `int32` or lower, uints to `uint32` or lower and floats
+      to `float32` or lower. 
+    * [rarely breaking] Changed `parameters.Binomial` and `parameters.Poisson`
+      to always return `int32`.
+    * [rarely breaking] Changed `parameters.Normal`,
+      `parameters.TruncatedNormal`, `parameters.Laplace`,
+      `parameters.ChiSquare`, `parameters.Weibull`, `parameters.Uniform` and
+      `parameters.Beta` to always return `float32`.
+    * [rarely breaking] Changed `augmenters.arithmetic.Add`,
+      `augmenters.arithmetic.AddElementwise`, `augmenters.arithmetic.Multiply`
+      and `augmenters.arithmetic.MultiplyElementwise` to no longer internally
+      increase itemsize of dtypes by a factor of 2 for
+      dtypes `uint16`, `int8` and `uint16`. For `Multiply*` this also
+      covers `float16` and `float32`. This protects against crashes due to
+      clipping `int64` or `uint64` data. In rare cases this can lead to
+      overflows if `image + random samples` or `image * random samples`
+      exceeds the value range of `int32` or `uint32`. This change may affect
+      various other augmenters that are wrappers around the mentioned ones,
+      e.g. `AdditiveGaussianNoise`.
+    * [rarely breaking] Decreased support of dtypes `uint16`, `int8`,
+      `int16`, `float16`, `float32` and `bool` in `augmenters.arithmetic.Add`,
+      `AddElementwise`, `Multiply` and `MultiplyElementwise` from "yes" to
+      "limited".
+    * [rarely breaking] Decreased support of dtype `int64` in
+      `augmenters.arithmetic.ReplaceElementwise` from "yes" to "no". This also
+      affects all `*Noise` augmenters (e.g. `AdditiveGaussianNoise`,
+      `ImpulseNoise`), all `Dropout` augmenters, all `Salt` augmenters and
+      all `Pepper` augmenters.
+    * [rarely breaking] Changed `augmenters.contrast.adjust_contrast_log`
+      and thereby `LogContrast` to no longer support dtypes `uint32`, `uint64`,
+      `int32` and `int64`.
 
+
+## Improved Segmentation Map Augmentation #302
+
+Augmentation of Segmentation Maps is now faster and more memory efficient.
+This required some breaking changes to `SegmentationMapOnImage`.
+To adapt to the new version, the following steps should be sufficient for most
+users:
+
+* Rename all calls of `SegmentationMapOnImage` to `SegmentationMapsOnImage`
+  (Map -> Maps).
+* Rename all calls of `SegmentationMapsOnImage.get_arr_int()` to
+  `SegmentationMapsOnImage.get_arr()`.
+* Remove the argument `nb_classes` from all calls of `SegmentationMapsOnImage`.
+* Remove the arguments `background_id` and `background_threshold` from all
+  calls as these are no longer supported.
+* Ensure that the input array to `SegmentationMapsOnImage` is always an
+  int-like (int, uint or bool).
+  Float arrays are no longer accepted.
+* Adapt all calls `SegmentationMapsOnImage.draw()` and
+  `SegmentationMapsOnImage.draw_on_image()`, as both of these now return a
+  list of drawn images instead of a single array. (For a segmentation map
+  array of shape `(H,W,C)` they return `C` drawn images. In most cases `C=1`,
+  so simply call `draw()[0]` or `draw_on_image()[0]`.)
+* Ensure that if `SegmentationMapsOnImage.arr` is accessed anywhere, the
+  respective code can handle the new `int32` `(H,W,#maps)` array form.
+  Previously it was `float32` and the channel-axis had the same size as the
+  max class id (+1) that could appear in the map.
+
+Changes:
+
+- Changes to class `SegmentationMapOnImage`:
+    - Renamed `SegmentationMapOnImage` to plural `SegmentationMapsOnImage`
+      and deprecated the old name.
+      This was changed due to the input array now being allowed to contain
+      several channels, with each such channel containing one full segmentation
+      map.
+    - Changed `SegmentationMapsOnImage.__init__` to produce a deprecation
+      warning for float arrays as `arr` argument.
+    - **[breaking]** Changed `SegmentationMapsOnImage.__init__` to no longer
+      accept `uint32` and larger itemsizes as `arr` argument, only `uint16`
+      and below is accepted. For `int` the allowed maximum is `int32`.
+    - Changed `SegmentationMapsOnImage.__init__` to always accept `(H,W,C)`
+      `arr` arguments.
+    - **[breaking]** Changed  `SegmentationMapsOnImage.arr` to always be
+      `int32` `(H,W,#maps)` (previously: `float32` `(H,W,#nb_classes)`).
+    - Deprecated `nb_classes` argument in `SegmentationMapsOnImage.__init__`.
+      The argument is now ignored.
+    - Added `SegmentationMapsOnImage.get_arr()`, which always returns a
+      segmentation map array with similar dtype and number of dimensions as
+      was originally input when creating a class instance.
+    - Deprecated `SegmentationMapsOnImage.get_arr_int()`.
+      The method is now an alias for `get_arr()`.
+    - `SegmentationMapsOnImage.draw()`:
+        - **[breaking]** Removed argument `return_foreground_mask` and
+          corresponding optional output. To generate a foreground mask
+          for the `c`-th segmentation map on a given image (usually `c=0`),
+          use `segmentation_map.arr[:, :, c] != 0`, assuming that `0` is
+          the integer index of your background class. 
+        - **[breaking]** Changed output of drawn image to be a list of arrays
+          instead of a single array (one per `C` in input array `(H,W,C)`).
+        - Refactored to be a wrapper around
+          `SegmentationMapsOnImage.draw_on_image()`.
+        - The `size` argument may now be any of: A single `None` (keep shape),
+          a single integer (use as height and width), a single float (relative
+          change to shape) or a tuple of these values. ("shape" here denotes
+          the value of the `.shape` attribute.)
+    - `SegmentationMapsOnImage.draw_on_image()`:
+        - **[breaking]** The argument `background_threshold` is now deprecated
+          and ignored. Providing it will lead to a deprecation warning.
+        - **[breaking]** Changed output of drawn image to be a list of arrays
+          instead of a single array (one per `C` in input array `(H,W,C)`).
+    - Changed `SegmentationMapsOnImage.resize()` to use nearest neighbour
+      interpolation by default.
+    - **[rarely breaking]** Changed `SegmentationMapsOnImage.copy()` to create
+      a shallow copy instead of being an alias for `deepcopy()`.
+    - Added optional arguments `arr` and `shape` to
+      `SegmentationMapsOnImage.copy()`.
+    - Added optional arguments `arr` and `shape` to
+      `SegmentationMapsOnImage.deepcopy()`.
+    - Refactored `SegmentationMapsOnImage.pad()`,
+      `SegmentationMapsOnImage.pad_to_aspect_ratio()` and
+      `SegmentationMapsOnImage.resize()` to generate new object instances via
+      `SegmentationMapsOnImage.deepcopy()`.
+    - **[rarely breaking]** Renamed `SegmentationMapsOnImage.input_was` to
+      `SegmentationMapsOnImage._input_was`.
+    - **[rarely breaking]** Changed `SegmentationMapsOnImage._input_was` to
+      always save `(input array dtype, input array ndim)` instead of mixtures
+      of strings/ints that varied by dtype kind.
+    - **[rarely breaking]** Restrict `shape` argument in
+      `SegmentationMapsOnImage.__init__` to tuples instead of accepting all
+      iterables.
+    - **[breaking]** Removed `SegmentationMapsOnImage.to_heatmaps()` as the
+      new segmentation map class is too different to sustain the old heatmap
+      conversion methods.
+    - **[breaking]** Removed `SegmentationMapsOnImage.from_heatmaps()` as the
+      new segmentation map class is too different to sustain the old heatmap
+      conversion methods.
+- Changes to class `Augmenter`:
+    - **[breaking]** Automatic segmentation map normalization from arrays or
+      lists of arrays now expects a single `(N,H,W,C)` array (before:
+      `(N,H,W)`) or a list of `(H,W,C)` arrays (before: `(H,W)`).
+      This affects valid segmentation map inputs for `Augmenter.augment()`
+      and its alias `Augmenter.__call__()`,
+      `imgaug.augmentables.batches.UnnormalizedBatch()` and
+      `imgaug.augmentables.normalization.normalize_segmentation_maps()`.
+    - Added `Augmenter._augment_segmentation_maps()`.
+    - Changed `Augmenter.augment_segmentation_maps()` to no longer be a
+    wrapper around `Augmenter.augment_heatmaps()` and instead call
+    `Augmenter._augment_segmentation_maps()`.
+- Added special segmentation map handling to all augmenters that modified
+  segmentation maps
+  (`Sequential`, `SomeOf`, `Sometimes`, `WithChannels`,
+   `Lambda`, `AssertLambda`, `AssertShape`,
+   `Alpha`, `AlphaElementwise`, `WithColorspace`, `Fliplr`, `Flipud`, `Affine`,
+   `AffineCv2`, `PiecewiseAffine`, `PerspectiveTransform`, `ElasticTransformation`,
+   `Rot90`, `Resize`, `CropAndPad`, `PadToFixedSize`, `CropToFixedSize`,
+   `KeepSizeByResize`).
+   - **[rarely breaking]** This changes the order of arguments in
+     `Lambda.__init__()`, `AssertLambda.__init__()`, `AssertShape.__init__()`
+     and hence breaks if one relied on that order.
 
 ## Fixes
  

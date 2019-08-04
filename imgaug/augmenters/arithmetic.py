@@ -55,18 +55,21 @@ class Add(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested
+        * ``int16``: limited; tested
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested
+        * ``float32``: limited; tested
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -235,10 +238,15 @@ class Add(meta.Augmenter):
                 value = iadt.clip_to_dtype_value_range_(
                     value, dtype_target, validate=True)
 
+                # Itemsize is currently reduced from 2 to 1 due to clip no
+                # longer supporting int64, which can cause issues with int32
+                # samples (32*2 = 64bit).
+                # TODO limit value ranges of samples to int16/uint16 for
+                #      security
                 image, value = iadt.promote_array_dtypes_(
                     [image, value],
                     dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=2)
+                    increase_itemsize_factor=1)
                 image = np.add(image, value, out=image, casting="no")
 
                 image = iadt.restore_dtypes_(image, input_dtype)
@@ -272,18 +280,21 @@ class AddElementwise(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested (1)
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested (1)
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -423,10 +434,11 @@ class AddElementwise(meta.Augmenter):
                 if value.shape[2] == 1:
                     value = np.tile(value, (1, 1, nb_channels))
 
+                # Decreased itemsize from 2 to 1 here, see explanation in Add.
                 image, value = iadt.promote_array_dtypes_(
                     [image, value],
                     dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=2)
+                    increase_itemsize_factor=1)
                 image = np.add(image, value, out=image, casting="no")
                 image = iadt.restore_dtypes_(image, input_dtype)
                 images[i] = image
@@ -782,18 +794,18 @@ class Multiply(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested (1)
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested (1)
 
         Note: tests were only conducted for rather small multipliers, around
         -10.0 to +10.0.
@@ -805,6 +817,9 @@ class Multiply(meta.Augmenter):
         the value range of ``float16``, as it has the same number of
         bytes (two) as ``uint16``. This is done to make overflows less likely
         to occur.
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
+              +/-inf.
 
     Parameters
     ----------
@@ -956,11 +971,13 @@ class Multiply(meta.Augmenter):
                 else:
                     mul = mul_samples_i[0:1].reshape((1, 1, 1))
 
-                mul_min = np.min(mul)
-                mul_max = np.max(mul)
-                is_not_increasing_value_range = (
-                        (-1 <= mul_min <= 1)
-                        and (-1 <= mul_max <= 1))
+                # deactivated itemsize increase due to clip causing problems
+                # with int64, see Add
+                # mul_min = np.min(mul)
+                # mul_max = np.max(mul)
+                # is_not_increasing_value_range = (
+                #         (-1 <= mul_min <= 1)
+                #         and (-1 <= mul_max <= 1))
 
                 # We limit here the value range of the mul parameter to the
                 # bytes in the image's dtype. This prevents overflow problems
@@ -980,8 +997,9 @@ class Multiply(meta.Augmenter):
                 image, mul = iadt.promote_array_dtypes_(
                     [image, mul],
                     dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=(
-                        1 if is_not_increasing_value_range else 2)
+                    # increase_itemsize_factor=(
+                    #     1 if is_not_increasing_value_range else 2)
+                    increase_itemsize_factor=1
                 )
                 image = np.multiply(image, mul, out=image, casting="no")
 
@@ -1015,18 +1033,18 @@ class MultiplyElementwise(meta.Augmenter):
     dtype support::
 
         * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
+        * ``uint16``: limited; tested (1)
         * ``uint32``: no
         * ``uint64``: no
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
         * ``int32``: no
         * ``int64``: no
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
         * ``float64``: no
         * ``float128``: no
-        * ``bool``: yes; tested
+        * ``bool``: limited; tested (1)
 
         Note: tests were only conducted for rather small multipliers, around
         -10.0 to +10.0.
@@ -1038,6 +1056,9 @@ class MultiplyElementwise(meta.Augmenter):
         the value range of ``float16``, as it has the same number of
         bytes (two) as ``uint16``. This is done to make overflows less likely
         to occur.
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -1172,10 +1193,12 @@ class MultiplyElementwise(meta.Augmenter):
                 # TODO maybe introduce to stochastic parameters some way to
                 #      get the possible min/max values, could make things
                 #      faster for dropout to get 0/1 min/max from the binomial
+                # itemsize decrease is currently deactivated due to issues
+                # with clip and int64, see Add
                 mul_min = np.min(mul)
                 mul_max = np.max(mul)
-                is_not_increasing_value_range = (
-                    (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1))
+                # is_not_increasing_value_range = (
+                #     (-1 <= mul_min <= 1) and (-1 <= mul_max <= 1))
 
                 # We limit here the value range of the mul parameter to the
                 # bytes in the image's dtype. This prevents overflow problems
@@ -1199,8 +1222,9 @@ class MultiplyElementwise(meta.Augmenter):
                 image, mul = iadt.promote_array_dtypes_(
                     [image, mul],
                     dtypes=[image, dtype_target],
-                    increase_itemsize_factor=(
-                        1 if is_not_increasing_value_range else 2)
+                    increase_itemsize_factor=1
+                    # increase_itemsize_factor=(
+                    #     1 if is_not_increasing_value_range else 2)
                 )
                 image = np.multiply(image, mul, out=image, casting="no")
                 image = iadt.restore_dtypes_(image, input_dtype)
@@ -1513,7 +1537,7 @@ class ReplaceElementwise(meta.Augmenter):
         * ``int8``: yes; tested
         * ``int16``: yes; tested
         * ``int32``: yes; tested
-        * ``int64``: yes; tested
+        * ``int64``: no (2)
         * ``float16``: yes; tested
         * ``float32``: yes; tested
         * ``float64``: yes; tested
@@ -1524,6 +1548,8 @@ class ReplaceElementwise(meta.Augmenter):
               :func:`imgaug.dtypes.clip_to_dtype_value_range_()` does not
               support it, which again is because numpy.clip() seems to not
               support it.
+        - (2) `int64` is disallowed due to being converted to `float64`
+              by :func:`numpy.clip` since 1.17 (possibly also before?).
 
     Parameters
     ----------
@@ -1583,6 +1609,36 @@ class ReplaceElementwise(meta.Augmenter):
     Replaces ``5`` percent of all pixels in each image by either ``0``
     or ``255``.
 
+    >>> import imgaug.augmenters as iaa
+    >>> aug = ReplaceElementwise(0.1, [0, 255], per_channel=0.5)
+
+    For ``50%`` of all images, replace ``10%`` of all pixels with either the
+    value ``0`` or the value ``255`` (same as in the previous example). For
+    the other ``50%`` of all images, replace *channelwise* ``10%`` of all
+    pixels with either the value ``0`` or the value ``255``. So, it will be
+    very rare for each pixel to have all channels replaced by ``255`` or
+    ``0``.
+
+    >>> import imgaug.augmenters as iaa
+    >>> import imgaug.parameters as iap
+    >>> aug = ReplaceElementwise(0.1, iap.Normal(128, 0.4*128), per_channel=0.5)
+
+    Replace ``10%`` of all pixels by gaussian noise centered around ``128``.
+    Both the replacement mask and the gaussian noise are sampled channelwise
+    for ``50%`` of all images.
+
+    >>> import imgaug.augmenters as iaa
+    >>> import imgaug.parameters as iap
+    >>> aug = ReplaceElementwise(
+    >>>     iap.FromLowerResolution(iap.Binomial(0.1), size_px=8),
+    >>>     iap.Normal(128, 0.4*128),
+    >>>     per_channel=0.5)
+
+    Replace ``10%`` of all pixels by gaussian noise centered around ``128``.
+    Sample the replacement mask at a lower resolution (``8x8`` pixels) and
+    upscale it to the image size, resulting in coarse areas being replaced by
+    gaussian noise.
+
     """
 
     def __init__(self, mask, replacement, per_channel=False,
@@ -1601,10 +1657,10 @@ class ReplaceElementwise(meta.Augmenter):
         iadt.gate_dtypes(images,
                          allowed=["bool",
                                   "uint8", "uint16", "uint32",
-                                  "int8", "int16", "int32", "int64",
+                                  "int8", "int16", "int32",
                                   "float16", "float32", "float64"],
                          disallowed=["uint64", "uint128", "uint256",
-                                     "int128", "int256",
+                                     "int64", "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
 
@@ -1702,7 +1758,7 @@ class ReplaceElementwise(meta.Augmenter):
 
 def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
     """
-    Apply impulse noise to images.
+    Add impulse noise to images.
 
     This is identical to ``SaltAndPepper``, except that `per_channel` is
     always set to ``True``.
@@ -1710,6 +1766,37 @@ def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
     dtype support::
 
         See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
+
+    Parameters
+    ----------
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of replacing a pixel to impulse noise.
+
+            * If a float, then that value will always be used as the
+              probability.
+            * If a tuple ``(a, b)``, then a probability will be sampled
+              uniformly per image from the interval ``[a, b]``.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a image-sized mask will be
+              sampled from that parameter per image. Any value ``>0.5`` in
+              that mask will be replaced with impulse noise noise.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ImpulseNoise(0.1)
+
+    Replace ``10%`` of all pixels with impulse noise.
 
     """
     return SaltAndPepper(
@@ -1769,8 +1856,13 @@ def SaltAndPepper(p=0, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.SaltAndPepper(0.05)
 
-    Replaces ``5`` percent of all pixels with salt and pepper noise (white-ish
-    and black-ish colors).
+    Replace ``5%`` of all pixels with salt and pepper noise.
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.SaltAndPepper(0.05, per_channel=True)
+
+    Replace *channelwise* ``5%`` of all pixels with salt and pepper
+    noise.
 
     """
     if name is None:
@@ -1890,11 +1982,23 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CoarseSaltAndPepper(0.05, size_percent=(0.01, 0.1))
 
-    Marks ``5`` percent of all pixels in a mask to be replaced by salt/pepper
-    noise. The mask has ``1`` to ``10`` percent the size of the input image.
+    Marks ``5%`` of all pixels in a mask to be replaced by salt/pepper
+    noise. The mask has ``1%`` to ``10%`` the size of the input image.
     The mask is then upscaled to the input image size, leading to large
     rectangular areas being marked as to be replaced. These areas are then
     replaced in the input image by salt/pepper noise.
+
+    >>> aug = iaa.CoarseSaltAndPepper(0.05, size_px=(4, 16))
+
+    Same as in the previous example, but the replacement mask before upscaling
+    has a size between ``4x4`` and ``16x16`` pixels (the axis sizes are sampled
+    independently, i.e. the mask may be rectangular).
+
+    >>> aug = iaa.CoarseSaltAndPepper(
+    >>>    0.05, size_percent=(0.01, 0.1), per_channel=True)
+
+    Same as in the first example, but mask and replacement are each sampled
+    independently per image channel.
 
     """
     mask = iap.handle_probability_param(
@@ -1928,6 +2032,9 @@ def Salt(p=0, per_channel=False,
          name=None, deterministic=False, random_state=None):
     """
     Replace pixels in images with salt noise, i.e. white-ish pixels.
+
+    This augmenter is similar to ``SaltAndPepper``, but adds no pepper noise to
+    images.
 
     dtype support::
 
@@ -1973,7 +2080,7 @@ def Salt(p=0, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Salt(0.05)
 
-    Replaces ``5`` percent of all pixels with salt noise (white-ish colors).
+    Replace ``5%`` of all pixels with salt noise (white-ish colors).
 
     """
 
@@ -2093,8 +2200,8 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CoarseSalt(0.05, size_percent=(0.01, 0.1))
 
-    Marks ``5`` percent of all pixels in a mask to be replaced by salt
-    noise. The mask has ``1`` to ``10`` percent the size of the input image.
+    Mark ``5%`` of all pixels in a mask to be replaced by salt
+    noise. The mask has ``1%`` to ``10%`` the size of the input image.
     The mask is then upscaled to the input image size, leading to large
     rectangular areas being marked as to be replaced. These areas are then
     replaced in the input image by salt noise.
@@ -2136,8 +2243,11 @@ def Pepper(p=0, per_channel=False,
     """
     Replace pixels in images with pepper noise, i.e. black-ish pixels.
 
-    This is similar to dropout, but slower and the black pixels are not
-    uniformly black.
+    This augmenter is similar to ``SaltAndPepper``, but adds no salt noise to
+    images.
+
+    This augmenter is similar to ``Dropout``, but slower and the black pixels
+    are not uniformly black.
 
     dtype support::
 
@@ -2183,7 +2293,7 @@ def Pepper(p=0, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Pepper(0.05)
 
-    Replaces ``5`` percent of all pixels with pepper noise (black-ish colors).
+    Replace ``5%`` of all pixels with pepper noise (black-ish colors).
 
     """
 
@@ -2301,8 +2411,8 @@ def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CoarsePepper(0.05, size_percent=(0.01, 0.1))
 
-    Marks ``5`` percent of all pixels in a mask to be replaced by pepper
-    noise. The mask has ``1`` to ``10`` percent the size of the input image.
+    Mark ``5%`` of all pixels in a mask to be replaced by pepper
+    noise. The mask has ``1%`` to ``10%`` the size of the input image.
     The mask is then upscaled to the input image size, leading to large
     rectangular areas being marked as to be replaced. These areas are then
     replaced in the input image by pepper noise.
@@ -2716,7 +2826,7 @@ def ContrastNormalization(alpha=1.0, per_channel=False,
 # TODO try adding per channel somehow
 class JpegCompression(meta.Augmenter):
     """
-    Degrade image quality by applying JPEG compression to it.
+    Degrade the quality of images by JPEG-compressing them.
 
     During JPEG compression, high frequency components (e.g. edges) are removed.
     With low compression (strength) only the highest frequency components are
@@ -2763,7 +2873,7 @@ class JpegCompression(meta.Augmenter):
               per image and used as the compression.
             * If a ``StochasticParameter``, then ``N`` samples will be drawn
               from that parameter per ``N`` input images, each representing the
-              compression for the ``n``th image.
+              compression for the ``n``-th image.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2777,12 +2887,12 @@ class JpegCompression(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.JpegCompression(compression=(80, 95))
+    >>> aug = iaa.JpegCompression(compression=(70, 99))
 
-    Removes high frequency components in images based on JPEG compression with
-    a *compression strength* between ``80`` and ``95`` (randomly and
+    Remove high frequency components in images via JPEG compression with
+    a *compression strength* between ``70`` and ``99`` (randomly and
     uniformly sampled per image). This corresponds to a (very low) *quality*
-    setting of 5 to 20.
+    setting of ``1`` to ``30``.
 
     """
     def __init__(self, compression=50,

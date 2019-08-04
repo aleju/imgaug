@@ -200,13 +200,15 @@ def get_value_range_of_dtype(dtype):
 # TODO call this function wherever data is clipped
 def clip_(array, min_value, max_value):
     # uint64 is disallowed, because numpy's clip seems to convert it to float64
+    # int64 is disallowed, because numpy's clip converts it to float64 since
+    # 1.17
     # TODO find the cause for that
     gate_dtypes(array,
                 allowed=["bool",
                          "uint8", "uint16", "uint32",
-                         "int8", "int16", "int32", "int64",
+                         "int8", "int16", "int32",
                          "float16", "float32", "float64", "float128"],
-                disallowed=["uint64"],
+                disallowed=["uint64", "int64"],
                 augmenter=None)
 
     # If the min of the input value range is above the allowed min, we do not
@@ -229,6 +231,12 @@ def clip_(array, min_value, max_value):
         # argument
         if len(array.shape) == 0:
             array = np.clip(array, min_value, max_value)
+        elif array.dtype.name == "int32":
+            # Since 1.17 (before maybe too?), numpy.clip() turns int32
+            # to float64. float64 should cover the whole value range of int32,
+            # so the dtype is not rejected here.
+            # TODO Verify this. Is rounding needed before conversion?
+            array = np.clip(array, min_value, max_value).astype(array.dtype)
         else:
             array = np.clip(array, min_value, max_value, out=array)
     return array

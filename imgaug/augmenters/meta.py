@@ -289,10 +289,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 elif isinstance(batch[0], ia.HeatmapsOnImage):
                     batch_normalized = Batch(heatmaps=batch, data=(idx,))
                     batch_orig_dt = "list_of_imgaug.HeatmapsOnImage"
-                elif isinstance(batch[0], ia.SegmentationMapOnImage):
+                elif isinstance(batch[0], ia.SegmentationMapsOnImage):
                     batch_normalized = Batch(segmentation_maps=batch,
                                              data=(idx,))
-                    batch_orig_dt = "list_of_imgaug.SegmentationMapOnImage"
+                    batch_orig_dt = "list_of_imgaug.SegmentationMapsOnImage"
                 elif isinstance(batch[0], ia.KeypointsOnImage):
                     batch_normalized = Batch(keypoints=batch, data=(idx,))
                     batch_orig_dt = "list_of_imgaug.KeypointsOnImage"
@@ -306,7 +306,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     raise Exception(
                         ("Unknown datatype in batch[0]. Expected numpy array "
                          + "or imgaug.HeatmapsOnImage or "
-                         + "imgaug.SegmentationMapOnImage or "
+                         + "imgaug.SegmentationMapsOnImage or "
                          + "imgaug.KeypointsOnImage or "
                          + "imgaug.BoundingBoxesOnImage, "
                          + "or imgaug.PolygonsOnImage, "
@@ -317,7 +317,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                      + "imgaug.UnnormalizedBatch or "
                      + "numpy array or list of (numpy array or "
                      + "imgaug.HeatmapsOnImage or "
-                     + "imgaug.SegmentationMapOnImage "
+                     + "imgaug.SegmentationMapsOnImage "
                      + "or imgaug.KeypointsOnImage or "
                      + "imgaug.BoundingBoxesOnImage or "
                      + "imgaug.PolygonsOnImage). Got %s.") % (type(batch),))
@@ -353,7 +353,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_unnormalized = batch_aug.images_aug
             elif batch_orig_dt == "list_of_imgaug.HeatmapsOnImage":
                 batch_unnormalized = batch_aug.heatmaps_aug
-            elif batch_orig_dt == "list_of_imgaug.SegmentationMapOnImage":
+            elif batch_orig_dt == "list_of_imgaug.SegmentationMapsOnImage":
                 batch_unnormalized = batch_aug.segmentation_maps_aug
             elif batch_orig_dt == "list_of_imgaug.KeypointsOnImage":
                 batch_unnormalized = batch_aug.keypoints_aug
@@ -766,9 +766,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         Augment heatmaps on multiple images.
 
         This is the internal version of ``augment_heatmaps()``.
-        It is called from ``augment_heatmaps()`` and should usually not be called
-        directly.
-        This method may heatmaps in-place.
+        It is called from ``augment_heatmaps()`` and should usually not be
+        called directly.
+        This method may augment heatmaps in-place.
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
@@ -818,48 +818,117 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        segmaps : imgaug.SegmentationMapOnImage or \
-                  list of imgaug.SegmentationMapOnImage
-            Segmentation map(s) to augment. Either a single heatmap or a list of
-            segmentation maps.
+        segmaps : imgaug.SegmentationMapsOnImage or \
+                  list of imgaug.SegmentationMapsOnImage
+            Segmentation map(s) to augment. Either a single heatmap or a list
+            of segmentation maps.
 
         parents : None or list of imgaug.augmenters.meta.Augmenter, optional
             Parent augmenters that have previously been called before the
-            call to this function. Usually you can leave this parameter as None.
-            It is set automatically for child augmenters.
+            call to this function. Usually you can leave this parameter as
+            ``None``. It is set automatically for child augmenters.
 
         hooks : None or imgaug.HooksHeatmaps, optional
-            HooksHeatmaps object to dynamically interfere with the augmentation process.
+            HooksHeatmaps object to dynamically interfere with the augmentation
+            process.
 
         Returns
         -------
-        segmaps_aug : imgaug.SegmentationMapOnImage or \
-                      list of imgaug.SegmentationMapOnImage
+        segmaps_aug : imgaug.SegmentationMapsOnImage or \
+                      list of imgaug.SegmentationMapsOnImage
             Corresponding augmented segmentation map(s).
 
         """
+        if self.deterministic:
+            state_orig = self.random_state.get_state()
+
+        if parents is None:
+            parents = []
+
         input_was_single_instance = False
-        if isinstance(segmaps, ia.SegmentationMapOnImage):
+        if isinstance(segmaps, ia.SegmentationMapsOnImage):
             input_was_single_instance = True
             segmaps = [segmaps]
 
-        heatmaps_with_nonempty = [segmap.to_heatmaps(only_nonempty=True, not_none_if_no_nonempty=True)
-                                  for segmap in segmaps]
-        heatmaps = [heatmaps_i for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
-        nonempty_class_indices = [nonempty_class_indices_i
-                                  for heatmaps_i, nonempty_class_indices_i in heatmaps_with_nonempty]
-        heatmaps_aug = self.augment_heatmaps(heatmaps, parents=parents, hooks=hooks)
-        segmaps_aug = []
-        for segmap, heatmaps_aug_i, nonempty_class_indices_i in zip(segmaps, heatmaps_aug, nonempty_class_indices):
-            segmap_aug = ia.SegmentationMapOnImage.from_heatmaps(heatmaps_aug_i,
-                                                                 class_indices=nonempty_class_indices_i,
-                                                                 nb_classes=segmap.nb_classes)
-            segmap_aug.input_was = segmap.input_was
-            segmaps_aug.append(segmap_aug)
+        ia.do_assert(
+            ia.is_iterable(segmaps),
+            "Expected to get list of imgaug.SegmentationMapsOnImage() "
+            "instances, got %s." % (type(segmaps),))
+        ia.do_assert(
+            all([isinstance(segmaps_i, ia.SegmentationMapsOnImage)
+                 for segmaps_i in segmaps]),
+            "Expected to get list of imgaug.SegmentationMapsOnImage() "
+            "instances, got %s." % (
+                [type(el) for el in segmaps],))
+
+        # copy, but only if topmost call or hooks are provided
+        if len(parents) == 0 or hooks is not None:
+            segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
+        else:
+            segmaps_copy = segmaps
+
+        if hooks is not None:
+            segmaps_copy = hooks.preprocess(segmaps_copy, augmenter=self, parents=parents)
+
+        if (hooks is None and self.activated) \
+                or (hooks is not None
+                    and hooks.is_activated(segmaps_copy, augmenter=self, parents=parents, default=self.activated)):
+            if len(segmaps_copy) > 0:
+                segmaps_result = self._augment_segmentation_maps(
+                    segmaps_copy,
+                    random_state=ia.copy_random_state(self.random_state),
+                    parents=parents,
+                    hooks=hooks
+                )
+                ia.forward_random_state(self.random_state)
+            else:
+                segmaps_result = segmaps_copy
+        else:
+            segmaps_result = segmaps_copy
+
+        if hooks is not None:
+            segmaps_result = hooks.postprocess(segmaps_result, augmenter=self, parents=parents)
+
+        if self.deterministic:
+            self.random_state.set_state(state_orig)
 
         if input_was_single_instance:
-            return segmaps_aug[0]
-        return segmaps_aug
+            return segmaps_result[0]
+        return segmaps_result
+
+    # TODO this differs from _augment_heatmaps(), which is an abstractmethod
+    #      either this method should also be abstract or _augment_heatmaps()
+    #      should return the input heatmaps unchanged
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        """
+        Augment segmentation maps on multiple images.
+
+        This is the internal version of ``augment_segmentation_maps()``.
+        It is called from ``augment_segmentation_maps()`` and should usually
+        not be called directly.
+        This method may augment segmentation maps in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        segmaps : list of imgaug.SegmentationMapsOnImage
+            Segmentation maps to augment. They may be changed in-place.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_segmentation_maps`.
+
+        hooks : imgaug.HooksHeatmaps or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_segmentation_maps`.
+
+        Returns
+        ----------
+        images : list of imgaug.SegmentationMapsOnImage
+            The augmented segmentation maps.
+
+        """
+        return segmaps
 
     def augment_keypoints(self, keypoints_on_images, parents=None, hooks=None):
         """
@@ -1536,17 +1605,21 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         a tuple of augmentables. It will return the same types of augmentables
         (only augmented) as input into the method. This behaviour
         is partly specific to the python version:
-          * In _python 3.6+_ (if ``return_batch=False``):
+
+          * In **python 3.6+** (if ``return_batch=False``):
+
             * Three or more augmentables may be used as input.
             * The return order matches the order of the named arguments, e.g.
-              ``B, D, C = augment(B=x, D=y, C=z)``.
+              ``x_aug, y_aug, z_aug = augment(X=x, Y=y, Z=z)``.
             * None of the provided named arguments has to be `image` or `images`.
-          * In _python <3.6_  (if ``return_batch=False``):
+
+          * In **python <3.6** (if ``return_batch=False``):
+
             * One or two augmentables may be used as input, not more than that.
-            * At least one the augmentables has to be `image` or `images`.
+            * At least one of the augmentables has to be `image` or `images`.
             * The augmented images are always returned first.
 
-        If `return_batch` was not set to ``False``, an instance of
+        If `return_batch` was set to ``True``, an instance of
         ``UnnormalizedBatch`` will be returned. The output is the same for
         all python version and any number or combination of augmentables may
         be provided.
@@ -1563,7 +1636,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             optional
             The image to augment. Only this or `images` can be set, not both.
             If `return_batch` is ``False`` and the python version is below 3.6,
-            either this or `images` _must_ be provided.
+            either this or `images` **must** be provided.
 
         images : None \
             or (N,H,W,C) ndarray \
@@ -1573,7 +1646,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             optional
             The images to augment. Only this or `image` can be set, not both.
             If `return_batch` is ``False`` and the python version is below 3.6,
-            either this or `image` _must_ be provided.
+            either this or `image` **must** be provided.
 
         heatmaps : None \
             or (N,H,W,C) ndarray \
@@ -1589,12 +1662,12 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         segmentation_maps : None \
             or (N,H,W) ndarray \
-            or imgaug.augmentables.segmaps.SegmentationMapOnImage \
+            or imgaug.augmentables.segmaps.SegmentationMapsOnImage \
             or iterable of (H,W) ndarray \
-            or iterable of imgaug.augmentables.segmaps.SegmentationMapOnImage, \
+            or iterable of imgaug.augmentables.segmaps.SegmentationMapsOnImage, \
             optional
             The segmentation maps to augment.
-            If anything else than ``SegmentationMapOnImage``, then the number
+            If anything else than ``SegmentationMapsOnImage``, then the number
             of segmaps must match the number of images provided via parameter
             `images`. The number is contained either in ``N`` or the first
             iterable's size.
@@ -1666,12 +1739,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             required for valid polygons).
             The following datatypes will be interpreted as a single polygon on
             a single image:
+
               * ``imgaug.augmentables.polys.Polygon``
               * ``iterable of tuple of number``
               * ``iterable of imgaug.augmentables.kps.Keypoint``
 
             The following datatypes will be interpreted as multiple polygons
             on a single image:
+
               * ``imgaug.augmentables.polys.PolygonsOnImage``
               * ``iterable of imgaug.augmentables.polys.Polygon``
               * ``iterable of iterable of tuple of number``
@@ -1680,6 +1755,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
             The following datatypes will be interpreted as multiple polygons on
             multiple images:
+
               * ``(N,#polys,#points,2) ndarray``
               * ``iterable of (#polys,#points,2) ndarray``
               * ``iterable of iterable of (#points,2) ndarray``
@@ -2843,6 +2919,24 @@ class Sequential(Augmenter, list):
                     )
         return heatmaps
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            if self.random_order:
+                for index in random_state.permutation(len(self)):
+                    segmaps = self[index].augment_segmentation_maps(
+                        segmaps=segmaps,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+            else:
+                for augmenter in self:
+                    segmaps = augmenter.augment_segmentation_maps(
+                        segmaps=segmaps,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+        return segmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if hooks is None or hooks.is_propagating(keypoints_on_images,
                                                  augmenter=self, parents=parents, default=True):
@@ -3151,6 +3245,13 @@ class SomeOf(Augmenter, list):
         return self._augment_non_images(heatmaps, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _augfunc(augmenter_, segmaps_to_aug_, parents_, hooks_):
+            return augmenter_.augment_segmentation_maps(
+                segmaps_to_aug_, parents_, hooks_)
+        return self._augment_non_images(segmaps, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
             return augmenter_.augment_keypoints(koi_to_aug_, parents_, hooks_)
@@ -3421,6 +3522,12 @@ class Sometimes(Augmenter):
         return self._augment_non_images(heatmaps, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _augfunc(augs_, inputs_, parents_, hooks_):
+            return augs_.augment_segmentation_maps(inputs_, parents_, hooks_)
+        return self._augment_non_images(segmaps, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(augs_, inputs_, parents_, hooks_):
             return augs_.augment_keypoints(inputs_, parents_, hooks_)
@@ -3611,6 +3718,12 @@ class WithChannels(Augmenter):
             return children_.augment_heatmaps(inputs_, parents_, hooks_)
         return self._augment_non_images(heatmaps, parents, hooks, _augfunc)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_segmentation_maps(
+                inputs_, parents_, hooks_)
+        return self._augment_non_images(segmaps, parents, hooks, _augfunc)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(children_, inputs_, parents_, hooks_):
             return children_.augment_keypoints(inputs_, parents_, hooks_)
@@ -3766,6 +3879,18 @@ class Lambda(Augmenter):
         If this is ``None`` instead of a function, the heatmaps will not be
         altered.
 
+    func_segmentation_maps : None or callable, optional
+        The function to call for each batch of segmentation maps.
+        It must follow the form
+
+            ``function(segmaps, random_state, parents, hooks)``
+
+        and return the changed segmaps (may be transformed in-place).
+        This is essentially the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_segmentation_maps`.
+        If this is ``None`` instead of a function, the segmentatio maps will
+        not be altered.
+
     func_keypoints : None or callable, optional
         The function to call for each batch of image keypoints.
         It must follow the form
@@ -3837,12 +3962,14 @@ class Lambda(Augmenter):
 
     """
 
-    def __init__(self, func_images=None, func_heatmaps=None, func_keypoints=None,
+    def __init__(self, func_images=None, func_heatmaps=None,
+                 func_segmentation_maps=None, func_keypoints=None,
                  func_polygons="keypoints",
                  name=None, deterministic=False, random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
+        self.func_segmentation_maps = func_segmentation_maps
         self.func_keypoints = func_keypoints
         self.func_polygons = func_polygons
 
@@ -3855,13 +3982,25 @@ class Lambda(Augmenter):
         if self.func_heatmaps is not None:
             result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
             ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() "
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage "
                          + "instances, got %s." % (type(result),))
             ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage() "
+                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage "
                          + "instances, got %s." % ([type(el) for el in result],))
             return result
         return heatmaps
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        if self.func_segmentation_maps is not None:
+            result = self.func_segmentation_maps(segmaps, random_state, parents, hooks)
+            ia.do_assert(ia.is_iterable(result),
+                         "Expected callback function for segmentation maps to return list of imgaug.SegmentationMapsOnImage() "
+                         + "instances, got %s." % (type(result),))
+            ia.do_assert(all([isinstance(el, ia.SegmentationMapsOnImage) for el in result]),
+                         "Expected callback function for segmentation maps to return list of imgaug.SegmentationMapsOnImage() "
+                         + "instances, got %s." % ([type(el) for el in result],))
+            return result
+        return segmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if self.func_keypoints is not None:
@@ -3895,7 +4034,8 @@ class Lambda(Augmenter):
         return []
 
 
-def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
+def AssertLambda(func_images=None, func_heatmaps=None,
+                 func_segmentation_maps=None, func_keypoints=None,
                  func_polygons=None, name=None, deterministic=False,
                  random_state=None):
     """
@@ -3937,6 +4077,13 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
         It essentially reuses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_heatmaps`.
 
+    func_segmentation_maps : None or callable, optional
+        The function to call for each batch of segmentation maps.
+        It must follow the form ``function(segmaps, random_state, parents, hooks)``
+        and return either True (valid input) or False (invalid input).
+        It essentially reuses the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_segmentation_maps`.
+
     func_keypoints : None or callable, optional
         The function to call for each batch of keypoints.
         It must follow the form ``function(keypoints_on_images, random_state, parents, hooks)``
@@ -3971,6 +4118,11 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
                      "Input heatmaps did not fulfill user-defined assertion in AssertLambda.")
         return heatmaps
 
+    def func_segmentation_maps_assert(segmaps, random_state, parents, hooks):
+        ia.do_assert(func_segmentation_maps(segmaps, random_state, parents, hooks),
+                     "Input segmentation maps did not fulfill user-defined assertion in AssertLambda.")
+        return segmaps
+
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
         ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents, hooks),
                      "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
@@ -3985,13 +4137,16 @@ def AssertLambda(func_images=None, func_heatmaps=None, func_keypoints=None,
         name = "Unnamed%s" % (ia.caller_name(),)
     return Lambda(func_images_assert if func_images is not None else None,
                   func_heatmaps_assert if func_heatmaps is not None else None,
+                  func_segmentation_maps_assert if func_segmentation_maps is not None else None,
                   func_keypoints_assert if func_keypoints is not None else None,
                   func_polygons_assert if func_polygons is not None else None,
                   name=name, deterministic=deterministic, random_state=random_state)
 
 
+# TODO add tests for segmaps
 def AssertShape(shape, check_images=True, check_heatmaps=True,
-                check_keypoints=True, check_polygons=True,
+                check_segmentation_maps=True, check_keypoints=True,
+                check_polygons=True,
                 name=None, deterministic=False, random_state=None):
     """
     Augmenter to make assumptions about the shape of input image(s), heatmaps and keypoints.
@@ -4035,10 +4190,17 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
 
     check_heatmaps : bool, optional
         Whether to validate input heatmaps via the given shape.
-        The number of heatmaps will be checked and for each Heatmaps
+        The number of heatmaps will be checked and for each ``HeatmapsOnImage``
         instance its array's height and width, but not the channel
         count as the channel number denotes the expected number of channels
         in images.
+
+    check_segmentation_maps : bool, optional
+        Whether to validate input segmentation maps via the given shape.
+        The number of segmentation maps will be checked and for each
+        ``SegmentationMapsOnImage`` instance its array's height and width, but
+        not the channel count as the channel number denotes the expected number
+        of channels in images.
 
     check_keypoints : bool, optional
         Whether to validate input keypoints via the given shape.
@@ -4141,6 +4303,19 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
                     compare(observed, expected, j, i)
         return heatmaps
 
+    def func_segmentation_maps(segmaps, _random_state, _parents, _hooks):
+        if check_segmentation_maps:
+            if shape[0] is not None:
+                compare(len(segmaps), shape[0], 0, "ALL")
+
+            for i in sm.xrange(len(segmaps)):
+                segmaps_i = segmaps[i]
+                for j in sm.xrange(len(shape[0:2])):
+                    expected = shape[j+1]
+                    observed = segmaps_i.arr.shape[j]
+                    compare(observed, expected, j, i)
+        return segmaps
+
     def func_keypoints(keypoints_on_images, _random_state, _parents, _hooks):
         if check_keypoints:
             if shape[0] is not None:
@@ -4170,14 +4345,18 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
     if name is None:
         name = "Unnamed%s" % (ia.caller_name(),)
 
-    return Lambda(func_images, func_heatmaps, func_keypoints, func_polygons,
+    return Lambda(func_images=func_images,
+                  func_heatmaps=func_heatmaps,
+                  func_segmentation_maps=func_segmentation_maps,
+                  func_keypoints=func_keypoints,
+                  func_polygons=func_polygons,
                   name=name, deterministic=deterministic,
                   random_state=random_state)
 
 
 class ChannelShuffle(Augmenter):
     """
-    Augmenter that randomly shuffles the channels in images.
+    Randomize the order of channels in input images.
 
     dtype support::
 
@@ -4218,13 +4397,17 @@ class ChannelShuffle(Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.ChannelShuffle(0.25)
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ChannelShuffle(0.35)
 
-    Shuffles channels for 25% of all images.
+    Shuffle all channels of 35% of all images.
 
-    >>> aug = iaa.ChannelShuffle(0.25, channels=[0, 1])
+    >>> aug = iaa.ChannelShuffle(0.35, channels=[0, 1])
 
-    Shuffles channels 0 and 1 with each other for 25% of all images.
+    Shuffle only channels ``0`` and ``1`` of 35% of all images. As the new
+    channel orders ``0, 1`` and ``1, 0`` are both valid outcomes of the
+    shuffling, it means that for ``0.35 * 0.5 = 0.175`` or 17.5% of all images
+    the order of channels ``0`` and ``1`` is inverted.
 
     """
 

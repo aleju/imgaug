@@ -167,7 +167,7 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
 
 class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
-    Augmenter to blend two image sources using an alpha/transparency value.
+    Alpha-blend two image sources using an alpha/opacity value.
 
     The two image sources can be imagined as branches.
     If a source is not given, it is automatically the same as the input.
@@ -175,10 +175,18 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
     Then the result images are defined as ``factor * A + (1-factor) * B``,
     where ``factor`` is an overlay factor.
 
-    For keypoint augmentation this augmenter will pick the keypoints either
-    from the first or the second branch. The first one is picked if
-    ``factor >= 0.5`` is true (per image). It is recommended to *not* use
-    augmenters that change keypoint positions with this class.
+    .. note::
+
+        It is not recommended to use ``Alpha`` with augmenters
+        that change the geometry of images (e.g. horizontal flips, affine
+        transformations) if you *also* want to augment coordinates (e.g.
+        keypoints, polygons, ...), as it is unclear which of the two
+        coordinate results (first or second branch) should be used as the
+        coordinates after augmentation.
+
+        Currently, if ``factor >= 0.5`` (per image), the results of the first
+        branch are used as the new coordinates, otherwise the results of the
+        second branch.
 
     dtype support::
 
@@ -236,41 +244,48 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
     --------
     >>> aug = iaa.Alpha(0.5, iaa.Grayscale(1.0))
 
-    Converts each image to grayscale and alpha-blends it by 50 percent with the
-    original image, thereby removing about 50 percent of all color. This
-    is equivalent to ``iaa.Grayscale(0.5)``.
+    Convert each image to pure grayscale and alpha-blend the result with the
+    original image using an alpha of ``50%``, thereby removing about ``50%`` of
+    all color. This is equivalent to ``iaa.Grayscale(0.5)``.
 
     >>> aug = iaa.Alpha((0.0, 1.0), iaa.Grayscale(1.0))
 
-    Converts each image to grayscale and alpha-blends it by a random percentage
-    (sampled per image) with the original image, thereby removing a random
-    percentage of all colors. This is equivalent to ``iaa.Grayscale((0.0, 1.0))``.
+    Same as in the previous example, but the alpha factor is sampled uniformly
+    from the interval ``[0.0, 1.0]`` once per image, thereby removing a random
+    fraction of all colors. This is equivalent to
+    ``iaa.Grayscale((0.0, 1.0))``.
 
-    >>> aug = iaa.Alpha((0.0, 1.0), iaa.Affine(rotate=(-20, 20)), per_channel=0.5)
+    >>> aug = iaa.Alpha(
+    >>>     (0.0, 1.0),
+    >>>     iaa.Affine(rotate=(-20, 20)),
+    >>>     per_channel=0.5)
 
-    Rotates each image by a random degree from the range ``[-20, 20]``. Then
-    alpha-blends that new image with the original one by a random factor from
-    the range ``[0.0, 1.0]``. In 50 percent of all cases, the blending happens
-    channel-wise and the factor is sampled independently per channel. As a
-    result, e.g. the red channel may look visible rotated (factor near 1.0),
-    while the green and blue channels may not look rotated (factors near 0.0).
-    NOTE: It is not recommended to use Alpha with augmenters that change the
-    positions of pixels if you *also* want to augment keypoints, as it is
-    unclear which of the two keypoint results (first or second branch) should
-    be used as the final result.
+    First, rotate each image by a random degree sampled uniformly from the
+    interval ``[-20, 20]``. Then, alpha-blend that new image with the original
+    one using a random factor sampled uniformly from the interval
+    ``[0.0, 1.0]``. For ``50%`` of all images, the blending happens
+    channel-wise and the factor is sampled independently per channel
+    (``per_channel=0.5``). As a result, e.g. the red channel may look visibly
+    rotated (factor near ``1.0``), while the green and blue channels may not
+    look rotated (factors near ``0.0``).
 
-    >>> aug = iaa.Alpha((0.0, 1.0), first=iaa.Add(10), second=iaa.Multiply(0.8))
+    >>> aug = iaa.Alpha(
+    >>>     (0.0, 1.0),
+    >>>     first=iaa.Add(100),
+    >>>     second=iaa.Multiply(0.2))
 
-    (A) Adds 10 to each image and (B) multiplies each image by 0.8. Then per
-    image a blending factor is sampled from the range ``[0.0, 1.0]``. If it is
-    close to 1.0, the results from (A) are mostly used, otherwise the ones
-    from (B). This is equivalent to
-    ``iaa.Sequential([iaa.Multiply(0.8), iaa.Alpha((0.0, 1.0), iaa.Add(10))])``.
+    Apply two branches of augmenters -- ``A`` and ``B`` -- *independently*
+    to input images and alpha-blend the results of these branches using a
+    factor ``f``. Branch ``A`` increases image pixel intensities by ``100``
+    and ``B`` multiplies the pixel intensities by ``0.2``. ``f`` is sampled
+    uniformly from the interval ``[0.0, 1.0]`` per image. The resulting images
+    contain a bit of ``A`` and a bit of ``B``.
 
-    >>> aug = iaa.Alpha(iap.Choice([0.25, 0.75]), iaa.MedianBlur((3, 7)))
+    >>> aug = iaa.Alpha([0.25, 0.75], iaa.MedianBlur(13))
 
-    Applies a random median blur to each image and alpha-blends the result with
-    the original image by either 25 or 75 percent strength.
+    Apply median blur to each image and alpha-blend the result with the
+    original image using an alpha factor of either exactly ``0.25`` or
+    exactly ``0.75`` (sampled once per image).
 
     """
 
@@ -383,6 +398,66 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
         return result
 
+    # TODO This is almost identical to coordinate based augmentation.
+    #      Merge the two.
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        nb_images = len(segmaps)
+        if nb_images == 0:
+            return segmaps
+
+        nb_channels = meta.estimate_max_number_of_channels(segmaps)
+        rss = ia.derive_random_states(random_state, 2)
+        per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
+        alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
+
+        result = segmaps
+
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                outputs_first = segmaps
+            else:
+                outputs_first = self.first.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                outputs_second = segmaps
+            else:
+                outputs_second = self.second.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            outputs_first = segmaps
+            outputs_second = segmaps
+
+        for i, (outputs_first_i, outputs_second_i) in enumerate(zip(outputs_first, outputs_second)):
+            # Segmap augmentation also works channel-wise based on image
+            # channels, even though the channels have different meanings
+            # between images and segmaps. This is done in order to keep the
+            # random values properly synchronized with the image augmentation
+            if per_channel[i] > 0.5:
+                nb_channels_i = segmaps[i].shape[2] if len(segmaps[i].shape) >= 3 else 1
+                alpha = np.average(alphas[i, 0:nb_channels_i])
+            else:
+                alpha = alphas[i, 0]
+            ia.do_assert(0 <= alpha <= 1.0)
+
+            # We cant choose "just a bit" of one segmentation map augmentation
+            # result without messing up the positions (interpolation doesn't
+            # make much sense here),
+            # so if the alpha is >= 0.5 (branch A is more visible than
+            # branch B), the result of branch A, otherwise branch B.
+            if alpha >= 0.5:
+                result[i] = outputs_first_i
+            else:
+                result[i] = outputs_second_i
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         def _augfunc(augs_, keypoints_on_images_, parents_, hooks_):
             return augs_.augment_keypoints(
@@ -437,7 +512,6 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             # coordinate augmentation also works channel-wise -- even though
             # e.g. keypoints do not have channels -- in order to keep the random
             # values properly synchronized with the image augmentation
-            # per_channel = self.per_channel.draw_sample(random_state=rs_image)
             if per_channel[i] > 0.5:
                 nb_channels_i = inputs[i].shape[2] if len(inputs[i].shape) >= 3 else 1
                 alpha = np.average(alphas[i, 0:nb_channels_i])
@@ -478,15 +552,30 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
 
 
 # TODO merge this with Alpha
+# FIXME the output of the third example makes it look like per_channel isn't
+#       working
 class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
-    Augmenter to blend two image sources pixelwise alpha/transparency values.
+    Alpha-blend two image sources using alpha/opacity values sampled per pixel.
 
-    This is the same as ``Alpha``, except that the transparency factor is
-    sampled per pixel instead of once per image (or a few times per image, if
-    per_channel is True).
+    This is the same as ``Alpha``, except that the opacity factor is
+    sampled once per *pixel* instead of once per *image* (or a few times per
+    image, if ``Alpha.per_channel`` is set to ``True``).
 
-    See ``Alpha`` for more description.
+    See ``Alpha`` for more details.
+
+    .. note::
+
+        It is not recommended to use ``AlphaElementwise`` with augmenters
+        that change the geometry of images (e.g. horizontal flips, affine
+        transformations) if you *also* want to augment coordinates (e.g.
+        keypoints, polygons, ...), as it is unclear which of the two
+        coordinate results (first or second branch) should be used as the
+        coordinates after augmentation.
+
+        Currently, if ``factor >= 0.5`` (per pixel), the results of the first
+        branch are used as the new coordinates, otherwise the results of the
+        second branch.
 
     dtype support::
 
@@ -544,42 +633,51 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     --------
     >>> aug = iaa.AlphaElementwise(0.5, iaa.Grayscale(1.0))
 
-    Converts each image to grayscale and overlays it by 50 percent with the
-    original image, thereby removing about 50 percent of all color. This
-    is equivalent to ``iaa.Grayscale(0.5)``. This is also equivalent to
-    ``iaa.Alpha(0.5, iaa.Grayscale(1.0))``, as the transparency factor is the
-    same for all pixels.
+    Convert each image to pure grayscale and alpha-blend the result with the
+    original image using an alpha of ``50%`` for all pixels, thereby removing
+    about ``50%`` of all color. This is equivalent to ``iaa.Grayscale(0.5)``.
+    This is also equivalent to ``iaa.Alpha(0.5, iaa.Grayscale(1.0))``, as
+    the opacity has a fixed value of ``0.5`` and is hence identical for all
+    pixels.
 
     >>> aug = iaa.AlphaElementwise((0, 1.0), iaa.Grayscale(1.0))
 
-    Converts each image to grayscale and alpha-blends it by a random percentage
-    (sampled per pixel) with the original image, thereby removing a random
-    percentage of all colors per pixel.
+    Same as in the previous example, but the alpha factor is sampled uniformly
+    from the interval ``[0.0, 1.0]`` once per pixel, thereby removing a random
+    fraction of all colors from each pixel. This is equivalent to
+    ``iaa.Grayscale((0.0, 1.0))``.
 
-    >>> aug = iaa.AlphaElementwise((0.0, 1.0), iaa.Affine(rotate=(-20, 20)), per_channel=0.5)
+    >>> aug = iaa.AlphaElementwise(
+    >>>     (0.0, 1.0),
+    >>>     iaa.Affine(rotate=(-20, 20)),
+    >>>     per_channel=0.5)
 
-    Rotates each image by a random degree from the range ``[-20, 20]``. Then
-    alpha-blends that new image with the original one by a random factor from
-    the range ``[0.0, 1.0]``, sampled per pixel. In 50 percent of all cases, the
-    blending happens channel-wise and the factor is sampled independently per
-    channel. As a result, e.g. the red channel may look visible rotated (factor
-    near 1.0), while the green and blue channels may not look rotated (factors
-    near 0.0). NOTE: It is not recommended to use Alpha with augmenters that
-    change the positions of pixels if you *also* want to augment keypoints, as
-    it is unclear which of the two keypoint results (first or second branch)
-    should be used as the final result.
+    First, rotate each image by a random degree sampled uniformly from the
+    interval ``[-20, 20]``. Then, alpha-blend that new image with the original
+    one using a random factor sampled uniformly from the interval
+    ``[0.0, 1.0]`` per pixel. For ``50%`` of all images, the blending happens
+    channel-wise and the factor is sampled independently per pixel *and*
+    channel (``per_channel=0.5``). As a result, e.g. the red channel may look
+    visibly rotated (factor near ``1.0``), while the green and blue channels
+    may not look rotated (factors near ``0.0``).
 
-    >>> aug = iaa.AlphaElementwise((0.0, 1.0), first=iaa.Add(10), second=iaa.Multiply(0.8))
+    >>> aug = iaa.AlphaElementwise(
+    >>>     (0.0, 1.0),
+    >>>     first=iaa.Add(100),
+    >>>     second=iaa.Multiply(0.2))
 
-    (A) Adds 10 to each image and (B) multiplies each image by 0.8. Then per
-    pixel a blending factor is sampled from the range ``[0.0, 1.0]``. If it is
-    close to 1.0, the results from (A) are mostly used, otherwise the ones
-    from (B).
+    Apply two branches of augmenters -- ``A`` and ``B`` -- *independently*
+    to input images and alpha-blend the results of these branches using a
+    factor ``f``. Branch ``A`` increases image pixel intensities by ``100``
+    and ``B`` multiplies the pixel intensities by ``0.2``. ``f`` is sampled
+    uniformly from the interval ``[0.0, 1.0]`` per pixel. The resulting images
+    contain a bit of ``A`` and a bit of ``B``.
 
-    >>> aug = iaa.AlphaElementwise(iap.Choice([0.25, 0.75]), iaa.MedianBlur((3, 7)))
+    >>> aug = iaa.AlphaElementwise([0.25, 0.75], iaa.MedianBlur(13))
 
-    Applies a random median blur to each image and alpha-blends the result with
-    the original image by either 25 or 75 percent strength (sampled per pixel).
+    Apply median blur to each image and alpha-blend the result with the
+    original image using an alpha factor of either exactly ``0.25`` or
+    exactly ``0.75`` (sampled once per pixel).
 
     """
 
@@ -598,6 +696,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
+        # TODO use SEED_MAX
         seeds = random_state.randint(0, 10**6, (nb_images,))
 
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
@@ -656,6 +755,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = heatmaps
         nb_heatmaps = len(heatmaps)
+        # TODO use SEED_MAX
         seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
 
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
@@ -708,6 +808,77 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             heatmaps_arr_aug = mask * heatmaps_first_i.arr_0to1 + (~mask) * heatmaps_second_i.arr_0to1
 
             result[i].arr_0to1 = heatmaps_arr_aug
+
+        return result
+
+    # TODO this is almost identical to heatmap aug, merge the two
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        def _sample_factor_mask(h_images, w_images, h_segmaps, w_segmaps, seed):
+            samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
+            ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
+
+            if (h_images, w_images) != (h_segmaps, w_segmaps):
+                samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
+                samples_c = ia.imresize_single_image(samples_c, (h_segmaps, w_segmaps), interpolation="cubic")
+                samples_c = samples_c.astype(np.float32) / 255.0
+
+            return samples_c
+
+        result = segmaps
+        nb_segmaps = len(segmaps)
+        # TODO use SEED_MAX
+        seeds = random_state.randint(0, 10**6, (nb_segmaps,))
+
+        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+            if self.first is None:
+                segmaps_first = segmaps
+            else:
+                segmaps_first = self.first.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                segmaps_second = segmaps
+            else:
+                segmaps_second = self.second.augment_segmentation_maps(
+                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            segmaps_first = segmaps
+            segmaps_second = segmaps
+
+        for i in sm.xrange(nb_segmaps):
+            segmaps_i = segmaps[i]
+            h_img, w_img = segmaps_i.shape[0:2]
+            h_segmaps, w_segmaps = segmaps_i.arr.shape[0:2]
+            nb_channels_img = segmaps_i.shape[2] if len(segmaps_i.shape) >= 3 else 1
+            nb_channels_segmaps = segmaps_i.arr.shape[2]
+            segmaps_first_i = segmaps_first[i]
+            segmaps_second_i = segmaps_second[i]
+            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            if per_channel > 0.5:
+                samples = []
+                for c in sm.xrange(nb_channels_img):
+                    # We sample here at the same size as the original image, as some effects
+                    # might not scale with image size. We sampled mask is then downscaled to the
+                    # heatmap size.
+                    samples_c = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, seeds[i]+1+c)
+                    samples.append(samples_c[..., np.newaxis])
+                samples = np.concatenate(samples, axis=2)
+                samples_avg = np.average(samples, axis=2)
+                samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_segmaps))
+            else:
+                samples = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, seeds[i])
+                samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_segmaps))
+
+            mask = samples_tiled >= 0.5
+            segmaps_arr_aug = mask * segmaps_first_i.arr + (~mask) * segmaps_second_i.arr
+
+            result[i].arr = segmaps_arr_aug
 
         return result
 
@@ -798,11 +969,11 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False, size_px_max=(2
                       iterations=(1, 3), aggregation_method="max", sigmoid=True, sigmoid_thresh=None,
                       name=None, deterministic=False, random_state=None):
     """
-    Augmenter to alpha-blend two image sources using simplex noise alpha masks.
+    Alpha-blend two image sources using simplex noise alpha masks.
 
     The alpha masks are sampled using a simplex noise method, roughly creating
-    connected blobs of 1s surrounded by 0s. If nearest neighbour upsampling
-    is used, these blobs can be rectangular with sharp edges.
+    connected blobs of 1s surrounded by 0s. If nearest neighbour
+    upsampling is used, these blobs can be rectangular with sharp edges.
 
     dtype support::
 
@@ -928,25 +1099,37 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False, size_px_max=(2
     --------
     >>> aug = iaa.SimplexNoiseAlpha(iaa.EdgeDetect(1.0))
 
-    Detects per image all edges, marks them in a black and white image and
-    then alpha-blends the result with the original image using simplex noise
+    Detect per image all edges, mark them in a black and white image and
+    then alpha-blend the result with the original image using simplex noise
     masks.
 
-    >>> aug = iaa.SimplexNoiseAlpha(iaa.EdgeDetect(1.0), upscale_method="linear")
+    >>> aug = iaa.SimplexNoiseAlpha(
+    >>>     iaa.EdgeDetect(1.0),
+    >>>     upscale_method="nearest")
 
-    Same as the first example, but uses only (smooth) linear upscaling to
-    scale the simplex noise masks to the final image sizes, i.e. no nearest
-    neighbour upsampling is used, which would result in rectangles with hard
+    Same as in the previous example, but using only nearest neighbour
+    upscaling to scale the simplex noise masks to the final image sizes, i.e.
+    no nearest linear upsampling is used. This leads to rectangles with sharp
     edges.
 
-    >>> aug = iaa.SimplexNoiseAlpha(iaa.EdgeDetect(1.0), sigmoid_thresh=iap.Normal(10.0, 5.0))
+    >>> aug = iaa.SimplexNoiseAlpha(
+    >>>     iaa.EdgeDetect(1.0),
+    >>>     upscale_method="linear")
 
-    Same as the first example, but uses a threshold for the sigmoid function
-    that is further to the right. This is more conservative, i.e. the generated
-    noise masks will be mostly black (values around 0.0), which means that
-    most of the original images (parameter/branch `second`) will be kept,
-    rather than using the results of the augmentation (parameter/branch
-    `first`).
+    Same as in the previous example, but using only linear upscaling to
+    scale the simplex noise masks to the final image sizes, i.e. no nearest
+    neighbour upsampling is used. This leads to rectangles with smooth edges.
+
+    >>> aug = iaa.SimplexNoiseAlpha(
+    >>>     iaa.EdgeDetect(1.0),
+    >>>     sigmoid_thresh=iap.Normal(10.0, 5.0))
+
+    Same as in the first example, but using a threshold for the sigmoid
+    function that is further to the right. This is more conservative, i.e.
+    the generated noise masks will be mostly black (values around ``0.0``),
+    which means that most of the original images (parameter/branch `second`)
+    will be kept, rather than using the results of the augmentation
+    (parameter/branch `first`).
 
     """
     upscale_method_default = iap.Choice(["nearest", "linear", "cubic"], p=[0.05, 0.6, 0.35])
@@ -986,7 +1169,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=F
                         sigmoid=0.5, sigmoid_thresh=None,
                         name=None, deterministic=False, random_state=None):
     """
-    Augmenter to alpha-blend two image sources using frequency noise masks.
+    Alpha-blend two image sources using frequency noise masks.
 
     The alpha masks are sampled using frequency noise of varying scales,
     which can sometimes create large connected blobs of 1s surrounded by 0s
@@ -1132,28 +1315,43 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=F
     --------
     >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0))
 
-    Detects per image all edges, marks them in a black and white image and
-    then alpha-blends the result with the original image using frequency noise
+    Detect per image all edges, mark them in a black and white image and
+    then alpha-blend the result with the original image using frequency noise
     masks.
 
-    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), upscale_method="linear")
+    >>> aug = iaa.FrequencyNoiseAlpha(
+    >>>     first=iaa.EdgeDetect(1.0),
+    >>>     upscale_method="nearest")
 
-    Same as the first example, but uses only (smooth) linear upscaling to
+    Same as the first example, but using only linear upscaling to
     scale the frequency noise masks to the final image sizes, i.e. no nearest
-    neighbour upsampling is used, which would result in rectangles with hard
-    edges.
+    neighbour upsampling is used. This results in smooth edges.
 
-    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), upscale_method="linear", exponent=-2, sigmoid=False)
+    >>> aug = iaa.FrequencyNoiseAlpha(
+    >>>     first=iaa.EdgeDetect(1.0),
+    >>>     upscale_method="linear")
 
-    Same as the previous example, but also limits the exponent to -2 and
-    deactivates the sigmoid, resulting in cloud-like patterns without sharp
-    edges.
+    Same as the first example, but using only linear upscaling to
+    scale the frequency noise masks to the final image sizes, i.e. no nearest
+    neighbour upsampling is used. This results in smooth edges.
 
-    >>> aug = iaa.FrequencyNoiseAlpha(first=iaa.EdgeDetect(1.0), sigmoid_thresh=iap.Normal(10.0, 5.0))
+    >>> aug = iaa.FrequencyNoiseAlpha(
+    >>>     first=iaa.EdgeDetect(1.0),
+    >>>     upscale_method="linear",
+    >>>     exponent=-2,
+    >>>     sigmoid=False)
 
-    Same as the first example, but uses a threshold for the sigmoid function
+    Same as in the previous example, but with the exponent set to a constant
+    ``-2`` and the sigmoid deactivated, resulting in cloud-like patterns
+    without sharp edges.
+
+    >>> aug = iaa.FrequencyNoiseAlpha(
+    >>>     first=iaa.EdgeDetect(1.0),
+    >>>     sigmoid_thresh=iap.Normal(10.0, 5.0))
+
+    Same as the first example, but using a threshold for the sigmoid function
     that is further to the right. This is more conservative, i.e. the generated
-    noise masks will be mostly black (values around 0.0), which means that
+    noise masks will be mostly black (values around ``0.0``), which means that
     most of the original images (parameter/branch `second`) will be kept,
     rather than using the results of the augmentation (parameter/branch
     `first`).

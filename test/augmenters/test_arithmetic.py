@@ -1329,7 +1329,7 @@ class TestCoarseDropout(unittest.TestCase):
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
-class TestMultiple(unittest.TestCase):
+class TestMultiply(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -1543,6 +1543,7 @@ class TestMultiple(unittest.TestCase):
     def test_other_dtypes_uint_int(self):
         # uint, int
         for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            dtype = np.dtype(dtype)
             min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             image = np.full((3, 3), 10, dtype=dtype)
@@ -1607,11 +1608,13 @@ class TestMultiple(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == max_value)
 
-            image = np.full((3, 3), max_value, dtype=dtype)
-            aug = iaa.Multiply(10)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == max_value)
+            # non-uint8 currently don't increase the itemsize
+            if dtype.name == "uint8":
+                image = np.full((3, 3), max_value, dtype=dtype)
+                aug = iaa.Multiply(10)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype.type == dtype
+                assert np.all(image_aug == max_value)
 
             image = np.full((3, 3), max_value, dtype=dtype)
             aug = iaa.Multiply(0)
@@ -1619,40 +1622,44 @@ class TestMultiple(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == 0)
 
-            image = np.full((3, 3), max_value, dtype=dtype)
-            aug = iaa.Multiply(-2)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == min_value)
-
-            for _ in sm.xrange(10):
-                image = np.full((1, 1, 3), 10, dtype=dtype)
-                aug = iaa.Multiply(iap.Uniform(0.5, 1.5))
+            # non-uint8 currently don't increase the itemsize
+            if dtype.name == "uint8":
+                image = np.full((3, 3), max_value, dtype=dtype)
+                aug = iaa.Multiply(-2)
                 image_aug = aug.augment_image(image)
                 assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
-                assert len(np.unique(image_aug)) == 1
+                assert np.all(image_aug == min_value)
 
-                image = np.full((1, 1, 100), 10, dtype=dtype)
-                aug = iaa.Multiply(iap.Uniform(0.5, 1.5), per_channel=True)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
-                assert len(np.unique(image_aug)) > 1
+            # non-uint8 currently don't increase the itemsize
+            if dtype.name == "uint8":
+                for _ in sm.xrange(10):
+                    image = np.full((1, 1, 3), 10, dtype=dtype)
+                    aug = iaa.Multiply(iap.Uniform(0.5, 1.5))
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
+                    assert len(np.unique(image_aug)) == 1
 
-                image = np.full((1, 1, 3), 10, dtype=dtype)
-                aug = iaa.Multiply(iap.DiscreteUniform(1, 3))
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
-                assert len(np.unique(image_aug)) == 1
+                    image = np.full((1, 1, 100), 10, dtype=dtype)
+                    aug = iaa.Multiply(iap.Uniform(0.5, 1.5), per_channel=True)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
+                    assert len(np.unique(image_aug)) > 1
 
-                image = np.full((1, 1, 100), 10, dtype=dtype)
-                aug = iaa.Multiply(iap.DiscreteUniform(1, 3), per_channel=True)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
-                assert len(np.unique(image_aug)) > 1
+                    image = np.full((1, 1, 3), 10, dtype=dtype)
+                    aug = iaa.Multiply(iap.DiscreteUniform(1, 3))
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+                    assert len(np.unique(image_aug)) == 1
+
+                    image = np.full((1, 1, 100), 10, dtype=dtype)
+                    aug = iaa.Multiply(iap.DiscreteUniform(1, 3), per_channel=True)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+                    assert len(np.unique(image_aug)) > 1
 
     def test_other_dtypes_float(self):
         # float
@@ -1677,11 +1684,12 @@ class TestMultiple(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert _allclose(image_aug, 20.0)
 
-            image = np.full((3, 3), max_value, dtype=dtype)
-            aug = iaa.Multiply(-10)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, min_value)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), max_value, dtype=dtype)
+            # aug = iaa.Multiply(-10)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert _allclose(image_aug, min_value)
 
             image = np.full((3, 3), max_value, dtype=dtype)
             aug = iaa.Multiply(0.0)
@@ -1695,11 +1703,12 @@ class TestMultiple(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert _allclose(image_aug, 0.5*max_value)
 
-            image = np.full((3, 3), min_value, dtype=dtype)
-            aug = iaa.Multiply(-2.0)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, max_value)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), min_value, dtype=dtype)
+            # aug = iaa.Multiply(-2.0)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert _allclose(image_aug, max_value)
 
             image = np.full((3, 3), min_value, dtype=dtype)
             aug = iaa.Multiply(0.0)
@@ -1708,6 +1717,8 @@ class TestMultiple(unittest.TestCase):
             assert _allclose(image_aug, 0.0)
 
             # using tolerances of -100 - 1e-2 and 100 + 1e-2 is not enough for float16, had to be increased to -/+ 1e-1
+            # deactivated, because itemsize increase was deactivated
+            """
             for _ in sm.xrange(10):
                 image = np.full((1, 1, 3), 10.0, dtype=dtype)
                 aug = iaa.Multiply(iap.Uniform(-10, 10))
@@ -1738,6 +1749,7 @@ class TestMultiple(unittest.TestCase):
                 assert image_aug.dtype.type == dtype
                 assert np.all(np.logical_and(-100 - 1e-1 < image_aug, image_aug < 100 + 1e-1))
                 assert not np.allclose(image_aug[:, :, 1:], image_aug[:, :, :-1])
+            """
 
 
 class TestMultiplyElementwise(unittest.TestCase):
@@ -1979,6 +1991,7 @@ class TestMultiplyElementwise(unittest.TestCase):
     def test_other_dtypes_uint_int(self):
         # uint, int
         for dtype in [np.uint8, np.uint16, np.int8, np.int16]:
+            dtype = np.dtype(dtype)
             min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             image = np.full((3, 3), 10, dtype=dtype)
@@ -1987,11 +2000,12 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == 10)
 
-            image = np.full((3, 3), 10, dtype=dtype)
-            aug = iaa.MultiplyElementwise(10)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == 100)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), 10, dtype=dtype)
+            # aug = iaa.MultiplyElementwise(10)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert np.all(image_aug == 100)
 
             image = np.full((3, 3), 10, dtype=dtype)
             aug = iaa.MultiplyElementwise(0.5)
@@ -2005,18 +2019,20 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == 0)
 
-            if np.dtype(dtype).kind == "u":
-                image = np.full((3, 3), 10, dtype=dtype)
-                aug = iaa.MultiplyElementwise(-1)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(image_aug == 0)
-            else:
-                image = np.full((3, 3), 10, dtype=dtype)
-                aug = iaa.MultiplyElementwise(-1)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(image_aug == -10)
+            # partially deactivated, because itemsize increase was deactivated
+            if dtype.name == "uint8":
+                if dtype.kind == "u":
+                    image = np.full((3, 3), 10, dtype=dtype)
+                    aug = iaa.MultiplyElementwise(-1)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(image_aug == 0)
+                else:
+                    image = np.full((3, 3), 10, dtype=dtype)
+                    aug = iaa.MultiplyElementwise(-1)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(image_aug == -10)
 
             image = np.full((3, 3), int(center_value), dtype=dtype)
             aug = iaa.MultiplyElementwise(1)
@@ -2024,18 +2040,21 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == int(center_value))
 
-            image = np.full((3, 3), int(center_value), dtype=dtype)
-            aug = iaa.MultiplyElementwise(1.2)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == int(1.2 * int(center_value)))
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), int(center_value), dtype=dtype)
+            # aug = iaa.MultiplyElementwise(1.2)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert np.all(image_aug == int(1.2 * int(center_value)))
 
-            if np.dtype(dtype).kind == "u":
-                image = np.full((3, 3), int(center_value), dtype=dtype)
-                aug = iaa.MultiplyElementwise(100)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(image_aug == max_value)
+            # deactivated, because itemsize increase was deactivated
+            if dtype.name == "uint8":
+                if dtype.kind == "u":
+                    image = np.full((3, 3), int(center_value), dtype=dtype)
+                    aug = iaa.MultiplyElementwise(100)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(image_aug == max_value)
 
             image = np.full((3, 3), max_value, dtype=dtype)
             aug = iaa.MultiplyElementwise(1)
@@ -2043,11 +2062,12 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == max_value)
 
-            image = np.full((3, 3), max_value, dtype=dtype)
-            aug = iaa.MultiplyElementwise(10)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == max_value)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), max_value, dtype=dtype)
+            # aug = iaa.MultiplyElementwise(10)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert np.all(image_aug == max_value)
 
             image = np.full((3, 3), max_value, dtype=dtype)
             aug = iaa.MultiplyElementwise(0)
@@ -2055,46 +2075,50 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == 0)
 
-            image = np.full((3, 3), max_value, dtype=dtype)
-            aug = iaa.MultiplyElementwise(-2)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == min_value)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), max_value, dtype=dtype)
+            # aug = iaa.MultiplyElementwise(-2)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert np.all(image_aug == min_value)
 
-            for _ in sm.xrange(10):
-                image = np.full((5, 5, 3), 10, dtype=dtype)
-                aug = iaa.MultiplyElementwise(iap.Uniform(0.5, 1.5))
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
-                assert len(np.unique(image_aug)) > 1
-                assert np.all(image_aug[..., 0] == image_aug[..., 1])
+            # partially deactivated, because itemsize increase was deactivated
+            if dtype.name == "uint8":
+                for _ in sm.xrange(10):
+                    image = np.full((5, 5, 3), 10, dtype=dtype)
+                    aug = iaa.MultiplyElementwise(iap.Uniform(0.5, 1.5))
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
+                    assert len(np.unique(image_aug)) > 1
+                    assert np.all(image_aug[..., 0] == image_aug[..., 1])
 
-                image = np.full((1, 1, 100), 10, dtype=dtype)
-                aug = iaa.MultiplyElementwise(iap.Uniform(0.5, 1.5), per_channel=True)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
-                assert len(np.unique(image_aug)) > 1
+                    image = np.full((1, 1, 100), 10, dtype=dtype)
+                    aug = iaa.MultiplyElementwise(iap.Uniform(0.5, 1.5), per_channel=True)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(5 <= image_aug, image_aug <= 15))
+                    assert len(np.unique(image_aug)) > 1
 
-                image = np.full((5, 5, 3), 10, dtype=dtype)
-                aug = iaa.MultiplyElementwise(iap.DiscreteUniform(1, 3))
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
-                assert len(np.unique(image_aug)) > 1
-                assert np.all(image_aug[..., 0] == image_aug[..., 1])
+                    image = np.full((5, 5, 3), 10, dtype=dtype)
+                    aug = iaa.MultiplyElementwise(iap.DiscreteUniform(1, 3))
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+                    assert len(np.unique(image_aug)) > 1
+                    assert np.all(image_aug[..., 0] == image_aug[..., 1])
 
-                image = np.full((1, 1, 100), 10, dtype=dtype)
-                aug = iaa.MultiplyElementwise(iap.DiscreteUniform(1, 3), per_channel=True)
-                image_aug = aug.augment_image(image)
-                assert image_aug.dtype.type == dtype
-                assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
-                assert len(np.unique(image_aug)) > 1
+                    image = np.full((1, 1, 100), 10, dtype=dtype)
+                    aug = iaa.MultiplyElementwise(iap.DiscreteUniform(1, 3), per_channel=True)
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.type == dtype
+                    assert np.all(np.logical_and(10 <= image_aug, image_aug <= 30))
+                    assert len(np.unique(image_aug)) > 1
 
     def test_other_dtypes_float(self):
         # float
         for dtype in [np.float16, np.float32]:
+            dtype = np.dtype(dtype)
             min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             if dtype == np.float16:
@@ -2109,17 +2133,19 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert _allclose(image_aug, 10.0)
 
-            image = np.full((3, 3), 10.0, dtype=dtype)
-            aug = iaa.MultiplyElementwise(2.0)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, 20.0)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), 10.0, dtype=dtype)
+            # aug = iaa.MultiplyElementwise(2.0)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert _allclose(image_aug, 20.0)
 
-            image = np.full((3, 3), max_value, dtype=dtype)
-            aug = iaa.MultiplyElementwise(-10)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, min_value)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), max_value, dtype=dtype)
+            # aug = iaa.MultiplyElementwise(-10)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert _allclose(image_aug, min_value)
 
             image = np.full((3, 3), max_value, dtype=dtype)
             aug = iaa.MultiplyElementwise(0.0)
@@ -2133,11 +2159,12 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert _allclose(image_aug, 0.5*max_value)
 
-            image = np.full((3, 3), min_value, dtype=dtype)
-            aug = iaa.MultiplyElementwise(-2.0)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, max_value)
+            # deactivated, because itemsize increase was deactivated
+            # image = np.full((3, 3), min_value, dtype=dtype)
+            # aug = iaa.MultiplyElementwise(-2.0)
+            # image_aug = aug.augment_image(image)
+            # assert image_aug.dtype.type == dtype
+            # assert _allclose(image_aug, max_value)
 
             image = np.full((3, 3), min_value, dtype=dtype)
             aug = iaa.MultiplyElementwise(0.0)
@@ -2146,6 +2173,8 @@ class TestMultiplyElementwise(unittest.TestCase):
             assert _allclose(image_aug, 0.0)
 
             # using tolerances of -100 - 1e-2 and 100 + 1e-2 is not enough for float16, had to be increased to -/+ 1e-1
+            # deactivated, because itemsize increase was deactivated
+            """
             for _ in sm.xrange(10):
                 image = np.full((50, 1, 3), 10.0, dtype=dtype)
                 aug = iaa.MultiplyElementwise(iap.Uniform(-10, 10))
@@ -2176,6 +2205,7 @@ class TestMultiplyElementwise(unittest.TestCase):
                 assert image_aug.dtype.type == dtype
                 assert np.all(np.logical_and(-100 - 1e-1 < image_aug, image_aug < 100 + 1e-1))
                 assert not np.allclose(image_aug[:, :, 1:], image_aug[:, :, :-1])
+            """
 
 
 class TestReplaceElementwise(unittest.TestCase):
@@ -2392,7 +2422,8 @@ class TestReplaceElementwise(unittest.TestCase):
 
     def test_other_dtypes_uint_int(self):
         # uint, int
-        for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32, np.int64]:
+        for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]:
+            dtype = np.dtype(dtype)
             min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             aug = iaa.ReplaceElementwise(mask=1, replacement=1)
@@ -2407,17 +2438,21 @@ class TestReplaceElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.all(image_aug == 2)
 
-            aug = iaa.ReplaceElementwise(mask=1, replacement=max_value)
-            image = np.full((3, 3), min_value, dtype=dtype)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == max_value)
+            # deterministic stochastic parameters are by default int32 for
+            # any integer value and hence cannot cover the full uint32 value
+            # range
+            if dtype.name != "uint32":
+                aug = iaa.ReplaceElementwise(mask=1, replacement=max_value)
+                image = np.full((3, 3), min_value, dtype=dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype.type == dtype
+                assert np.all(image_aug == max_value)
 
-            aug = iaa.ReplaceElementwise(mask=1, replacement=min_value)
-            image = np.full((3, 3), max_value, dtype=dtype)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert np.all(image_aug == min_value)
+                aug = iaa.ReplaceElementwise(mask=1, replacement=min_value)
+                image = np.full((3, 3), max_value, dtype=dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype.type == dtype
+                assert np.all(image_aug == min_value)
 
             aug = iaa.ReplaceElementwise(mask=1, replacement=iap.Uniform(1.0, 10.0))
             image = np.full((100, 1), 0, dtype=dtype)
@@ -2443,6 +2478,7 @@ class TestReplaceElementwise(unittest.TestCase):
     def test_other_dtypes_float(self):
         # float
         for dtype in [np.float16, np.float32, np.float64]:
+            dtype = np.dtype(dtype)
             min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
 
             atol = 1e-3*max_value if dtype == np.float16 else 1e-9 * max_value
@@ -2460,17 +2496,21 @@ class TestReplaceElementwise(unittest.TestCase):
             assert image_aug.dtype.type == dtype
             assert np.allclose(image_aug, 2.0)
 
-            aug = iaa.ReplaceElementwise(mask=1, replacement=max_value)
-            image = np.full((3, 3), min_value, dtype=dtype)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, max_value)
+            # deterministic stochastic parameters are by default float32 for
+            # any float value and hence cannot cover the full float64 value
+            # range
+            if dtype.name != "float64":
+                aug = iaa.ReplaceElementwise(mask=1, replacement=max_value)
+                image = np.full((3, 3), min_value, dtype=dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype.type == dtype
+                assert _allclose(image_aug, max_value)
 
-            aug = iaa.ReplaceElementwise(mask=1, replacement=min_value)
-            image = np.full((3, 3), max_value, dtype=dtype)
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.type == dtype
-            assert _allclose(image_aug, min_value)
+                aug = iaa.ReplaceElementwise(mask=1, replacement=min_value)
+                image = np.full((3, 3), max_value, dtype=dtype)
+                image_aug = aug.augment_image(image)
+                assert image_aug.dtype.type == dtype
+                assert _allclose(image_aug, min_value)
 
             aug = iaa.ReplaceElementwise(mask=1, replacement=iap.Uniform(1.0, 10.0))
             image = np.full((100, 1), 0, dtype=dtype)

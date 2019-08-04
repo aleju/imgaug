@@ -41,6 +41,12 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
     """
     Flip/mirror input images horizontally.
 
+    .. note ::
+
+        The default value for the probability is ``0.0``.
+        So, to flip *all* input image use ``Fliplr(1.0)`` and *not* just
+        ``Fliplr()``.
+
     dtype support::
 
         * ``uint8``: yes; fully tested
@@ -107,6 +113,17 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             heatmaps_i.arr_0to1 = arr_flipped
         return heatmaps
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        arrs_flipped = self._augment_images(
+            [segmaps_i.arr for segmaps_i in segmaps],
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
+        for segmaps_i, arr_flipped in zip(segmaps, arrs_flipped):
+            segmaps_i.arr = arr_flipped
+        return segmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         nb_images = len(keypoints_on_images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
@@ -133,6 +150,12 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
     """
     Flip/mirror input images vertically.
+
+    .. note ::
+
+        The default value for the probability is ``0.0``.
+        So, to flip *all* input image use ``Flipud(1.0)`` and *not* just
+        ``Flipud()``.
 
     dtype support::
 
@@ -198,6 +221,17 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
         for heatmaps_i, arr_flipped in zip(heatmaps, arrs_flipped):
             heatmaps_i.arr_0to1 = arr_flipped
         return heatmaps
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        arrs_flipped = self._augment_images(
+            [segmaps_i.arr for segmaps_i in segmaps],
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
+        for segmaps_i, arr_flipped in zip(segmaps, arrs_flipped):
+            segmaps_i.arr = arr_flipped
+        return segmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         nb_images = len(keypoints_on_images)

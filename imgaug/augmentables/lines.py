@@ -1290,7 +1290,7 @@ class LineString(object):
 
         This is similar to
         :func:`imgaug.augmentables.lines.LineString.draw_mask`.
-        The result is wrapped in a ``SegmentationMapOnImage`` object
+        The result is wrapped in a ``SegmentationMapsOnImage`` object
         instead of just an array.
 
         Parameters
@@ -1311,12 +1311,12 @@ class LineString(object):
 
         Returns
         -------
-        imgaug.augmentables.segmaps.SegmentationMapOnImage
+        imgaug.augmentables.segmaps.SegmentationMapsOnImage
             Segmentation map object containing drawn line string.
 
         """
-        from .segmaps import SegmentationMapOnImage
-        return SegmentationMapOnImage(
+        from .segmaps import SegmentationMapsOnImage
+        return SegmentationMapsOnImage(
             self.draw_mask(
                 image_shape, size_lines=size_lines, size_points=size_points,
                 raise_if_out_of_image=raise_if_out_of_image),

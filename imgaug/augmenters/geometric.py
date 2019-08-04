@@ -735,6 +735,38 @@ class Affine(meta.Augmenter):
             heatmaps_i.shape = output_shape_i
         return heatmaps
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        nb_segmaps = len(segmaps)
+        scale_samples, translate_samples, rotate_samples, shear_samples, \
+            cval_samples, mode_samples, order_samples = self._draw_samples(nb_segmaps, random_state)
+
+        # Segmentation map augmentation always pads with a constant value
+        # of 0 (background class id), and always uses nearest neighbour
+        # interpolation. While different pad modes and BG class ids could
+        # be used, the interpolation mode has to be NN as any other mode would
+        # lead to averaging class ids, which makes no sense to do.
+        cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
+        mode_samples = ["constant"] * len(mode_samples)
+        order_samples = [0] * len(order_samples)
+
+        arrs = [segmaps_i.arr for segmaps_i in segmaps]
+        arrs_aug, matrices = self._augment_images_by_samples(
+            arrs, scale_samples, translate_samples, rotate_samples,
+            shear_samples, cval_samples, mode_samples, order_samples,
+            return_matrices=True)
+        for segmaps_i, arr_aug, matrix, order in zip(segmaps, arrs_aug, matrices, order_samples):
+            # in contrast to heatmap aug, we don't have to clip augmented
+            # arrays here, as we always use NN interpolation
+            assert order == 0
+
+            segmaps_i.arr = arr_aug
+            if self.fit_output:
+                _, output_shape_i = self._tf_to_fit_output(segmaps_i.shape, matrix)
+            else:
+                output_shape_i = segmaps_i.shape
+            segmaps_i.shape = output_shape_i
+        return segmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
@@ -1466,6 +1498,20 @@ class AffineCv2(meta.Augmenter):
             heatmap_i.arr_0to1 = arr_aug
         return heatmaps
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        nb_images = len(segmaps)
+        scale_samples, translate_samples, rotate_samples, shear_samples, \
+            cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+        cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
+        mode_samples = ["constant"] * len(mode_samples)
+        order_samples = [0] * len(order_samples)
+        arrs = [segmaps_i.arr for segmaps_i in segmaps]
+        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,
+                                                   shear_samples, cval_samples, mode_samples, order_samples)
+        for segmaps_i, arr_aug in zip(segmaps, arrs_aug):
+            segmaps_i.arr = arr_aug
+        return segmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
@@ -1563,12 +1609,27 @@ class AffineCv2(meta.Augmenter):
 
 class PiecewiseAffine(meta.Augmenter):
     """
-    Augmenter that places a regular grid of points on an image and randomly
+    Apply affine transformations that differ between local neighbourhoods.
+
+    This augmenter places a regular grid of points on an image and randomly
     moves the neighbourhood of these point around via affine transformations.
     This leads to local distortions.
 
-    This is mostly a wrapper around scikit-image's PiecewiseAffine.
-    See also the Affine augmenter for a similar technique.
+    This is mostly a wrapper around scikit-image's ``PiecewiseAffine``.
+    See also ``Affine`` for a similar technique.
+
+    .. note::
+
+        This augmenter is very slow. See :ref:`performance`.
+        Try to use ``ElasticTransformation`` instead, which is at least 10x
+        faster.
+
+    .. note::
+
+        For coordinate-based inputs (keypoints, bounding boxes, polygons,
+        ...), this augmenter still has to perform an image-based augmentation,
+        which will make it significantly slower for such inputs than other
+        augmenters. See :ref:`performance`.
 
     dtype support::
 
@@ -1847,6 +1908,43 @@ class PiecewiseAffine(meta.Augmenter):
 
         return result
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        result = segmaps
+        nb_images = len(segmaps)
+
+        rss = ia.derive_random_states(random_state, nb_images+2)
+
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
+                                                    random_state=rss[-2])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
+                                                    random_state=rss[-1])
+
+        for i in sm.xrange(nb_images):
+            segmaps_i = segmaps[i]
+            arr = segmaps_i.arr
+
+            rs_image = rss[i]
+            h, w = arr.shape[0:2]
+            transformer = self._get_transformer(
+                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+
+            if transformer is not None:
+                arr_warped = tf.warp(
+                    arr,
+                    transformer,
+                    order=0,
+                    mode="constant",
+                    cval=0,
+                    preserve_range=True,
+                    output_shape=arr.shape
+                )
+
+                # skimage converts to float64
+                arr_warped = iadt.restore_dtypes_(arr_warped, arr.dtype)
+                segmaps_i.arr = arr_warped
+
+        return result
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
@@ -1982,18 +2080,20 @@ class PiecewiseAffine(meta.Augmenter):
         return [self.scale, self.nb_rows, self.nb_cols, self.order, self.cval, self.mode, self.absolute_scale]
 
 
+# TODO add args for interpolation, borderMode, borderValue
 class PerspectiveTransform(meta.Augmenter):
     """
-    Augmenter that performs a random four point perspective transform.
+    Apply random four point perspective transformations to images.
 
     Each of the four points is placed on the image using a random distance from
     its respective corner. The distance is sampled from a normal distribution.
-    As a result, most transformations don't change very much, while some
-    "focus" on polygons far inside the image.
+    As a result, most transformations don't change the image very much, while
+    some "focus" on polygons far inside the image.
 
-    The results of this augmenter have some similarity with Crop.
+    The results of this augmenter have some similarity with ``Crop``.
 
-    Code partially from http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/ .
+    Code partially from
+    http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
 
     dtype support::
 
@@ -2111,12 +2211,20 @@ class PerspectiveTransform(meta.Augmenter):
 
     Examples
     --------
-    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.10))
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.15))
 
-    Applies perspective transformations using a random scale between 0.01 and
-    0.1 per image, where the scale is roughly a measure of how far the
-    perspective transform's corner points may be distanced from the original
-    image's corner points.
+    Apply perspective transformations using a random scale between ``0.01``
+    and ``0.15`` per image, where the scale is roughly a measure of how far
+    the perspective transformation's corner points may be distanced from the
+    image's corner points. Higher scale values lead to stronger "zoom-in"
+    effects (and thereby stronger distortions).
+
+    >>> aug = iaa.PerspectiveTransform(scale=(0.01, 0.15), keep_size=False)
+
+    Same as in the previous example, but images are not resized back to
+    the input image size after augmentation. This will lead to smaller
+    output images.
 
     """
 
@@ -2282,6 +2390,52 @@ class PerspectiveTransform(meta.Augmenter):
                 heatmaps_i_aug.shape = (max_heights_imgs[i], max_widths_imgs[i]) + heatmaps_i_aug.shape[2:]
 
             result[i] = heatmaps_i_aug
+
+        return result
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        result = segmaps
+
+        matrices, max_heights, max_widths, _, _ = self._create_matrices(
+            [segmaps_i.arr.shape for segmaps_i in segmaps],
+            ia.copy_random_state(random_state)
+        )
+
+        # estimate max_heights/max_widths for the underlying images
+        # this is only necessary if keep_size is False as then the underlying image sizes
+        # change and we need to update them here
+        if self.keep_size:
+            max_heights_imgs, max_widths_imgs = max_heights, max_widths
+        else:
+            _, max_heights_imgs, max_widths_imgs, _, _ = self._create_matrices(
+                [segmaps_i.shape for segmaps_i in segmaps],
+                ia.copy_random_state(random_state)
+            )
+
+        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+            segmaps_i = segmaps[i]
+            arr = segmaps_i.arr
+
+            nb_channels = arr.shape[2]
+
+            warped = [
+                cv2.warpPerspective(arr[..., c],
+                                    M,
+                                    (max_width, max_height),
+                                    flags=cv2.INTER_NEAREST)
+                for c
+                in sm.xrange(nb_channels)
+            ]
+            warped = [warped_i[..., np.newaxis] for warped_i in warped]
+            warped = np.dstack(warped)
+
+            result[i].arr = warped
+
+            if self.keep_size:
+                h, w = arr.shape[0:2]
+                result[i] = result[i].resize((h, w))
+            else:
+                result[i].shape = (max_heights_imgs[i], max_widths_imgs[i]) + result[i].shape[2:]
 
         return result
 
@@ -2457,19 +2611,21 @@ class PerspectiveTransform(meta.Augmenter):
 # TODO add backend arg
 class ElasticTransformation(meta.Augmenter):
     """
-    Augmenter to transform images by moving pixels locally around using displacement fields.
+    Transform images by moving pixels locally around using displacement fields.
 
-    The augmenter has the parameters ``alpha`` and ``sigma``. ``alpha`` controls the strength of the
-    displacement: higher values mean that pixels are moved further. ``sigma`` controls the
-    smoothness of the displacement: higher values lead to smoother patterns -- as if the
-    image was below water -- while low values will cause indivdual pixels to be moved very
+    The augmenter has the parameters ``alpha`` and ``sigma``. ``alpha``
+    controls the strength of the displacement: higher values mean that pixels
+    are moved further. ``sigma`` controls the smoothness of the displacement:
+    higher values lead to smoother patterns -- as if the image was below water
+    -- while low values will cause indivdual pixels to be moved very
     differently from their neighbours, leading to noisy and pixelated images.
 
-    A relation of 10:1 seems to be good for ``alpha`` and ``sigma``, e.g. ``alpha=10`` and ``sigma=1`` or
-    ``alpha=50``, ``sigma=5``. For ``128x128`` a setting of ``alpha=(0, 70.0)``, ``sigma=(4.0, 6.0)`` may be a
-    good choice and will lead to a water-like effect.
+    A relation of 10:1 seems to be good for ``alpha`` and ``sigma``, e.g.
+    ``alpha=10`` and ``sigma=1`` or ``alpha=50``, ``sigma=5``. For ``128x128``
+    a setting of ``alpha=(0, 70.0)``, ``sigma=(4.0, 6.0)`` may be a good
+    choice and will lead to a water-like effect.
 
-    See ::
+    For a detailed explanation, see ::
 
         Simard, Steinkraus and Platt
         Best Practices for Convolutional Neural Networks applied to Visual
@@ -2477,7 +2633,12 @@ class ElasticTransformation(meta.Augmenter):
         in Proc. of the International Conference on Document Analysis and
         Recognition, 2003
 
-    for a detailed explanation.
+    .. note::
+
+        For coordinate-based inputs (keypoints, bounding boxes, polygons,
+        ...), this augmenter still has to perform an image-based augmentation,
+        which will make it significantly slower for such inputs than other
+        augmenters. See :ref:`performance`.
 
     dtype support::
 
@@ -2798,6 +2959,61 @@ class ElasticTransformation(meta.Augmenter):
 
         return heatmaps
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        nb_segmaps = len(segmaps)
+        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_segmaps, random_state)
+        for i in sm.xrange(nb_segmaps):
+            segmaps_i = segmaps[i]
+            if segmaps_i.arr.shape[0:2] == segmaps_i.shape[0:2]:
+                dx, dy = self.generate_shift_maps(
+                    segmaps_i.arr.shape[0:2],
+                    alpha=alphas[i],
+                    sigma=sigmas[i],
+                    random_state=rss[i]
+                )
+
+                arr_warped = self.map_coordinates(
+                    segmaps_i.arr,
+                    dx,
+                    dy,
+                    order=0,
+                    cval=0,
+                    mode="constant"
+                )
+
+                segmaps_i.arr = arr_warped
+            else:
+                # Segmaps do not have the same size as augmented images.
+                # This may result in indices of moved pixels being different.
+                # To prevent this, we use the same image size as for the base images, but that
+                # requires resizing the segmaps temporarily to the image sizes.
+                height_orig, width_orig = segmaps_i.arr.shape[0:2]
+                segmaps_i = segmaps_i.resize(segmaps_i.shape[0:2])
+                arr = segmaps_i.arr
+                dx, dy = self.generate_shift_maps(
+                    arr.shape[0:2],
+                    alpha=alphas[i],
+                    sigma=sigmas[i],
+                    random_state=rss[i]
+                )
+
+                # TODO will it produce similar results to first downscale the shift maps and then remap?
+                #      That would make the remap step take less operations and would also mean that the segmaps
+                #      wouldnt have to be scaled up anymore. It would also simplify the code as this branch could
+                #      be merged with the one above.
+                arr_warped = self.map_coordinates(
+                    arr,
+                    dx,
+                    dy,
+                    order=0,
+                    cval=0,
+                    mode="constant"
+                )
+
+                segmaps[i].arr = arr_warped
+                segmaps[i] = segmaps[i].resize((height_orig, width_orig))
+        return segmaps
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
         nb_images = len(keypoints_on_images)
@@ -3065,9 +3281,10 @@ class ElasticTransformation(meta.Augmenter):
 
 class Rot90(meta.Augmenter):
     """
-    Augmenter to rotate images clockwise by multiples of 90 degrees.
+    Rotate images clockwise by multiples of 90 degrees.
 
-    This could also be achieved using ``Affine``, but Rot90 is significantly more efficient.
+    This could also be achieved using ``Affine``, but ``Rot90`` is
+    significantly more efficient.
 
     dtype support::
 
@@ -3127,28 +3344,33 @@ class Rot90(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Rot90(1)
 
-    Rotates all images by 90 degrees.
-    Resizes all images afterwards to keep the size that they had before augmentation.
+    Rotate all images by 90 degrees.
+    Resize these images afterwards to keep the size that they had before
+    augmentation.
     This may cause the images to look distorted.
 
     >>> aug = iaa.Rot90([1, 3])
 
-    Rotates all images by 90 or 270 degrees.
-    Resizes all images afterwards to keep the size that they had before augmentation.
+    Rotate all images by 90 or 270 degrees.
+    Resize these images afterwards to keep the size that they had before
+    augmentation.
     This may cause the images to look distorted.
 
     >>> aug = iaa.Rot90((1, 3))
 
-    Rotates all images by 90, 180 or 270 degrees.
-    Resizes all images afterwards to keep the size that they had before augmentation.
+    Rotate all images by 90, 180 or 270 degrees.
+    Resize these images afterwards to keep the size that they had before
+    augmentation.
     This may cause the images to look distorted.
 
     >>> aug = iaa.Rot90((1, 3), keep_size=False)
 
-    Rotates all images by 90, 180 or 270 degrees.
-    Does not resize to the original image size afterwards, i.e. each image's size may change.
+    Rotate all images by 90, 180 or 270 degrees.
+    Does not resize to the original image size afterwards, i.e. each image's
+    size may change.
 
     """
 
@@ -3203,6 +3425,24 @@ class Rot90(meta.Augmenter):
                 pass
             heatmaps_aug.append(heatmaps_i)
         return heatmaps_aug
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        arrs = [segmaps_i.arr for segmaps_i in segmaps]
+        arrs_aug, ks = self._augment_arrays(arrs, random_state, None)
+        segmaps_aug = []
+        for segmaps_i, arr_aug, k_i in zip(segmaps, arrs_aug, ks):
+            shape_orig = segmaps_i.arr.shape
+            segmaps_i.arr = arr_aug
+            if self.keep_size:
+                segmaps_i = segmaps_i.resize(shape_orig[0:2])
+            elif k_i % 2 == 1:
+                h, w = segmaps_i.shape[0:2]
+                segmaps_i.shape = tuple([w, h] + list(segmaps_i.shape[2:]))
+            else:
+                # keep_size was False, but rotated by a multiple of 2, hence height and width do not change
+                pass
+            segmaps_aug.append(segmaps_i)
+        return segmaps_aug
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         nb_images = len(keypoints_on_images)

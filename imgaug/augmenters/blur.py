@@ -673,10 +673,12 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 
     Examples
     --------
-    >>> aug = iaa.BilateralBlur(d=(3, 10), sigma_color=(10, 250), sigma_space=(10, 250))
+    >>> aug = iaa.BilateralBlur(
+    >>>     d=(3, 10), sigma_color=(10, 250), sigma_space=(10, 250))
 
-    blurs all images using a bilateral filter with max distance 3 to 10
-    and wide ranges for sigma_color and sigma_space.
+    Blur all images using a bilateral filter with a `max distance` sampled
+    uniformly from the interval ``[3, 10]`` and wide ranges for `sigma_color`
+    and `sigma_space`.
 
     """
 
@@ -721,7 +723,7 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 # TODO add k sizing via float/percentage
 def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, deterministic=False, random_state=None):
     """
-    Augmenter that sharpens images and overlays the result with the original image.
+    Blur images in a way that fakes camera or object movements.
 
     dtype support::
 
@@ -782,12 +784,12 @@ def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, d
     --------
     >>> aug = iaa.MotionBlur(k=15)
 
-    Create a motion blur augmenter with kernel size of 15x15.
+    Apply motion blur with a kernel size of ``15x15`` pixels to images.
 
     >>> aug = iaa.MotionBlur(k=15, angle=[-45, 45])
 
-    Create a motion blur augmenter with kernel size of 15x15 and a blur angle of either -45 or 45 degrees (randomly
-    picked per image).
+    Apply motion blur with a kernel size of ``15x15`` pixels and a blur angle
+    of either ``-45`` or ``45`` degrees (randomly picked per image).
 
     """
     # TODO allow (1, None) and set to identity matrix if k == 1

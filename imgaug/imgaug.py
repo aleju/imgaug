@@ -739,12 +739,12 @@ def quokka_segmentation_map(size=None, extract=None):
 
     Returns
     -------
-    result : imgaug.SegmentationMapOnImage
+    result : imgaug.SegmentationMapsOnImage
         Segmentation map object.
 
     """
     # TODO get rid of this deferred import
-    from imgaug.augmentables.segmaps import SegmentationMapOnImage
+    from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
     with open(QUOKKA_ANNOTATIONS_FP, "r") as f:
         json_dict = json.load(f)
@@ -757,15 +757,16 @@ def quokka_segmentation_map(size=None, extract=None):
         xx.append(x)
         yy.append(y)
 
-    img_seg = np.zeros((643, 960, 1), dtype=np.float32)
-    rr, cc = skimage.draw.polygon(np.array(yy), np.array(xx), shape=img_seg.shape)
-    img_seg[rr, cc] = 1.0
+    img_seg = np.zeros((643, 960, 1), dtype=np.int32)
+    rr, cc = skimage.draw.polygon(
+        np.array(yy), np.array(xx), shape=img_seg.shape)
+    img_seg[rr, cc, 0] = 1
 
     if extract is not None:
         bb = _quokka_normalize_extract(extract)
         img_seg = bb.extract_from_image(img_seg)
 
-    segmap = SegmentationMapOnImage(img_seg, shape=img_seg.shape[0:2] + (3,))
+    segmap = SegmentationMapsOnImage(img_seg, shape=img_seg.shape[0:2] + (3,))
 
     if size is not None:
         shape_resized = _compute_resized_shape(img_seg.shape, size)
@@ -2559,7 +2560,7 @@ MOVED = [
     ("MultiPolygon", "imgaug.augmentables.polys", None),
     ("_ConcavePolygonRecoverer", "imgaug.augmentables.polys", None),
     ("HeatmapsOnImage", "imgaug.augmentables.heatmaps", None),
-    ("SegmentationMapOnImage", "imgaug.augmentables.segmaps", None),
+    ("SegmentationMapsOnImage", "imgaug.augmentables.segmaps", None),
     ("Batch", "imgaug.augmentables.batches", None),
     ("BatchLoader", "imgaug.multicore", None),
     ("BackgroundAugmenter", "imgaug.multicore", None),

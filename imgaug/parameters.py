@@ -287,7 +287,6 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
             size if not ia.is_single_integer(size) else tuple([size]),
             random_state)
         ia.forward_random_state(random_state)
-
         return samples
 
     @abstractmethod
@@ -516,7 +515,12 @@ class Deterministic(StochasticParameter):
             raise Exception("Expected StochasticParameter object or number or string, got %s." % (type(value),))
 
     def _draw_samples(self, size, random_state):
-        return np.full(size, self.value)
+        kwargs = {}
+        if ia.is_single_integer(self.value):
+            kwargs = {"dtype": np.int32}
+        elif ia.is_single_float(self.value):
+            kwargs = {"dtype": np.float32}
+        return np.full(size, self.value, **kwargs)
 
     def __repr__(self):
         return self.__str__()
@@ -608,6 +612,17 @@ class Choice(StochasticParameter):
             samples = samples.reshape(size)
         else:
             samples = random_state.choice(self.a, size, replace=self.replace, p=self.p)
+
+        dt = samples.dtype
+        if dt.itemsize*8 > 32:
+            # strings have kind "U"
+            if dt.kind == "i":
+                samples = samples.astype(np.int32)
+            elif dt.kind == "u":
+                samples = samples.astype(np.uint32)
+            elif dt.kind == "f":
+                samples = samples.astype(np.float32)
+
         return samples
 
     def __repr__(self):
@@ -648,7 +663,7 @@ class Binomial(StochasticParameter):
     def _draw_samples(self, size, random_state):
         p = self.p.draw_sample(random_state=random_state)
         ia.do_assert(0 <= p <= 1.0, "Expected probability p to be in range [0.0, 1.0], got %s." % (p,))
-        return random_state.binomial(1, p, size)
+        return random_state.binomial(1, p, size).astype(np.int32)
 
     def __repr__(self):
         return self.__str__()
@@ -695,8 +710,8 @@ class DiscreteUniform(StochasticParameter):
         if a > b:
             a, b = b, a
         elif a == b:
-            return np.full(size, a)
-        return random_state.randint(a, b + 1, size)
+            return np.full(size, a, dtype=np.int32)
+        return random_state.randint(a, b + 1, size, dtype=np.int32)
 
     def __repr__(self):
         return self.__str__()
@@ -744,7 +759,7 @@ class Poisson(StochasticParameter):
         lam = self.lam.draw_sample(random_state=random_state)
         lam = max(lam, 0)
 
-        return random_state.poisson(lam=lam, size=size)
+        return random_state.poisson(lam=lam, size=size).astype(np.int32)
 
     def __repr__(self):
         return self.__str__()
@@ -790,9 +805,11 @@ class Normal(StochasticParameter):
         scale = self.scale.draw_sample(random_state=random_state)
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
-            return np.full(size, loc)
+            return np.full(size, loc, dtype=np.float32)
         else:
-            return random_state.normal(loc, scale, size=size)
+            return random_state.normal(
+                loc, scale, size=size
+            ).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -857,11 +874,11 @@ class TruncatedNormal(StochasticParameter):
             low, high = high, low
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
-            return np.full(size, fill_value=loc, dtype=np.float64)
+            return np.full(size, fill_value=loc, dtype=np.float32)
         a = (low - loc) / scale
         b = (high - loc) / scale
         rv = scipy.stats.truncnorm(a=a, b=b, loc=loc, scale=scale)
-        return rv.rvs(size=size, random_state=random_state)
+        return rv.rvs(size=size, random_state=random_state).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -921,9 +938,11 @@ class Laplace(StochasticParameter):
         scale = self.scale.draw_sample(random_state=random_state)
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
         if scale == 0:
-            return np.full(size, loc)
+            return np.full(size, loc, dtype=np.float32)
         else:
-            return random_state.laplace(loc, scale, size=size)
+            return random_state.laplace(
+                loc, scale, size=size
+            ).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -968,7 +987,7 @@ class ChiSquare(StochasticParameter):
     def _draw_samples(self, size, random_state):
         df = self.df.draw_sample(random_state=random_state)
         ia.do_assert(df >= 1, "Expected df to be in range [1, inf), got %s." % (df,))
-        return random_state.chisquare(df, size=size)
+        return random_state.chisquare(df, size=size).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -1012,7 +1031,7 @@ class Weibull(StochasticParameter):
     def _draw_samples(self, size, random_state):
         a = self.a.draw_sample(random_state=random_state)
         ia.do_assert(a > 0, "Expected a to be in range (0, inf), got %s." % (a,))
-        return random_state.weibull(a, size=size)
+        return random_state.weibull(a, size=size).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -1059,8 +1078,8 @@ class Uniform(StochasticParameter):
         if a > b:
             a, b = b, a
         elif a == b:
-            return np.full(size, a)
-        return random_state.uniform(a, b, size)
+            return np.full(size, a, dtype=np.float32)
+        return random_state.uniform(a, b, size).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -1116,7 +1135,7 @@ class Beta(StochasticParameter):
         beta = self.beta.draw_sample(random_state=random_state)
         alpha = max(alpha, self.epsilon)
         beta = max(beta, self.epsilon)
-        return random_state.beta(alpha, beta, size=size)
+        return random_state.beta(alpha, beta, size=size).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
@@ -1337,6 +1356,8 @@ class Clip(StochasticParameter):
     def _draw_samples(self, size, random_state):
         samples = self.other_param.draw_samples(size, random_state=random_state)
         if self.minval is not None or self.maxval is not None:
+            # Note that this would produce a warning if 'samples' is int64
+            # or uint64
             samples = np.clip(samples, self.minval, self.maxval, out=samples)
         return samples
 
