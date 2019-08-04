@@ -722,7 +722,7 @@ class TestAverageBlur(unittest.TestCase):
     def test_kernel_size_is_tuple_with_wider_range(self):
         # k as (3, 5)
         aug = iaa.AverageBlur(k=(3, 5))
-        nb_iterations = 100
+        nb_iterations = 200
         nb_seen = [0, 0, 0]
         for i in sm.xrange(nb_iterations):
             observed = aug.augment_image(self.base_img)

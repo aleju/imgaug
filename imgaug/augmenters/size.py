@@ -34,6 +34,7 @@ import six.moves as sm
 from . import meta
 import imgaug as ia
 from .. import parameters as iap
+from .. import random as iarandom
 
 
 # TODO somehow integrate this with ia.pad()
@@ -461,16 +462,15 @@ class Resize(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
-        # TODO use SEED_MAX
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = iarandom.derive_rngs(random_state, 3)
         if isinstance(self.size, tuple):
-            samples_h = self.size[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            samples_w = self.size[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+            samples_h = self.size[0].draw_samples(nb_images, random_state=rngs[0])
+            samples_w = self.size[1].draw_samples(nb_images, random_state=rngs[1])
         else:
-            samples_h = self.size.draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
+            samples_h = self.size.draw_samples(nb_images, random_state=rngs[0])
             samples_w = samples_h
         if do_sample_ip:
-            samples_ip = self.interpolation.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
+            samples_ip = self.interpolation.draw_samples(nb_images, random_state=rngs[2])
         else:
             samples_ip = None
         return samples_h, samples_w, samples_ip
@@ -840,13 +840,12 @@ class CropAndPad(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
+        rngs = iarandom.derive_rngs(random_state, nb_images)
         for i in sm.xrange(nb_images):
-            seed = seeds[i]
             height, width = images[i].shape[0:2]
             crop_top, crop_right, crop_bottom, crop_left, \
                 pad_top, pad_right, pad_bottom, pad_left, pad_mode, \
-                pad_cval = self._draw_samples_image(seed, height, width)
+                pad_cval = self._draw_samples_image(rngs[i], height, width)
 
             image_cr = images[i][crop_top:height-crop_bottom, crop_left:width-crop_right, :]
 
@@ -871,14 +870,12 @@ class CropAndPad(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = []
         nb_heatmaps = len(heatmaps)
-        # TODO use SEED_MAX
-        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+        rngs = iarandom.derive_rngs(random_state, nb_heatmaps)
         for i in sm.xrange(nb_heatmaps):
-            seed = seeds[i]
             height_image, width_image = heatmaps[i].shape[0:2]
             height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
 
-            vals = self._draw_samples_image(seed, height_image, width_image)
+            vals = self._draw_samples_image(rngs[i], height_image, width_image)
             crop_image_top, crop_image_right, crop_image_bottom, crop_image_left, \
                 pad_image_top, pad_image_right, pad_image_bottom, pad_image_left, \
                 _pad_mode, _pad_cval = vals
@@ -938,14 +935,12 @@ class CropAndPad(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         result = []
         nb_segmaps = len(segmaps)
-        # TODO use SEED_MAX
-        seeds = random_state.randint(0, 10**6, (nb_segmaps,))
+        rngs = iarandom.derive_rngs(random_state, nb_segmaps)
         for i in sm.xrange(nb_segmaps):
-            seed = seeds[i]
             height_image, width_image = segmaps[i].shape[0:2]
             height_segmaps, width_segmaps = segmaps[i].arr.shape[0:2]
 
-            vals = self._draw_samples_image(seed, height_image, width_image)
+            vals = self._draw_samples_image(rngs[i], height_image, width_image)
             crop_image_top, crop_image_right, crop_image_bottom, crop_image_left, \
                 pad_image_top, pad_image_right, pad_image_bottom, pad_image_left, \
                 _pad_mode, _pad_cval = vals
@@ -1005,13 +1000,12 @@ class CropAndPad(meta.Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
+        rngs = iarandom.derive_rngs(random_state, nb_images)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            seed = seeds[i]
             height, width = keypoints_on_image.shape[0:2]
             crop_top, crop_right, crop_bottom, crop_left, \
                 pad_top, pad_right, pad_bottom, pad_left, _pad_mode, \
-                _pad_cval = self._draw_samples_image(seed, height, width)
+                _pad_cval = self._draw_samples_image(rngs[i], height, width)
             shifted = keypoints_on_image.shift(x=-crop_left+pad_left, y=-crop_top+pad_top)
             shifted.shape = (
                 height - crop_top - crop_bottom + pad_top + pad_bottom,
@@ -1029,9 +1023,7 @@ class CropAndPad(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
-    def _draw_samples_image(self, seed, height, width):
-        random_state = ia.new_random_state(seed)
-
+    def _draw_samples_image(self, random_state, height, width):
         if self.mode == "noop":
             top = right = bottom = left = 0
         else:
@@ -1681,18 +1673,18 @@ class PadToFixedSize(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = iarandom.derive_rngs(random_state, 4)
 
         if isinstance(self.position, tuple):
-            pad_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            pad_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+            pad_xs = self.position[0].draw_samples(nb_images, random_state=rngs[0])
+            pad_ys = self.position[1].draw_samples(nb_images, random_state=rngs[1])
         else:
-            pads = self.position.draw_samples((nb_images, 2), random_state=ia.new_random_state(seed + 0))
+            pads = self.position.draw_samples((nb_images, 2), random_state=rngs[0])
             pad_xs = pads[:, 0]
             pad_ys = pads[:, 1]
 
-        pad_modes = self.pad_mode.draw_samples(nb_images, random_state=ia.new_random_state(seed + 2))
-        pad_cvals = self.pad_cval.draw_samples(nb_images, random_state=ia.new_random_state(seed + 3))
+        pad_modes = self.pad_mode.draw_samples(nb_images, random_state=rngs[2])
+        pad_cvals = self.pad_cval.draw_samples(nb_images, random_state=rngs[3])
         pad_cvals = np.clip(np.round(pad_cvals), 0, 255).astype(np.uint8)
 
         return pad_xs, pad_ys, pad_modes, pad_cvals
@@ -1990,13 +1982,13 @@ class CropToFixedSize(meta.Augmenter):
         return segmaps
 
     def _draw_samples(self, nb_images, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = iarandom.derive_rngs(random_state, 2)
 
         if isinstance(self.position, tuple):
-            offset_xs = self.position[0].draw_samples(nb_images, random_state=ia.new_random_state(seed + 0))
-            offset_ys = self.position[1].draw_samples(nb_images, random_state=ia.new_random_state(seed + 1))
+            offset_xs = self.position[0].draw_samples(nb_images, random_state=rngs[0])
+            offset_ys = self.position[1].draw_samples(nb_images, random_state=rngs[1])
         else:
-            offsets = self.position.draw_samples((nb_images, 2), random_state=ia.new_random_state(seed + 0))
+            offsets = self.position.draw_samples((nb_images, 2), random_state=rngs[0])
             offset_xs = offsets[:, 0]
             offset_ys = offsets[:, 1]
 
@@ -2148,15 +2140,14 @@ class KeepSizeByResize(meta.Augmenter):
         self.interpolation_segmaps = _validate_param(interpolation_segmaps, True)
 
     def _draw_samples(self, nb_images, random_state):
-        # TODO use SEED_MAX
-        seed = random_state.randint(0, 10 ** 6, 1)[0]
-        interpolations = self.interpolation.draw_samples((nb_images,), random_state=ia.new_random_state(seed + 0))
+        rngs = iarandom.derive_rngs(random_state, 3)
+        interpolations = self.interpolation.draw_samples((nb_images,), random_state=rngs[0])
 
         if self.interpolation_heatmaps == KeepSizeByResize.SAME_AS_IMAGES:
             interpolations_heatmaps = np.copy(interpolations)
         else:
             interpolations_heatmaps = self.interpolation_heatmaps.draw_samples(
-                (nb_images,), random_state=ia.new_random_state(seed + 10)
+                (nb_images,), random_state=rngs[1]
             )
 
             # Note that `interpolations_heatmaps == self.SAME_AS_IMAGES`
@@ -2172,8 +2163,11 @@ class KeepSizeByResize(meta.Augmenter):
         if self.interpolation_segmaps == KeepSizeByResize.SAME_AS_IMAGES:
             interpolations_segmaps = np.copy(interpolations)
         else:
+            # TODO This used previously the same seed as the heatmaps part
+            #      leading to the same sampled values. Was that intentional?
+            #      Doesn't look like it should be that way.
             interpolations_segmaps = self.interpolation_segmaps.draw_samples(
-                (nb_images,), random_state=ia.new_random_state(seed + 10)
+                (nb_images,), random_state=rngs[2]
             )
 
             # Note that `interpolations_heatmaps == self.SAME_AS_IMAGES`

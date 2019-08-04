@@ -13,6 +13,7 @@ import imageio
 
 from . import imgaug as ia
 from . import dtypes as iadt
+from . import random as iarandom
 from .external.opensimplex import OpenSimplex
 
 
@@ -573,9 +574,9 @@ class Choice(StochasticParameter):
 
     def _draw_samples(self, size, random_state):
         if any([isinstance(a_i, StochasticParameter) for a_i in self.a]):
-            # TODO replace by derive_random_state()
-            seed = random_state.randint(0, 10**6, 1)[0]
-            samples = ia.new_random_state(seed).choice(self.a, np.prod(size), replace=self.replace, p=self.p)
+            rngs = iarandom.derive_rngs(random_state, 1+len(self.a))
+            samples = rngs[0].choice(
+                self.a, np.prod(size), replace=self.replace, p=self.p)
 
             # collect the sampled parameters and how many samples must be taken
             # from each of them
@@ -596,7 +597,7 @@ class Choice(StochasticParameter):
                 if key in params_counter:
                     param_to_samples[key] = param.draw_samples(
                         size=(params_counter[key],),
-                        random_state=ia.new_random_state(seed+1+i)
+                        random_state=rngs[1+i]
                     )
 
             # assign the values sampled from the parameters to the `samples`
@@ -711,7 +712,8 @@ class DiscreteUniform(StochasticParameter):
             a, b = b, a
         elif a == b:
             return np.full(size, a, dtype=np.int32)
-        return random_state.randint(a, b + 1, size, dtype=np.int32)
+        return iarandom.polyfill_integers(
+            random_state, a, b + 1, size, dtype=np.int32)
 
     def __repr__(self):
         return self.__str__()
@@ -1461,16 +1463,15 @@ class Multiply(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        # TODO replace with derive_random_state()
-        seed = random_state.randint(0, 10**6, 1)[0]
-        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        rngs = iarandom.derive_rngs(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rngs[0])
 
         elementwise = self.elementwise and not isinstance(self.val, Deterministic)
 
         if elementwise:
-            val_samples = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_samples(size, random_state=rngs[1])
         else:
-            val_samples = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_sample(random_state=rngs[1])
 
         if elementwise:
             return np.multiply(samples, val_samples)
@@ -1524,17 +1525,13 @@ class Divide(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        # TODO replace with derive_random_state()
-        seed = random_state.randint(0, 10**6, 1)[0]
-        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        rngs = iarandom.derive_rngs(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rngs[0])
 
         elementwise = self.elementwise and not isinstance(self.val, Deterministic)
 
         if elementwise:
-            val_samples = self.val.draw_samples(
-                size,
-                random_state=ia.new_random_state(seed+1)
-            )
+            val_samples = self.val.draw_samples(size, random_state=rngs[1])
 
             # prevent division by zero
             val_samples[val_samples == 0] = 1
@@ -1544,9 +1541,7 @@ class Divide(StochasticParameter):
                 force_np_float_dtype(val_samples)
             )
         else:
-            val_sample = self.val.draw_sample(
-                random_state=ia.new_random_state(seed+1)
-            )
+            val_sample = self.val.draw_sample(random_state=rngs[1])
 
             # prevent division by zero
             if val_sample == 0:
@@ -1602,16 +1597,15 @@ class Add(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        # TODO replace with derive_random_state()
-        seed = random_state.randint(0, 10**6, 1)[0]
-        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        rngs = iarandom.derive_rngs(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rngs[0])
 
         elementwise = self.elementwise and not isinstance(self.val, Deterministic)
 
         if elementwise:
-            val_samples = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_samples(size, random_state=rngs[1])
         else:
-            val_samples = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_sample(random_state=rngs[1])
 
         if elementwise:
             return np.add(samples, val_samples)
@@ -1661,16 +1655,15 @@ class Subtract(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        # TODO replace with derive_random_state()
-        seed = random_state.randint(0, 10**6, 1)[0]
-        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        rngs = iarandom.derive_rngs(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rngs[0])
 
         elementwise = self.elementwise and not isinstance(self.val, Deterministic)
 
         if elementwise:
-            val_samples = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_samples(size, random_state=rngs[1])
         else:
-            val_samples = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            val_samples = self.val.draw_sample(random_state=rngs[1])
 
         if elementwise:
             return np.subtract(samples, val_samples)
@@ -1722,15 +1715,15 @@ class Power(StochasticParameter):
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
-        samples = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        rngs = iarandom.derive_rngs(random_state, 2)
+        samples = self.other_param.draw_samples(size, random_state=rngs[0])
 
         elementwise = self.elementwise and not isinstance(self.val, Deterministic)
 
         if elementwise:
-            exponents = self.val.draw_samples(size, random_state=ia.new_random_state(seed+1))
+            exponents = self.val.draw_samples(size, random_state=rngs[1])
         else:
-            exponents = self.val.draw_sample(random_state=ia.new_random_state(seed+1))
+            exponents = self.val.draw_sample(random_state=rngs[1])
 
         # without this we get int results in the case of
         # Power(<int>, <stochastic float param>)
@@ -1892,11 +1885,8 @@ class ForceSign(StochasticParameter):
         self.reroll_count_max = reroll_count_max
 
     def _draw_samples(self, size, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
-        samples = self.other_param.draw_samples(
-            size,
-            random_state=ia.new_random_state(seed)
-        )
+        rngs = iarandom.derive_rngs(random_state, 1+self.reroll_count_max)
+        samples = self.other_param.draw_samples(size, random_state=rngs[0])
 
         if self.mode == "invert":
             if self.positive:
@@ -1919,7 +1909,7 @@ class ForceSign(StochasticParameter):
                 # There is still quite some room for improvement here.
                 samples_reroll = self.other_param.draw_samples(
                     size,
-                    random_state=ia.new_random_state(seed+1+reroll_count)
+                    random_state=rngs[1+reroll_count]
                 )
                 samples[bad_samples] = samples_reroll[bad_samples]
 
@@ -2101,14 +2091,18 @@ class IterativeNoiseAggregator(StochasticParameter):
                             + "got %s." % (type(aggregation_method),))
 
     def _draw_samples(self, size, random_state):
-        seed = random_state.randint(0, 10**6)
-        aggregation_method = self.aggregation_method.draw_sample(random_state=ia.new_random_state(seed))
-        iterations = self.iterations.draw_sample(random_state=ia.new_random_state(seed+1))
+        rngs = iarandom.derive_rngs(random_state, 2)
+        aggregation_method = self.aggregation_method.draw_sample(random_state=rngs[0])
+        iterations = self.iterations.draw_sample(random_state=rngs[1])
         ia.do_assert(iterations > 0)
+
+        rngs_iterations = iarandom.derive_rngs(rngs[1], iterations)
 
         result = np.zeros(size, dtype=np.float32)
         for i in sm.xrange(iterations):
-            noise_iter = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed+2+i))
+            noise_iter = self.other_param.draw_samples(
+                size, random_state=rngs_iterations[i])
+
             if aggregation_method == "avg":
                 result += noise_iter
             elif aggregation_method == "min":
@@ -2116,7 +2110,7 @@ class IterativeNoiseAggregator(StochasticParameter):
                     result = noise_iter
                 else:
                     result = np.minimum(result, noise_iter)
-            else: # self.aggregation_method == "max"
+            else:  # self.aggregation_method == "max"
                 if i == 0:
                     result = noise_iter
                 else:
@@ -2224,12 +2218,12 @@ class Sigmoid(StochasticParameter):
         return Sigmoid(other_param, threshold, activated, mul=20, add=-10)
 
     def _draw_samples(self, size, random_state):
-        seed = random_state.randint(0, 10**6)
-        result = self.other_param.draw_samples(size, random_state=ia.new_random_state(seed))
+        rngs = iarandom.derive_rngs(random_state, 3)
+        result = self.other_param.draw_samples(size, random_state=rngs[0])
         if result.dtype.kind != "f":
             result = result.astype(np.float32)
-        activated = self.activated.draw_sample(random_state=ia.new_random_state(seed+1))
-        threshold = self.threshold.draw_sample(random_state=ia.new_random_state(seed+2))
+        activated = self.activated.draw_sample(random_state=rngs[1])
+        threshold = self.threshold.draw_sample(random_state=rngs[2])
         if activated > 0.5:
             # threshold must be subtracted here, not added
             # higher threshold = move threshold of sigmoid towards the right
@@ -2315,13 +2309,13 @@ class SimplexNoise(StochasticParameter):
     def _draw_samples(self, size, random_state):
         ia.do_assert(len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,))
         h, w = size
-        seed = random_state.randint(0, 10**6)
         iterations = 1
+        rngs = iarandom.derive_rngs(random_state, 1+iterations)
         aggregation_method = "max"
-        upscale_methods = self.upscale_method.draw_samples((iterations,), random_state=ia.new_random_state(seed))
+        upscale_methods = self.upscale_method.draw_samples((iterations,), random_state=rngs[0])
         result = np.zeros((h, w), dtype=np.float32)
         for i in sm.xrange(iterations):
-            noise_iter = self._draw_samples_iteration(h, w, seed + 10 + i, upscale_methods[i])
+            noise_iter = self._draw_samples_iteration(h, w, rngs[1+i], upscale_methods[i])
             if aggregation_method == "avg":
                 result += noise_iter
             elif aggregation_method == "min":
@@ -2340,9 +2334,13 @@ class SimplexNoise(StochasticParameter):
 
         return result
 
-    def _draw_samples_iteration(self, h, w, seed, upscale_method):
+    def _draw_samples_iteration(self, h, w, rng, upscale_method):
+        # TODO replace by create_seed function in imgaug.random
+        opensimplex_seed = iarandom.polyfill_integers(
+            rng, iarandom.SEED_MIN_VALUE, iarandom.SEED_MAX_VALUE)
+
         maxlen = max(h, w)
-        size_px_max = self.size_px_max.draw_sample(random_state=ia.new_random_state(seed))
+        size_px_max = self.size_px_max.draw_sample(random_state=rng)
         if maxlen > size_px_max:
             downscale_factor = size_px_max / maxlen
             h_small = int(h * downscale_factor)
@@ -2355,7 +2353,7 @@ class SimplexNoise(StochasticParameter):
         h_small = max(h_small, 1)
         w_small = max(w_small, 1)
 
-        generator = OpenSimplex(seed=seed)
+        generator = OpenSimplex(seed=opensimplex_seed)
         noise = np.zeros((h_small, w_small), dtype=np.float32)
         for y in sm.xrange(h_small):
             for x in sm.xrange(w_small):
@@ -2483,11 +2481,11 @@ class FrequencyNoise(StochasticParameter):
 
         ia.do_assert(len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,))
 
-        seed = random_state.randint(0, 10**6)
+        rngs = ia.derive_random_states(random_state, 5)
 
         h, w = size
         maxlen = max(h, w)
-        size_px_max = self.size_px_max.draw_sample(random_state=ia.new_random_state(seed))
+        size_px_max = self.size_px_max.draw_sample(random_state=rngs[0])
         if maxlen > size_px_max:
             downscale_factor = size_px_max / maxlen
             h_small = int(h * downscale_factor)
@@ -2501,8 +2499,9 @@ class FrequencyNoise(StochasticParameter):
         w_small = max(w_small, 4)
 
         # generate random base matrix
-        wn_r = ia.new_random_state(seed+1).rand(h_small, w_small)
-        wn_a = ia.new_random_state(seed+2).rand(h_small, w_small)
+        # TODO use a single RNG with a single call here
+        wn_r = iarandom.polyfill_random(rngs[1], size=(h_small, w_small))
+        wn_a = iarandom.polyfill_random(rngs[2], size=(h_small, w_small))
 
         wn_r = wn_r * (max(h_small, w_small) ** 2)
         wn_a = wn_a * 2 * np.pi
@@ -2511,7 +2510,7 @@ class FrequencyNoise(StochasticParameter):
         wn_a = wn_r * np.sin(wn_a)
 
         # pronounce some frequencies
-        exponent = self.exponent.draw_sample(random_state=ia.new_random_state(seed+3))
+        exponent = self.exponent.draw_sample(random_state=rngs[3])
         # this has some similarity with a distance map from the center, but looks a bit more like a cross
         f = self._create_distance_matrix((h_small, w_small))
         f[0, 0] = 1 # necessary to prevent -inf from appearing
@@ -2532,7 +2531,7 @@ class FrequencyNoise(StochasticParameter):
         noise_0to1 = (wn_inv - wn_inv_min) / (wn_inv_max - wn_inv_min)
 
         # upscale from low resolution to image size
-        upscale_method = self.upscale_method.draw_sample(random_state=ia.new_random_state(seed+1))
+        upscale_method = self.upscale_method.draw_sample(random_state=rngs[4])
         if noise_0to1.shape != (size[0], size[1]):
             noise_0to1_uint8 = (noise_0to1 * 255).astype(np.uint8)
             noise_0to1_3d = np.tile(noise_0to1_uint8[..., np.newaxis], (1, 1, 3))

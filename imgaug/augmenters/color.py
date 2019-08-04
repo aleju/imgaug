@@ -45,6 +45,7 @@ from . import arithmetic
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 @ia.deprecated(alt_func="WithColorspace")
@@ -1991,8 +1992,13 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     cv2.setRNGSeed(1)
     _compactness, labels, centers = cv2.kmeans(
         colors, n_colors, None, criteria, attempts, cv2.KMEANS_RANDOM_CENTERS)
+    # TODO replace by sample_seed function
     cv2.setRNGSeed(
-        ia.CURRENT_RANDOM_STATE.randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE)
+        iarandom.polyfill_integers(
+            iarandom.get_global_rng(),
+            iarandom.SEED_MIN_VALUE,
+            iarandom.SEED_MAX_VALUE
+        )
     )  # cv2 seems to be able to handle SEED_MAX_VALUE (tested) but not floats
 
     # Convert back to uint8 (or whatever the image dtype was) and to input

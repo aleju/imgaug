@@ -1054,9 +1054,19 @@ class TestCLAHE(unittest.TestCase):
             # Trigger a warning.
             img5d_aug = clahe.augment_image(img5d)
             # Verify
-            assert len(caught_warnings) == 1
-            assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
-                   in str(caught_warnings[-1].message)
+            if sys.version_info >= (3, 6):
+                assert len(caught_warnings) == 4
+            else:
+                assert len(caught_warnings) == 1
+            hits = []
+            for w in caught_warnings:
+                hits.append(
+                    "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
+                    in str(w.message)
+                )
+            assert np.any(hits)
+            # assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
+            #        in str(caught_warnings[-1].message)
 
         assert np.array_equal(img5d_aug, img5d + 2)
 
@@ -1282,8 +1292,11 @@ class TestCLAHE(unittest.TestCase):
                 self._test_many_images_rgb_to_lab_array(nb_channels=nb_channels, nb_images=nb_images)
 
     def test_determinism(self):
-        clahe = iaa.CLAHE(clip_limit=(1, 100), tile_grid_size_px=(3, 60), tile_grid_size_px_min=2,
-                          from_colorspace=iaa.CLAHE.RGB, to_colorspace=iaa.CLAHE.Lab)
+        clahe = iaa.CLAHE(clip_limit=(1, 100),
+                          tile_grid_size_px=(3, 60),
+                          tile_grid_size_px_min=2,
+                          from_colorspace=iaa.CLAHE.RGB,
+                          to_colorspace=iaa.CLAHE.Lab)
 
         for nb_channels in [None, 1, 3, 4]:
             with self.subTest(nb_channels=nb_channels):
@@ -1291,14 +1304,26 @@ class TestCLAHE(unittest.TestCase):
                 if nb_channels is not None:
                     img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
 
-                result1 = clahe.augment_image(img)
-                result2 = clahe.augment_image(img)
-                assert not np.array_equal(result1, result2)
+                all_same = True
+                for _ in sm.xrange(10):
+                    result1 = clahe.augment_image(img)
+                    result2 = clahe.augment_image(img)
+                    same = np.array_equal(result1, result2)
+                    all_same = all_same and same
+                    if not all_same:
+                        break
+                assert not all_same
 
                 clahe_det = clahe.to_deterministic()
-                result1 = clahe_det.augment_image(img)
-                result2 = clahe_det.augment_image(img)
-                assert np.array_equal(result1, result2)
+                all_same = True
+                for _ in sm.xrange(10):
+                    result1 = clahe_det.augment_image(img)
+                    result2 = clahe_det.augment_image(img)
+                    same = np.array_equal(result1, result2)
+                    all_same = all_same and same
+                    if not all_same:
+                        break
+                assert all_same
 
     def test_get_parameters(self):
         clahe = iaa.CLAHE(clip_limit=1, tile_grid_size_px=3, tile_grid_size_px_min=2, from_colorspace=iaa.CLAHE.BGR,
@@ -1466,9 +1491,19 @@ class TestHistogramEqualization(unittest.TestCase):
                         # Trigger a warning.
                         img_aug = aug.augment_image(img)
                         # Verify
-                        assert len(caught_warnings) == 1
-                        assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"\
-                               in str(caught_warnings[-1].message)
+                        if sys.version_info >= (3, 6):
+                            assert len(caught_warnings) == 4
+                        else:
+                            assert len(caught_warnings) == 1
+                        hits = []
+                        for w in caught_warnings:
+                            hits.append(
+                                "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"
+                                in str(w.message)
+                            )
+                        assert np.any(hits)
+                        # assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"\
+                        #        in str(caught_warnings[-1].message)
 
                 expected = img
                 if nb_channels is None or nb_channels == 1:

@@ -18,6 +18,7 @@ import skimage.measure
 import collections
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
+
 ALL = "ALL"
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,14 +33,6 @@ DEFAULT_FONT_FP = os.path.join(
     "DejaVuSans.ttf"
 )
 
-# We instantiate a current/global random state here once.
-# One can also call np.random, but that is (in contrast to np.random.RandomState)
-# a module and hence cannot be copied via deepcopy. That's why we use RandomState
-# here (and in all augmenters) instead of np.random.
-CURRENT_RANDOM_STATE = np.random.RandomState(42)
-SEED_MIN_VALUE = 0
-SEED_MAX_VALUE = 2**31-1  # use 2**31 instead of 2**32 here because 2**31 errored on some systems
-
 
 # to check if a dtype instance is among these dtypes, use e.g. `dtype.type in NP_FLOAT_TYPES`
 # do not just use `dtype in NP_FLOAT_TYPES` as that would fail
@@ -51,6 +44,148 @@ IMSHOW_BACKEND_DEFAULT = "matplotlib"
 
 IMRESIZE_VALID_INTERPOLATIONS = ["nearest", "linear", "area", "cubic",
                                  cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
+
+################################################################################
+# Helpers for deprecation
+################################################################################
+
+class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
+    """Warning for deprecated calls.
+
+    Since python 2.7 DeprecatedWarning is silent by default. So we define
+    our own DeprecatedWarning here so that it is not silent by default.
+
+    """
+    pass
+
+
+def warn(msg, category=UserWarning, stacklevel=2):
+    """Generate a a warning with stacktrace.
+
+    Parameters
+    ----------
+    msg : str
+        The message of the warning.
+
+    category : class
+        The class of the warning to produce.
+
+    stacklevel : int, optional
+        How many steps above this function to "jump" in the stacktrace for
+        the displayed file and line number of the error message.
+        Usually 2.
+
+    """
+    import warnings
+    warnings.warn(msg, category=category, stacklevel=stacklevel)
+
+
+def warn_deprecated(msg, stacklevel=2):
+    """Generate a non-silent deprecation warning with stacktrace.
+
+    The used warning is ``imgaug.imgaug.DeprecationWarning``.
+
+    Parameters
+    ----------
+    msg : str
+        The message of the warning.
+
+    stacklevel : int, optional
+        How many steps above this function to "jump" in the stacktrace for
+        the displayed file and line number of the error message.
+        Usually 2.
+
+    """
+    warn(msg, category=DeprecationWarning, stacklevel=stacklevel)
+
+
+class deprecated(object):
+    """Decorator to mark deprecated functions with warning.
+
+    Adapted from
+    <https://github.com/scikit-image/scikit-image/blob/master/skimage/_shared/utils.py>.
+
+    Parameters
+    ----------
+    alt_func : None or str, optional
+        If given, tell user what function to use instead.
+
+    behavior : {'warn', 'raise'}, optional
+        Behavior during call to deprecated function: 'warn' = warn user that
+        function is deprecated; 'raise' = raise error.
+
+    removed_version : None or str, optional
+        The package version in which the deprecated function will be removed.
+
+    comment : None or str, optional
+        An optional comment that will be appended to the warning message.
+
+    """
+
+    def __init__(self, alt_func=None, behavior="warn", removed_version=None,
+                 comment=None):
+        self.alt_func = alt_func
+        self.behavior = behavior
+        self.removed_version = removed_version
+        self.comment = comment
+
+    def __call__(self, func):
+        alt_msg = None
+        if self.alt_func is not None:
+            alt_msg = "Use ``%s`` instead." % (self.alt_func,)
+
+        rmv_msg = None
+        if self.removed_version is not None:
+            rmv_msg = "It will be removed in version %s." % (
+                self.removed_version,)
+
+        comment_msg = None
+        if self.comment is not None and len(self.comment) > 0:
+            comment_msg = "%s." % (self.comment.rstrip(". "),)
+
+        addendum = " ".join([submsg
+                             for submsg
+                             in [alt_msg, rmv_msg, comment_msg]
+                             if submsg is not None])
+
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            # TODO add class name if class method
+            import inspect
+            # arg_names = func.__code__.co_varnames
+
+            # getargspec() was deprecated in py3, but doesn't exist in py2
+            if hasattr(inspect, "getfullargspec"):
+                arg_names = inspect.getfullargspec(func)[0]
+            else:
+                arg_names = inspect.getargspec(func)[0]
+
+            if "self" in arg_names or "cls" in arg_names:
+                main_msg = "Method ``%s.%s()`` is deprecated." % (
+                    args[0].__class__.__name__, func.__name__)
+            else:
+                main_msg = "Function ``%s()`` is deprecated." % (
+                    func.__name__,)
+
+            msg = (main_msg + " " + addendum).rstrip(" ").replace("``", "`")
+
+            if self.behavior == "warn":
+                warn_deprecated(msg, stacklevel=3)
+            elif self.behavior == "raise":
+                raise DeprecationWarning(msg)
+            return func(*args, **kwargs)
+
+        # modify doc string to display deprecation warning
+        doc = "**Deprecated**. " + addendum
+        if wrapped.__doc__ is None:
+            wrapped.__doc__ = doc
+        else:
+            wrapped.__doc__ = doc + "\n\n    " + wrapped.__doc__
+
+        return wrapped
+
+################################################################################
 
 
 def is_np_array(val):
@@ -323,6 +458,7 @@ def caller_name():
     return sys._getframe(1).f_code.co_name
 
 
+@deprecated("imgaug.random.seed")
 def seed(seedval):
     """
     Set the seed used by the global random state and thereby all randomness
@@ -339,10 +475,11 @@ def seed(seedval):
         The seed to use.
 
     """
-    CURRENT_RANDOM_STATE.seed(seedval)
+    import imgaug.random
+    imgaug.random.seed(seedval)
 
 
-# TODO add tests
+@deprecated("imgaug.random.normalize_rng")
 def normalize_random_state(random_state):
     """
     Normalize various inputs to a numpy random state.
@@ -362,14 +499,11 @@ def normalize_random_state(random_state):
         Normalized random state.
 
     """
-    if random_state is None:
-        return CURRENT_RANDOM_STATE
-    elif isinstance(random_state, np.random.RandomState):
-        return random_state
-    # seed given
-    return np.random.RandomState(random_state)
+    import imgaug.random
+    return imgaug.random.normalize_rng_(random_state)
 
 
+@deprecated("imgaug.random.get_global_rng")
 def current_random_state():
     """
     Returns the current/global random state of the library.
@@ -380,9 +514,11 @@ def current_random_state():
         The current/global random state.
 
     """
-    return CURRENT_RANDOM_STATE
+    import imgaug.random
+    return imgaug.random.get_global_rng()
 
 
+@deprecated("imgaug.random.convert_seed_to_rng")
 def new_random_state(seed=None, fully_random=False):
     """
     Returns a new random state.
@@ -404,15 +540,23 @@ def new_random_state(seed=None, fully_random=False):
         The new random state.
 
     """
+    import imgaug.random
     if seed is None:
         if not fully_random:
             # sample manually a seed instead of just RandomState(),
-            # because the latter one
-            # is way slower.
-            seed = CURRENT_RANDOM_STATE.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
-    return np.random.RandomState(seed)
+            # because the latter one is way slower.
+            global_rng = imgaug.random.get_global_rng()
+            seed_min = imgaug.random.SEED_MIN_VALUE
+            seed_max = imgaug.random.SEED_MAX_VALUE
+            if imgaug.random.is_new_numpy_rng_style():
+                f = global_rng.integers
+            else:
+                f = global_rng.randint
+            seed = f(seed_min, seed_max)
+    return imgaug.random.convert_seed_to_rng(seed)
 
 
+@deprecated("imgaug.random.convert_seed_to_rng")
 def dummy_random_state():
     """
     Returns a dummy random state that is always based on a seed of 1.
@@ -423,9 +567,11 @@ def dummy_random_state():
         The new random state.
 
     """
-    return np.random.RandomState(1)
+    import imgaug.random
+    return imgaug.random.convert_seed_to_rng(1)
 
 
+@deprecated("imgaug.random.copy_rng_unless_global_rng")
 def copy_random_state(random_state, force_copy=False):
     """
     Creates a copy of a random state.
@@ -446,15 +592,13 @@ def copy_random_state(random_state, force_copy=False):
         The copied random state.
 
     """
-    if random_state == np.random and not force_copy:
-        return random_state
-    else:
-        rs_copy = dummy_random_state()
-        orig_state = random_state.get_state()
-        rs_copy.set_state(orig_state)
-        return rs_copy
+    import imgaug.random
+    if force_copy:
+        return imgaug.random.copy_rng(random_state)
+    return imgaug.random.copy_rng_unless_global_rng(random_state)
 
 
+@deprecated("imgaug.random.derive_rng")
 def derive_random_state(random_state):
     """
     Create a new random states based on an existing random state or seed.
@@ -470,10 +614,11 @@ def derive_random_state(random_state):
         Derived random state.
 
     """
-    return derive_random_states(random_state, n=1)[0]
+    import imgaug.random
+    return imgaug.random.derive_rng(random_state)
 
 
-# TODO use this everywhere instead of manual seed + create
+@deprecated("imgaug.random.derive_rngs")
 def derive_random_states(random_state, n=1):
     """
     Create N new random states based on an existing random state or seed.
@@ -492,10 +637,11 @@ def derive_random_states(random_state, n=1):
         Derived random states.
 
     """
-    seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
-    return [new_random_state(seed_+i) for i in sm.xrange(n)]
+    import imgaug.random
+    return imgaug.random.derive_rngs(random_state, n=n)
 
 
+@deprecated("imgaug.random.advance_rng")
 def forward_random_state(random_state):
     """
     Forward the internal state of a random state.
@@ -508,7 +654,8 @@ def forward_random_state(random_state):
         Random state to forward.
 
     """
-    random_state.uniform()
+    import imgaug.random
+    imgaug.random.advance_rng(random_state)
 
 
 def _quokka_normalize_extract(extract):
@@ -2390,144 +2537,7 @@ class HooksKeypoints(HooksImages):
     pass
 
 
-#####################################################################
-# Helpers for deprecation
-#####################################################################
 
-class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
-    """Warning for deprecated calls.
-
-    Since python 2.7 DeprecatedWarning is silent by default. So we define
-    our own DeprecatedWarning here so that it is not silent by default.
-
-    """
-    pass
-
-
-def warn(msg, category=UserWarning, stacklevel=2):
-    """Generate a a warning with stacktrace.
-
-    Parameters
-    ----------
-    msg : str
-        The message of the warning.
-
-    category : class
-        The class of the warning to produce.
-
-    stacklevel : int, optional
-        How many steps above this function to "jump" in the stacktrace for
-        the displayed file and line number of the error message.
-        Usually 2.
-
-    """
-    import warnings
-    warnings.warn(msg, category=category, stacklevel=stacklevel)
-
-
-def warn_deprecated(msg, stacklevel=2):
-    """Generate a non-silent deprecation warning with stacktrace.
-
-    The used warning is ``imgaug.imgaug.DeprecationWarning``.
-
-    Parameters
-    ----------
-    msg : str
-        The message of the warning.
-
-    stacklevel : int, optional
-        How many steps above this function to "jump" in the stacktrace for
-        the displayed file and line number of the error message.
-        Usually 2.
-
-    """
-    warn(msg, category=DeprecationWarning, stacklevel=stacklevel)
-
-
-class deprecated(object):
-    """Decorator to mark deprecated functions with warning.
-
-    Adapted from
-    <https://github.com/scikit-image/scikit-image/blob/master/skimage/_shared/utils.py>.
-
-    Parameters
-    ----------
-    alt_func : None or str, optional
-        If given, tell user what function to use instead.
-
-    behavior : {'warn', 'raise'}, optional
-        Behavior during call to deprecated function: 'warn' = warn user that
-        function is deprecated; 'raise' = raise error.
-
-    removed_version : None or str, optional
-        The package version in which the deprecated function will be removed.
-
-    comment : None or str, optional
-        An optional comment that will be appended to the warning message.
-
-    """
-
-    def __init__(self, alt_func=None, behavior="warn", removed_version=None,
-                 comment=None):
-        self.alt_func = alt_func
-        self.behavior = behavior
-        self.removed_version = removed_version
-        self.comment = comment
-
-    def __call__(self, func):
-        alt_msg = None
-        if self.alt_func is not None:
-            alt_msg = "Use ``%s`` instead." % (self.alt_func,)
-
-        rmv_msg = None
-        if self.removed_version is not None:
-            rmv_msg = "It will be removed in version %s." % (
-                self.removed_version,)
-
-        comment_msg = None
-        if self.comment is not None and len(self.comment) > 0:
-            comment_msg = "%s." % (self.comment.rstrip(". "),)
-
-        addendum = " ".join([submsg
-                             for submsg
-                             in [alt_msg, rmv_msg, comment_msg]
-                             if submsg is not None])
-
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-            # TODO add class name if class method
-            import inspect
-            # arg_names = func.__code__.co_varnames
-
-            # getargspec() was deprecated in py3, but doesn't exist in py2
-            if hasattr(inspect, "getfullargspec"):
-                arg_names = inspect.getfullargspec(func)[0]
-            else:
-                arg_names = inspect.getargspec(func)[0]
-
-            if "self" in arg_names or "cls" in arg_names:
-                main_msg = "Method ``%s.%s()`` is deprecated." % (
-                    args[0].__class__.__name__, func.__name__)
-            else:
-                main_msg = "Function ``%s()`` is deprecated." % (
-                    func.__name__,)
-
-            msg = (main_msg + " " + addendum).rstrip(" ").replace("``", "`")
-
-            if self.behavior == "warn":
-                warn_deprecated(msg, stacklevel=3)
-            elif self.behavior == "raise":
-                raise DeprecationWarning(msg)
-            return func(*args, **kwargs)
-
-        # modify doc string to display deprecation warning
-        doc = "**Deprecated**. " + addendum
-        if wrapped.__doc__ is None:
-            wrapped.__doc__ = doc
-        else:
-            wrapped.__doc__ = doc + "\n\n    " + wrapped.__doc__
-
-        return wrapped
 
 
 #####################################################################

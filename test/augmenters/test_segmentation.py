@@ -21,6 +21,7 @@ import six.moves as sm
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
+from imgaug import random as iarandom
 from imgaug.testutils import reseed
 
 
@@ -1138,24 +1139,8 @@ class TestDropoutPointsSampler(unittest.TestCase):
         _ = sampler.sample_points([image], 2)[0]
         rs_s2_1 = other.last_random_state
 
-        # get_state() returns: tuple(str, ndarray of 624 uints, int, int,
-        #                            float)
-        # we compare the non-floats here
-        all_s1_identical = True
-        all_s1s2_identical = True
-        for i in sm.xrange(1, 4):
-            all_s1_identical = (
-                all_s1_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s1_2.get_state()[i]))
-
-            all_s1s2_identical = (
-                all_s1s2_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s2_1.get_state()[i]))
-
-        assert all_s1_identical
-        assert not all_s1s2_identical
+        assert iarandom.is_rng_identical_with(rs_s1_1, rs_s1_2)
+        assert not iarandom.is_rng_identical_with(rs_s1_1, rs_s2_1)
 
     def test_conversion_to_string(self):
         sampler = iaa.DropoutPointsSampler(
@@ -1396,24 +1381,8 @@ class TestSubsamplingPointSampler(unittest.TestCase):
         _ = sampler.sample_points([image], 2)[0]
         rs_s2_1 = other.last_random_state
 
-        # get_state() returns: tuple(str, ndarray of 624 uints, int, int,
-        #                            float)
-        # we compare the non-floats here
-        all_s1_identical = True
-        all_s1s2_identical = True
-        for i in sm.xrange(1, 4):
-            all_s1_identical = (
-                all_s1_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s1_2.get_state()[i]))
-
-            all_s1s2_identical = (
-                all_s1s2_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s2_1.get_state()[i]))
-
-        assert all_s1_identical
-        assert not all_s1s2_identical
+        assert iarandom.is_rng_identical_with(rs_s1_1, rs_s1_2)
+        assert not iarandom.is_rng_identical_with(rs_s1_1, rs_s2_1)
 
     def test_conversion_to_string(self):
         sampler = iaa.SubsamplingPointsSampler(

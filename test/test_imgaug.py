@@ -40,14 +40,14 @@ def main():
     test_is_float_array()
     test_is_callable()
     test_caller_name()
-    test_seed()
-    test_current_random_state()
-    test_new_random_state()
-    test_dummy_random_state()
-    test_copy_random_state()
-    test_derive_random_state()
-    test_derive_random_states()
-    test_forward_random_state()
+    # test_seed()
+    # test_current_random_state()
+    # test_new_random_state()
+    # test_dummy_random_state()
+    # test_copy_random_state()
+    # test_derive_random_state()
+    # test_derive_random_states()
+    # test_forward_random_state()
     test__quokka_normalize_extract()
     test__compute_resized_shape()
     test_quokka()
@@ -257,6 +257,7 @@ def test_is_callable():
         assert ia.is_callable(value) == False
 
 
+"""
 def test_seed():
     ia.seed(10017)
     rs = np.random.RandomState(10017)
@@ -334,6 +335,7 @@ def test_forward_random_state():
     ia.forward_random_state(rs1)
     rs2.uniform()
     assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
+"""
 
 
 def test__quokka_normalize_extract():

@@ -3646,7 +3646,7 @@ class TestIterativeNoiseAggregator(unittest.TestCase):
         assert np.all(samples == 0)
 
     def test_value_is_stochastic_avg_or_max_100_iter_evaluate_counts(self):
-        seen = [0, 0, 0]
+        seen = [0, 0, 0, 0]
         for _ in sm.xrange(100):
             param = iap.IterativeNoiseAggregator(
                 iap.Choice([0, 50]),
@@ -3663,9 +3663,10 @@ class TestIterativeNoiseAggregator(unittest.TestCase):
             elif diff_0 < _eps(samples):
                 seen[2] += 1
             else:
-                assert False
+                seen[3] += 1
 
-        assert seen[2] < 5
+        assert seen[2] <= 2  # around 0.0
+        assert seen[3] <= 2  # 0.0+eps <= x < 15.0 or 35.0 < x < 50.0 or >50.0
         assert 50 - 20 < seen[0] < 50 + 20
         assert 50 - 20 < seen[1] < 50 + 20
 

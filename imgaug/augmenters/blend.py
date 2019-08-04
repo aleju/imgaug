@@ -29,6 +29,7 @@ from . import meta
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
@@ -696,8 +697,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
-        # TODO use SEED_MAX
-        seeds = random_state.randint(0, 10**6, (nb_images,))
+        rngs = iarandom.derive_rngs(random_state, nb_images)
 
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -727,23 +727,23 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             h, w, nb_channels = image.shape[0:3]
             image_first = images_first[i]
             image_second = images_second[i]
-            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            per_channel = self.per_channel.draw_sample(random_state=rngs[i])
             if per_channel > 0.5:
                 alphas = []
-                for c in sm.xrange(nb_channels):
-                    samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
+                for _ in sm.xrange(nb_channels):
+                    samples_c = self.factor.draw_samples((h, w), random_state=rngs[i])
                     ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
                     alphas.append(samples_c)
                 alphas = np.float64(alphas).transpose((1, 2, 0))
             else:
-                alphas = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
+                alphas = self.factor.draw_samples((h, w), random_state=rngs[i])
                 ia.do_assert(0.0 <= alphas.item(0) <= 1.0)
             result[i] = blend_alpha(image_first, image_second, alphas, eps=self.epsilon)
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps, seed):
-            samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
+        def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps, rng):
+            samples_c = self.factor.draw_samples((h_images, w_images), random_state=rng)
             ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
 
             if (h_images, w_images) != (h_heatmaps, w_heatmaps):
@@ -755,8 +755,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = heatmaps
         nb_heatmaps = len(heatmaps)
-        # TODO use SEED_MAX
-        seeds = random_state.randint(0, 10**6, (nb_heatmaps,))
+        rngs = iarandom.derive_rngs(random_state, nb_heatmaps)
 
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -788,20 +787,20 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             nb_channels_heatmaps = heatmaps_i.arr_0to1.shape[2]
             heatmaps_first_i = heatmaps_first[i]
             heatmaps_second_i = heatmaps_second[i]
-            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            per_channel = self.per_channel.draw_sample(random_state=rngs[i])
             if per_channel > 0.5:
                 samples = []
-                for c in sm.xrange(nb_channels_img):
+                for _ in sm.xrange(nb_channels_img):
                     # We sample here at the same size as the original image, as some effects
                     # might not scale with image size. We sampled mask is then downscaled to the
                     # heatmap size.
-                    samples_c = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i]+1+c)
+                    samples_c = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, rngs[i])
                     samples.append(samples_c[..., np.newaxis])
                 samples = np.concatenate(samples, axis=2)
                 samples_avg = np.average(samples, axis=2)
                 samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_heatmaps))
             else:
-                samples = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, seeds[i])
+                samples = _sample_factor_mask(h_img, w_img, h_heatmaps, w_heatmaps, rngs[i])
                 samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_heatmaps))
 
             mask = samples_tiled >= 0.5
@@ -813,8 +812,8 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
     # TODO this is almost identical to heatmap aug, merge the two
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        def _sample_factor_mask(h_images, w_images, h_segmaps, w_segmaps, seed):
-            samples_c = self.factor.draw_samples((h_images, w_images), random_state=ia.new_random_state(seed))
+        def _sample_factor_mask(h_images, w_images, h_segmaps, w_segmaps, rng):
+            samples_c = self.factor.draw_samples((h_images, w_images), random_state=rng)
             ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
 
             if (h_images, w_images) != (h_segmaps, w_segmaps):
@@ -826,8 +825,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = segmaps
         nb_segmaps = len(segmaps)
-        # TODO use SEED_MAX
-        seeds = random_state.randint(0, 10**6, (nb_segmaps,))
+        rngs = iarandom.derive_rngs(random_state, nb_segmaps)
 
         if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -859,20 +857,20 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             nb_channels_segmaps = segmaps_i.arr.shape[2]
             segmaps_first_i = segmaps_first[i]
             segmaps_second_i = segmaps_second[i]
-            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            per_channel = self.per_channel.draw_sample(random_state=rngs[i])
             if per_channel > 0.5:
                 samples = []
-                for c in sm.xrange(nb_channels_img):
+                for _ in sm.xrange(nb_channels_img):
                     # We sample here at the same size as the original image, as some effects
                     # might not scale with image size. We sampled mask is then downscaled to the
                     # heatmap size.
-                    samples_c = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, seeds[i]+1+c)
+                    samples_c = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, rngs[i])
                     samples.append(samples_c[..., np.newaxis])
                 samples = np.concatenate(samples, axis=2)
                 samples_avg = np.average(samples, axis=2)
                 samples_tiled = np.tile(samples_avg[..., np.newaxis], (1, 1, nb_channels_segmaps))
             else:
-                samples = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, seeds[i])
+                samples = _sample_factor_mask(h_img, w_img, h_segmaps, w_segmaps, rngs[i])
                 samples_tiled = np.tile(samples[..., np.newaxis], (1, 1, nb_channels_segmaps))
 
             mask = samples_tiled >= 0.5
@@ -909,7 +907,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_coordinate_based(self, inputs, random_state, parents, hooks, func):
         result = inputs
         nb_images = len(inputs)
-        seeds = random_state.randint(0, 10**6, (nb_images,))
+        rngs = iarandom.derive_rngs(random_state, nb_images)
 
         if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -941,14 +939,14 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
             # coordinate augmentation also works channel-wise, even though
             # coordinates do not have channels, in order to keep the random
             # values properly synchronized with the image augmentation
-            per_channel = self.per_channel.draw_sample(random_state=ia.new_random_state(seeds[i]))
+            per_channel = self.per_channel.draw_sample(random_state=rngs[i])
             if per_channel > 0.5:
                 samples = np.zeros((h, w, nb_channels), dtype=np.float32)
                 for c in sm.xrange(nb_channels):
-                    samples_c = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]+1+c))
+                    samples_c = self.factor.draw_samples((h, w), random_state=rngs[i])
                     samples[:, :, c] = samples_c
             else:
-                samples = self.factor.draw_samples((h, w), random_state=ia.new_random_state(seeds[i]))
+                samples = self.factor.draw_samples((h, w), random_state=rngs[i])
             ia.do_assert(0.0 <= samples.item(0) <= 1.0)
             sample = np.average(samples)
 

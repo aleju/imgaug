@@ -10,6 +10,7 @@ import random
 import numpy as np
 
 import imgaug.imgaug as ia
+import imgaug.random as iarandom
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 if sys.version_info[0] == 2:
@@ -84,11 +85,11 @@ class Pool(object):
         self.maxtasksperchild = maxtasksperchild
 
         if seed is not None:
-            assert ia.SEED_MIN_VALUE <= seed <= ia.SEED_MAX_VALUE, (
+            assert iarandom.SEED_MIN_VALUE <= seed <= iarandom.SEED_MAX_VALUE, (
                 "Expected `seed` to be either `None` or a value between "
                 "%d and %d. Got type %s, value %s instead." % (
-                    ia.SEED_MIN_VALUE,
-                    ia.SEED_MAX_VALUE,
+                    iarandom.SEED_MIN_VALUE,
+                    iarandom.SEED_MAX_VALUE,
                     type(seed),
                     str(seed)
                 )
@@ -463,8 +464,9 @@ def _reseed_global_local(base_seed, augseq):
 
 def _derive_seed(base_seed, offset=0):
     return (
-        ia.SEED_MIN_VALUE
-        + (base_seed + offset) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        iarandom.SEED_MIN_VALUE
+        + (base_seed + offset)
+        % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
     )
 
 
@@ -510,7 +512,12 @@ class BatchLoader(object):
         self.join_signal = multiprocessing.Event()
         self.workers = []
         self.threaded = threaded
-        seeds = ia.current_random_state().randint(0, 10**6, size=(nb_workers,))
+        # TODO replace by sample_seeds function
+        seeds = iarandom.polyfill_integers(
+            iarandom.get_global_rng(),
+            iarandom.SEED_MIN_VALUE,
+            iarandom.SEED_MAX_VALUE,
+            size=(nb_workers,))
         for i in range(nb_workers):
             if threaded:
                 worker = threading.Thread(
@@ -729,7 +736,13 @@ class BackgroundAugmenter(object):
         self.workers = []
         self.nb_workers_finished = 0
 
-        seeds = ia.current_random_state().randint(0, 10**6, size=(nb_workers,))
+        # TODO replace by sample_seeds
+        seeds = iarandom.polyfill_integers(
+            iarandom.get_global_rng(),
+            iarandom.SEED_MIN_VALUE,
+            iarandom.SEED_MAX_VALUE,
+            size=(nb_workers,)
+        )
         for i in range(nb_workers):
             worker = multiprocessing.Process(
                 target=self._augment_images_worker,

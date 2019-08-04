@@ -43,6 +43,7 @@ import six.moves as sm
 
 import imgaug as ia
 from .. import parameters as iap
+from .. import random as iarandom
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
@@ -191,15 +192,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                      "Expected deterministic to be a boolean, got %s." % (type(deterministic),))
         self.deterministic = deterministic
 
-        if random_state is None:
-            if self.deterministic:
-                self.random_state = ia.new_random_state()
-            else:
-                self.random_state = ia.current_random_state()
-        elif isinstance(random_state, np.random.RandomState):
-            self.random_state = random_state
+        if deterministic and random_state is None:
+            self.random_state = ia.new_random_state()
         else:
-            self.random_state = np.random.RandomState(random_state)
+            self.random_state = iarandom.normalize_rng_(random_state)
 
         self.activated = True
 
@@ -506,7 +502,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 return images
 
             if self.deterministic:
-                state_orig = self.random_state.get_state()
+                state_orig = iarandom.get_rng_state(self.random_state)
 
             images_result = self._augment_images(
                 images,
@@ -519,7 +515,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             ia.forward_random_state(self.random_state)
 
             if self.deterministic:
-                self.random_state.set_state(state_orig)
+                iarandom.set_rng_state(self.random_state, state_orig)
 
             return images_result
 
@@ -528,7 +524,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         # It was either the first call (no parents) or hooks were provided.
         #
         if self.deterministic:
-            state_orig = self.random_state.get_state()
+            state_orig = iarandom.get_rng_state(self.random_state)
 
         if parents is None:
             parents = []
@@ -639,7 +635,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     images_result[i] = np.squeeze(images_result[i], axis=2)
 
         if self.deterministic:
-            self.random_state.set_state(state_orig)
+            iarandom.set_rng_state(self.random_state, state_orig)
 
         return images_result
 
@@ -709,7 +705,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         if self.deterministic:
-            state_orig = self.random_state.get_state()
+            state_orig = iarandom.get_rng_state(self.random_state)
 
         if parents is None:
             parents = []
@@ -754,7 +750,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             heatmaps_result = hooks.postprocess(heatmaps_result, augmenter=self, parents=parents)
 
         if self.deterministic:
-            self.random_state.set_state(state_orig)
+            iarandom.set_rng_state(self.random_state, state_orig)
 
         if input_was_single_instance:
             return heatmaps_result[0]
@@ -840,7 +836,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         if self.deterministic:
-            state_orig = self.random_state.get_state()
+            state_orig = iarandom.get_rng_state(self.random_state)
 
         if parents is None:
             parents = []
@@ -890,7 +886,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             segmaps_result = hooks.postprocess(segmaps_result, augmenter=self, parents=parents)
 
         if self.deterministic:
-            self.random_state.set_state(state_orig)
+            iarandom.set_rng_state(self.random_state, state_orig)
 
         if input_was_single_instance:
             return segmaps_result[0]
@@ -985,7 +981,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         if self.deterministic:
-            state_orig = self.random_state.get_state()
+            state_orig = iarandom.get_rng_state(self.random_state)
 
         if parents is None:
             parents = []
@@ -1029,7 +1025,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             keypoints_on_images_result = hooks.postprocess(keypoints_on_images_result, augmenter=self, parents=parents)
 
         if self.deterministic:
-            self.random_state.set_state(state_orig)
+            iarandom.set_rng_state(self.random_state, state_orig)
 
         if input_was_single_instance:
             return keypoints_on_images_result[0]
@@ -1362,7 +1358,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         if self.deterministic:
-            state_orig = self.random_state.get_state()
+            state_orig = iarandom.get_rng_state(self.random_state)
 
         if parents is None:
             parents = []
@@ -1410,7 +1406,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 augables_ois_result, augmenter=self, parents=parents)
 
         if self.deterministic:
-            self.random_state.set_state(state_orig)
+            iarandom.set_rng_state(self.random_state, state_orig)
 
         if input_was_single_instance:
             return augables_ois_result[0]
@@ -2265,22 +2261,17 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         """
         ia.do_assert(isinstance(deterministic_too, bool))
 
-        # TODO replace by ia.normalize_random_state()
-        if random_state is None:
-            random_state = ia.current_random_state()
-        elif isinstance(random_state, np.random.RandomState):
-            pass  # just use the provided random state without change
-        else:
-            random_state = ia.new_random_state(random_state)
+        random_state = iarandom.normalize_rng_(random_state)
 
         if not self.deterministic or deterministic_too:
-            # TODO replace by ia.derive_random_state()
-            seed = random_state.randint(0, 10**6, 1)[0]
-            self.random_state = ia.new_random_state(seed)
+            # note that deriving advances the RNG, so child augmenters get a
+            # different RNG state
+            self.random_state = iarandom.copy_rng(random_state)
 
         for lst in self.get_children_lists():
             for aug in lst:
-                aug.reseed(random_state=random_state, deterministic_too=deterministic_too)
+                aug.reseed(random_state=iarandom.derive_rng(random_state),
+                           deterministic_too=deterministic_too)
 
     def localize_random_state(self, recursive=True):
         """

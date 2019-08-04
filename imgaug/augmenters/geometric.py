@@ -39,6 +39,7 @@ import imgaug as ia
 from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 class Affine(meta.Augmenter):
@@ -831,32 +832,32 @@ class Affine(meta.Augmenter):
                 self.fit_output]
 
     def _draw_samples(self, nb_samples, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = iarandom.derive_rngs(random_state, 11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 10)),
-                self.scale[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 20)),
+                self.scale[0].draw_samples((nb_samples,), random_state=rngs[0]),
+                self.scale[1].draw_samples((nb_samples,), random_state=rngs[1]),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 30))
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 40)),
-                self.translate[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 50)),
+                self.translate[0].draw_samples((nb_samples,), random_state=rngs[3]),
+                self.translate[1].draw_samples((nb_samples,), random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
-        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
-        shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
+        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
+        shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
 
-        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=ia.new_random_state(seed + 90))
-        mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
-        order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
+        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=rngs[8])
+        mode_samples = self.mode.draw_samples((nb_samples,), random_state=rngs[9])
+        order_samples = self.order.draw_samples((nb_samples,), random_state=rngs[10])
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, \
             order_samples
@@ -1573,35 +1574,35 @@ class AffineCv2(meta.Augmenter):
         return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
 
     def _draw_samples(self, nb_samples, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = iarandom.derive_rngs(random_state, 11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 10)),
-                self.scale[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 20)),
+                self.scale[0].draw_samples((nb_samples,), random_state=rngs[0]),
+                self.scale[1].draw_samples((nb_samples,), random_state=rngs[1]),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 30))
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 40)),
-                self.translate[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 50)),
+                self.translate[0].draw_samples((nb_samples,), random_state=rngs[3]),
+                self.translate[1].draw_samples((nb_samples,), random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
         ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
         ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
 
-        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
-        shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
+        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
+        shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
 
-        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=ia.new_random_state(seed + 90))
-        mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
-        order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
+        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=rngs[8])
+        mode_samples = self.mode.draw_samples((nb_samples,), random_state=rngs[9])
+        order_samples = self.order.draw_samples((nb_samples,), random_state=rngs[10])
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, \
             order_samples
@@ -2485,12 +2486,12 @@ class PerspectiveTransform(meta.Augmenter):
         max_heights = []
         max_widths = []
         nb_images = len(shapes)
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
+        rngs = iarandom.derive_rngs(random_state, 2+nb_images)
 
         cval_samples = self.cval.draw_samples((nb_images, 3),
-                                              random_state=random_state)
+                                              random_state=rngs[0])
         mode_samples = self.mode.draw_samples((nb_images,),
-                                              random_state=random_state)
+                                              random_state=rngs[1])
 
         cval_samples_cv2 = []
 
@@ -2502,7 +2503,7 @@ class PerspectiveTransform(meta.Augmenter):
 
             h, w = shapes[i][0:2]
 
-            points = self.jitter.draw_samples((4, 2), random_state=ia.new_random_state(seeds[i]))
+            points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
             points = np.mod(np.abs(points), 1)
 
             # top left
@@ -2840,7 +2841,6 @@ class ElasticTransformation(meta.Augmenter):
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
-        # seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
         rss = ia.derive_random_states(random_state, nb_images+5)
         alphas = self.alpha.draw_samples((nb_images,), random_state=rss[-5])
         sigmas = self.sigma.draw_samples((nb_images,), random_state=rss[-4])
@@ -3108,7 +3108,10 @@ class ElasticTransformation(meta.Augmenter):
 
         # The step of random number generation could be batched, so that random numbers are sampled once for the whole
         # batch. Would get rid of creating many random_states.
-        dxdy_unsmoothed = (random_state.rand(2 * h_pad, w_pad) * 2 - 1).astype(np.float32)
+        dxdy_unsmoothed = iarandom.polyfill_random(
+            random_state,
+            (2 * h_pad, w_pad)
+        ) * 2 - 1
 
         dx_unsmoothed = dxdy_unsmoothed[0:h_pad, :]
         dy_unsmoothed = dxdy_unsmoothed[h_pad:, :]

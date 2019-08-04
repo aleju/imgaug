@@ -24,6 +24,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
+from imgaug import random as iarandom
 from imgaug.augmenters import meta
 from imgaug.testutils import create_random_images, create_random_keypoints, array_equal_lists, keypoints_equal, reseed
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
@@ -1304,14 +1305,17 @@ def test_Augmenter():
     # --------
     # TODO incomplete tests, handle only cases that were missing in code coverage report
     aug = DummyAugmenter()
-    assert aug.random_state == ia.CURRENT_RANDOM_STATE
+    assert aug.random_state is iarandom.get_global_rng()
     aug = DummyAugmenter(deterministic=True)
-    assert aug.random_state != ia.CURRENT_RANDOM_STATE
+    assert aug.random_state is not iarandom.get_global_rng()
     rs = np.random.RandomState(123)
     aug = DummyAugmenter(random_state=rs)
     assert aug.random_state == rs
     aug = DummyAugmenter(random_state=123)
-    assert aug.random_state.randint(0, 10**6) == np.random.RandomState(123).randint(0, 10**6)
+    assert iarandom.is_rng_identical_with(
+        aug.random_state,
+        iarandom.convert_seed_to_rng(123)
+    )
 
     # --------
     # augment_batches
@@ -1378,8 +1382,18 @@ def test_Augmenter():
         # Trigger a warning.
         _ = aug.augment_images(np.zeros((16, 32, 3), dtype=np.uint8))
         # Verify some things
-        assert len(caught_warnings) == 1
-        assert "indicates that you provided a single image with shape (H, W, C)" in str(caught_warnings[-1].message)
+        if sys.version_info >= (3, 6):
+            assert len(caught_warnings) == 3
+        else:
+            assert len(caught_warnings) == 1
+        hits = []
+        for w in caught_warnings:
+            hits.append(
+                "indicates that you provided a single image with shape (H, W, C)"
+                in str(w.message)
+            )
+        assert np.any(hits)
+        # assert "indicates that you provided a single image with shape (H, W, C)" in str(caught_warnings[-1].message)
 
     aug = DummyAugmenter()
     got_exception = False
@@ -1614,19 +1628,15 @@ def test_Augmenter():
     # localize_random_state
     # --------
     aug = DummyAugmenter()
-    assert aug.random_state == ia.CURRENT_RANDOM_STATE
+    assert aug.random_state is iarandom.get_global_rng()
     aug_localized = aug.localize_random_state()
-    assert aug_localized.random_state != ia.CURRENT_RANDOM_STATE
+    assert aug_localized.random_state is not iarandom.get_global_rng()
 
     # --------
     # reseed
     # --------
     def _same_rs(rs1, rs2):
-        rs1_copy = copy.deepcopy(rs1)
-        rs2_copy = copy.deepcopy(rs2)
-        rnd1 = rs1_copy.randint(0, 10**6)
-        rnd2 = rs2_copy.randint(0, 10**6)
-        return rnd1 == rnd2
+        return iarandom.is_rng_identical_with(rs1, rs2)
 
     aug1 = DummyAugmenter()
     aug2 = DummyAugmenter(deterministic=True)
@@ -1657,20 +1667,27 @@ def test_Augmenter():
     aug0_copy.reseed(random_state=123)
     assert not _same_rs(aug0.random_state, aug0_copy.random_state)
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
-    assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
-    expected = np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
-    assert aug0_copy.random_state.randint(0, 10**6) == expected
+    assert _same_rs(aug0_copy.random_state,
+                    iarandom.normalize_rng_(123))
+    expected = iarandom.derive_rng(iarandom.normalize_rng_(123))
+    assert _same_rs(aug0_copy[0].random_state, expected)
 
     aug0_copy = aug0.deepcopy()
     assert _same_rs(aug0.random_state, aug0_copy.random_state)
     assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
-    aug0_copy.reseed(random_state=np.random.RandomState(123))
+    aug0_copy.reseed(random_state=iarandom.convert_seed_to_rng(123))
     assert not _same_rs(aug0.random_state, aug0_copy.random_state)
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
-    expected = np.random.RandomState(np.random.RandomState(123).randint(0, 10**6)).randint(0, 10**6)
-    assert aug0_copy.random_state.randint(0, 10**6) == expected
+    assert _same_rs(aug0_copy.random_state,
+                    iarandom.normalize_rng_(123))
+    expected = iarandom.derive_rng(
+        iarandom.normalize_rng_(
+            iarandom.convert_seed_to_rng(123)
+        )
+    )
+    assert _same_rs(aug0_copy[0].random_state, expected)
 
     # --------
     # get_parameters
@@ -2166,10 +2183,10 @@ def test_Augmenter_augment_polygons():
     aug = iaa.Rot90((0, 3), keep_size=False)
     poly = ia.Polygon([(0, 0), (5, 0), (5, 5)])
     poly_oi = ia.PolygonsOnImage(
-        [poly.deepcopy() for _ in sm.xrange(100)],
+        [poly.deepcopy() for _ in sm.xrange(1)],
         shape=(10, 11, 3)
     )
-    poly_ois = [poly_oi, poly_oi.deepcopy()]
+    poly_ois = [poly_oi.deepcopy() for _ in sm.xrange(100)]
     polys_ois_aug1 = aug.augment_polygons(poly_ois)
     polys_ois_aug2 = aug.augment_polygons(poly_ois)
 
@@ -2181,11 +2198,12 @@ def test_Augmenter_augment_polygons():
     assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
 
     # --> different between PolygonOnImages
-    points1 = [poly.exterior for poly in polys_ois_aug1[0].polygons]
-    points2 = [poly.exterior for poly in polys_ois_aug1[1].polygons]  # aug1 is correct here
-    points1 = np.float32(points1)
-    points2 = np.float32(points2)
-    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+    same = []
+    points1 = np.float32([poly.exterior for poly in polys_ois_aug1[0].polygons])
+    for poly in polys_ois_aug1[1:]:
+        points2 = np.float32([poly.exterior for poly in poly.polygons])
+        same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
+    assert not np.all(same)
 
     # --> different between polygons
     points1 = set()
@@ -2200,21 +2218,20 @@ def test_Augmenter_augment_polygons():
     aug_det = aug.to_deterministic()
     poly = ia.Polygon([(0, 0), (5, 0), (5, 5)])
     poly_oi = ia.PolygonsOnImage(
-        [poly.deepcopy() for _ in sm.xrange(100)],
+        [poly.deepcopy() for _ in sm.xrange(1)],
         shape=(10, 11, 3)
     )
-    poly_ois = [poly_oi, poly_oi.deepcopy()]
+    poly_ois = [poly_oi.deepcopy() for _ in sm.xrange(100)]
     polys_ois_aug1 = aug_det.augment_polygons(poly_ois)
     polys_ois_aug2 = aug_det.augment_polygons(poly_ois)
 
-    # --> different within the same run
-    points1 = set()
-    for poly in polys_ois_aug1[0].polygons:
-        for point in poly.exterior:
-            points1.add(tuple(
-                [int(point[0]*10), int(point[1]*10)]
-            ))
-    assert len(points1) > 1
+    # --> different between PolygonsOnImages
+    same = []
+    points1 = np.float32([poly.exterior for poly in polys_ois_aug1[0].polygons])
+    for poly in polys_ois_aug1[1:]:
+        points2 = np.float32([poly.exterior for poly in poly.polygons])
+        same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
+    assert not np.all(same)
 
     # --> similar between augmentation runs
     points1 = [poly.exterior for poly_oi in polys_ois_aug1 for poly in poly_oi.polygons]
@@ -2390,10 +2407,10 @@ def test_Augmenter_augment_line_strings():
     aug = iaa.Rot90((0, 3), keep_size=False)
     ls = ia.LineString([(0, 0), (5, 0), (5, 5)])
     ls_oi = ia.LineStringsOnImage(
-        [ls.deepcopy() for _ in sm.xrange(100)],
+        [ls.deepcopy() for _ in sm.xrange(1)],
         shape=(10, 11, 3)
     )
-    ls_ois = [ls_oi, ls_oi.deepcopy()]
+    ls_ois = [ls_oi.deepcopy() for _ in sm.xrange(100)]
     lss_ois_aug1 = aug.augment_line_strings(ls_ois)
     lss_ois_aug2 = aug.augment_line_strings(ls_ois)
 
@@ -2405,40 +2422,31 @@ def test_Augmenter_augment_line_strings():
     assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
 
     # --> different between LineStringsOnImages
-    points1 = [ls.coords for ls in lss_ois_aug1[0].line_strings]
-    points2 = [ls.coords for ls in lss_ois_aug1[1].line_strings]  # aug1 is correct here
-    points1 = np.float32(points1)
-    points2 = np.float32(points2)
-    assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
-
-    # --> different between polygons
-    points1 = set()
-    for ls in lss_ois_aug1[0].line_strings:
-        for point in ls.coords:
-            points1.add(tuple(
-                [int(point[0]*10), int(point[1]*10)]
-            ))
-    assert len(points1) > 1
+    same = []
+    points1 = np.float32([ls.coords for ls in lss_ois_aug1[0].line_strings])
+    for ls in lss_ois_aug1[1:]:
+        points2 = np.float32([ls.coords for ls in ls.line_strings])
+        same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
+    assert not np.all(same)
 
     # test determinism
     aug_det = aug.to_deterministic()
     ls = ia.LineString([(0, 0), (5, 0), (5, 5)])
     ls_oi = ia.LineStringsOnImage(
-        [ls.deepcopy() for _ in sm.xrange(100)],
+        [ls.deepcopy() for _ in sm.xrange(1)],
         shape=(10, 11, 3)
     )
-    ls_ois = [ls_oi, ls_oi.deepcopy()]
+    ls_ois = [ls_oi.deepcopy() for _ in sm.xrange(100)]
     lss_ois_aug1 = aug_det.augment_line_strings(ls_ois)
     lss_ois_aug2 = aug_det.augment_line_strings(ls_ois)
 
-    # --> different within the same run
-    points1 = set()
-    for ls in lss_ois_aug1[0].line_strings:
-        for point in ls.coords:
-            points1.add(tuple(
-                [int(point[0]*10), int(point[1]*10)]
-            ))
-    assert len(points1) > 1
+    # --> different between LineStringsOnImages
+    same = []
+    points1 = np.float32([ls.coords for ls in lss_ois_aug1[0].line_strings])
+    for ls in lss_ois_aug1[1:]:
+        points2 = np.float32([ls.coords for ls in ls.line_strings])
+        same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
+    assert not np.all(same)
 
     # --> similar between augmentation runs
     points1 = [ls.coords for ls_oi in lss_ois_aug1 for ls in ls_oi.line_strings]
@@ -3370,8 +3378,18 @@ def test_Augmenter_copy_random_state():
         # Trigger a warning.
         _ = target.copy_random_state(source, matching="name")
         # Verify some things
-        assert len(caught_warnings) == 1
-        assert "contains multiple augmenters with the same name" in str(caught_warnings[-1].message)
+
+        hits = []
+        for w in caught_warnings:
+            hits.append(
+                "contains multiple augmenters with the same name" in str(w.message)
+            )
+        if sys.version_info >= (3, 6):
+            assert len(caught_warnings) == 4
+        else:
+            assert len(caught_warnings) == 1
+        assert np.any(hits)
+        #assert "contains multiple augmenters with the same name" in str(caught_warnings[-1].message)
 
 
 def test_Sequential():

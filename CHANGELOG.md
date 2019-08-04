@@ -357,6 +357,47 @@ Changes:
      `Lambda.__init__()`, `AssertLambda.__init__()`, `AssertShape.__init__()`
      and hence breaks if one relied on that order.
 
+## New RNG handling
+
+* Adapted library to automatically use numpy 1.17 RNG classes, if they are
+  available. The library falls back to <=1.16 RNG interfaces otherwise.
+* Added module `imgaug.random`.
+  * Added `imgaug.random.is_new_numpy_rng_style()`.
+  * Added `imgaug.random.get_global_rng()`.
+  * Added `imgaug.random.get_bit_generator_class()`.
+  * Added `imgaug.random.seed()`.
+  * Added `imgaug.random.normalize_rng_()`.
+  * Added `imgaug.random.convert_seed_to_rng()`.
+  * Added `imgaug.random.convert_seed_sequence_to_rng()`.
+  * Added `imgaug.random.copy_rng()`.
+  * Added `imgaug.random.copy_rng_unless_global_rng()`.
+  * Added `imgaug.random.derive_rng()`.
+  * Added `imgaug.random.derive_rngs()`.
+  * Added `imgaug.random.get_rng_state()`.
+  * Added `imgaug.random.set_rng_state()`.
+  * Added `imgaug.random.is_identical_with()`.
+  * Added `imgaug.random.advance_rng()`.
+  * Added `imgaug.random.polyfill_integers()`.
+  * Added `imgaug.random.polyfill_random()`.
+* Marked old RNG related functions in `imgaug.imgaug` as deprecated.
+  They will now produce warnings and redirect towards corresponding functions
+  in `imgaug.random`. This affects the functions listed below.
+  * `imgaug.imgaug.seed()`.
+  * `imgaug.imgaug.normalize_random_state()`.
+  * `imgaug.imgaug.current_random_state()`.
+  * `imgaug.imgaug.new_random_state()`.
+  * `imgaug.imgaug.dummy_random_state()`.
+  * `imgaug.imgaug.copy_random_state()`.
+  * `imgaug.imgaug.derive_random_state()`.
+  * `imgaug.imgaug.derive_random_states()`.
+  * `imgaug.imgaug.forward_random_state()`.
+* [rarely breaking] Removed `imgaug.imgaug.CURRENT_RANDOM_STATE`.
+  Use `imgaug.random.get_global_rng()` instead.
+* [rarely breaking] Removed `imgaug.imgaug.SEED_MIN_VALUE`.
+  Use  `imgaug.random.SEED_MIN_VALUE` instead.
+* [rarely breaking] Removed `imgaug.imgaug.SEED_MAX_VALUE`.
+  Use  `imgaug.random.SEED_MAX_VALUE` instead.
+
 ## Fixes
  
 * Fixed an issue with `Polygon.clip_out_of_image()`,

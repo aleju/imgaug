@@ -532,6 +532,8 @@ class Polygon(object):
         assert alpha is not None
         assert size is not None
 
+        # FIXME due to the np.array(.) and the assert at ndim==2 below, this
+        #       will always fail on 2D images?
         color_face = color_face if color_face is not None else np.array(color)
         color_lines = color_lines if color_lines is not None else np.array(color) * 0.5
         color_points = color_points if color_points is not None else np.array(color) * 0.5

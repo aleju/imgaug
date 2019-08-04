@@ -24,6 +24,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 
 import imgaug as ia
 import imgaug.multicore as multicore
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug.testutils import reseed
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
@@ -36,7 +37,7 @@ class TestPool(unittest.TestCase):
     def test___init___seed_out_of_bounds(self):
         augseq = iaa.Noop()
         with self.assertRaises(AssertionError) as context:
-            _ = multicore.Pool(augseq, seed=ia.SEED_MAX_VALUE + 100)
+            _ = multicore.Pool(augseq, seed=iarandom.SEED_MAX_VALUE + 100)
         assert "Expected `seed` to be" in str(context.exception)
 
     def test_property_pool(self):
@@ -688,12 +689,14 @@ class Test_Pool_worker(unittest.TestCase):
         # expected seeds used
         seed = seed_start + batch_idx
         seed_global_expected = (
-            ia.SEED_MIN_VALUE
-            + (seed - 10**9) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+            iarandom.SEED_MIN_VALUE
+            + (seed - 10**9)
+            % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
         )
         seed_local_expected = (
-            ia.SEED_MIN_VALUE
-            + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+            iarandom.SEED_MIN_VALUE
+            + seed
+            % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
         )
 
         assert result == "augmented_batch"
