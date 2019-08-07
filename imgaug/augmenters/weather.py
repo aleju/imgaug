@@ -29,6 +29,7 @@ from . import meta, arithmetic, blur, contrast, color as augmenters_color
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 class FastSnowyLandscape(meta.Augmenter):
@@ -149,7 +150,7 @@ class FastSnowyLandscape(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_augmentables = len(augmentables)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         thresh_samples = self.lightness_threshold.draw_samples(
             (nb_augmentables,), rss[1])
         lmul_samples = self.lightness_multiplier.draw_samples(
@@ -521,7 +522,7 @@ class CloudLayer(meta.Augmenter):
             density_multiplier, "density_multiplier")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        rss = ia.derive_random_states(random_state, len(images))
+        rss = iarandom.derive_rngs(random_state, len(images))
         result = images
         for i, (image, rs) in enumerate(zip(images, rss)):
             result[i] = self.draw_on_image(image, rs)
@@ -587,7 +588,7 @@ class CloudLayer(meta.Augmenter):
             self.density_multiplier.draw_sample(random_state)
 
         height, width = image.shape[0:2]
-        rss_alpha, rss_intensity = ia.derive_random_states(random_state, 2)
+        rss_alpha, rss_intensity = iarandom.derive_rngs(random_state, 2)
 
         intensity_coarse = self._generate_intensity_map_coarse(
             height, width, intensity_mean_sample,
@@ -1024,7 +1025,7 @@ class SnowflakesLayer(meta.Augmenter):
         self.gate_noise_size = (8, 8)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        rss = ia.derive_random_states(random_state, len(images))
+        rss = iarandom.derive_rngs(random_state, len(images))
         result = images
         for i, (image, rs) in enumerate(zip(images, rss)):
             result[i] = self.draw_on_image(image, rs)
@@ -1075,7 +1076,7 @@ class SnowflakesLayer(meta.Augmenter):
             height_down,
             width_down,
             self.density,
-            ia.derive_random_state(random_state)
+            iarandom.derive_rng(random_state)
         )
 
         # gate the sampled noise via noise in range [0.0, 1.0]
@@ -1083,7 +1084,7 @@ class SnowflakesLayer(meta.Augmenter):
         # other areas
         gate_noise = iap.Beta(1.0, 1.0 - self.density_uniformity)
         noise = self._gate(noise, gate_noise, self.gate_noise_size,
-                           ia.derive_random_state(random_state))
+                           iarandom.derive_rng(random_state))
         noise = ia.imresize_single_image(noise, (height, width),
                                          interpolation="cubic")
 

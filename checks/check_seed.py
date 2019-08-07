@@ -4,6 +4,7 @@ import numpy as np
 from skimage import data
 
 import imgaug as ia
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 
 
@@ -14,15 +15,15 @@ def main():
     unseeded1 = aug.draw_grid(img, cols=8, rows=1)
     unseeded2 = aug.draw_grid(img, cols=8, rows=1)
 
-    ia.seed(1000)
+    iarandom.seed(1000)
     seeded1 = aug.draw_grid(img, cols=8, rows=1)
     seeded2 = aug.draw_grid(img, cols=8, rows=1)
 
-    ia.seed(1000)
+    iarandom.seed(1000)
     reseeded1 = aug.draw_grid(img, cols=8, rows=1)
     reseeded2 = aug.draw_grid(img, cols=8, rows=1)
 
-    ia.seed(1001)
+    iarandom.seed(1001)
     reseeded3 = aug.draw_grid(img, cols=8, rows=1)
     reseeded4 = aug.draw_grid(img, cols=8, rows=1)
 

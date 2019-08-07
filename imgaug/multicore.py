@@ -458,7 +458,7 @@ def _Pool_starworker(inputs):
 def _reseed_global_local(base_seed, augseq):
     seed_global = _derive_seed(base_seed, -10**9)
     seed_local = _derive_seed(base_seed)
-    ia.seed(seed_global)
+    iarandom.seed(seed_global)
     augseq.reseed(seed_local)
 
 
@@ -596,7 +596,7 @@ class BatchLoader(object):
         if seedval is not None:
             random.seed(seedval)
             np.random.seed(seedval)
-            ia.seed(seedval)
+            iarandom.seed(seedval)
 
         try:
             gen = (
@@ -801,7 +801,7 @@ class BackgroundAugmenter(object):
         np.random.seed(seedval)
         random.seed(seedval)
         augseq.reseed(seedval)
-        ia.seed(seedval)
+        iarandom.seed(seedval)
 
         loader_finished = False
 

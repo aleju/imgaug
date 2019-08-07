@@ -193,7 +193,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         self.deterministic = deterministic
 
         if deterministic and random_state is None:
-            self.random_state = ia.new_random_state()
+            self.random_state = iarandom.create_random_rng()
         else:
             self.random_state = iarandom.normalize_rng_(random_state)
 
@@ -506,13 +506,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
             images_result = self._augment_images(
                 images,
-                random_state=ia.copy_random_state(self.random_state),
+                random_state=iarandom.copy_rng(self.random_state),
                 parents=parents,
                 hooks=hooks
             )
             # move "forward" the random state, so that the next call to
             # augment_images() will use different random values
-            ia.forward_random_state(self.random_state)
+            iarandom.advance_rng_(self.random_state)
 
             if self.deterministic:
                 iarandom.set_rng_state(self.random_state, state_orig)
@@ -594,13 +594,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if len(images) > 0:
                 images_result = self._augment_images(
                     images_copy,
-                    random_state=ia.copy_random_state(self.random_state),
+                    random_state=iarandom.copy_rng(self.random_state),
                     parents=parents,
                     hooks=hooks
                 )
                 # move "forward" the random state, so that the next call to
                 # augment_images() will use different random values
-                ia.forward_random_state(self.random_state)
+                iarandom.advance_rng_(self.random_state)
             else:
                 images_result = images_copy
         else:
@@ -736,11 +736,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if len(heatmaps_copy) > 0:
                 heatmaps_result = self._augment_heatmaps(
                     heatmaps_copy,
-                    random_state=ia.copy_random_state(self.random_state),
+                    random_state=iarandom.copy_rng(self.random_state),
                     parents=parents,
                     hooks=hooks
                 )
-                ia.forward_random_state(self.random_state)
+                iarandom.advance_rng_(self.random_state)
             else:
                 heatmaps_result = heatmaps_copy
         else:
@@ -872,11 +872,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if len(segmaps_copy) > 0:
                 segmaps_result = self._augment_segmentation_maps(
                     segmaps_copy,
-                    random_state=ia.copy_random_state(self.random_state),
+                    random_state=iarandom.copy_rng(self.random_state),
                     parents=parents,
                     hooks=hooks
                 )
-                ia.forward_random_state(self.random_state)
+                iarandom.advance_rng_(self.random_state)
             else:
                 segmaps_result = segmaps_copy
         else:
@@ -1011,11 +1011,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if len(keypoints_on_images_copy) > 0:
                 keypoints_on_images_result = self._augment_keypoints(
                     keypoints_on_images_copy,
-                    random_state=ia.copy_random_state(self.random_state),
+                    random_state=iarandom.copy_rng(self.random_state),
                     parents=parents,
                     hooks=hooks
                 )
-                ia.forward_random_state(self.random_state)
+                iarandom.advance_rng_(self.random_state)
             else:
                 keypoints_on_images_result = keypoints_on_images_copy
         else:
@@ -1395,11 +1395,11 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if len(augables_ois) > 0:
                 augables_ois_result = subaugment_func(
                     augables_ois_copy,
-                    ia.copy_random_state(self.random_state),
+                    iarandom.copy_rng(self.random_state),
                     parents,
                     hooks
                 )
-                ia.forward_random_state(self.random_state)
+                iarandom.advance_rng_(self.random_state)
 
         if hooks is not None:
             augables_ois_result = hooks.postprocess(
@@ -2222,8 +2222,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         # multiprocessing (the child processes might use the same global random state as the parent process).
         # Note for the latter point that augment_batches() might call to_deterministic() if the batch contains
         # multiply types of augmentables.
-        # aug.random_state = ia.new_random_state()
-        aug.random_state = ia.derive_random_state(self.random_state)
+        # aug.random_state = iarandom.create_random_rng()
+        aug.random_state = iarandom.derive_rng(self.random_state)
 
         aug.deterministic = True
         return aug
@@ -2331,14 +2331,15 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             Returns itself (with localized random states).
 
         """
-        if self.random_state == ia.current_random_state():
-            self.random_state = ia.new_random_state()
+        if self.random_state is iarandom.get_global_rng():
+            self.random_state = iarandom.create_random_rng()
         if recursive:
             for lst in self.get_children_lists():
                 for child in lst:
                     child.localize_random_state_(recursive=recursive)
         return self
 
+    # TODO adapt random_state -> rng
     def copy_random_state(self, source, recursive=True, matching="position", matching_tolerant=True,
                           copy_determinism=False):
         """
@@ -2424,7 +2425,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         source_augs = [source] + source.get_all_children(flat=True) if recursive else [source]
         target_augs = [self] + self.get_all_children(flat=True) if recursive else [self]
 
-        global_rs = ia.current_random_state()
+        global_rs = iarandom.get_global_rng()
         global_rs_exc_msg = "You called copy_random_state_() with a source " \
                             "that uses global random states. Call " \
                             "localize_random_state_() on the source first " \
@@ -2446,7 +2447,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 if name in source_augs_dict:
                     if source_augs_dict[name].random_state == global_rs:
                         raise Exception(global_rs_exc_msg)
-                    target_augs_dict[name].random_state = ia.copy_random_state(source_augs_dict[name].random_state)
+                    target_augs_dict[name].random_state = iarandom.copy_rng(source_augs_dict[name].random_state)
                     if copy_determinism:
                         target_augs_dict[name].deterministic = source_augs_dict[name].deterministic
                 elif not matching_tolerant:
@@ -2461,7 +2462,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             for source_aug, target_aug in zip(source_augs, target_augs):
                 if source_aug.random_state == global_rs:
                     raise Exception(global_rs_exc_msg)
-                target_aug.random_state = ia.copy_random_state(source_aug.random_state, force_copy=True)
+                target_aug.random_state = iarandom.copy_rng(source_aug.random_state)
                 if copy_determinism:
                     target_aug.deterministic = source_aug.deterministic
         else:
@@ -2970,7 +2971,7 @@ class Sequential(Augmenter, list):
         augs = [aug.to_deterministic() for aug in self]
         seq = self.copy()
         seq[:] = augs
-        seq.random_state = ia.derive_random_state(self.random_state)
+        seq.random_state = iarandom.derive_rng(self.random_state)
         seq.deterministic = True
         return seq
 
@@ -3297,7 +3298,7 @@ class SomeOf(Augmenter, list):
         augs = [aug.to_deterministic() for aug in self]
         seq = self.copy()
         seq[:] = augs
-        seq.random_state = ia.derive_random_state(self.random_state)
+        seq.random_state = iarandom.derive_rng(self.random_state)
         seq.deterministic = True
         return seq
 
@@ -3568,7 +3569,7 @@ class Sometimes(Augmenter):
         aug.then_list = aug.then_list.to_deterministic() if aug.then_list is not None else aug.then_list
         aug.else_list = aug.else_list.to_deterministic() if aug.else_list is not None else aug.else_list
         aug.deterministic = True
-        aug.random_state = ia.derive_random_state(self.random_state)
+        aug.random_state = iarandom.derive_rng(self.random_state)
         return aug
 
     def get_parameters(self):
@@ -3755,7 +3756,7 @@ class WithChannels(Augmenter):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
         aug.deterministic = True
-        aug.random_state = ia.derive_random_state(self.random_state)
+        aug.random_state = iarandom.derive_rng(self.random_state)
         return aug
 
     def get_parameters(self):
@@ -4414,7 +4415,7 @@ class ChannelShuffle(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         p_samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        rss = ia.derive_random_states(random_state, nb_images)
+        rss = iarandom.derive_rngs(random_state, nb_images)
         for i in sm.xrange(nb_images):
             if p_samples[i] >= 1-1e-4:
                 images[i] = shuffle_channels(images[i], rss[i], self.channels)

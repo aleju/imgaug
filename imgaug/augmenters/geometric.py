@@ -1822,7 +1822,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = images
         nb_images = len(images)
 
-        rss = ia.derive_random_states(random_state, nb_images+5)
+        rss = iarandom.derive_rngs(random_state, nb_images+5)
 
         # make sure to sample "order" here at the 3rd position to match the sampling steps
         # in _augment_heatmaps()
@@ -1872,7 +1872,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = heatmaps
         nb_images = len(heatmaps)
 
-        rss = ia.derive_random_states(random_state, nb_images+2)
+        rss = iarandom.derive_rngs(random_state, nb_images+2)
 
         nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
         nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
@@ -1913,7 +1913,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = segmaps
         nb_images = len(segmaps)
 
-        rss = ia.derive_random_states(random_state, nb_images+2)
+        rss = iarandom.derive_rngs(random_state, nb_images+2)
 
         nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
                                                     random_state=rss[-2])
@@ -1950,7 +1950,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
 
-        rss = ia.derive_random_states(random_state, nb_images+2)
+        rss = iarandom.derive_rngs(random_state, nb_images+2)
 
         nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
         nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
@@ -2351,7 +2351,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
             [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
-            ia.copy_random_state(random_state)
+            iarandom.copy_rng(random_state)
         )
 
         # estimate max_heights/max_widths for the underlying images
@@ -2362,7 +2362,7 @@ class PerspectiveTransform(meta.Augmenter):
         else:
             _, max_heights_imgs, max_widths_imgs, cval_samples, mode_samples = self._create_matrices(
                 [heatmaps_i.shape for heatmaps_i in heatmaps],
-                ia.copy_random_state(random_state)
+                iarandom.copy_rng(random_state)
             )
 
         for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
@@ -2399,7 +2399,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         matrices, max_heights, max_widths, _, _ = self._create_matrices(
             [segmaps_i.arr.shape for segmaps_i in segmaps],
-            ia.copy_random_state(random_state)
+            iarandom.copy_rng(random_state)
         )
 
         # estimate max_heights/max_widths for the underlying images
@@ -2410,7 +2410,7 @@ class PerspectiveTransform(meta.Augmenter):
         else:
             _, max_heights_imgs, max_widths_imgs, _, _ = self._create_matrices(
                 [segmaps_i.shape for segmaps_i in segmaps],
-                ia.copy_random_state(random_state)
+                iarandom.copy_rng(random_state)
             )
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
@@ -2841,7 +2841,7 @@ class ElasticTransformation(meta.Augmenter):
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
-        rss = ia.derive_random_states(random_state, nb_images+5)
+        rss = iarandom.derive_rngs(random_state, nb_images+5)
         alphas = self.alpha.draw_samples((nb_images,), random_state=rss[-5])
         sigmas = self.sigma.draw_samples((nb_images,), random_state=rss[-4])
         orders = self.order.draw_samples((nb_images,), random_state=rss[-3])

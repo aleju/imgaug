@@ -18,9 +18,9 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import cv2
 
-import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
+from imgaug import random as iarandom
 from imgaug.testutils import reseed
 
 
@@ -243,7 +243,7 @@ class TestCanny(unittest.TestCase):
         hthresh_samples = samples[1]
         sobel_samples = samples[2]
 
-        rss = ia.derive_random_states(np.random.RandomState(seed), 4)
+        rss = iarandom.derive_rngs(np.random.RandomState(seed), 4)
         alpha_expected = [0.2] * nb_images
         hthresh_expected = rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                                          size=(nb_images, 2))
@@ -278,7 +278,7 @@ class TestCanny(unittest.TestCase):
         hthresh_samples = samples[1]
         sobel_samples = samples[2]
 
-        rss = ia.derive_random_states(np.random.RandomState(seed), 4)
+        rss = iarandom.derive_rngs(np.random.RandomState(seed), 4)
         alpha_expected = [0.2] * nb_images
         hthresh_expected = (
             rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],

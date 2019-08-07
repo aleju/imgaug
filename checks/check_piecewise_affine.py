@@ -3,9 +3,10 @@ from __future__ import print_function, division
 import numpy as np
 
 import imgaug as ia
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 
-ia.seed(3)
+iarandom.seed(3)
 
 
 def main():

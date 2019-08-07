@@ -1054,19 +1054,11 @@ class TestCLAHE(unittest.TestCase):
             # Trigger a warning.
             img5d_aug = clahe.augment_image(img5d)
             # Verify
-            if sys.version_info >= (3, 6):
-                assert len(caught_warnings) == 4
-            else:
-                assert len(caught_warnings) == 1
-            hits = []
-            for w in caught_warnings:
-                hits.append(
-                    "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
-                    in str(w.message)
-                )
-            assert np.any(hits)
-            # assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
-            #        in str(caught_warnings[-1].message)
+            assert len(caught_warnings) == 1
+            assert (
+                "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleCLAHE)" \
+                in str(caught_warnings[-1].message)
+            )
 
         assert np.array_equal(img5d_aug, img5d + 2)
 
@@ -1491,19 +1483,11 @@ class TestHistogramEqualization(unittest.TestCase):
                         # Trigger a warning.
                         img_aug = aug.augment_image(img)
                         # Verify
-                        if sys.version_info >= (3, 6):
-                            assert len(caught_warnings) == 4
-                        else:
-                            assert len(caught_warnings) == 1
-                        hits = []
-                        for w in caught_warnings:
-                            hits.append(
-                                "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"
-                                in str(w.message)
-                            )
-                        assert np.any(hits)
-                        # assert "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"\
-                        #        in str(caught_warnings[-1].message)
+                        assert len(caught_warnings) == 1
+                        assert (
+                            "Got image with 5 channels in _IntensityChannelBasedApplier (parents: ExampleHistEq)"\
+                            in str(caught_warnings[-1].message)
+                        )
 
                 expected = img
                 if nb_channels is None or nb_channels == 1:

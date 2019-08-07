@@ -1382,18 +1382,11 @@ def test_Augmenter():
         # Trigger a warning.
         _ = aug.augment_images(np.zeros((16, 32, 3), dtype=np.uint8))
         # Verify some things
-        if sys.version_info >= (3, 6):
-            assert len(caught_warnings) == 3
-        else:
-            assert len(caught_warnings) == 1
-        hits = []
-        for w in caught_warnings:
-            hits.append(
-                "indicates that you provided a single image with shape (H, W, C)"
-                in str(w.message)
-            )
-        assert np.any(hits)
-        # assert "indicates that you provided a single image with shape (H, W, C)" in str(caught_warnings[-1].message)
+        assert len(caught_warnings) == 1
+        assert (
+            "indicates that you provided a single image with shape (H, W, C)"
+            in str(caught_warnings[-1].message)
+        )
 
     aug = DummyAugmenter()
     got_exception = False
@@ -3378,18 +3371,11 @@ def test_Augmenter_copy_random_state():
         # Trigger a warning.
         _ = target.copy_random_state(source, matching="name")
         # Verify some things
-
-        hits = []
-        for w in caught_warnings:
-            hits.append(
-                "contains multiple augmenters with the same name" in str(w.message)
-            )
-        if sys.version_info >= (3, 6):
-            assert len(caught_warnings) == 4
-        else:
-            assert len(caught_warnings) == 1
-        assert np.any(hits)
-        #assert "contains multiple augmenters with the same name" in str(caught_warnings[-1].message)
+        assert len(caught_warnings) == 1
+        assert (
+            "contains multiple augmenters with the same name"
+            in str(caught_warnings[-1].message)
+        )
 
 
 def test_Sequential():

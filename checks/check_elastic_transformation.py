@@ -10,6 +10,7 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug.augmenters import meta
+import imgaug.random as iarandom
 
 
 def main():
@@ -17,7 +18,7 @@ def main():
     image = ia.imresize_single_image(image, (128, 128))
 
     # check if scipy and cv2 remap similarly
-    rs = ia.new_random_state(1)
+    rs = iarandom.convert_seed_to_rng(1)
     aug_scipy = ElasticTransformationScipy(alpha=30, sigma=3, random_state=rs, deterministic=True)
     aug_cv2 = ElasticTransformationCv2(alpha=30, sigma=3, random_state=rs, deterministic=True)
     augs_scipy = aug_scipy.augment_images([image] * 8)

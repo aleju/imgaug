@@ -46,6 +46,7 @@ from . import meta
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 class Add(meta.Augmenter):
@@ -158,7 +159,8 @@ class Add(meta.Augmenter):
 
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
+
         value_samples = self.value.draw_samples(
             (nb_images, nb_channels_max), random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(
@@ -382,7 +384,7 @@ class AddElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, nb_images+1)
+        rss = iarandom.derive_rngs(random_state, nb_images+1)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[-1])
 
@@ -906,7 +908,7 @@ class Multiply(meta.Augmenter):
 
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         mul_samples = self.mul.draw_samples(
             (nb_images, nb_channels_max), random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(
@@ -1144,7 +1146,7 @@ class MultiplyElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, nb_images+1)
+        rss = iarandom.derive_rngs(random_state, nb_images+1)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[-1])
         is_mul_binomial = isinstance(self.mul, iap.Binomial) or (
@@ -1665,7 +1667,7 @@ class ReplaceElementwise(meta.Augmenter):
                          augmenter=self)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, 2*nb_images+1)
+        rss = iarandom.derive_rngs(random_state, 2*nb_images+1)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[-1])
 
@@ -2602,7 +2604,7 @@ class Invert(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         p_samples = self.p.draw_samples((nb_images, nb_channels),
                                         random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(

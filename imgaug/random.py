@@ -115,8 +115,11 @@ def _seed_np116(entropy):
     get_global_rng().seed(entropy)
 
 
+def normalize_rng(rng):
+    return normalize_rng_(copylib.deepcopy(rng))
+
+
 # TODO add tests
-# TODO rename to inplace
 def normalize_rng_(rng):
     """
     Normalize various inputs to a numpy random number generator.
@@ -153,15 +156,19 @@ def _normalize_rng_np117_(rng):
             get_bit_generator_class()(rng)
         )
     elif isinstance(rng, np.random.bit_generator.BitGenerator):
-        return np.random.Generator(rng)
+        rng = np.random.Generator(rng)
+        reset_rng_cache_(rng)
+        return rng
     elif isinstance(rng, np.random.Generator):
+        reset_rng_cache_(rng)
         return rng
     elif isinstance(rng, np.random.RandomState):
         # TODO warn
+        reset_rng_cache_(rng)
         return rng
     # seed given
-    seed_seq = np.random.SeedSequence(rng)
-    return np.random.Generator(get_bit_generator_class()(seed_seq))
+    seed_ = rng
+    return convert_seed_to_rng(seed_)
 
 
 def _normalize_rng_np116_(random_state):
@@ -169,8 +176,9 @@ def _normalize_rng_np116_(random_state):
         return get_global_rng()
     elif isinstance(random_state, np.random.RandomState):
         return random_state
-    # seed given given
-    return np.random.RandomState(random_state)
+    # seed given
+    seed_ = random_state
+    return convert_seed_to_rng(seed_)
 
 
 def convert_seed_to_rng(entropy):
@@ -223,6 +231,21 @@ def convert_seed_sequence_to_rng(seed_sequence):
     """
     bit_gen = get_bit_generator_class()
     return np.random.Generator(bit_gen(seed_sequence))
+
+
+def create_random_rng():
+    # could also use derive_rng(get_global_rng()) here
+    random_seed = generate_seed(get_global_rng())
+    return convert_seed_to_rng(random_seed)
+
+
+def generate_seed(rng):
+    return generate_seeds(rng, 1)[0]
+
+
+def generate_seeds(rng, n_seeds):
+    return polyfill_integers(rng, SEED_MIN_VALUE, SEED_MAX_VALUE,
+                             size=(n_seeds,))
 
 
 def copy_rng(rng):
@@ -289,6 +312,51 @@ def copy_rng_unless_global_rng(rng):
     return copy_rng(rng)
 
 
+def reset_rng_cache_(rng):
+    """
+    Reset an RNG's internal cache.
+
+    Parameters
+    ----------
+    rng : numpy.random.Generator or numpy.random.RandomState
+        The RNG to reset.
+
+    Returns
+    -------
+    numpy.random.Generator
+        The same RNG, with its cache being reset.
+        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
+        will be returned.
+
+    """
+    if IS_NEW_NP_RNG_STYLE:
+        return _reset_rng_cache_np117_(rng)
+    else:
+        return _reset_rng_cache_np116_(rng)
+
+
+def _reset_rng_cache_np117_(rng):
+    if isinstance(rng, np.random.RandomState):
+        # TODO warn
+        rng = _reset_rng_cache_np116_(rng)
+    else:
+        # This deactivates usage of the cache. We could also remove the cached
+        # value itself in "uinteger", but setting the RNG to ignore the cached
+        # value should be enough.
+        rng.bit_generator.state["has_uint32"] = 0
+    return rng
+
+
+def _reset_rng_cache_np116_(rng):
+    # State tuple content:
+    #   'MT19937', array of ints, unknown int, cache flag, cached value
+    # The cache flag only affects the standard_normal() method.
+    state = list(rng.get_state())
+    state[-2] = 0
+    rng.set_state(tuple(state))
+    return rng
+
+
 def derive_rng(rng):
     """
     Create a new RNG based on an existing RNG.
@@ -341,7 +409,19 @@ def _derive_rngs_np117(rng, n=1):
     if isinstance(rng, np.random.RandomState):
         # TODO warn
         return _derive_rngs_np116(rng, n=n)
-    seed_ = rng.integers(SEED_MIN_VALUE, SEED_MAX_VALUE, dtype="int32")
+
+    # We generate here two integers instead of one, because the internal state
+    # of the RNG might have one 32bit integer still cached up, which would
+    # then be returned first when calling integers(). This should usually be
+    # fine, but there is some risk involved that this will lead to sampling
+    # many times the same seed in loop constructions (if the internal state
+    # is not properly advanced and the cache is then also not reset). Adding
+    # 'size=(2,)' decreases that risk. (It is then enough to e.g. call once
+    # random() to advance the internal state. No resetting of caches is
+    # needed.)
+    seed_ = rng.integers(SEED_MIN_VALUE, SEED_MAX_VALUE, dtype="int32",
+                         size=(2,))[-1]
+
     seed_seq = np.random.SeedSequence(seed_)
     seed_seqs = seed_seq.spawn(n)
     return [convert_seed_sequence_to_rng(seed_seq)
@@ -349,7 +429,7 @@ def _derive_rngs_np117(rng, n=1):
 
 
 def _derive_rngs_np116(random_state, n=1):
-    seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
+    seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE)
     return [_convert_seed_to_rng_np116(seed_+i) for i in sm.xrange(n)]
 
 
@@ -363,6 +443,7 @@ def _get_rng_state_np117(rng):
     if isinstance(rng, np.random.RandomState):
         # TODO warn
         return _get_rng_state_np116(rng)
+    # TODO copy this or in augmenter? otherwise determinism might not work
     return rng.bit_generator.state
 
 
@@ -444,7 +525,7 @@ def _is_rng_identical_with_np116(rng, other_rng):
     return True
 
 
-def advance_rng(rng):
+def advance_rng_(rng):
     """
     Forward the internal state of an RNG by one step.
 
@@ -455,20 +536,29 @@ def advance_rng(rng):
 
     """
     if IS_NEW_NP_RNG_STYLE:
-        _advance_rng_np117(rng)
-    _advance_rng_np116(rng)
+        _advance_rng_np117_(rng)
+    _advance_rng_np116_(rng)
 
 
-def _advance_rng_np117(rng):
+def _advance_rng_np117_(rng):
     if isinstance(rng, np.random.RandomState):
         # TODO warn
-        _advance_rng_np116(rng)
+        _advance_rng_np116_(rng)
     else:
         rng.random()
 
+        # integers() caches up to one 32bit value. We get rid here of that.
+        # If we don't do that, we risk that after copying or deriving we keep
+        # producing the same integer value.
+        rng.integers(0, 2**31-1, size=(2,))
 
-def _advance_rng_np116(rng):
+
+def _advance_rng_np116_(rng):
     rng.uniform()
+    # standard_normal() caches up to one 32bit value. We get rid here of that.
+    # If we don't do that, we risk that after copying or deriving we keep
+    # producing the same integer value.
+    rng.standard_normal(size=(2,))
 
 
 def polyfill_integers(rng, low, high=None, size=None, dtype="int32"):

@@ -12,6 +12,7 @@ import skimage.measure
 import collections
 
 from .. import imgaug as ia
+from .. import random as iarandom
 from .utils import normalize_shape, interpolate_points
 
 
@@ -1371,7 +1372,7 @@ class _ConcavePolygonRecoverer(object):
 
         if not isinstance(random_state, np.random.RandomState):
             random_state = np.random.RandomState(random_state)
-        rss = ia.derive_random_states(random_state, 3)
+        rss = iarandom.derive_rngs(random_state, 3)
 
         # remove consecutive duplicate points
         new_exterior = self._remove_consecutive_duplicate_points(new_exterior)

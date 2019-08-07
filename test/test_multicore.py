@@ -572,7 +572,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
 
     @mock.patch.object(sys, 'version_info')
     @mock.patch("time.time_ns", create=True)  # doesnt exist in <=3.6
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     @mock.patch("multiprocessing.current_process")
     def test_without_seed_start_simulate_py37_or_higher(self,
                                                         mock_cp,
@@ -600,7 +600,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
 
     @mock.patch.object(sys, 'version_info')
     @mock.patch("time.time")
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     @mock.patch("multiprocessing.current_process")
     def test_without_seed_start_simulate_py36_or_lower(self,
                                                        mock_cp,
@@ -626,7 +626,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
         seed_local = augseq.reseed.call_args_list[0][0][0]
         assert seed_global != seed_local
 
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     def test_without_seed_start(self, mock_ia_seed):
         augseq = mock.MagicMock()
 
@@ -673,7 +673,7 @@ class Test_Pool_worker(unittest.TestCase):
         assert augseq.augment_batch.call_count == 1
         augseq.augment_batch.assert_called_once_with(batch)
 
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     def test_with_seed_start(self, mock_ia_seed):
         augseq = mock.MagicMock()
         augseq.augment_batch.return_value = "augmented_batch"

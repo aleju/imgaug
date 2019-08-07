@@ -312,7 +312,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         result = images
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -355,7 +355,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return heatmaps
 
         nb_channels = meta.estimate_max_number_of_channels(heatmaps)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         per_channel = self.per_channel.draw_samples(nb_heatmaps, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_heatmaps, nb_channels), random_state=rss[1])
 
@@ -407,7 +407,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return segmaps
 
         nb_channels = meta.estimate_max_number_of_channels(segmaps)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -489,7 +489,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return inputs
 
         nb_channels = meta.estimate_max_number_of_channels(inputs)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -537,7 +537,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         aug.first = aug.first.to_deterministic() if aug.first is not None else None
         aug.second = aug.second.to_deterministic() if aug.second is not None else None
         aug.deterministic = True
-        aug.random_state = ia.derive_random_state(self.random_state)
+        aug.random_state = iarandom.derive_rng(self.random_state)
         return aug
 
     def get_parameters(self):

@@ -283,11 +283,15 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
 
         """
         # TODO convert int to random state here
-        random_state = random_state if random_state is not None else ia.current_random_state()
+        random_state = (
+            random_state
+            if random_state is not None
+            else iarandom.get_global_rng()
+        )
         samples = self._draw_samples(
             size if not ia.is_single_integer(size) else tuple([size]),
             random_state)
-        ia.forward_random_state(random_state)
+        iarandom.advance_rng_(random_state)
         return samples
 
     @abstractmethod
@@ -1813,7 +1817,7 @@ class RandomSign(StochasticParameter):
         self.p_positive = p_positive
 
     def _draw_samples(self, size, random_state):
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         samples = self.other_param.draw_samples(size, random_state=rss[0])
         # TODO add method to change from uint to int here instead of assert
         assert samples.dtype.kind != "u", "Cannot flip signs of unsigned integers."
@@ -2335,9 +2339,11 @@ class SimplexNoise(StochasticParameter):
         return result
 
     def _draw_samples_iteration(self, h, w, rng, upscale_method):
-        # TODO replace by create_seed function in imgaug.random
-        opensimplex_seed = iarandom.polyfill_integers(
-            rng, iarandom.SEED_MIN_VALUE, iarandom.SEED_MAX_VALUE)
+        opensimplex_seed = iarandom.generate_seed(rng)
+
+        # we have to use int(.) here, otherwise we can get warnings about
+        # value overflows in OpenSimplex L103
+        generator = OpenSimplex(seed=int(opensimplex_seed))
 
         maxlen = max(h, w)
         size_px_max = self.size_px_max.draw_sample(random_state=rng)
@@ -2353,7 +2359,6 @@ class SimplexNoise(StochasticParameter):
         h_small = max(h_small, 1)
         w_small = max(w_small, 1)
 
-        generator = OpenSimplex(seed=opensimplex_seed)
         noise = np.zeros((h_small, w_small), dtype=np.float32)
         for y in sm.xrange(h_small):
             for x in sm.xrange(w_small):
@@ -2481,7 +2486,7 @@ class FrequencyNoise(StochasticParameter):
 
         ia.do_assert(len(size) == 2, "Expected requested noise to have shape (H, W), got shape %s." % (size,))
 
-        rngs = ia.derive_random_states(random_state, 5)
+        rngs = iarandom.derive_rngs(random_state, 5)
 
         h, w = size
         maxlen = max(h, w)

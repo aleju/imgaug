@@ -35,6 +35,7 @@ from . import color as color_lib
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
@@ -659,7 +660,7 @@ class _IntensityChannelBasedApplier(object):
 
     def apply(self, images, random_state, parents, hooks, func):
         input_was_array = ia.is_np_array(images)
-        rss = ia.derive_random_states(random_state, 3)
+        rss = iarandom.derive_rngs(random_state, 3)
 
         # normalize images
         # (H, W, 1) will be used directly in AllChannelsCLAHE
@@ -844,7 +845,7 @@ class AllChannelsCLAHE(meta.Augmenter):
         nb_channels = meta.estimate_max_number_of_channels(images)
 
         mode = "single" if self.tile_grid_size_px[1] is None else "two"
-        rss = ia.derive_random_states(random_state, 3 if mode == "single" else 4)
+        rss = iarandom.derive_rngs(random_state, 3 if mode == "single" else 4)
         per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
         clip_limit = self.clip_limit.draw_samples((nb_images, nb_channels), random_state=rss[1])
         tile_grid_size_px_h = self.tile_grid_size_px[0].draw_samples((nb_images, nb_channels), random_state=rss[2])
@@ -1322,7 +1323,7 @@ class _ContrastFuncWrapper(meta.Augmenter):
                              augmenter=self)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, 1+nb_images)
+        rss = iarandom.derive_rngs(random_state, 1+nb_images)
         per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
 
         result = images

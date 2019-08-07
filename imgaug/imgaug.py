@@ -556,6 +556,7 @@ def new_random_state(seed=None, fully_random=False):
     return imgaug.random.convert_seed_to_rng(seed)
 
 
+# TODO seems to not be used anywhere anymore
 @deprecated("imgaug.random.convert_seed_to_rng")
 def dummy_random_state():
     """
@@ -655,7 +656,7 @@ def forward_random_state(random_state):
 
     """
     import imgaug.random
-    imgaug.random.advance_rng(random_state)
+    imgaug.random.advance_rng_(random_state)
 
 
 def _quokka_normalize_extract(extract):

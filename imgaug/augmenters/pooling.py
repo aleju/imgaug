@@ -30,6 +30,7 @@ import six
 from . import meta
 import imgaug as ia
 from .. import parameters as iap
+from .. import random as iarandom
 
 
 @six.add_metaclass(ABCMeta)
@@ -53,7 +54,7 @@ class _AbstractPoolingBase(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = ia.derive_random_states(random_state, 2)
+        rss = iarandom.derive_rngs(random_state, 2)
         mode = "single" if self.kernel_size[1] is None else "two"
         kernel_sizes_h = self.kernel_size[0].draw_samples(
             (nb_images,),
