@@ -512,12 +512,7 @@ class BatchLoader(object):
         self.join_signal = multiprocessing.Event()
         self.workers = []
         self.threaded = threaded
-        # TODO replace by sample_seeds function
-        seeds = iarandom.polyfill_integers(
-            iarandom.get_global_rng(),
-            iarandom.SEED_MIN_VALUE,
-            iarandom.SEED_MAX_VALUE,
-            size=(nb_workers,))
+        seeds = iarandom.get_global_rng().generate_seeds_(nb_workers)
         for i in range(nb_workers):
             if threaded:
                 worker = threading.Thread(
@@ -736,13 +731,7 @@ class BackgroundAugmenter(object):
         self.workers = []
         self.nb_workers_finished = 0
 
-        # TODO replace by sample_seeds
-        seeds = iarandom.polyfill_integers(
-            iarandom.get_global_rng(),
-            iarandom.SEED_MIN_VALUE,
-            iarandom.SEED_MAX_VALUE,
-            size=(nb_workers,)
-        )
+        seeds = iarandom.get_global_rng().generate_seeds_(nb_workers)
         for i in range(nb_workers):
             worker = multiprocessing.Process(
                 target=self._augment_images_worker,

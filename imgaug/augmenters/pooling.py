@@ -24,13 +24,11 @@ from __future__ import print_function, division, absolute_import
 
 from abc import ABCMeta, abstractmethod
 
-import numpy as np
 import six
 
 from . import meta
 import imgaug as ia
 from .. import parameters as iap
-from .. import random as iarandom
 
 
 @six.add_metaclass(ABCMeta)
@@ -54,7 +52,7 @@ class _AbstractPoolingBase(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
         mode = "single" if self.kernel_size[1] is None else "two"
         kernel_sizes_h = self.kernel_size[0].draw_samples(
             (nb_images,),

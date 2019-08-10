@@ -82,12 +82,12 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=_ListSampler(0),
             color_false=_ListSampler(1))
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
         color_true, color_false = colorizer._draw_samples(random_state)
         assert np.array_equal(color_true, [0, 1, 2])
         assert np.array_equal(color_false, [1, 2, 3])
-        assert colorizer.color_true.last_random_state == random_state
-        assert colorizer.color_false.last_random_state == random_state
+        assert colorizer.color_true.last_random_state.equals(random_state)
+        assert colorizer.color_false.last_random_state.equals(random_state)
 
     def test_colorize__one_channel(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
@@ -234,16 +234,16 @@ class TestCanny(unittest.TestCase):
             alpha=0.2,
             hysteresis_thresholds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             sobel_kernel_size=[3, 5, 7],
-            random_state=np.random.RandomState(seed))
+            random_state=iarandom.RNG(seed))
 
         example_image = np.zeros((5, 5, 3), dtype=np.uint8)
         samples = aug._draw_samples([example_image] * nb_images,
-                                    random_state=np.random.RandomState(seed))
+                                    random_state=iarandom.RNG(seed))
         alpha_samples = samples[0]
         hthresh_samples = samples[1]
         sobel_samples = samples[2]
 
-        rss = iarandom.derive_rngs(np.random.RandomState(seed), 4)
+        rss = iarandom.RNG(seed).derive_rngs_(4)
         alpha_expected = [0.2] * nb_images
         hthresh_expected = rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                                          size=(nb_images, 2))
@@ -269,16 +269,16 @@ class TestCanny(unittest.TestCase):
             hysteresis_thresholds=([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                                    iap.DiscreteUniform(5, 100)),
             sobel_kernel_size=[3, 5, 7],
-            random_state=np.random.RandomState(seed))
+            random_state=iarandom.RNG(seed))
 
         example_image = np.zeros((5, 5, 3), dtype=np.uint8)
         samples = aug._draw_samples([example_image] * nb_images,
-                                    random_state=np.random.RandomState(seed))
+                                    random_state=iarandom.RNG(seed))
         alpha_samples = samples[0]
         hthresh_samples = samples[1]
         sobel_samples = samples[2]
 
-        rss = iarandom.derive_rngs(np.random.RandomState(seed), 4)
+        rss = iarandom.RNG(seed).derive_rngs_(4)
         alpha_expected = [0.2] * nb_images
         hthresh_expected = (
             rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -524,8 +524,8 @@ class TestCanny(unittest.TestCase):
             color_false=0
         )
 
-        image_single_chan = np.random.RandomState(1).randint(
-            0, 255, size=(100, 100)).astype(np.uint8)
+        image_single_chan = iarandom.RNG(1).integers(
+            0, 255, size=(100, 100), dtype="uint8")
         image = np.tile(image_single_chan[:, :, np.newaxis], (1, 1, 3))
 
         images_canny_uint8 = {}

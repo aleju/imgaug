@@ -185,7 +185,7 @@ class WithColorspace(meta.Augmenter):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
         aug.deterministic = True
-        aug.random_state = iarandom.derive_rng(self.random_state)
+        aug.random_state = self.random_state.derive_rng_()
         return aug
 
     def get_parameters(self):
@@ -396,7 +396,7 @@ class WithHueAndSaturation(meta.Augmenter):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
         aug.deterministic = True
-        aug.random_state = iarandom.derive_rng(self.random_state)
+        aug.random_state = self.random_state.derive_rng_()
         return aug
 
     def get_parameters(self):
@@ -555,7 +555,7 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
     if random_state is None:
         rss = [None] * 5
     else:
-        rss = iarandom.derive_rngs(random_state, 5)
+        rss = random_state.derive_rngs_(5)
 
     children = []
     if mul is not None:
@@ -933,7 +933,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
 
         if self.value is not None:
             per_channel = self.per_channel.draw_samples(
@@ -994,7 +994,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         # else:
         #    images_hsv = images_hsv.astype(np.int32)
 
-        rss = iarandom.derive_rngs(random_state, 3)
+        rss = random_state.derive_rngs_(3)
         images_hsv = self.colorspace_changer._augment_images(
             images, rss[0], parents + [self], hooks)
         samples = self._draw_samples(images, rss[1])
@@ -1433,7 +1433,7 @@ class ChangeColorspace(meta.Augmenter):
         self.eps = 0.001
 
     def _draw_samples(self, n_augmentables, random_state):
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
         alphas = self.alpha.draw_samples(
             (n_augmentables,), random_state=rss[0])
         to_colorspaces = self.to_colorspace.draw_samples(
@@ -1659,7 +1659,7 @@ class _AbstractColorQuantization(meta.Augmenter):
                 "float256"],
             augmenter=self)
 
-        rss = iarandom.derive_rngs(random_state, 1 + len(images))
+        rss = random_state.derive_rngs_(1 + len(images))
         n_colors = self._draw_samples(len(images), rss[-1])
 
         result = images
@@ -1697,14 +1697,14 @@ class _AbstractColorQuantization(meta.Augmenter):
                 cs = ChangeColorspace(
                     from_colorspace=self.from_colorspace,
                     to_colorspace=self.to_colorspace,
-                    random_state=iarandom.copy_rng(random_state),
+                    random_state=random_state.copy_unless_global_rng(),
                     deterministic=True)
                 _, to_colorspaces = cs._draw_samples(
-                    1, iarandom.copy_rng(random_state))
+                    1, random_state.copy_unless_global_rng())
                 cs_inv = ChangeColorspace(
                     from_colorspace=to_colorspaces[0],
                     to_colorspace=self.from_colorspace,
-                    random_state=iarandom.copy_rng(random_state),
+                    random_state=random_state.copy_unless_global_rng(),
                     deterministic=True)
 
             image_tf = cs.augment_image(image)
@@ -1993,13 +1993,8 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     _compactness, labels, centers = cv2.kmeans(
         colors, n_colors, None, criteria, attempts, cv2.KMEANS_RANDOM_CENTERS)
     # TODO replace by sample_seed function
-    cv2.setRNGSeed(
-        iarandom.polyfill_integers(
-            iarandom.get_global_rng(),
-            iarandom.SEED_MIN_VALUE,
-            iarandom.SEED_MAX_VALUE
-        )
-    )  # cv2 seems to be able to handle SEED_MAX_VALUE (tested) but not floats
+    # cv2 seems to be able to handle SEED_MAX_VALUE (tested) but not floats
+    cv2.setRNGSeed(iarandom.get_global_rng().generate_seed_())
 
     # Convert back to uint8 (or whatever the image dtype was) and to input
     # image shape

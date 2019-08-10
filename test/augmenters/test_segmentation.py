@@ -696,7 +696,7 @@ class TestUniformVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
 
     def test___init___integrationtest(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
         aug = iaa.UniformVoronoi(
             100,
             p_replace=0.5,
@@ -712,7 +712,7 @@ class TestUniformVoronoi(unittest.TestCase):
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedUniformVoronoi"
         assert aug.deterministic is True
-        assert aug.random_state is rs
+        assert aug.random_state.equals(rs)
 
 
 class TestRegularGridVoronoi(unittest.TestCase):
@@ -752,7 +752,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
 
     def test___init___integrationtest(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
         aug = iaa.RegularGridVoronoi(
             10,
             (10, 30),
@@ -774,7 +774,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedRegularGridVoronoi"
         assert aug.deterministic is True
-        assert aug.random_state is rs
+        assert aug.random_state.equals(rs)
 
 
 class TestRelativeRegularGridVoronoi(unittest.TestCase):
@@ -814,7 +814,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
 
     def test___init___integrationtest(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
         aug = iaa.RelativeRegularGridVoronoi(
             0.1,
             (0.1, 0.3),
@@ -837,7 +837,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedRelativeRegularGridVoronoi"
         assert aug.deterministic is True
-        assert aug.random_state is rs
+        assert aug.random_state.equals(rs)
 
 
 # TODO verify behaviours when image height/width is zero
@@ -1139,8 +1139,8 @@ class TestDropoutPointsSampler(unittest.TestCase):
         _ = sampler.sample_points([image], 2)[0]
         rs_s2_1 = other.last_random_state
 
-        assert iarandom.is_rng_identical_with(rs_s1_1, rs_s1_2)
-        assert not iarandom.is_rng_identical_with(rs_s1_1, rs_s2_1)
+        assert rs_s1_1.equals(rs_s1_2)
+        assert not rs_s1_1.equals(rs_s2_1)
 
     def test_conversion_to_string(self):
         sampler = iaa.DropoutPointsSampler(
@@ -1381,8 +1381,8 @@ class TestSubsamplingPointSampler(unittest.TestCase):
         _ = sampler.sample_points([image], 2)[0]
         rs_s2_1 = other.last_random_state
 
-        assert iarandom.is_rng_identical_with(rs_s1_1, rs_s1_2)
-        assert not iarandom.is_rng_identical_with(rs_s1_1, rs_s2_1)
+        assert rs_s1_1.equals(rs_s1_2)
+        assert not rs_s1_1.equals(rs_s2_1)
 
     def test_conversion_to_string(self):
         sampler = iaa.SubsamplingPointsSampler(

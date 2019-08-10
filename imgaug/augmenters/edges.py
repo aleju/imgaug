@@ -32,7 +32,6 @@ from . import blend
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
-from .. import random as iarandom
 
 
 # TODO this should be placed in some other file than edges.py as it could be
@@ -366,7 +365,7 @@ class Canny(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = iarandom.derive_rngs(random_state, 4)
+        rss = random_state.derive_rngs_(4)
 
         alpha_samples = self.alpha.draw_samples((nb_images,), rss[0])
 
@@ -414,7 +413,7 @@ class Canny(meta.Augmenter):
                              "float256"],
                          augmenter=self)
 
-        rss = iarandom.derive_rngs(random_state, len(images))
+        rss = random_state.derive_rngs_(len(images))
         samples = self._draw_samples(images, rss[-1])
         alpha_samples = samples[0]
         hthresh_samples = samples[1]

@@ -37,7 +37,6 @@ from . import meta
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
-from .. import random as iarandom
 
 
 # TODO allow 3d matrices as input (not only 2D)
@@ -158,7 +157,7 @@ class Convolve(meta.Augmenter):
                                      "int32", "int64", "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
-        rss = iarandom.derive_rngs(random_state, len(images))
+        rss = random_state.derive_rngs_(len(images))
 
         for i, image in enumerate(images):
             _height, _width, nb_channels = images[i].shape

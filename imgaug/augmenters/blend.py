@@ -29,7 +29,6 @@ from . import meta
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
-from .. import random as iarandom
 
 
 def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
@@ -312,7 +311,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         result = images
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -355,7 +354,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return heatmaps
 
         nb_channels = meta.estimate_max_number_of_channels(heatmaps)
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
         per_channel = self.per_channel.draw_samples(nb_heatmaps, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_heatmaps, nb_channels), random_state=rss[1])
 
@@ -407,7 +406,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return segmaps
 
         nb_channels = meta.estimate_max_number_of_channels(segmaps)
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -489,7 +488,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return inputs
 
         nb_channels = meta.estimate_max_number_of_channels(inputs)
-        rss = iarandom.derive_rngs(random_state, 2)
+        rss = random_state.derive_rngs_(2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -537,7 +536,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         aug.first = aug.first.to_deterministic() if aug.first is not None else None
         aug.second = aug.second.to_deterministic() if aug.second is not None else None
         aug.deterministic = True
-        aug.random_state = iarandom.derive_rng(self.random_state)
+        aug.random_state = self.random_state.derive_rng_()
         return aug
 
     def get_parameters(self):
@@ -697,7 +696,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
-        rngs = iarandom.derive_rngs(random_state, nb_images)
+        rngs = random_state.derive_rngs_(nb_images)
 
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -755,7 +754,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = heatmaps
         nb_heatmaps = len(heatmaps)
-        rngs = iarandom.derive_rngs(random_state, nb_heatmaps)
+        rngs = random_state.derive_rngs_(nb_heatmaps)
 
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -825,7 +824,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = segmaps
         nb_segmaps = len(segmaps)
-        rngs = iarandom.derive_rngs(random_state, nb_segmaps)
+        rngs = random_state.derive_rngs_(nb_segmaps)
 
         if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -907,7 +906,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_coordinate_based(self, inputs, random_state, parents, hooks, func):
         result = inputs
         nb_images = len(inputs)
-        rngs = iarandom.derive_rngs(random_state, nb_images)
+        rngs = random_state.derive_rngs_(nb_images)
 
         if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             if self.first is None:

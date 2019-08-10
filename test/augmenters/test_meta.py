@@ -1305,17 +1305,14 @@ def test_Augmenter():
     # --------
     # TODO incomplete tests, handle only cases that were missing in code coverage report
     aug = DummyAugmenter()
-    assert aug.random_state is iarandom.get_global_rng()
+    assert aug.random_state.generator is iarandom.get_global_rng().generator
     aug = DummyAugmenter(deterministic=True)
     assert aug.random_state is not iarandom.get_global_rng()
-    rs = np.random.RandomState(123)
+    rs = iarandom.RNG(123)
     aug = DummyAugmenter(random_state=rs)
-    assert aug.random_state == rs
+    assert aug.random_state.generator is rs.generator
     aug = DummyAugmenter(random_state=123)
-    assert iarandom.is_rng_identical_with(
-        aug.random_state,
-        iarandom.convert_seed_to_rng(123)
-    )
+    assert aug.random_state.equals(iarandom.RNG(123))
 
     # --------
     # augment_batches
@@ -1621,7 +1618,7 @@ def test_Augmenter():
     # localize_random_state
     # --------
     aug = DummyAugmenter()
-    assert aug.random_state is iarandom.get_global_rng()
+    assert aug.random_state.is_global_rng()
     aug_localized = aug.localize_random_state()
     assert aug_localized.random_state is not iarandom.get_global_rng()
 
@@ -1629,7 +1626,7 @@ def test_Augmenter():
     # reseed
     # --------
     def _same_rs(rs1, rs2):
-        return iarandom.is_rng_identical_with(rs1, rs2)
+        return rs1.equals(rs2)
 
     aug1 = DummyAugmenter()
     aug2 = DummyAugmenter(deterministic=True)
@@ -1660,9 +1657,8 @@ def test_Augmenter():
     aug0_copy.reseed(random_state=123)
     assert not _same_rs(aug0.random_state, aug0_copy.random_state)
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
-    assert _same_rs(aug0_copy.random_state,
-                    iarandom.normalize_rng_(123))
-    expected = iarandom.derive_rng(iarandom.normalize_rng_(123))
+    assert _same_rs(aug0_copy.random_state, iarandom.RNG(123))
+    expected = iarandom.RNG(123).derive_rng_()
     assert _same_rs(aug0_copy[0].random_state, expected)
 
     aug0_copy = aug0.deepcopy()
@@ -1674,12 +1670,8 @@ def test_Augmenter():
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
     assert _same_rs(aug0_copy.random_state,
-                    iarandom.normalize_rng_(123))
-    expected = iarandom.derive_rng(
-        iarandom.normalize_rng_(
-            iarandom.convert_seed_to_rng(123)
-        )
-    )
+                    iarandom.RNG(123))
+    expected = iarandom.RNG(123).derive_rng_()
     assert _same_rs(aug0_copy[0].random_state, expected)
 
     # --------
@@ -3275,6 +3267,9 @@ def test_Augmenter_copy_random_state():
 
     target_cprs = target.copy_random_state(source, matching="position")
     source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
+    assert target_cprs.random_state.equals(source_alt.random_state)
+    for i in sm.xrange(3):
+        assert target_cprs[i].random_state.equals(source_alt[i].random_state)
     images_aug_source = source_alt.augment_images(images)
     images_aug_target = target_cprs.augment_images(images)
     assert np.array_equal(images_aug_source, images_aug_target)
@@ -3284,7 +3279,7 @@ def test_Augmenter_copy_random_state():
     source_alt = source.remove_augmenters(lambda aug, parents: aug.name == "blur")
     images_aug_source = source_alt.augment_images(images)
     images_aug_target = target_cprs.augment_images(images)
-    assert target_cprs[0].deterministic == True
+    assert target_cprs[0].deterministic is True
     assert np.array_equal(images_aug_source, images_aug_target)
 
     source[0].deterministic = False

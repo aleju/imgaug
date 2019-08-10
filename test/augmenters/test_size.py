@@ -2535,7 +2535,7 @@ def test_KeepSizeByResize():
                                interpolation_heatmaps="linear",
                                interpolation_segmaps="cubic")
     samples, samples_heatmaps, samples_segmaps = aug._draw_samples(
-        1000, iarandom.convert_seed_to_rng(1))
+        1000, iarandom.RNG(1))
     assert "nearest" in samples
     assert len(set(samples)) == 1
     assert "linear" in samples_heatmaps
@@ -2548,7 +2548,7 @@ def test_KeepSizeByResize():
                                interpolation_heatmaps=iaa.KeepSizeByResize.SAME_AS_IMAGES,
                                interpolation_segmaps=iaa.KeepSizeByResize.SAME_AS_IMAGES)
     samples, samples_heatmaps, samples_segmaps = aug._draw_samples(
-        1000, iarandom.convert_seed_to_rng(1))
+        1000, iarandom.RNG(1))
     assert iaa.KeepSizeByResize.NO_RESIZE in samples
     assert len(set(samples)) == 1
     assert iaa.KeepSizeByResize.NO_RESIZE in samples_heatmaps
@@ -2561,7 +2561,7 @@ def test_KeepSizeByResize():
                                interpolation_heatmaps=cv2.INTER_NEAREST,
                                interpolation_segmaps=cv2.INTER_CUBIC)
     samples, samples_heatmaps, samples_segmaps = aug._draw_samples(
-        1000, iarandom.convert_seed_to_rng(1))
+        1000, iarandom.RNG(1))
     assert cv2.INTER_LINEAR in samples
     assert len(set(samples)) == 1
     assert cv2.INTER_NEAREST in samples_heatmaps
@@ -2574,7 +2574,7 @@ def test_KeepSizeByResize():
                                interpolation_heatmaps=["linear", iaa.KeepSizeByResize.SAME_AS_IMAGES],
                                interpolation_segmaps=["linear", iaa.KeepSizeByResize.SAME_AS_IMAGES])
     samples, samples_heatmaps, samples_segmaps = aug._draw_samples(
-        5000, iarandom.convert_seed_to_rng(1))
+        5000, iarandom.RNG(1))
     assert "cubic" in samples
     assert "nearest" in samples
     assert len(set(samples)) == 2
@@ -2592,7 +2592,7 @@ def test_KeepSizeByResize():
                                interpolation_heatmaps=iap.Choice(["linear", "nearest"]),
                                interpolation_segmaps=iap.Choice(["linear", "nearest"]))
     samples, samples_heatmaps, samples_segmaps = aug._draw_samples(
-        10000, iarandom.convert_seed_to_rng(1))
+        10000, iarandom.RNG(1))
     assert "cubic" in samples
     assert "linear" in samples
     assert len(set(samples)) == 2

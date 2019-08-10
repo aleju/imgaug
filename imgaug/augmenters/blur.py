@@ -36,7 +36,6 @@ from . import convolutional as iaa_convolutional
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
-from .. import random as iarandom
 
 
 # TODO add border mode, cval
@@ -454,7 +453,7 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             samples = self.k.draw_samples((nb_images,), random_state=random_state)
             samples = (samples, samples)
         else:
-            rss = iarandom.derive_rngs(random_state, 2)
+            rss = random_state.derive_rngs_(2)
             samples = (
                 self.k[0].draw_samples((nb_images,), random_state=rss[0]),
                 self.k[1].draw_samples((nb_images,), random_state=rss[1]),
@@ -701,7 +700,7 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
                       + "Got channels: %s") % ([image.shape[2] for image in images],))
 
         nb_images = len(images)
-        rss = iarandom.derive_rngs(random_state, 3)
+        rss = random_state.derive_rngs_(3)
         samples_d = self.d.draw_samples((nb_images,), random_state=rss[0])
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=rss[1])
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=rss[2])
