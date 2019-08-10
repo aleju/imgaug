@@ -1301,7 +1301,7 @@ class TestPoisson(unittest.TestCase):
         sample = param.draw_sample()
 
         assert sample.shape == tuple()
-        assert 0 < sample
+        assert 0 <= sample
 
     def test_via_comparison_to_np_poisson(self):
         param = iap.Poisson(1)
