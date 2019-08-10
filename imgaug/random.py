@@ -147,9 +147,9 @@ def normalize_rng_(rng):
         will be returned.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
-        return _normalize_rng_np117_(rng)
-    return _normalize_rng_np116_(rng)
+    if isinstance(rng, np.random.RandomState):
+        return _normalize_rng_np116_(rng)
+    return _normalize_rng_np117_(rng)
 
 
 def _normalize_rng_np117_(rng):
@@ -164,10 +164,6 @@ def _normalize_rng_np117_(rng):
         reset_rng_cache_(rng)
         return rng
     elif isinstance(rng, np.random.Generator):
-        reset_rng_cache_(rng)
-        return rng
-    elif isinstance(rng, np.random.RandomState):
-        # TODO warn
         reset_rng_cache_(rng)
         return rng
     # seed given
@@ -202,9 +198,9 @@ def convert_seed_to_rng(entropy):
         will be returned.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
-        return _convert_seed_to_rng_np117(entropy)
-    return _convert_seed_to_rng_np116(entropy)
+    if IS_OLD_NP_RNG_STYLE:
+        return _convert_seed_to_rng_np116(entropy)
+    return _convert_seed_to_rng_np117(entropy)
 
 
 def _convert_seed_to_rng_np117(entropy):
@@ -269,17 +265,15 @@ def copy_rng(rng):
         will be returned.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
-        return _copy_rng_np117(rng)
-    return _copy_rng_np116(rng)
+    if isinstance(rng, np.random.RandomState):
+        return _copy_rng_np116(rng)
+    return _copy_rng_np117(rng)
 
 
 def _copy_rng_np117(rng):
-    if isinstance(rng, np.random.RandomState):
-        # TODO warn
-        return _copy_rng_np116(rng)
-
-    assert isinstance(rng, np.random.Generator)
+    # TODO not sure if it is enough to only copy the state
+    # TODO initializing a bit gen and then copying the state might be slower
+    #      then just deepcopying the whole thing
     old_bit_gen = rng.bit_generator
     new_bit_gen = old_bit_gen.__class__(1)
     new_bit_gen.state = copylib.deepcopy(old_bit_gen.state)
@@ -333,21 +327,16 @@ def reset_rng_cache_(rng):
         will be returned.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
-        return _reset_rng_cache_np117_(rng)
-    else:
+    if isinstance(rng, np.random.RandomState):
         return _reset_rng_cache_np116_(rng)
+    return _reset_rng_cache_np117_(rng)
 
 
 def _reset_rng_cache_np117_(rng):
-    if isinstance(rng, np.random.RandomState):
-        # TODO warn
-        rng = _reset_rng_cache_np116_(rng)
-    else:
-        # This deactivates usage of the cache. We could also remove the cached
-        # value itself in "uinteger", but setting the RNG to ignore the cached
-        # value should be enough.
-        rng.bit_generator.state["has_uint32"] = 0
+    # This deactivates usage of the cache. We could also remove the cached
+    # value itself in "uinteger", but setting the RNG to ignore the cached
+    # value should be enough.
+    rng.bit_generator.state["has_uint32"] = 0
     return rng
 
 
@@ -403,9 +392,9 @@ def derive_rngs(rng, n=1):
         will be returned.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
-        return _derive_rngs_np117(rng, n=n)
-    return _derive_rngs_np116(rng, n=n)
+    if isinstance(rng, np.random.RandomState):
+        return _derive_rngs_np116(rng, n=n)
+    return _derive_rngs_np117(rng, n=n)
 
 
 def _derive_rngs_np117(rng, n=1):
@@ -413,6 +402,20 @@ def _derive_rngs_np117(rng, n=1):
     if isinstance(rng, np.random.RandomState):
         # TODO warn
         return _derive_rngs_np116(rng, n=n)
+
+    """
+    advance_rng_(rng)
+    rng = copylib.deepcopy(rng)
+    reset_rng_cache_(rng)
+    state = rng.bit_generator.state
+    rngs = []
+    for i in sm.xrange(n):
+        state["state"]["state"] += (i * 100003 + 17)
+        rng.bit_generator.state = state
+        rngs.append(rng)
+        rng = copylib.deepcopy(rng)
+    return rngs
+    """
 
     # We generate here two integers instead of one, because the internal state
     # of the RNG might have one 32bit integer still cached up, which would
@@ -438,16 +441,12 @@ def _derive_rngs_np116(random_state, n=1):
 
 
 def get_rng_state(rng):
-    if IS_NEW_NP_RNG_STYLE:
-        return _get_rng_state_np117(rng)
-    return _get_rng_state_np116(rng)
+    if isinstance(rng, np.random.RandomState):
+        return _get_rng_state_np116(rng)
+    return _get_rng_state_np117(rng)
 
 
 def _get_rng_state_np117(rng):
-    if isinstance(rng, np.random.RandomState):
-        # TODO warn
-        return _get_rng_state_np116(rng)
-    # TODO copy this or in augmenter? otherwise determinism might not work
     return rng.bit_generator.state
 
 
@@ -456,18 +455,14 @@ def _get_rng_state_np116(rng):
 
 
 def set_rng_state(rng, state):
-    if IS_NEW_NP_RNG_STYLE:
-        _set_rng_state_np117(rng, state)
-    else:
+    if isinstance(rng, np.random.RandomState):
         _set_rng_state_np116(rng, state)
+    else:
+        _set_rng_state_np117(rng, state)
 
 
 def _set_rng_state_np117(rng, state):
-    if isinstance(rng, np.random.RandomState):
-        # TODO warn
-        _set_rng_state_np116(rng, state)
-    else:
-        rng.bit_generator.state = state
+    rng.bit_generator.state = state
 
 
 def _set_rng_state_np116(rng, state):
@@ -475,19 +470,15 @@ def _set_rng_state_np116(rng, state):
 
 
 def is_rng_identical_with(rng, other_rng):
-    if IS_NEW_NP_RNG_STYLE:
-        return _is_rng_identical_with_np117(rng, other_rng)
-    return _is_rng_identical_with_np116(rng, other_rng)
+    if isinstance(rng, np.random.RandomState):
+        return _is_rng_identical_with_np116(rng, other_rng)
+    return _is_rng_identical_with_np117(rng, other_rng)
 
 
 def _is_rng_identical_with_np117(rng, other_rng):
     assert rng.__class__ is other_rng.__class__, (
         "Expected both rngs to have the same class, "
         "got types '%s' and '%s'." % (type(rng), type(other_rng)))
-
-    if isinstance(rng, np.random.RandomState):
-        # TODO warn
-        return _is_rng_identical_with_np116(rng, other_rng)
 
     state1 = get_rng_state(rng)["state"]
     state2 = get_rng_state(other_rng)["state"]
@@ -521,12 +512,7 @@ def _is_rng_identical_with_np117(rng, other_rng):
 def _is_rng_identical_with_np116(rng, other_rng):
     state1 = get_rng_state(rng)
     state2 = get_rng_state(other_rng)
-
-    for i in sm.xrange(1, 4):
-        if not np.array_equal(state1[i], state2[i]):
-            return False
-
-    return True
+    return np.array_equal(state1[1:4+1], state2[1:4+1])
 
 
 def advance_rng_(rng):
@@ -539,30 +525,20 @@ def advance_rng_(rng):
         RNG to forward.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
+    if isinstance(rng, np.random.RandomState):
+        _advance_rng_np116_(rng)
+    else:
         _advance_rng_np117_(rng)
-    _advance_rng_np116_(rng)
 
 
 def _advance_rng_np117_(rng):
-    if isinstance(rng, np.random.RandomState):
-        # TODO warn
-        _advance_rng_np116_(rng)
-    else:
-        rng.random()
-
-        # integers() caches up to one 32bit value. We get rid here of that.
-        # If we don't do that, we risk that after copying or deriving we keep
-        # producing the same integer value.
-        rng.integers(0, 2**31-1, size=(2,))
+    _reset_rng_cache_np117_(rng)
+    rng.random()
 
 
 def _advance_rng_np116_(rng):
+    _reset_rng_cache_np116_(rng)
     rng.uniform()
-    # standard_normal() caches up to one 32bit value. We get rid here of that.
-    # If we don't do that, we risk that after copying or deriving we keep
-    # producing the same integer value.
-    rng.standard_normal(size=(2,))
 
 
 def polyfill_integers(rng, low, high=None, size=None, dtype="int32"):
@@ -593,7 +569,7 @@ def polyfill_integers(rng, low, high=None, size=None, dtype="int32"):
         See :func:`numpy.random.Generator.integers`.
 
     """
-    if hasattr(rng, "randint"):
+    if isinstance(rng, np.random.RandomState):
         return rng.randint(low=low, high=high, size=size, dtype=dtype)
     return rng.integers(low=low, high=high, size=size, dtype=dtype,
                         endpoint=False)
@@ -625,9 +601,8 @@ def polyfill_random(rng, size, dtype="float32", out=None):
         See :func:`numpy.random.Generator.random`.
 
     """
-    np_supports_gen = hasattr(np.random, "Generator")
-    if np_supports_gen and isinstance(rng, np.random.Generator):
-        return rng.random(size=size, dtype=dtype, out=out)
-    # note that numpy.random in <=1.16 supports random(), but
-    # numpy.random.RandomState does not
-    return rng.random_sample(size=size).astype(dtype)
+    if isinstance(rng, np.random.RandomState):
+        # note that numpy.random in <=1.16 supports random(), but
+        # numpy.random.RandomState does not
+        return rng.random_sample(size=size).astype(dtype)
+    return rng.random(size=size, dtype=dtype, out=out)
