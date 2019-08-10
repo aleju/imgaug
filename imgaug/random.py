@@ -8,10 +8,14 @@ import six.moves as sm
 
 # Check if numpy is version 1.17 or later. In that version, the new random
 # number interface was added.
+# Note that a valid version number can also be "1.18.0.dev0+285ab1d",
+# in which the last component cannot easily be converted to an int. Hence we
+# only pick the first two components.
 IS_NEW_NP_RNG_STYLE = False
-np_version = list(map(int, np.__version__.split(".")))
+np_version = list(map(int, np.__version__.split(".")[0:2]))
 if np_version[0] > 1 or np_version[1] >= 17:
     IS_NEW_NP_RNG_STYLE = True
+IS_OLD_NP_RNG_STYLE = not IS_NEW_NP_RNG_STYLE
 
 
 # We instantiate a current/global random state here once.
