@@ -30,17 +30,21 @@ SEED_MAX_VALUE = 2**31-1
 
 # TODO decrease pool_size in SeedSequence to 2 or 1?
 # TODO add 'with resetted_rng(...)'
-# TODO rename _rng functions to _generator
 # TODO update augmenter docstrings
 # TODO change random_state to rng
-# TODO use use_state_of_() in augment_* functions
-# TODO use duplicate() function in augmenters
 
 
 class RNG(object):
     """
+    Random number generator for imgaug.
 
-    Not supported:
+    This class is a wrapper around ``numpy.random.Generator`` and
+    automatically falls back to ``numpy.random.RandomState`` in case of
+    numpy version 1.16 or lower. It allows to use numpy 1.17's sampling
+    functions in 1.16 too and supports a variety of useful functions on
+    the wrapped sampler, e.g. gettings its state or copying it.
+
+    Not supported sampling functions of 1.16:
 
     * :func:`numpy.random.RandomState.rand`
     * :func:`numpy.random.RandomState.randn`
@@ -52,6 +56,40 @@ class RNG(object):
     * :func:`numpy.random.RandomState.seed`
     * :func:`numpy.random.RandomState.get_state`
     * :func:`numpy.random.RandomState.set_state`
+
+    In :func:`imgaug.random.RNG.choice`, the `axis` argument is not yet
+    supported.
+
+    Parameters
+    ----------
+    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+        The numpy random number generator to use. In case of numpy
+        version 1.17 or later, this shouldn't be a ``RandomState`` as that
+        class is outdated.
+        Behaviour for different datatypes:
+
+          * If ``None``: The global RNG is wrapped by this RNG (they are then
+            effectively identical, any sampling on this RNG will affect the
+            global RNG).
+          * If ``int``: In numpy 1.17+, the value is used as a seed for a
+            ``Generator`` wrapped by this RNG. I.e. it will be provided as the
+            entropy to a ``SeedSequence``, which will then be used for an
+            ``SFC64`` bit generator and wrapped by a ``Generator``.
+            In numpy <=1.16, the value is used as a seed for a ``RandomState``,
+            which is then wrapped by this RNG.
+          * If :class:`numpy.random.Generator`: That generator will be wrapped.
+          * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
+            generator will be created (and wrapped by this RNG) that contains
+            the bit generator.
+          * If :class:`numpy.random.bit_generator.SeedSequence`: A numpy
+            generator will be created (and wrapped by this RNG) that contains
+            an ``SFC64`` bit generator initialized with the given
+            ``SeedSequence``.
+          * If :class:`numpy.random.RandomState`: In numpy <=1.16, this
+            ``RandomState`` will be wrapped and used to sample random values.
+            In numpy 1.17+, a seed will be derived from this ``RandomState``
+            and a new ``numpy.generator.Generator`` based on an ``SFC64``
+            bit generator will be created and wrapped by this RNG.
 
     """
 
@@ -67,77 +105,309 @@ class RNG(object):
 
     @property
     def state(self):
+        """Get the state of this RNG.
+
+        Returns
+        -------
+        tuple or dict
+            The state of the RNG.
+            In numpy 1.17+, the bit generator's state will be returned.
+            In numpy <=1.16, the ``RandomState`` 's state is returned.
+            In both cases the state is a copy. In-place changes will not affect
+            the RNG.
+
+        """
         return get_generator_state(self.generator)
 
     @state.setter
     def state(self, value):
+        """Set the state if the RNG in-place.
+
+        Parameters
+        ----------
+        value : tuple or dict
+            The new state of the RNG.
+            Should correspond to the output of the ``state`` property.
+
+        """
         self.set_state_(value)
 
     def set_state_(self, value):
+        """Set the state if the RNG in-place.
+
+        Parameters
+        ----------
+        value : tuple or dict
+            The new state of the RNG.
+            Should correspond to the output of the ``state`` property.
+
+        Returns
+        -------
+        RNG
+            The RNG itself.
+
+        """
         set_rng_state_(self.generator, value)
         return self
 
     def use_state_of_(self, other):
-        return self.set_state_(other.state)
+        """Copy and use (in-place) the state of another RNG.
 
-    def use_state_copy_global_rng_(self, other):
-        if self.is_global_rng():
-            return other.copy()
+        .. note ::
+
+            It is often sensible to first verify that neither this RNG nor
+            `other` are identical to the global RNG.
+
+
+        Parameters
+        ----------
+        other : RNG
+            The other RNG, which's state will be copied.
+
+        Returns
+        -------
+        RNG
+            The RNG itself.
+
+        """
         return self.set_state_(other.state)
 
     def is_global_rng(self):
+        """Estimate whether this RNG is identical to the global RNG.
+
+        Returns
+        -------
+        bool
+            ``True`` is this RNG's underlying generator is identical to the
+            global RNG's underlying generator. The RNGs themselves may
+            be different, only the wrapped generator matters.
+            ``False`` otherwise.
+
+        """
         # We use .generator here, because otherwise RNG(global_rng) would be
         # viewed as not-identical to the global RNG, even though its generator
         # and bit generator are identical.
         return get_global_rng().generator is self.generator
 
     def equals_global_rng(self):
+        """Estimate whether this RNG has the same state as the global RNG.
+
+        Returns
+        -------
+        bool
+            ``True`` is this RNG has the same state as the global RNG, i.e.
+            it will lead to the same sampled values given the same sampling
+            method calls. The RNGs *don't* have to be identical object
+            instances, which protects against e.g. copy effects.
+            ``False`` otherwise.
+
+        """
         return get_global_rng().equals(self)
 
     def generate_seed_(self):
+        """Sample a random seed.
+
+        This advances the underlying generator's state.
+
+        See ``SEED_MIN_VALUE`` and ``SEED_MAX_VALUE`` for the seed's value
+        range.
+
+        Returns
+        -------
+        int
+            The sampled seed.
+
+        """
         return generate_seed_(self.generator)
 
     def generate_seeds_(self, n):
+        """Generate `n` random seed values.
+
+        This advances the underlying generator's state.
+
+        See ``SEED_MIN_VALUE`` and ``SEED_MAX_VALUE`` for the seed's value
+        range.
+
+        Parameters
+        ----------
+        n : int
+            Number of seeds to sample.
+
+        Returns
+        -------
+        ndarray
+            1D-array of ``int32`` seeds.
+
+        """
         return generate_seeds_(self.generator, n)
 
     def reset_cache_(self):
+        """Reset all cache of this RNG.
+
+        Returns
+        -------
+        RNG
+            The RNG itself.
+
+        """
         reset_generator_cache_(self.generator)
         return self
 
     def derive_rng_(self):
+        """Create a child RNG.
+
+        This advances the underlying generator's state.
+
+        Returns
+        -------
+        RNG
+            A child RNG.
+
+        """
         return self.derive_rngs_(1)[0]
 
     def derive_rngs_(self, n):
+        """Create `n` child RNGs.
+
+        This advances the underlying generator's state.
+
+        Parameters
+        ----------
+        n : int
+            Number of child RNGs to derive.
+
+        Returns
+        -------
+        list of RNG
+            Child RNGs.
+
+        """
         return [RNG(gen) for gen in derive_generators_(self.generator, n)]
 
     def equals(self, other):
+        """Estimate whether this RNG and `other` have the same state.
+
+        Returns
+        -------
+        bool
+            ``True`` if this RNG's generator and the generator of `other`
+            have equal internal states. ``False`` otherwise.
+
+        """
         assert isinstance(other, RNG)
         return is_generator_equal_to(self.generator, other.generator)
 
     def advance_(self):
+        """Advance the RNG's internal state in-place by one step.
+
+        This advances the underlying generator's state.
+
+        .. note ::
+
+            This simply samples one or more random values. This means that
+            a call of this method will not completely change the outputs of
+            the next called sampling method. To achieve more drastic output
+            changes, call :func:`imgaug.random.RNG.derive_rng_`.
+
+        Returns
+        -------
+        RNG
+            The RNG itself.
+
+        """
         advance_generator_(self.generator)
         return self
 
     def copy(self):
+        """Create a copy of this RNG.
+
+        Returns
+        -------
+        RNG
+            Copy of this RNG. The copy will produce the same random samples.
+
+        """
         return RNG(copy_generator(self.generator))
 
     def copy_unless_global_rng(self):
-        return RNG(copy_generator_unless_global_rng(self.generator))
+        """Create a copy of this RNG unless it is the global RNG.
+
+        Returns
+        -------
+        RNG
+            Copy of this RNG unless it is the global RNG. In the latter case
+            the RNG instance itself will be returned without any changes.
+
+        """
+        if self.is_global_rng():
+            return self
+        return self.copy()
 
     def duplicate(self, n):
+        """Create a list containing `n` times this RNG.
+
+        This method was mainly introduced as a replacement for previous
+        calls of :func:`imgaug.random.RNG.derive_rngs_`. These calls
+        turned out to be very slow in numpy 1.17+ and were hence replaced
+        by simple duplication (except for the cases where child RNGs
+        absolutely *had* to be created).
+        This RNG duplication method doesn't help very much against code
+        repetition, but it does *mark* the points where it would be desirable
+        to create child RNGs for various reasons. Once deriving child RNGs
+        is somehow sped up in the future, these calls can again be
+        easily found and replaced.
+
+        Parameters
+        ----------
+        n : int
+            Length of the output list.
+
+        Returns
+        -------
+        list of RNG
+            List containing `n` times this RNG (same instances, no copies).
+
+        """
         return [self for _ in sm.xrange(n)]
 
     @classmethod
     def create_fully_random(cls):
+        """Create a new RNG, based on entropy provided from the OS.
+
+        Returns
+        -------
+        RNG
+            A new RNG. It is not derived from any other previously created
+            RNG, nor does it depend on the seeding of imgaug or numpy.
+
+        """
         return RNG(create_fully_random_generator())
 
     @classmethod
     def create_pseudo_random_(cls):
+        """Create a new RNG in pseudo-random fashion.
+
+        A seed will be sampled from the current global RNG and used to
+        initialize the new RNG.
+
+        This advandes the global RNG's state.
+
+        Returns
+        -------
+        RNG
+            A new RNG, derived from the current global RNG.
+
+        """
         return get_global_rng().derive_rng_()
 
-    ##################################
-    # numpy.random.Generator functions
-    ##################################
+    ###########################################################################
+    # Below:
+    #   Aliases for methods of numpy.random.Generator functions
+    #
+    # The methods below could also be handled with less code using some magic
+    # methods. Explicitly writing things down here has the advantage that
+    # the methods actually appear in the autogenerated API.
+    ###########################################################################
 
     def integers(self, low, high=None, size=None, dtype="int32",
                  endpoint=False):
@@ -391,8 +661,6 @@ def get_global_rng():
     -------
     RNG
         The global RNG to use.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
 
     """
     global GLOBAL_RNG
@@ -420,8 +688,7 @@ def get_bit_generator_class():
 
 # TODO mark as in-place
 def seed(entropy):
-    """
-    Set the seed of imgaug's global random number generator.
+    """Set the seed of imgaug's global RNG.
 
     The global RNG controls most of the "randomness" in imgaug.
 
@@ -454,32 +721,66 @@ def _seed_np116(entropy):
     get_global_rng().generator.seed(entropy)
 
 
-def normalize_generator(rng):
-    return normalize_generator_(copylib.deepcopy(rng))
+def normalize_generator(generator):
+    """Normalize various inputs to a numpy (random number) generator.
 
-
-# TODO add tests
-def normalize_generator_(generator):
-    """
-    Normalize various inputs to a numpy (random number) generator.
+    This function will first copy the provided argument, i.e. it never returns
+    a provided instance itself.
 
     Parameters
     ----------
-    generator : None or int or numpy.random.SeedSequence or numpy.random.bit_generator.BitGenerator or numpy.random.Generator
-        The input to normalize.
-        If this is ``None``, the global RNG will be returned.
-        If this is an instance of ``numpy.random.Generator`` or
-        ``numpy.random.RandomState`` it will be returned
-        without any change. Seed sequences or bit generators will be wrapped
-        to return a Generator. Integers will result in a new generator
-        (wrapping a seed sequence and bit generator) being returned.
+    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+        The numpy random number generator to normalize. In case of numpy
+        version 1.17 or later, this shouldn't be a ``RandomState`` as that
+        class is outdated.
+        Behaviour for different datatypes:
+
+          * If ``None``: The global RNG's generator is returned.
+          * If ``int``: In numpy 1.17+, the value is used as a seed for a
+            ``Generator``, i.e. it will be provided as the entropy to a
+            ``SeedSequence``, which will then be used for an ``SFC64`` bit
+            generator and wrapped by a ``Generator``, which is then returned.
+            In numpy <=1.16, the value is used as a seed for a ``RandomState``,
+            which will then be returned.
+          * If :class:`numpy.random.Generator`: That generator will be
+            returned.
+          * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
+            generator will be created and returned that contains the bit
+            generator.
+          * If :class:`numpy.random.bit_generator.SeedSequence`: A numpy
+            generator will be created and returned that contains an ``SFC64``
+            bit generator initialized with the given ``SeedSequence``.
+          * If :class:`numpy.random.RandomState`: In numpy <=1.16, this
+            ``RandomState`` will be returned. In numpy 1.17+, a seed will be
+            derived from this ``RandomState`` and a new
+            ``numpy.generator.Generator`` based on an ``SFC64`` bit generator
+            will be created and returned.
 
     Returns
     -------
-    numpy.random.Generator
-        Normalized RNG.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator`` (even if
+        the input was a ``RandomState``).
+
+    """
+    return normalize_generator_(copylib.deepcopy(generator))
+
+
+def normalize_generator_(generator):
+    """Normalize in-place various inputs to a numpy (random number) generator.
+
+    This function will try to return the provided instance itself.
+
+    Parameters
+    ----------
+    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+        See :func:`imgaug.random.normalize_generator`.
+
+    Returns
+    -------
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator`` (even if
+        the input was a ``RandomState``).
 
     """
     if not SUPPORTS_NEW_NP_RNG_STYLE:
@@ -520,8 +821,7 @@ def _normalize_generator_np116_(random_state):
 
 
 def convert_seed_to_generator(entropy):
-    """
-    Convert a seed value to a numpy (random number) generator.
+    """Convert a seed value to a numpy (random number) generator.
 
     Parameters
     ----------
@@ -530,10 +830,9 @@ def convert_seed_to_generator(entropy):
 
     Returns
     -------
-    numpy.random.Generator
-        RNG initialized with the provided seed.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        Both are initialized with the provided seed.
 
     """
     if not SUPPORTS_NEW_NP_RNG_STYLE:
@@ -551,8 +850,7 @@ def _convert_seed_to_generator_np116(entropy):
 
 
 def convert_seed_sequence_to_generator(seed_sequence):
-    """
-    Convert a seed sequence to a numpy (random number) generator.
+    """Convert a seed sequence to a numpy (random number) generator.
 
     Parameters
     ----------
@@ -562,9 +860,7 @@ def convert_seed_sequence_to_generator(seed_sequence):
     Returns
     -------
     numpy.random.Generator
-        RNG initialized with the provided seed.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+        Generator initialized with the provided seed sequence.
 
     """
     bit_gen = get_bit_generator_class()
@@ -572,12 +868,33 @@ def convert_seed_sequence_to_generator(seed_sequence):
 
 
 def create_pseudo_random_generator_():
+    """Create a new numpy (random) generator, derived from the global RNG.
+
+    This function advances the global RNG's state.
+
+    Returns
+    -------
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        Both are initialized with a seed sampled from the global RNG.
+
+    """
     # could also use derive_rng(get_global_rng()) here
     random_seed = generate_seed_(get_global_rng())
     return convert_seed_to_generator(random_seed)
 
 
 def create_fully_random_generator():
+    """Create a new numpy (random) generator, derived from OS's entropy.
+
+    Returns
+    -------
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        Both are initialized with entropy requested from the OS. They are
+        hence independent of entered seeds or the library's global RNG.
+
+    """
     if not SUPPORTS_NEW_NP_RNG_STYLE:
         return _create_fully_random_generator_np116()
     return _create_fully_random_generator_np117()
@@ -593,29 +910,63 @@ def _create_fully_random_generator_np116():
 
 
 def generate_seed_(generator):
-    return generate_seeds_(generator, 1)[0]
+    """Sample a seed from the provided generator.
 
+    This function advances the generator's state.
 
-def generate_seeds_(generator, n_seeds):
-    return polyfill_integers(generator, SEED_MIN_VALUE, SEED_MAX_VALUE,
-                             size=(n_seeds,))
-
-
-def copy_generator(generator):
-    """
-    Copy an existing numpy (random number) generator.
+    See ``SEED_MIN_VALUE`` and ``SEED_MAX_VALUE`` for the seed's value
+    range.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        The RNG to copy.
+        The generator from which to sample the seed.
 
     Returns
     -------
-    numpy.random.Generator
-        The copied RNG.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+    int
+        The sampled seed.
+
+    """
+    return generate_seeds_(generator, 1)[0]
+
+
+def generate_seeds_(generator, n):
+    """Sample `n` seeds from the provided generator.
+
+    This function advances the generator's state.
+
+    Parameters
+    ----------
+    generator : numpy.random.Generator or numpy.random.RandomState
+        The generator from which to sample the seed.
+
+    n : int
+        Number of seeds to sample.
+
+    Returns
+    -------
+    ndarray
+        1D-array of ``int32`` seeds.
+
+    """
+    return polyfill_integers(generator, SEED_MIN_VALUE, SEED_MAX_VALUE,
+                             size=(n,))
+
+
+def copy_generator(generator):
+    """Copy an existing numpy (random number) generator.
+
+    Parameters
+    ----------
+    generator : numpy.random.Generator or numpy.random.RandomState
+        The generator to copy.
+
+    Returns
+    -------
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        Both are copies of the input argument.
 
     """
     if isinstance(generator, np.random.RandomState):
@@ -641,21 +992,23 @@ def _copy_generator_np116(random_state):
 
 
 def copy_generator_unless_global_rng(generator):
-    """
-    Copy a numpy generator unless it is the current global generator.
+    """Copy a numpy generator unless it is the current global generator.
+
+    "global generator" here denotes the generator contained in the
+    global RNG's ``.generator`` attribute.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        The RNG to copy.
+        The generator to copy.
 
     Returns
     -------
-    numpy.random.Generator
-        Either a copy of the RNG (if it wasn't identical to imgaug's global
-        RNG) or the input RNG (if it was identical).
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        Both are copies of the input argument, unless that input is
+        identical to the global generator. If it is identical, the
+        instance itself will be returned without copying it.
 
     """
     if generator is get_global_rng().generator:
@@ -664,20 +1017,20 @@ def copy_generator_unless_global_rng(generator):
 
 
 def reset_generator_cache_(generator):
-    """
-    Reset a numpy (random number) generator's internal cache.
+    """Reset a numpy (random number) generator's internal cache.
+
+    This function modifies the generator's state in-place.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        The RNG to reset.
+        The generator of which to reset the cache.
 
     Returns
     -------
-    numpy.random.Generator
-        The same RNG, with its cache being reset.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        In both cases the input argument itself.
 
     """
     if isinstance(generator, np.random.RandomState):
@@ -704,20 +1057,20 @@ def _reset_generator_cache_np116_(random_state):
 
 
 def derive_generator_(generator):
-    """
-    Create a new numpy (random number) generator based on an existing generator.
+    """Create a child numpy (random number) generator from an existing one.
+
+    This advances the generator's state.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        RNG from which to derive a new RNG.
+        The generator from which to derive a new child generator.
 
     Returns
     -------
-    numpy.random.Generator
-        Derived RNG.
-        In numpy 1.16 or older, an instance of ``numpy.random.RandomState``
-        will be returned.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        In both cases a derived child generator.
 
     """
     return derive_generators_(generator, n=1)[0]
@@ -726,23 +1079,22 @@ def derive_generator_(generator):
 # TODO does this advance the RNG in 1.17? It should advance it for security
 #      reasons
 def derive_generators_(generator, n=1):
-    """
-    Create new numpy (random number) generators based on an existing generator.
+    """Create child numpy (random number) generators from an existing one.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        RNG from which to derive new RNGs.
+        The generator from which to derive new child generators.
 
     n : int, optional
-        Number of RNGs to derive.
+        Number of child generators to derive.
 
     Returns
     -------
-    list of numpy.random.Generator
-        Derived RNGs.
-        In numpy 1.16 or older, a list of ``numpy.random.RandomState``
-        will be returned.
+    list of numpy.random.Generator or list of numpy.random.RandomState
+        In numpy <=1.16 a list of  ``RandomState`` s,
+        in 1.17+ a list of ``Generator`` s.
+        In both cases lists of derived child generators.
 
     """
     if isinstance(generator, np.random.RandomState):
@@ -790,6 +1142,23 @@ def _derive_generators_np116_(random_state, n=1):
 
 
 def get_generator_state(generator):
+    """Get the state of this provided generator.
+
+    Parameters
+    ----------
+    generator : numpy.random.Generator or numpy.random.RandomState
+        The generator, which's state is supposed to be extracted.
+
+    Returns
+    -------
+    tuple or dict
+        The state of the generator.
+        In numpy 1.17+, the bit generator's state will be returned.
+        In numpy <=1.16, the ``RandomState`` 's state is returned.
+        In both cases the state is a copy. In-place changes will not affect
+        the RNG.
+
+    """
     if isinstance(generator, np.random.RandomState):
         return _get_generator_state_np116(generator)
     return _get_generator_state_np117(generator)
@@ -804,6 +1173,19 @@ def _get_generator_state_np116(random_state):
 
 
 def set_rng_state_(generator, state):
+    """Set the state if the RNG in-place.
+
+    Parameters
+    ----------
+    generator : numpy.random.Generator or numpy.random.RandomState
+        The generator, which's state is supposed to be modified.
+
+    state : tuple or dict
+        The new state of the generator.
+        Should correspond to the output of
+        :func:`imgaug.random.get_generator_state`.
+
+    """
     if isinstance(generator, np.random.RandomState):
         _set_rng_state_np116_(generator, state)
     else:
@@ -819,6 +1201,23 @@ def _set_rng_state_np116_(random_state, state):
 
 
 def is_generator_equal_to(generator, other_generator):
+    """Estimate whether two generator have the same class and state.
+
+    Parameters
+    ----------
+    generator : numpy.random.Generator or numpy.random.RandomState
+        First generator used in the comparison.
+
+    other_generator : numpy.random.Generator or numpy.random.RandomState
+        Second generator used in the comparison.
+
+    Returns
+    -------
+    bool
+        ``True`` if `generator` 's class and state are the same as the
+        class and state of `other_generator`. ``False`` otherwise.
+
+    """
     if isinstance(generator, np.random.RandomState):
         return _is_generator_equal_to_np116(generator, other_generator)
     return _is_generator_equal_to_np117(generator, other_generator)
@@ -873,13 +1272,21 @@ def _is_generator_equal_to_np116(random_state, other_random_state):
 
 
 def advance_generator_(generator):
-    """
-    Forward the internal state of an RNG by one step.
+    """Advance a numpy random generator's internal state in-place by one step.
+
+    This advances the generator's state.
+
+    .. note ::
+
+        This simply samples one or more random values. This means that
+        a call of this method will not completely change the outputs of
+        the next called sampling method. To achieve more drastic output
+        changes, call :func:`imgaug.random.derive_generator_`.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        RNG to forward.
+        Generator of which to advance the internal state.
 
     """
     if isinstance(generator, np.random.RandomState):
@@ -900,14 +1307,14 @@ def _advance_generator_np116_(generator):
 
 def polyfill_integers(generator, low, high=None, size=None, dtype="int32",
                       endpoint=False):
-    """
-    Sample integers from an RNG in different numpy versions.
+    """Sample integers from a generator in different numpy versions.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        The RNG to sample from. If it is a ``RandomState``, ``randint()`` will
-        be called, otherwise ``integers()``.
+        The generator to sample from. If it is a ``RandomState``,
+        :func:`numpy.random.RandomState.randint` will be called,
+        otherwise :func:`numpy.random.Generator.integers`.
 
     low : int or array-like of ints
         See :func:`numpy.random.Generator.integers`.
@@ -937,14 +1344,13 @@ def polyfill_integers(generator, low, high=None, size=None, dtype="int32",
 
 
 def polyfill_random(generator, size, dtype="float32", out=None):
-    """
-    Sample random floats from an RNG in different numpy versions.
+    """Sample random floats from a generator in different numpy versions.
 
     Parameters
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
-        The RNG to sample from. Both ``RandomState`` and ``Generator``
-        suppert ``random()``, but with different interfaces.
+        The generator to sample from. Both ``RandomState`` and ``Generator``
+        support ``random()``, but with different interfaces.
 
     size : int or tuple of ints, optional
         See :func:`numpy.random.Generator.random`.
