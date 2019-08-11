@@ -243,12 +243,14 @@ class TestCanny(unittest.TestCase):
         hthresh_samples = samples[1]
         sobel_samples = samples[2]
 
-        rss = iarandom.RNG(seed).derive_rngs_(4)
-        alpha_expected = [0.2] * nb_images
-        hthresh_expected = rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                                         size=(nb_images, 2))
-        sobel_expected = rss[3].choice([3, 5, 7],
-                                       size=(nb_images,))
+        rss = iarandom.RNG(seed).duplicate(4)
+        alpha_expected = iap.Deterministic(0.2).draw_samples((nb_images,),
+                                                             rss[0])
+        hthresh_expected = iap.Choice(
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).draw_samples((nb_images, 2),
+                                                             rss[1])
+        sobel_expected = iap.Choice([3, 5, 7]).draw_samples((nb_images,),
+                                                            rss[2])
 
         invalid = hthresh_expected[:, 0] > hthresh_expected[:, 1]
         assert np.any(invalid)
@@ -278,20 +280,22 @@ class TestCanny(unittest.TestCase):
         hthresh_samples = samples[1]
         sobel_samples = samples[2]
 
-        rss = iarandom.RNG(seed).derive_rngs_(4)
-        alpha_expected = [0.2] * nb_images
-        hthresh_expected = (
-            rss[1].choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                          size=(nb_images,)),
-            # TODO simplify this to rss[2].randint(5, 100+1)
-            #      would currenlty be a bit more ugly, because DiscrUniform
-            #      samples two values for a and b first from rss[2]
-            iap.DiscreteUniform(5, 100).draw_samples((nb_images,), rss[2])
-        )
+        rss = iarandom.RNG(seed).duplicate(4)
+        alpha_expected = iap.Deterministic(0.2).draw_samples((nb_images,),
+                                                             rss[0])
+        hthresh_expected = [None, None]
+        hthresh_expected[0] = iap.Choice(
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).draw_samples((nb_images,),
+                                                             rss[1])
+        # TODO simplify this to rss[2].randint(5, 100+1)
+        #      would currenlty be a bit more ugly, because DiscrUniform
+        #      samples two values for a and b first from rss[2]
+        hthresh_expected[1] = iap.DiscreteUniform(5, 100).draw_samples(
+            (nb_images,), rss[2])
         hthresh_expected = np.stack(hthresh_expected, axis=-1)
 
-        sobel_expected = rss[3].choice([3, 5, 7],
-                                       size=(nb_images,))
+        sobel_expected = iap.Choice([3, 5, 7]).draw_samples((nb_images,),
+                                                            rss[3])
 
         invalid = hthresh_expected[:, 0] > hthresh_expected[:, 1]
         hthresh_expected[invalid, :] = hthresh_expected[invalid, :][:, [1, 0]]

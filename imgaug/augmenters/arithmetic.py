@@ -158,7 +158,7 @@ class Add(meta.Augmenter):
 
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
 
         value_samples = self.value.draw_samples(
             (nb_images, nb_channels_max), random_state=rss[0])
@@ -383,7 +383,7 @@ class AddElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = random_state.derive_rngs_(nb_images+1)
+        rss = random_state.duplicate(nb_images+1)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[-1])
 
@@ -907,7 +907,7 @@ class Multiply(meta.Augmenter):
 
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         mul_samples = self.mul.draw_samples(
             (nb_images, nb_channels_max), random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(
@@ -1145,7 +1145,7 @@ class MultiplyElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = random_state.derive_rngs_(nb_images+1)
+        rss = random_state.duplicate(nb_images+1)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[-1])
         is_mul_binomial = isinstance(self.mul, iap.Binomial) or (
@@ -1666,7 +1666,7 @@ class ReplaceElementwise(meta.Augmenter):
                          augmenter=self)
 
         nb_images = len(images)
-        rss = random_state.derive_rngs_(2*nb_images+1)
+        rss = random_state.duplicate(2*nb_images+1)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[-1])
 
@@ -2603,7 +2603,7 @@ class Invert(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         p_samples = self.p.draw_samples((nb_images, nb_channels),
                                         random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(

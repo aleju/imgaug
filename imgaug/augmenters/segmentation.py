@@ -232,7 +232,7 @@ class Superpixels(meta.Augmenter):
                          augmenter=self)
 
         nb_images = len(images)
-        rss = random_state.derive_rngs_(1+nb_images)
+        rss = random_state.duplicate(1+nb_images)
         n_segments_samples = self.n_segments.draw_samples(
             (nb_images,), random_state=rss[0])
 
@@ -606,13 +606,13 @@ class Voronoi(meta.Augmenter):
                                      "float96", "float128", "float256"],
                          augmenter=self)
 
-        rss = random_state.derive_rngs_(len(images))
+        rss = random_state.duplicate(len(images))
         for i, (image, rs) in enumerate(zip(images, rss)):
             images[i] = self._augment_single_image(image, rs)
         return images
 
     def _augment_single_image(self, image, random_state):
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         orig_shape = image.shape
         image = _ensure_image_max_size(image, self.max_size, self.interpolation)
 
@@ -1210,7 +1210,7 @@ class RegularGridPointsSampler(PointsSamplerIf):
         return self._generate_point_grids(images, n_rows_lst, n_cols_lst)
 
     def _draw_samples(self, images, random_state):
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         n_rows_lst = self.n_rows.draw_samples(len(images), random_state=rss[0])
         n_cols_lst = self.n_cols.draw_samples(len(images), random_state=rss[1])
         return self._clip_rows_and_cols(n_rows_lst, n_cols_lst, images)
@@ -1333,7 +1333,7 @@ class RelativeRegularGridPointsSampler(PointsSamplerIf):
 
     def _draw_samples(self, images, random_state):
         n_augmentables = len(images)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         n_rows_frac = self.n_rows_frac.draw_samples(n_augmentables,
                                                     random_state=rss[0])
         n_cols_frac = self.n_cols_frac.draw_samples(n_augmentables,
@@ -1430,14 +1430,14 @@ class DropoutPointsSampler(PointsSamplerIf):
         random_state = iarandom.RNG(random_state)
         _verify_sample_points_images(images)
 
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         points_on_images = self.other_points_sampler.sample_points(images,
                                                                    rss[0])
         drop_masks = self._draw_samples(points_on_images, rss[1])
         return self._apply_dropout_masks(points_on_images, drop_masks)
 
     def _draw_samples(self, points_on_images, random_state):
-        rss = random_state.derive_rngs_(len(points_on_images))
+        rss = random_state.duplicate(len(points_on_images))
         drop_masks = [self._draw_samples_for_image(points_on_image, rs)
                       for points_on_image, rs
                       in zip(points_on_images, rss)]
@@ -1517,7 +1517,7 @@ class UniformPointsSampler(PointsSamplerIf):
         random_state = iarandom.RNG(random_state)
         _verify_sample_points_images(images)
 
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         n_points_imagewise = self._draw_samples(len(images), rss[0])
 
         n_points_total = np.sum(n_points_imagewise)
@@ -1609,7 +1609,7 @@ class SubsamplingPointsSampler(PointsSamplerIf):
         random_state = iarandom.RNG(random_state)
         _verify_sample_points_images(images)
 
-        rss = random_state.derive_rngs_(len(images) + 1)
+        rss = random_state.duplicate(len(images) + 1)
         points_on_images = self.other_points_sampler.sample_points(
             images, rss[-1])
         return [self._subsample(points_on_image, self.n_points_max, rs)

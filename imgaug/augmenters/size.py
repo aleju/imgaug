@@ -461,7 +461,7 @@ class Resize(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
-        rngs = random_state.derive_rngs_(3)
+        rngs = random_state.duplicate(3)
         if isinstance(self.size, tuple):
             samples_h = self.size[0].draw_samples(nb_images, random_state=rngs[0])
             samples_w = self.size[1].draw_samples(nb_images, random_state=rngs[1])
@@ -839,7 +839,7 @@ class CropAndPad(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
-        rngs = random_state.derive_rngs_(nb_images)
+        rngs = random_state.duplicate(nb_images)
         for i in sm.xrange(nb_images):
             height, width = images[i].shape[0:2]
             crop_top, crop_right, crop_bottom, crop_left, \
@@ -869,7 +869,7 @@ class CropAndPad(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = []
         nb_heatmaps = len(heatmaps)
-        rngs = random_state.derive_rngs_(nb_heatmaps)
+        rngs = random_state.duplicate(nb_heatmaps)
         for i in sm.xrange(nb_heatmaps):
             height_image, width_image = heatmaps[i].shape[0:2]
             height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
@@ -934,7 +934,7 @@ class CropAndPad(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         result = []
         nb_segmaps = len(segmaps)
-        rngs = random_state.derive_rngs_(nb_segmaps)
+        rngs = random_state.duplicate(nb_segmaps)
         for i in sm.xrange(nb_segmaps):
             height_image, width_image = segmaps[i].shape[0:2]
             height_segmaps, width_segmaps = segmaps[i].arr.shape[0:2]
@@ -999,7 +999,7 @@ class CropAndPad(meta.Augmenter):
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        rngs = random_state.derive_rngs_(nb_images)
+        rngs = random_state.duplicate(nb_images)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.shape[0:2]
             crop_top, crop_right, crop_bottom, crop_left, \
@@ -1672,7 +1672,7 @@ class PadToFixedSize(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state):
-        rngs = random_state.derive_rngs_(4)
+        rngs = random_state.duplicate(4)
 
         if isinstance(self.position, tuple):
             pad_xs = self.position[0].draw_samples(nb_images, random_state=rngs[0])
@@ -1981,7 +1981,7 @@ class CropToFixedSize(meta.Augmenter):
         return segmaps
 
     def _draw_samples(self, nb_images, random_state):
-        rngs = random_state.derive_rngs_(2)
+        rngs = random_state.duplicate(2)
 
         if isinstance(self.position, tuple):
             offset_xs = self.position[0].draw_samples(nb_images, random_state=rngs[0])
@@ -2139,7 +2139,7 @@ class KeepSizeByResize(meta.Augmenter):
         self.interpolation_segmaps = _validate_param(interpolation_segmaps, True)
 
     def _draw_samples(self, nb_images, random_state):
-        rngs = random_state.derive_rngs_(3)
+        rngs = random_state.duplicate(3)
         interpolations = self.interpolation.draw_samples((nb_images,), random_state=rngs[0])
 
         if self.interpolation_heatmaps == KeepSizeByResize.SAME_AS_IMAGES:

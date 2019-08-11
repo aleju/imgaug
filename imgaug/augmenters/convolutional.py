@@ -157,7 +157,7 @@ class Convolve(meta.Augmenter):
                                      "int32", "int64", "int128", "int256",
                                      "float96", "float128", "float256"],
                          augmenter=self)
-        rss = random_state.derive_rngs_(len(images))
+        rss = random_state.duplicate(len(images))
 
         for i, image in enumerate(images):
             _height, _width, nb_channels = images[i].shape

@@ -365,7 +365,7 @@ class Canny(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = random_state.derive_rngs_(4)
+        rss = random_state.duplicate(4)
 
         alpha_samples = self.alpha.draw_samples((nb_images,), rss[0])
 
@@ -413,7 +413,7 @@ class Canny(meta.Augmenter):
                              "float256"],
                          augmenter=self)
 
-        rss = random_state.derive_rngs_(len(images))
+        rss = random_state.duplicate(len(images))
         samples = self._draw_samples(images, rss[-1])
         alpha_samples = samples[0]
         hthresh_samples = samples[1]

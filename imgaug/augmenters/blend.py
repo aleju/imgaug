@@ -311,7 +311,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         result = images
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -354,7 +354,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return heatmaps
 
         nb_channels = meta.estimate_max_number_of_channels(heatmaps)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_heatmaps, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_heatmaps, nb_channels), random_state=rss[1])
 
@@ -406,7 +406,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return segmaps
 
         nb_channels = meta.estimate_max_number_of_channels(segmaps)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -488,7 +488,7 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
             return inputs
 
         nb_channels = meta.estimate_max_number_of_channels(inputs)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_images, random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels), random_state=rss[1])
 
@@ -696,7 +696,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
-        rngs = random_state.derive_rngs_(nb_images)
+        rngs = random_state.duplicate(nb_images)
 
         if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -754,7 +754,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = heatmaps
         nb_heatmaps = len(heatmaps)
-        rngs = random_state.derive_rngs_(nb_heatmaps)
+        rngs = random_state.duplicate(nb_heatmaps)
 
         if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -824,7 +824,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
 
         result = segmaps
         nb_segmaps = len(segmaps)
-        rngs = random_state.derive_rngs_(nb_segmaps)
+        rngs = random_state.duplicate(nb_segmaps)
 
         if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
             if self.first is None:
@@ -906,7 +906,7 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_coordinate_based(self, inputs, random_state, parents, hooks, func):
         result = inputs
         nb_images = len(inputs)
-        rngs = random_state.derive_rngs_(nb_images)
+        rngs = random_state.duplicate(nb_images)
 
         if hooks is None or hooks.is_propagating(inputs, augmenter=self, parents=parents, default=True):
             if self.first is None:

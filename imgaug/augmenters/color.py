@@ -933,7 +933,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
 
         if self.value is not None:
             per_channel = self.per_channel.draw_samples(
@@ -994,7 +994,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         # else:
         #    images_hsv = images_hsv.astype(np.int32)
 
-        rss = random_state.derive_rngs_(3)
+        rss = random_state.duplicate(3)
         images_hsv = self.colorspace_changer._augment_images(
             images, rss[0], parents + [self], hooks)
         samples = self._draw_samples(images, rss[1])
@@ -1433,7 +1433,7 @@ class ChangeColorspace(meta.Augmenter):
         self.eps = 0.001
 
     def _draw_samples(self, n_augmentables, random_state):
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         alphas = self.alpha.draw_samples(
             (n_augmentables,), random_state=rss[0])
         to_colorspaces = self.to_colorspace.draw_samples(
@@ -1659,7 +1659,7 @@ class _AbstractColorQuantization(meta.Augmenter):
                 "float256"],
             augmenter=self)
 
-        rss = random_state.derive_rngs_(1 + len(images))
+        rss = random_state.duplicate(1 + len(images))
         n_colors = self._draw_samples(len(images), rss[-1])
 
         result = images

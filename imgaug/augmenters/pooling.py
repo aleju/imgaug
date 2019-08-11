@@ -52,7 +52,7 @@ class _AbstractPoolingBase(meta.Augmenter):
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
-        rss = random_state.derive_rngs_(2)
+        rss = random_state.duplicate(2)
         mode = "single" if self.kernel_size[1] is None else "two"
         kernel_sizes_h = self.kernel_size[0].draw_samples(
             (nb_images,),

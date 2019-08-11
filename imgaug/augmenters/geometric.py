@@ -831,7 +831,7 @@ class Affine(meta.Augmenter):
                 self.fit_output]
 
     def _draw_samples(self, nb_samples, random_state):
-        rngs = random_state.derive_rngs_(11)
+        rngs = random_state.duplicate(11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
@@ -1573,7 +1573,7 @@ class AffineCv2(meta.Augmenter):
         return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
 
     def _draw_samples(self, nb_samples, random_state):
-        rngs = random_state.derive_rngs_(11)
+        rngs = random_state.duplicate(11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
@@ -1810,6 +1810,18 @@ class PiecewiseAffine(meta.Augmenter):
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
+    def _draw_samples(self, nb_images, random_state):
+        rss = random_state.duplicate(5)
+
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-5])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-4])
+        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-3])
+        cval_samples = self.cval.draw_samples((nb_images,), random_state=rss[-2])
+        mode_samples = self.mode.draw_samples((nb_images,), random_state=rss[-1])
+
+        return nb_rows_samples, nb_cols_samples, order_samples, cval_samples, \
+            mode_samples
+
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
                          allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
@@ -1821,15 +1833,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = images
         nb_images = len(images)
 
-        rss = random_state.derive_rngs_(nb_images+5)
+        nb_rows_samples, nb_cols_samples, order_samples, cval_samples, \
+            mode_samples = self._draw_samples(nb_images, random_state)
 
-        # make sure to sample "order" here at the 3rd position to match the sampling steps
-        # in _augment_heatmaps()
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-5])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-4])
-        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-3])
-        cval_samples = self.cval.draw_samples((nb_images,), random_state=rss[-2])
-        mode_samples = self.mode.draw_samples((nb_images,), random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i, image in enumerate(images):
             rs_image = rss[i]
@@ -1871,10 +1878,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = heatmaps
         nb_images = len(heatmaps)
 
-        rss = random_state.derive_rngs_(nb_images+2)
+        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
+            _mode_samples = self._draw_samples(nb_images, random_state)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
             heatmaps_i = heatmaps[i]
@@ -1912,12 +1919,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = segmaps
         nb_images = len(segmaps)
 
-        rss = random_state.derive_rngs_(nb_images+2)
+        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
+            _mode_samples = self._draw_samples(nb_images, random_state)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
-                                                    random_state=rss[-2])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
-                                                    random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
             segmaps_i = segmaps[i]
@@ -1949,10 +1954,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
 
-        rss = random_state.derive_rngs_(nb_images+2)
+        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
+            _mode_samples = self._draw_samples(nb_images, random_state)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
             if not keypoints_on_images[i].keypoints:
@@ -2487,7 +2492,7 @@ class PerspectiveTransform(meta.Augmenter):
         max_heights = []
         max_widths = []
         nb_images = len(shapes)
-        rngs = random_state.derive_rngs_(2+nb_images)
+        rngs = random_state.duplicate(2+nb_images)
 
         cval_samples = self.cval.draw_samples((nb_images, 3),
                                               random_state=rngs[0])
@@ -2842,7 +2847,7 @@ class ElasticTransformation(meta.Augmenter):
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
-        rss = random_state.derive_rngs_(nb_images+5)
+        rss = random_state.duplicate(nb_images+5)
         alphas = self.alpha.draw_samples((nb_images,), random_state=rss[-5])
         sigmas = self.sigma.draw_samples((nb_images,), random_state=rss[-4])
         orders = self.order.draw_samples((nb_images,), random_state=rss[-3])

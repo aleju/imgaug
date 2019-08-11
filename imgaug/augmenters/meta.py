@@ -508,16 +508,17 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if self.deterministic:
                 state_orig = self.random_state.state
 
-            # TODO would copy_unless_global_rng() here be enough?
             images_result = self._augment_images(
                 images,
-                random_state=self.random_state.copy(),
+                random_state=self.random_state,
                 parents=parents,
                 hooks=hooks
             )
             # move "forward" the random state, so that the next call to
             # augment_images() will use different random values
-            self.random_state.advance_()
+            # This is currently deactivated as the RNG is no longer copied
+            # for the _augment_* call.
+            # self.random_state.advance_()
 
             if self.deterministic:
                 self.random_state.set_state_(state_orig)
@@ -597,16 +598,17 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 or (hooks is not None
                     and hooks.is_activated(images_copy, augmenter=self, parents=parents, default=self.activated)):
             if len(images) > 0:
-                # TODO would copy_unless_global_rng() here be enough?
                 images_result = self._augment_images(
                     images_copy,
-                    random_state=self.random_state.copy(),
+                    random_state=self.random_state,
                     parents=parents,
                     hooks=hooks
                 )
                 # move "forward" the random state, so that the next call to
                 # augment_images() will use different random values
-                self.random_state.advance_()
+                # This is currently deactivated as the RNG is no longer copied
+                # for the _augment_* call.
+                # self.random_state.advance_()
             else:
                 images_result = images_copy
         else:
@@ -740,14 +742,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 or (hooks is not None
                     and hooks.is_activated(heatmaps_copy, augmenter=self, parents=parents, default=self.activated)):
             if len(heatmaps_copy) > 0:
-                # TODO would copy_unless_global_rng() here be enough?
                 heatmaps_result = self._augment_heatmaps(
                     heatmaps_copy,
-                    random_state=self.random_state.copy(),
+                    random_state=self.random_state,
                     parents=parents,
                     hooks=hooks
                 )
-                self.random_state.advance_()
+                # self.random_state.advance_()
             else:
                 heatmaps_result = heatmaps_copy
         else:
@@ -877,14 +878,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 or (hooks is not None
                     and hooks.is_activated(segmaps_copy, augmenter=self, parents=parents, default=self.activated)):
             if len(segmaps_copy) > 0:
-                # TODO would copy_unless_global_rng() here be enough?
                 segmaps_result = self._augment_segmentation_maps(
                     segmaps_copy,
-                    random_state=self.random_state.copy(),
+                    random_state=self.random_state,
                     parents=parents,
                     hooks=hooks
                 )
-                self.random_state.advance_()
+                # self.random_state.advance_()
             else:
                 segmaps_result = segmaps_copy
         else:
@@ -1017,14 +1017,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                     and hooks.is_activated(keypoints_on_images_copy,
                                            augmenter=self, parents=parents, default=self.activated)):
             if len(keypoints_on_images_copy) > 0:
-                # TODO would copy_unless_global_rng() here be enough?
                 keypoints_on_images_result = self._augment_keypoints(
                     keypoints_on_images_copy,
-                    random_state=self.random_state.copy(),
+                    random_state=self.random_state,
                     parents=parents,
                     hooks=hooks
                 )
-                self.random_state.advance_()
+                # self.random_state.advance_()
             else:
                 keypoints_on_images_result = keypoints_on_images_copy
         else:
@@ -1402,14 +1401,13 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         )
         if is_activated or is_activated_hooks:
             if len(augables_ois) > 0:
-                # TODO would copy_unless_global_rng() here be enough?
                 augables_ois_result = subaugment_func(
                     augables_ois_copy,
-                    self.random_state.copy(),
+                    self.random_state,
                     parents,
                     hooks
                 )
-                self.random_state.advance_()
+                # self.random_state.advance_()
 
         if hooks is not None:
             augables_ois_result = hooks.postprocess(
@@ -4450,7 +4448,7 @@ class ChannelShuffle(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         p_samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        rss = random_state.derive_rngs_(nb_images)
+        rss = random_state.duplicate(nb_images)
         for i in sm.xrange(nb_images):
             if p_samples[i] >= 1-1e-4:
                 images[i] = shuffle_channels(images[i], rss[i], self.channels)
