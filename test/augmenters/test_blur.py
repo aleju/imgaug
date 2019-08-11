@@ -1055,7 +1055,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(10)
         ]
         expected = np.float32([
@@ -1075,7 +1075,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(10)
         ]
         expected = np.float32([
@@ -1095,7 +1095,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(10)
         ]
         expected = np.float32([
@@ -1115,7 +1115,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(50)
         ]
         expected1 = np.float32([
@@ -1148,7 +1148,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(10)
         ]
         expected = np.float32([
@@ -1170,7 +1170,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(50)
         ]
         expected1 = np.float32([
@@ -1224,7 +1224,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(10)
         ]
         expected = np.float32([
@@ -1244,7 +1244,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(10)
         ]
         expected = np.float32([
@@ -1264,7 +1264,7 @@ class TestMotionBlur(unittest.TestCase):
             matrix_func(
                 np.zeros((128, 128, 3), dtype=np.uint8),
                 3,
-                iarandom.convert_seed_to_rng(i)
+                iarandom.RNG(i)
             ) for i in range(50)
         ]
         expected1 = np.float32([

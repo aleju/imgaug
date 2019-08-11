@@ -1370,9 +1370,8 @@ class _ConcavePolygonRecoverer(object):
         if polygon.is_valid:
             return polygon
 
-        if not isinstance(random_state, np.random.RandomState):
-            random_state = np.random.RandomState(random_state)
-        rss = iarandom.derive_rngs(random_state, 3)
+        random_state = iarandom.RNG(random_state)
+        rss = random_state.derive_rngs_(3)
 
         # remove consecutive duplicate points
         new_exterior = self._remove_consecutive_duplicate_points(new_exterior)

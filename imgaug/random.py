@@ -11,12 +11,10 @@ import six.moves as sm
 # Note that a valid version number can also be "1.18.0.dev0+285ab1d",
 # in which the last component cannot easily be converted to an int. Hence we
 # only pick the first two components.
-# TODO rename to SUPPORTS_* or IS_SUPPORTING_*
-IS_NEW_NP_RNG_STYLE = False
+SUPPORTS_NEW_NP_RNG_STYLE = False
 np_version = list(map(int, np.__version__.split(".")[0:2]))
 if np_version[0] > 1 or np_version[1] >= 17:
-    IS_NEW_NP_RNG_STYLE = True
-IS_OLD_NP_RNG_STYLE = not IS_NEW_NP_RNG_STYLE
+    SUPPORTS_NEW_NP_RNG_STYLE = True
 
 
 # We instantiate a current/global random state here once.
@@ -33,6 +31,10 @@ SEED_MAX_VALUE = 2**31-1
 # TODO decrease pool_size in SeedSequence to 2 or 1?
 # TODO add 'with resetted_rng(...)'
 # TODO rename _rng functions to _generator
+# TODO update augmenter docstrings
+# TODO change random_state to rng
+# TODO use use_state_of_() in augment_* functions
+# TODO use duplicate() function in augmenters
 
 
 class RNG(object):
@@ -59,20 +61,20 @@ class RNG(object):
         if isinstance(generator, RNG):
             self.generator = generator.generator
         else:
-            self.generator = normalize_rng_(generator)
+            self.generator = normalize_generator_(generator)
         self._is_new_rng_style = (
             not isinstance(self.generator, np.random.RandomState))
 
     @property
     def state(self):
-        return get_rng_state(self.generator)
+        return get_generator_state(self.generator)
 
     @state.setter
     def state(self, value):
         self.set_state_(value)
 
     def set_state_(self, value):
-        set_rng_state(self.generator, value)
+        set_rng_state_(self.generator, value)
         return self
 
     def use_state_of_(self, other):
@@ -93,41 +95,41 @@ class RNG(object):
         return get_global_rng().equals(self)
 
     def generate_seed_(self):
-        return generate_seed(self.generator)
+        return generate_seed_(self.generator)
 
     def generate_seeds_(self, n):
-        return generate_seeds(self.generator, n)
+        return generate_seeds_(self.generator, n)
 
     def reset_cache_(self):
-        reset_rng_cache_(self.generator)
+        reset_generator_cache_(self.generator)
         return self
 
     def derive_rng_(self):
         return self.derive_rngs_(1)[0]
 
     def derive_rngs_(self, n):
-        return [RNG(gen) for gen in derive_rngs(self.generator, n)]
+        return [RNG(gen) for gen in derive_generators_(self.generator, n)]
 
     def equals(self, other):
         assert isinstance(other, RNG)
-        return is_rng_identical_with(self.generator, other.generator)
+        return is_generator_equal_to(self.generator, other.generator)
 
     def advance_(self):
-        advance_rng_(self.generator)
+        advance_generator_(self.generator)
         return self
 
     def copy(self):
-        return RNG(copy_rng(self.generator))
+        return RNG(copy_generator(self.generator))
 
     def copy_unless_global_rng(self):
-        return RNG(copy_rng_unless_global_rng(self.generator))
+        return RNG(copy_generator_unless_global_rng(self.generator))
 
     def duplicate(self, n):
         return [self for _ in sm.xrange(n)]
 
     @classmethod
     def create_fully_random(cls):
-        return RNG(create_fully_random_rng())
+        return RNG(create_fully_random_generator())
 
     @classmethod
     def create_pseudo_random_(cls):
@@ -363,7 +365,7 @@ class RNG(object):
 
 
 # TODO rename to supports_* or is_supporting_*
-def is_new_numpy_rng_style():
+def supports_new_numpy_rng_style():
     """
     Determine whether numpy supports the new ``random`` interface (v1.17+).
 
@@ -376,7 +378,7 @@ def is_new_numpy_rng_style():
         should be used instead.
 
     """
-    return IS_NEW_NP_RNG_STYLE
+    return SUPPORTS_NEW_NP_RNG_STYLE
 
 
 def get_global_rng():
@@ -396,10 +398,11 @@ def get_global_rng():
     global GLOBAL_RNG
     if GLOBAL_RNG is None:
         # TODO replace seed by constant
-        GLOBAL_RNG = RNG(convert_seed_to_rng(42))
+        GLOBAL_RNG = RNG(convert_seed_to_generator(42))
     return GLOBAL_RNG
 
 
+# TODO replace by constructor
 def get_bit_generator_class():
     """
     Get the bit generator class used by imgaug.
@@ -411,7 +414,7 @@ def get_bit_generator_class():
         class!)
 
     """
-    assert IS_NEW_NP_RNG_STYLE
+    assert SUPPORTS_NEW_NP_RNG_STYLE
     return np.random.SFC64
 
 
@@ -433,7 +436,7 @@ def seed(entropy):
         The seed value to use.
 
     """
-    if IS_NEW_NP_RNG_STYLE:
+    if SUPPORTS_NEW_NP_RNG_STYLE:
         _seed_np117(entropy)
     else:
         _seed_np116(entropy)
@@ -450,18 +453,18 @@ def _seed_np116(entropy):
     get_global_rng().seed(entropy)
 
 
-def normalize_rng(rng):
-    return normalize_rng_(copylib.deepcopy(rng))
+def normalize_generator(rng):
+    return normalize_generator_(copylib.deepcopy(rng))
 
 
 # TODO add tests
-def normalize_rng_(rng):
+def normalize_generator_(generator):
     """
-    Normalize various inputs to a numpy random number generator.
+    Normalize various inputs to a numpy (random number) generator.
 
     Parameters
     ----------
-    rng : None or int or numpy.random.SeedSequence or numpy.random.bit_generator.BitGenerator or numpy.random.Generator
+    generator : None or int or numpy.random.SeedSequence or numpy.random.bit_generator.BitGenerator or numpy.random.Generator
         The input to normalize.
         If this is ``None``, the global RNG will be returned.
         If this is an instance of ``numpy.random.Generator`` or
@@ -478,46 +481,46 @@ def normalize_rng_(rng):
         will be returned.
 
     """
-    if IS_OLD_NP_RNG_STYLE:
-        return _normalize_rng_np116_(rng)
-    return _normalize_rng_np117_(rng)
+    if not SUPPORTS_NEW_NP_RNG_STYLE:
+        return _normalize_generator_np116_(generator)
+    return _normalize_generator_np117_(generator)
 
 
-def _normalize_rng_np117_(rng):
-    if rng is None:
+def _normalize_generator_np117_(generator):
+    if generator is None:
         return get_global_rng().generator
-    elif isinstance(rng, np.random.SeedSequence):
+    elif isinstance(generator, np.random.SeedSequence):
         return np.random.Generator(
-            get_bit_generator_class()(rng)
+            get_bit_generator_class()(generator)
         )
-    elif isinstance(rng, np.random.bit_generator.BitGenerator):
-        rng = np.random.Generator(rng)
-        reset_rng_cache_(rng)
-        return rng
-    elif isinstance(rng, np.random.Generator):
-        reset_rng_cache_(rng)
-        return rng
-    elif isinstance(rng, np.random.RandomState):
+    elif isinstance(generator, np.random.bit_generator.BitGenerator):
+        generator = np.random.Generator(generator)
+        reset_generator_cache_(generator)
+        return generator
+    elif isinstance(generator, np.random.Generator):
+        reset_generator_cache_(generator)
+        return generator
+    elif isinstance(generator, np.random.RandomState):
         # TODO warn
-        return convert_seed_to_rng(generate_seed(rng))
+        return convert_seed_to_generator(generate_seed_(generator))
     # seed given
-    seed_ = rng
-    return convert_seed_to_rng(seed_)
+    seed_ = generator
+    return convert_seed_to_generator(seed_)
 
 
-def _normalize_rng_np116_(random_state):
+def _normalize_generator_np116_(random_state):
     if random_state is None:
         return get_global_rng().generator
     elif isinstance(random_state, np.random.RandomState):
         return random_state
     # seed given
     seed_ = random_state
-    return convert_seed_to_rng(seed_)
+    return convert_seed_to_generator(seed_)
 
 
-def convert_seed_to_rng(entropy):
+def convert_seed_to_generator(entropy):
     """
-    Convert a seed value to an RNG.
+    Convert a seed value to a numpy (random number) generator.
 
     Parameters
     ----------
@@ -532,23 +535,23 @@ def convert_seed_to_rng(entropy):
         will be returned.
 
     """
-    if IS_OLD_NP_RNG_STYLE:
-        return _convert_seed_to_rng_np116(entropy)
-    return _convert_seed_to_rng_np117(entropy)
+    if not SUPPORTS_NEW_NP_RNG_STYLE:
+        return _convert_seed_to_generator_np116(entropy)
+    return _convert_seed_to_generator_np117(entropy)
 
 
-def _convert_seed_to_rng_np117(entropy):
+def _convert_seed_to_generator_np117(entropy):
     seed_sequence = np.random.SeedSequence(entropy)
-    return convert_seed_sequence_to_rng(seed_sequence)
+    return convert_seed_sequence_to_generator(seed_sequence)
 
 
-def _convert_seed_to_rng_np116(entropy):
+def _convert_seed_to_generator_np116(entropy):
     return np.random.RandomState(entropy)
 
 
-def convert_seed_sequence_to_rng(seed_sequence):
+def convert_seed_sequence_to_generator(seed_sequence):
     """
-    Convert a seed sequence to an RNG.
+    Convert a seed sequence to a numpy (random number) generator.
 
     Parameters
     ----------
@@ -567,44 +570,43 @@ def convert_seed_sequence_to_rng(seed_sequence):
     return np.random.Generator(bit_gen(seed_sequence))
 
 
-# TODO rename to create_pseudo_random_rng()?
-def create_random_rng():
+def create_pseudo_random_generator_():
     # could also use derive_rng(get_global_rng()) here
-    random_seed = generate_seed(get_global_rng())
-    return convert_seed_to_rng(random_seed)
+    random_seed = generate_seed_(get_global_rng())
+    return convert_seed_to_generator(random_seed)
 
 
-def create_fully_random_rng():
-    if IS_NEW_NP_RNG_STYLE:
-        return _create_fully_random_rng_np117()
-    return _create_fully_random_rng_np116()
+def create_fully_random_generator():
+    if not SUPPORTS_NEW_NP_RNG_STYLE:
+        return _create_fully_random_generator_np116()
+    return _create_fully_random_generator_np117()
 
 
-def _create_fully_random_rng_np117():
+def _create_fully_random_generator_np117():
     # TODO need entropy here?
     return np.random.Generator(np.random.SFC64())
 
 
-def _create_fully_random_rng_np116():
+def _create_fully_random_generator_np116():
     return np.random.RandomState()
 
 
-def generate_seed(rng):
-    return generate_seeds(rng, 1)[0]
+def generate_seed_(generator):
+    return generate_seeds_(generator, 1)[0]
 
 
-def generate_seeds(rng, n_seeds):
-    return polyfill_integers(rng, SEED_MIN_VALUE, SEED_MAX_VALUE,
+def generate_seeds_(generator, n_seeds):
+    return polyfill_integers(generator, SEED_MIN_VALUE, SEED_MAX_VALUE,
                              size=(n_seeds,))
 
 
-def copy_rng(rng):
+def copy_generator(generator):
     """
-    Copy an existing RNG.
+    Copy an existing numpy (random number) generator.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         The RNG to copy.
 
     Returns
@@ -615,35 +617,35 @@ def copy_rng(rng):
         will be returned.
 
     """
-    if isinstance(rng, np.random.RandomState):
-        return _copy_rng_np116(rng)
-    return _copy_rng_np117(rng)
+    if isinstance(generator, np.random.RandomState):
+        return _copy_generator_np116(generator)
+    return _copy_generator_np117(generator)
 
 
-def _copy_rng_np117(rng):
+def _copy_generator_np117(generator):
     # TODO not sure if it is enough to only copy the state
     # TODO initializing a bit gen and then copying the state might be slower
     #      then just deepcopying the whole thing
-    old_bit_gen = rng.bit_generator
+    old_bit_gen = generator.bit_generator
     new_bit_gen = old_bit_gen.__class__(1)
     new_bit_gen.state = copylib.deepcopy(old_bit_gen.state)
     return np.random.Generator(new_bit_gen)
 
 
-def _copy_rng_np116(random_state):
+def _copy_generator_np116(random_state):
     rs_copy = np.random.RandomState(1)
     state = random_state.get_state()
     rs_copy.set_state(state)
     return rs_copy
 
 
-def copy_rng_unless_global_rng(rng):
+def copy_generator_unless_global_rng(generator):
     """
-    Copy an RNG unless it is the current global RNG.
+    Copy a numpy generator unless it is the current global generator.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         The RNG to copy.
 
     Returns
@@ -655,18 +657,18 @@ def copy_rng_unless_global_rng(rng):
         will be returned.
 
     """
-    if rng is get_global_rng():
-        return rng
-    return copy_rng(rng)
+    if generator is get_global_rng().generator:
+        return generator
+    return copy_generator(generator)
 
 
-def reset_rng_cache_(rng):
+def reset_generator_cache_(generator):
     """
-    Reset an RNG's internal cache.
+    Reset a numpy (random number) generator's internal cache.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         The RNG to reset.
 
     Returns
@@ -677,36 +679,36 @@ def reset_rng_cache_(rng):
         will be returned.
 
     """
-    if isinstance(rng, np.random.RandomState):
-        return _reset_rng_cache_np116_(rng)
-    return _reset_rng_cache_np117_(rng)
+    if isinstance(generator, np.random.RandomState):
+        return _reset_generator_cache_np116_(generator)
+    return _reset_generator_cache_np117_(generator)
 
 
-def _reset_rng_cache_np117_(rng):
+def _reset_generator_cache_np117_(generator):
     # This deactivates usage of the cache. We could also remove the cached
     # value itself in "uinteger", but setting the RNG to ignore the cached
     # value should be enough.
-    rng.bit_generator.state["has_uint32"] = 0
-    return rng
+    generator.bit_generator.state["has_uint32"] = 0
+    return generator
 
 
-def _reset_rng_cache_np116_(rng):
+def _reset_generator_cache_np116_(random_state):
     # State tuple content:
     #   'MT19937', array of ints, unknown int, cache flag, cached value
     # The cache flag only affects the standard_normal() method.
-    state = list(rng.get_state())
+    state = list(random_state.get_state())
     state[-2] = 0
-    rng.set_state(tuple(state))
-    return rng
+    random_state.set_state(tuple(state))
+    return random_state
 
 
-def derive_rng(rng):
+def derive_generator_(generator):
     """
-    Create a new RNG based on an existing RNG.
+    Create a new numpy (random number) generator based on an existing generator.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         RNG from which to derive a new RNG.
 
     Returns
@@ -717,18 +719,18 @@ def derive_rng(rng):
         will be returned.
 
     """
-    return derive_rngs(rng, n=1)[0]
+    return derive_generators_(generator, n=1)[0]
 
 
 # TODO does this advance the RNG in 1.17? It should advance it for security
 #      reasons
-def derive_rngs(rng, n=1):
+def derive_generators_(generator, n=1):
     """
-    Create new RNGs based on an existing RNG.
+    Create new numpy (random number) generators based on an existing generator.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         RNG from which to derive new RNGs.
 
     n : int, optional
@@ -742,12 +744,12 @@ def derive_rngs(rng, n=1):
         will be returned.
 
     """
-    if isinstance(rng, np.random.RandomState):
-        return _derive_rngs_np116(rng, n=n)
-    return _derive_rngs_np117(rng, n=n)
+    if isinstance(generator, np.random.RandomState):
+        return _derive_generators_np116_(generator, n=n)
+    return _derive_generators_np117_(generator, n=n)
 
 
-def _derive_rngs_np117(rng, n=1):
+def _derive_generators_np117_(generator, n=1):
     # TODO possible to get the SeedSequence from 'rng'?
     """
     advance_rng_(rng)
@@ -772,63 +774,63 @@ def _derive_rngs_np117(rng, n=1):
     # 'size=(2,)' decreases that risk. (It is then enough to e.g. call once
     # random() to advance the internal state. No resetting of caches is
     # needed.)
-    seed_ = rng.integers(SEED_MIN_VALUE, SEED_MAX_VALUE, dtype="int32",
-                         size=(2,))[-1]
+    seed_ = generator.integers(SEED_MIN_VALUE, SEED_MAX_VALUE, dtype="int32",
+                               size=(2,))[-1]
 
     seed_seq = np.random.SeedSequence(seed_)
     seed_seqs = seed_seq.spawn(n)
-    return [convert_seed_sequence_to_rng(seed_seq)
+    return [convert_seed_sequence_to_generator(seed_seq)
             for seed_seq in seed_seqs]
 
 
-def _derive_rngs_np116(random_state, n=1):
+def _derive_generators_np116_(random_state, n=1):
     seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE)
-    return [_convert_seed_to_rng_np116(seed_+i) for i in sm.xrange(n)]
+    return [_convert_seed_to_generator_np116(seed_ + i) for i in sm.xrange(n)]
 
 
-def get_rng_state(rng):
-    if isinstance(rng, np.random.RandomState):
-        return _get_rng_state_np116(rng)
-    return _get_rng_state_np117(rng)
+def get_generator_state(generator):
+    if isinstance(generator, np.random.RandomState):
+        return _get_generator_state_np116(generator)
+    return _get_generator_state_np117(generator)
 
 
-def _get_rng_state_np117(rng):
-    return rng.bit_generator.state
+def _get_generator_state_np117(generator):
+    return generator.bit_generator.state
 
 
-def _get_rng_state_np116(rng):
-    return rng.get_state()
+def _get_generator_state_np116(random_state):
+    return random_state.get_state()
 
 
-# TODO mark as inplace
-def set_rng_state(rng, state):
-    if isinstance(rng, np.random.RandomState):
-        _set_rng_state_np116(rng, state)
+def set_rng_state_(generator, state):
+    if isinstance(generator, np.random.RandomState):
+        _set_rng_state_np116_(generator, state)
     else:
-        _set_rng_state_np117(rng, state)
+        _set_rng_state_np117_(generator, state)
 
 
-def _set_rng_state_np117(rng, state):
-    rng.bit_generator.state = state
+def _set_rng_state_np117_(generator, state):
+    generator.bit_generator.state = state
 
 
-def _set_rng_state_np116(rng, state):
-    rng.set_state(state)
+def _set_rng_state_np116_(random_state, state):
+    random_state.set_state(state)
 
 
-def is_rng_identical_with(rng, other_rng):
-    if isinstance(rng, np.random.RandomState):
-        return _is_rng_identical_with_np116(rng, other_rng)
-    return _is_rng_identical_with_np117(rng, other_rng)
+def is_generator_equal_to(generator, other_generator):
+    if isinstance(generator, np.random.RandomState):
+        return _is_generator_equal_to_np116(generator, other_generator)
+    return _is_generator_equal_to_np117(generator, other_generator)
 
 
-def _is_rng_identical_with_np117(rng, other_rng):
-    assert rng.__class__ is other_rng.__class__, (
+# TODO rework this method
+def _is_generator_equal_to_np117(generator, other_generator):
+    assert generator.__class__ is other_generator.__class__, (
         "Expected both rngs to have the same class, "
-        "got types '%s' and '%s'." % (type(rng), type(other_rng)))
+        "got types '%s' and '%s'." % (type(generator), type(other_generator)))
 
-    state1 = get_rng_state(rng)["state"]
-    state2 = get_rng_state(other_rng)["state"]
+    state1 = get_generator_state(generator)["state"]
+    state2 = get_generator_state(other_generator)["state"]
 
     if isinstance(state1, (list, tuple)):
         for a, b in zip(state1, state2):
@@ -856,46 +858,46 @@ def _is_rng_identical_with_np117(rng, other_rng):
     return True
 
 
-def _is_rng_identical_with_np116(rng, other_rng):
-    state1 = get_rng_state(rng)
-    state2 = get_rng_state(other_rng)
+def _is_generator_equal_to_np116(random_state, other_random_state):
+    state1 = _get_generator_state_np116(random_state)
+    state2 = _get_generator_state_np116(other_random_state)
     return np.array_equal(state1[1:4+1], state2[1:4+1])
 
 
-def advance_rng_(rng):
+def advance_generator_(generator):
     """
     Forward the internal state of an RNG by one step.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         RNG to forward.
 
     """
-    if isinstance(rng, np.random.RandomState):
-        _advance_rng_np116_(rng)
+    if isinstance(generator, np.random.RandomState):
+        _advance_generator_np116_(generator)
     else:
-        _advance_rng_np117_(rng)
+        _advance_generator_np117_(generator)
 
 
-def _advance_rng_np117_(rng):
-    _reset_rng_cache_np117_(rng)
-    rng.random()
+def _advance_generator_np117_(generator):
+    _reset_generator_cache_np117_(generator)
+    generator.random()
 
 
-def _advance_rng_np116_(rng):
-    _reset_rng_cache_np116_(rng)
-    rng.uniform()
+def _advance_generator_np116_(generator):
+    _reset_generator_cache_np116_(generator)
+    generator.uniform()
 
 
-def polyfill_integers(rng, low, high=None, size=None, dtype="int32",
+def polyfill_integers(generator, low, high=None, size=None, dtype="int32",
                       endpoint=False):
     """
     Sample integers from an RNG in different numpy versions.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         The RNG to sample from. If it is a ``RandomState``, ``randint()`` will
         be called, otherwise ``integers()``.
 
@@ -920,19 +922,19 @@ def polyfill_integers(rng, low, high=None, size=None, dtype="int32",
         See :func:`numpy.random.Generator.integers`.
 
     """
-    if isinstance(rng, np.random.RandomState):
-        return rng.randint(low=low, high=high, size=size, dtype=dtype)
-    return rng.integers(low=low, high=high, size=size, dtype=dtype,
-                        endpoint=endpoint)
+    if isinstance(generator, np.random.RandomState):
+        return generator.randint(low=low, high=high, size=size, dtype=dtype)
+    return generator.integers(low=low, high=high, size=size, dtype=dtype,
+                              endpoint=endpoint)
 
 
-def polyfill_random(rng, size, dtype="float32", out=None):
+def polyfill_random(generator, size, dtype="float32", out=None):
     """
     Sample random floats from an RNG in different numpy versions.
 
     Parameters
     ----------
-    rng : numpy.random.Generator or numpy.random.RandomState
+    generator : numpy.random.Generator or numpy.random.RandomState
         The RNG to sample from. Both ``RandomState`` and ``Generator``
         suppert ``random()``, but with different interfaces.
 
@@ -952,8 +954,8 @@ def polyfill_random(rng, size, dtype="float32", out=None):
         See :func:`numpy.random.Generator.random`.
 
     """
-    if isinstance(rng, np.random.RandomState):
+    if isinstance(generator, np.random.RandomState):
         # note that numpy.random in <=1.16 supports random(), but
         # numpy.random.RandomState does not
-        return rng.random_sample(size=size).astype(dtype)
-    return rng.random(size=size, dtype=dtype, out=out)
+        return generator.random_sample(size=size).astype(dtype)
+    return generator.random(size=size, dtype=dtype, out=out)

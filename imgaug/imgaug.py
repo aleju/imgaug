@@ -500,7 +500,7 @@ def normalize_random_state(random_state):
 
     """
     import imgaug.random
-    return imgaug.random.normalize_rng_(random_state)
+    return imgaug.random.normalize_generator_(random_state)
 
 
 @deprecated("imgaug.random.get_global_rng")
@@ -548,12 +548,12 @@ def new_random_state(seed=None, fully_random=False):
             global_rng = imgaug.random.get_global_rng()
             seed_min = imgaug.random.SEED_MIN_VALUE
             seed_max = imgaug.random.SEED_MAX_VALUE
-            if imgaug.random.is_new_numpy_rng_style():
+            if imgaug.random.supports_new_numpy_rng_style():
                 f = global_rng.integers
             else:
                 f = global_rng.randint
             seed = f(seed_min, seed_max)
-    return imgaug.random.convert_seed_to_rng(seed)
+    return imgaug.random.RNG(seed)
 
 
 # TODO seems to not be used anywhere anymore
@@ -569,7 +569,7 @@ def dummy_random_state():
 
     """
     import imgaug.random
-    return imgaug.random.convert_seed_to_rng(1)
+    return imgaug.random.RNG(1)
 
 
 @deprecated("imgaug.random.copy_rng_unless_global_rng")
@@ -595,8 +595,8 @@ def copy_random_state(random_state, force_copy=False):
     """
     import imgaug.random
     if force_copy:
-        return imgaug.random.copy_rng(random_state)
-    return imgaug.random.copy_rng_unless_global_rng(random_state)
+        return imgaug.random.copy_generator(random_state)
+    return imgaug.random.copy_generator_unless_global_rng(random_state)
 
 
 @deprecated("imgaug.random.derive_rng")
@@ -616,7 +616,7 @@ def derive_random_state(random_state):
 
     """
     import imgaug.random
-    return imgaug.random.derive_rng(random_state)
+    return imgaug.random.derive_generator_(random_state)
 
 
 @deprecated("imgaug.random.derive_rngs")
@@ -639,7 +639,7 @@ def derive_random_states(random_state, n=1):
 
     """
     import imgaug.random
-    return imgaug.random.derive_rngs(random_state, n=n)
+    return imgaug.random.derive_generators_(random_state, n=n)
 
 
 @deprecated("imgaug.random.advance_rng")
@@ -656,7 +656,7 @@ def forward_random_state(random_state):
 
     """
     import imgaug.random
-    imgaug.random.advance_rng_(random_state)
+    imgaug.random.advance_generator_(random_state)
 
 
 def _quokka_normalize_extract(extract):

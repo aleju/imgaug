@@ -1305,9 +1305,9 @@ def test_Augmenter():
     # --------
     # TODO incomplete tests, handle only cases that were missing in code coverage report
     aug = DummyAugmenter()
-    assert aug.random_state.generator is iarandom.get_global_rng().generator
+    assert aug.random_state.is_global_rng()
     aug = DummyAugmenter(deterministic=True)
-    assert aug.random_state is not iarandom.get_global_rng()
+    assert not aug.random_state.is_global_rng()
     rs = iarandom.RNG(123)
     aug = DummyAugmenter(random_state=rs)
     assert aug.random_state.generator is rs.generator
@@ -1620,7 +1620,7 @@ def test_Augmenter():
     aug = DummyAugmenter()
     assert aug.random_state.is_global_rng()
     aug_localized = aug.localize_random_state()
-    assert aug_localized.random_state is not iarandom.get_global_rng()
+    assert not aug_localized.random_state.is_global_rng()
 
     # --------
     # reseed
@@ -1665,7 +1665,7 @@ def test_Augmenter():
     assert _same_rs(aug0.random_state, aug0_copy.random_state)
     assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
-    aug0_copy.reseed(random_state=iarandom.convert_seed_to_rng(123))
+    aug0_copy.reseed(random_state=iarandom.RNG(123))
     assert not _same_rs(aug0.random_state, aug0_copy.random_state)
     assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
     assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
