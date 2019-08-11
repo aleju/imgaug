@@ -418,6 +418,7 @@ def get_bit_generator_class():
     return np.random.SFC64
 
 
+# TODO mark as in-place
 def seed(entropy):
     """
     Set the seed of imgaug's global random number generator.
@@ -450,7 +451,7 @@ def _seed_np117(entropy):
 
 
 def _seed_np116(entropy):
-    get_global_rng().seed(entropy)
+    get_global_rng().generator.seed(entropy)
 
 
 def normalize_generator(rng):
