@@ -862,7 +862,14 @@ def _is_generator_equal_to_np117(generator, other_generator):
 def _is_generator_equal_to_np116(random_state, other_random_state):
     state1 = _get_generator_state_np116(random_state)
     state2 = _get_generator_state_np116(other_random_state)
-    return np.array_equal(state1[1:4+1], state2[1:4+1])
+    # Note that state1 and state2 are tuples with the value at index 1 being
+    # a numpy array and the values at 2-4 being ints/floats, so we can't just
+    # apply array_equal to state1[1:4+1] and state2[1:4+1]. We need a loop
+    # here.
+    for i in sm.xrange(1, 4+1):
+        if not np.array_equal(state1[i], state2[i]):
+            return False
+    return True
 
 
 def advance_generator_(generator):
