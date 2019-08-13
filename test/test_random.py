@@ -50,6 +50,531 @@ class TestConstants(_Base):
         assert iarandom.GLOBAL_RNG is not None
 
 
+class TestRNG(_Base):
+    @mock.patch("imgaug.random.normalize_generator_")
+    def test___init___calls_normalize_mocked(self, mock_norm):
+        _ = iarandom.RNG(0)
+        mock_norm.assert_called_once_with(0)
+
+    def test___init___with_rng(self):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(rng1)
+
+        assert rng2.generator is rng1.generator
+
+    @mock.patch("imgaug.random.get_generator_state")
+    def test_state_getter_mocked(self, mock_get):
+        mock_get.return_value = "mock"
+        rng = iarandom.RNG(0)
+        result = rng.state
+        assert result == "mock"
+        mock_get.assert_called_once_with(rng.generator)
+
+    @mock.patch("imgaug.random.RNG.set_state_")
+    def test_state_setter_mocked(self, mock_set):
+        rng = iarandom.RNG(0)
+        state = {"foo"}
+        rng.state = state
+        mock_set.assert_called_once_with(state)
+
+    @mock.patch("imgaug.random.set_generator_state_")
+    def test_set_state__mocked(self, mock_set):
+        rng = iarandom.RNG(0)
+        state = {"foo"}
+        result = rng.set_state_(state)
+        assert result is rng
+        mock_set.assert_called_once_with(rng.generator, state)
+
+    @mock.patch("imgaug.random.set_generator_state_")
+    def test_use_state_of__mocked(self, mock_set):
+        rng1 = iarandom.RNG(0)
+        rng2 = mock.MagicMock()
+        state = {"foo"}
+        rng2.state = state
+        result = rng1.use_state_of_(rng2)
+        assert result == rng1
+        mock_set.assert_called_once_with(rng1.generator, state)
+
+    @mock.patch("imgaug.random.get_global_rng")
+    def test_is_global__is_global__rng_mocked(self, mock_get):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(rng1.generator)
+        mock_get.return_value = rng2
+        assert rng1.is_global_rng() is True
+
+    @mock.patch("imgaug.random.get_global_rng")
+    def test_is_global_rng__is_not_global__mocked(self, mock_get):
+        rng1 = iarandom.RNG(0)
+        # different instance with same state/seed should still be viewed as
+        # different by the method
+        rng2 = iarandom.RNG(0)
+        mock_get.return_value = rng2
+        assert rng1.is_global_rng() is False
+
+    @mock.patch("imgaug.random.get_global_rng")
+    def test_equals_global_rng__is_global__mocked(self, mock_get):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(0)
+        mock_get.return_value = rng2
+        assert rng1.equals_global_rng() is True
+
+    @mock.patch("imgaug.random.get_global_rng")
+    def test_equals_global_rng__is_not_global__mocked(self, mock_get):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(1)
+        mock_get.return_value = rng2
+        assert rng1.equals_global_rng() is False
+
+    @mock.patch("imgaug.random.generate_seed_")
+    def test_generate_seed__mocked(self, mock_gen):
+        rng = iarandom.RNG(0)
+        mock_gen.return_value = -1
+        seed = rng.generate_seed_()
+        assert seed == -1
+        mock_gen.assert_called_once_with(rng.generator)
+
+    @mock.patch("imgaug.random.generate_seeds_")
+    def test_generate_seeds__mocked(self, mock_gen):
+        rng = iarandom.RNG(0)
+        mock_gen.return_value = [-1, -2]
+        seeds = rng.generate_seeds_(2)
+        assert seeds == [-1, -2]
+        mock_gen.assert_called_once_with(rng.generator, 2)
+
+    @mock.patch("imgaug.random.reset_generator_cache_")
+    def test_reset_cache__mocked(self, mock_reset):
+        rng = iarandom.RNG(0)
+        result = rng.reset_cache_()
+        assert result is rng
+        mock_reset.assert_called_once_with(rng.generator)
+
+    @mock.patch("imgaug.random.derive_generators_")
+    def test_derive_rng__mocked(self, mock_derive):
+        gen = iarandom.convert_seed_to_generator(0)
+        mock_derive.return_value = [gen]
+        rng = iarandom.RNG(0)
+        result = rng.derive_rng_()
+        assert result.generator is gen
+        mock_derive.assert_called_once_with(rng.generator, 1)
+
+    @mock.patch("imgaug.random.derive_generators_")
+    def test_derive_rngs__mocked(self, mock_derive):
+        gen1 = iarandom.convert_seed_to_generator(0)
+        gen2 = iarandom.convert_seed_to_generator(1)
+        mock_derive.return_value = [gen1, gen2]
+        rng = iarandom.RNG(0)
+        result = rng.derive_rngs_(2)
+        assert result[0].generator is gen1
+        assert result[1].generator is gen2
+        mock_derive.assert_called_once_with(rng.generator, 2)
+
+    @mock.patch("imgaug.random.is_generator_equal_to")
+    def test_equals_mocked(self, mock_equal):
+        mock_equal.return_value = "foo"
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(1)
+        result = rng1.equals(rng2)
+        assert result == "foo"
+        mock_equal.assert_called_once_with(rng1.generator, rng2.generator)
+
+    def test_equals_identical_generators(self):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(rng1)
+        assert rng1.equals(rng2)
+
+    def test_equals_with_similar_generators(self):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(0)
+        assert rng1.equals(rng2)
+
+    def test_equals_with_different_generators(self):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(1)
+        assert not rng1.equals(rng2)
+
+    def test_equals_with_advanced_generator(self):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(0)
+        rng2.advance_()
+        assert not rng1.equals(rng2)
+
+    @mock.patch("imgaug.random.advance_generator_")
+    def test_advance__mocked(self, mock_advance):
+        rng = iarandom.RNG(0)
+        result = rng.advance_()
+        assert result is rng
+        mock_advance.assert_called_once_with(rng.generator)
+
+    @mock.patch("imgaug.random.copy_generator")
+    def test_copy_mocked(self, mock_copy):
+        rng1 = iarandom.RNG(0)
+        rng2 = iarandom.RNG(1)
+        mock_copy.return_value = rng2.generator
+        result = rng1.copy()
+        assert result.generator is rng2.generator
+        mock_copy.assert_called_once_with(rng1.generator)
+
+    @mock.patch("imgaug.random.RNG.copy")
+    @mock.patch("imgaug.random.RNG.is_global_rng")
+    def test_copy_unless_global_rng__is_global__mocked(self, mock_is_global,
+                                                       mock_copy):
+        rng = iarandom.RNG(0)
+        mock_is_global.return_value = True
+        mock_copy.return_value = "foo"
+        result = rng.copy_unless_global_rng()
+        assert result is rng
+        mock_is_global.assert_called_once()
+        assert mock_copy.call_count == 0
+
+    @mock.patch("imgaug.random.RNG.copy")
+    @mock.patch("imgaug.random.RNG.is_global_rng")
+    def test_copy_unless_global_rng__is_not_global__mocked(self, mock_is_global,
+                                                           mock_copy):
+        rng = iarandom.RNG(0)
+        mock_is_global.return_value = False
+        mock_copy.return_value = "foo"
+        result = rng.copy_unless_global_rng()
+        assert result is "foo"
+        mock_is_global.assert_called_once()
+        mock_copy.assert_called_once()
+
+    def test_duplicate(self):
+        rng = iarandom.RNG(0)
+        rngs = rng.duplicate(1)
+        assert rngs == [rng]
+
+    def test_duplicate_two_entries(self):
+        rng = iarandom.RNG(0)
+        rngs = rng.duplicate(2)
+        assert rngs == [rng, rng]
+
+    @mock.patch("imgaug.random.create_fully_random_generator")
+    def test_create_fully_random_mocked(self, mock_create):
+        gen = iarandom.convert_seed_to_generator(0)
+        mock_create.return_value = gen
+        rng = iarandom.RNG.create_fully_random()
+        mock_create.assert_called_once()
+        assert rng.generator is gen
+
+    @mock.patch("imgaug.random.derive_generators_")
+    def test_create_pseudo_random__mocked(self, mock_get):
+        rng_glob = iarandom.get_global_rng()
+        rng = iarandom.RNG(0)
+        mock_get.return_value = [rng.generator]
+        result = iarandom.RNG.create_pseudo_random_()
+        assert result.generator is rng.generator
+        mock_get.assert_called_once_with(rng_glob.generator, 1)
+
+    @mock.patch("imgaug.random.polyfill_integers")
+    def test_integers_mocked(self, mock_func):
+        mock_func.return_value = "foo"
+        rng = iarandom.RNG(0)
+
+        result = rng.integers(low=0, high=1, size=(1,), dtype="int64",
+                              endpoint=True)
+
+        assert result == "foo"
+        mock_func.assert_called_once_with(
+            rng.generator, low=0, high=1, size=(1,), dtype="int64",
+            endpoint=True)
+
+    @mock.patch("imgaug.random.polyfill_random")
+    def test_random_mocked(self, mock_func):
+        mock_func.return_value = "foo"
+        rng = iarandom.RNG(0)
+        out = np.zeros((1,), dtype="float64")
+
+        result = rng.random(size=(1,), dtype="float64", out=out)
+
+        assert result == "foo"
+        mock_func.assert_called_once_with(
+            rng.generator, size=(1,), dtype="float64", out=out)
+
+    # TODO below test for generator methods are all just mock-based, add
+    #      non-mocked versions
+
+    def test_choice_mocked(self):
+        self._test_sampling_func("choice", a=[1, 2, 3], size=(1,),
+                                 replace=False, p=[0.1, 0.2, 0.7])
+
+    def test_bytes_mocked(self):
+        self._test_sampling_func("bytes", length=[10])
+
+    def test_shuffle_mocked(self):
+        mock_gen = mock.MagicMock()
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+
+        rng.shuffle([1, 2, 3])
+
+        mock_gen.shuffle.assert_called_once_with([1, 2, 3])
+
+    def test_permutation_mocked(self):
+        mock_gen = mock.MagicMock()
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        mock_gen.permutation.return_value = "foo"
+
+        result = rng.permutation([1, 2, 3])
+
+        assert result == "foo"
+        mock_gen.permutation.assert_called_once_with([1, 2, 3])
+
+    def test_beta_mocked(self):
+        self._test_sampling_func("beta", a=1.0, b=2.0, size=(1,))
+
+    def test_binomial_mocked(self):
+        self._test_sampling_func("binomial", n=10, p=0.1, size=(1,))
+
+    def test_chisquare_mocked(self):
+        self._test_sampling_func("chisquare", df=2, size=(1,))
+
+    def test_dirichlet_mocked(self):
+        self._test_sampling_func("dirichlet", alpha=0.1, size=(1,))
+
+    def test_exponential_mocked(self):
+        self._test_sampling_func("exponential", scale=1.1, size=(1,))
+
+    def test_f_mocked(self):
+        self._test_sampling_func("f", dfnum=1, dfden=2, size=(1,))
+
+    def test_gamma_mocked(self):
+        self._test_sampling_func("gamma", shape=1, scale=1.2, size=(1,))
+
+    def test_geometric_mocked(self):
+        self._test_sampling_func("geometric", p=0.5, size=(1,))
+
+    def test_gumbel_mocked(self):
+        self._test_sampling_func("gumbel", loc=0.1, scale=1.1, size=(1,))
+
+    def test_hypergeometric_mocked(self):
+        self._test_sampling_func("hypergeometric", ngood=2, nbad=4, nsample=6,
+                                 size=(1,))
+
+    def test_laplace_mocked(self):
+        self._test_sampling_func("laplace", loc=0.5, scale=1.5, size=(1,))
+
+    def test_logistic_mocked(self):
+        self._test_sampling_func("logistic", loc=0.5, scale=1.5, size=(1,))
+
+    def test_lognormal_mocked(self):
+        self._test_sampling_func("lognormal", mean=0.5, sigma=1.5, size=(1,))
+
+    def test_logseries_mocked(self):
+        self._test_sampling_func("logseries", p=0.5, size=(1,))
+
+    def test_multinomial_mocked(self):
+        self._test_sampling_func("multinomial", n=5, pvals=0.5, size=(1,))
+
+    def test_multivariate_normal_mocked(self):
+        self._test_sampling_func("multivariate_normal", mean=0.5, cov=1.0,
+                                 size=(1,), check_valid="foo", tol=1e-2)
+
+    def test_negative_binomial_mocked(self):
+        self._test_sampling_func("negative_binomial", n=10, p=0.5, size=(1,))
+
+    def test_noncentral_chisquare_mocked(self):
+        self._test_sampling_func("noncentral_chisquare", df=0.5, nonc=1.0,
+                                 size=(1,))
+
+    def test_noncentral_f_mocked(self):
+        self._test_sampling_func("noncentral_f", dfnum=0.5, dfden=1.5,
+                                 nonc=2.0, size=(1,))
+
+    def test_normal_mocked(self):
+        self._test_sampling_func("normal", loc=0.5, scale=1.0, size=(1,))
+
+    def test_pareto_mocked(self):
+        self._test_sampling_func("pareto", a=0.5, size=(1,))
+
+    def test_poisson_mocked(self):
+        self._test_sampling_func("poisson", lam=1.5, size=(1,))
+
+    def test_power_mocked(self):
+        self._test_sampling_func("power", a=0.5, size=(1,))
+
+    def test_rayleigh_mocked(self):
+        self._test_sampling_func("rayleigh", scale=1.5, size=(1,))
+
+    def test_standard_cauchy_mocked(self):
+        self._test_sampling_func("standard_cauchy", size=(1,))
+
+    def test_standard_exponential_np117_mocked(self):
+        fname = "standard_exponential"
+
+        arr = np.zeros((1,), dtype="float16")
+        args = []
+        kwargs = {"size": (1,), "dtype": "float16", "method": "foo",
+                  "out": arr}
+
+        mock_gen = mock.MagicMock()
+        getattr(mock_gen, fname).return_value = "foo"
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        rng._is_new_rng_style = True
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        assert result == "foo"
+        getattr(mock_gen, fname).assert_called_once_with(*args, **kwargs)
+
+    def test_standard_exponential_np116_mocked(self):
+        fname = "standard_exponential"
+
+        arr_out = np.zeros((1,), dtype="float16")
+        arr_result = np.ones((1,), dtype="float16")
+
+        def _side_effect(x):
+            return arr_result
+
+        args = []
+        kwargs = {"size": (1,), "dtype": "float16", "method": "foo",
+                  "out": arr_out}
+        kwargs_subcall = {"size": (1,)}
+
+        mock_gen = mock.MagicMock()
+        mock_gen.astype.side_effect = _side_effect
+        getattr(mock_gen, fname).return_value = mock_gen
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        rng._is_new_rng_style = False
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        getattr(mock_gen, fname).assert_called_once_with(*args,
+                                                         **kwargs_subcall)
+        mock_gen.astype.assert_called_once_with("float16")
+        assert np.allclose(result, arr_result)
+        assert np.allclose(arr_out, arr_result)
+
+    def test_standard_gamma_np117_mocked(self):
+        fname = "standard_gamma"
+
+        arr = np.zeros((1,), dtype="float16")
+        args = []
+        kwargs = {"shape": 1.0, "size": (1,), "dtype": "float16", "out": arr}
+
+        mock_gen = mock.MagicMock()
+        getattr(mock_gen, fname).return_value = "foo"
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        rng._is_new_rng_style = True
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        assert result == "foo"
+        getattr(mock_gen, fname).assert_called_once_with(*args, **kwargs)
+
+    def test_standard_gamma_np116_mocked(self):
+        fname = "standard_gamma"
+
+        arr_out = np.zeros((1,), dtype="float16")
+        arr_result = np.ones((1,), dtype="float16")
+
+        def _side_effect(x):
+            return arr_result
+
+        args = []
+        kwargs = {"shape": 1.0, "size": (1,), "dtype": "float16",
+                  "out": arr_out}
+        kwargs_subcall = {"shape": 1.0, "size": (1,)}
+
+        mock_gen = mock.MagicMock()
+        mock_gen.astype.side_effect = _side_effect
+        getattr(mock_gen, fname).return_value = mock_gen
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        rng._is_new_rng_style = False
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        getattr(mock_gen, fname).assert_called_once_with(*args,
+                                                         **kwargs_subcall)
+        mock_gen.astype.assert_called_once_with("float16")
+        assert np.allclose(result, arr_result)
+        assert np.allclose(arr_out, arr_result)
+
+    def test_standard_normal_np117_mocked(self):
+        fname = "standard_normal"
+
+        arr = np.zeros((1,), dtype="float16")
+        args = []
+        kwargs = {"size": (1,), "dtype": "float16", "out": arr}
+
+        mock_gen = mock.MagicMock()
+        getattr(mock_gen, fname).return_value = "foo"
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        rng._is_new_rng_style = True
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        assert result == "foo"
+        getattr(mock_gen, fname).assert_called_once_with(*args, **kwargs)
+
+    def test_standard_normal_np116_mocked(self):
+        fname = "standard_normal"
+
+        arr_out = np.zeros((1,), dtype="float16")
+        arr_result = np.ones((1,), dtype="float16")
+
+        def _side_effect(x):
+            return arr_result
+
+        args = []
+        kwargs = {"size": (1,), "dtype": "float16", "out": arr_out}
+        kwargs_subcall = {"size": (1,)}
+
+        mock_gen = mock.MagicMock()
+        mock_gen.astype.side_effect = _side_effect
+        getattr(mock_gen, fname).return_value = mock_gen
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+        rng._is_new_rng_style = False
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        getattr(mock_gen, fname).assert_called_once_with(*args,
+                                                         **kwargs_subcall)
+        mock_gen.astype.assert_called_once_with("float16")
+        assert np.allclose(result, arr_result)
+        assert np.allclose(arr_out, arr_result)
+
+    def test_standard_t_mocked(self):
+        self._test_sampling_func("standard_t", df=1.5, size=(1,))
+
+    def test_triangular_mocked(self):
+        self._test_sampling_func("triangular", left=1.0, mode=1.5, right=2.0,
+                                 size=(1,))
+
+    def test_uniform_mocked(self):
+        self._test_sampling_func("uniform", low=0.5, high=1.5, size=(1,))
+
+    def test_vonmises_mocked(self):
+        self._test_sampling_func("vonmises", mu=1.0, kappa=1.5, size=(1,))
+
+    def test_wald_mocked(self):
+        self._test_sampling_func("wald", mean=0.5, scale=1.0, size=(1,))
+
+    def test_weibull_mocked(self):
+        self._test_sampling_func("weibull", a=1.0, size=(1,))
+
+    def test_zipf_mocked(self):
+        self._test_sampling_func("zipf", a=1.0, size=(1,))
+
+    @classmethod
+    def _test_sampling_func(cls, fname, *args, **kwargs):
+        mock_gen = mock.MagicMock()
+        getattr(mock_gen, fname).return_value = "foo"
+        rng = iarandom.RNG(0)
+        rng.generator = mock_gen
+
+        result = getattr(rng, fname)(*args, **kwargs)
+
+        assert result == "foo"
+        getattr(mock_gen, fname).assert_called_once_with(*args, **kwargs)
+
+
 class Test_supports_new_numpy_rng_style(_Base):
     def test_call(self):
         assert iarandom.supports_new_numpy_rng_style() is IS_NP_117_OR_HIGHER
