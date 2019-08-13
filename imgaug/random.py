@@ -63,7 +63,7 @@ class RNG(object):
 
     Parameters
     ----------
-    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+    generator : None or int or RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         The numpy random number generator to use. In case of numpy
         version 1.17 or later, this shouldn't be a ``RandomState`` as that
         class is outdated.
@@ -78,6 +78,9 @@ class RNG(object):
             ``SFC64`` bit generator and wrapped by a ``Generator``.
             In numpy <=1.16, the value is used as a seed for a ``RandomState``,
             which is then wrapped by this RNG.
+          * If :class:`RNG`: That RNG's ``generator`` attribute will be used
+            as the generator for this RNG, i.e. the same as
+            ``RNG(other_rng.generator)``.
           * If :class:`numpy.random.Generator`: That generator will be wrapped.
           * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
             generator will be created (and wrapped by this RNG) that contains
@@ -561,7 +564,7 @@ class RNG(object):
         """Call :func:`numpy.random.Generator.standard_cauchy`."""
         return self.generator.standard_cauchy(size=size)
 
-    def standard_exponential(self, size=None, dtype="float32", method='zig',
+    def standard_exponential(self, size=None, dtype="float32", method="zig",
                              out=None):
         """Call :func:`numpy.random.Generator.standard_exponential`.
 
@@ -574,7 +577,15 @@ class RNG(object):
         if self._is_new_rng_style:
             return self.generator.standard_exponential(
                 size=size, dtype=dtype, method=method, out=out)
-        return self.generator.standard_exponential(size=size).astype(dtype)
+        result = self.generator.standard_exponential(size=size).astype(dtype)
+        if out is not None:
+            assert out.dtype.name == result.dtype.name, (
+                "Expected out array to have the same dtype as "
+                "standard_exponential()'s result array. Got %s (out) and "
+                "%s (result) instead." % (out.dtype.name, result.dtype.name))
+            assert out.dtype.name == result.dtype.name
+            out[...] = result
+        return result
 
     def standard_gamma(self, shape, size=None, dtype="float32", out=None):
         """Call :func:`numpy.random.Generator.standard_gamma`.
@@ -588,8 +599,16 @@ class RNG(object):
         if self._is_new_rng_style:
             return self.generator.standard_gamma(
                 shape=shape, size=size, dtype=dtype, out=out)
-        return self.generator.standard_gamma(
+        result = self.generator.standard_gamma(
             shape=shape, size=size).astype(dtype)
+        if out is not None:
+            assert out.dtype.name == result.dtype.name, (
+                "Expected out array to have the same dtype as "
+                "standard_gamma()'s result array. Got %s (out) and "
+                "%s (result) instead." % (out.dtype.name, result.dtype.name))
+            assert out.dtype.name == result.dtype.name
+            out[...] = result
+        return result
 
     def standard_normal(self, size=None, dtype="float32", out=None):
         """Call :func:`numpy.random.Generator.standard_normal`.
@@ -603,7 +622,15 @@ class RNG(object):
         if self._is_new_rng_style:
             return self.generator.standard_normal(
                 size=size, dtype=dtype, out=out)
-        return self.generator.standard_normal(size=size).astype(dtype)
+        result = self.generator.standard_normal(size=size).astype(dtype)
+        if out is not None:
+            assert out.dtype.name == result.dtype.name, (
+                "Expected out array to have the same dtype as "
+                "standard_normal()'s result array. Got %s (out) and "
+                "%s (result) instead." % (out.dtype.name, result.dtype.name))
+            assert out.dtype.name == result.dtype.name
+            out[...] = result
+        return result
 
     def standard_t(self, df, size=None):
         """Call :func:`numpy.random.Generator.standard_t`."""
