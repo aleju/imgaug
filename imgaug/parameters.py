@@ -249,9 +249,10 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
 
         Parameters
         ----------
-        random_state : None or numpy.random.RandomState, optional
+        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A random state to use during the sampling process.
-            If None, the libraries global random state will be used.
+            Similar behaviour with respect to datatypes as in
+            :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
         Returns
         -------
@@ -270,9 +271,10 @@ class StochasticParameter(object): # pylint: disable=locally-disabled, unused-va
         size : tuple of int or int
             Number of sample values by dimension.
 
-        random_state : None or np.random.RandomState, optional
+        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A random state to use during the sampling process.
-            If None, the libraries global random state will be used.
+            Similar behaviour with respect to datatypes as in
+            :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
         Returns
         -------
@@ -853,7 +855,7 @@ class TruncatedNormal(StochasticParameter):
     Examples
     --------
     >>> param = TruncatedNormal(0, 5.0, low=-10, high=10)
-    >>> samples = param.draw_samples(100, random_state=np.random.RandomState(0))
+    >>> samples = param.draw_samples(100, random_state=0)
     >>> assert np.all(samples >= -10)
     >>> assert np.all(samples <= 10)
 

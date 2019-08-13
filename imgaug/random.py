@@ -31,8 +31,8 @@ SEED_MAX_VALUE = 2**31-1
 
 # TODO decrease pool_size in SeedSequence to 2 or 1?
 # TODO add 'with resetted_rng(...)'
-# TODO update augmenter docstrings
-# TODO change random_state to rng
+# TODO change random_state to rng or seed
+# TODO update changelog
 
 
 class RNG(object):
@@ -45,7 +45,7 @@ class RNG(object):
     functions in 1.16 too and supports a variety of useful functions on
     the wrapped sampler, e.g. gettings its state or copying it.
 
-    Not supported sampling functions of 1.16:
+    Not supported sampling functions of numpy <=1.16:
 
     * :func:`numpy.random.RandomState.rand`
     * :func:`numpy.random.RandomState.randn`

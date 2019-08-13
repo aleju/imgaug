@@ -165,18 +165,35 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             instantiate the augmenter with the defaults and then use
             :func:`imgaug.augmenters.Augmenter.to_deterministic`.
 
-        random_state : None or int or numpy.random.RandomState, optional
-            The random state to use for this augmenter.
+        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+            The RNG (random number generator) to use for this augmenter.
+            Setting this parameter allows to control/influence the random
+            number sampling of the augmenter. Usually, there is no need to
+            set this parameter.
 
-                * If int, a new ``numpy.random.RandomState`` will be created using this
-                  value as the seed.
-                * If ``numpy.random.RandomState`` instance, the instance will be used directly.
-                * If None, imgaug's default RandomState will be used, which's state can
-                  be controlled using ``imgaug.seed(int)``.
+                * If ``None``: The global RNG is used (shared by all
+                  augmenters).
+                * If ``int``: The value will be used as a seed for a new
+                  :class:`imgaug.random.RNG` instance.
+                * If :class:`imgaug.random.RNG`: The ``RNG`` instance will be
+                  used without changes.
+                * If :class:`imgaug.random.Generator`: A new
+                  :class:`imgaug.random.RNG` instance will be
+                  created, containing that generator.
+                * If :class:`imgaug.random.bit_generator.BitGenerator`: Will
+                  be wrapped in a :class:`imgaug.random.Generator`. Then
+                  similar behaviour to :class:`imgaug.random.Generator`
+                  parameters.
+                * If :class:`imgaug.random.SeedSequence`: Will
+                  be wrapped in a new bit generator and
+                  :class:`imgaug.random.Generator`. Then
+                  similar behaviour to :class:`imgaug.random.Generator`
+                  parameters.
+                * If :class:`imgaug.random.RandomState`: Similar behaviour to
+                  :class:`imgaug.random.Generator`. Outdated in numpy 1.17+.
 
-            Usually there is no need to set this variable by hand. Instead,
-            instantiate the augmenter with the defaults and then use
-            :func:`imgaug.augmenters.Augmenter.to_deterministic`.
+            If a new bit generator has to be created, it will be an instance
+            of :class:`numpy.random.SFC64`.
 
         """
         super(Augmenter, self).__init__()
@@ -671,7 +688,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             is the width of images and ``C`` is the number of channels of images.
             In the case of a list as input, ``H``, ``W`` and ``C`` may change per image.
 
-        random_state : numpy.random.RandomState
+        random_state : imgaug.random.RNG
             The random state to use for all sampling tasks during the augmentation.
 
         parents : list of imgaug.augmenters.meta.Augmenter
@@ -1057,7 +1074,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         keypoints_on_images : list of imgaug.KeypointsOnImage
             Keypoints to augment. They may be changed in-place.
 
-        random_state : numpy.random.RandomState
+        random_state : imgaug.random.RNG
             The random state to use for all sampling tasks during the augmentation.
 
         parents : list of imgaug.augmenters.meta.Augmenter
@@ -1438,7 +1455,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         polygons_on_images : list of imgaug.PolygonsOnImage
             Polygons to augment. They may be changed in-place.
 
-        random_state : numpy.random.RandomState
+        random_state : imgaug.random.RNG
             The random state to use for all sampling tasks during the
             augmentation.
 
@@ -1466,7 +1483,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         polygons_on_images : list of imgaug.PolygonsOnImage
             Polygons to augment. They may be changed in-place.
 
-        random_state : numpy.random.RandomState
+        random_state : imgaug.random.RNG
             The random state to use for all sampling tasks during the
             augmentation.
 
@@ -1544,7 +1561,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
             Line strings to augment. They may be changed in-place.
 
-        random_state : numpy.random.RandomState
+        random_state : imgaug.random.RNG
             The random state to use for all sampling tasks during the
             augmentation.
 
@@ -2257,7 +2274,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        random_state : None or int or numpy.random.RandomState, optional
+        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A RandomState that is used to sample seeds per augmenter.
             If int, the parameter will be used as a seed for a new RandomState.
             If None, a new RandomState will automatically be created.
@@ -2861,7 +2878,7 @@ class Sequential(Augmenter, list):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3087,7 +3104,7 @@ class SomeOf(Augmenter, list):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3377,7 +3394,7 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3460,7 +3477,7 @@ class Sometimes(Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3666,7 +3683,7 @@ class WithChannels(Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3835,7 +3852,7 @@ class Noop(Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -3949,7 +3966,7 @@ class Lambda(Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -4129,7 +4146,7 @@ def AssertLambda(func_images=None, func_heatmaps=None,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -4245,7 +4262,7 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -4417,7 +4434,7 @@ class ChannelShuffle(Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -4491,7 +4508,7 @@ def shuffle_channels(image, random_state, channels=None):
     image : (H,W,[C]) ndarray
         Image of any dtype for which to shuffle the channels.
 
-    random_state : numpy.random.RandomState
+    random_state : imgaug.random.RNG
         The random state to use for this shuffling operation.
 
     channels : None or imgaug.ALL or list of int, optional

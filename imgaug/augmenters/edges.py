@@ -54,7 +54,7 @@ class BinaryImageColorizerIf(object):
         nth_image : int
             Index of the image in the batch.
 
-        random_state : numpy.random.RandomState
+        random_state : imgaug.random.RNG
             Random state to use.
 
         Returns
@@ -258,7 +258,7 @@ class Canny(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
