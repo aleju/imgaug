@@ -12,10 +12,11 @@ import six.moves as sm
 # in which the last component cannot easily be converted to an int. Hence we
 # only pick the first two components.
 SUPPORTS_NEW_NP_RNG_STYLE = False
+BIT_GENERATOR = None
 np_version = list(map(int, np.__version__.split(".")[0:2]))
 if np_version[0] > 1 or np_version[1] >= 17:
     SUPPORTS_NEW_NP_RNG_STYLE = True
-
+    BIT_GENERATOR = np.random.SFC64
 
 # We instantiate a current/global random state here once.
 GLOBAL_RNG = None
@@ -62,7 +63,7 @@ class RNG(object):
 
     Parameters
     ----------
-    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         The numpy random number generator to use. In case of numpy
         version 1.17 or later, this shouldn't be a ``RandomState`` as that
         class is outdated.
@@ -81,7 +82,7 @@ class RNG(object):
           * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
             generator will be created (and wrapped by this RNG) that contains
             the bit generator.
-          * If :class:`numpy.random.bit_generator.SeedSequence`: A numpy
+          * If :class:`numpy.random.SeedSequence`: A numpy
             generator will be created (and wrapped by this RNG) that contains
             an ``SFC64`` bit generator initialized with the given
             ``SeedSequence``.
@@ -147,7 +148,7 @@ class RNG(object):
             The RNG itself.
 
         """
-        set_rng_state_(self.generator, value)
+        set_generator_state_(self.generator, value)
         return self
 
     def use_state_of_(self, other):
@@ -670,22 +671,6 @@ def get_global_rng():
     return GLOBAL_RNG
 
 
-# TODO replace by constructor
-def get_bit_generator_class():
-    """
-    Get the bit generator class used by imgaug.
-
-    Returns
-    -------
-    numpy.random.bit_generator.BitGenerator
-        The class to use as the bit generator. (**Not** an instance of that
-        class!)
-
-    """
-    assert SUPPORTS_NEW_NP_RNG_STYLE
-    return np.random.SFC64
-
-
 # TODO mark as in-place
 def seed(entropy):
     """Set the seed of imgaug's global RNG.
@@ -729,7 +714,7 @@ def normalize_generator(generator):
 
     Parameters
     ----------
-    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         The numpy random number generator to normalize. In case of numpy
         version 1.17 or later, this shouldn't be a ``RandomState`` as that
         class is outdated.
@@ -747,7 +732,7 @@ def normalize_generator(generator):
           * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
             generator will be created and returned that contains the bit
             generator.
-          * If :class:`numpy.random.bit_generator.SeedSequence`: A numpy
+          * If :class:`numpy.random.SeedSequence`: A numpy
             generator will be created and returned that contains an ``SFC64``
             bit generator initialized with the given ``SeedSequence``.
           * If :class:`numpy.random.RandomState`: In numpy <=1.16, this
@@ -773,7 +758,7 @@ def normalize_generator_(generator):
 
     Parameters
     ----------
-    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         See :func:`imgaug.random.normalize_generator`.
 
     Returns
@@ -793,17 +778,20 @@ def _normalize_generator_np117_(generator):
         return get_global_rng().generator
     elif isinstance(generator, np.random.SeedSequence):
         return np.random.Generator(
-            get_bit_generator_class()(generator)
+            BIT_GENERATOR(generator)
         )
     elif isinstance(generator, np.random.bit_generator.BitGenerator):
         generator = np.random.Generator(generator)
+        # TODO is it necessary/sensible here to reset the cache?
         reset_generator_cache_(generator)
         return generator
     elif isinstance(generator, np.random.Generator):
+        # TODO is it necessary/sensible here to reset the cache?
         reset_generator_cache_(generator)
         return generator
     elif isinstance(generator, np.random.RandomState):
         # TODO warn
+        # TODO reset the cache here too?
         return convert_seed_to_generator(generate_seed_(generator))
     # seed given
     seed_ = generator
@@ -814,6 +802,7 @@ def _normalize_generator_np116_(random_state):
     if random_state is None:
         return get_global_rng().generator
     elif isinstance(random_state, np.random.RandomState):
+        # TODO reset the cache here, like in np117?
         return random_state
     # seed given
     seed_ = random_state
@@ -854,7 +843,7 @@ def convert_seed_sequence_to_generator(seed_sequence):
 
     Parameters
     ----------
-    seed_sequence : numpy.random.bit_generator.SeedSequence
+    seed_sequence : numpy.random.SeedSequence
         The seed value to use.
 
     Returns
@@ -863,8 +852,7 @@ def convert_seed_sequence_to_generator(seed_sequence):
         Generator initialized with the provided seed sequence.
 
     """
-    bit_gen = get_bit_generator_class()
-    return np.random.Generator(bit_gen(seed_sequence))
+    return np.random.Generator(BIT_GENERATOR(seed_sequence))
 
 
 def create_pseudo_random_generator_():
@@ -880,7 +868,7 @@ def create_pseudo_random_generator_():
 
     """
     # could also use derive_rng(get_global_rng()) here
-    random_seed = generate_seed_(get_global_rng())
+    random_seed = generate_seed_(get_global_rng().generator)
     return convert_seed_to_generator(random_seed)
 
 
@@ -1042,7 +1030,9 @@ def _reset_generator_cache_np117_(generator):
     # This deactivates usage of the cache. We could also remove the cached
     # value itself in "uinteger", but setting the RNG to ignore the cached
     # value should be enough.
-    generator.bit_generator.state["has_uint32"] = 0
+    state = _get_generator_state_np117(generator)
+    state["has_uint32"] = 0
+    _set_generator_state_np117_(generator, state)
     return generator
 
 
@@ -1172,8 +1162,8 @@ def _get_generator_state_np116(random_state):
     return random_state.get_state()
 
 
-def set_rng_state_(generator, state):
-    """Set the state if the RNG in-place.
+def set_generator_state_(generator, state):
+    """Set the state of a numpy (random number) generator in-place.
 
     Parameters
     ----------
@@ -1187,16 +1177,16 @@ def set_rng_state_(generator, state):
 
     """
     if isinstance(generator, np.random.RandomState):
-        _set_rng_state_np116_(generator, state)
+        _set_generator_state_np116_(generator, state)
     else:
-        _set_rng_state_np117_(generator, state)
+        _set_generator_state_np117_(generator, state)
 
 
-def _set_rng_state_np117_(generator, state):
+def _set_generator_state_np117_(generator, state):
     generator.bit_generator.state = state
 
 
-def _set_rng_state_np116_(random_state, state):
+def _set_generator_state_np116_(random_state, state):
     random_state.set_state(state)
 
 
@@ -1223,39 +1213,23 @@ def is_generator_equal_to(generator, other_generator):
     return _is_generator_equal_to_np117(generator, other_generator)
 
 
-# TODO rework this method
 def _is_generator_equal_to_np117(generator, other_generator):
     assert generator.__class__ is other_generator.__class__, (
         "Expected both rngs to have the same class, "
         "got types '%s' and '%s'." % (type(generator), type(other_generator)))
 
-    state1 = get_generator_state(generator)["state"]
-    state2 = get_generator_state(other_generator)["state"]
+    state1 = get_generator_state(generator)
+    state2 = get_generator_state(other_generator)
+    assert state1["bit_generator"] == "SFC64"
+    assert state2["bit_generator"] == "SFC64"
 
-    if isinstance(state1, (list, tuple)):
-        for a, b in zip(state1, state2):
-            if a.dtype.kind != b.dtype.kind:
-                return False
-            assert a.dtype.kind in ["i", "u"]
-            if not np.array_equal(a, b):
-                return False
-    elif isinstance(state1, dict):
-        keys1 = set(state1.keys())
-        keys2 = set(state2.keys())
-        assert len(keys1.union(keys2)) == len(keys1)
+    if state1["has_uint32"] != state2["has_uint32"]:
+        return False
+    elif state1["has_uint32"] == state2["has_uint32"] == 1:
+        if state1["uinteger"] != state2["uinteger"]:
+            return False
 
-        for key in state1:
-            a, b = state1[key], state2[key]
-            if a.dtype.kind != b.dtype.kind:
-                return False
-            assert a.dtype.kind in ["i", "u"]
-            if not np.array_equal(a, b):
-                return False
-    else:
-        raise ValueError("Unknown state type. Expected list, tuple or dict, "
-                         "got type %s" % (type(state1),))
-
-    return True
+    return np.array_equal(state1["state"]["state"], state2["state"]["state"])
 
 
 def _is_generator_equal_to_np116(random_state, other_random_state):
@@ -1337,7 +1311,13 @@ def polyfill_integers(generator, low, high=None, size=None, dtype="int32",
         See :func:`numpy.random.Generator.integers`.
 
     """
-    if isinstance(generator, np.random.RandomState):
+    if hasattr(generator, "randint"):
+        if endpoint:
+            if high is None:
+                high = low + 1
+                low = 0
+            else:
+                high = high + 1
         return generator.randint(low=low, high=high, size=size, dtype=dtype)
     return generator.integers(low=low, high=high, size=size, dtype=dtype,
                               endpoint=endpoint)
@@ -1368,8 +1348,15 @@ def polyfill_random(generator, size, dtype="float32", out=None):
         See :func:`numpy.random.Generator.random`.
 
     """
-    if isinstance(generator, np.random.RandomState):
+    if hasattr(generator, "random_sample"):
         # note that numpy.random in <=1.16 supports random(), but
         # numpy.random.RandomState does not
-        return generator.random_sample(size=size).astype(dtype)
+        result = generator.random_sample(size=size).astype(dtype)
+        if out is not None:
+            assert out.dtype.name == result.dtype.name, (
+                "Expected out array to have the same dtype as "
+                "random_sample()'s result array. Got %s (out) and %s (result) "
+                "instead." % (out.dtype.name, result.dtype.name))
+            out[...] = result
+        return result
     return generator.random(size=size, dtype=dtype, out=out)
