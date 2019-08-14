@@ -600,6 +600,39 @@ def _test_Polygon_cut_clip(func):
         [0.5*100, 100]
     ]))
 
+    # polygon with two points
+    poly = ia.Polygon([(2.0, 2.0), (10.0, 2.0)])
+    multipoly_clipped = func(poly, (100, 100, 3))
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [2.0, 2.0],
+        [10.0, 2.0]
+    ]))
+
+    poly = ia.Polygon([(2.0, 2.0), (10.0, 2.0)])
+    multipoly_clipped = func(poly, (3, 3, 3))
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [2.0, 2.0],
+        [3.0, 2.0]
+    ]), max_distance=1e-3)
+
+    # polygon with a single point
+    poly = ia.Polygon([(2.0, 2.0)])
+    multipoly_clipped = func(poly, (3, 3, 3))
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [2.0, 2.0]
+    ]))
+
+    poly = ia.Polygon([(2.0, 2.0)])
+    multipoly_clipped = func(poly, (1, 1, 3))
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 0
+
 
 def test_Polygon_shift():
     poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
