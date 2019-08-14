@@ -659,7 +659,6 @@ class RNG(object):
         return self.generator.zipf(a=a, size=size)
 
 
-# TODO rename to supports_* or is_supporting_*
 def supports_new_numpy_rng_style():
     """
     Determine whether numpy supports the new ``random`` interface (v1.17+).
