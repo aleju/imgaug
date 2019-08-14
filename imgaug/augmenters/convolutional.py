@@ -40,6 +40,8 @@ from .. import dtypes as iadt
 
 
 # TODO allow 3d matrices as input (not only 2D)
+# TODO add _augment_keypoints and other _augment funcs, as these should do
+#      something for e.g. [[0, 0, 1]]
 class Convolve(meta.Augmenter):
     """
     Apply a convolution to input images.
@@ -218,17 +220,6 @@ class Convolve(meta.Augmenter):
             images[i] = image_aug
 
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        # TODO this can fail for some matrices, e.g. [[0, 0, 1]]
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.matrix, self.matrix_type]

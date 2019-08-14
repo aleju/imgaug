@@ -356,12 +356,6 @@ class GaussianBlur(meta.Augmenter):
             image[...] = blur_gaussian_(image, sigma=sig, eps=self.eps)
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.sigma]
 
@@ -546,12 +540,6 @@ class AverageBlur(meta.Augmenter):
                 images[i] = image_aug
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.k]
 
@@ -650,12 +638,6 @@ class MedianBlur(meta.Augmenter):
                     image_aug = image_aug[..., np.newaxis]
                 images[i] = image_aug
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.k]
@@ -795,12 +777,6 @@ class BilateralBlur(meta.Augmenter):
                 images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
                                                 sigma_space_i)
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.d, self.sigma_color, self.sigma_space]
