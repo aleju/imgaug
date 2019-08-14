@@ -279,6 +279,7 @@ def test_current_random_state():
 def test_new_random_state__induce_pseudo_random(mock_rng):
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
+
         _ = ia.new_random_state(seed=None, fully_random=False)
 
     assert mock_rng.create_pseudo_random_.call_count == 1
@@ -290,6 +291,7 @@ def test_new_random_state__induce_pseudo_random(mock_rng):
 def test_new_random_state__induce_fully_random(mock_rng):
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
+
         _ = ia.new_random_state(seed=None, fully_random=True)
 
     assert mock_rng.create_fully_random.call_count == 1
@@ -301,6 +303,7 @@ def test_new_random_state__induce_fully_random(mock_rng):
 def test_new_random_state__use_seed(mock_rng):
     with warnings.catch_warnings(record=True) as caught_warnings:
         warnings.simplefilter("always")
+
         _ = ia.new_random_state(seed=1)
 
     mock_rng.assert_called_once_with(1)
@@ -311,6 +314,8 @@ def test_new_random_state__use_seed(mock_rng):
 @mock.patch("imgaug.random.RNG")
 def test_dummy_random_state(mock_rng):
     with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
         _ = ia.dummy_random_state()
 
     mock_rng.assert_called_once_with(1)
@@ -322,6 +327,8 @@ def test_dummy_random_state(mock_rng):
 @mock.patch("imgaug.random.copy_generator_unless_global_generator")
 def test_copy_random_state__not_global(mock_copy_gen_glob, mock_copy_gen):
     with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
         gen = iarandom.convert_seed_to_generator(1)
         _ = ia.copy_random_state(gen, force_copy=False)
 
@@ -335,6 +342,8 @@ def test_copy_random_state__not_global(mock_copy_gen_glob, mock_copy_gen):
 @mock.patch("imgaug.random.copy_generator_unless_global_generator")
 def test_copy_random_state__also_global(mock_copy_gen_glob, mock_copy_gen):
     with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
         gen = iarandom.convert_seed_to_generator(1)
         _ = ia.copy_random_state(gen, force_copy=True)
 
@@ -347,6 +356,8 @@ def test_copy_random_state__also_global(mock_copy_gen_glob, mock_copy_gen):
 @mock.patch("imgaug.random.derive_generator_")
 def test_derive_random_state(mock_derive):
     with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
         gen = iarandom.convert_seed_to_generator(1)
         _ = ia.derive_random_state(gen)
 
@@ -358,6 +369,8 @@ def test_derive_random_state(mock_derive):
 @mock.patch("imgaug.random.derive_generators_")
 def test_derive_random_states(mock_derive):
     with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
         gen = iarandom.convert_seed_to_generator(1)
         _ = ia.derive_random_states(gen, n=2)
 
@@ -369,6 +382,8 @@ def test_derive_random_states(mock_derive):
 @mock.patch("imgaug.random.advance_generator_")
 def test_forward_random_state(mock_advance):
     with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        
         gen = iarandom.convert_seed_to_generator(1)
         _ = ia.forward_random_state(gen)
 
