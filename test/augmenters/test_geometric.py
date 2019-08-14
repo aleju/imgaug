@@ -1,6 +1,19 @@
 from __future__ import print_function, division, absolute_import
 
 import time
+import itertools
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
+import warnings
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -1402,6 +1415,38 @@ def test_Affine():
                 image_exp = aug_flip.augment_image(image)
                 assert image_aug.dtype == np.dtype(dtype)
                 assert (np.sum(_isclose(image_aug, image_exp)) / image.size) > 0.9
+
+
+class TestAffine(unittest.TestCase):
+    def test_unusual_channel_numbers(self):
+        nb_channels_lst = [4, 5]
+        orders = [0, 1, 3]
+        backends = ["auto", "skimage", "cv2"]
+        for nb_channels, order, backend in itertools.product(nb_channels_lst,
+                                                             orders, backends):
+            with self.subTest(nb_channels=nb_channels, order=order,
+                              backend=backend):
+                aug = iaa.Affine(translate_px={"x": -1}, mode="constant",
+                                 cval=255, order=order, backend=backend)
+
+                image = np.full((3, 3, nb_channels), 128, dtype=np.uint8)
+                heatmap_arr = np.full((3, 3, nb_channels), 0.5,
+                                      dtype=np.float32)
+                heatmap = ia.HeatmapsOnImage(heatmap_arr, shape=image.shape)
+
+                image_aug, heatmap_aug = aug(image=image, heatmaps=heatmap)
+                hm_aug_arr = heatmap_aug.arr_0to1
+
+                assert image_aug.shape == (3, 3, nb_channels)
+                assert heatmap_aug.arr_0to1.shape == (3, 3, nb_channels)
+                assert heatmap_aug.shape == image.shape
+                assert np.allclose(image_aug[:, 0:2, :], 128, rtol=0, atol=2)
+                assert np.allclose(image_aug[:, 2:3, 0:3], 255, rtol=0, atol=2)
+                assert np.allclose(image_aug[:, 2:3, 3:], 255, rtol=0, atol=2)
+                assert np.allclose(hm_aug_arr[:, 0:2, :], 0.5, rtol=0,
+                                   atol=0.025)
+                assert np.allclose(hm_aug_arr[:, 2:3, :], 0.0, rtol=0,
+                                   atol=0.025)
 
 
 def test_AffineCv2():
