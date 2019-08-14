@@ -821,6 +821,7 @@ class Normal(StochasticParameter):
         return "Normal(loc=%s, scale=%s)" % (self.loc, self.scale)
 
 
+# TODO docstring for parameters is outdated
 class TruncatedNormal(StochasticParameter):
     """
     Parameter that resembles a truncated normal distribution.
@@ -873,6 +874,7 @@ class TruncatedNormal(StochasticParameter):
         scale = self.scale.draw_sample(random_state=random_state)
         low = self.low.draw_sample(random_state=random_state)
         high = self.high.draw_sample(random_state=random_state)
+        seed = random_state.generate_seed_()
         if low > high:
             low, high = high, low
         ia.do_assert(scale >= 0, "Expected scale to be in range [0, inf), got %s." % (scale,))
@@ -881,7 +883,11 @@ class TruncatedNormal(StochasticParameter):
         a = (low - loc) / scale
         b = (high - loc) / scale
         rv = scipy.stats.truncnorm(a=a, b=b, loc=loc, scale=scale)
-        return rv.rvs(size=size, random_state=random_state).astype(np.float32)
+
+        # Using a seed here works with both np.random interfaces.
+        # Last time tried, scipy crashed when providing just
+        # random_state.generator on the new np.random interface.
+        return rv.rvs(size=size, random_state=seed).astype(np.float32)
 
     def __repr__(self):
         return self.__str__()
