@@ -1150,7 +1150,7 @@ class Augmenter(object):
             The augmented keypoints.
 
         """
-        raise NotImplementedError()
+        return keypoints_on_images
 
     def augment_bounding_boxes(self, bounding_boxes_on_images, hooks=None):
         """Augment a batch of bounding boxes.
