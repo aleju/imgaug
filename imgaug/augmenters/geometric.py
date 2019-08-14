@@ -1110,16 +1110,37 @@ class Affine(meta.Augmenter):
                 int(np.round(output_shape[0]))
             )
 
-        # TODO this uses always a tuple of 3 values for cval, even
-        #      if #chans != 3, works with 1d but what in other cases?
-        image_warped = cv2.warpAffine(
-            image,
-            matrix.params[:2],
-            dsize=dsize,
-            flags=order,
-            borderMode=mode,
-            borderValue=cval
-        )
+        # TODO this uses always a tuple of 3 values for cval, even if
+        #      #chans != 3, works with 1d but what in other cases?
+        nb_channels = image.shape[-1]
+        if nb_channels <= 3:
+            # TODO this block can also be when order==0 for any nb_channels,
+            #      but was deactivated for now, because cval would always
+            #      contain 3 values and not nb_channels values
+            image_warped = cv2.warpAffine(
+                image,
+                matrix.params[:2],
+                dsize=dsize,
+                flags=order,
+                borderMode=mode,
+                borderValue=cval
+            )
+            image_warped = np.atleast_3d(image_warped)
+        else:
+            # warp each channel on its own, re-add channel axis, then stack
+            # the result from a list of [H, W, 1] to (H, W, C).
+            image_warped = [
+                cv2.warpAffine(
+                    image[:, :, c],
+                    matrix.params[:2],
+                    dsize=dsize,
+                    flags=order,
+                    borderMode=mode,
+                    borderValue=tuple([cval[0]])
+                )
+                for c in sm.xrange(nb_channels)]
+            image_warped = np.dstack([
+                warped_i[..., np.newaxis] for warped_i in image_warped])
 
         # cv2 warp drops last axis if shape is (H, W, 1)
         if image_warped.ndim == 2:
@@ -2640,6 +2661,9 @@ class PerspectiveTransform(meta.Augmenter):
                 if warped.ndim == 2 and images[i].ndim == 3:
                     warped = np.expand_dims(warped, 2)
             else:
+                # FIXME usage of cval here seems incorrect, is always the same
+                #       group
+
                 # warp each channel on its own, re-add channel axis, then stack
                 # the result from a list of [H, W, 1] to (H, W, C).
                 warped = [cv2.warpPerspective(
