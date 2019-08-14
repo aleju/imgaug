@@ -472,6 +472,52 @@ def _test_Polygon_cut_clip(func):
     ]))
     assert multipoly_clipped[0].label == "test"
 
+    # square poly with a single edge intersecting the image (issue #310)
+    poly = ia.Polygon([(-1.0, 0.0), (0.0, 0.0), (0.0, 1.0), (-1.0, 1.0)])
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 0
+
+    # square poly with a tiny area on the left image edge intersecting with
+    # the image
+    offset = 1e-4
+    poly = ia.Polygon([(-1.0, 0.0), (0.0+offset, 0.0),
+                       (0.0+offset, 1.0), (-1.0, 1.0)])
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [0.0, 0.0],
+        [0.0+offset, 0.0],
+        [0.0+offset, 1.0],
+        [0.0, 1.0]
+    ]))
+
+    # square poly with a single point intersecting the image (issue #310)
+    poly = ia.Polygon([(-1.0, -1.0), (0.0, -1.0), (0.0, 0.0), (-1.0, 0.0)])
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 0
+
+    # square poly with a tiny area around the top left image corner
+    # intersecting with the the image
+    offset = 1e-4
+    poly = ia.Polygon([(-1.0, -1.0), (0.0, -1.0),
+                       (0.0+offset, 0.0+offset), (-1.0, 0.0)])
+    image = np.zeros((1, 1, 3), dtype=np.uint8)
+    multipoly_clipped = func(poly, image)
+    assert isinstance(multipoly_clipped, list)
+    assert len(multipoly_clipped) == 1
+    assert multipoly_clipped[0].exterior_almost_equals(np.float32([
+        [0.0, 0.0],
+        [0.0+offset, 0.0],
+        [0.0+offset, 0.0+offset],
+        [0.0, 0.0+offset]
+    ]))
+
     # non-square poly, with one rectangle on the left side of the image and one on the right side,
     # both sides are connected by a thin strip below the image
     # after clipping it should become two rectangles
