@@ -1001,7 +1001,7 @@ def _copy_generator_np116(random_state):
     return rs_copy
 
 
-def copy_generator_unless_global_rng(generator):
+def copy_generator_unless_global_generator(generator):
     """Copy a numpy generator unless it is the current global generator.
 
     "global generator" here denotes the generator contained in the

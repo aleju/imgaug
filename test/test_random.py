@@ -868,7 +868,7 @@ class Test_copy_generator(_Base):
         assert iarandom.is_generator_equal_to(gen, gen_copy)
 
 
-class Test_copy_generator_unless_global_rng(_Base):
+class Test_copy_generator_unless_global_generator(_Base):
     @mock.patch("imgaug.random.get_global_rng")
     @mock.patch("imgaug.random.copy_generator")
     def test_mocked_gen_is_global(self, mock_copy, mock_get_global_rng):
@@ -876,7 +876,7 @@ class Test_copy_generator_unless_global_rng(_Base):
         mock_copy.return_value = "foo"
         mock_get_global_rng.return_value = iarandom.RNG(gen)
 
-        result = iarandom.copy_generator_unless_global_rng(gen)
+        result = iarandom.copy_generator_unless_global_generator(gen)
 
         assert mock_get_global_rng.call_count == 1
         assert mock_copy.call_count == 0
@@ -890,7 +890,7 @@ class Test_copy_generator_unless_global_rng(_Base):
         mock_copy.return_value = "foo"
         mock_get_global_rng.return_value = iarandom.RNG(gen2)
 
-        result = iarandom.copy_generator_unless_global_rng(gen1)
+        result = iarandom.copy_generator_unless_global_generator(gen1)
 
         assert mock_get_global_rng.call_count == 1
         mock_copy.assert_called_once_with(gen1)
