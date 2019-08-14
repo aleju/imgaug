@@ -480,6 +480,9 @@ def seed(entropy=None, seedval=None):
     entropy : int
         The seed value to use.
 
+    seedval : None or int, optional
+        Deprecated.
+
     """
     assert entropy is not None or seedval is not None
     if seedval is not None:
@@ -551,17 +554,10 @@ def new_random_state(seed=None, fully_random=False):
     """
     import imgaug.random
     if seed is None:
-        if not fully_random:
-            # sample manually a seed instead of just RandomState(),
-            # because the latter one is way slower.
-            global_rng = imgaug.random.get_global_rng()
-            seed_min = imgaug.random.SEED_MIN_VALUE
-            seed_max = imgaug.random.SEED_MAX_VALUE
-            if imgaug.random.supports_new_numpy_rng_style():
-                f = global_rng.integers
-            else:
-                f = global_rng.randint
-            seed = f(seed_min, seed_max)
+        if fully_random:
+            return imgaug.random.RNG.create_fully_random()
+        else:
+            return imgaug.random.RNG.create_pseudo_random_()
     return imgaug.random.RNG(seed)
 
 
@@ -603,7 +599,7 @@ def copy_random_state(random_state, force_copy=False):
     import imgaug.random
     if force_copy:
         return imgaug.random.copy_generator(random_state)
-    return imgaug.random.copy_generator_unless_global_rng(random_state)
+    return imgaug.random.copy_generator_unless_global_generator(random_state)
 
 
 @deprecated("imgaug.random.derive_generator_")
