@@ -866,7 +866,7 @@ class Augmenter(object):
             The augmented heatmaps.
 
         """
-        raise NotImplementedError()
+        return heatmaps
 
     def _augment_heatmaps_as_images(self, heatmaps, parents, hooks):
         # TODO documentation
