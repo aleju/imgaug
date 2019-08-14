@@ -333,6 +333,8 @@ class Polygon(object):
         if len(self.exterior) == 0:
             raise Exception("Cannot determine whether the polygon is inside the image, because it contains no points.")
         ls = self.to_line_string()
+        # FIXME this looks like its going to fail for polygons where all corner
+        #       points are outside of the image
         return ls.is_out_of_image(image, fully=fully, partly=partly)
 
     @ia.deprecated(alt_func="Polygon.clip_out_of_image()",
@@ -382,12 +384,28 @@ class Polygon(object):
         poly_shapely = self.to_shapely_polygon()
         poly_image = shapely.geometry.Polygon([(0, 0), (w, 0), (w, h), (0, h)])
         multipoly_inter_shapely = poly_shapely.intersection(poly_image)
-        if not isinstance(multipoly_inter_shapely, shapely.geometry.MultiPolygon):
-            assert isinstance(
-                multipoly_inter_shapely, shapely.geometry.Polygon), (
-                "Expected to get a MultiPolygon or Polygon from Shapely, "
-                "got %s." % (type(multipoly_inter_shapely),))
-            multipoly_inter_shapely = shapely.geometry.MultiPolygon([multipoly_inter_shapely])
+        ignore_types = (shapely.geometry.LineString,
+                        shapely.geometry.MultiLineString,
+                        shapely.geometry.point.Point,
+                        shapely.geometry.MultiPoint)
+        if isinstance(multipoly_inter_shapely, shapely.geometry.Polygon):
+            multipoly_inter_shapely = shapely.geometry.MultiPolygon(
+                [multipoly_inter_shapely])
+        elif isinstance(multipoly_inter_shapely, shapely.geometry.MultiPolygon):
+            # we got a multipolygon from shapely, no need to change anything
+            # anymore
+            pass
+        elif isinstance(multipoly_inter_shapely, ignore_types):
+            # polygons that become (one or more) lines/points after clipping
+            # are here ignored
+            multipoly_inter_shapely = shapely.geometry.MultiPolygon([])
+        else:
+            raise Exception(
+                "Got an unexpected result of type %s from Shapely for "
+                "image %s and polygon %s. This is an internal error. Please "
+                "report." % (
+                    type(multipoly_inter_shapely), image.shape, self.exterior)
+            )
 
         polygons = []
         for poly_inter_shapely in multipoly_inter_shapely.geoms:
