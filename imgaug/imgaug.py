@@ -458,23 +458,38 @@ def caller_name():
     return sys._getframe(1).f_code.co_name
 
 
-@deprecated("imgaug.random.seed")
-def seed(seedval):
-    """**Deprecated.** Set the seed used by the global RNG.
+def seed(entropy=None, seedval=None):
+    """Set the seed of imgaug's global RNG.
 
-    This random state is by default by all augmenters. Under special
+    The global RNG controls most of the "randomness" in imgaug.
+
+    The global RNG is the default one used by all augmenters. Under special
     circumstances (e.g. when an augmenter is switched to deterministic mode),
-    the global random state is replaced by another -- local -- one.
-    The replacement is dependent on the global random state.
+    the global RNG is replaced with a local one. The state of that replacement
+    may be dependent on the global RNG's state at the time of creating the
+    child RNG.
+
+    .. note ::
+
+        This function is not yet marked as deprecated, but might be in the
+        future. The preferred way to seed `imgaug` is via
+        :func:`imgaug.random.seed`.
 
     Parameters
     ----------
-    seedval : int
-        The seed to use.
+    entropy : int
+        The seed value to use.
 
     """
+    assert entropy is not None or seedval is not None
+    if seedval is not None:
+        assert entropy is None
+        warn_deprecated("Parameter 'seedval' is deprecated. Use "
+                        "'entropy' instead.")
+        entropy = seedval
+
     import imgaug.random
-    imgaug.random.seed(seedval)
+    imgaug.random.seed(entropy)
 
 
 @deprecated("imgaug.random.normalize_generator")
