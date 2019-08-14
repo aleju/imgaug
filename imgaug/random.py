@@ -1,3 +1,43 @@
+"""Classes and functions related to pseudo-random number generation.
+
+This module deals with the generation of pseudo-random numbers.
+It provides the :class:`imgaug.random.RNG` class, which is the primary
+random number generator in ``imgaug``. It also provides various utility
+functions related random number generation, such as copying random number
+generators or setting their state.
+
+The main benefit of this module is to hide the actually used random number
+generation classes and methods behin imgaug-specific classes and methods.
+This allows to deal with numpy using two different interfaces (one old
+interface in numpy <=1.16 and a new one in numpy 1.17+). It also allows
+to potentially switch to a different framework/library in the future.
+
+Definitions
+-----------
+
+- *numpy generator* or *numpy random number generator*: Usually an instance
+  of :class:`numpy.random.Generator`. Can often also denote an instance
+  of :class:`numpy.random.RandomState` as both have almost the same interface.
+- *RandomState*: An instance of `numpy.random.RandomState`.
+  Note that outside of this module, the term "random state" often roughly
+  translates to "any random number generator with numpy-like interface
+  in a given state", i.e. it can then include instances of
+  :class:`numpy.random.Generator` or :class:`imgaug.random.RNG`.
+- *RNG*: An instance of :class:`imgaug.random.RNG`.
+
+Examples
+--------
+
+>>> import imgaug.random as iarandom
+>>> rng = iarandom.RNG(1234)
+>>> rng.integers(0, 1000)
+
+Initialize a random number generator with seed ``1234``, then sample
+a single integer from the discrete interval ``[0, 1000)``.
+This will use a :class:`numpy.random.Generator` in numpy 1.17+ and
+automatically fall back to :class:`numpy.random.RandomState` in numpy <=1.16.
+
+"""
 from __future__ import print_function, division, absolute_import
 
 import copy as copylib
