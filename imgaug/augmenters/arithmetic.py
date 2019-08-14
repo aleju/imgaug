@@ -160,10 +160,10 @@ class Add(meta.Augmenter):
         nb_channels_max = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
 
-        value_samples = self.value.draw_samples(
-            (nb_images, nb_channels_max), random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[1])
+            (nb_images,), random_state=rss[0])
+        value_samples = self.value.draw_samples(
+            (nb_images, nb_channels_max), random_state=rss[1])
 
         gen = enumerate(zip(images, value_samples, per_channel_samples,
                             input_dtypes))
@@ -383,11 +383,11 @@ class AddElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = random_state.duplicate(nb_images+1)
+        rss = random_state.duplicate(1+nb_images)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[-1])
+            (nb_images,), random_state=rss[0])
 
-        gen = enumerate(zip(images, per_channel_samples, rss[:-1],
+        gen = enumerate(zip(images, per_channel_samples, rss[1:],
                             input_dtypes))
         for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
@@ -908,10 +908,10 @@ class Multiply(meta.Augmenter):
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
-        mul_samples = self.mul.draw_samples(
-            (nb_images, nb_channels_max), random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[1])
+            (nb_images,), random_state=rss[0])
+        mul_samples = self.mul.draw_samples(
+            (nb_images, nb_channels_max), random_state=rss[1])
 
         gen = enumerate(zip(images, mul_samples, per_channel_samples,
                             input_dtypes))
@@ -1145,15 +1145,15 @@ class MultiplyElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = random_state.duplicate(nb_images+1)
+        rss = random_state.duplicate(1+nb_images)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[-1])
+            (nb_images,), random_state=rss[0])
         is_mul_binomial = isinstance(self.mul, iap.Binomial) or (
             isinstance(self.mul, iap.FromLowerResolution)
             and isinstance(self.mul.other_param, iap.Binomial)
         )
 
-        gen = enumerate(zip(images, per_channel_samples, rss[:-1],
+        gen = enumerate(zip(images, per_channel_samples, rss[1:],
                             input_dtypes))
         for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
@@ -1666,11 +1666,11 @@ class ReplaceElementwise(meta.Augmenter):
                          augmenter=self)
 
         nb_images = len(images)
-        rss = random_state.duplicate(2*nb_images+1)
+        rss = random_state.duplicate(1+2*nb_images)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[-1])
+            (nb_images,), random_state=rss[0])
 
-        gen = zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2])
+        gen = zip(images, per_channel_samples, rss[1::2], rss[2::2])
         for image, per_channel_i, rs_mask, rs_replacement in gen:
             height, width, nb_channels = image.shape
             sampling_shape = (height,
@@ -2604,10 +2604,10 @@ class Invert(meta.Augmenter):
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
-        p_samples = self.p.draw_samples((nb_images, nb_channels),
-                                        random_state=rss[0])
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[1])
+            (nb_images,), random_state=rss[0])
+        p_samples = self.p.draw_samples((nb_images, nb_channels),
+                                        random_state=rss[1])
 
         gen = zip(images, per_channel_samples, p_samples)
         for image, per_channel_samples_i, p_samples_i in gen:
