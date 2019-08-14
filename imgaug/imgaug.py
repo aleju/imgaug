@@ -497,7 +497,7 @@ def seed(entropy=None, seedval=None):
 
 @deprecated("imgaug.random.normalize_generator")
 def normalize_random_state(random_state):
-    """**Deprecated.** Normalize various inputs to a numpy random generator.
+    """Normalize various inputs to a numpy random generator.
 
     Parameters
     ----------
@@ -517,7 +517,7 @@ def normalize_random_state(random_state):
 
 @deprecated("imgaug.random.get_global_rng")
 def current_random_state():
-    """**Deprecated.** Get or create the current global RNG of imgaug.
+    """Get or create the current global RNG of imgaug.
 
     Note that the first call to this function will create a global RNG.
 
@@ -533,7 +533,7 @@ def current_random_state():
 
 @deprecated("imgaug.random.convert_seed_to_rng")
 def new_random_state(seed=None, fully_random=False):
-    """**Deprecated.** Create a new numpy random number generator.
+    """Create a new numpy random number generator.
 
     Parameters
     ----------
@@ -564,7 +564,7 @@ def new_random_state(seed=None, fully_random=False):
 # TODO seems to not be used anywhere anymore
 @deprecated("imgaug.random.convert_seed_to_rng")
 def dummy_random_state():
-    """**Deprecated.** Create a dummy random state using a seed of ``1``.
+    """Create a dummy random state using a seed of ``1``.
 
     Returns
     -------
@@ -578,7 +578,7 @@ def dummy_random_state():
 
 @deprecated("imgaug.random.copy_generator_unless_global_rng")
 def copy_random_state(random_state, force_copy=False):
-    """**Deprecated.** Copy an existing numpy (random number) generator.
+    """Copy an existing numpy (random number) generator.
 
     Parameters
     ----------
@@ -604,7 +604,7 @@ def copy_random_state(random_state, force_copy=False):
 
 @deprecated("imgaug.random.derive_generator_")
 def derive_random_state(random_state):
-    """**Deprecated.** Derive a child numpy random generator from another one.
+    """Derive a child numpy random generator from another one.
 
     Parameters
     ----------
@@ -624,7 +624,7 @@ def derive_random_state(random_state):
 
 @deprecated("imgaug.random.derive_generators_")
 def derive_random_states(random_state, n=1):
-    """**Deprecated.** Derive child numpy random generators from another one.
+    """Derive child numpy random generators from another one.
 
     Parameters
     ----------
@@ -648,7 +648,7 @@ def derive_random_states(random_state, n=1):
 
 @deprecated("imgaug.random.advance_generator_")
 def forward_random_state(random_state):
-    """**Deprecated.** Advance a numpy random generator's internal state.
+    """Advance a numpy random generator's internal state.
 
     Parameters
     ----------
