@@ -429,6 +429,22 @@ def test_Polygon_is_out_of_image():
     assert poly.is_out_of_image((1, 1, 3), fully=False, partly=True)
     assert poly.is_out_of_image((1, 1, 3), fully=True, partly=True)
 
+    # polygon with two points
+    poly = ia.Polygon([(2.0, 2.0), (10.0, 2.0)])
+    assert not poly.is_out_of_image((100, 100, 3), fully=True, partly=False)
+    assert not poly.is_out_of_image((100, 100, 3), fully=False, partly=True)
+    assert not poly.is_out_of_image((3, 3, 3), fully=True, partly=False)
+    assert poly.is_out_of_image((3, 3, 3), fully=False, partly=True)
+    assert poly.is_out_of_image((1, 1, 3), fully=True, partly=False)
+    assert not poly.is_out_of_image((1, 1, 3), fully=False, partly=True)
+
+    # polygon with a single point
+    poly = ia.Polygon([(2.0, 2.0)])
+    assert not poly.is_out_of_image((100, 100, 3), fully=True, partly=False)
+    assert not poly.is_out_of_image((100, 100, 3), fully=False, partly=True)
+    assert poly.is_out_of_image((1, 1, 3), fully=True, partly=False)
+    assert not poly.is_out_of_image((1, 1, 3), fully=False, partly=True)
+
     poly = ia.Polygon([])
     got_exception = False
     try:
