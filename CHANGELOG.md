@@ -357,32 +357,46 @@ Changes:
      `Lambda.__init__()`, `AssertLambda.__init__()`, `AssertShape.__init__()`
      and hence breaks if one relied on that order.
 
-## New RNG handling
+## New RNG handling #375
 
-* Adapted library to automatically use numpy 1.17 RNG classes, if they are
-  available. The library falls back to <=1.16 RNG interfaces otherwise.
+* Adapted library to automatically use the new `numpy.random` classes of
+  numpy 1.17 -- if they are available. If they are not available (i.e. numpy
+  version is <=1.16), the library automatically falls back to the old
+  interface (i.e. `numpy.random.RandomState`).
 * Added module `imgaug.random`.
-  * Added `imgaug.random.is_new_numpy_rng_style()`.
+  * Added class `imgaug.random.RNG`. This is now the preferred way to represent
+    RNG states (previously: `numpy.random.RandomState`). Instantiate it
+    via e.g. `RNG(1052912236)`, where `1052912236` is a seed.
+  * Added `imgaug.random.supports_new_rng_style()`.
   * Added `imgaug.random.get_global_rng()`.
-  * Added `imgaug.random.get_bit_generator_class()`.
   * Added `imgaug.random.seed()`.
-  * Added `imgaug.random.normalize_rng_()`.
-  * Added `imgaug.random.convert_seed_to_rng()`.
-  * Added `imgaug.random.convert_seed_sequence_to_rng()`.
-  * Added `imgaug.random.copy_rng()`.
-  * Added `imgaug.random.copy_rng_unless_global_rng()`.
-  * Added `imgaug.random.derive_rng()`.
-  * Added `imgaug.random.derive_rngs()`.
-  * Added `imgaug.random.get_rng_state()`.
-  * Added `imgaug.random.set_rng_state()`.
-  * Added `imgaug.random.is_identical_with()`.
-  * Added `imgaug.random.advance_rng()`.
+  * Added `imgaug.random.normalize_generator()`.
+  * Added `imgaug.random.normalize_generator_()`.
+  * Added `imgaug.random.convert_seed_to_generator()`.
+  * Added `imgaug.random.convert_seed_sequence_to_generator()`.
+  * Added `imgaug.random.create_pseudo_random_generator_()`.
+  * Added `imgaug.random.create_fully_random_generator()`.
+  * Added `imgaug.random.generate_seed_()`.
+  * Added `imgaug.random.generate_seeds_()`.
+  * Added `imgaug.random.copy_generator()`.
+  * Added `imgaug.random.copy_generator_unless_global_generator()`.
+  * Added `imgaug.random.reset_generator_cache_()`.
+  * Added `imgaug.random.derive_generator_()`.
+  * Added `imgaug.random.derive_generators_()`.
+  * Added `imgaug.random.get_generator_state()`.
+  * Added `imgaug.random.set_generator_state_()`.
+  * Added `imgaug.random.is_generator_equal_to()`.
+  * Added `imgaug.random.advance_generator_()`.
   * Added `imgaug.random.polyfill_integers()`.
   * Added `imgaug.random.polyfill_random()`.
+* Refactored all arguments related to random state handling to also accept
+  `imgaug.random.RNG`, as well as the new numpy random classes. This
+  particularly affects `imgaug.augmenters.meta.Augmenter` and
+  `imgaug.parameters.StochasticParameter` (argument `random_state` for both).
 * Marked old RNG related functions in `imgaug.imgaug` as deprecated.
   They will now produce warnings and redirect towards corresponding functions
-  in `imgaug.random`. This affects the functions listed below.
-  * `imgaug.imgaug.seed()`.
+  in `imgaug.random`. This does not yet affect `imgaug.imgaug.seed()`.
+  It does affect the functions listed below.
   * `imgaug.imgaug.normalize_random_state()`.
   * `imgaug.imgaug.current_random_state()`.
   * `imgaug.imgaug.new_random_state()`.
@@ -394,9 +408,21 @@ Changes:
 * [rarely breaking] Removed `imgaug.imgaug.CURRENT_RANDOM_STATE`.
   Use `imgaug.random.get_global_rng()` instead.
 * [rarely breaking] Removed `imgaug.imgaug.SEED_MIN_VALUE`.
-  Use  `imgaug.random.SEED_MIN_VALUE` instead.
+  Use  `imgaug.random.SEED_MIN_VALUE` instead or sample seeds via
+  `imgaug.random.generate_seeds_()`.
 * [rarely breaking] Removed `imgaug.imgaug.SEED_MAX_VALUE`.
-  Use  `imgaug.random.SEED_MAX_VALUE` instead.
+  Use  `imgaug.random.SEED_MAX_VALUE` instead or sample seeds via
+  `imgaug.random.generate_seeds_()`.
+* Optimized RNG handling throughout all augmenters to minimize the number of
+  RNG copies. RNGs are now re-used as often as possible. This improves
+  performance, but has the disadvantage that adding images to a batch will now
+  often affect the samples of the other images in the same batch. E.g.
+  previously for a batch of images `A,B,C` and seed `1`, the samples of `A,B,C`
+  would remain unchanged if the batch was changed to `A,B,C,D` (provided the
+  seed stayed the same). Now, if `D` is added the samples of `A,B,C` may
+  change.
+* [breaking] The above listed changes will lead to different values being
+  sampled for the same seeds (compared to past versions of the library).
 
 ## Fixes
  

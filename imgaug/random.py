@@ -36,7 +36,6 @@ SEED_GLOBAL_RNG = 148194721
 # TODO decrease pool_size in SeedSequence to 2 or 1?
 # TODO add 'with resetted_rng(...)'
 # TODO change random_state to rng or seed
-# TODO update changelog
 
 
 class RNG(object):
