@@ -1408,6 +1408,110 @@ class TestNormal(unittest.TestCase):
         assert np.allclose(samples1, samples2)
 
 
+class TestTruncatedNormal(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        param = iap.TruncatedNormal(0, 1)
+        expected = (
+            "TruncatedNormal("
+            "loc=Deterministic(int 0), "
+            "scale=Deterministic(int 1), "
+            "low=Deterministic(float -inf), "
+            "high=Deterministic(float inf)"
+            ")"
+        )
+        assert (
+            param.__str__()
+            == param.__repr__()
+            == expected
+        )
+
+    def test___init___custom_range(self):
+        param = iap.TruncatedNormal(0, 1, low=-100, high=50.0)
+        expected = (
+            "TruncatedNormal("
+            "loc=Deterministic(int 0), "
+            "scale=Deterministic(int 1), "
+            "low=Deterministic(int -100), "
+            "high=Deterministic(float 50.00000000)"
+            ")"
+        )
+        assert (
+            param.__str__()
+            == param.__repr__()
+            == expected
+        )
+
+    def test_scale_is_zero(self):
+        param = iap.TruncatedNormal(0.5, 0, low=-10, high=10)
+        samples = param.draw_samples((100,))
+        assert np.allclose(samples, 0.5)
+
+    def test_scale(self):
+        param1 = iap.TruncatedNormal(0.0, 0.1, low=-100, high=100)
+        param2 = iap.TruncatedNormal(0.0, 5.0, low=-100, high=100)
+        samples1 = param1.draw_samples((200,))
+        samples2 = param2.draw_samples((200,))
+        assert np.std(samples1) < np.std(samples2)
+        assert np.isclose(np.std(samples1), 0.1, rtol=0, atol=0.20)
+        assert np.isclose(np.std(samples2), 5.0, rtol=0, atol=0.40)
+
+    def test_loc_is_stochastic_parameter(self):
+        param = iap.TruncatedNormal(iap.Choice([-100, 100]), 0.01,
+                                    low=-1000, high=1000)
+
+        seen = [0, 0]
+        for _ in sm.xrange(200):
+            samples = param.draw_samples((5,))
+            observed = np.mean(samples)
+
+            dist1 = np.abs(-100 - observed)
+            dist2 = np.abs(100 - observed)
+
+            if dist1 < 1:
+                seen[0] += 1
+            elif dist2 < 1:
+                seen[1] += 1
+            else:
+                assert False
+        assert np.isclose(seen[0], 100, rtol=0, atol=20)
+        assert np.isclose(seen[1], 100, rtol=0, atol=20)
+
+    def test_samples_are_within_bounds(self):
+        param = iap.TruncatedNormal(0, 10.0, low=-5, high=7.5)
+
+        samples = param.draw_samples((1000,))
+
+        # are all within bounds
+        assert np.all(samples >= -5.0 - 1e-4)
+        assert np.all(samples <= 7.5 + 1e-4)
+
+        # at least some samples close to bounds
+        assert np.any(samples <= -4.5)
+        assert np.any(samples >= 7.0)
+
+        # at least some samples close to loc
+        assert np.any(np.abs(samples) < 0.5)
+
+    def test_samples_same_values_for_same_seeds(self):
+        param = iap.TruncatedNormal(0, 1)
+
+        samples1 = param.draw_samples((10, 5), random_state=1234)
+        samples2 = param.draw_samples((10, 5), random_state=1234)
+
+        assert np.allclose(samples1, samples2)
+
+    def test_samples_different_values_for_different_seeds(self):
+        param = iap.TruncatedNormal(0, 1)
+
+        samples1 = param.draw_samples((10, 5), random_state=1234)
+        samples2 = param.draw_samples((10, 5), random_state=2345)
+
+        assert not np.allclose(samples1, samples2)
+
+
 class TestLaplace(unittest.TestCase):
     def setUp(self):
         reseed()
