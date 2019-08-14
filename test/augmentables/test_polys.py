@@ -421,6 +421,14 @@ def test_Polygon_is_out_of_image():
     assert not poly.is_out_of_image((10, 10, 3), fully=True, partly=False)
     assert poly.is_out_of_image((10, 10, 3), fully=False, partly=True)
 
+    # polygon with all corners outside of the image
+    poly = ia.Polygon([(-1.0, -1.0), (2.0, -1.0), (2.0, 2.0), (-1.0, 2.0)])
+    assert not poly.is_out_of_image((100, 100, 3), fully=True, partly=False)
+    assert poly.is_out_of_image((100, 100, 3), fully=False, partly=True)
+    assert not poly.is_out_of_image((1, 1, 3), fully=True, partly=False)
+    assert poly.is_out_of_image((1, 1, 3), fully=False, partly=True)
+    assert poly.is_out_of_image((1, 1, 3), fully=True, partly=True)
+
     poly = ia.Polygon([])
     got_exception = False
     try:
