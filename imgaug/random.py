@@ -26,6 +26,13 @@ GLOBAL_RNG = None
 SEED_MIN_VALUE = 0
 SEED_MAX_VALUE = 2**31-1
 
+# We pick a large random seed here, that makes collisions with seeds chosen
+# by the user unlikely to happen.
+# Note that the library might switch to random-seed instead of fixed-seed
+# in the future, so it is not guarantueed that this constant lives for very
+# long.
+SEED_GLOBAL_RNG = 148194721
+
 # TODO decrease pool_size in SeedSequence to 2 or 1?
 # TODO add 'with resetted_rng(...)'
 # TODO change random_state to rng or seed
@@ -690,7 +697,7 @@ def get_global_rng():
     global GLOBAL_RNG
     if GLOBAL_RNG is None:
         # TODO replace seed by constant
-        GLOBAL_RNG = RNG(convert_seed_to_generator(42))
+        GLOBAL_RNG = RNG(convert_seed_to_generator(SEED_GLOBAL_RNG))
     return GLOBAL_RNG
 
 
