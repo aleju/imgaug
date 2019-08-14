@@ -24,6 +24,7 @@ import imgaug as ia
 from imgaug.imgaug import _quokka_normalize_extract, _compute_resized_shape
 from imgaug import dtypes as iadt
 from imgaug.testutils import reseed
+import imgaug.random as iarandom
 
 
 def main():
@@ -257,85 +258,123 @@ def test_is_callable():
         assert ia.is_callable(value) == False
 
 
-"""
-def test_seed():
+@mock.patch("imgaug.random.seed")
+def test_seed(mock_seed):
     ia.seed(10017)
-    rs = np.random.RandomState(10017)
-    assert ia.CURRENT_RANDOM_STATE.randint(0, 1000*1000) == rs.randint(0, 1000*1000)
-    reseed()
+    mock_seed.assert_called_once_with(10017)
 
 
 def test_current_random_state():
-    assert ia.current_random_state() == ia.CURRENT_RANDOM_STATE
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
+        rng = ia.current_random_state()
+
+    assert rng.is_global_rng()
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
 
 
-def test_new_random_state():
-    seed = 1000
-    ia.seed(seed)
+@mock.patch("imgaug.random.RNG")
+def test_new_random_state__induce_pseudo_random(mock_rng):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _ = ia.new_random_state(seed=None, fully_random=False)
 
-    rs_observed = ia.new_random_state(seed=None, fully_random=False)
-    rs_expected = np.random.RandomState(
-        np.random.RandomState(seed).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE, 1)[0]
-    )
-    assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
-    rs_observed1 = ia.new_random_state(seed=None, fully_random=False)
-    rs_observed2 = ia.new_random_state(seed=None, fully_random=False)
-    assert rs_observed1.randint(0, 10**6) != rs_observed2.randint(0, 10**6)
-
-    ia.seed(seed)
-    np.random.seed(seed)
-    rs_observed = ia.new_random_state(seed=None, fully_random=True)
-    rs_not_expected = np.random.RandomState(
-        np.random.RandomState(seed).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE, 1)[0]
-    )
-    assert rs_observed.randint(0, 10**6) != rs_not_expected.randint(0, 10**6)
-
-    rs_observed1 = ia.new_random_state(seed=None, fully_random=True)
-    rs_observed2 = ia.new_random_state(seed=None, fully_random=True)
-    assert rs_observed1.randint(0, 10**6) != rs_observed2.randint(0, 10**6)
-
-    rs_observed1 = ia.new_random_state(seed=1234)
-    rs_observed2 = ia.new_random_state(seed=1234)
-    rs_expected = np.random.RandomState(1234)
-    assert rs_observed1.randint(0, 10**6) == rs_observed2.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+    assert mock_rng.create_pseudo_random_.call_count == 1
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
 
 
-def test_dummy_random_state():
-    assert ia.dummy_random_state().randint(0, 10**6) == np.random.RandomState(1).randint(0, 10**6)
+@mock.patch("imgaug.random.RNG")
+def test_new_random_state__induce_fully_random(mock_rng):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _ = ia.new_random_state(seed=None, fully_random=True)
+
+    assert mock_rng.create_fully_random.call_count == 1
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
 
 
-def test_copy_random_state():
-    rs = np.random.RandomState(1017)
-    rs_copy = ia.copy_random_state(rs)
-    assert rs != rs_copy
-    assert rs.randint(0, 10**6) == rs_copy.randint(0, 10**6)
+@mock.patch("imgaug.random.RNG")
+def test_new_random_state__use_seed(mock_rng):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        _ = ia.new_random_state(seed=1)
 
-    assert ia.copy_random_state(np.random) == np.random
-    assert ia.copy_random_state(np.random, force_copy=True) != np.random
-
-
-def test_derive_random_state():
-    rs_observed = ia.derive_random_state(np.random.RandomState(1017))
-    rs_expected = np.random.RandomState(np.random.RandomState(1017).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE))
-    assert rs_observed.randint(0, 10**6) == rs_expected.randint(0, 10**6)
+    mock_rng.assert_called_once_with(1)
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
 
 
-def test_derive_random_states():
-    rs_observed1, rs_observed2 = ia.derive_random_states(np.random.RandomState(1017), n=2)
-    seed = np.random.RandomState(1017).randint(ia.SEED_MIN_VALUE, ia.SEED_MAX_VALUE)
-    rs_expected1 = np.random.RandomState(seed+0)
-    rs_expected2 = np.random.RandomState(seed+1)
-    assert rs_observed1.randint(0, 10**6) == rs_expected1.randint(0, 10**6)
-    assert rs_observed2.randint(0, 10**6) == rs_expected2.randint(0, 10**6)
+@mock.patch("imgaug.random.RNG")
+def test_dummy_random_state(mock_rng):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        _ = ia.dummy_random_state()
+
+    mock_rng.assert_called_once_with(1)
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
 
 
-def test_forward_random_state():
-    rs1 = np.random.RandomState(1017)
-    rs2 = np.random.RandomState(1017)
-    ia.forward_random_state(rs1)
-    rs2.uniform()
-    assert rs1.randint(0, 10**6) == rs2.randint(0, 10**6)
-"""
+@mock.patch("imgaug.random.copy_generator")
+@mock.patch("imgaug.random.copy_generator_unless_global_generator")
+def test_copy_random_state__not_global(mock_copy_gen_glob, mock_copy_gen):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        gen = iarandom.convert_seed_to_generator(1)
+        _ = ia.copy_random_state(gen, force_copy=False)
+
+    assert mock_copy_gen.call_count == 0
+    mock_copy_gen_glob.assert_called_once_with(gen)
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
+
+
+@mock.patch("imgaug.random.copy_generator")
+@mock.patch("imgaug.random.copy_generator_unless_global_generator")
+def test_copy_random_state__also_global(mock_copy_gen_glob, mock_copy_gen):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        gen = iarandom.convert_seed_to_generator(1)
+        _ = ia.copy_random_state(gen, force_copy=True)
+
+    mock_copy_gen.assert_called_once_with(gen)
+    assert mock_copy_gen_glob.call_count == 0
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
+
+
+@mock.patch("imgaug.random.derive_generator_")
+def test_derive_random_state(mock_derive):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        gen = iarandom.convert_seed_to_generator(1)
+        _ = ia.derive_random_state(gen)
+
+    mock_derive.assert_called_once_with(gen)
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
+
+
+@mock.patch("imgaug.random.derive_generators_")
+def test_derive_random_states(mock_derive):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        gen = iarandom.convert_seed_to_generator(1)
+        _ = ia.derive_random_states(gen, n=2)
+
+    mock_derive.assert_called_once_with(gen, n=2)
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
+
+
+@mock.patch("imgaug.random.advance_generator_")
+def test_forward_random_state(mock_advance):
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        gen = iarandom.convert_seed_to_generator(1)
+        _ = ia.forward_random_state(gen)
+
+    mock_advance.assert_called_once_with(gen)
+    assert len(caught_warnings) == 1
+    assert "is deprecated" in str(caught_warnings[-1].message)
 
 
 def test__quokka_normalize_extract():
