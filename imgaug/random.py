@@ -694,15 +694,16 @@ def get_global_rng():
     return GLOBAL_RNG
 
 
-# TODO mark as in-place
+# This is an in-place operation, but does not use a trailing slash to indicate
+# that in order to match the interface of `random` and `numpy.random`.
 def seed(entropy):
-    """Set the seed of imgaug's global RNG.
+    """Set the seed of imgaug's global RNG (in-place).
 
     The global RNG controls most of the "randomness" in imgaug.
 
     The global RNG is the default one used by all augmenters. Under special
     circumstances (e.g. when an augmenter is switched to deterministic mode),
-    the global RNG is replaced by a local one. The state of that replacement
+    the global RNG is replaced with a local one. The state of that replacement
     may be dependent on the global RNG's state at the time of creating the
     child RNG.
 
@@ -713,18 +714,18 @@ def seed(entropy):
 
     """
     if SUPPORTS_NEW_NP_RNG_STYLE:
-        _seed_np117(entropy)
+        _seed_np117_(entropy)
     else:
-        _seed_np116(entropy)
+        _seed_np116_(entropy)
 
 
-def _seed_np117(entropy):
+def _seed_np117_(entropy):
     global GLOBAL_RNG
     # TODO any way to seed the Generator object instead of creating a new one?
     GLOBAL_RNG = RNG(entropy)
 
 
-def _seed_np116(entropy):
+def _seed_np116_(entropy):
     get_global_rng().generator.seed(entropy)
 
 

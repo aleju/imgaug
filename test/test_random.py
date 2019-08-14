@@ -592,8 +592,8 @@ class Test_get_global_rng(_Base):
 
 
 class Test_seed(_Base):
-    @mock.patch("imgaug.random._seed_np117")
-    @mock.patch("imgaug.random._seed_np116")
+    @mock.patch("imgaug.random._seed_np117_")
+    @mock.patch("imgaug.random._seed_np116_")
     def test_mocked_call(self, mock_np116, mock_np117):
         iarandom.seed(1)
 
