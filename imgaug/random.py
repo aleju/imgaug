@@ -21,9 +21,6 @@ if np_version[0] > 1 or np_version[1] >= 17:
 # We instantiate a current/global random state here once.
 GLOBAL_RNG = None
 
-# Deprecated name for current RNG
-CURRENT_RANDOM_STATE = GLOBAL_RNG
-
 # use 2**31 instead of 2**32 as the maximum here, because 2**31 errored on
 # some systems
 SEED_MIN_VALUE = 0
@@ -723,10 +720,9 @@ def seed(entropy):
 
 
 def _seed_np117(entropy):
-    global GLOBAL_RNG, CURRENT_RANDOM_STATE
+    global GLOBAL_RNG
     # TODO any way to seed the Generator object instead of creating a new one?
     GLOBAL_RNG = RNG(entropy)
-    CURRENT_RANDOM_STATE = GLOBAL_RNG
 
 
 def _seed_np116(entropy):
@@ -1095,7 +1091,7 @@ def derive_generator_(generator):
 
 # TODO does this advance the RNG in 1.17? It should advance it for security
 #      reasons
-def derive_generators_(generator, n=1):
+def derive_generators_(generator, n):
     """Create child numpy (random number) generators from an existing one.
 
     Parameters
@@ -1103,7 +1099,7 @@ def derive_generators_(generator, n=1):
     generator : numpy.random.Generator or numpy.random.RandomState
         The generator from which to derive new child generators.
 
-    n : int, optional
+    n : int
         Number of child generators to derive.
 
     Returns
@@ -1119,7 +1115,7 @@ def derive_generators_(generator, n=1):
     return _derive_generators_np117_(generator, n=n)
 
 
-def _derive_generators_np117_(generator, n=1):
+def _derive_generators_np117_(generator, n):
     # TODO possible to get the SeedSequence from 'rng'?
     """
     advance_rng_(rng)
@@ -1153,7 +1149,7 @@ def _derive_generators_np117_(generator, n=1):
             for seed_seq in seed_seqs]
 
 
-def _derive_generators_np116_(random_state, n=1):
+def _derive_generators_np116_(random_state, n):
     seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE)
     return [_convert_seed_to_generator_np116(seed_ + i) for i in sm.xrange(n)]
 
