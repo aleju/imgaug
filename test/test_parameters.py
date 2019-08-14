@@ -1452,8 +1452,8 @@ class TestTruncatedNormal(unittest.TestCase):
     def test_scale(self):
         param1 = iap.TruncatedNormal(0.0, 0.1, low=-100, high=100)
         param2 = iap.TruncatedNormal(0.0, 5.0, low=-100, high=100)
-        samples1 = param1.draw_samples((200,))
-        samples2 = param2.draw_samples((200,))
+        samples1 = param1.draw_samples((1000,))
+        samples2 = param2.draw_samples((1000,))
         assert np.std(samples1) < np.std(samples2)
         assert np.isclose(np.std(samples1), 0.1, rtol=0, atol=0.20)
         assert np.isclose(np.std(samples2), 5.0, rtol=0, atol=0.40)
