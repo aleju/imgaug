@@ -727,18 +727,16 @@ class Affine(meta.Augmenter):
                 else:
                     cv2_bad_dtype = (
                         image.dtype.name
-                        not in self.VALID_DTYPES_CV2_ORDER_NOT_0)
-                cv2_bad_shape = image.shape[2] > 4
-                cv2_impossible = (cv2_bad_order or cv2_bad_dtype
-                                  or cv2_bad_shape)
-
+                        not in self.VALID_DTYPES_CV2_ORDER_NOT_0
+                    )
+                cv2_impossible = cv2_bad_order or cv2_bad_dtype
                 use_skimage = (
                     self.backend == "skimage"
-                    or (self.backend == "auto" and cv2_impossible))
-
+                    or (self.backend == "auto" and cv2_impossible)
+                )
                 if use_skimage:
-                    # cval contains 3 values as cv2 can handle 3, but skimage
-                    # only 1
+                    # cval contains 3 values as cv2 can handle 3, but
+                    # skimage only 1
                     cval = cval[0]
                     # skimage does not clip automatically
                     cval = max(min(cval, max_value), min_value)
