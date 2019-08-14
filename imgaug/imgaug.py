@@ -18,6 +18,7 @@ import skimage.measure
 import collections
 from PIL import Image as PIL_Image, ImageDraw as PIL_ImageDraw, ImageFont as PIL_ImageFont
 
+
 ALL = "ALL"
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,14 +33,6 @@ DEFAULT_FONT_FP = os.path.join(
     "DejaVuSans.ttf"
 )
 
-# We instantiate a current/global random state here once.
-# One can also call np.random, but that is (in contrast to np.random.RandomState)
-# a module and hence cannot be copied via deepcopy. That's why we use RandomState
-# here (and in all augmenters) instead of np.random.
-CURRENT_RANDOM_STATE = np.random.RandomState(42)
-SEED_MIN_VALUE = 0
-SEED_MAX_VALUE = 2**31-1  # use 2**31 instead of 2**32 here because 2**31 errored on some systems
-
 
 # to check if a dtype instance is among these dtypes, use e.g. `dtype.type in NP_FLOAT_TYPES`
 # do not just use `dtype in NP_FLOAT_TYPES` as that would fail
@@ -51,6 +44,148 @@ IMSHOW_BACKEND_DEFAULT = "matplotlib"
 
 IMRESIZE_VALID_INTERPOLATIONS = ["nearest", "linear", "area", "cubic",
                                  cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
+
+
+################################################################################
+# Helpers for deprecation
+################################################################################
+
+class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
+    """Warning for deprecated calls.
+
+    Since python 2.7 DeprecatedWarning is silent by default. So we define
+    our own DeprecatedWarning here so that it is not silent by default.
+
+    """
+    pass
+
+
+def warn(msg, category=UserWarning, stacklevel=2):
+    """Generate a a warning with stacktrace.
+
+    Parameters
+    ----------
+    msg : str
+        The message of the warning.
+
+    category : class
+        The class of the warning to produce.
+
+    stacklevel : int, optional
+        How many steps above this function to "jump" in the stacktrace for
+        the displayed file and line number of the error message.
+        Usually 2.
+
+    """
+    import warnings
+    warnings.warn(msg, category=category, stacklevel=stacklevel)
+
+
+def warn_deprecated(msg, stacklevel=2):
+    """Generate a non-silent deprecation warning with stacktrace.
+
+    The used warning is ``imgaug.imgaug.DeprecationWarning``.
+
+    Parameters
+    ----------
+    msg : str
+        The message of the warning.
+
+    stacklevel : int, optional
+        How many steps above this function to "jump" in the stacktrace for
+        the displayed file and line number of the error message.
+        Usually 2.
+
+    """
+    warn(msg, category=DeprecationWarning, stacklevel=stacklevel)
+
+
+class deprecated(object):
+    """Decorator to mark deprecated functions with warning.
+
+    Adapted from
+    <https://github.com/scikit-image/scikit-image/blob/master/skimage/_shared/utils.py>.
+
+    Parameters
+    ----------
+    alt_func : None or str, optional
+        If given, tell user what function to use instead.
+
+    behavior : {'warn', 'raise'}, optional
+        Behavior during call to deprecated function: 'warn' = warn user that
+        function is deprecated; 'raise' = raise error.
+
+    removed_version : None or str, optional
+        The package version in which the deprecated function will be removed.
+
+    comment : None or str, optional
+        An optional comment that will be appended to the warning message.
+
+    """
+
+    def __init__(self, alt_func=None, behavior="warn", removed_version=None,
+                 comment=None):
+        self.alt_func = alt_func
+        self.behavior = behavior
+        self.removed_version = removed_version
+        self.comment = comment
+
+    def __call__(self, func):
+        alt_msg = None
+        if self.alt_func is not None:
+            alt_msg = "Use ``%s`` instead." % (self.alt_func,)
+
+        rmv_msg = None
+        if self.removed_version is not None:
+            rmv_msg = "It will be removed in version %s." % (
+                self.removed_version,)
+
+        comment_msg = None
+        if self.comment is not None and len(self.comment) > 0:
+            comment_msg = "%s." % (self.comment.rstrip(". "),)
+
+        addendum = " ".join([submsg
+                             for submsg
+                             in [alt_msg, rmv_msg, comment_msg]
+                             if submsg is not None])
+
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            # TODO add class name if class method
+            import inspect
+            # arg_names = func.__code__.co_varnames
+
+            # getargspec() was deprecated in py3, but doesn't exist in py2
+            if hasattr(inspect, "getfullargspec"):
+                arg_names = inspect.getfullargspec(func)[0]
+            else:
+                arg_names = inspect.getargspec(func)[0]
+
+            if "self" in arg_names or "cls" in arg_names:
+                main_msg = "Method ``%s.%s()`` is deprecated." % (
+                    args[0].__class__.__name__, func.__name__)
+            else:
+                main_msg = "Function ``%s()`` is deprecated." % (
+                    func.__name__,)
+
+            msg = (main_msg + " " + addendum).rstrip(" ").replace("``", "`")
+
+            if self.behavior == "warn":
+                warn_deprecated(msg, stacklevel=3)
+            elif self.behavior == "raise":
+                raise DeprecationWarning(msg)
+            return func(*args, **kwargs)
+
+        # modify doc string to display deprecation warning
+        doc = "**Deprecated**. " + addendum
+        if wrapped.__doc__ is None:
+            wrapped.__doc__ = doc
+        else:
+            wrapped.__doc__ = doc + "\n\n    " + wrapped.__doc__
+
+        return wrapped
+
+################################################################################
 
 
 def is_np_array(val):
@@ -323,117 +458,132 @@ def caller_name():
     return sys._getframe(1).f_code.co_name
 
 
-def seed(seedval):
-    """
-    Set the seed used by the global random state and thereby all randomness
-    in the library.
+def seed(entropy=None, seedval=None):
+    """Set the seed of imgaug's global RNG.
 
-    This random state is by default by all augmenters. Under special
+    The global RNG controls most of the "randomness" in imgaug.
+
+    The global RNG is the default one used by all augmenters. Under special
     circumstances (e.g. when an augmenter is switched to deterministic mode),
-    the global random state is replaced by another -- local -- one.
-    The replacement is dependent on the global random state.
+    the global RNG is replaced with a local one. The state of that replacement
+    may be dependent on the global RNG's state at the time of creating the
+    child RNG.
+
+    .. note ::
+
+        This function is not yet marked as deprecated, but might be in the
+        future. The preferred way to seed `imgaug` is via
+        :func:`imgaug.random.seed`.
 
     Parameters
     ----------
-    seedval : int
-        The seed to use.
+    entropy : int
+        The seed value to use.
+
+    seedval : None or int, optional
+        Deprecated.
 
     """
-    CURRENT_RANDOM_STATE.seed(seedval)
+    assert entropy is not None or seedval is not None
+    if seedval is not None:
+        assert entropy is None
+        warn_deprecated("Parameter 'seedval' is deprecated. Use "
+                        "'entropy' instead.")
+        entropy = seedval
+
+    import imgaug.random
+    imgaug.random.seed(entropy)
 
 
-# TODO add tests
+@deprecated("imgaug.random.normalize_generator")
 def normalize_random_state(random_state):
-    """
-    Normalize various inputs to a numpy random state.
+    """Normalize various inputs to a numpy random generator.
 
     Parameters
     ----------
-    random_state : None or numpy.random.RandomState or int or float
-        RandomState to normalize.
-        If this is ``None``, the global random state will be returned.
-        If this is an instance of numpy's ``RandomState``, it will be returned
-        without any change. If it is anything else it is assumed to be a
-        seed value and a new ``RandomState`` using that seed will be returned.
+    random_state : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+        See :func:`imgaug.random.normalize_generator`.
 
     Returns
     -------
-    numpy.random.RandomState
-        Normalized random state.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator`` (even if
+        the input was a ``RandomState``).
 
     """
-    if random_state is None:
-        return CURRENT_RANDOM_STATE
-    elif isinstance(random_state, np.random.RandomState):
-        return random_state
-    # seed given
-    return np.random.RandomState(random_state)
+    import imgaug.random
+    return imgaug.random.normalize_generator_(random_state)
 
 
+@deprecated("imgaug.random.get_global_rng")
 def current_random_state():
-    """
-    Returns the current/global random state of the library.
+    """Get or create the current global RNG of imgaug.
+
+    Note that the first call to this function will create a global RNG.
 
     Returns
-    ----------
-    numpy.random.RandomState
-        The current/global random state.
+    -------
+    imgaug.random.RNG
+        The global RNG to use.
 
     """
-    return CURRENT_RANDOM_STATE
+    import imgaug.random
+    return imgaug.random.get_global_rng()
 
 
+@deprecated("imgaug.random.convert_seed_to_rng")
 def new_random_state(seed=None, fully_random=False):
-    """
-    Returns a new random state.
+    """Create a new numpy random number generator.
 
     Parameters
     ----------
     seed : None or int, optional
-        Optional seed value to use.
-        The same datatypes are allowed as for ``numpy.random.RandomState(seed)``.
+        The seed value to use. If ``None`` and `fully_random` is ``False``,
+        the seed will be derived from the global RNG. If `fully_random` is
+        ``True``, the seed will be provided by the OS.
 
     fully_random : bool, optional
-        Whether to use numpy's random initialization for the
-        RandomState (used if set to True). If False, a seed is sampled from
-        the global random state, which is a bit faster and hence the default.
+        Whether the seed will be provided by the OS.
 
     Returns
     -------
-    numpy.random.RandomState
-        The new random state.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        Both are initialized with the provided seed.
 
     """
+    import imgaug.random
     if seed is None:
-        if not fully_random:
-            # sample manually a seed instead of just RandomState(),
-            # because the latter one
-            # is way slower.
-            seed = CURRENT_RANDOM_STATE.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
-    return np.random.RandomState(seed)
+        if fully_random:
+            return imgaug.random.RNG.create_fully_random()
+        else:
+            return imgaug.random.RNG.create_pseudo_random_()
+    return imgaug.random.RNG(seed)
 
 
+# TODO seems to not be used anywhere anymore
+@deprecated("imgaug.random.convert_seed_to_rng")
 def dummy_random_state():
-    """
-    Returns a dummy random state that is always based on a seed of 1.
+    """Create a dummy random state using a seed of ``1``.
 
     Returns
     -------
-    numpy.random.RandomState
+    imgaug.random.RNG
         The new random state.
 
     """
-    return np.random.RandomState(1)
+    import imgaug.random
+    return imgaug.random.RNG(1)
 
 
+@deprecated("imgaug.random.copy_generator_unless_global_rng")
 def copy_random_state(random_state, force_copy=False):
-    """
-    Creates a copy of a random state.
+    """Copy an existing numpy (random number) generator.
 
     Parameters
     ----------
-    random_state : numpy.random.RandomState
-        The random state to copy.
+    random_state : numpy.random.Generator or numpy.random.RandomState
+        The generator to copy.
 
     force_copy : bool, optional
         If True, this function will always create a copy of every random
@@ -446,69 +596,68 @@ def copy_random_state(random_state, force_copy=False):
         The copied random state.
 
     """
-    if random_state == np.random and not force_copy:
-        return random_state
-    else:
-        rs_copy = dummy_random_state()
-        orig_state = random_state.get_state()
-        rs_copy.set_state(orig_state)
-        return rs_copy
+    import imgaug.random
+    if force_copy:
+        return imgaug.random.copy_generator(random_state)
+    return imgaug.random.copy_generator_unless_global_generator(random_state)
 
 
+@deprecated("imgaug.random.derive_generator_")
 def derive_random_state(random_state):
-    """
-    Create a new random states based on an existing random state or seed.
+    """Derive a child numpy random generator from another one.
 
     Parameters
     ----------
-    random_state : numpy.random.RandomState
-        Random state or seed from which to derive the new random state.
+    random_state : numpy.random.Generator or numpy.random.RandomState
+        The generator from which to derive a new child generator.
 
     Returns
     -------
-    numpy.random.RandomState
-        Derived random state.
+    numpy.random.Generator or numpy.random.RandomState
+        In numpy <=1.16 a ``RandomState``, in 1.17+ a ``Generator``.
+        In both cases a derived child generator.
 
     """
-    return derive_random_states(random_state, n=1)[0]
+    import imgaug.random
+    return imgaug.random.derive_generator_(random_state)
 
 
-# TODO use this everywhere instead of manual seed + create
+@deprecated("imgaug.random.derive_generators_")
 def derive_random_states(random_state, n=1):
-    """
-    Create N new random states based on an existing random state or seed.
+    """Derive child numpy random generators from another one.
 
     Parameters
     ----------
-    random_state : numpy.random.RandomState
-        Random state or seed from which to derive new random states.
+    random_state : numpy.random.Generator or numpy.random.RandomState
+        The generator from which to derive new child generators.
 
     n : int, optional
-        Number of random states to derive.
+        Number of child generators to derive.
 
     Returns
     -------
-    list of numpy.random.RandomState
-        Derived random states.
+    list of numpy.random.Generator or list of numpy.random.RandomState
+        In numpy <=1.16 a list of  ``RandomState`` s,
+        in 1.17+ a list of ``Generator`` s.
+        In both cases lists of derived child generators.
 
     """
-    seed_ = random_state.randint(SEED_MIN_VALUE, SEED_MAX_VALUE, 1)[0]
-    return [new_random_state(seed_+i) for i in sm.xrange(n)]
+    import imgaug.random
+    return imgaug.random.derive_generators_(random_state, n=n)
 
 
+@deprecated("imgaug.random.advance_generator_")
 def forward_random_state(random_state):
-    """
-    Forward the internal state of a random state.
-
-    This makes sure that future calls to the random_state will produce new random values.
+    """Advance a numpy random generator's internal state.
 
     Parameters
     ----------
-    random_state : numpy.random.RandomState
-        Random state to forward.
+    random_state : numpy.random.Generator or numpy.random.RandomState
+        Generator of which to advance the internal state.
 
     """
-    random_state.uniform()
+    import imgaug.random
+    imgaug.random.advance_generator_(random_state)
 
 
 def _quokka_normalize_extract(extract):
@@ -2390,144 +2539,7 @@ class HooksKeypoints(HooksImages):
     pass
 
 
-#####################################################################
-# Helpers for deprecation
-#####################################################################
 
-class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
-    """Warning for deprecated calls.
-
-    Since python 2.7 DeprecatedWarning is silent by default. So we define
-    our own DeprecatedWarning here so that it is not silent by default.
-
-    """
-    pass
-
-
-def warn(msg, category=UserWarning, stacklevel=2):
-    """Generate a a warning with stacktrace.
-
-    Parameters
-    ----------
-    msg : str
-        The message of the warning.
-
-    category : class
-        The class of the warning to produce.
-
-    stacklevel : int, optional
-        How many steps above this function to "jump" in the stacktrace for
-        the displayed file and line number of the error message.
-        Usually 2.
-
-    """
-    import warnings
-    warnings.warn(msg, category=category, stacklevel=stacklevel)
-
-
-def warn_deprecated(msg, stacklevel=2):
-    """Generate a non-silent deprecation warning with stacktrace.
-
-    The used warning is ``imgaug.imgaug.DeprecationWarning``.
-
-    Parameters
-    ----------
-    msg : str
-        The message of the warning.
-
-    stacklevel : int, optional
-        How many steps above this function to "jump" in the stacktrace for
-        the displayed file and line number of the error message.
-        Usually 2.
-
-    """
-    warn(msg, category=DeprecationWarning, stacklevel=stacklevel)
-
-
-class deprecated(object):
-    """Decorator to mark deprecated functions with warning.
-
-    Adapted from
-    <https://github.com/scikit-image/scikit-image/blob/master/skimage/_shared/utils.py>.
-
-    Parameters
-    ----------
-    alt_func : None or str, optional
-        If given, tell user what function to use instead.
-
-    behavior : {'warn', 'raise'}, optional
-        Behavior during call to deprecated function: 'warn' = warn user that
-        function is deprecated; 'raise' = raise error.
-
-    removed_version : None or str, optional
-        The package version in which the deprecated function will be removed.
-
-    comment : None or str, optional
-        An optional comment that will be appended to the warning message.
-
-    """
-
-    def __init__(self, alt_func=None, behavior="warn", removed_version=None,
-                 comment=None):
-        self.alt_func = alt_func
-        self.behavior = behavior
-        self.removed_version = removed_version
-        self.comment = comment
-
-    def __call__(self, func):
-        alt_msg = None
-        if self.alt_func is not None:
-            alt_msg = "Use ``%s`` instead." % (self.alt_func,)
-
-        rmv_msg = None
-        if self.removed_version is not None:
-            rmv_msg = "It will be removed in version %s." % (
-                self.removed_version,)
-
-        comment_msg = None
-        if self.comment is not None and len(self.comment) > 0:
-            comment_msg = "%s." % (self.comment.rstrip(". "),)
-
-        addendum = " ".join([submsg
-                             for submsg
-                             in [alt_msg, rmv_msg, comment_msg]
-                             if submsg is not None])
-
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-            # TODO add class name if class method
-            import inspect
-            # arg_names = func.__code__.co_varnames
-
-            # getargspec() was deprecated in py3, but doesn't exist in py2
-            if hasattr(inspect, "getfullargspec"):
-                arg_names = inspect.getfullargspec(func)[0]
-            else:
-                arg_names = inspect.getargspec(func)[0]
-
-            if "self" in arg_names or "cls" in arg_names:
-                main_msg = "Method ``%s.%s()`` is deprecated." % (
-                    args[0].__class__.__name__, func.__name__)
-            else:
-                main_msg = "Function ``%s()`` is deprecated." % (
-                    func.__name__,)
-
-            msg = (main_msg + " " + addendum).rstrip(" ").replace("``", "`")
-
-            if self.behavior == "warn":
-                warn_deprecated(msg, stacklevel=3)
-            elif self.behavior == "raise":
-                raise DeprecationWarning(msg)
-            return func(*args, **kwargs)
-
-        # modify doc string to display deprecation warning
-        doc = "**Deprecated**. " + addendum
-        if wrapped.__doc__ is None:
-            wrapped.__doc__ = doc
-        else:
-            wrapped.__doc__ = doc + "\n\n    " + wrapped.__doc__
-
-        return wrapped
 
 
 #####################################################################

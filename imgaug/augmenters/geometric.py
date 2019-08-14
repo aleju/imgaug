@@ -393,7 +393,7 @@ class Affine(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -831,32 +831,32 @@ class Affine(meta.Augmenter):
                 self.fit_output]
 
     def _draw_samples(self, nb_samples, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = random_state.duplicate(11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 10)),
-                self.scale[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 20)),
+                self.scale[0].draw_samples((nb_samples,), random_state=rngs[0]),
+                self.scale[1].draw_samples((nb_samples,), random_state=rngs[1]),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 30))
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 40)),
-                self.translate[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 50)),
+                self.translate[0].draw_samples((nb_samples,), random_state=rngs[3]),
+                self.translate[1].draw_samples((nb_samples,), random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
-        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
-        shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
+        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
+        shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
 
-        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=ia.new_random_state(seed + 90))
-        mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
-        order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
+        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=rngs[8])
+        mode_samples = self.mode.draw_samples((nb_samples,), random_state=rngs[9])
+        order_samples = self.order.draw_samples((nb_samples,), random_state=rngs[10])
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, \
             order_samples
@@ -1217,7 +1217,7 @@ class AffineCv2(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1573,35 +1573,35 @@ class AffineCv2(meta.Augmenter):
         return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
 
     def _draw_samples(self, nb_samples, random_state):
-        seed = random_state.randint(0, 10**6, 1)[0]
+        rngs = random_state.duplicate(11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 10)),
-                self.scale[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 20)),
+                self.scale[0].draw_samples((nb_samples,), random_state=rngs[0]),
+                self.scale[1].draw_samples((nb_samples,), random_state=rngs[1]),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 30))
+            scale_samples = self.scale.draw_samples((nb_samples,), random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 40)),
-                self.translate[1].draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 50)),
+                self.translate[0].draw_samples((nb_samples,), random_state=rngs[3]),
+                self.translate[1].draw_samples((nb_samples,), random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 60))
+            translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
         ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
         ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
 
-        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 70))
-        shear_samples = self.shear.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 80))
+        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
+        shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
 
-        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=ia.new_random_state(seed + 90))
-        mode_samples = self.mode.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 100))
-        order_samples = self.order.draw_samples((nb_samples,), random_state=ia.new_random_state(seed + 110))
+        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=rngs[8])
+        mode_samples = self.mode.draw_samples((nb_samples,), random_state=rngs[9])
+        order_samples = self.order.draw_samples((nb_samples,), random_state=rngs[10])
 
         return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, \
             order_samples
@@ -1720,7 +1720,7 @@ class PiecewiseAffine(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1810,6 +1810,18 @@ class PiecewiseAffine(meta.Augmenter):
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
+    def _draw_samples(self, nb_images, random_state):
+        rss = random_state.duplicate(5)
+
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-5])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-4])
+        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-3])
+        cval_samples = self.cval.draw_samples((nb_images,), random_state=rss[-2])
+        mode_samples = self.mode.draw_samples((nb_images,), random_state=rss[-1])
+
+        return nb_rows_samples, nb_cols_samples, order_samples, cval_samples, \
+            mode_samples
+
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(images,
                          allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
@@ -1821,15 +1833,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = images
         nb_images = len(images)
 
-        rss = ia.derive_random_states(random_state, nb_images+5)
+        nb_rows_samples, nb_cols_samples, order_samples, cval_samples, \
+            mode_samples = self._draw_samples(nb_images, random_state)
 
-        # make sure to sample "order" here at the 3rd position to match the sampling steps
-        # in _augment_heatmaps()
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-5])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-4])
-        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-3])
-        cval_samples = self.cval.draw_samples((nb_images,), random_state=rss[-2])
-        mode_samples = self.mode.draw_samples((nb_images,), random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i, image in enumerate(images):
             rs_image = rss[i]
@@ -1871,10 +1878,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = heatmaps
         nb_images = len(heatmaps)
 
-        rss = ia.derive_random_states(random_state, nb_images+2)
+        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
+            _mode_samples = self._draw_samples(nb_images, random_state)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
             heatmaps_i = heatmaps[i]
@@ -1912,12 +1919,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = segmaps
         nb_images = len(segmaps)
 
-        rss = ia.derive_random_states(random_state, nb_images+2)
+        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
+            _mode_samples = self._draw_samples(nb_images, random_state)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
-                                                    random_state=rss[-2])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
-                                                    random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
             segmaps_i = segmaps[i]
@@ -1949,10 +1954,10 @@ class PiecewiseAffine(meta.Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
 
-        rss = ia.derive_random_states(random_state, nb_images+2)
+        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
+            _mode_samples = self._draw_samples(nb_images, random_state)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-2])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-1])
+        rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
             if not keypoints_on_images[i].keypoints:
@@ -2206,7 +2211,7 @@ class PerspectiveTransform(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2348,9 +2353,10 @@ class PerspectiveTransform(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = heatmaps
 
+        # TODO would copy_unless_global_rng() here and below enough?
         matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
             [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
-            ia.copy_random_state(random_state)
+            random_state.copy()
         )
 
         # estimate max_heights/max_widths for the underlying images
@@ -2361,7 +2367,7 @@ class PerspectiveTransform(meta.Augmenter):
         else:
             _, max_heights_imgs, max_widths_imgs, cval_samples, mode_samples = self._create_matrices(
                 [heatmaps_i.shape for heatmaps_i in heatmaps],
-                ia.copy_random_state(random_state)
+                random_state.copy()
             )
 
         for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
@@ -2396,9 +2402,10 @@ class PerspectiveTransform(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         result = segmaps
 
+        # TODO would copy_unless_global_rng() here be enough?
         matrices, max_heights, max_widths, _, _ = self._create_matrices(
             [segmaps_i.arr.shape for segmaps_i in segmaps],
-            ia.copy_random_state(random_state)
+            random_state.copy()
         )
 
         # estimate max_heights/max_widths for the underlying images
@@ -2409,7 +2416,7 @@ class PerspectiveTransform(meta.Augmenter):
         else:
             _, max_heights_imgs, max_widths_imgs, _, _ = self._create_matrices(
                 [segmaps_i.shape for segmaps_i in segmaps],
-                ia.copy_random_state(random_state)
+                random_state.copy()
             )
 
         for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
@@ -2485,12 +2492,12 @@ class PerspectiveTransform(meta.Augmenter):
         max_heights = []
         max_widths = []
         nb_images = len(shapes)
-        seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images,))
+        rngs = random_state.duplicate(2+nb_images)
 
         cval_samples = self.cval.draw_samples((nb_images, 3),
-                                              random_state=random_state)
+                                              random_state=rngs[0])
         mode_samples = self.mode.draw_samples((nb_images,),
-                                              random_state=random_state)
+                                              random_state=rngs[1])
 
         cval_samples_cv2 = []
 
@@ -2502,7 +2509,7 @@ class PerspectiveTransform(meta.Augmenter):
 
             h, w = shapes[i][0:2]
 
-            points = self.jitter.draw_samples((4, 2), random_state=ia.new_random_state(seeds[i]))
+            points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
             points = np.mod(np.abs(points), 1)
 
             # top left
@@ -2757,7 +2764,7 @@ class ElasticTransformation(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2840,8 +2847,7 @@ class ElasticTransformation(meta.Augmenter):
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _draw_samples(self, nb_images, random_state):
-        # seeds = ia.copy_random_state(random_state).randint(0, 10**6, (nb_images+1,))
-        rss = ia.derive_random_states(random_state, nb_images+5)
+        rss = random_state.duplicate(nb_images+5)
         alphas = self.alpha.draw_samples((nb_images,), random_state=rss[-5])
         sigmas = self.sigma.draw_samples((nb_images,), random_state=rss[-4])
         orders = self.order.draw_samples((nb_images,), random_state=rss[-3])
@@ -3108,7 +3114,7 @@ class ElasticTransformation(meta.Augmenter):
 
         # The step of random number generation could be batched, so that random numbers are sampled once for the whole
         # batch. Would get rid of creating many random_states.
-        dxdy_unsmoothed = (random_state.rand(2 * h_pad, w_pad) * 2 - 1).astype(np.float32)
+        dxdy_unsmoothed = random_state.random((2 * h_pad, w_pad)) * 2 - 1
 
         dx_unsmoothed = dxdy_unsmoothed[0:h_pad, :]
         dy_unsmoothed = dxdy_unsmoothed[h_pad:, :]
@@ -3338,7 +3344,7 @@ class Rot90(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
 

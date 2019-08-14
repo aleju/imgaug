@@ -1,7 +1,8 @@
 from imgaug import augmenters as iaa
 import imgaug as ia
+import imgaug.random as iarandom
 
-ia.seed(1)
+iarandom.seed(1)
 
 
 def main():

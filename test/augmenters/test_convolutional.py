@@ -20,6 +20,7 @@ import six.moves as sm
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
+from imgaug import random as iarandom
 from imgaug.testutils import reseed
 
 
@@ -165,7 +166,9 @@ class TestConvolve(unittest.TestCase):
 
         aug = iaa.Convolve(
             matrix=lambda _img, nb_channels, random_state:
-                np.float32([[random_state.randint(0, 5)]])
+                np.float32([[
+                    iarandom.polyfill_integers(random_state, 0, 5)
+                ]])
         )
         seen = [False] * 5
         for _ in sm.xrange(200):

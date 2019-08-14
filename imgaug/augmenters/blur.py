@@ -284,7 +284,7 @@ class GaussianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -381,7 +381,7 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -453,7 +453,7 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
             samples = self.k.draw_samples((nb_images,), random_state=random_state)
             samples = (samples, samples)
         else:
-            rss = ia.derive_random_states(random_state, 2)
+            rss = random_state.duplicate(2)
             samples = (
                 self.k[0].draw_samples((nb_images,), random_state=rss[0]),
                 self.k[1].draw_samples((nb_images,), random_state=rss[1]),
@@ -537,7 +537,7 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -668,7 +668,7 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -700,7 +700,7 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
                       + "Got channels: %s") % ([image.shape[2] for image in images],))
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, 3)
+        rss = random_state.duplicate(3)
         samples_d = self.d.draw_samples((nb_images,), random_state=rss[0])
         samples_sigma_color = self.sigma_color.draw_samples((nb_images,), random_state=rss[1])
         samples_sigma_space = self.sigma_space.draw_samples((nb_images,), random_state=rss[2])
@@ -777,7 +777,7 @@ def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1, name=None, d
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples

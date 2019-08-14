@@ -24,6 +24,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 
 import imgaug as ia
 import imgaug.multicore as multicore
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug.testutils import reseed
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
@@ -36,7 +37,7 @@ class TestPool(unittest.TestCase):
     def test___init___seed_out_of_bounds(self):
         augseq = iaa.Noop()
         with self.assertRaises(AssertionError) as context:
-            _ = multicore.Pool(augseq, seed=ia.SEED_MAX_VALUE + 100)
+            _ = multicore.Pool(augseq, seed=iarandom.SEED_MAX_VALUE + 100)
         assert "Expected `seed` to be" in str(context.exception)
 
     def test_property_pool(self):
@@ -571,7 +572,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
 
     @mock.patch.object(sys, 'version_info')
     @mock.patch("time.time_ns", create=True)  # doesnt exist in <=3.6
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     @mock.patch("multiprocessing.current_process")
     def test_without_seed_start_simulate_py37_or_higher(self,
                                                         mock_cp,
@@ -599,7 +600,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
 
     @mock.patch.object(sys, 'version_info')
     @mock.patch("time.time")
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     @mock.patch("multiprocessing.current_process")
     def test_without_seed_start_simulate_py36_or_lower(self,
                                                        mock_cp,
@@ -625,7 +626,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
         seed_local = augseq.reseed.call_args_list[0][0][0]
         assert seed_global != seed_local
 
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     def test_without_seed_start(self, mock_ia_seed):
         augseq = mock.MagicMock()
 
@@ -672,7 +673,7 @@ class Test_Pool_worker(unittest.TestCase):
         assert augseq.augment_batch.call_count == 1
         augseq.augment_batch.assert_called_once_with(batch)
 
-    @mock.patch("imgaug.imgaug.seed")
+    @mock.patch("imgaug.random.seed")
     def test_with_seed_start(self, mock_ia_seed):
         augseq = mock.MagicMock()
         augseq.augment_batch.return_value = "augmented_batch"
@@ -688,12 +689,14 @@ class Test_Pool_worker(unittest.TestCase):
         # expected seeds used
         seed = seed_start + batch_idx
         seed_global_expected = (
-            ia.SEED_MIN_VALUE
-            + (seed - 10**9) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+            iarandom.SEED_MIN_VALUE
+            + (seed - 10**9)
+            % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
         )
         seed_local_expected = (
-            ia.SEED_MIN_VALUE
-            + seed % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+            iarandom.SEED_MIN_VALUE
+            + seed
+            % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
         )
 
         assert result == "augmented_batch"

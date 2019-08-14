@@ -11,6 +11,7 @@ import numpy as np
 import six.moves as sm
 
 import imgaug as ia
+import imgaug.random as iarandom
 
 
 def create_random_images(size):
@@ -64,6 +65,6 @@ def keypoints_equal(kps1, kps2, eps=0.001):
 
 
 def reseed(seed=0):
-    ia.seed(seed)
+    iarandom.seed(seed)
     np.random.seed(seed)
     random.seed(seed)

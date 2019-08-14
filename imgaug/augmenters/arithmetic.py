@@ -101,7 +101,7 @@ class Add(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -158,11 +158,12 @@ class Add(meta.Augmenter):
 
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
-        value_samples = self.value.draw_samples(
-            (nb_images, nb_channels_max), random_state=rss[0])
+        rss = random_state.duplicate(2)
+
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[1])
+            (nb_images,), random_state=rss[0])
+        value_samples = self.value.draw_samples(
+            (nb_images, nb_channels_max), random_state=rss[1])
 
         gen = enumerate(zip(images, value_samples, per_channel_samples,
                             input_dtypes))
@@ -326,7 +327,7 @@ class AddElementwise(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -382,11 +383,11 @@ class AddElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, nb_images+1)
+        rss = random_state.duplicate(1+nb_images)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[-1])
+            (nb_images,), random_state=rss[0])
 
-        gen = enumerate(zip(images, per_channel_samples, rss[:-1],
+        gen = enumerate(zip(images, per_channel_samples, rss[1:],
                             input_dtypes))
         for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
@@ -519,7 +520,7 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -634,7 +635,7 @@ def AdditiveLaplaceNoise(loc=0, scale=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -735,7 +736,7 @@ def AdditivePoissonNoise(lam=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -851,7 +852,7 @@ class Multiply(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -906,11 +907,11 @@ class Multiply(meta.Augmenter):
 
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
-        mul_samples = self.mul.draw_samples(
-            (nb_images, nb_channels_max), random_state=rss[0])
+        rss = random_state.duplicate(2)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[1])
+            (nb_images,), random_state=rss[0])
+        mul_samples = self.mul.draw_samples(
+            (nb_images, nb_channels_max), random_state=rss[1])
 
         gen = enumerate(zip(images, mul_samples, per_channel_samples,
                             input_dtypes))
@@ -1090,7 +1091,7 @@ class MultiplyElementwise(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1144,15 +1145,15 @@ class MultiplyElementwise(meta.Augmenter):
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, nb_images+1)
+        rss = random_state.duplicate(1+nb_images)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[-1])
+            (nb_images,), random_state=rss[0])
         is_mul_binomial = isinstance(self.mul, iap.Binomial) or (
             isinstance(self.mul, iap.FromLowerResolution)
             and isinstance(self.mul.other_param, iap.Binomial)
         )
 
-        gen = enumerate(zip(images, per_channel_samples, rss[:-1],
+        gen = enumerate(zip(images, per_channel_samples, rss[1:],
                             input_dtypes))
         for i, (image, per_channel_samples_i, rs, input_dtype) in gen:
             height, width, nb_channels = image.shape
@@ -1292,7 +1293,7 @@ def Dropout(p=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1452,7 +1453,7 @@ def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1598,7 +1599,7 @@ class ReplaceElementwise(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1665,11 +1666,11 @@ class ReplaceElementwise(meta.Augmenter):
                          augmenter=self)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, 2*nb_images+1)
+        rss = random_state.duplicate(1+2*nb_images)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[-1])
+            (nb_images,), random_state=rss[0])
 
-        gen = zip(images, per_channel_samples, rss[:-1:2], rss[1:-1:2])
+        gen = zip(images, per_channel_samples, rss[1::2], rss[2::2])
         for image, per_channel_i, rs_mask, rs_replacement in gen:
             height, width, nb_channels = image.shape
             sampling_shape = (height,
@@ -1788,7 +1789,7 @@ def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1848,7 +1849,7 @@ def SaltAndPepper(p=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1974,7 +1975,7 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2072,7 +2073,7 @@ def Salt(p=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2192,7 +2193,7 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2285,7 +2286,7 @@ def Pepper(p=0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2403,7 +2404,7 @@ def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2541,7 +2542,7 @@ class Invert(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2602,11 +2603,11 @@ class Invert(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = ia.derive_random_states(random_state, 2)
-        p_samples = self.p.draw_samples((nb_images, nb_channels),
-                                        random_state=rss[0])
+        rss = random_state.duplicate(2)
         per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[1])
+            (nb_images,), random_state=rss[0])
+        p_samples = self.p.draw_samples((nb_images, nb_channels),
+                                        random_state=rss[1])
 
         gen = zip(images, per_channel_samples, p_samples)
         for image, per_channel_samples_i, p_samples_i in gen:
@@ -2796,7 +2797,7 @@ def ContrastNormalization(alpha=1.0, per_channel=False,
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2881,7 +2882,7 @@ class JpegCompression(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples

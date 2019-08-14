@@ -12,6 +12,7 @@ import skimage.measure
 import collections
 
 from .. import imgaug as ia
+from .. import random as iarandom
 from .utils import normalize_shape, interpolate_points
 
 
@@ -532,6 +533,8 @@ class Polygon(object):
         assert alpha is not None
         assert size is not None
 
+        # FIXME due to the np.array(.) and the assert at ndim==2 below, this
+        #       will always fail on 2D images?
         color_face = color_face if color_face is not None else np.array(color)
         color_lines = color_lines if color_lines is not None else np.array(color) * 0.5
         color_points = color_points if color_points is not None else np.array(color) * 0.5
@@ -1367,9 +1370,8 @@ class _ConcavePolygonRecoverer(object):
         if polygon.is_valid:
             return polygon
 
-        if not isinstance(random_state, np.random.RandomState):
-            random_state = np.random.RandomState(random_state)
-        rss = ia.derive_random_states(random_state, 3)
+        random_state = iarandom.RNG(random_state)
+        rss = random_state.derive_rngs_(3)
 
         # remove consecutive duplicate points
         new_exterior = self._remove_consecutive_duplicate_points(new_exterior)

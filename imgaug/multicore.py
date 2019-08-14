@@ -10,6 +10,7 @@ import random
 import numpy as np
 
 import imgaug.imgaug as ia
+import imgaug.random as iarandom
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 if sys.version_info[0] == 2:
@@ -84,11 +85,11 @@ class Pool(object):
         self.maxtasksperchild = maxtasksperchild
 
         if seed is not None:
-            assert ia.SEED_MIN_VALUE <= seed <= ia.SEED_MAX_VALUE, (
+            assert iarandom.SEED_MIN_VALUE <= seed <= iarandom.SEED_MAX_VALUE, (
                 "Expected `seed` to be either `None` or a value between "
                 "%d and %d. Got type %s, value %s instead." % (
-                    ia.SEED_MIN_VALUE,
-                    ia.SEED_MAX_VALUE,
+                    iarandom.SEED_MIN_VALUE,
+                    iarandom.SEED_MAX_VALUE,
                     type(seed),
                     str(seed)
                 )
@@ -457,14 +458,15 @@ def _Pool_starworker(inputs):
 def _reseed_global_local(base_seed, augseq):
     seed_global = _derive_seed(base_seed, -10**9)
     seed_local = _derive_seed(base_seed)
-    ia.seed(seed_global)
+    iarandom.seed(seed_global)
     augseq.reseed(seed_local)
 
 
 def _derive_seed(base_seed, offset=0):
     return (
-        ia.SEED_MIN_VALUE
-        + (base_seed + offset) % (ia.SEED_MAX_VALUE - ia.SEED_MIN_VALUE)
+        iarandom.SEED_MIN_VALUE
+        + (base_seed + offset)
+        % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
     )
 
 
@@ -510,7 +512,7 @@ class BatchLoader(object):
         self.join_signal = multiprocessing.Event()
         self.workers = []
         self.threaded = threaded
-        seeds = ia.current_random_state().randint(0, 10**6, size=(nb_workers,))
+        seeds = iarandom.get_global_rng().generate_seeds_(nb_workers)
         for i in range(nb_workers):
             if threaded:
                 worker = threading.Thread(
@@ -589,7 +591,7 @@ class BatchLoader(object):
         if seedval is not None:
             random.seed(seedval)
             np.random.seed(seedval)
-            ia.seed(seedval)
+            iarandom.seed(seedval)
 
         try:
             gen = (
@@ -729,7 +731,7 @@ class BackgroundAugmenter(object):
         self.workers = []
         self.nb_workers_finished = 0
 
-        seeds = ia.current_random_state().randint(0, 10**6, size=(nb_workers,))
+        seeds = iarandom.get_global_rng().generate_seeds_(nb_workers)
         for i in range(nb_workers):
             worker = multiprocessing.Process(
                 target=self._augment_images_worker,
@@ -788,7 +790,7 @@ class BackgroundAugmenter(object):
         np.random.seed(seedval)
         random.seed(seedval)
         augseq.reseed(seedval)
-        ia.seed(seedval)
+        iarandom.seed(seedval)
 
         loader_finished = False
 

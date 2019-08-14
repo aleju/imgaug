@@ -355,7 +355,7 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False, ra
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
@@ -436,7 +436,7 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False, name=None, determini
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
@@ -514,7 +514,7 @@ def LogContrast(gain=1, per_channel=False, name=None, deterministic=False, rando
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
@@ -582,7 +582,7 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Returns
@@ -659,7 +659,7 @@ class _IntensityChannelBasedApplier(object):
 
     def apply(self, images, random_state, parents, hooks, func):
         input_was_array = ia.is_np_array(images)
-        rss = ia.derive_random_states(random_state, 3)
+        rss = random_state.duplicate(3)
 
         # normalize images
         # (H, W, 1) will be used directly in AllChannelsCLAHE
@@ -795,7 +795,7 @@ class AllChannelsCLAHE(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -844,7 +844,7 @@ class AllChannelsCLAHE(meta.Augmenter):
         nb_channels = meta.estimate_max_number_of_channels(images)
 
         mode = "single" if self.tile_grid_size_px[1] is None else "two"
-        rss = ia.derive_random_states(random_state, 3 if mode == "single" else 4)
+        rss = random_state.duplicate(3 if mode == "single" else 4)
         per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
         clip_limit = self.clip_limit.draw_samples((nb_images, nb_channels), random_state=rss[1])
         tile_grid_size_px_h = self.tile_grid_size_px[0].draw_samples((nb_images, nb_channels), random_state=rss[2])
@@ -988,7 +988,7 @@ class CLAHE(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1120,7 +1120,7 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1235,7 +1235,7 @@ class HistogramEqualization(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1322,7 +1322,7 @@ class _ContrastFuncWrapper(meta.Augmenter):
                              augmenter=self)
 
         nb_images = len(images)
-        rss = ia.derive_random_states(random_state, 1+nb_images)
+        rss = random_state.duplicate(1+nb_images)
         per_channel = self.per_channel.draw_samples((nb_images,), random_state=rss[0])
 
         result = images

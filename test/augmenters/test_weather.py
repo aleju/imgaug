@@ -155,16 +155,17 @@ class TestClouds(unittest.TestCase):
             img = np.zeros((100, 100), dtype=np.uint8)
         else:
             img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
-        img_aug = iaa.Clouds().augment_image(img)
-        assert 20 < np.average(img_aug) < 250
-        assert np.max(img_aug) > 150
+        imgs_aug = iaa.Clouds().augment_images([img] * 5)
+        assert 20 < np.average(imgs_aug) < 250
+        assert np.max(imgs_aug) > 150
 
-        img_aug_f32 = img_aug.astype(np.float32)
-        grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
-        grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
+        for img_aug in imgs_aug:
+            img_aug_f32 = img_aug.astype(np.float32)
+            grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
+            grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
 
-        assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
-        assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
+            assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
+            assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
 
     def test_very_roughly_three_channels(self):
         self._test_very_roughly(3)
@@ -189,16 +190,17 @@ class TestFog(unittest.TestCase):
             img = np.zeros((100, 100), dtype=np.uint8)
         else:
             img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
-        img_aug = iaa.Clouds().augment_image(img)
-        assert 50 < np.average(img_aug) < 255
-        assert np.max(img_aug) > 100
+        imgs_aug = iaa.Clouds().augment_images([img] * 5)
+        assert 50 < np.average(imgs_aug) < 255
+        assert np.max(imgs_aug) > 100
 
-        img_aug_f32 = img_aug.astype(np.float32)
-        grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
-        grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
+        for img_aug in imgs_aug:
+            img_aug_f32 = img_aug.astype(np.float32)
+            grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
+            grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
 
-        assert np.sum(np.abs(grad_x)) > 1 * img.shape[1]
-        assert np.sum(np.abs(grad_y)) > 1 * img.shape[0]
+            assert np.sum(np.abs(grad_x)) > 1 * img.shape[1]
+            assert np.sum(np.abs(grad_y)) > 1 * img.shape[0]
 
     def test_very_roughly_three_channels(self):
         self._test_very_roughly(3)
@@ -223,38 +225,46 @@ class TestSnowflakes(unittest.TestCase):
         else:
             img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
 
-        img_aug = iaa.Snowflakes().augment_image(img)
-        assert 0.01 < np.average(img_aug) < 100
-        assert np.max(img_aug) > 100
+        imgs_aug = iaa.Snowflakes().augment_images([img] * 5)
+        assert 0.01 < np.average(imgs_aug) < 100
+        assert np.max(imgs_aug) > 100
 
-        img_aug_f32 = img_aug.astype(np.float32)
-        grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
-        grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
+        for img_aug in imgs_aug:
+            img_aug_f32 = img_aug.astype(np.float32)
+            grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
+            grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
 
-        assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
-        assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
+            assert np.sum(np.abs(grad_x)) > 5 * img.shape[1]
+            assert np.sum(np.abs(grad_y)) > 5 * img.shape[0]
 
         # test density
-        img_aug_undense = iaa.Snowflakes(
+        imgs_aug_undense = iaa.Snowflakes(
             density=0.001,
-            density_uniformity=0.99).augment_image(img)
-        img_aug_dense = iaa.Snowflakes(
+            density_uniformity=0.99).augment_images([img] * 5)
+        imgs_aug_dense = iaa.Snowflakes(
             density=0.1,
-            density_uniformity=0.99).augment_image(img)
-        assert np.average(img_aug_undense) < np.average(img_aug_dense)
+            density_uniformity=0.99).augment_images([img] * 5)
+        assert (
+            np.average(imgs_aug_undense)
+            < np.average(imgs_aug_dense)
+        )
 
         # test density_uniformity
-        img_aug_ununiform = iaa.Snowflakes(
+        imgs_aug_ununiform = iaa.Snowflakes(
             density=0.4,
-            density_uniformity=0.1).augment_image(img)
-        img_aug_uniform = iaa.Snowflakes(
+            density_uniformity=0.1).augment_images([img] * 5)
+        imgs_aug_uniform = iaa.Snowflakes(
             density=0.4,
-            density_uniformity=0.9).augment_image(img)
+            density_uniformity=0.9).augment_images([img] * 5)
 
-        assert (
-            self._measure_uniformity(img_aug_ununiform)
-            < self._measure_uniformity(img_aug_uniform)
-        )
+        ununiform_uniformity = np.average([
+            self._measure_uniformity(img_aug)
+            for img_aug in imgs_aug_ununiform])
+        uniform_uniformity = np.average([
+            self._measure_uniformity(img_aug)
+            for img_aug in imgs_aug_uniform])
+
+        assert ununiform_uniformity < uniform_uniformity
 
     def test_very_roughly_three_channels(self):
         self._test_very_roughly(3)

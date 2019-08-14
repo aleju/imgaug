@@ -21,6 +21,7 @@ import six.moves as sm
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
+from imgaug import random as iarandom
 from imgaug.testutils import reseed
 
 
@@ -695,7 +696,7 @@ class TestUniformVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
 
     def test___init___integrationtest(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
         aug = iaa.UniformVoronoi(
             100,
             p_replace=0.5,
@@ -711,7 +712,7 @@ class TestUniformVoronoi(unittest.TestCase):
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedUniformVoronoi"
         assert aug.deterministic is True
-        assert aug.random_state is rs
+        assert aug.random_state.equals(rs)
 
 
 class TestRegularGridVoronoi(unittest.TestCase):
@@ -751,7 +752,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
 
     def test___init___integrationtest(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
         aug = iaa.RegularGridVoronoi(
             10,
             (10, 30),
@@ -773,7 +774,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedRegularGridVoronoi"
         assert aug.deterministic is True
-        assert aug.random_state is rs
+        assert aug.random_state.equals(rs)
 
 
 class TestRelativeRegularGridVoronoi(unittest.TestCase):
@@ -813,7 +814,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
 
     def test___init___integrationtest(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
         aug = iaa.RelativeRegularGridVoronoi(
             0.1,
             (0.1, 0.3),
@@ -836,7 +837,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedRelativeRegularGridVoronoi"
         assert aug.deterministic is True
-        assert aug.random_state is rs
+        assert aug.random_state.equals(rs)
 
 
 # TODO verify behaviours when image height/width is zero
@@ -1138,24 +1139,8 @@ class TestDropoutPointsSampler(unittest.TestCase):
         _ = sampler.sample_points([image], 2)[0]
         rs_s2_1 = other.last_random_state
 
-        # get_state() returns: tuple(str, ndarray of 624 uints, int, int,
-        #                            float)
-        # we compare the non-floats here
-        all_s1_identical = True
-        all_s1s2_identical = True
-        for i in sm.xrange(1, 4):
-            all_s1_identical = (
-                all_s1_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s1_2.get_state()[i]))
-
-            all_s1s2_identical = (
-                all_s1s2_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s2_1.get_state()[i]))
-
-        assert all_s1_identical
-        assert not all_s1s2_identical
+        assert rs_s1_1.equals(rs_s1_2)
+        assert not rs_s1_1.equals(rs_s2_1)
 
     def test_conversion_to_string(self):
         sampler = iaa.DropoutPointsSampler(
@@ -1396,24 +1381,8 @@ class TestSubsamplingPointSampler(unittest.TestCase):
         _ = sampler.sample_points([image], 2)[0]
         rs_s2_1 = other.last_random_state
 
-        # get_state() returns: tuple(str, ndarray of 624 uints, int, int,
-        #                            float)
-        # we compare the non-floats here
-        all_s1_identical = True
-        all_s1s2_identical = True
-        for i in sm.xrange(1, 4):
-            all_s1_identical = (
-                all_s1_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s1_2.get_state()[i]))
-
-            all_s1s2_identical = (
-                all_s1s2_identical
-                and np.array_equal(rs_s1_1.get_state()[i],
-                                   rs_s2_1.get_state()[i]))
-
-        assert all_s1_identical
-        assert not all_s1s2_identical
+        assert rs_s1_1.equals(rs_s1_2)
+        assert not rs_s1_1.equals(rs_s2_1)
 
     def test_conversion_to_string(self):
         sampler = iaa.SubsamplingPointsSampler(
