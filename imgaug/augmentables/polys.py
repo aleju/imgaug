@@ -376,9 +376,16 @@ class Polygon(object):
         # load shapely lazily, which makes the dependency more optional
         import shapely.geometry
 
-        # if fully out of image, clip everything away, nothing remaining
-        if self.is_out_of_image(image, fully=True, partly=False):
+        # Shapely polygon conversion requires at least 3 coordinates
+        if len(self.exterior) == 0:
             return []
+        elif len(self.exterior) in [1, 2]:
+            ls = self.to_line_string(closed=False)
+            ls_clipped = ls.clip_out_of_image(image)
+            assert len(ls_clipped) <= 1
+            if len(ls_clipped) == 0:
+                return []
+            return [self.deepcopy(exterior=ls_clipped[0].coords)]
 
         h, w = image.shape[0:2] if ia.is_np_array(image) else image[0:2]
         poly_shapely = self.to_shapely_polygon()
@@ -399,12 +406,19 @@ class Polygon(object):
             # polygons that become (one or more) lines/points after clipping
             # are here ignored
             multipoly_inter_shapely = shapely.geometry.MultiPolygon([])
+        elif isinstance(multipoly_inter_shapely,
+                        shapely.geometry.GeometryCollection):
+            # Shapely returns GEOMETRYCOLLECTION EMPTY if there is nothing
+            # remaining after the clip.
+            assert multipoly_inter_shapely.is_empty
+            return []
         else:
+            print(multipoly_inter_shapely, image, self.exterior)
             raise Exception(
                 "Got an unexpected result of type %s from Shapely for "
-                "image %s and polygon %s. This is an internal error. Please "
-                "report." % (
-                    type(multipoly_inter_shapely), image.shape, self.exterior)
+                "image (%d, %d) and polygon %s. This is an internal error. "
+                "Please report." % (
+                    type(multipoly_inter_shapely), h, w, self.exterior)
             )
 
         polygons = []
