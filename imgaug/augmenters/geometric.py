@@ -752,8 +752,11 @@ class Affine(meta.Augmenter):
                     )
                 else:
                     assert not cv2_bad_dtype, (
-                        "cv2 backend can only handle images of dtype uint8, "
-                        "float32 and float64, got %s." % (image.dtype,))
+                        not cv2_bad_dtype,
+                        "cv2 backend in Affine got a dtype %s, which it "
+                        "cannot handle. Try using a different dtype or set "
+                        "order=0." % (
+                            image.dtype,))
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
