@@ -332,10 +332,29 @@ class Polygon(object):
         #      value in these cases
         if len(self.exterior) == 0:
             raise Exception("Cannot determine whether the polygon is inside the image, because it contains no points.")
+
+        # The line string is identical to the edge of the polygon.
+        # If the edge is fully inside the image, we know that the polygon must
+        # be fully inside the image.
+        # If the edge is partially outside of the image, we know that the
+        # polygon is partially outside of the image.
+        # Only if the edge is fully outside of the image we cannot be sure if
+        # the polygon's inner area overlaps with the image (e.g. if the
+        # polygon contains the whole image in it).
         ls = self.to_line_string()
-        # FIXME this looks like its going to fail for polygons where all corner
-        #       points are outside of the image
-        return ls.is_out_of_image(image, fully=fully, partly=partly)
+        if ls.is_fully_within_image(image):
+            return False
+        if ls.is_out_of_image(image, fully=False, partly=True):
+            return partly
+
+        # LS is fully outside of the image. Estimate whether there is any
+        # intersection with the image plane. If so, we know that there is
+        # partial overlap (full overlap would mean that the LS was fully inside
+        # the image).
+        polys = self.clip_out_of_image(image)
+        if len(polys) > 0:
+            return partly
+        return fully
 
     @ia.deprecated(alt_func="Polygon.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "
