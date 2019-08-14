@@ -223,7 +223,7 @@ class TestRNG(_Base):
         mock_copy.return_value = "foo"
         result = rng.copy_unless_global_rng()
         assert result is rng
-        mock_is_global.assert_called_once()
+        mock_is_global.assert_called_once_with()
         assert mock_copy.call_count == 0
 
     @mock.patch("imgaug.random.RNG.copy")
@@ -235,8 +235,8 @@ class TestRNG(_Base):
         mock_copy.return_value = "foo"
         result = rng.copy_unless_global_rng()
         assert result is "foo"
-        mock_is_global.assert_called_once()
-        mock_copy.assert_called_once()
+        mock_is_global.assert_called_once_with()
+        mock_copy.assert_called_once_with()
 
     def test_duplicate(self):
         rng = iarandom.RNG(0)
@@ -253,7 +253,7 @@ class TestRNG(_Base):
         gen = iarandom.convert_seed_to_generator(0)
         mock_create.return_value = gen
         rng = iarandom.RNG.create_fully_random()
-        mock_create.assert_called_once()
+        mock_create.assert_called_once_with()
         assert rng.generator is gen
 
     @mock.patch("imgaug.random.derive_generators_")
@@ -607,7 +607,6 @@ class Test_seed(_Base):
     def test_integrationtest(self):
         iarandom.seed(1)
         assert iarandom.GLOBAL_RNG.equals(iarandom.RNG(1))
-        assert iarandom.CURRENT_RANDOM_STATE is iarandom.GLOBAL_RNG
 
 
 class Test_normalize_generator(_Base):
@@ -764,11 +763,11 @@ class Test_create_fully_random_generator(_Base):
 
         if IS_NP_117_OR_HIGHER:
             assert result == "np117"
-            mock_np117.assert_called_once()
+            mock_np117.assert_called_once_with()
             assert mock_np116.call_count == 0
         else:
             assert result == "np116"
-            mock_np116.assert_called_once()
+            mock_np116.assert_called_once_with()
             assert mock_np117.call_count == 0
 
     @unittest.skipIf(not IS_NP_117_OR_HIGHER,
@@ -781,7 +780,7 @@ class Test_create_fully_random_generator(_Base):
 
             result = iarandom._create_fully_random_generator_np117()
 
-        mock_bitgen.assert_called_once()
+        assert mock_bitgen.call_count == 1
         assert iarandom.is_generator_equal_to(
             result, np.random.Generator(dummy_bitgen))
 
@@ -793,7 +792,7 @@ class Test_create_fully_random_generator(_Base):
 
             result = iarandom._create_fully_random_generator_np116()
 
-        mock_rs.assert_called_once()
+        assert mock_rs.call_count == 1
         assert iarandom.is_generator_equal_to(result, np.random.RandomState(1))
 
 
@@ -879,7 +878,7 @@ class Test_copy_generator_unless_global_rng(_Base):
 
         result = iarandom.copy_generator_unless_global_rng(gen)
 
-        mock_get_global_rng.assert_called_once()
+        assert mock_get_global_rng.call_count == 1
         assert mock_copy.call_count == 0
         assert result is gen
 
@@ -893,8 +892,8 @@ class Test_copy_generator_unless_global_rng(_Base):
 
         result = iarandom.copy_generator_unless_global_rng(gen1)
 
-        mock_get_global_rng.assert_called_once()
-        mock_copy.assert_called_once()
+        assert mock_get_global_rng.call_count == 1
+        mock_copy.assert_called_once_with(gen1)
         assert result == "foo"
 
 
@@ -910,11 +909,11 @@ class Test_reset_generator_cache_(_Base):
 
         if IS_NP_117_OR_HIGHER:
             assert result == "np117"
-            mock_np117.assert_called_once()
+            mock_np117.assert_called_once_with(gen)
             assert mock_np116.call_count == 0
         else:
             assert result == "np116"
-            mock_np116.assert_called_once()
+            mock_np116.assert_called_once_with(gen)
             assert mock_np117.call_count == 0
 
     @unittest.skipIf(not IS_NP_117_OR_HIGHER,
@@ -985,15 +984,15 @@ class Test_derive_generators_(_Base):
         mock_np117.return_value = "np117"
         gen = iarandom.convert_seed_to_generator(1)
 
-        result = iarandom.derive_generators_(gen)
+        result = iarandom.derive_generators_(gen, 1)
 
         if isinstance(gen, np.random.RandomState):
             assert result == "np116"
-            mock_np116.assert_called_once()
+            mock_np116.assert_called_once_with(gen, n=1)
             assert mock_np117.call_count == 0
         else:
             assert result == "np117"
-            mock_np117.assert_called_once()
+            mock_np117.assert_called_once_with(gen, n=1)
             assert mock_np116.call_count == 0
 
     @unittest.skipIf(not IS_NP_117_OR_HIGHER,
@@ -1041,11 +1040,11 @@ class Test_get_generator_state(_Base):
 
         if isinstance(gen, np.random.RandomState):
             assert result == "np116"
-            mock_np116.assert_called_once()
+            mock_np116.assert_called_once_with(gen)
             assert mock_np117.call_count == 0
         else:
             assert result == "np117"
-            mock_np117.assert_called_once()
+            mock_np117.assert_called_once_with(gen)
             assert mock_np116.call_count == 0
 
     @unittest.skipIf(not IS_NP_117_OR_HIGHER,
@@ -1056,9 +1055,9 @@ class Test_get_generator_state(_Base):
         assert str(state) == str(gen.bit_generator.state)
 
     def test_call_np116(self):
-        gen = iarandom.convert_seed_to_generator(1)
+        gen = np.random.RandomState(1)
         state = iarandom.get_generator_state(gen)
-        assert str(state) == str(gen.bit_generator.state)
+        assert str(state) == str(gen.get_state())
 
 
 class Test_set_generator_state_(_Base):
@@ -1134,10 +1133,10 @@ class Test_set_generator_state_(_Base):
         iarandom._set_generator_state_np116_(
             gen2, iarandom.get_generator_state(gen1))
 
-        samples1 = gen1.random(size=(100,))
-        samples2 = gen2.random(size=(100,))
-        samples1_copy = gen1_copy.random(size=(100,))
-        samples2_copy = gen2_copy.random(size=(100,))
+        samples1 = gen1.uniform(0.0, 1.0, size=(100,))
+        samples2 = gen2.uniform(0.0, 1.0, size=(100,))
+        samples1_copy = gen1_copy.uniform(0.0, 1.0, size=(100,))
+        samples2_copy = gen2_copy.uniform(0.0, 1.0, size=(100,))
 
         assert np.allclose(samples1, samples2)
         assert np.allclose(samples1, samples1_copy)
@@ -1312,9 +1311,9 @@ class Test_advance_generator_(_Base):
         # second advance
         iarandom._advance_generator_np117_(gen)
 
-        sample_before = gen_copy1.random()
-        sample_after = gen_copy2.random()
-        sample_after_after = gen.random()
+        sample_before = gen_copy1.uniform(0.0, 1.0)
+        sample_after = gen_copy2.uniform(0.0, 1.0)
+        sample_after_after = gen.uniform(0.0, 1.0)
         assert not np.isclose(sample_after, sample_before, rtol=0)
         assert not np.isclose(sample_after_after, sample_after, rtol=0)
         assert not np.isclose(sample_after_after, sample_before, rtol=0)
@@ -1330,9 +1329,9 @@ class Test_advance_generator_(_Base):
         # second advance
         iarandom._advance_generator_np116_(gen)
 
-        sample_before = gen_copy1.random()
-        sample_after = gen_copy2.random()
-        sample_after_after = gen.random()
+        sample_before = gen_copy1.uniform(0.0, 1.0)
+        sample_after = gen_copy2.uniform(0.0, 1.0)
+        sample_after_after = gen.uniform(0.0, 1.0)
         assert not np.isclose(sample_after, sample_before, rtol=0)
         assert not np.isclose(sample_after_after, sample_after, rtol=0)
         assert not np.isclose(sample_after_after, sample_before, rtol=0)
