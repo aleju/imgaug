@@ -502,6 +502,127 @@ class Test_fliplr(unittest.TestCase):
                     assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
 
 
+class Test_flipud(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test__flipud_2d(self):
+        self._test__flipud_subfunc_n_channels(fliplib.flipud, None)
+
+    def test__flipud_3d_single_channel(self):
+        self._test__flipud_subfunc_n_channels(fliplib.flipud, 1)
+
+    def test__flipud_3d_three_channels(self):
+        self._test__flipud_subfunc_n_channels(fliplib.flipud, 3)
+
+    def test__flipud_3d_four_channels(self):
+        self._test__flipud_subfunc_n_channels(fliplib.flipud, 4)
+
+    @classmethod
+    def _test__flipud_subfunc_n_channels(cls, func, nb_channels):
+        arr = np.uint8([
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [10, 11, 12, 13]
+        ])
+        if nb_channels is not None:
+            arr = np.tile(arr[..., np.newaxis], (1, 1, nb_channels))
+            for c in sm.xrange(nb_channels):
+                arr[..., c] += c
+
+        arr_flipped = func(arr)
+
+        expected = np.uint8([
+            [10, 11, 12, 13],
+            [4, 5, 6, 7],
+            [0, 1, 2, 3]
+        ])
+        if nb_channels is not None:
+            expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
+            for c in sm.xrange(nb_channels):
+                expected[..., c] += c
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == arr.shape
+        assert np.array_equal(arr_flipped, expected)
+
+    def test_zero_width_arr(self):
+        arr = np.zeros((4, 0, 1), dtype=np.uint8)
+        arr_flipped = fliplib.flipud(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (4, 0, 1)
+
+    def test_zero_height_arr(self):
+        arr = np.zeros((0, 4, 1), dtype=np.uint8)
+        arr_flipped = fliplib.flipud(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (0, 4, 1)
+
+    def test_bool_faithful(self):
+        arr = np.array([[False], [False], [True]], dtype=bool)
+        arr_flipped = fliplib.flipud(arr)
+        expected = np.array([[True], [False], [False]], dtype=bool)
+        assert arr_flipped.dtype.name == "bool"
+        assert arr_flipped.shape == (3, 1)
+        assert np.array_equal(arr_flipped, expected)
+
+    def test_uint_int_faithful(self):
+        dts = ["uint8", "uint16", "uint32", "uint64",
+               "int8", "int16", "int32", "int64"]
+        for dt in dts:
+            with self.subTest(dtype=dt):
+                dt = np.dtype(dt)
+                minv, center, maxv = iadt.get_value_range_of_dtype(dt)
+                center = int(center)
+                arr = np.array([[minv], [center], [maxv]], dtype=dt)
+
+                arr_flipped = fliplib.flipud(arr)
+
+                expected = np.array([[maxv], [center], [minv]], dtype=dt)
+                assert arr_flipped.dtype.name == dt.name
+                assert arr_flipped.shape == (3, 1)
+                assert np.array_equal(arr_flipped, expected)
+
+    def test_float_faithful_to_min_max(self):
+        dts = ["float16", "float32", "float64", "float128"]
+        for dt in dts:
+            with self.subTest(dtype=dt):
+                dt = np.dtype(dt)
+                minv, center, maxv = iadt.get_value_range_of_dtype(dt)
+                center = int(center)
+                atol = 1e-4 if dt.name == "float16" else 1e-8
+                arr = np.array([[minv], [center], [maxv]], dtype=dt)
+
+                arr_flipped = fliplib.flipud(arr)
+
+                expected = np.array([[maxv], [center], [minv]], dtype=dt)
+                assert arr_flipped.dtype.name == dt.name
+                assert arr_flipped.shape == (3, 1)
+                assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
+
+    def test_float_faithful_to_large_values(self):
+        dts = ["float16", "float32", "float64", "float128"]
+        values = [
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2],  # float16
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**4, 10.0**6],  # float32
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**6, 10.0**10],  # float64
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**7, 10.0**11],  # float128
+        ]
+        for dt, values_i in zip(dts, values):
+            for value in values_i:
+                with self.subTest(dtype=dt, value=value):
+                    dt = np.dtype(dt)
+                    minv, center, maxv = -value, 0.0, value
+                    atol = 1e-4 if dt.name == "float16" else 1e-8
+                    arr = np.array([[minv], [center], [maxv]], dtype=dt)
+
+                    arr_flipped = fliplib.flipud(arr)
+
+                    expected = np.array([[maxv], [center], [minv]], dtype=dt)
+                    assert arr_flipped.dtype.name == dt.name
+                    assert arr_flipped.shape == (3, 1)
+                    assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
+
+
 def test_Flipud():
     reseed()
 
