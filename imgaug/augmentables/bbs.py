@@ -44,10 +44,8 @@ class BoundingBox(object):
         """Create a new BoundingBox instance."""
         if x1 > x2:
             x2, x1 = x1, x2
-        ia.do_assert(x2 >= x1)
         if y1 > y2:
             y2, y1 = y1, y2
-        ia.do_assert(y2 >= y1)
 
         self.x1 = x1
         self.y1 = y1
@@ -450,8 +448,10 @@ class BoundingBox(object):
         shape = normalize_shape(image)
 
         height, width = shape[0:2]
-        ia.do_assert(height > 0)
-        ia.do_assert(width > 0)
+        assert height > 0, (
+            "Expected image with height>0, got shape %s." % (image.shape,))
+        assert width > 0, (
+            "Expected image with width>0, got shape %s." % (image.shape,))
 
         eps = np.finfo(np.float32).eps
         x1 = np.clip(self.x1, 0, width - eps)
@@ -920,7 +920,9 @@ class BoundingBoxesOnImage(object):
             Object containing a list of BoundingBox objects following the provided corner coordinates.
 
         """
-        ia.do_assert(xyxy.shape[1] == 4, "Expected input array of shape (N, 4), got shape %s." % (xyxy.shape,))
+        assert xyxy.shape[1] == 4, (
+            "Expected input array of shape (N, 4), got shape %s." % (
+                xyxy.shape,))
 
         boxes = [BoundingBox(*row) for row in xyxy]
 

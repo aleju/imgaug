@@ -1056,8 +1056,7 @@ class SnowflakesLayer(meta.Augmenter):
             "got %d dimensions." % (image.ndim,))
         assert image.shape[2] in [1, 3], (
             "Expected to get image with a channel axis of size 1 or 3, "
-            "got %d (shape: %s)" % (image.shape[2], image.shape)
-        )
+            "got %d (shape: %s)" % (image.shape[2], image.shape))
 
         rss = random_state.duplicate(2)
 

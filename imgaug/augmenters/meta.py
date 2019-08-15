@@ -79,14 +79,18 @@ def handle_children_list(lst, augmenter_name, lst_name, default="sequential"):
     elif isinstance(lst, Augmenter):
         if ia.is_iterable(lst):
             # TODO why was this assert added here? seems to make no sense
-            ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
+            assert all([isinstance(child, Augmenter) for child in lst]), (
+                "Expected all children to be augmenters, got types %s." % (
+                    ", ".join([str(type(v)) for v in lst])))
             return lst
         else:
             return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     elif ia.is_iterable(lst):
         if len(lst) == 0 and default != "sequential":
             return default
-        ia.do_assert(all([isinstance(child, Augmenter) for child in lst]))
+        assert all([isinstance(child, Augmenter) for child in lst]), (
+            "Expected all children to be augmenters, got types %s." % (
+                ", ".join([str(type(v)) for v in lst])))
         return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
     else:
         raise Exception(("Expected None, Augmenter or list/tuple as children list %s for augmenter with name %s, "
@@ -97,7 +101,9 @@ def reduce_to_nonempty(objs):
     objs_reduced = []
     ids = []
     for i, obj in enumerate(objs):
-        ia.do_assert(hasattr(obj, "empty"))
+        assert hasattr(obj, "empty"), (
+            "Expected object with property 'empty'. Got type %s." % (
+                type(obj),))
         if not obj.empty:
             objs_reduced.append(obj)
             ids.append(i)
@@ -113,10 +119,14 @@ def invert_reduce_to_nonempty(objs, ids, objs_reduced):
 
 def estimate_max_number_of_channels(images):
     if ia.is_np_array(images):
-        assert images.ndim == 4
+        assert images.ndim == 4, (
+            "Expected 'images' to be 4-dimensional if provided as array. "
+            "Got %d dimensions." % (images.ndim,))
         return images.shape[3]
     else:
-        assert ia.is_iterable(images)
+        assert ia.is_iterable(images), (
+            "Expected 'images' to be an array or iterable, got %s." % (
+                type(images),))
         if len(images) == 0:
             return None
         channels = [el.shape[2] if len(el.shape) >= 3 else 1 for el in images]
@@ -127,7 +137,9 @@ def copy_arrays(arrays):
     if ia.is_np_array(arrays):
         return np.copy(arrays)
     else:
-        assert ia.is_iterable(arrays), "Expected ndarray or iterable of ndarray, got type %s." % (type(arrays),)
+        assert ia.is_iterable(arrays), (
+            "Expected ndarray or iterable of ndarray, got type %s." % (
+                type(arrays),))
         return [np.copy(array) for array in arrays]
 
 
@@ -198,15 +210,17 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         """
         super(Augmenter, self).__init__()
 
-        ia.do_assert(name is None or ia.is_string(name),
-                     "Expected name to be None or string-like, got %s." % (type(name),))
+        assert name is None or ia.is_string(name), (
+            "Expected name to be None or string-like, got %s." % (
+                type(name),))
         if name is None:
             self.name = "Unnamed%s" % (self.__class__.__name__,)
         else:
             self.name = name
 
-        ia.do_assert(ia.is_single_bool(deterministic),
-                     "Expected deterministic to be a boolean, got %s." % (type(deterministic),))
+        assert ia.is_single_bool(deterministic), (
+            "Expected deterministic to be a boolean, got %s." % (
+                type(deterministic),))
         self.deterministic = deterministic
 
         if deterministic and random_state is None:
@@ -258,17 +272,15 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         if isinstance(batches, (Batch, UnnormalizedBatch)):
             batches = [batches]
 
-        ia.do_assert(
-            (ia.is_iterable(batches)
+        assert ((ia.is_iterable(batches)
              and not ia.is_np_array(batches)
              and not ia.is_string(batches))
-            or ia.is_generator(batches),
-            ("Expected either (a) an iterable that is not an array or a string "
-             + "or (b) a generator. Got: %s") % (type(batches),))
+            or ia.is_generator(batches)), (
+                "Expected either (a) an iterable that is not an array or a "
+                "string or (b) a generator. Got: %s" % (type(batches),))
 
         if background:
-            ia.do_assert(
-                hooks is None,
+            assert hooks is None, (
                 "Hooks can not be used when background augmentation is "
                 "activated.")
 
@@ -284,10 +296,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 batch_normalized = batch_copy
                 batch_orig_dt = "imgaug.UnnormalizedBatch"
             elif ia.is_np_array(batch):
-                ia.do_assert(
-                    batch.ndim in (3, 4),
-                    ("Expected numpy array to have shape (N, H, W) or "
-                     + "(N, H, W, C), got %s.") % (batch.shape,))
+                assert batch.ndim in (3, 4),(
+                    "Expected numpy array to have shape (N, H, W) or "
+                    "(N, H, W, C), got %s." % (batch.shape,))
                 batch_normalized = Batch(images=batch, data=(idx,))
                 batch_orig_dt = "numpy_array"
             elif isinstance(batch, list):
@@ -371,7 +382,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             elif batch_orig_dt == "list_of_imgaug.BoundingBoxesOnImage":
                 batch_unnormalized = batch_aug.bounding_boxes_aug
             else:  # only option left
-                ia.do_assert(batch_orig_dt == "list_of_imgaug.PolygonsOnImage")
+                assert batch_orig_dt == "list_of_imgaug.PolygonsOnImage", (
+                    "Got an unexpected type %s." % (type(batch_orig_dt),))
                 batch_unnormalized = batch_aug.polygons_aug
             return batch_unnormalized
 
@@ -402,7 +414,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             with multicore.Pool(self) as pool:
                 for batch_aug in pool.imap_batches(load_batches()):
                     idx = batch_aug.data[0]
-                    assert idx in id_to_batch_orig
+                    assert idx in id_to_batch_orig, (
+                        "Got idx %d from Pool, which is not known." % (
+                            idx))
                     batch_orig, batch_orig_dt = id_to_batch_orig[idx]
                     batch_unnormalized = _unnormalize_batch(
                         batch_aug, batch_orig, batch_orig_dt)
@@ -474,8 +488,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             The corresponding augmented image.
 
         """
-        ia.do_assert(image.ndim in [2, 3],
-                     "Expected image to have shape (height, width, [channels]), got shape %s." % (image.shape,))
+        assert image.ndim in [2, 3], (
+            "Expected image to have shape (height, width, [channels]), "
+            "got shape %s." % (image.shape,))
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
@@ -548,9 +563,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             input_type = "array"
             input_added_axis = False
 
-            ia.do_assert(images.ndim in [3, 4],
-                         "Expected 3d/4d array of form (N, height, width) or (N, height, width, channels), "
-                         "got shape %s." % (images.shape,))
+            assert images.ndim in [3, 4], (
+                "Expected 3d/4d array of form (N, height, width) or (N, "
+                "height, width, channels), got shape %s." % (images.shape,))
 
             # copy the input, we don't want to augment it in-place
             images_copy = np.copy(images)
@@ -576,9 +591,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             if len(images) == 0:
                 images_copy = []
             else:
-                ia.do_assert(all(image.ndim in [2, 3] for image in images),
-                             "Expected list of images with each image having shape (height, width) or "
-                             + "(height, width, channels), got shapes %s." % ([image.shape for image in images],))
+                assert all(image.ndim in [2, 3] for image in images), (
+                    "Expected list of images with each image having shape "
+                    "(height, width) or (height, width, channels), got "
+                    "shapes %s." % ([image.shape for image in images],))
 
                 # copy images and add channel axis for 2D images (see above,
                 # as for list inputs each image can have different shape, it
@@ -642,11 +658,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             #    "but got %s." % (type(images_result),)
             # )
 
-            ia.do_assert(
-                len(images_result) == len(images),
-                "INTERNAL ERROR: Expected number of images to be unchanged after augmentation, "
-                "but was changed from %d to %d." % (len(images), len(images_result))
-            )
+            assert len(images_result) == len(images), (
+                "INTERNAL ERROR: Expected number of images to be unchanged "
+                "after augmentation, but was changed from %d to %d." % (
+                    len(images), len(images_result)))
             for i in sm.xrange(len(images_result)):
                 if input_added_axis[i] is True:
                     images_result[i] = np.squeeze(images_result[i], axis=2)
@@ -732,11 +747,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             input_was_single_instance = True
             heatmaps = [heatmaps]
 
-        ia.do_assert(ia.is_iterable(heatmaps),
-                     "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (type(heatmaps),))
-        ia.do_assert(all([isinstance(heatmaps_i, ia.HeatmapsOnImage) for heatmaps_i in heatmaps]),
-                     "Expected to get list of imgaug.HeatmapsOnImage() instances, got %s." % (
-                         [type(el) for el in heatmaps],))
+        assert ia.is_iterable(heatmaps), (
+            "Expected to get list of imgaug.HeatmapsOnImage() instances, "
+            "got %s." % (type(heatmaps),))
+        only_heatmaps = all([isinstance(heatmaps_i, ia.HeatmapsOnImage)
+                             for heatmaps_i in heatmaps])
+        assert only_heatmaps, (
+            "Expected to get list of imgaug.HeatmapsOnImage() instances, "
+            "got %s." % ([type(el) for el in heatmaps],))
 
         # copy, but only if topmost call or hooks are provided
         if len(parents) == 0 or hooks is not None:
@@ -861,16 +879,15 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             input_was_single_instance = True
             segmaps = [segmaps]
 
-        ia.do_assert(
-            ia.is_iterable(segmaps),
+        assert ia.is_iterable(segmaps), (
             "Expected to get list of imgaug.SegmentationMapsOnImage() "
             "instances, got %s." % (type(segmaps),))
-        ia.do_assert(
-            all([isinstance(segmaps_i, ia.SegmentationMapsOnImage)
-                 for segmaps_i in segmaps]),
+        only_segmaps = all(
+            [isinstance(segmaps_i, ia.SegmentationMapsOnImage)
+             for segmaps_i in segmaps])
+        assert only_segmaps, (
             "Expected to get list of imgaug.SegmentationMapsOnImage() "
-            "instances, got %s." % (
-                [type(el) for el in segmaps],))
+            "instances, got %s." % ([type(el) for el in segmaps],))
 
         # copy, but only if topmost call or hooks are provided
         if len(parents) == 0 or hooks is not None:
@@ -1004,9 +1021,15 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             input_was_single_instance = True
             keypoints_on_images = [keypoints_on_images]
 
-        ia.do_assert(ia.is_iterable(keypoints_on_images))
-        ia.do_assert(all([isinstance(keypoints_on_image, ia.KeypointsOnImage)
-                          for keypoints_on_image in keypoints_on_images]))
+        assert ia.is_iterable(keypoints_on_images), (
+            "Expected to get list of imgaug.KeypointsOnImage() "
+            "instances, got %s." % (type(keypoints_on_images),))
+        only_keypoints = all(
+            [isinstance(keypoints_on_image, ia.KeypointsOnImage)
+             for keypoints_on_image in keypoints_on_images])
+        assert only_keypoints, (
+            "Expected to get list of imgaug.KeypointsOnImage() "
+            "instances, got %s." % ([type(el) for el in keypoints_on_images],))
 
         # copy, but only if topmost call or hooks are provided
         if len(parents) == 0 or hooks is not None:
@@ -1370,9 +1393,17 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             input_was_single_instance = True
             augables_ois = [augables_ois]
 
-        ia.do_assert(ia.is_iterable(augables_ois))
-        ia.do_assert(all([isinstance(augable_oi, cls_expected)
-                          for augable_oi in augables_ois]))
+        assert ia.is_iterable(augables_ois), (
+            "Expected to get list of %s instances, got %s." % (
+                cls_expected.__class__.__name__,
+                type(augables_ois),))
+        only_valid_types = all(
+            [isinstance(augable_oi, cls_expected)
+             for augable_oi in augables_ois])
+        assert only_valid_types, (
+            "Expected to get list of %s instances, got %s." % (
+                cls_expected.__class__.__name__,
+                [type(el) for el in augables_ois],))
 
         # copy, but only if topmost call or hooks are provided
         augables_ois_copy = augables_ois
@@ -1782,10 +1813,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         """
         assert ia.is_single_bool(return_batch), (
-            ("Expected boolean as argument for 'return_batch', got type %s. "
-             + "Call augment() only with named arguments, e.g. "
-             + "augment(images=<array>).") % (str(type(return_batch)),)
-        )
+            "Expected boolean as argument for 'return_batch', got type %s. "
+            "Call augment() only with named arguments, e.g. "
+            "augment(images=<array>)." % (str(type(return_batch)),))
 
         expected_keys = ["images", "heatmaps", "segmentation_maps",
                          "keypoints", "bounding_boxes", "polygons",
@@ -1795,7 +1825,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         # at least one augmentable provided?
         assert any([key in kwargs for key in expected_keys_call]), (
             "Expected augment() to be called with one of the following named "
-            + "arguments: %s. Got none of these." % (
+            "arguments: %s. Got none of these." % (
                 ", ".join(expected_keys_call),))
 
         # all keys in kwargs actually known?
@@ -2016,7 +2046,10 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             else:
                 raise Exception("Unexpected images shape, expected 2-, 3- or 4-dimensional array, "
                                 + "got shape %s." % (images.shape,))
-        elif isinstance(images, list):
+        else:
+            assert isinstance(images, list), (
+                "Expected 'images' to be an ndarray or list of ndarrays. "
+                "Got %s." % (type(images),))
             for i, image in enumerate(images):
                 if len(image.shape) == 3:
                     continue
@@ -2025,7 +2058,6 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
                 else:
                     raise Exception(("Unexpected image shape at index %d, expected 2- or 3-dimensional array, "
                                      + "got shape %s.") % (i, image.shape,))
-        ia.do_assert(isinstance(images, list))
 
         det = self if self.deterministic else self.to_deterministic()
         augs = []
@@ -2125,7 +2157,8 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             otherwise a list of Augmenter objects (even if `n` was 1).
 
         """
-        ia.do_assert(n is None or n >= 1)
+        assert n is None or n >= 1, (
+            "Expected 'n' to be None or >=1, got %s." % (n,))
         if n is None:
             return self.to_deterministic(1)[0]
         else:
@@ -2189,7 +2222,9 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             object is ``A`` or one of its children is ``A``.
 
         """
-        ia.do_assert(isinstance(deterministic_too, bool))
+        assert isinstance(deterministic_too, bool), (
+            "Expected 'deterministic_too' to be a boolean, got type %s." % (
+                deterministic_too))
 
         if random_state is None:
             random_state = iarandom.RNG.create_pseudo_random_()
@@ -2819,13 +2854,16 @@ class Sequential(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
-            ia.do_assert(all([isinstance(child, Augmenter) for child in children]))
+            assert all([isinstance(child, Augmenter) for child in children]), (
+                "Expected all children to be augmenters, got types %s." % (
+                    ", ".join([str(type(v)) for v in children])))
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
 
-        ia.do_assert(ia.is_single_bool(random_order),
-                     "Expected random_order to be boolean, got %s." % (type(random_order),))
+        assert ia.is_single_bool(random_order), (
+            "Expected random_order to be boolean, got %s." % (
+                type(random_order),))
         self.random_order = random_order
 
     # TODO make the below functions more DRY
@@ -3058,7 +3096,9 @@ class SomeOf(Augmenter, list):
             # children
             list.__init__(self, [children])
         elif ia.is_iterable(children):
-            ia.do_assert(all([isinstance(child, Augmenter) for child in children]))
+            assert all([isinstance(child, Augmenter) for child in children]), (
+                "Expected all children to be augmenters, got types %s." % (
+                    ", ".join([str(type(v)) for v in children])))
             list.__init__(self, children)
         else:
             raise Exception("Expected None or Augmenter or list of Augmenter, got %s." % (type(children),))
@@ -3070,7 +3110,9 @@ class SomeOf(Augmenter, list):
             self.n = None
             self.n_mode = "None"
         elif ia.is_iterable(n):
-            ia.do_assert(len(n) == 2)
+            assert len(n) == 2, (
+                "Expected iterable 'n' to contain exactly two values, "
+                "got %d." % (len(n),))
             if ia.is_single_number(n[0]) and n[1] is None:
                 self.n = (int(n[0]), None)
                 self.n_mode = "(int,None)"
@@ -3085,8 +3127,9 @@ class SomeOf(Augmenter, list):
         else:
             raise Exception("Expected int, (int, None), (int, int) or StochasticParameter, got %s" % (type(n),))
 
-        ia.do_assert(ia.is_single_bool(random_order),
-                     "Expected random_order to be boolean, got %s." % (type(random_order),))
+        assert ia.is_single_bool(random_order), (
+            "Expected random_order to be boolean, got %s." % (
+                type(random_order),))
         self.random_order = random_order
 
     def _get_n(self, nb_images, random_state):
@@ -3608,8 +3651,11 @@ class WithChannels(Augmenter):
         elif ia.is_single_integer(channels):
             self.channels = [channels]
         elif ia.is_iterable(channels):
-            ia.do_assert(all([ia.is_single_integer(channel) for channel in channels]),
-                         "Expected integers as channels, got %s." % ([type(channel) for channel in channels],))
+            only_ints = all([
+                ia.is_single_integer(channel) for channel in channels])
+            assert only_ints, (
+                "Expected integers as channels, got %s." % (
+                    [type(channel) for channel in channels],))
             self.channels = channels
         else:
             raise Exception("Expected None, int or list of ints as channels, got %s." % (type(channels),))
@@ -3642,14 +3688,16 @@ class WithChannels(Augmenter):
                     hooks=hooks
                 )
 
-                ia.do_assert(
+                shapes_same = (
                     all([img_out.shape[0:2] == shape_orig[0:2]
-                         for img_out, shape_orig in zip(result_then_list, shapes_orig)]),
-                    "Heights/widths of images changed in WithChannels from %s to %s, but expected to be the same." % (
+                         for img_out, shape_orig
+                         in zip(result_then_list, shapes_orig)]))
+                assert shapes_same, (
+                    "Heights/widths of images changed in WithChannels from "
+                    "%s to %s, but expected to be the same." % (
                         str([shape_orig[0:2] for shape_orig in shapes_orig]),
                         str([img_out.shape[0:2] for img_out in result_then_list]),
-                    )
-                )
+                    ))
 
                 if ia.is_np_array(images):
                     result[..., self.channels] = result_then_list
@@ -3927,36 +3975,48 @@ class Lambda(Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         if self.func_heatmaps is not None:
             result = self.func_heatmaps(heatmaps, random_state, parents, hooks)
-            ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage "
-                         + "instances, got %s." % (type(result),))
-            ia.do_assert(all([isinstance(el, ia.HeatmapsOnImage) for el in result]),
-                         "Expected callback function for heatmaps to return list of imgaug.HeatmapsOnImage "
-                         + "instances, got %s." % ([type(el) for el in result],))
+            assert ia.is_iterable(result), (
+                "Expected callback function for heatmaps to return list of "
+                "imgaug.HeatmapsOnImage instances, got %s." % (
+                    type(result),))
+            only_heatmaps = all([
+                isinstance(el, ia.HeatmapsOnImage) for el in result])
+            assert only_heatmaps, (
+                "Expected callback function for heatmaps to return list of "
+                "imgaug.HeatmapsOnImage instances, got %s." % (
+                    [type(el) for el in result],))
             return result
         return heatmaps
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         if self.func_segmentation_maps is not None:
             result = self.func_segmentation_maps(segmaps, random_state, parents, hooks)
-            ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for segmentation maps to return list of imgaug.SegmentationMapsOnImage() "
-                         + "instances, got %s." % (type(result),))
-            ia.do_assert(all([isinstance(el, ia.SegmentationMapsOnImage) for el in result]),
-                         "Expected callback function for segmentation maps to return list of imgaug.SegmentationMapsOnImage() "
-                         + "instances, got %s." % ([type(el) for el in result],))
+            assert ia.is_iterable(result), (
+                "Expected callback function for segmentation maps to return "
+                "list of imgaug.SegmentationMapsOnImage() instances, "
+                "got %s." % (type(result),))
+            only_segmaps = all([
+                isinstance(el, ia.SegmentationMapsOnImage) for el in result])
+            assert only_segmaps, (
+                "Expected callback function for segmentation maps to return "
+                "list of imgaug.SegmentationMapsOnImage() instances, "
+                "got %s." % ([type(el) for el in result],))
             return result
         return segmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         if self.func_keypoints is not None:
             result = self.func_keypoints(keypoints_on_images, random_state, parents, hooks)
-            ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() "
-                         + "instances, got %s." % (type(result),))
-            ia.do_assert(all([isinstance(el, ia.KeypointsOnImage) for el in result]),
-                         "Expected callback function for keypoints to return list of imgaug.KeypointsOnImage() "
-                         + "instances, got %s." % ([type(el) for el in result],))
+            assert ia.is_iterable(result), (
+                "Expected callback function for keypoints to return list of "
+                "imgaug.KeypointsOnImage() instances, got %s." % (
+                    type(result),))
+            only_keypoints = all([
+                isinstance(el, ia.KeypointsOnImage) for el in result])
+            assert only_keypoints, (
+                "Expected callback function for keypoints to return list of "
+                "imgaug.KeypointsOnImage() instances, got %s." % (
+                    [type(el) for el in result],))
             return result
         return keypoints_on_images
 
@@ -3967,12 +4027,16 @@ class Lambda(Augmenter):
                 recoverer=ia._ConcavePolygonRecoverer())
         elif self.func_polygons is not None:
             result = self.func_polygons(polygons_on_images, random_state, parents, hooks)
-            ia.do_assert(ia.is_iterable(result),
-                         "Expected callback function for polygons to return list of imgaug.PolygonsOnImage() "
-                         + "instances, got %s." % (type(result),))
-            ia.do_assert(all([isinstance(el, ia.PolygonsOnImage) for el in result]),
-                         "Expected callback function for polygons to return list of imgaug.PolygonsOnImage() "
-                         + "instances, got %s." % ([type(el) for el in result],))
+            assert ia.is_iterable(result), (
+                "Expected callback function for polygons to return list of "
+                "imgaug.PolygonsOnImage() instances, got %s." % (
+                    type(result),))
+            only_polygons = all([
+                isinstance(el, ia.PolygonsOnImage) for el in result])
+            assert only_polygons, (
+                "Expected callback function for polygons to return list of "
+                "imgaug.PolygonsOnImage() instances, got %s." % (
+                    [type(el) for el in result],))
             return result
         return polygons_on_images
 
@@ -4055,28 +4119,33 @@ def AssertLambda(func_images=None, func_heatmaps=None,
 
     """
     def func_images_assert(images, random_state, parents, hooks):
-        ia.do_assert(func_images(images, random_state, parents, hooks),
-                     "Input images did not fulfill user-defined assertion in AssertLambda.")
+        assert func_images(images, random_state, parents, hooks), (
+            "Input images did not fulfill user-defined assertion in "
+            "AssertLambda.")
         return images
 
     def func_heatmaps_assert(heatmaps, random_state, parents, hooks):
-        ia.do_assert(func_heatmaps(heatmaps, random_state, parents, hooks),
-                     "Input heatmaps did not fulfill user-defined assertion in AssertLambda.")
+        assert func_heatmaps(heatmaps, random_state, parents, hooks), (
+            "Input heatmaps did not fulfill user-defined assertion in "
+            "AssertLambda.")
         return heatmaps
 
     def func_segmentation_maps_assert(segmaps, random_state, parents, hooks):
-        ia.do_assert(func_segmentation_maps(segmaps, random_state, parents, hooks),
-                     "Input segmentation maps did not fulfill user-defined assertion in AssertLambda.")
+        assert func_segmentation_maps(segmaps, random_state, parents, hooks), (
+            "Input segmentation maps did not fulfill user-defined assertion "
+            "in AssertLambda.")
         return segmaps
 
     def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
-        ia.do_assert(func_keypoints(keypoints_on_images, random_state, parents, hooks),
-                     "Input keypoints did not fulfill user-defined assertion in AssertLambda.")
+        assert func_keypoints(keypoints_on_images, random_state, parents, hooks), (
+            "Input keypoints did not fulfill user-defined assertion in"
+            "AssertLambda.")
         return keypoints_on_images
 
     def func_polygons_assert(polygons_on_images, random_state, parents, hooks):
-        ia.do_assert(func_polygons(polygons_on_images, random_state, parents, hooks),
-                     "Input polygons did not fulfill user-defined assertion in AssertLambda.")
+        assert func_polygons(polygons_on_images, random_state, parents, hooks), (
+            "Input polygons did not fulfill user-defined assertion in"
+            "AssertLambda.")
         return polygons_on_images
 
     if name is None:
@@ -4190,23 +4259,30 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
     the number of channels may be either 1 or 3.
 
     """
-    ia.do_assert(len(shape) == 4, "Expected shape to have length 4, got %d with shape: %s." % (len(shape), str(shape)))
+    assert len(shape) == 4, (
+        "Expected shape to have length 4, got %d with shape: %s." % (
+            len(shape), str(shape)))
 
     def compare(observed, expected, dimension, image_index):
         if expected is not None:
             if ia.is_single_integer(expected):
-                ia.do_assert(observed == expected,
-                             "Expected dim %d (entry index: %s) to have value %d, got %d." % (
-                                 dimension, image_index, expected, observed))
+                assert observed == expected, (
+                    "Expected dim %d (entry index: %s) to have value %d, "
+                    "got %d." % (dimension, image_index, expected, observed))
             elif isinstance(expected, tuple):
-                ia.do_assert(len(expected) == 2)
-                ia.do_assert(expected[0] <= observed < expected[1],
-                             "Expected dim %d (entry index: %s) to have value in range [%d, %d), got %d." % (
-                                 dimension, image_index, expected[0], expected[1], observed))
+                assert len(expected) == 2, (
+                    "Expected tuple argument 'expected' to contain exactly 2 "
+                    "entries, got %d." % (len(expected),))
+                assert expected[0] <= observed < expected[1], (
+                    "Expected dim %d (entry index: %s) to have value in "
+                    "interval [%d, %d), got %d." % (
+                        dimension, image_index, expected[0], expected[1],
+                        observed))
             elif isinstance(expected, list):
-                ia.do_assert(any([observed == val for val in expected]),
-                             "Expected dim %d (entry index: %s) to have any value of %s, got %d." % (
-                                 dimension, image_index, str(expected), observed))
+                assert any([observed == val for val in expected]), (
+                    "Expected dim %d (entry index: %s) to have any value "
+                    "of %s, got %d." % (
+                        dimension, image_index, str(expected), observed))
             else:
                 raise Exception(("Invalid datatype for shape entry %d, expected each entry to be an integer, "
                                 + "a tuple (with two entries) or a list, got %s.") % (dimension, type(expected),))
@@ -4219,17 +4295,18 @@ def AssertShape(shape, check_images=True, check_heatmaps=True,
 
                 for i in sm.xrange(len(images)):
                     image = images[i]
-                    ia.do_assert(len(image.shape) == 3,
-                                 "Expected image number %d to have a shape of length 3, got %d (shape: %s)." % (
-                                     i, len(image.shape), str(image.shape)))
+                    assert len(image.shape) == 3, (
+                        "Expected image number %d to have a shape of length "
+                        "3, got %d (shape: %s)." % (
+                            i, len(image.shape), str(image.shape)))
                     for j in sm.xrange(len(shape)-1):
                         expected = shape[j+1]
                         observed = image.shape[j]
                         compare(observed, expected, j, i)
             else:
-                ia.do_assert(len(images.shape) == 4,
-                             "Expected image's shape to have length 4, got %d (shape: %s)." % (
-                                 len(images.shape), str(images.shape)))
+                assert len(images.shape) == 4, (
+                    "Expected image's shape to have length 4, got %d "
+                    "(shape: %s)." % (len(images.shape), str(images.shape)))
                 for i in range(4):
                     expected = shape[i]
                     observed = images.shape[i]
@@ -4360,10 +4437,16 @@ class ChannelShuffle(Augmenter):
     def __init__(self, p=1.0, channels=None, name=None, deterministic=False, random_state=None):
         super(ChannelShuffle, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
-        ia.do_assert(channels is None
-                     or channels == ia.ALL
-                     or (isinstance(channels, list) and all([ia.is_single_integer(v) for v in channels])),
-                     "Expected None or imgaug.ALL or list of int, got %s." % (type(channels),))
+        valid_channels = (
+            channels is None
+            or channels == ia.ALL
+            or (
+                isinstance(channels, list)
+                and all([ia.is_single_integer(v) for v in channels])
+            ))
+        assert valid_channels, (
+            "Expected None or imgaug.ALL or list of int, got %s." % (
+                type(channels),))
         self.channels = channels
 
     def _augment_images(self, images, random_state, parents, hooks):

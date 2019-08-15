@@ -639,14 +639,16 @@ class _IntensityChannelBasedApplier(object):
         super(_IntensityChannelBasedApplier, self).__init__()
 
         # TODO maybe add CIE, Luv?
-        ia.do_assert(from_colorspace in [self.RGB,
-                                         self.BGR,
-                                         self.Lab,
-                                         self.HLS,
-                                         self.HSV])
-        ia.do_assert(to_colorspace in [self.Lab,
-                                       self.HLS,
-                                       self.HSV])
+        valid_from_colorspaces = [self.RGB, self.BGR, self.Lab, self.HLS,
+                                  self.HSV]
+        assert from_colorspace in valid_from_colorspaces, (
+            "Expected 'from_colorspace' to be one of %s, got %s." % (
+                valid_from_colorspaces, from_colorspace))
+
+        valid_to_colorspaces = [self.Lab, self.HLS, self.HSV]
+        assert to_colorspace in valid_to_colorspaces, (
+            "Expected 'to_colorspace' to be one of %s, got %s." % (
+                valid_to_colorspaces, to_colorspace))
 
         self.change_colorspace = color_lib.ChangeColorspace(
             to_colorspace=to_colorspace,

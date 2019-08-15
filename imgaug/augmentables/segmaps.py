@@ -87,9 +87,16 @@ class SegmentationMapsOnImage(object):
     ]
 
     def __init__(self, arr, shape, nb_classes=None):
-        ia.do_assert(ia.is_np_array(arr),
-                     "Expected to get numpy array, got %s." % (type(arr),))
-        assert isinstance(shape, tuple)
+        assert ia.is_np_array(arr), (
+            "Expected to get numpy array, got %s." % (type(arr),))
+        assert arr.ndim in [2, 3], (
+            "Expected segmentation map array to be 2- or "
+            "3-dimensional, got %d dimensions and shape %s." % (
+                arr.ndim, arr.shape))
+        assert isinstance(shape, tuple), (
+            "Expected 'shape' to be a tuple denoting the shape of the image "
+            "on which the segmentation map is placed. Got type %s instead." % (
+                type(shape)))
 
         if arr.dtype.kind == "f":
             ia.warn_deprecated(
@@ -101,18 +108,17 @@ class SegmentationMapsOnImage(object):
 
             if arr.ndim == 2:
                 arr = (arr > 0.5)
-            else:
-                assert arr.ndim == 3
+            else:  # arr.ndim == 3
                 arr = np.argmax(arr, axis=2).astype(np.int32)
 
         if arr.dtype.name == "bool":
-            ia.do_assert(arr.ndim in [2, 3])
             self._input_was = (arr.dtype, arr.ndim)
             if arr.ndim == 2:
                 arr = arr[..., np.newaxis]
         elif arr.dtype.kind in ["i", "u"]:
-            ia.do_assert(arr.ndim in [2, 3])
-            ia.do_assert(np.min(arr.flat[0:100]) >= 0)
+            assert np.min(arr.flat[0:100]) >= 0, (
+                "Expected segmentation map array to only contain values >=0, "
+                "got a minimum of %d." % (np.min(arr),))
             if arr.dtype.kind == "u":
                 # allow only <=uint16 due to conversion to int32
                 assert arr.dtype.itemsize <= 2, (
@@ -166,7 +172,10 @@ class SegmentationMapsOnImage(object):
         # input dtype, hence we can simply convert via astype() here.
         arr_input = self.arr.astype(input_dtype)
         if input_ndim == 2:
-            assert arr_input.shape[2] == 1
+            assert arr_input.shape[2] == 1, (
+                "Originally got a (H,W) segmentation map. Internal array "
+                "should now have shape (H,W,1), but got %s. This might be "
+                "an internal error." % (arr_input.shape,))
             return arr_input[:, :, 0]
         return arr_input
 
@@ -273,11 +282,22 @@ class SegmentationMapsOnImage(object):
                 "The argument `background_threshold` is deprecated and "
                 "ignored. Please don't use it anymore.")
 
-        ia.do_assert(image.ndim == 3)
-        ia.do_assert(image.shape[2] == 3)
-        ia.do_assert(image.dtype.name == "uint8")
-        ia.do_assert(0 - 1e-8 <= alpha <= 1.0 + 1e-8)
-        ia.do_assert(resize in ["segmentation_map", "image"])
+        assert image.ndim == 3, (
+            "Expected to draw on 3-dimensional image, got image with %d "
+            "dimensions." % (image.ndim,))
+        assert image.shape[2] == 3, (
+            "Expected to draw on RGB image, got image with %d channels "
+            "instead." % (image.shape[2],))
+        assert image.dtype.name == "uint8", (
+            "Expected to get image with dtype uint8, got dtype %s." % (
+                image.dtype.name,) )
+        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8, (
+            "Expected 'alpha' to be in interval [0.0, 1.0], got %.4f." % (
+                alpha,))
+        assert resize in ["segmentation_map", "image"], (
+            "Expected 'resize' to be \"segmentation_map\" or \"image\", got "
+            "%s." % (resize,))
+
         colors = (
             colors
             if colors is not None
@@ -291,14 +311,12 @@ class SegmentationMapsOnImage(object):
         segmaps_drawn = []
         arr_channelwise = np.dsplit(self.arr, self.arr.shape[2])
         for arr in arr_channelwise:
-            assert arr.shape[2] == 1
             arr = arr[:, :, 0]
 
             nb_classes = 1 + np.max(arr)
             segmap_drawn = np.zeros((arr.shape[0], arr.shape[1], 3),
                                     dtype=np.uint8)
-            ia.do_assert(
-                nb_classes <= len(colors),
+            assert nb_classes <= len(colors), (
                 "Can't draw all %d classes as it would exceed the maximum "
                 "number of %d available colors." % (nb_classes, len(colors),))
 

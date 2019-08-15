@@ -33,17 +33,26 @@ class HeatmapsOnImage(object):
 
     def __init__(self, arr, shape, min_value=0.0, max_value=1.0):
         """Construct a new HeatmapsOnImage object."""
-        ia.do_assert(ia.is_np_array(arr), "Expected numpy array as heatmap input array, got type %s" % (type(arr),))
+        assert ia.is_np_array(arr), (
+            "Expected numpy array as heatmap input array, "
+            "got type %s" % (type(arr),))
         # TODO maybe allow 0-sized heatmaps? in that case the min() and max() must be adjusted
-        ia.do_assert(arr.shape[0] > 0 and arr.shape[1] > 0,
-                     "Expected numpy array as heatmap with height and width greater than 0, got shape %s." % (
-                         arr.shape,))
-        ia.do_assert(arr.dtype.type in [np.float32],
-                     "Heatmap input array expected to be of dtype float32, got dtype %s." % (arr.dtype,))
-        ia.do_assert(arr.ndim in [2, 3], "Heatmap input array must be 2d or 3d, got shape %s." % (arr.shape,))
-        ia.do_assert(len(shape) in [2, 3],
-                     "Argument 'shape' in HeatmapsOnImage expected to be 2d or 3d, got shape %s." % (shape,))
-        ia.do_assert(min_value < max_value)
+        assert arr.shape[0] > 0 and arr.shape[1] > 0, (
+            "Expected numpy array as heatmap with height and width greater "
+            "than 0, got shape %s." % (arr.shape,))
+        assert arr.dtype.type in [np.float32], (
+            "Heatmap input array expected to be of dtype float32, "
+            "got dtype %s." % (arr.dtype,))
+        assert arr.ndim in [2, 3], (
+            "Heatmap input array must be 2d or 3d, got shape %s." % (
+                arr.shape,))
+        assert len(shape) in [2, 3], (
+            "Argument 'shape' in HeatmapsOnImage expected to be 2d or 3d, "
+            "got shape %s." % (shape,))
+        assert min_value < max_value, (
+            "Expected min_value to be lower than max_value, "
+            "got %.4f and %.4f" % (min_value, max_value))
+
         if np.min(arr.flat[0:50]) < min_value - np.finfo(arr.dtype).eps \
                 or np.max(arr.flat[0:50]) > max_value + np.finfo(arr.dtype).eps:
             import warnings
@@ -185,12 +194,21 @@ class HeatmapsOnImage(object):
 
         """
         # assert RGB image
-        ia.do_assert(image.ndim == 3)
-        ia.do_assert(image.shape[2] == 3)
-        ia.do_assert(image.dtype.type == np.uint8)
+        assert image.ndim == 3, (
+            "Expected to draw on three-dimensional image, "
+            "got %d dimensions with shape %s instead." % (
+                image.ndim, image.shape))
+        assert image.shape[2] == 3, (
+            "Expected RGB image, got %d channels instead." % (image.shape[2],))
+        assert image.dtype.name == "uint8", (
+            "Expected uint8 image, got dtype %s." % (image.dtype.name,))
 
-        ia.do_assert(0 - 1e-8 <= alpha <= 1.0 + 1e-8)
-        ia.do_assert(resize in ["heatmaps", "image"])
+        assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f" % (
+                alpha))
+        assert resize in ["heatmaps", "image"], (
+            "Expected resize to be \"heatmaps\" or \"image\", "
+            "got %s instead." % (resize,))
 
         if resize == "image":
             image = ia.imresize_single_image(image, self.arr_0to1.shape[0:2], interpolation="cubic")
@@ -505,21 +523,31 @@ class HeatmapsOnImage(object):
             Input array, with value range projected to the desired target value range.
 
         """
-        ia.do_assert(ia.is_np_array(arr))
+        assert ia.is_np_array(arr), (
+            "Expected 'arr' to be an ndarray, got type %s." % (type(arr),))
+
+        def _validate_tuple(arg_name, arg_value):
+            assert isinstance(arg_value, tuple), (
+                "'%s' was not a HeatmapsOnImage instance, "
+                "expected type tuple then. Got type %s." % (
+                    arg_name, type(arg_value),))
+            assert len(arg_value) == 2, (
+                "Expected tuple '%s' to contain exactly two entries, "
+                "got %d." % (arg_name, len(arg_value),))
+            assert arg_value[0] < arg_value[1], (
+                "Expected tuple '%s' to have two entries with "
+                "entry 1 < entry 2, got values %.4f and %.4f." % (
+                    arg_name, arg_value[0], arg_value[1]))
 
         if isinstance(source, HeatmapsOnImage):
             source = (source.min_value, source.max_value)
         else:
-            ia.do_assert(isinstance(source, tuple))
-            ia.do_assert(len(source) == 2)
-            ia.do_assert(source[0] < source[1])
+            _validate_tuple("source", source)
 
         if isinstance(target, HeatmapsOnImage):
             target = (target.min_value, target.max_value)
         else:
-            ia.do_assert(isinstance(target, tuple))
-            ia.do_assert(len(target) == 2)
-            ia.do_assert(target[0] < target[1])
+            _validate_tuple("target", target)
 
         # Check if source and target are the same (with a tiny bit of tolerance)
         # if so, evade compuation and just copy the array instead.

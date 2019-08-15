@@ -459,7 +459,9 @@ class Affine(meta.Augmenter):
                  mode="constant", fit_output=False, backend="auto", name=None, deterministic=False, random_state=None):
         super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
 
-        ia.do_assert(backend in ["auto", "skimage", "cv2"])
+        assert backend in ["auto", "skimage", "cv2"], (
+            "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
+            "got %s." % (backend,))
         self.backend = backend
 
         # skimage | cv2
@@ -492,19 +494,25 @@ class Affine(meta.Augmenter):
                 # a warning)
                 self.order = iap.Choice([0, 1, 3, 4, 5])
         elif ia.is_single_integer(order):
-            ia.do_assert(0 <= order <= 5,
-                         "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
+            assert 0 <= order <= 5, (
+                "Expected order's integer value to be in range 0 <= x <= 5, "
+                "got %d." % (order,))
             if backend == "cv2":
-                ia.do_assert(order in [0, 1, 3])
+                assert order in [0, 1, 3], (
+                    "Backend \"cv2\" and order=%d was chosen, but cv2 backend "
+                    "can only handle order 0, 1 or 3." % (order,))
             self.order = iap.Deterministic(order)
         elif isinstance(order, list):
-            ia.do_assert(all([ia.is_single_integer(val) for val in order]),
-                         "Expected order list to only contain integers, got types %s." % (
-                             str([type(val) for val in order]),))
-            ia.do_assert(all([0 <= val <= 5 for val in order]),
-                         "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
+            assert all([ia.is_single_integer(val) for val in order]), (
+                "Expected order list to only contain integers, "
+                "got types %s." % (str([type(val) for val in order]),))
+            assert all([0 <= val <= 5 for val in order]), (
+                "Expected all of order's integer values to be in range "
+                "0 <= x <= 5, got %s." % (str(order),))
             if backend == "cv2":
-                ia.do_assert(all([val in [0, 1, 3] for val in order]))
+                assert all([val in [0, 1, 3] for val in order]), (
+                    "cv2 backend can only handle order 0, 1 or 3. Got order "
+                    "list of %s." % (order,))
             self.order = iap.Choice(order)
         elif isinstance(order, iap.StochasticParameter):
             self.order = order
@@ -538,7 +546,9 @@ class Affine(meta.Augmenter):
         elif ia.is_string(mode):
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
-            ia.do_assert(all([ia.is_string(val) for val in mode]))
+            assert all([ia.is_string(val) for val in mode]), (
+                "Expected list of modes to only contain strings, got "
+                "types %s" % (", ".join([str(type(v)) for v in mode])))
             self.mode = iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
@@ -548,7 +558,9 @@ class Affine(meta.Augmenter):
 
         # scale
         if isinstance(scale, dict):
-            ia.do_assert("x" in scale or "y" in scale)
+            assert "x" in scale or "y" in scale, (
+                "Expected scale dictionary to contain at least key \"x\" or "
+                "key \"y\". Found neither of them.")
             x = scale.get("x", 1.0)
             y = scale.get("y", 1.0)
             self.scale = (
@@ -565,12 +577,16 @@ class Affine(meta.Augmenter):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
-        ia.do_assert(translate_percent is None or translate_px is None)
+        assert translate_percent is None or translate_px is None, (
+            "Expected either translate_percent or translate_px to be "
+            "provided, but neither of them was.")
 
         if translate_percent is not None:
             # translate by percent
             if isinstance(translate_percent, dict):
-                ia.do_assert("x" in translate_percent or "y" in translate_percent)
+                assert "x" in translate_percent or "y" in translate_percent, (
+                    "Expected translate_percent dictionary to contain at "
+                    "least key \"x\" or key \"y\". Found neither of them.")
                 x = translate_percent.get("x", 0)
                 y = translate_percent.get("y", 0)
                 self.translate = (
@@ -585,7 +601,9 @@ class Affine(meta.Augmenter):
         else:
             # translate by pixels
             if isinstance(translate_px, dict):
-                ia.do_assert("x" in translate_px or "y" in translate_px)
+                assert "x" in translate_px or "y" in translate_px, (
+                    "Expected translate_px dictionary to contain at "
+                    "least key \"x\" or key \"y\". Found neither of them.")
                 x = translate_px.get("x", 0)
                 y = translate_px.get("y", 0)
                 self.translate = (
@@ -668,9 +686,9 @@ class Affine(meta.Augmenter):
                         return_matrix=return_matrices,
                     )
                 else:
-                    ia.do_assert(not cv2_bad_dtype,
-                                 "cv2 backend can only handle images of dtype uint8, float32 and float64, got %s." % (
-                                     image.dtype,))
+                    assert not cv2_bad_dtype, (
+                        "cv2 backend can only handle images of dtype uint8, "
+                        "float32 and float64, got %s." % (image.dtype,))
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
@@ -741,6 +759,8 @@ class Affine(meta.Augmenter):
         # lead to averaging class ids, which makes no sense to do.
         cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
         mode_samples = ["constant"] * len(mode_samples)
+        # in contrast to heatmap aug, we don't have to clip augmented
+        # arrays here, as we always use NN interpolation
         order_samples = [0] * len(order_samples)
 
         arrs = [segmaps_i.arr for segmaps_i in segmaps]
@@ -749,10 +769,6 @@ class Affine(meta.Augmenter):
             shear_samples, cval_samples, mode_samples, order_samples,
             return_matrices=True)
         for segmaps_i, arr_aug, matrix, order in zip(segmaps, arrs_aug, matrices, order_samples):
-            # in contrast to heatmap aug, we don't have to clip augmented
-            # arrays here, as we always use NN interpolation
-            assert order == 0
-
             segmaps_i.arr = arr_aug
             if self.fit_output:
                 _, output_shape_i = self._tf_to_fit_output(segmaps_i.shape, matrix)
@@ -942,9 +958,10 @@ class Affine(meta.Augmenter):
                                      "float96", "float128", "float256"],
                          augmenter=self)
         if order != 0:
-            ia.do_assert(image.dtype != np.int32,
-                         ("Affine only supports cv2-based transformations of int32 arrays when "
-                          + "using order=0, but order was set to %d.") % (order,))
+            assert image.dtype.name != "int32", (
+                "Affine only supports cv2-based transformations of int32 "
+                "arrays when using order=0, but order was set to %d." % (
+                    order,))
 
         input_dtype = image.dtype
         if input_dtype in [np.bool_, np.float16]:
@@ -1278,20 +1295,28 @@ class AffineCv2(meta.Augmenter):
         if order == ia.ALL:
             self.order = iap.Choice(available_orders)
         elif ia.is_single_integer(order):
-            ia.do_assert(order in available_orders,
-                         "Expected order's integer value to be in %s, got %d." % (str(available_orders), order))
+            assert order in available_orders, (
+                "Expected order's integer value to be in %s, got %d." % (
+                    str(available_orders), order))
             self.order = iap.Deterministic(order)
         elif ia.is_string(order):
-            ia.do_assert(order in available_orders_str,
-                         "Expected order to be in %s, got %s." % (str(available_orders_str), order))
+            assert order in available_orders_str, (
+                "Expected order to be in %s, got %s." % (
+                    str(available_orders_str), order))
             self.order = iap.Deterministic(order)
         elif isinstance(order, list):
-            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in order]),
-                         "Expected order list to only contain integers/strings, got types %s." % (
-                             str([type(val) for val in order]),))
-            ia.do_assert(all([val in available_orders + available_orders_str for val in order]),
-                         "Expected all order values to be in %s, got %s." % (
-                             available_orders + available_orders_str, str(order),))
+            valid_types = all(
+                [ia.is_single_integer(val) or ia.is_string(val)
+                 for val in order])
+            assert valid_types, (
+                "Expected order list to only contain integers/strings, got "
+                "types %s." % (str([type(val) for val in order]),))
+            valid_orders = all(
+                [val in available_orders + available_orders_str
+                 for val in order])
+            assert valid_orders, (
+                "Expected all order values to be in %s, got %s." % (
+                    available_orders + available_orders_str, str(order),))
             self.order = iap.Choice(order)
         elif isinstance(order, iap.StochasticParameter):
             self.order = order
@@ -1311,20 +1336,22 @@ class AffineCv2(meta.Augmenter):
         if mode == ia.ALL:
             self.mode = iap.Choice(available_modes)
         elif ia.is_single_integer(mode):
-            ia.do_assert(mode in available_modes,
-                         "Expected mode to be in %s, got %d." % (str(available_modes), mode))
+            assert mode in available_modes, (
+                "Expected mode to be in %s, got %d." % (
+                    str(available_modes), mode))
             self.mode = iap.Deterministic(mode)
         elif ia.is_string(mode):
-            ia.do_assert(mode in available_modes_str,
-                         "Expected mode to be in %s, got %s." % (str(available_modes_str), mode))
+            assert mode in available_modes_str, (
+                "Expected mode to be in %s, got %s." % (
+                    str(available_modes_str), mode))
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
-            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]),
-                         "Expected mode list to only contain integers/strings, got types %s." % (
-                             str([type(val) for val in mode]),))
-            ia.do_assert(all([val in available_modes + available_modes_str for val in mode]),
-                         "Expected all mode values to be in %s, got %s." % (
-                             str(available_modes + available_modes_str), str(mode)))
+            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), (
+                "Expected mode list to only contain integers/strings, got types %s." % (
+                    str([type(val) for val in mode]),))
+            assert all([val in available_modes + available_modes_str for val in mode]), (
+                "Expected all mode values to be in %s, got %s." % (
+                    str(available_modes + available_modes_str), str(mode)))
             self.mode = iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
@@ -1334,7 +1361,9 @@ class AffineCv2(meta.Augmenter):
 
         # scale
         if isinstance(scale, dict):
-            ia.do_assert("x" in scale or "y" in scale)
+            assert "x" in scale or "y" in scale, (
+                "Expected scale dictionary to contain at "
+                "least key \"x\" or key \"y\". Found neither of them.")
             x = scale.get("x", 1.0)
             y = scale.get("y", 1.0)
             self.scale = (
@@ -1351,12 +1380,16 @@ class AffineCv2(meta.Augmenter):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
-        ia.do_assert(translate_percent is None or translate_px is None)
+        assert translate_percent is None or translate_px is None, (
+            "Expected either translate_percent or translate_px to be "
+            "provided, but neither of them was.")
 
         if translate_percent is not None:
             # translate by percent
             if isinstance(translate_percent, dict):
-                ia.do_assert("x" in translate_percent or "y" in translate_percent)
+                assert "x" in translate_percent or "y" in translate_percent, (
+                    "Expected translate_percent dictionary to contain at "
+                    "least key \"x\" or key \"y\". Found neither of them.")
                 x = translate_percent.get("x", 0)
                 y = translate_percent.get("y", 0)
                 self.translate = (
@@ -1371,7 +1404,9 @@ class AffineCv2(meta.Augmenter):
         else:
             # translate by pixels
             if isinstance(translate_px, dict):
-                ia.do_assert("x" in translate_px or "y" in translate_px)
+                assert "x" in translate_px or "y" in translate_px, (
+                    "Expected translate_px dictionary to contain at "
+                    "least key \"x\" or key \"y\". Found neither of them.")
                 x = translate_px.get("x", 0)
                 y = translate_px.get("y", 0)
                 self.translate = (
@@ -1581,8 +1616,12 @@ class AffineCv2(meta.Augmenter):
             translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
-        ia.do_assert(translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64])
-        ia.do_assert(translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64])
+        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64], (
+            "Expected translate_samples to have dtype int32, int64, float32 "
+            "or float64. Got %s." % (translate_samples.dtype.name,))
+        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64], (
+            "Expected translate_samples to have dtype int32, int64, float32 "
+            "or float64. Got %s." % (translate_samples.dtype.name,))
 
         rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
         shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
@@ -1757,15 +1796,17 @@ class PiecewiseAffine(meta.Augmenter):
             # a warning)
             self.order = iap.Choice([0, 1, 3, 4, 5])
         elif ia.is_single_integer(order):
-            ia.do_assert(0 <= order <= 5,
-                         "Expected order's integer value to be in range 0 <= x <= 5, got %d." % (order,))
+            assert 0 <= order <= 5, (
+                "Expected order's integer value to be in range 0 <= x <= 5, "
+                "got %d." % (order,))
             self.order = iap.Deterministic(order)
         elif isinstance(order, list):
-            ia.do_assert(all([ia.is_single_integer(val) for val in order]),
-                         "Expected order list to only contain integers, got types %s." % (
-                             str([type(val) for val in order]),))
-            ia.do_assert(all([0 <= val <= 5 for val in order]),
-                         "Expected all of order's integer values to be in range 0 <= x <= 5, got %s." % (str(order),))
+            assert all([ia.is_single_integer(val) for val in order]), (
+                "Expected order list to only contain integers, got "
+                "types %s." % (str([type(val) for val in order]),))
+            assert all([0 <= val <= 5 for val in order]), (
+                "Expected all of order's integer values to be in range "
+                "0 <= x <= 5, got %s." % (str(order),))
             self.order = iap.Choice(order)
         elif isinstance(order, iap.StochasticParameter):
             self.order = order
@@ -1785,7 +1826,9 @@ class PiecewiseAffine(meta.Augmenter):
         elif ia.is_string(mode):
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
-            ia.do_assert(all([ia.is_string(val) for val in mode]))
+            assert all([ia.is_string(val) for val in mode]), (
+                "Expected all values of 'mode' to be strings, got "
+                "types %s." % (", ".join([str(type(v)) for v in mode])))
             self.mode = iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
@@ -2250,20 +2293,27 @@ class PerspectiveTransform(meta.Augmenter):
         if mode == ia.ALL:
             self.mode = iap.Choice(available_modes)
         elif ia.is_single_integer(mode):
-            ia.do_assert(mode in available_modes,
-                         "Expected mode to be in %s, got %d." % (str(available_modes), mode))
+            assert mode in available_modes, (
+                "Expected mode to be in %s, got %d." % (
+                    str(available_modes), mode))
             self.mode = iap.Deterministic(mode)
         elif ia.is_string(mode):
-            ia.do_assert(mode in available_modes_str,
-                         "Expected mode to be in %s, got %s." % (str(available_modes_str), mode))
+            assert mode in available_modes_str, (
+                "Expected mode to be in %s, got %s." % (
+                    str(available_modes_str), mode))
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
-            ia.do_assert(all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]),
-                         "Expected mode list to only contain integers/strings, got types %s." % (
-                             str([type(val) for val in mode]),))
-            ia.do_assert(all([val in available_modes + available_modes_str for val in mode]),
-                         "Expected all mode values to be in %s, got %s." % (
-                             str(available_modes + available_modes_str), str(mode)))
+            valid_types = all([ia.is_single_integer(val) or ia.is_string(val)
+                               for val in mode])
+            assert valid_types, (
+                "Expected mode list to only contain integers/strings, got "
+                "types %s." % (
+                    ", ".join([str(type(val)) for val in mode]),))
+            valid_modes = all([val in available_modes + available_modes_str
+                               for val in mode])
+            assert valid_modes, (
+                "Expected all mode values to be in %s, got %s." % (
+                    str(available_modes + available_modes_str), str(mode)))
             self.mode = iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
@@ -2822,7 +2872,10 @@ class ElasticTransformation(meta.Augmenter):
         elif ia.is_string(mode):
             self.mode = iap.Deterministic(mode)
         elif ia.is_iterable(mode):
-            ia.do_assert(all([ia.is_string(val) for val in mode]))
+            assert all([ia.is_string(val) for val in mode]), (
+                "Expected mode list to only contain strings, got "
+                "types %s." % (
+                    ", ".join([str(type(val)) for val in mode]),))
             self.mode = iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
@@ -2853,7 +2906,6 @@ class ElasticTransformation(meta.Augmenter):
         result = images
         nb_images = len(images)
         rss, alphas, sigmas, orders, cvals, modes = self._draw_samples(nb_images, random_state)
-        assert len(images) == len(rss) == len(alphas) == len(sigmas) == len(orders) == len(cvals) == len(modes)
 
         for i, image in enumerate(images):
             image = images[i]
@@ -3081,7 +3133,7 @@ class ElasticTransformation(meta.Augmenter):
 
     @classmethod
     def generate_shift_maps(cls, shape, alpha, sigma, random_state):
-        ia.do_assert(len(shape) == 2)
+        assert len(shape) == 2, ("Expected 2d shape, got %s." % (shape,))
 
         # kernel size used for cv2 based blurring, should be copied from gaussian_blur_()
         # TODO make dry
@@ -3214,7 +3266,8 @@ class ElasticTransformation(meta.Augmenter):
         if bad_dtype_cv2 or bad_dx_shape_cv2 or bad_dy_shape_cv2:
             backend = "scipy"
 
-        ia.do_assert(image.ndim == 3)
+        assert image.ndim == 3, (
+            "Expected 3-dimensional image, got %d dimensions." % (image.ndim,))
         result = np.copy(image)
         height, width = image.shape[0:2]
         if backend == "scipy":

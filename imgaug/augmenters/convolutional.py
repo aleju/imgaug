@@ -131,11 +131,9 @@ class Convolve(meta.Augmenter):
             self.matrix = None
             self.matrix_type = "None"
         elif ia.is_np_array(matrix):
-            ia.do_assert(
-                matrix.ndim == 2,
+            assert matrix.ndim == 2, (
                 "Expected convolution matrix to have exactly two dimensions, "
-                "got %d (shape %s)." % (
-                    matrix.ndim, matrix.shape))
+                "got %d (shape %s)." % (matrix.ndim, matrix.shape))
             self.matrix = matrix
             self.matrix_type = "constant"
         elif isinstance(matrix, types.FunctionType):
@@ -184,15 +182,13 @@ class Convolve(meta.Augmenter):
                 is_valid_array = (ia.is_np_array(matrices)
                                   and matrices.ndim == 3
                                   and matrices.shape[2] == nb_channels)
-                ia.do_assert(
-                    is_valid_list or is_valid_array,
+                assert is_valid_list or is_valid_array, (
                     "Callable provided to Convole must return either a "
                     "list of 2D matrices (one per image channel) "
                     "or a 2D numpy array "
                     "or a 3D numpy array where the last dimension's size "
                     "matches the number of image channels. "
-                    "Got type %s." % (type(matrices),)
-                )
+                    "Got type %s." % (type(matrices),))
 
                 if ia.is_np_array(matrices):
                     # Shape of matrices is currently (H, W, C), but in the
@@ -309,7 +305,9 @@ def Sharpen(alpha=0, lightness=1,
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        ia.do_assert(0 <= alpha_sample <= 1.0)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f." % (
+                alpha_sample))
         lightness_sample = lightness_param.draw_sample(
             random_state=random_state_func)
         matrix_nochange = np.array([
@@ -405,7 +403,9 @@ def Emboss(alpha=0, strength=1,
 
     def create_matrices(image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        ia.do_assert(0 <= alpha_sample <= 1.0)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f." % (
+                alpha_sample))
         strength_sample = strength_param.draw_sample(
             random_state=random_state_func)
         matrix_nochange = np.array([
@@ -483,7 +483,9 @@ def EdgeDetect(alpha=0, name=None, deterministic=False, random_state=None):
 
     def create_matrices(_image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        ia.do_assert(0 <= alpha_sample <= 1.0)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f." % (
+                alpha_sample))
         matrix_nochange = np.array([
             [0, 0, 0],
             [0, 1, 0],
@@ -604,7 +606,9 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0),
 
     def create_matrices(_image, nb_channels, random_state_func):
         alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        ia.do_assert(0 <= alpha_sample <= 1.0)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f." % (
+                alpha_sample))
         direction_sample = direction_param.draw_sample(
             random_state=random_state_func)
 

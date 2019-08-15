@@ -168,10 +168,11 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
         if backend == "auto":
             backend_to_use = "cv2" if image.dtype.name not in dts_not_supported_by_cv2 else "scipy"
         elif backend == "cv2":
-            assert image.dtype.name not in dts_not_supported_by_cv2,\
-                ("Requested 'cv2' backend, but provided %s input image, which "
-                 + "cannot be handled by that backend. Choose a different backend or "
-                 + "set backend to 'auto' or use a different datatype.") % (image.dtype.name,)
+            assert image.dtype.name not in dts_not_supported_by_cv2, (
+                "Requested 'cv2' backend, but provided %s input image, which "
+                "cannot be handled by that backend. Choose a different backend "
+                "or set backend to 'auto' or use a different datatype." % (
+                    image.dtype.name,))
         elif backend == "scipy":
             # can handle all dtypes that were allowed in gate_dtypes()
             pass
@@ -234,7 +235,9 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
                 # TODO reduce this to 3x3
                 ksize = int(max(ksize, 5))
             else:
-                assert ia.is_single_integer(ksize), "Expected 'ksize' argument to be a number, got %s." % (type(ksize),)
+                assert ia.is_single_integer(ksize), (
+                    "Expected 'ksize' argument to be a number, "
+                    "got %s." % (type(ksize),))
 
             ksize = ksize + 1 if ksize % 2 == 0 else ksize
 
@@ -410,7 +413,9 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
         if ia.is_single_number(k):
             self.k = iap.Deterministic(int(k))
         elif ia.is_iterable(k):
-            ia.do_assert(len(k) == 2)
+            assert len(k) == 2, (
+                "Expected iterable 'k' to contain exactly 2 entries, "
+                "got %d." % (len(k),))
             if all([ia.is_single_number(ki) for ki in k]):
                 self.k = iap.DiscreteUniform(int(k[0]), int(k[1]))
             elif all([isinstance(ki, iap.StochasticParameter) for ki in k]):
@@ -559,11 +564,13 @@ class MedianBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-va
         self.k = iap.handle_discrete_param(k, "k", value_range=(1, None), tuple_to_uniform=True, list_to_choice=True,
                                            allow_floats=False)
         if ia.is_single_integer(k):
-            ia.do_assert(k % 2 != 0, "Expected k to be odd, got %d. Add or subtract 1." % (int(k),))
+            assert k % 2 != 0, (
+                "Expected k to be odd, got %d. Add or subtract 1." % (
+                    int(k),))
         elif ia.is_iterable(k):
-            ia.do_assert(all([ki % 2 != 0 for ki in k]),
-                         "Expected all values in iterable k to be odd, but at least one was not. "
-                         + "Add or subtract 1 to/from that value.")
+            assert all([ki % 2 != 0 for ki in k]), (
+                "Expected all values in iterable k to be odd, but at least "
+                "one was not. Add or subtract 1 to/from that value.")
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
@@ -694,9 +701,10 @@ class BilateralBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused
 
     def _augment_images(self, images, random_state, parents, hooks):
         # Make sure that all images have 3 channels
-        ia.do_assert(all([image.shape[2] == 3 for image in images]),
-                     ("BilateralBlur can currently only be applied to images with 3 channels."
-                      + "Got channels: %s") % ([image.shape[2] for image in images],))
+        assert all([image.shape[2] == 3 for image in images]), (
+            "BilateralBlur can currently only be applied to images with 3 "
+            "channels. Got channels: %s" % (
+                [image.shape[2] for image in images],))
 
         nb_images = len(images)
         rss = random_state.duplicate(3)

@@ -501,12 +501,12 @@ class BatchLoader(object):
     @ia.deprecated(alt_func="imgaug.multicore.Pool")
     def __init__(self, load_batch_func, queue_size=50, nb_workers=1,
                  threaded=True):
-        ia.do_assert(queue_size >= 2,
-                     "Queue size for BatchLoader must be at least 2, "
-                     "got %d." % (queue_size,))
-        ia.do_assert(nb_workers >= 1,
-                     "Number of workers for BatchLoader must be at least 1, "
-                     "got %d" % (nb_workers,))
+        assert queue_size >= 2, (
+            "Queue size for BatchLoader must be at least 2, "
+            "got %d." % (queue_size,))
+        assert nb_workers >= 1, (
+            "Number of workers for BatchLoader must be at least 1, "
+            "got %d" % (nb_workers,))
         self._queue_internal = multiprocessing.Queue(queue_size//2)
         self.queue = multiprocessing.Queue(queue_size//2)
         self.join_signal = multiprocessing.Event()
@@ -600,10 +600,10 @@ class BatchLoader(object):
                 else load_batch_func
             )
             for batch in gen:
-                ia.do_assert(isinstance(batch, Batch),
-                             "Expected batch returned by load_batch_func to "
-                             "be of class imgaug.Batch, got %s." % (
-                                 type(batch),))
+                assert isinstance(batch, Batch), (
+                    "Expected batch returned by load_batch_func to "
+                    "be of class imgaug.Batch, got %s." % (
+                        type(batch),))
                 batch_pickled = pickle.dumps(batch, protocol=-1)
                 while not join_signal.is_set():
                     try:
@@ -708,7 +708,8 @@ class BackgroundAugmenter(object):
 
     @ia.deprecated(alt_func="imgaug.multicore.Pool")
     def __init__(self, batch_loader, augseq, queue_size=50, nb_workers="auto"):
-        ia.do_assert(queue_size > 0)
+        assert queue_size > 0, (
+            "Expected 'queue_size' to be at least 1, got %d." % (queue_size,))
         self.augseq = augseq
         self.queue_source = (
             batch_loader
@@ -725,7 +726,9 @@ class BackgroundAugmenter(object):
             # try to reserve at least one core for the main process
             nb_workers = max(1, nb_workers - 1)
         else:
-            ia.do_assert(nb_workers >= 1)
+            assert nb_workers >= 1, (
+                "Expected 'nb_workers' to be \"auto\" or at least 1, "
+                "got %d instead." % (nb_workers,))
 
         self.nb_workers = nb_workers
         self.workers = []

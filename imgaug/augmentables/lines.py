@@ -188,7 +188,9 @@ class LineString(object):
             else:
                 other = shapely.geometry.LineString(other.coords)
         elif isinstance(other, tuple):
-            assert len(other) == 2
+            assert len(other) == 2, (
+                "Expected tuple 'other' to contain exactly two entries, "
+                "got %d." % (len(other),))
             other = shapely.geometry.Point(other)
         else:
             raise ValueError(
@@ -803,8 +805,8 @@ class LineString(object):
             image_was_empty = True
             image = np.zeros(image, dtype=np.uint8)
         assert image.ndim in [2, 3], (
-            ("Expected image or shape of form (H,W) or (H,W,C), "
-             + "got shape %s.") % (image.shape,))
+            "Expected image or shape of form (H,W) or (H,W,C), "
+            "got shape %s." % (image.shape,))
 
         if len(self.coords) <= 1 or alpha < 0 + 1e-4 or size < 1:
             return np.copy(image)
@@ -1004,9 +1006,14 @@ class LineString(object):
             Image with line string drawn on it.
 
         """
-        assert color is not None
-        assert alpha is not None
-        assert size is not None
+        def _assert_not_none(arg_name, arg_value):
+            assert arg_value is not None, (
+                "Expected '%s' to not be None, got type %s." % (
+                    arg_name, type(arg_value),))
+
+        _assert_not_none("color", color)
+        _assert_not_none("alpha", alpha)
+        _assert_not_none("size", size)
 
         color_lines = color_lines if color_lines is not None \
             else np.float32(color)
@@ -1091,8 +1098,8 @@ class LineString(object):
         from .bbs import BoundingBox
 
         assert image.ndim in [2, 3], (
-            "Expected image of shape (H,W,[C]), "
-            "got shape %s." % (image.shape,))
+            "Expected image of shape (H,W,[C]), got shape %s." % (
+                image.shape,))
 
         if len(self.coords) == 0 or size <= 0:
             if prevent_zero_size:
@@ -1848,7 +1855,9 @@ def _convert_var_to_shapely_geometry(var):
     if isinstance(var, tuple):
         geom = shapely.geometry.Point(var[0], var[1])
     elif isinstance(var, list):
-        assert len(var) > 0
+        assert len(var) > 0, (
+            "Expected list to contain at least one coordinate, "
+            "got %d coordinates." % (len(var),))
         if isinstance(var[0], tuple):
             geom = shapely.geometry.LineString(var)
         elif all([isinstance(v, LineString) for v in var]):

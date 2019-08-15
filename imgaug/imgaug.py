@@ -484,9 +484,16 @@ def seed(entropy=None, seedval=None):
         Deprecated.
 
     """
-    assert entropy is not None or seedval is not None
+    assert entropy is not None or seedval is not None, (
+        "Expected argument 'entropy' or 'seedval' to be not-None, but both"
+        "were None.")
+
     if seedval is not None:
-        assert entropy is None
+        assert entropy is None, (
+            "Argument 'seedval' is the outdated name for 'entropy'. Hence, "
+            "if it is provided, 'entropy' must be None. Got 'entropy' value "
+            "of type %s." % (type(entropy),))
+
         warn_deprecated("Parameter 'seedval' is deprecated. Use "
                         "'entropy' instead.")
         entropy = seedval
@@ -694,8 +701,12 @@ def _quokka_normalize_extract(extract):
     elif isinstance(extract, BoundingBox):
         bb = extract
     elif isinstance(extract, BoundingBoxesOnImage):
-        do_assert(len(extract.bounding_boxes) == 1)
-        do_assert(extract.shape[0:2] == (643, 960))
+        assert len(extract.bounding_boxes) == 1, (
+            "Provided BoundingBoxesOnImage instance may currently only "
+            "contain a single bounding box.")
+        assert extract.shape[0:2] == (643, 960), (
+            "Expected BoundingBoxesOnImage instance on an image of shape "
+            "(643, 960, ?). Got shape %s." % (extract.shape,))
         bb = extract.bounding_boxes[0]
     else:
         raise Exception(
@@ -705,6 +716,7 @@ def _quokka_normalize_extract(extract):
     return bb
 
 
+# TODO is this the same as the project functions in augmentables?
 def _compute_resized_shape(from_shape, to_shape):
     """
     Computes the intended new shape of an image-like array after resizing.
@@ -745,17 +757,20 @@ def _compute_resized_shape(from_shape, to_shape):
     if to_shape is None:
         pass
     elif isinstance(to_shape, tuple):
-        do_assert(len(from_shape) in [2, 3])
-        do_assert(len(to_shape) in [2, 3])
+        assert len(from_shape) in [2, 3]
+        assert len(to_shape) in [2, 3]
 
         if len(from_shape) == 3 and len(to_shape) == 3:
-            do_assert(from_shape[2] == to_shape[2])
+            assert from_shape[2] == to_shape[2]
         elif len(to_shape) == 3:
             to_shape_computed.append(to_shape[2])
 
-        do_assert(all([v is None or is_single_number(v) for v in to_shape[0:2]]),
-                  "Expected the first two entries in to_shape to be None or numbers, "
-                  + "got types %s." % (str([type(v) for v in to_shape[0:2]]),))
+        is_to_s_valid_values = all(
+            [v is None or is_single_number(v) for v in to_shape[0:2]])
+        assert is_to_s_valid_values, (
+            "Expected the first two entries in to_shape to be None or "
+            "numbers, got types %s." % (
+                str([type(v) for v in to_shape[0:2]]),))
 
         for i, from_shape_i in enumerate(from_shape[0:2]):
             if to_shape[i] is None:
@@ -1224,7 +1239,9 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
         Input image with text drawn on it.
 
     """
-    do_assert(img.dtype in [np.uint8, np.float32])
+    assert img.dtype.name in ["uint8", "float32"], (
+        "Can currently draw text only on images of dtype 'uint8' or 'float32'. "
+        "Got dtype %s." % (img.dtype.name,))
 
     input_dtype = img.dtype
     if img.dtype == np.float32:
@@ -1336,11 +1353,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         return images
 
     # verify that all input images have height/width > 0
-    do_assert(
-        all([image.shape[0] > 0 and image.shape[1] > 0 for image in images]),
-        ("Cannot resize images, because at least one image has a height and/or width of zero. "
-         + "Observed shapes were: %s.") % (str([image.shape for image in images]),)
-    )
+    no_zero_size_images = all([
+        image.shape[0] > 0 and image.shape[1] > 0 for image in images])
+    assert no_zero_size_images, (
+        "Cannot resize images, because at least one image has a height and/or "
+        "width of zero. Observed shapes were: %s." % (
+            str([image.shape for image in images]),))
 
     # verify that sizes contains only values >0
     if is_single_number(sizes) and sizes <= 0:
@@ -1359,9 +1377,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     if is_single_number(sizes):
         sizes = (sizes, sizes)
     else:
-        do_assert(len(sizes) == 2, "Expected tuple with exactly two entries, got %d entries." % (len(sizes),))
-        do_assert(all([is_single_number(val) for val in sizes]),
-                  "Expected tuple with two ints or floats, got types %s." % (str([type(val) for val in sizes]),))
+        assert len(sizes) == 2, (
+            "Expected 'sizes' tuple with exactly two entries, "
+            "got %d entries." % (len(sizes),))
+        assert all([is_single_number(val) for val in sizes]), (
+            "Expected 'sizes' tuple with two ints or floats, "
+            "got types %s." % (str([type(val) for val in sizes]),))
 
     # if input is a list, call this function N times for N images
     # but check beforehand if all images have the same shape, then just convert to a single array and de-convert
@@ -1375,7 +1396,8 @@ def imresize_many_images(images, sizes=None, interpolation=None):
                     for image in images]
 
     shape = images.shape
-    do_assert(images.ndim in [3, 4], "Expected array of shape (N, H, W, [C]), got shape %s" % (str(shape),))
+    assert images.ndim in [3, 4], "Expected array of shape (N, H, W, [C]), " \
+                                  "got shape %s" % (str(shape),)
     nb_images = shape[0]
     im_height, im_width = shape[1], shape[2]
     nb_channels = shape[3] if images.ndim > 3 else None
@@ -1388,7 +1410,14 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         return np.copy(images)
 
     ip = interpolation
-    do_assert(ip is None or ip in IMRESIZE_VALID_INTERPOLATIONS)
+    assert ip is None or ip in IMRESIZE_VALID_INTERPOLATIONS, (
+        "Expected 'interpolation' to be None or one of %s. Got %s." % (
+            ", ".join(
+                [str(valid_ip) for valid_ip in IMRESIZE_VALID_INTERPOLATIONS]
+            ),
+            str(ip)
+        )
+    )
     if ip is None:
         if height > im_height or width > im_width:
             ip = cv2.INTER_AREA
@@ -1432,7 +1461,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
             image = image.astype(np.float32)
 
         result_img = cv2.resize(image, (width, height), interpolation=ip)
-        assert result_img.dtype == image.dtype
+        assert result_img.dtype.name == image.dtype.name, (
+            "Expected cv2.resize() to keep the input dtype '%s', but got "
+            "'%s'. This is an internal error. Please report." % (
+                image.dtype.name, result_img.dtype.name
+            )
+        )
 
         # cv2 removes the channel axis if input was (H, W, 1)
         # we re-add it (but only if input was not (H, W))
@@ -1451,6 +1485,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
             result_img = iadt.restore_dtypes_(result_img, np.float16)
         result[i] = result_img
     return result
+
+
+def _assert_two_or_three_dims(image):
+    assert image.ndim in [2, 3], (
+        "Expected image with two or three dimensions, but got %d dimensions "
+        "and shape %s." % (image.ndim, image.shape))
 
 
 def imresize_single_image(image, sizes, interpolation=None):
@@ -1480,16 +1520,17 @@ def imresize_single_image(image, sizes, interpolation=None):
         The resized image.
 
     """
+    _assert_two_or_three_dims(image)
+
     grayscale = False
     if image.ndim == 2:
         grayscale = True
         image = image[:, :, np.newaxis]
-    do_assert(len(image.shape) == 3, image.shape)
+
     rs = imresize_many_images(image[np.newaxis, :, :, :], sizes, interpolation=interpolation)
     if grayscale:
         return np.squeeze(rs[0, :, :, 0])
-    else:
-        return rs[0, ...]
+    return rs[0, ...]
 
 
 # TODO add crop() function too
@@ -1560,11 +1601,11 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         ``W'=W+left+right``.
 
     """
-    do_assert(arr.ndim in [2, 3])
-    do_assert(top >= 0)
-    do_assert(right >= 0)
-    do_assert(bottom >= 0)
-    do_assert(left >= 0)
+    _assert_two_or_three_dims(arr)
+    assert all([v >= 0 for v in [top, right, bottom, left]]), (
+        "Expected padding amounts that are >=0, but got %d, %d, %d, %d "
+        "(top, right, botto, left)" % (top, right, bottom, left))
+
     if top > 0 or right > 0 or bottom > 0 or left > 0:
         mapping_mode_np_to_cv2 = {
             "constant": cv2.BORDER_CONSTANT,
@@ -1678,10 +1719,13 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         tuple of the form ``(top, right, bottom, left)``.
 
     """
-    do_assert(arr.ndim in [2, 3])
-    do_assert(aspect_ratio > 0)
+    _assert_two_or_three_dims(arr)
+    assert aspect_ratio > 0, (
+        "Expected to get an aspect ratio >0, got %.4f." % (aspect_ratio,))
+    assert arr.shape[0] > 0, (
+        "Expected to get an array with height >0, got shape %s." % (arr.shape,))
+
     height, width = arr.shape[0:2]
-    do_assert(height > 0)
     aspect_ratio_current = width / height
 
     pad_top = 0
@@ -1812,8 +1856,8 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
             to_pad = multiple - (axis_size % multiple)
         return int(np.floor(to_pad/2)), int(np.ceil(to_pad/2))
 
-    assert arr.ndim in [2, 3], (
-        "Can only pad arrays with 2 or 3 axis, got %d axis." % (arr.ndim,))
+    _assert_two_or_three_dims(arr)
+
     if height_multiple is not None:
         assert height_multiple > 0, (
             "Can only pad to multiples of 1 or larger, got %d." % (
@@ -1989,11 +2033,14 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
                         "Use `pad_cval` instead.")
         pad_cval = cval
 
-    do_assert(arr.ndim in [2, 3])
+    _assert_two_or_three_dims(arr)
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
         and [is_single_integer(val) and val >= 1 for val in block_size]
-    do_assert(is_valid_int or is_valid_tuple)
+    assert is_valid_int or is_valid_tuple, (
+        "Expected argument 'block_size' to be a single integer >0 or "
+        "a tuple of 2 or 3 values with each one being >0. Got %s." % (
+            str(block_size)))
 
     if is_single_integer(block_size):
         block_size = [block_size, block_size]
@@ -2227,33 +2274,46 @@ def draw_grid(images, rows=None, cols=None):
 
     """
     nb_images = len(images)
-    do_assert(nb_images > 0)
+    assert nb_images > 0, "Expected to get at least one image, got none."
 
     if is_np_array(images):
-        do_assert(images.ndim == 4)
+        assert images.ndim == 4, (
+            "Expected to get an array of four dimensions denoting "
+            "(N, H, W, C), got %d dimensions and shape %s." % (
+                images.ndim, images.shape))
     else:
-        do_assert(is_iterable(images) and is_np_array(images[0]) and images[0].ndim == 3)
-        dts = [image.dtype.name for image in images]
-        nb_dtypes = len(set(dts))
-        do_assert(nb_dtypes == 1, ("All images provided to draw_grid() must have the same dtype, "
-                                   + "found %d dtypes (%s)") % (nb_dtypes, ", ".join(dts)))
+        assert is_iterable(images), (
+            "Expected to get an iterable of ndarrays, "
+            "got %s." % (type(images),))
+        assert all([is_np_array(image) for image in images]), (
+            "Expected to get an iterable of ndarrays, "
+            "got types %s." % (
+                ", ".join([str(type(image)) for image in images],)))
+        assert all([image.ndim == 3 for image in images]), (
+            "Expected to get images with three dimensions. Got shapes %s." % (
+                ", ".join([str(image.shape) for image in images])))
+        assert len(set([image.dtype.name for image in images])) == 1, (
+            "Expected to get images with the same dtypes, got dtypes %s." % (
+                ", ".join([image.dtype.name for image in images])))
+        assert len(set([image.shape[-1] for image in images])) == 1, (
+            "Expected to get images with the same number of channels, "
+            "got shapes %s." % (
+                ", ".join([str(image.shape) for image in images])))
 
     cell_height = max([image.shape[0] for image in images])
     cell_width = max([image.shape[1] for image in images])
-    channels = set([image.shape[2] for image in images])
-    do_assert(
-        len(channels) == 1,
-        "All images are expected to have the same number of channels, "
-        + "but got channel set %s with length %d instead." % (str(channels), len(channels))
-    )
-    nb_channels = list(channels)[0]
+    nb_channels = images[0].shape[2]
+
     if rows is None and cols is None:
         rows = cols = int(math.ceil(math.sqrt(nb_images)))
     elif rows is not None:
         cols = int(math.ceil(nb_images / rows))
     elif cols is not None:
         rows = int(math.ceil(nb_images / cols))
-    do_assert(rows * cols >= nb_images)
+    assert rows * cols >= nb_images, (
+        "Expected rows*cols to lead to at least as many cells as there were "
+        "images provided, but got %d rows, %d cols (=%d cells) for %d "
+        "images. " % (rows, cols, rows*cols, nb_images))
 
     width = cell_width * cols
     height = cell_height * rows
@@ -2331,7 +2391,8 @@ def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
         OpenCV tends to be faster, but apparently causes more technical issues.
 
     """
-    do_assert(backend in ["matplotlib", "cv2"], "Expected backend 'matplotlib' or 'cv2', got %s." % (backend,))
+    assert backend in ["matplotlib", "cv2"], (
+        "Expected backend 'matplotlib' or 'cv2', got %s." % (backend,))
 
     if backend == "cv2":
         image_bgr = image

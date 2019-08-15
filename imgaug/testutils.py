@@ -32,8 +32,10 @@ def create_random_keypoints(size_images, nb_keypoints_per_img):
 
 
 def array_equal_lists(list1, list2):
-    ia.do_assert(isinstance(list1, list))
-    ia.do_assert(isinstance(list2, list))
+    assert isinstance(list1, list), (
+        "Expected list1 to be a list, got type %s." % (type(list1),))
+    assert isinstance(list2, list), (
+        "Expected list2 to be a list, got type %s." % (type(list2),))
 
     if len(list1) != len(list2):
         return False

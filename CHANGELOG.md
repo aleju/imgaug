@@ -235,6 +235,10 @@
     * [rarely breaking] Changed `augmenters.contrast.adjust_contrast_log`
       and thereby `LogContrast` to no longer support dtypes `uint32`, `uint64`,
       `int32` and `int64`.
+* Replaced all calls of `imgaug.imgaug.do_assert` by ordinary `assert`
+  statements. This is a bit less secure, but should overall improve
+  performance.
+* Added error messages to `assert` statements throughout the library.
 
 
 ## Improved Segmentation Map Augmentation #302
