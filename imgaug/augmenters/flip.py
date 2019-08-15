@@ -904,24 +904,12 @@ class Flipud(meta.Augmenter):
     .. note ::
 
         The default value for the probability is ``0.0``.
-        So, to flip *all* input image use ``Flipud(1.0)`` and *not* just
+        So, to flip *all* input images use ``Flipud(1.0)`` and *not* just
         ``Flipud()``.
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
-        * ``uint32``: yes; tested
-        * ``uint64``: yes; tested
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
-        * ``int32``: yes; tested
-        * ``int64``: yes; tested
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
-        * ``float64``: yes; tested
-        * ``float128``: yes; tested
-        * ``bool``: yes; tested
+        See :func:`imgaug.augmenters.flip.flipud`.
 
     Parameters
     ----------
