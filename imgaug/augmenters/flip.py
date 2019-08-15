@@ -29,7 +29,6 @@ from .. import parameters as iap
 
 
 """
-
 Speed comparison by datatype and flip method.
 
 HORIZONTAL FLIPS.
@@ -356,6 +355,332 @@ fort cv2_ get contig 1.89190ms
 
 """
 
+"""
+Speed comparison by datatype and flip method.
+
+VERTICAL FLIPS.
+
+----------
+bool
+----------
+               slice 0.00047ms
+       slice, contig 0.02332ms
+              flipud 0.00143ms
+       flipud contig 0.02502ms
+                 cv2 Error: Expected cv::UMat for argument 'src'
+          cv2 contig Error: Expected cv::UMat for argument 'src'
+            fort cv2 Error: Expected cv::UMat for argument 'src'
+     fort cv2 contig Error: Expected cv::UMat for argument 'src'
+                cv2_ Error: Expected cv::UMat for argument 'src'
+         cv2_ contig Error: Expected cv::UMat for argument 'src'
+           fort cv2_ Error: Expected cv::UMat for argument 'src'
+    fort cv2_ contig Error: Expected cv::UMat for argument 'src'
+            cv2_ get Error: Expected cv::UMat for argument 'src'
+     cv2_ get contig Error: Expected cv::UMat for argument 'src'
+       fort cv2_ get Error: Expected cv::UMat for argument 'src'
+fort cv2_ get contig Error: Expected cv::UMat for argument 'src'
+
+----------
+uint8
+----------
+               slice 0.00049ms
+       slice, contig 0.02311ms
+              flipud 0.00155ms
+       flipud contig 0.02506ms
+                 cv2 0.03030ms (0.76x)
+          cv2 contig 0.03401ms (0.68x)
+            fort cv2 0.31000ms (0.07x)
+     fort cv2 contig 0.33619ms (0.07x)
+                cv2_ 0.01753ms (1.32x)
+         cv2_ contig 0.01841ms (1.26x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.26680ms (0.02x)
+fort cv2_ get contig 1.27027ms (0.02x)
+
+----------
+uint16
+----------
+               slice 0.00147ms
+       slice, contig 0.04861ms
+              flipud 0.00406ms
+       flipud contig 0.05060ms
+                 cv2 0.06169ms (0.79x)
+          cv2 contig 0.06397ms (0.76x)
+            fort cv2 0.39190ms (0.12x)
+     fort cv2 contig 0.39098ms (0.12x)
+                cv2_ 0.03375ms (1.44x)
+         cv2_ contig 0.03619ms (1.34x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.51197ms (0.03x)
+fort cv2_ get contig 1.52977ms (0.03x)
+
+----------
+uint32
+----------
+               slice 0.00167ms
+       slice, contig 0.09415ms
+              flipud 0.00476ms
+       flipud contig 0.09660ms
+                 cv2 Error: Expected cv::UMat for argument 'src'
+          cv2 contig Error: Expected cv::UMat for argument 'src'
+            fort cv2 Error: Expected cv::UMat for argument 'src'
+     fort cv2 contig Error: Expected cv::UMat for argument 'src'
+                cv2_ Error: Expected cv::UMat for argument 'src'
+         cv2_ contig Error: Expected cv::UMat for argument 'src'
+           fort cv2_ Error: Expected cv::UMat for argument 'src'
+    fort cv2_ contig Error: Expected cv::UMat for argument 'src'
+            cv2_ get Error: Expected cv::UMat for argument 'src'
+     cv2_ get contig Error: Expected cv::UMat for argument 'src'
+       fort cv2_ get Error: Expected cv::UMat for argument 'src'
+fort cv2_ get contig Error: Expected cv::UMat for argument 'src'
+
+----------
+uint64
+----------
+               slice 0.00175ms
+       slice, contig 0.17413ms
+              flipud 0.00488ms
+       flipud contig 0.17508ms
+                 cv2 Error: Got dtype int32
+          cv2 contig Error: Got dtype int32
+            fort cv2 Error: Got dtype int32
+     fort cv2 contig Error: Got dtype int32
+                cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+         cv2_ contig Error: Got dtype object
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: Got dtype int32
+     cv2_ get contig Error: Got dtype int32
+       fort cv2_ get Error: Got dtype int32
+fort cv2_ get contig Error: Got dtype int32
+
+----------
+int8
+----------
+               slice 0.00057ms
+       slice, contig 0.02604ms
+              flipud 0.00146ms
+       flipud contig 0.02806ms
+                 cv2 0.03434ms (0.76x)
+          cv2 contig 0.03676ms (0.71x)
+            fort cv2 0.30920ms (0.08x)
+     fort cv2 contig 0.31123ms (0.08x)
+                cv2_ 0.01625ms (1.60x)
+         cv2_ contig 0.01799ms (1.45x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.29065ms (0.02x)
+fort cv2_ get contig 1.29596ms (0.02x)
+
+----------
+int16
+----------
+               slice 0.00142ms
+       slice, contig 0.05079ms
+              flipud 0.00403ms
+       flipud contig 0.05312ms
+                 cv2 0.06277ms (0.81x)
+          cv2 contig 0.06527ms (0.78x)
+            fort cv2 0.39710ms (0.13x)
+     fort cv2 contig 0.39851ms (0.13x)
+                cv2_ 0.03419ms (1.49x)
+         cv2_ contig 0.03668ms (1.38x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.52476ms (0.03x)
+fort cv2_ get contig 1.52594ms (0.03x)
+
+----------
+int32
+----------
+               slice 0.00172ms
+       slice, contig 0.09621ms
+              flipud 0.00469ms
+       flipud contig 0.09868ms
+                 cv2 0.12192ms (0.79x)
+          cv2 contig 0.12459ms (0.77x)
+            fort cv2 0.57915ms (0.17x)
+     fort cv2 contig 0.58571ms (0.16x)
+                cv2_ 0.07337ms (1.31x)
+         cv2_ contig 0.07595ms (1.27x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.97937ms (0.05x)
+fort cv2_ get contig 1.97919ms (0.05x)
+
+----------
+int64
+----------
+               slice 0.00167ms
+       slice, contig 0.17308ms
+              flipud 0.00470ms
+       flipud contig 0.17542ms
+                 cv2 Error: Got dtype int32
+          cv2 contig Error: Got dtype int32
+            fort cv2 Error: Got dtype int32
+     fort cv2 contig Error: Got dtype int32
+                cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+         cv2_ contig Error: Got dtype object
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: Got dtype int32
+     cv2_ get contig Error: Got dtype int32
+       fort cv2_ get Error: Got dtype int32
+fort cv2_ get contig Error: Got dtype int32
+
+----------
+float16
+----------
+               slice 0.00146ms
+       slice, contig 0.05094ms
+              flipud 0.00408ms
+       flipud contig 0.05359ms
+                 cv2 Error: Expected cv::UMat for argument 'src'
+          cv2 contig Error: Expected cv::UMat for argument 'src'
+            fort cv2 Error: Expected cv::UMat for argument 'src'
+     fort cv2 contig Error: Expected cv::UMat for argument 'src'
+                cv2_ Error: Expected cv::UMat for argument 'src'
+         cv2_ contig Error: Expected cv::UMat for argument 'src'
+           fort cv2_ Error: Expected cv::UMat for argument 'src'
+    fort cv2_ contig Error: Expected cv::UMat for argument 'src'
+            cv2_ get Error: Expected cv::UMat for argument 'src'
+     cv2_ get contig Error: Expected cv::UMat for argument 'src'
+       fort cv2_ get Error: Expected cv::UMat for argument 'src'
+fort cv2_ get contig Error: Expected cv::UMat for argument 'src'
+
+----------
+float32
+----------
+               slice 0.00164ms
+       slice, contig 0.09606ms
+              flipud 0.00461ms
+       flipud contig 0.09897ms
+                 cv2 0.12151ms (0.79x)
+          cv2 contig 0.12514ms (0.77x)
+            fort cv2 0.57887ms (0.17x)
+     fort cv2 contig 0.58280ms (0.16x)
+                cv2_ 0.07312ms (1.31x)
+         cv2_ contig 0.07581ms (1.27x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.97501ms (0.05x)
+fort cv2_ get contig 1.98010ms (0.05x)
+
+----------
+float64
+----------
+               slice 0.00170ms
+       slice, contig 0.17300ms
+              flipud 0.00483ms
+       flipud contig 0.17539ms
+                 cv2 0.23941ms (0.72x)
+          cv2 contig 0.24220ms (0.71x)
+            fort cv2 1.26645ms (0.14x)
+     fort cv2 contig 1.27246ms (0.14x)
+                cv2_ 0.14879ms (1.16x)
+         cv2_ contig 0.15185ms (1.14x)
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 4.02958ms (0.04x)
+fort cv2_ get contig 4.02822ms (0.04x)
+
+----------
+float128
+----------
+               slice 0.00168ms
+       slice, contig 0.35407ms
+              flipud 0.00513ms
+       flipud contig 0.35716ms
+                 cv2 Error: Expected cv::UMat for argument 'src'
+          cv2 contig Error: Expected cv::UMat for argument 'src'
+            fort cv2 Error: Expected cv::UMat for argument 'src'
+     fort cv2 contig Error: Expected cv::UMat for argument 'src'
+                cv2_ Error: Expected cv::UMat for argument 'src'
+         cv2_ contig Error: Expected cv::UMat for argument 'src'
+           fort cv2_ Error: Expected cv::UMat for argument 'src'
+    fort cv2_ contig Error: Expected cv::UMat for argument 'src'
+            cv2_ get Error: Expected cv::UMat for argument 'src'
+     cv2_ get contig Error: Expected cv::UMat for argument 'src'
+       fort cv2_ get Error: Expected cv::UMat for argument 'src'
+fort cv2_ get contig Error: Expected cv::UMat for argument 'src'
+
+==============================
+flip method followed by Add
+==============================
+               slice 1.11286ms
+       slice, contig 1.14822ms
+              flipud 1.11858ms
+       flipud contig 1.14703ms
+                 cv2 1.14892ms
+          cv2 contig 1.15923ms
+            fort cv2 1.43633ms
+     fort cv2 contig 1.44342ms
+                cv2_ 1.15194ms
+         cv2_ contig 1.14864ms
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 2.47966ms
+fort cv2_ get contig 2.48177ms
+
+==============================
+flip method followed by Affine
+==============================
+               slice 2.61450ms
+       slice, contig 2.67402ms
+              flipud 2.62069ms
+       flipud contig 2.67267ms
+                 cv2 2.66312ms
+          cv2 contig 2.68482ms
+            fort cv2 2.94520ms
+     fort cv2 contig 2.97767ms
+                cv2_ 2.64183ms
+         cv2_ contig 2.64857ms
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 3.94321ms
+fort cv2_ get contig 4.01652ms
+
+==============================
+flip method followed by AverageBlur
+==============================
+               slice 0.57750ms
+       slice, contig 0.60905ms
+              flipud 0.58156ms
+       flipud contig 0.61562ms
+                 cv2 0.61704ms
+          cv2 contig 0.62293ms
+            fort cv2 0.90804ms
+     fort cv2 contig 0.90495ms
+                cv2_ 0.60047ms
+         cv2_ contig 0.60876ms
+           fort cv2_ Error: 'cv2.UMat' object has no attribute 'ndim'
+    fort cv2_ contig Error: Got dtype object
+            cv2_ get Error: 'numpy.ndarray' object has no attribute 'get'
+     cv2_ get contig Error: 'numpy.ndarray' object has no attribute 'get'
+       fort cv2_ get 1.93064ms
+fort cv2_ get contig 1.95215ms
+"""
+
 _FLIPLR_DTYPES_CV2 = {"uint8", "uint16", "int8", "int16"}
 
 
@@ -591,7 +916,7 @@ class Flipud(meta.Augmenter):
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, (image, sample) in enumerate(zip(images, samples)):
             if sample > 0.5:
-                images[i] = np.flipud(image)
+                images[i] = image[::-1, :, ...]
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
