@@ -880,7 +880,7 @@ class Fliplr(meta.Augmenter):
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if not keypoints_on_image.keypoints:
                 continue
-            elif samples[i] == 1:  # FIXME change to >0.5 to match _augment_images()
+            elif samples[i] > 0.5:
                 width = keypoints_on_image.shape[1]
                 for keypoint in keypoints_on_image.keypoints:
                     keypoint.x = width - float(keypoint.x)
@@ -994,7 +994,7 @@ class Flipud(meta.Augmenter):
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if not keypoints_on_image.keypoints:
                 continue
-            elif samples[i] == 1:
+            elif samples[i] > 0.5:
                 height = keypoints_on_image.shape[0]
                 for keypoint in keypoints_on_image.keypoints:
                     keypoint.y = height - float(keypoint.y)
