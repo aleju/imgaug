@@ -163,9 +163,7 @@ class LineString(object):
 
         Parameters
         ----------
-        other : tuple of number \
-                or imgaug.augmentables.kps.Keypoint \
-                or imgaug.augmentables.LineString
+        other : tuple of number or imgaug.augmentables.kps.Keypoint or imgaug.augmentables.LineString
             Other object to which to compute the distances.
 
         default
@@ -206,9 +204,7 @@ class LineString(object):
 
         Parameters
         ----------
-        other : tuple of number \
-                or imgaug.augmentables.kps.Keypoint \
-                or imgaug.augmentables.LineString
+        other : tuple of number or imgaug.augmentables.kps.Keypoint or imgaug.augmentables.LineString
             Other object to which to compute the distance.
 
         default
@@ -494,8 +490,7 @@ class LineString(object):
 
         Parameters
         ----------
-        other : tuple of number or list of tuple of number or \
-                list of LineString or LineString
+        other : tuple of number or list of tuple of number or list of LineString or LineString
             The other geometry to use during intersection tests.
 
         Returns
@@ -1143,8 +1138,7 @@ class LineString(object):
 
         Parameters
         ----------
-        other : imgaug.augmentables.lines.LineString or ndarray \
-                or iterable of tuple of number
+        other : imgaug.augmentables.lines.LineString or ndarray or iterable of tuple of number
             The points to add to this line string.
 
         Returns
@@ -1333,11 +1327,7 @@ class LineString(object):
 
         Parameters
         ----------
-        other : imgaug.augmentables.lines.LineString \
-                or tuple of number \
-                or ndarray \
-                or list of ndarray \
-                or list of tuple of number
+        other : imgaug.augmentables.lines.LineString or tuple of number or ndarray or list of ndarray or list of tuple of number
             The other line string or its coordinates.
 
         max_distance : float, optional
@@ -1767,8 +1757,7 @@ class LineStringsOnImage(object):
 
         Parameters
         ----------
-        line_strings : None \
-                       or list of imgaug.augmentables.lines.LineString, optional
+        line_strings : None or list of imgaug.augmentables.lines.LineString, optional
             List of line strings on the image.
             If not ``None``, then the ``line_strings`` attribute of the copied
             object will be set to this value.
@@ -1796,8 +1785,7 @@ class LineStringsOnImage(object):
 
         Parameters
         ----------
-        line_strings : None \
-                       or list of imgaug.augmentables.lines.LineString, optional
+        line_strings : None or list of imgaug.augmentables.lines.LineString, optional
             List of line strings on the image.
             If not ``None``, then the ``line_strings`` attribute of the copied
             object will be set to this value.

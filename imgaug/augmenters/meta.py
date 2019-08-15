@@ -231,10 +231,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        batches : imgaug.augmentables.batches.Batch \
-                  or imgaug.augmentables.batches.UnnormalizedBatch \
-                  or iterable of imgaug.augmentables.batches.Batch \
-                  or iterable of imgaug.augmentables.batches.UnnormalizedBatch
+        batches : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch or iterable of imgaug.augmentables.batches.Batch or iterable of imgaug.augmentables.batches.UnnormalizedBatch
             A single batch or a list of batches to augment.
 
         hooks : None or imgaug.HooksImages, optional
@@ -254,10 +251,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Yields
         -------
-        imgaug.augmentables.batches.Batch \
-                  or imgaug.augmentables.batches.UnnormalizedBatch \
-                  or iterable of imgaug.augmentables.batches.Batch \
-                  or iterable of imgaug.augmentables.batches.UnnormalizedBatch
+        imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch or iterable of imgaug.augmentables.batches.Batch or iterable of imgaug.augmentables.batches.UnnormalizedBatch
             Augmented batches.
 
         """
@@ -421,8 +415,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.Batch \
-                or imgaug.augmentables.batches.UnnormalizedBatch
+        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch
             A single batch to augment.
 
         hooks : None or imgaug.HooksImages, optional
@@ -431,8 +424,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        imgaug.augmentables.batches.Batch \
-                or imgaug.augmentables.batches.UnnormalizedBatch
+        imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch
             Augmented batch.
 
         """
@@ -839,8 +831,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        segmaps : imgaug.SegmentationMapsOnImage or \
-                  list of imgaug.SegmentationMapsOnImage
+        segmaps : imgaug.SegmentationMapsOnImage or list of imgaug.SegmentationMapsOnImage
             Segmentation map(s) to augment. Either a single heatmap or a list
             of segmentation maps.
 
@@ -855,8 +846,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        segmaps_aug : imgaug.SegmentationMapsOnImage or \
-                      list of imgaug.SegmentationMapsOnImage
+        segmaps_aug : imgaug.SegmentationMapsOnImage or list of imgaug.SegmentationMapsOnImage
             Corresponding augmented segmentation map(s).
 
         """
@@ -982,8 +972,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        keypoints_on_images : imgaug.KeypointsOnImage or \
-                              list of imgaug.KeypointsOnImage
+        keypoints_on_images : imgaug.KeypointsOnImage or list of imgaug.KeypointsOnImage
             The keypoints/landmarks to augment.
             Expected is an instance of imgaug.KeypointsOnImage or a list of
             imgaug.KeypointsOnImage objects, with each such object containing
@@ -1000,8 +989,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        keypoints_on_images_result : imgaug.KeypointsOnImage or \
-                                     list of imgaug.KeypointsOnImage
+        keypoints_on_images_result : imgaug.KeypointsOnImage or list of imgaug.KeypointsOnImage
             Augmented keypoints.
 
         """
@@ -1123,8 +1111,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        bounding_boxes_on_images : imgaug.BoundingBoxesOnImage or \
-                                   list of imgaug.BoundingBoxesOnImage
+        bounding_boxes_on_images : imgaug.BoundingBoxesOnImage or list of imgaug.BoundingBoxesOnImage
             The bounding boxes to augment.
             Expected is an instance of imgaug.BoundingBoxesOnImage or a list of
             imgaug.BoundingBoxesOnImage objects, with each such object
@@ -1136,8 +1123,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        result : imgaug.BoundingBoxesOnImage or \
-                 list of imgaug.BoundingBoxesOnImage
+        result : imgaug.BoundingBoxesOnImage or list of imgaug.BoundingBoxesOnImage
             Augmented bounding boxes.
 
         """
@@ -1218,8 +1204,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        polygons_on_images : imgaug.PolygonsOnImage or \
-                             list of imgaug.PolygonsOnImage
+        polygons_on_images : imgaug.PolygonsOnImage or list of imgaug.PolygonsOnImage
             The polygons to augment.
             Expected is an instance of imgaug.PolygonsOnImage or a list of
             imgaug.PolygonsOnImage objects, with each such object
@@ -1296,8 +1281,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        line_strings_on_images : imgaug.augmentables.lines.LineStringsOnImage \
-                                 or list of imgaug.augmentables.lines.LineStringsOnImage
+        line_strings_on_images : imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
             The line strings to augment.
             Expected is an instance of LineStringsOnImage or a list of
             LineStringsOnImage objects, with each such object containing the
@@ -1314,8 +1298,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        imgaug.augmentables.lines.LineStringsOnImage \
-        or list of imgaug.augmentables.lines.LineStringsOnImage
+        imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
             Augmented line strings.
 
         """
@@ -1356,10 +1339,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
         subaugment_func : callable
             Function that will be called to actually augment the data.
 
-        augables_ois : imgaug.augmentables.polys.PolygonsOnImage \
-                       or imgaug.augmentables.lines.LineStringsOnImage \
-                       or list of imgaug.augmentables.lines.LineStringsOnImage \
-                       or list of imgaug.augmentables.polys.PolygonsOnImage
+        augables_ois : imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.polys.PolygonsOnImage
             The augmentables to augment. `augables_ois` is the abbreviation for
             "augmentables_on_images". Expected are the augmentables on a
             single image (single instance) or 1+ images (list of instances).
@@ -1375,10 +1355,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Returns
         -------
-        imgaug.augmentables.polys.PolygonsOnImage \
-        or imgaug.augmentables.lines.LineStringsOnImage \
-        or list of imgaug.augmentables.polys.PolygonsOnImage \
-        or list of imgaug.augmentables.lines.LineStringsOnImage
+        imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
             Augmented augmentables.
 
         """
@@ -1651,59 +1628,31 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        image : None
-            or (H,W,C) ndarray \
-            or (H,W) ndarray, \
-            optional
+        image : None or (H,W,C) ndarray or (H,W) ndarray, optional
             The image to augment. Only this or `images` can be set, not both.
             If `return_batch` is ``False`` and the python version is below 3.6,
             either this or `images` **must** be provided.
 
-        images : None \
-            or (N,H,W,C) ndarray \
-            or (N,H,W) ndarray \
-            or iterable of (H,W,C) ndarray \
-            or iterable of (H,W) ndarray, \
-            optional
+        images : None or (N,H,W,C) ndarray or (N,H,W) ndarray or iterable of (H,W,C) ndarray or iterable of (H,W) ndarray, optional
             The images to augment. Only this or `image` can be set, not both.
             If `return_batch` is ``False`` and the python version is below 3.6,
             either this or `image` **must** be provided.
 
-        heatmaps : None \
-            or (N,H,W,C) ndarray \
-            or imgaug.augmentables.heatmaps.HeatmapsOnImage \
-            or iterable of (H,W,C) ndarray \
-            or iterable of imgaug.augmentables.heatmaps.HeatmapsOnImage, \
-            optional
+        heatmaps : None or (N,H,W,C) ndarray or imgaug.augmentables.heatmaps.HeatmapsOnImage or iterable of (H,W,C) ndarray or iterable of imgaug.augmentables.heatmaps.HeatmapsOnImage, optional
             The heatmaps to augment.
             If anything else than ``HeatmapsOnImage``, then the number of
             heatmaps must match the number of images provided via parameter
             `images`. The number is contained either in ``N`` or the first
             iterable's size.
 
-        segmentation_maps : None \
-            or (N,H,W) ndarray \
-            or imgaug.augmentables.segmaps.SegmentationMapsOnImage \
-            or iterable of (H,W) ndarray \
-            or iterable of imgaug.augmentables.segmaps.SegmentationMapsOnImage, \
-            optional
+        segmentation_maps : None or (N,H,W) ndarray or imgaug.augmentables.segmaps.SegmentationMapsOnImage or iterable of (H,W) ndarray or iterable of imgaug.augmentables.segmaps.SegmentationMapsOnImage, optional
             The segmentation maps to augment.
             If anything else than ``SegmentationMapsOnImage``, then the number
             of segmaps must match the number of images provided via parameter
             `images`. The number is contained either in ``N`` or the first
             iterable's size.
 
-        keypoints : None \
-            or list of (N,K,2) ndarray \
-            or tuple of number \
-            or imgaug.augmentables.kps.Keypoint \
-            or iterable of (K,2) ndarray \
-            or iterable of tuple of number \
-            or iterable of imgaug.augmentables.kps.Keypoint \
-            or iterable of imgaug.augmentables.kps.KeypointOnImage \
-            or iterable of iterable of tuple of number \
-            or iterable of iterable of imgaug.augmentables.kps.Keypoint, \
-            optional
+        keypoints : None or list of (N,K,2) ndarray or tuple of number or imgaug.augmentables.kps.Keypoint or iterable of (K,2) ndarray or iterable of tuple of number or iterable of imgaug.augmentables.kps.Keypoint or iterable of imgaug.augmentables.kps.KeypointOnImage or iterable of iterable of tuple of number or iterable of iterable of imgaug.augmentables.kps.Keypoint, optional
             The keypoints to augment.
             If a tuple (or iterable(s) of tuple), then iterpreted as (x,y)
             coordinates and must hence contain two numbers.
@@ -1719,41 +1668,14 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
             in case of "iterable of iterable of tuples" in the first iterable's
             size.
 
-        bounding_boxes : None \
-            or (N,B,4) ndarray \
-            or tuple of number \
-            or imgaug.augmentables.bbs.BoundingBox \
-            or imgaug.augmentables.bbs.BoundingBoxesOnImage \
-            or iterable of (B,4) ndarray \
-            or iterable of tuple of number \
-            or iterable of imgaug.augmentables.bbs.BoundingBox \
-            or iterable of imgaug.augmentables.bbs.BoundingBoxesOnImage \
-            or iterable of iterable of tuple of number \
-            or iterable of iterable imgaug.augmentables.bbs.BoundingBox, \
-            optional
+        bounding_boxes : None or (N,B,4) ndarray or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage or iterable of (B,4) ndarray or iterable of tuple of number or iterable of imgaug.augmentables.bbs.BoundingBox or iterable of imgaug.augmentables.bbs.BoundingBoxesOnImage or iterable of iterable of tuple of number or iterable of iterable imgaug.augmentables.bbs.BoundingBox, optional
             The bounding boxes to augment.
             This is analogous to the `keypoints` parameter. However, each
             tuple -- and also the last index in case of arrays -- has size 4,
             denoting the bounding box coordinates ``x1``, ``y1``, ``x2`` and
             ``y2``.
 
-        polygons : None  \
-            or (N,#polys,#points,2) ndarray \
-            or imgaug.augmentables.polys.Polygon \
-            or imgaug.augmentables.polys.PolygonsOnImage \
-            or iterable of (#polys,#points,2) ndarray \
-            or iterable of tuple of number \
-            or iterable of imgaug.augmentables.kps.Keypoint \
-            or iterable of imgaug.augmentables.polys.Polygon \
-            or iterable of imgaug.augmentables.polys.PolygonsOnImage \
-            or iterable of iterable of (#points,2) ndarray \
-            or iterable of iterable of tuple of number \
-            or iterable of iterable of imgaug.augmentables.kps.Keypoint \
-            or iterable of iterable of imgaug.augmentables.polys.Polygon \
-            or iterable of iterable of iterable of tuple of number \
-            or iterable of iterable of iterable of tuple of \
-            imgaug.augmentables.kps.Keypoint, \
-            optional
+        polygons : None or (N,#polys,#points,2) ndarray or imgaug.augmentables.polys.Polygon or imgaug.augmentables.polys.PolygonsOnImage or iterable of (#polys,#points,2) ndarray or iterable of tuple of number or iterable of imgaug.augmentables.kps.Keypoint or iterable of imgaug.augmentables.polys.Polygon or iterable of imgaug.augmentables.polys.PolygonsOnImage or iterable of iterable of (#points,2) ndarray or iterable of iterable of tuple of number or iterable of iterable of imgaug.augmentables.kps.Keypoint or iterable of iterable of imgaug.augmentables.polys.Polygon or iterable of iterable of iterable of tuple of number or iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint, optional
             The polygons to augment.
             This is similar to the `keypoints` parameter. However, each polygon
             may be made up of several (x,y) coordinates (three or more are
@@ -1783,23 +1705,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
               * ``iterable of iterable of iterable of tuple of number``
               * ``iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint``
 
-        line_strings : None \
-            or (N,#lines,#points,2) ndarray \
-            or imgaug.augmentables.lines.LineString \
-            or imgaug.augmentables.lines.LineStringOnImage \
-            or iterable of (#polys,#points,2) ndarray \
-            or iterable of tuple of number \
-            or iterable of imgaug.augmentables.kps.Keypoint \
-            or iterable of imgaug.augmentables.lines.LineString \
-            or iterable of imgaug.augmentables.lines.LineStringOnImage \
-            or iterable of iterable of (#points,2) ndarray \
-            or iterable of iterable of tuple of number \
-            or iterable of iterable of imgaug.augmentables.kps.Keypoint \
-            or iterable of iterable of imgaug.augmentables.lines.LineString \
-            or iterable of iterable of iterable of tuple of number \
-            or iterable of iterable of iterable of tuple of \
-            imgaug.augmentables.kps.Keypoint, \
-            optional
+        line_strings : None or (N,#lines,#points,2) ndarray or imgaug.augmentables.lines.LineString or imgaug.augmentables.lines.LineStringOnImage or iterable of (#polys,#points,2) ndarray or iterable of tuple of number or iterable of imgaug.augmentables.kps.Keypoint or iterable of imgaug.augmentables.lines.LineString or iterable of imgaug.augmentables.lines.LineStringOnImage or iterable of iterable of (#points,2) ndarray or iterable of iterable of tuple of number or iterable of iterable of imgaug.augmentables.kps.Keypoint or iterable of iterable of imgaug.augmentables.lines.LineString or iterable of iterable of iterable of tuple of number or iterable of iterable of iterable of tuple of imgaug.augmentables.kps.Keypoint, optional
             The line strings to augment.
             See `polygons`, which behaves similarly.
 
@@ -2078,8 +1984,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         -------
-        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray\
-                 or list of (H,W) ndarray
+        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray or list of (H,W) ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape ``(H, W)`` or
             ``(H, W, 3)``. If a single array, then it is expected to have
@@ -2168,8 +2073,7 @@ class Augmenter(object):  # pylint: disable=locally-disabled, unused-variable, l
 
         Parameters
         ----------
-        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray\
-                 or list of (H,W) ndarray
+        images : (N,H,W,3) ndarray or (H,W,3) ndarray or (H,W) ndarray or list of (H,W,3) ndarray or list of (H,W) ndarray
             List of images of which to show the augmented versions.
             If a list, then each element is expected to have shape ``(H, W)`` or ``(H, W, 3)``.
             If a single array, then it is expected to have shape ``(N, H, W, 3)``

@@ -2039,8 +2039,7 @@ class IterativeNoiseAggregator(StochasticParameter):
         the number of iterations will be sampled once per call
         to :func:`imgaug.parameters.IterativeNoiseAggregator._draw_samples`.
 
-    aggregation_method : imgaug.ALL or {'min', 'avg', 'max'} or list of str or\
-                         imgaug.parameters.StochasticParameter, optional
+    aggregation_method : imgaug.ALL or {'min', 'avg', 'max'} or list of str or imgaug.parameters.StochasticParameter, optional
         The method to use to aggregate the results of multiple iterations.
         If a string, it must have the value ``min`` or ``max`` or ``avg``.
         If ``min`` is chosen, the elementwise minimum will be computed over
@@ -2209,8 +2208,7 @@ class Sigmoid(StochasticParameter):
         other_param : imgaug.parameters.StochasticParameter
             See :func:`imgaug.parameters.Sigmoid.__init__`.
 
-        threshold : number or tuple of number or iterable of number or imgaug.parameters.StochasticParameter,\
-                    optional
+        threshold : number or tuple of number or iterable of number or imgaug.parameters.StochasticParameter, optional
             See :func:`imgaug.parameters.Sigmoid.__init__`.
 
         activated : bool or number, optional

@@ -775,9 +775,7 @@ class AllChannelsCLAHE(meta.Augmenter):
     clip_limit : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See ``imgaug.augmenters.contrast.CLAHE``.
 
-    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter \
-                        or tuple of tuple of int or tuple of list of int \
-                        or tuple of imgaug.parameters.StochasticParameter, optional
+    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or tuple of tuple of int or tuple of list of int or tuple of imgaug.parameters.StochasticParameter, optional
         See ``imgaug.augmenters.contrast.CLAHE``.
 
     tile_grid_size_px_min : int, optional
@@ -943,9 +941,7 @@ class CLAHE(meta.Augmenter):
             * If a list, then a random value will be sampled from that list per image.
             * If a StochasticParameter, then a value will be sampled per image from that parameter.
 
-    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter \
-                        or tuple of tuple of int or tuple of list of int \
-                        or tuple of imgaug.parameters.StochasticParameter, optional
+    tile_grid_size_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or tuple of tuple of int or tuple of list of int or tuple of imgaug.parameters.StochasticParameter, optional
         Kernel size, i.e. size of each local neighbourhood in pixels.
 
             * If an int, then that value will be used for all images for both kernel height and width.

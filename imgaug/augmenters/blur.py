@@ -357,8 +357,7 @@ class AverageBlur(meta.Augmenter):  # pylint: disable=locally-disabled, unused-v
 
     Parameters
     ----------
-    k : int or tuple of int or tuple of tuple of int or imgaug.parameters.StochasticParameter\
-        or tuple of StochasticParameter, optional
+    k : int or tuple of int or tuple of tuple of int or imgaug.parameters.StochasticParameter or tuple of StochasticParameter, optional
         Kernel size to use.
 
             * If a single int, then that value will be used for the height
