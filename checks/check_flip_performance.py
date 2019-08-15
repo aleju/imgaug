@@ -1,73 +1,94 @@
 from __future__ import print_function, division
 import timeit
+import argparse
 import numpy as np
+
+COMMANDS_HORIZONTAL_FLIPS = [
+    ("slice",
+     "arr2 = arr[:, ::-1, :]; "),
+    ("slice, contig",
+     "arr2 = arr[:, ::-1, :]; "
+     "arr2 = np.ascontiguousarray(arr2);"),
+    ("fliplr",
+     "arr2 = np.fliplr(arr); "),
+    ("fliplr contig",
+     "arr2 = np.fliplr(arr); "
+     "arr2 = np.ascontiguousarray(arr2);"),
+    ("cv2",
+     "arr2 = cv2.flip(arr, 1); "
+     "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "),
+    ("cv2 contig",
+     "arr2 = cv2.flip(arr, 1); "
+     "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "
+     "arr2 = np.ascontiguousarray(arr2); "),
+    ("fort cv2",
+     "arr = np.asfortranarray(arr); "
+     "arr2 = cv2.flip(arr, 1); "
+     "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "),
+    ("fort cv2 contig",
+     "arr = np.asfortranarray(arr); "
+     "arr2 = cv2.flip(arr, 1); "
+     "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "
+     "arr2 = np.ascontiguousarray(arr2); "),
+    ("cv2_",
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
+    ("cv2_ contig",
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = np.ascontiguousarray(arr); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
+    ("fort cv2_",
+     "arr = np.asfortranarray(arr); "
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
+    ("fort cv2_ contig",
+     "arr = np.asfortranarray(arr); "
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = np.ascontiguousarray(arr); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
+    ("cv2_ get",
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = arr.get(); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
+    ("cv2_ get contig",
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = arr.get(); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "
+     "arr = np.ascontiguousarray(arr); "),
+    ("fort cv2_ get",
+     "arr = np.asfortranarray(arr); "
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = arr.get(); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
+    ("fort cv2_ get contig",
+     "arr = np.asfortranarray(arr); "
+     "arr = cv2.flip(arr, 1, dst=arr); "
+     "arr = arr.get(); "
+     "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "
+     "arr = np.ascontiguousarray(arr); ")
+]
+
+COMMANDS_VERTICAL_FLIPS = []
+for name, command in COMMANDS_HORIZONTAL_FLIPS:
+    name = name.replace("fliplr", "flipud")
+    command = command.replace("[:, ::-1, :]", "[::-1, :, :]")
+    command = command.replace("fliplr", "flipud")
+    command = command.replace("cv2.flip(arr, 1", "cv2.flip(arr, 0")
+    COMMANDS_VERTICAL_FLIPS.append((name, command))
 
 
 def main():
-    commands = [
-        ("slice",
-         "arr2 = arr[:, ::-1, :]; "),
-        ("slice, contig",
-         "arr2 = arr[:, ::-1, :]; "
-         "arr2 = np.ascontiguousarray(arr2);"),
-        ("fliplr",
-         "arr2 = np.fliplr(arr); "),
-        ("fliplr contig",
-         "arr2 = np.fliplr(arr); "
-         "arr2 = np.ascontiguousarray(arr2);"),
-        ("cv2",
-         "arr2 = cv2.flip(arr, 1); "
-         "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "),
-        ("cv2 contig",
-         "arr2 = cv2.flip(arr, 1); "
-         "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "
-         "arr2 = np.ascontiguousarray(arr2); "),
-        ("fort cv2",
-         "arr = np.asfortranarray(arr); "
-         "arr2 = cv2.flip(arr, 1); "
-         "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "),
-        ("fort cv2 contig",
-         "arr = np.asfortranarray(arr); "
-         "arr2 = cv2.flip(arr, 1); "
-         "arr2 = arr2 if arr2.ndim == 3 else arr2[..., np.newaxis]; "
-         "arr2 = np.ascontiguousarray(arr2); "),
-        ("cv2_",
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
-        ("cv2_ contig",
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = np.ascontiguousarray(arr); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
-        ("fort cv2_",
-         "arr = np.asfortranarray(arr); "
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
-        ("fort cv2_ contig",
-         "arr = np.asfortranarray(arr); "
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = np.ascontiguousarray(arr); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
-        ("cv2_ get",
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = arr.get(); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
-        ("cv2_ get contig",
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = arr.get(); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "
-         "arr = np.ascontiguousarray(arr); "),
-        ("fort cv2_ get",
-         "arr = np.asfortranarray(arr); "
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = arr.get(); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "),
-        ("fort cv2_ get contig",
-         "arr = np.asfortranarray(arr); "
-         "arr = cv2.flip(arr, 1, dst=arr); "
-         "arr = arr.get(); "
-         "arr = arr if arr.ndim == 3 else arr[..., np.newaxis]; "
-         "arr = np.ascontiguousarray(arr); ")
-    ]
+    parser = argparse.ArgumentParser(
+        description="Test performance of horizontal or vertical flip methods")
+    parser.add_argument("--type", help="horizontal|vertical", required=True)
+    args = parser.parse_args()
+
+    assert args.type in ["horizontal", "vertical"]
+
+    commands = (
+        COMMANDS_HORIZONTAL_FLIPS
+        if args.type == "horizontal"
+        else COMMANDS_VERTICAL_FLIPS)
 
     number = 10000
     for dt in ["bool",
