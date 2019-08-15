@@ -1842,8 +1842,7 @@ class MultiPolygon(object):
 
         Parameters
         ----------
-        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon\
-                   or shapely.geometry.collection.GeometryCollection
+        geometry : shapely.geometry.MultiPolygon or shapely.geometry.Polygon or shapely.geometry.collection.GeometryCollection
             The object to convert to a MultiPolygon.
 
         label : None or str, optional

@@ -130,10 +130,7 @@ class AveragePooling(_AbstractPoolingBase):
 
     Attributes
     ----------
-    kernel_size : int or tuple of int or list of int \
-                  or imgaug.parameters.StochasticParameter \
-                  or tuple of tuple of int or tuple of list of int \
-                  or tuple of imgaug.parameters.StochasticParameter, optional
+    kernel_size : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or tuple of tuple of int or tuple of list of int or tuple of imgaug.parameters.StochasticParameter, optional
         The kernel size of the pooling operation.
 
         * If an int, then that value will be used for all images for both
@@ -240,10 +237,7 @@ class MaxPooling(_AbstractPoolingBase):
 
     Attributes
     ----------
-    kernel_size : int or tuple of int or list of int \
-                  or imgaug.parameters.StochasticParameter \
-                  or tuple of tuple of int or tuple of list of int \
-                  or tuple of imgaug.parameters.StochasticParameter, optional
+    kernel_size : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or tuple of tuple of int or tuple of list of int or tuple of imgaug.parameters.StochasticParameter, optional
         The kernel size of the pooling operation.
 
         * If an int, then that value will be used for all images for both
@@ -352,10 +346,7 @@ class MinPooling(_AbstractPoolingBase):
 
     Attributes
     ----------
-    kernel_size : int or tuple of int or list of int \
-                  or imgaug.parameters.StochasticParameter \
-                  or tuple of tuple of int or tuple of list of int \
-                  or tuple of imgaug.parameters.StochasticParameter, optional
+    kernel_size : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or tuple of tuple of int or tuple of list of int or tuple of imgaug.parameters.StochasticParameter, optional
         The kernel size of the pooling operation.
 
         * If an int, then that value will be used for all images for both
@@ -464,10 +455,7 @@ class MedianPooling(_AbstractPoolingBase):
 
     Attributes
     ----------
-    kernel_size : int or tuple of int or list of int \
-                  or imgaug.parameters.StochasticParameter \
-                  or tuple of tuple of int or tuple of list of int \
-                  or tuple of imgaug.parameters.StochasticParameter, optional
+    kernel_size : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or tuple of tuple of int or tuple of list of int or tuple of imgaug.parameters.StochasticParameter, optional
         The kernel size of the pooling operation.
 
         * If an int, then that value will be used for all images for both

@@ -177,8 +177,7 @@ class Resize(meta.Augmenter):
 
     Parameters
     ----------
-    size : 'keep' or int or float or tuple of int or tuple of float or list of int or list of float or\
-           imgaug.parameters.StochasticParameter or dict
+    size : 'keep' or int or float or tuple of int or tuple of float or list of int or list of float or imgaug.parameters.StochasticParameter or dict
         The new size of the images.
 
             * If this has the string value "keep", the original height and
@@ -210,8 +209,7 @@ class Resize(meta.Augmenter):
               value (e.g. resize images to a height of 64 pixels and resize
               the width so that the overall aspect ratio is maintained).
 
-    interpolation : imgaug.ALL or int or str or list of int or list of str or imgaug.parameters.StochasticParameter,\
-                    optional
+    interpolation : imgaug.ALL or int or str or list of int or list of str or imgaug.parameters.StochasticParameter, optional
         Interpolation to use.
 
             * If imgaug.ALL, then a random interpolation from ``nearest``, ``linear``,
@@ -583,8 +581,7 @@ class CropAndPad(meta.Augmenter):
               StochasticParameter (sample the amount to crop/pad from that
               parameter).
 
-    percent : None or int or float or imgaug.parameters.StochasticParameter \
-              or tuple, optional
+    percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
         The number of pixels to crop (negative values) or pad (positive values)
         on each side of the image given *in percent* of the image height/width.
         E.g. if this is set to 0.1, the augmenter will always crop away 10
@@ -613,8 +610,7 @@ class CropAndPad(meta.Augmenter):
               a StochasticParameter (sample the percentage to crop/pad from
               that parameter).
 
-    pad_mode : imgaug.ALL or str or list of str or \
-               imgaug.parameters.StochasticParameter, optional
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         Padding mode to use. The available modes match the numpy padding modes,
         i.e. ``constant``, ``edge``, ``linear_ramp``, ``maximum``, ``median``,
         ``minimum``, ``reflect``, ``symmetric``, ``wrap``. The modes
@@ -630,8 +626,7 @@ class CropAndPad(meta.Augmenter):
             * If StochasticParameter, a random mode will be sampled from this
               parameter per image.
 
-    pad_cval : number or tuple of number list of number or \
-               imgaug.parameters.StochasticParameter, optional
+    pad_cval : number or tuple of number list of number or imgaug.parameters.StochasticParameter, optional
         The constant value to use if the pad mode is ``constant`` or the end
         value to use if the mode is ``linear_ramp``.
         See :func:`imgaug.imgaug.pad` for more details.
@@ -1108,8 +1103,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
               that is contained in the list) or a StochasticParameter (sample
               the amount to pad from that parameter).
 
-    percent : None or int or float or imgaug.parameters.StochasticParameter \
-              or tuple, optional
+    percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
         The number of pixels to pad on each side of the image given
         *in percent* of the image height/width.
         E.g. if this is set to 0.1, the augmenter will always add 10 percent
@@ -1135,8 +1129,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
               StochasticParameter (sample the percentage to pad from that
               parameter).
 
-    pad_mode : imgaug.ALL or str or list of str or \
-               imgaug.parameters.StochasticParameter, optional
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         Padding mode to use. The available modes match the numpy padding modes,
         i.e. ``constant``, ``edge``, ``linear_ramp``, ``maximum``, ``median``,
         ``minimum``, ``reflect``, ``symmetric``, ``wrap``. The modes
@@ -1152,8 +1145,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
             * If StochasticParameter, a random mode will be sampled from this
               parameter per image.
 
-    pad_cval : number or tuple of number list of number or \
-               imgaug.parameters.StochasticParameter, optional
+    pad_cval : number or tuple of number list of number or imgaug.parameters.StochasticParameter, optional
         The constant value to use if the pad mode is ``constant`` or the end
         value to use if the mode is ``linear_ramp``.
         See :func:`imgaug.imgaug.pad` for more details.
@@ -1311,8 +1303,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
               value that is contained in the list) or a StochasticParameter
               (sample the amount to crop from that parameter).
 
-    percent : None or int or float or imgaug.parameters.StochasticParameter \
-              or tuple, optional
+    percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
         The number of pixels to crop away (cut off) on each side of the image
         given *in percent* of the image height/width.
         E.g. if this is set to 0.1, the augmenter will always crop away
@@ -1463,9 +1454,7 @@ class PadToFixedSize(meta.Augmenter):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
 
-    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center',\
-            'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter\
-            or tuple of StochasticParameter, optional
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         Sets the center point of the padding, which determines how the required padding amounts are distributed
         to each side. For a tuple ``(a, b)``, both ``a`` and ``b`` are expected to be in range ``[0.0, 1.0]``
         and describe the fraction of padding applied to the left/right (low/high values for ``a``) and the fraction
@@ -1749,9 +1738,7 @@ class CropToFixedSize(meta.Augmenter):
     height : int
         Fixed height of new images.
 
-    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center',\
-                'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter\
-                or tuple of StochasticParameter, optional
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
          Sets the center point of the cropping, which determines how the required cropping amounts are distributed
          to each side. For a tuple ``(a, b)``, both ``a`` and ``b`` are expected to be in range ``[0.0, 1.0]``
          and describe the fraction of cropping applied to the left/right (low/high values for ``a``) and the fraction
@@ -2020,9 +2007,7 @@ class KeepSizeByResize(meta.Augmenter):
     children : Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
         One or more augmenters to apply to images. These augmenters may change the image size.
 
-    interpolation : KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or\
-                    {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or\
-                    list of str or list of int or StochasticParameter, optional
+    interpolation : KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing images.
         Can take any value that :func:`imgaug.imgaug.imresize_single_image` accepts, e.g. ``cubic``.
 
@@ -2036,20 +2021,14 @@ class KeepSizeByResize(meta.Augmenter):
             * If this is a StochasticParameter, it will be queried once per call to ``_augment_images()`` and must
               return ``N`` strings or ints (matching the above mentioned ones) for ``N`` images.
 
-    interpolation_heatmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or\
-                             {'nearest', 'linear', 'area', 'cubic'} or\
-                             {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or\
-                             list of str or list of int or StochasticParameter, optional
+    interpolation_heatmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing heatmaps.
         Meaning and valid values are similar to `interpolation`. This parameter may also take the value
         ``KeepSizeByResize.SAME_AS_IMAGES``, which will lead to copying the interpolation modes used for the
         corresponding images. The value may also be returned on a per-image basis if `interpolation_heatmaps` is
         provided as a StochasticParameter or may be one possible value if it is provided as a list of strings.
 
-    interpolation_segmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or\
-                            {'nearest', 'linear', 'area', 'cubic'} or\
-                            {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or\
-                            list of str or list of int or StochasticParameter, optional
+    interpolation_segmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing segmentation maps.
         Similar to `interpolation_heatmaps`.
         NOTE: Only ``NO_RESIZE`` or nearest neighbour interpolation make sense

@@ -195,9 +195,7 @@ class Affine(meta.Augmenter):
 
     Parameters
     ----------
-    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter\
-            or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
-            optional
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
         Scaling factor to use,
         where 1.0 represents no change and 0.5 is zoomed out to 50 percent of the original size.
 
@@ -215,9 +213,7 @@ class Affine(meta.Augmenter):
               set different values for the axis. If they are set to the same
               ranges, different values may still be sampled per axis.
 
-    translate_percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
-                        dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
-                        optional
+    translate_percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
         Translation in percent relative to the image height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image height/width.
 
@@ -237,9 +233,7 @@ class Affine(meta.Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    translate_px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or\
-                   dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter},\
-                   optional
+    translate_px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
         Translation in pixels.
 
             * If None then equivalent to 0.0 unless translate_percent has a non-None value.
@@ -1046,9 +1040,7 @@ class AffineCv2(meta.Augmenter):
 
     Parameters
     ----------
-    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
-            dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
-            optional
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
         Scaling factor to use,
         where 1.0 represents no change and 0.5 is zoomed out to 50 percent of the original size.
 
@@ -1066,9 +1058,7 @@ class AffineCv2(meta.Augmenter):
               set different values for the axis. If they are set to the same
               ranges, different values may still be sampled per axis.
 
-    translate_percent : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or\
-                        dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter},\
-                        optional
+    translate_percent : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
         Translation in percent relative to the image
         height/width (x-translation, y-translation) to use,
         where 0 represents no change and 0.5 is half of the image
@@ -1089,9 +1079,7 @@ class AffineCv2(meta.Augmenter):
               If they are set to the same ranges, different values may still
               be sampled per axis.
 
-    translate_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or\
-                   dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter},\
-                   optional
+    translate_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
         Translation in pixels.
 
             * If a single int, then that value will be used for all images.

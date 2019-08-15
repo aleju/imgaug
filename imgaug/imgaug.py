@@ -1038,8 +1038,7 @@ def quokka_polygons(size=None, extract=None):
         original image are used). Floats lead to relative size changes, ints
         to absolute sizes in pixels.
 
-    extract : None or 'square' or tuple of number or imgaug.BoundingBox or \
-              imgaug.BoundingBoxesOnImage
+    extract : None or 'square' or tuple of number or imgaug.BoundingBox or imgaug.BoundingBoxesOnImage
         Subarea to extract from the image. See :func:`imgaug.quokka`.
 
     Returns
