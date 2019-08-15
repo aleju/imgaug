@@ -424,11 +424,23 @@ class Test_fliplr(unittest.TestCase):
         assert arr_flipped.shape == arr.shape
         assert np.array_equal(arr_flipped, expected)
 
+    def test_zero_height_arr_cv2(self):
+        arr = np.zeros((0, 4, 1), dtype=np.uint8)
+        arr_flipped = fliplib._fliplr_cv2(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (0, 4, 1)
+
     def test_zero_width_arr_cv2(self):
         arr = np.zeros((4, 0, 1), dtype=np.uint8)
         arr_flipped = fliplib._fliplr_cv2(arr)
         assert arr_flipped.dtype.name == "uint8"
         assert arr_flipped.shape == (4, 0, 1)
+
+    def test_zero_height_arr_sliced(self):
+        arr = np.zeros((0, 4, 1), dtype=np.uint8)
+        arr_flipped = fliplib._fliplr_sliced(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (0, 4, 1)
 
     def test_zero_width_arr_sliced(self):
         arr = np.zeros((4, 0, 1), dtype=np.uint8)

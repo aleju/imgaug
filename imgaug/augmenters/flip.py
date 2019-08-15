@@ -733,8 +733,8 @@ def _fliplr_sliced(arr):
 
 
 def _fliplr_cv2(arr):
-    # cv2.flip() returns None for zero-width arrays
-    if arr.shape[1] == 0:
+    # cv2.flip() returns None for arrays with zero height or width
+    if arr.shape[0] == 0 or arr.shape[1] == 0:
         return np.copy(arr)
 
     result = cv2.flip(arr, 1)
