@@ -1,6 +1,18 @@
 from __future__ import print_function, division, absolute_import
 
 import time
+import sys
+# unittest only added in 3.4 self.subTest()
+if sys.version_info[0] < 3 or sys.version_info[1] < 4:
+    import unittest2 as unittest
+else:
+    import unittest
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
+import warnings
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -14,6 +26,7 @@ from imgaug import dtypes as iadt
 from imgaug.testutils import keypoints_equal, reseed
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+import imgaug.augmenters.flip as fliplib
 
 
 def main():
@@ -327,6 +340,166 @@ def test_Fliplr():
         image_aug = aug.augment_image(image)
         assert image_aug.dtype.type == dtype
         assert np.allclose(image_aug, expected, atol=atol)
+
+
+class Test_fliplr(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @mock.patch("imgaug.augmenters.flip._fliplr_sliced")
+    @mock.patch("imgaug.augmenters.flip._fliplr_cv2")
+    def test__fliplr_cv2_called_mocked(self, mock_cv2, mock_sliced):
+        for dtype in ["uint8", "uint16", "int8", "int16"]:
+            mock_cv2.reset_mock()
+            mock_sliced.reset_mock()
+            arr = np.zeros((1, 1), dtype=dtype)
+
+            _ = fliplib.fliplr(arr)
+
+            mock_cv2.assert_called_once_with(arr)
+            assert mock_sliced.call_count == 0
+
+    @mock.patch("imgaug.augmenters.flip._fliplr_sliced")
+    @mock.patch("imgaug.augmenters.flip._fliplr_cv2")
+    def test__fliplr_sliced_called_mocked(self, mock_cv2, mock_sliced):
+        for dtype in ["bool", "uint32", "uint64", "int32", "int64",
+                      "float16", "float32", "float64", "float128"]:
+            mock_cv2.reset_mock()
+            mock_sliced.reset_mock()
+            arr = np.zeros((1, 1), dtype=dtype)
+
+            _ = fliplib.fliplr(arr)
+
+            assert mock_cv2.call_count == 0
+            mock_sliced.assert_called_once_with(arr)
+
+    def test__fliplr_cv2_2d(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_cv2, None)
+
+    def test__fliplr_cv2_3d_single_channel(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_cv2, 1)
+
+    def test__fliplr_cv2_3d_three_channels(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_cv2, 3)
+
+    def test__fliplr_cv2_3d_four_channels(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_cv2, 4)
+
+    def test__fliplr_sliced_2d(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, None)
+
+    def test__fliplr_sliced_3d_single_channel(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 1)
+
+    def test__fliplr_sliced_3d_three_channels(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 3)
+
+    def test__fliplr_sliced_3d_four_channels(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 4)
+
+    @classmethod
+    def _test__fliplr_subfunc_n_channels(cls, func, nb_channels):
+        arr = np.uint8([
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [10, 11, 12, 13]
+        ])
+        if nb_channels is not None:
+            arr = np.tile(arr[..., np.newaxis], (1, 1, nb_channels))
+            for c in sm.xrange(nb_channels):
+                arr[..., c] += c
+
+        arr_flipped = func(arr)
+
+        expected = np.uint8([
+            [3, 2, 1, 0],
+            [7, 6, 5, 4],
+            [13, 12, 11, 10]
+        ])
+        if nb_channels is not None:
+            expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
+            for c in sm.xrange(nb_channels):
+                expected[..., c] += c
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == arr.shape
+        assert np.array_equal(arr_flipped, expected)
+
+    def test_zero_width_arr_cv2(self):
+        arr = np.zeros((4, 0, 1), dtype=np.uint8)
+        arr_flipped = fliplib._fliplr_cv2(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (4, 0, 1)
+
+    def test_zero_width_arr_sliced(self):
+        arr = np.zeros((4, 0, 1), dtype=np.uint8)
+        arr_flipped = fliplib._fliplr_sliced(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (4, 0, 1)
+
+    def test_bool_faithful(self):
+        arr = np.array([[False, False, True]], dtype=bool)
+        arr_flipped = fliplib.fliplr(arr)
+        expected = np.array([[True, False, False]], dtype=bool)
+        assert arr_flipped.dtype.name == "bool"
+        assert arr_flipped.shape == (1, 3)
+        assert np.array_equal(arr_flipped, expected)
+
+    def test_uint_int_faithful(self):
+        dts = ["uint8", "uint16", "uint32", "uint64",
+               "int8", "int16", "int32", "int64"]
+        for dt in dts:
+            with self.subTest(dtype=dt):
+                dt = np.dtype(dt)
+                minv, center, maxv = iadt.get_value_range_of_dtype(dt)
+                center = int(center)
+                arr = np.array([[minv, center, maxv]], dtype=dt)
+
+                arr_flipped = fliplib.fliplr(arr)
+
+                expected = np.array([[maxv, center, minv]], dtype=dt)
+                assert arr_flipped.dtype.name == dt.name
+                assert arr_flipped.shape == (1, 3)
+                assert np.array_equal(arr_flipped, expected)
+
+    def test_float_faithful_to_min_max(self):
+        dts = ["float16", "float32", "float64", "float128"]
+        for dt in dts:
+            with self.subTest(dtype=dt):
+                dt = np.dtype(dt)
+                minv, center, maxv = iadt.get_value_range_of_dtype(dt)
+                center = int(center)
+                atol = 1e-4 if dt.name == "float16" else 1e-8
+                arr = np.array([[minv, center, maxv]], dtype=dt)
+
+                arr_flipped = fliplib.fliplr(arr)
+
+                expected = np.array([[maxv, center, minv]], dtype=dt)
+                assert arr_flipped.dtype.name == dt.name
+                assert arr_flipped.shape == (1, 3)
+                assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
+
+    def test_float_faithful_to_large_values(self):
+        dts = ["float16", "float32", "float64", "float128"]
+        values = [
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2],  # float16
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**4, 10.0**6],  # float32
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**6, 10.0**10],  # float64
+            [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**7, 10.0**11],  # float128
+        ]
+        for dt, values_i in zip(dts, values):
+            for value in values_i:
+                with self.subTest(dtype=dt, value=value):
+                    dt = np.dtype(dt)
+                    minv, center, maxv = -value, 0.0, value
+                    atol = 1e-4 if dt.name == "float16" else 1e-8
+                    arr = np.array([[minv, center, maxv]], dtype=dt)
+
+                    arr_flipped = fliplib.fliplr(arr)
+
+                    expected = np.array([[maxv, center, minv]], dtype=dt)
+                    assert arr_flipped.dtype.name == dt.name
+                    assert arr_flipped.shape == (1, 3)
+                    assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
 
 
 def test_Flipud():
