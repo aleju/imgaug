@@ -743,6 +743,50 @@ def _fliplr_cv2(arr):
     return result
 
 
+def flipud(arr):
+    """Flip an image-like array vertically.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
+        * ``int32``: yes; fully tested
+        * ``int64``: yes; fully tested
+        * ``float16``: yes; fully tested
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: yes; fully tested
+        * ``bool``: yes; fully tested
+
+    Parameters
+    ----------
+    arr : ndarray
+        A 2D/3D `(H, W, [C])` image array.
+
+    Returns
+    -------
+    ndarray
+        Vertically flipped array.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters.flip as flip
+    >>> arr = np.arange(16).reshape((4, 4))
+    >>> arr_flipped = flip.flipud(arr)
+
+    Create a ``4x4`` array and flip it vertically.
+
+    """
+    # Note that this function is currently not called by Flipud for performance
+    # reasons. Changing this will therefore not affect Flipud.
+    return arr[::-1, ...]
+
+
 def HorizontalFlip(*args, **kwargs):
     """Alias for Fliplr."""
     return Fliplr(*args, **kwargs)
@@ -916,7 +960,9 @@ class Flipud(meta.Augmenter):
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, (image, sample) in enumerate(zip(images, samples)):
             if sample > 0.5:
-                images[i] = image[::-1, :, ...]
+                # We currently do not use flip.flipud() here, because that
+                # saves a function call.
+                images[i] = image[::-1, ...]
         return images
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
