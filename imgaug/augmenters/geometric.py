@@ -1,5 +1,4 @@
-"""
-Augmenters that apply affine transformations or other similar augmentations.
+"""Augmenters that apply affine or similar transformations.
 
 Do not import directly from this file, as the categorization is not final.
 Use instead ::
@@ -45,7 +44,8 @@ class Affine(meta.Augmenter):
     """
     Augmenter to apply affine transformations to images.
 
-    This is mostly a wrapper around skimage's AffineTransform class and warp function.
+    This is mostly a wrapper around the corresponding classes and functions
+    in OpenCV and skimage..
 
     Affine transformations involve:
 
@@ -82,8 +82,9 @@ class Affine(meta.Augmenter):
             * ``float128``: no (2)
             * ``bool``: yes; tested
 
-            - (1) scikit-image converts internally to float64, which might affect the accuracy of
-                  large integers. In tests this seemed to not be an issue.
+            - (1) scikit-image converts internally to float64, which might
+                  affect the accuracy of large integers. In tests this seemed
+                  to not be an issue.
             - (2) results too inaccurate
 
         if (backend="skimage", order in [3, 4])::
@@ -102,8 +103,9 @@ class Affine(meta.Augmenter):
             * ``float128``: no (2)
             * ``bool``: yes; tested
 
-            - (1) scikit-image converts internally to float64, which might affect the accuracy of
-                  large integers. In tests this seemed to not be an issue.
+            - (1) scikit-image converts internally to float64, which might
+                  affect the accuracy of large integers. In tests this seemed
+                  to not be an issue.
             - (2) results too inaccurate
             - (3) ``NaN`` around minimum and maximum of float64 value range
 
@@ -123,8 +125,9 @@ class Affine(meta.Augmenter):
                 * ``float128``: no (2)
                 * ``bool``: yes; tested
 
-                - (1) scikit-image converts internally to float64, which might affect the accuracy of
-                      large integers. In tests this seemed to not be an issue.
+                - (1) scikit-image converts internally to ``float64``, which
+                      might affect the accuracy of large integers. In tests
+                      this seemed to not be an issue.
                 - (2) results too inaccurate
                 - (3) ``NaN`` around minimum and maximum of float64 value range
 
@@ -165,7 +168,8 @@ class Affine(meta.Augmenter):
             * ``bool``: yes; tested (4)
 
             - (1) rejected by cv2
-            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4) (...)imgwarp.cpp:1805: error:
+            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4)
+                  (...)imgwarp.cpp:1805: error:
                   (-215:Assertion failed) ifunc != 0 in function 'remap'``
             - (3) mapped internally to ``int16``
             - (4) mapped internally to ``float32``
@@ -187,7 +191,8 @@ class Affine(meta.Augmenter):
             * ``bool``: yes; tested (4)
 
             - (1) rejected by cv2
-            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4) (...)imgwarp.cpp:1805: error:
+            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4)
+                  (...)imgwarp.cpp:1805: error:
                   (-215:Assertion failed) ifunc != 0 in function 'remap'``
             - (3) mapped internally to ``int16``
             - (4) mapped internally to ``float32``
@@ -196,90 +201,95 @@ class Affine(meta.Augmenter):
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
-        Scaling factor to use,
-        where 1.0 represents no change and 0.5 is zoomed out to 50 percent of the original size.
+        Scaling factor to use, where ``1.0`` denotes "no change" and
+        ``0.5`` is zoomed out to ``50`` percent of the original size.
 
             * If a single number, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled from the range
-              ``a <= x <= b`` per image. That value will be used identically for
-              both x- and y-axis.
-            * If a list, then a random value will eb sampled from that list
-              per image.
-            * If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            * If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`scale`). Using a dictionary allows to
-              set different values for the axis. If they are set to the same
-              ranges, different values may still be sampled per axis.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``. That value will be
+              used identically for both x- and y-axis.
+            * If a list, then a random value will be sampled from that list
+              per image (again, used for both x- and y-axis).
+            * If a ``StochasticParameter``, then from that parameter a value
+              will be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys ``x``
+              and/or ``y``. Each of these keys can have the same values as
+              described above. Using a dictionary allows to set different
+              values for the two axis and sampling will then happen
+              *independently* per axis, resulting in samples that differ
+              between the axes.
 
     translate_percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
-        Translation in percent relative to the image height/width (x-translation, y-translation) to use,
-        where 0 represents no change and 0.5 is half of the image height/width.
+        Translation as a fraction of the image height/width (x-translation,
+        y-translation), where ``0`` denotes "no change" and ``0.5`` denotes
+        "half of the axis size".
 
-            * If None then equivalent to 0 unless translate_px has a non-None value.
+            * If ``None`` then equivalent to ``0.0`` unless `translate_px` has
+              a value other than ``None``.
             * If a single number, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled from the range
-              ``a <= x <= b`` per image. That percent value will be used identically
-              for both x- and y-axis.
-            * If a list, then a random value will eb sampled from that list
-              per image.
-            * If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            * If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`translate_percent`).
-              Using a dictionary allows to set different values for the axis.
-              If they are set to the same ranges, different values may still
-              be sampled per axis.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``. That sampled fraction
+              value will be used identically for both x- and y-axis.
+            * If a list, then a random value will be sampled from that list
+              per image (again, used for both x- and y-axis).
+            * If a ``StochasticParameter``, then from that parameter a value
+              will be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys ``x``
+              and/or ``y``. Each of these keys can have the same values as
+              described above. Using a dictionary allows to set different
+              values for the two axis and sampling will then happen
+              *independently* per axis, resulting in samples that differ
+              between the axes.
 
     translate_px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
         Translation in pixels.
 
-            * If None then equivalent to 0.0 unless translate_percent has a non-None value.
+            * If ``None`` then equivalent to ``0`` unless `translate_percent`
+              has a value other than ``None``.
             * If a single int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled from the discrete
-              range ``[a..b]`` per image. That number will be used identically
-              for both x- and y-axis.
-            * If a list, then a random value will eb sampled from that list
-              per image.
-            * If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            * If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`translate_px`).
-              Using a dictionary allows to set different values for the axis.
-              If they are set to the same ranges, different values may still
-              be sampled per axis.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the discrete interval ``[a..b]``. That number
+              will be used identically for both x- and y-axis.
+            * If a list, then a random value will be sampled from that list
+              per image (again, used for both x- and y-axis).
+            * If a ``StochasticParameter``, then from that parameter a value
+              will be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys ``x``
+              and/or ``y``. Each of these keys can have the same values as
+              described above. Using a dictionary allows to set different
+              values for the two axis and sampling will then happen
+              *independently* per axis, resulting in samples that differ
+              between the axes.
 
     rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Rotation in degrees (_NOT_ radians), i.e. expected value range is
-        0 to 360 for positive rotations (may also be negative). Rotation
-        happens around the _center_ of the image, not the top left corner
-        as in some other frameworks.
+        Rotation in degrees (**NOT** radians), i.e. expected value range is
+        around ``[-360, 360]``. Rotation happens around the *center* of the
+        image, not the top left corner as in some other frameworks.
 
             * If a number, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled per image from the
-              range ``a <= x <= b`` and be used as the rotation value.
-            * If a list, then a random value will eb sampled from that list
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]`` and used as the rotation
+              value.
+            * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then this parameter will be used to
+            * If a ``StochasticParameter``, then this parameter will be used to
               sample the rotation value per image.
 
     shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Shear in degrees (_NOT_ radians), i.e. expected value range is
-        0 to 360 for positive shear (may also be negative).
+        Shear in degrees (**NOT** radians), i.e. expected value range is
+        around ``[-360, 360]``.
 
-            * If a float/int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled per image from the
-              range ``a <= x <= b`` and be used as the rotation value.
-            * If a list, then a random value will eb sampled from that list
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]`` and be used as the
+              rotation value.
+            * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then this parameter will be used to
-              sample the shear value per image.
+            * If a ``StochasticParameter``, then this parameter will be used
+              to sample the shear value per image.
 
     order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        Interpolation order to use. Same meaning as in skimage:
+        Interpolation order to use. Same meaning as in ``skimage``:
 
             * ``0``: ``Nearest-neighbor``
             * ``1``: ``Bi-linear`` (default)
@@ -288,9 +298,9 @@ class Affine(meta.Augmenter):
             * ``4``: ``Bi-quartic``
             * ``5``: ``Bi-quintic``
 
-        Method 0 and 1 are fast, 3 is a bit slower, 4 and 5 are very slow.
-        If the backend is ``cv2``, the mapping to OpenCV's interpolation modes
-        is as follows:
+        Method ``0`` and ``1`` are fast, ``3`` is a bit slower, ``4`` and
+        ``5`` are very slow. If the backend is ``cv2``, the mapping to
+        OpenCV's interpolation modes is as follows:
 
             * ``0`` -> ``cv2.INTER_NEAREST``
             * ``1`` -> ``cv2.INTER_LINEAR``
@@ -300,45 +310,35 @@ class Affine(meta.Augmenter):
 
         As datatypes this parameter accepts:
 
-            * If a single int, then that order will be used for all images.
-            * If an iterable, then for each image a random value will be sampled
-              from that iterable (i.e. list of allowed order values).
-            * If imgaug.ALL, then equivalant to list ``[0, 1, 3, 4, 5]`` in case of backend ``skimage``
-              and otherwise ``[0, 1, 3]``.
-            * If StochasticParameter, then that parameter is queried per image
-              to sample the order value to use.
+            * If a single ``int``, then that order will be used for all images.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If ``imgaug.ALL``, then equivalant to list ``[0, 1, 3, 4, 5]``
+              in case of ``backend=skimage`` and otherwise ``[0, 1, 3]``.
+            * If ``StochasticParameter``, then that parameter is queried per
+              image to sample the order value to use.
 
     cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        The constant value used for skimage's transform function.
-        This is the value used to fill up pixels in the result image that
-        didn't exist in the input image (e.g. when translating to the left,
-        some new pixels are created at the right). Such a fill-up with a
-        constant value only happens, when `mode` is "constant".
-        The expected value range is ``[0, 255]``. It may be a float value.
+        The constant value to use when filling in newly created pixels.
+        (E.g. translating by 1px to the right will create a new 1px-wide
+        column of pixels on the left of the image).  The value is only used
+        when `mode=constant`. The expected value range is ``[0, 255]`` for
+        ``uint8`` images. It may be a float value.
 
             * If this is a single number, then that value will be used
               (e.g. 0 results in black pixels).
-            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
-              is picked per image.
+            * If a tuple ``(a, b)``, then three values (for three image
+              channels) will be uniformly sampled per image from the
+              interval ``[a, b]``.
             * If a list, then a random value will be sampled from that list
               per image.
-            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
-              sampled per image.
-            * If a StochasticParameter, a new value will be sampled from the
-              parameter per image.
-
-    fit_output : bool, optional
-        Whether the image after affine transformation is completely contained in the output image.
-        If False, parts of the image may be outside of the image plane or the image might make up only a small
-        part of the image plane. Activating this can be useful e.g. for rotations by 45 degrees to avoid that the
-        image corners are outside of the image plane.
-        Note that activating this will negate translation.
-        Note also that activating this may lead to image sizes differing from the input image sizes. To avoid this,
-        wrap ``Affine`` in ``KeepSizeByResize``, e.g. ``KeepSizeByResize(Affine(...))``.
+            * If ``imgaug.ALL`` then equivalent to tuple ``(0, 255)`.
+            * If a ``StochasticParameter``, a new value will be sampled from
+              the parameter per image.
 
     mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        Parameter that defines the handling of newly created pixels.
-        Same meaning as in skimage (and numpy.pad):
+        Method to use when filling in newly created pixels.
+        Same meaning as in ``skimage`` (and :func:`numpy.pad`):
 
             * ``constant``: Pads with a constant value
             * ``edge``: Pads with the edge values of array
@@ -361,25 +361,39 @@ class Affine(meta.Augmenter):
         The datatype of the parameter may be:
 
             * If a single string, then that mode will be used for all images.
-            * If a list of strings, then per image a random mode will be picked
-              from that list.
-            * If imgaug.ALL, then a random mode from all possible modes will be
-              picked.
-            * If StochasticParameter, then the mode will be sampled from that
-              parameter per image, i.e. it must return only the above mentioned
-              strings.
+            * If a list of strings, then a random mode will be picked
+              from that list per image.
+            * If ``imgaug.ALL``, then a random mode from all possible modes
+              will be picked.
+            * If ``StochasticParameter``, then the mode will be sampled from
+              that parameter per image, i.e. it must return only the above
+              mentioned strings.
+
+    fit_output : bool, optional
+        Whether to modify the affine transformation so that the whole output
+        image is always contained in the image plane (``True``) or accept
+        parts of the image being outside the image plane (``False``).
+        This can be thought of as first applying the affine transformation
+        and then applying a second transformation to "zoom in" on the new
+        image so that it fits the image plane,
+        This is useful to avoid corners of the image being outside of the image
+        plane after applying rotations. It will however negate translation
+        and scaling.
+        Note also that activating this may lead to image sizes differing from
+        the input image sizes. To avoid this, wrap ``Affine`` in
+        :class:`imgaug.augmenters.size.KeepSizeByResize`,
+        e.g. ``KeepSizeByResize(Affine(...))``.
 
     backend : str, optional
         Framework to use as a backend. Valid values are ``auto``, ``skimage``
         (scikit-image's warp) and ``cv2`` (OpenCV's warp).
         If ``auto`` is used, the augmenter will automatically try
-        to use ``cv2`` where possible (order must be in ``[0, 1, 3]`` and
-        image's dtype uint8, otherwise skimage is chosen). It will
-        silently fall back to skimage if order/dtype is not supported by cv2.
-        cv2 is generally faster than skimage. It also supports RGB cvals,
+        to use ``cv2`` whenever possible (order must be in ``[0, 1, 3]``). It
+        will silently fall back to skimage if order/dtype is not supported by
+        cv2. cv2 is generally faster than skimage. It also supports RGB cvals,
         while skimage will resort to intensity cvals (i.e. 3x the same value
-        as RGB). If ``cv2`` is chosen and order is 2 or 4, it will automatically
-        fall back to order 3.
+        as RGB). If ``cv2`` is chosen and order is ``2`` or ``4``, it will
+        automatically fall back to order ``3``.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -392,62 +406,71 @@ class Affine(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Affine(scale=2.0)
 
-    zooms all images by a factor of 2.
+    Zoom in on all images by a factor of ``2``.
 
     >>> aug = iaa.Affine(translate_px=16)
 
-    translates all images on the x- and y-axis by 16 pixels (to the
-    right/top), fills up any new pixels with zero (black values).
+    Translate all images on the x- and y-axis by 16 pixels (towards the
+    bottom right) and fill up any new pixels with zero (black values).
 
     >>> aug = iaa.Affine(translate_percent=0.1)
 
-    translates all images on the x- and y-axis by 10 percent of their
-    width/height (to the right/top), fills up any new pixels with zero
+    Translate all images on the x- and y-axis by ``10`` percent of their
+    width/height (towards the bottom right). The pixel values are computed
+    per axis based on that axis' size. Fill up any new pixels with zero
     (black values).
 
     >>> aug = iaa.Affine(rotate=35)
 
-    rotates all images by 35 degrees, fills up any new pixels with zero
+    Rotate all images by ``35`` *degrees*. Fill up any new pixels with zero
     (black values).
 
     >>> aug = iaa.Affine(shear=15)
 
-    rotates all images by 15 degrees, fills up any new pixels with zero
+    Shear all images by ``15`` *degrees*. Fill up any new pixels with zero
     (black values).
 
     >>> aug = iaa.Affine(translate_px=(-16, 16))
 
-    translates all images on the x- and y-axis by a random value
-    between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
-    sampled once per image), fills up any new pixels with zero (black values).
+    Translate all images on the x- and y-axis by a random value
+    between ``-16`` and ``16`` pixels (to the bottom right) and fill up any new
+    pixels with zero (black values). The translation value is sampled once
+    per image and is the same for both axis.
 
     >>> aug = iaa.Affine(translate_px={"x": (-16, 16), "y": (-4, 4)})
 
-    translates all images on the x-axis by a random value
-    between -16 and 16 pixels (to the right) and on the y-axis by a
-    random value between -4 and 4 pixels to the top. Even if both ranges
-    were the same, both axis could use different samples.
-    Fills up any new pixels with zero (black values).
+    Translate all images on the x-axis by a random value
+    between ``-16`` and ``16`` pixels (to the right) and on the y-axis by a
+    random value between ``-4`` and ``4`` pixels to the bottom. The sampling
+    happens independently per axis, so even if both intervals were identical,
+    the sampled axis-wise values would likely be different.
+    This also fills up any new pixels with zero (black values).
 
     >>> aug = iaa.Affine(scale=2.0, order=[0, 1])
 
-    same as previously, but uses (randomly) either nearest neighbour
-    interpolation or linear interpolation.
+    Same as in the above `scale` example, but uses (randomly) either
+    nearest neighbour interpolation or linear interpolation. If `order` is
+    not specified, ``order=1`` would be used by default.
 
     >>> aug = iaa.Affine(translate_px=16, cval=(0, 255))
 
-    same as previously, but fills up any new pixels with a random
-    brightness (same for the whole image).
+    Same as in the `translate_px` example above, but newly created pixels
+    are now filled with a random color (sampled once per image and the
+    same for all newly created pixels within that image).
 
     >>> aug = iaa.Affine(translate_px=16, mode=["constant", "edge"])
 
-    same as previously, but fills up the new pixels in only 50 percent
-    of all images with black values. In the other 50 percent of all cases,
-    the value of the nearest edge is used.
+    Similar to the previous example, but the newly created pixels are
+    filled with black pixels in half of all images (mode ``constant`` with
+    default `cval` being ``0``) and in the other half of all images using
+    ``edge`` mode, which repeats the color of the spatially closest pixel
+    of the corresponding image edge.
 
     """
+
     VALID_DTYPES_CV2_ORDER_0 = {"uint8", "uint16", "int8", "int16", "int32",
                                 "float16", "float32", "float64",
                                 "bool"}
@@ -455,9 +478,12 @@ class Affine(meta.Augmenter):
                                     "float16", "float32", "float64",
                                     "bool"}
 
-    def __init__(self, scale=1.0, translate_percent=None, translate_px=None, rotate=0.0, shear=0.0, order=1, cval=0,
-                 mode="constant", fit_output=False, backend="auto", name=None, deterministic=False, random_state=None):
-        super(Affine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
+                 rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(Affine, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
         assert backend in ["auto", "skimage", "cv2"], (
             "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
@@ -490,12 +516,12 @@ class Affine(meta.Augmenter):
             if backend == "auto" or backend == "cv2":
                 self.order = iap.Choice([0, 1, 3])
             else:
-                # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws
-                # a warning)
+                # dont use order=2 (bi-quadratic) because that is apparently
+                # currently not recommended (and throws a warning)
                 self.order = iap.Choice([0, 1, 3, 4, 5])
         elif ia.is_single_integer(order):
             assert 0 <= order <= 5, (
-                "Expected order's integer value to be in range 0 <= x <= 5, "
+                "Expected order's integer value to be in the interval [0, 5], "
                 "got %d." % (order,))
             if backend == "cv2":
                 assert order in [0, 1, 3], (
@@ -517,15 +543,18 @@ class Affine(meta.Augmenter):
         elif isinstance(order, iap.StochasticParameter):
             self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int, list of int or StochasticParameter, got %s." % (
-                type(order),))
+            raise Exception(
+                "Expected order to be imgaug.ALL, int, list of int or "
+                "StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            # TODO change this so that it is dynamically created per image (or once per dtype)
+            # TODO change this so that it is dynamically created per image
+            #      (or once per dtype)
             self.cval = iap.Uniform(0, 255)  # skimage transform expects float
         else:
-            self.cval = iap.handle_continuous_param(cval, "cval", value_range=None, tuple_to_uniform=True,
-                                                    list_to_choice=True)
+            self.cval = iap.handle_continuous_param(
+                cval, "cval", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         # skimage   | cv2
@@ -542,7 +571,8 @@ class Affine(meta.Augmenter):
             "wrap": cv2.BORDER_WRAP
         }
         if mode == ia.ALL:
-            self.mode = iap.Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
+            self.mode = iap.Choice(["constant", "edge", "symmetric",
+                                    "reflect", "wrap"])
         elif ia.is_string(mode):
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
@@ -553,8 +583,9 @@ class Affine(meta.Augmenter):
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
-            raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, "
-                            + "got %s." % (type(mode),))
+            raise Exception(
+                "Expected mode to be imgaug.ALL, a string, a list of strings "
+                "or StochasticParameter, got %s." % (type(mode),))
 
         # scale
         if isinstance(scale, dict):
@@ -564,14 +595,17 @@ class Affine(meta.Augmenter):
             x = scale.get("x", 1.0)
             y = scale.get("y", 1.0)
             self.scale = (
-                iap.handle_continuous_param(x, "scale['x']", value_range=(0+1e-4, None), tuple_to_uniform=True,
-                                            list_to_choice=True),
-                iap.handle_continuous_param(y, "scale['y']", value_range=(0+1e-4, None), tuple_to_uniform=True,
-                                            list_to_choice=True)
+                iap.handle_continuous_param(
+                    x, "scale['x']", value_range=(0+1e-4, None),
+                    tuple_to_uniform=True, list_to_choice=True),
+                iap.handle_continuous_param(
+                    y, "scale['y']", value_range=(0+1e-4, None),
+                    tuple_to_uniform=True, list_to_choice=True)
             )
         else:
-            self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0+1e-4, None), tuple_to_uniform=True,
-                                                     list_to_choice=True)
+            self.scale = iap.handle_continuous_param(
+                scale, "scale", value_range=(0+1e-4, None),
+                tuple_to_uniform=True, list_to_choice=True)
 
         # translate
         if translate_percent is None and translate_px is None:
@@ -590,14 +624,17 @@ class Affine(meta.Augmenter):
                 x = translate_percent.get("x", 0)
                 y = translate_percent.get("y", 0)
                 self.translate = (
-                    iap.handle_continuous_param(x, "translate_percent['x']", value_range=None, tuple_to_uniform=True,
-                                                list_to_choice=True),
-                    iap.handle_continuous_param(y, "translate_percent['y']", value_range=None, tuple_to_uniform=True,
-                                                list_to_choice=True)
+                    iap.handle_continuous_param(
+                        x, "translate_percent['x']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True),
+                    iap.handle_continuous_param(
+                        y, "translate_percent['y']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True)
                 )
             else:
-                self.translate = iap.handle_continuous_param(translate_percent, "translate_percent", value_range=None,
-                                                             tuple_to_uniform=True, list_to_choice=True)
+                self.translate = iap.handle_continuous_param(
+                    translate_percent, "translate_percent", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True)
         else:
             # translate by pixels
             if isinstance(translate_px, dict):
@@ -607,34 +644,45 @@ class Affine(meta.Augmenter):
                 x = translate_px.get("x", 0)
                 y = translate_px.get("y", 0)
                 self.translate = (
-                    iap.handle_discrete_param(x, "translate_px['x']", value_range=None, tuple_to_uniform=True,
-                                              list_to_choice=True, allow_floats=False),
-                    iap.handle_discrete_param(y, "translate_px['y']", value_range=None, tuple_to_uniform=True,
-                                              list_to_choice=True, allow_floats=False)
+                    iap.handle_discrete_param(
+                        x, "translate_px['x']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True,
+                        allow_floats=False),
+                    iap.handle_discrete_param(
+                        y, "translate_px['y']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True,
+                        allow_floats=False)
                 )
             else:
-                self.translate = iap.handle_discrete_param(translate_px, "translate_px", value_range=None,
-                                                           tuple_to_uniform=True, list_to_choice=True,
-                                                           allow_floats=False)
+                self.translate = iap.handle_discrete_param(
+                    translate_px, "translate_px", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True,
+                    allow_floats=False)
 
-        self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True,
-                                                  list_to_choice=True)
-        self.shear = iap.handle_continuous_param(shear, "shear", value_range=None, tuple_to_uniform=True,
-                                                 list_to_choice=True)
+        self.rotate = iap.handle_continuous_param(
+            rotate, "rotate", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        self.shear = iap.handle_continuous_param(
+            shear, "shear", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
         self.fit_output = fit_output
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+            cval_samples, mode_samples, order_samples = self._draw_samples(
+                nb_images, random_state)
 
-        result = self._augment_images_by_samples(images, scale_samples, translate_samples, rotate_samples,
-                                                 shear_samples, cval_samples, mode_samples, order_samples)
+        result = self._augment_images_by_samples(
+            images, scale_samples, translate_samples, rotate_samples,
+            shear_samples, cval_samples, mode_samples, order_samples)
 
         return result
 
-    def _augment_images_by_samples(self, images, scale_samples, translate_samples, rotate_samples, shear_samples,
-                                   cval_samples, mode_samples, order_samples, return_matrices=False):
+    def _augment_images_by_samples(self, images, scale_samples,
+                                   translate_samples, rotate_samples,
+                                   shear_samples, cval_samples, mode_samples,
+                                   order_samples, return_matrices=False):
         nb_images = len(images)
         input_was_array = ia.is_np_array(images)
         input_dtype = None if not input_was_array else images.dtype
@@ -644,10 +692,12 @@ class Affine(meta.Augmenter):
         for i in sm.xrange(nb_images):
             image = images[i]
 
-            min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
+            min_value, _center_value, max_value = \
+                iadt.get_value_range_of_dtype(image.dtype)
 
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
-            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            translate_x = translate_samples[0][i]
+            translate_y = translate_samples[1][i]
             if ia.is_single_float(translate_y):
                 translate_y_px = int(np.round(translate_y * images[i].shape[0]))
             else:
@@ -661,17 +711,34 @@ class Affine(meta.Augmenter):
             cval = cval_samples[i]
             mode = mode_samples[i]
             order = order_samples[i]
-            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
-                    or shear != 0:
+
+            any_change = (
+                scale_x != 1.0 or scale_y != 1.0
+                or translate_x_px != 0 or translate_y_px != 0
+                or rotate != 0
+                or shear != 0)
+
+            if any_change:
                 cv2_bad_order = order not in [0, 1, 3]
                 if order == 0:
-                    cv2_bad_dtype = image.dtype.name not in self.VALID_DTYPES_CV2_ORDER_0
+                    cv2_bad_dtype = (
+                        image.dtype.name
+                        not in self.VALID_DTYPES_CV2_ORDER_0)
                 else:
-                    cv2_bad_dtype = image.dtype.name not in self.VALID_DTYPES_CV2_ORDER_NOT_0
+                    cv2_bad_dtype = (
+                        image.dtype.name
+                        not in self.VALID_DTYPES_CV2_ORDER_NOT_0)
                 cv2_bad_shape = image.shape[2] > 4
-                cv2_impossible = cv2_bad_order or cv2_bad_dtype or cv2_bad_shape
-                if self.backend == "skimage" or (self.backend == "auto" and cv2_impossible):
-                    # cval contains 3 values as cv2 can handle 3, but skimage only 1
+                cv2_impossible = (cv2_bad_order or cv2_bad_dtype
+                                  or cv2_bad_shape)
+
+                use_skimage = (
+                    self.backend == "skimage"
+                    or (self.backend == "auto" and cv2_impossible))
+
+                if use_skimage:
+                    # cval contains 3 values as cv2 can handle 3, but skimage
+                    # only 1
                     cval = cval[0]
                     # skimage does not clip automatically
                     cval = max(min(cval, max_value), min_value)
@@ -708,8 +775,8 @@ class Affine(meta.Augmenter):
             else:
                 result.append(images[i])
 
-        # the shapes can change due to fit_output, then it may not be possible to return an array, even when the input
-        # was an array
+        # the shapes can change due to fit_output, then it may not be possible
+        # to return an array, even when the input was an array
         if input_was_array:
             nb_shapes = len(set([image.shape for image in result]))
             if nb_shapes == 1:
@@ -723,25 +790,30 @@ class Affine(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_heatmaps = len(heatmaps)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            cval_samples, mode_samples, order_samples = self._draw_samples(nb_heatmaps, random_state)
+            cval_samples, mode_samples, order_samples = self._draw_samples(
+                nb_heatmaps, random_state)
         cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
         mode_samples = ["constant"] * len(mode_samples)
         order_samples = [3] * len(order_samples)
 
         arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
-        arrs_aug, matrices = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,
-                                                             shear_samples, cval_samples, mode_samples, order_samples,
-                                                             return_matrices=True)
-        for heatmaps_i, arr_aug, matrix, order in zip(heatmaps, arrs_aug, matrices, order_samples):
-            # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
-            # not clear whether 4+ also do that
+        arrs_aug, matrices = self._augment_images_by_samples(
+            arrs, scale_samples, translate_samples, rotate_samples,
+            shear_samples, cval_samples, mode_samples, order_samples,
+            return_matrices=True)
+
+        gen = zip(heatmaps, arrs_aug, matrices, order_samples)
+        for heatmaps_i, arr_aug, matrix, order in gen:
+            # order=3 matches cubic interpolation and can cause values to go
+            # outside of the range [0.0, 1.0] not clear whether 4+ also do that
             # TODO add test for this
             if order >= 3:
                 arr_aug = np.clip(arr_aug, 0.0, 1.0, out=arr_aug)
 
             heatmaps_i.arr_0to1 = arr_aug
             if self.fit_output:
-                _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape, matrix)
+                _, output_shape_i = self._tf_to_fit_output(heatmaps_i.shape,
+                                                           matrix)
             else:
                 output_shape_i = heatmaps_i.shape
             heatmaps_i.shape = output_shape_i
@@ -750,7 +822,8 @@ class Affine(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         nb_segmaps = len(segmaps)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            cval_samples, mode_samples, order_samples = self._draw_samples(nb_segmaps, random_state)
+            cval_samples, mode_samples, order_samples = self._draw_samples(
+                nb_segmaps, random_state)
 
         # Segmentation map augmentation always pads with a constant value
         # of 0 (background class id), and always uses nearest neighbour
@@ -768,55 +841,76 @@ class Affine(meta.Augmenter):
             arrs, scale_samples, translate_samples, rotate_samples,
             shear_samples, cval_samples, mode_samples, order_samples,
             return_matrices=True)
-        for segmaps_i, arr_aug, matrix, order in zip(segmaps, arrs_aug, matrices, order_samples):
+
+        gen = zip(segmaps, arrs_aug, matrices, order_samples)
+        for segmaps_i, arr_aug, matrix, order in gen:
             segmaps_i.arr = arr_aug
             if self.fit_output:
-                _, output_shape_i = self._tf_to_fit_output(segmaps_i.shape, matrix)
+                _, output_shape_i = self._tf_to_fit_output(segmaps_i.shape,
+                                                           matrix)
             else:
                 output_shape_i = segmaps_i.shape
             segmaps_i.shape = output_shape_i
         return segmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
+            _cval_samples, _mode_samples, _order_samples = self._draw_samples(
+                nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             height, width = keypoints_on_image.height, keypoints_on_image.width
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
-            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            translate_x = translate_samples[0][i]
+            translate_y = translate_samples[1][i]
             if ia.is_single_float(translate_y):
-                translate_y_px = int(np.round(translate_y * keypoints_on_image.shape[0]))
+                translate_y_px = int(
+                    np.round(translate_y * keypoints_on_image.shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(np.round(translate_x * keypoints_on_image.shape[1]))
+                translate_x_px = int(
+                    np.round(translate_x * keypoints_on_image.shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
             shear = shear_samples[i]
-            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
-                    or shear != 0:
-                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+
+            any_change = (
+                scale_x != 1.0 or scale_y != 1.0
+                or translate_x_px != 0 or translate_y_px != 0
+                or rotate != 0
+                or shear != 0
+            )
+
+            if any_change:
+                matrix_to_topleft = tf.SimilarityTransform(
+                    translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
                     scale=(scale_x, scale_y),
                     translation=(translate_x_px, translate_y_px),
                     rotation=math.radians(rotate),
                     shear=math.radians(shear)
                 )
-                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
-                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+                matrix_to_center = tf.SimilarityTransform(
+                    translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft
+                          + matrix_transforms
+                          + matrix_to_center)
                 if self.fit_output:
-                    matrix, output_shape = self._tf_to_fit_output(keypoints_on_image.shape, matrix)
+                    matrix, output_shape = self._tf_to_fit_output(
+                        keypoints_on_image.shape, matrix)
                 else:
                     output_shape = keypoints_on_image.shape
 
                 if len(keypoints_on_image.keypoints) == 0:
-                    result.append(keypoints_on_image.deepcopy(shape=output_shape))
+                    result.append(
+                        keypoints_on_image.deepcopy(shape=output_shape))
                 else:
                     coords = keypoints_on_image.to_xy_array()
                     coords_aug = tf.matrix_transform(coords, matrix.params)
@@ -837,8 +931,9 @@ class Affine(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode, self.backend,
-                self.fit_output]
+        return [
+            self.scale, self.translate, self.rotate, self.shear, self.order,
+            self.cval, self.mode, self.backend, self.fit_output]
 
     def _draw_samples(self, nb_samples, random_state):
         rngs = random_state.duplicate(11)
@@ -849,27 +944,37 @@ class Affine(meta.Augmenter):
                 self.scale[1].draw_samples((nb_samples,), random_state=rngs[1]),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=rngs[2])
+            scale_samples = self.scale.draw_samples((nb_samples,),
+                                                    random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=rngs[3]),
-                self.translate[1].draw_samples((nb_samples,), random_state=rngs[4]),
+                self.translate[0].draw_samples((nb_samples,),
+                                               random_state=rngs[3]),
+                self.translate[1].draw_samples((nb_samples,),
+                                               random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
+            translate_samples = self.translate.draw_samples(
+                (nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
-        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
-        shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
+        rotate_samples = self.rotate.draw_samples((nb_samples,),
+                                                  random_state=rngs[6])
+        shear_samples = self.shear.draw_samples((nb_samples,),
+                                                random_state=rngs[7])
 
-        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=rngs[8])
-        mode_samples = self.mode.draw_samples((nb_samples,), random_state=rngs[9])
-        order_samples = self.order.draw_samples((nb_samples,), random_state=rngs[10])
+        cval_samples = self.cval.draw_samples((nb_samples, 3),
+                                              random_state=rngs[8])
+        mode_samples = self.mode.draw_samples((nb_samples,),
+                                              random_state=rngs[9])
+        order_samples = self.order.draw_samples((nb_samples,),
+                                                random_state=rngs[10])
 
-        return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, \
-            order_samples
+        return (
+            scale_samples, translate_samples, rotate_samples, shear_samples,
+            cval_samples, mode_samples, order_samples)
 
     @classmethod
     def _tf_to_fit_output(cls, input_shape, matrix):
@@ -899,14 +1004,19 @@ class Affine(meta.Augmenter):
         matrix = matrix + matrix_to_fit
         return matrix, output_shape
 
-    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
+    def _warp_skimage(self, image, scale_x, scale_y, translate_x_px,
+                      translate_y_px, rotate, shear, cval, mode, order,
                       fit_output, return_matrix=False):
-        iadt.gate_dtypes(image,
-                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.gate_dtypes(
+            image,
+            allowed=["bool",
+                     "uint8", "uint16", "uint32",
+                     "int8", "int16", "int32",
+                     "float16", "float32", "float64"],
+            disallowed=["uint64", "uint128", "uint256",
+                        "int64", "int128", "int256",
+                        "float96", "float128", "float256"],
+            augmenter=self)
 
         input_dtype = image.dtype
 
@@ -914,14 +1024,16 @@ class Affine(meta.Augmenter):
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
 
-        matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+        matrix_to_topleft = tf.SimilarityTransform(
+            translation=[-shift_x, -shift_y])
         matrix_transforms = tf.AffineTransform(
             scale=(scale_x, scale_y),
             translation=(translate_x_px, translate_y_px),
             rotation=math.radians(rotate),
             shear=math.radians(shear)
         )
-        matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+        matrix_to_center = tf.SimilarityTransform(
+            translation=[shift_x, shift_y])
         matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
 
         output_shape = None
@@ -948,15 +1060,20 @@ class Affine(meta.Augmenter):
             return image_warped, matrix
         return image_warped
 
-    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px, translate_y_px, rotate, shear, cval, mode, order,
+    def _warp_cv2(self, image, scale_x, scale_y, translate_x_px,
+                  translate_y_px, rotate, shear, cval, mode, order,
                   fit_output, return_matrix=False):
-        iadt.gate_dtypes(image,
-                         allowed=["bool", "uint8", "uint16", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.gate_dtypes(
+            image,
+            allowed=["bool",
+                     "uint8", "uint16",
+                     "int8", "int16", "int32",
+                     "float16", "float32", "float64"],
+            disallowed=["uint32", "uint64", "uint128", "uint256",
+                        "int64", "int128", "int256",
+                        "float96", "float128", "float256"],
+            augmenter=self)
+
         if order != 0:
             assert image.dtype.name != "int32", (
                 "Affine only supports cv2-based transformations of int32 "
@@ -973,23 +1090,28 @@ class Affine(meta.Augmenter):
         shift_x = width / 2.0 - 0.5
         shift_y = height / 2.0 - 0.5
 
-        matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+        matrix_to_topleft = tf.SimilarityTransform(
+            translation=[-shift_x, -shift_y])
         matrix_transforms = tf.AffineTransform(
             scale=(scale_x, scale_y),
             translation=(translate_x_px, translate_y_px),
             rotation=math.radians(rotate),
             shear=math.radians(shear)
         )
-        matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
+        matrix_to_center = tf.SimilarityTransform(
+            translation=[shift_x, shift_y])
         matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
 
         dsize = (width, height)
         if fit_output:
             matrix, output_shape = self._tf_to_fit_output(image.shape, matrix)
-            dsize = (int(np.round(output_shape[1])), int(np.round(output_shape[0])))
+            dsize = (
+                int(np.round(output_shape[1])),
+                int(np.round(output_shape[0]))
+            )
 
-        # TODO this uses always a tuple of 3 values for cval, even if #chans != 3, works with 1d but what in other
-        # cases?
+        # TODO this uses always a tuple of 3 values for cval, even
+        #      if #chans != 3, works with 1d but what in other cases?
         image_warped = cv2.warpAffine(
             image,
             matrix.params[:2],
@@ -1018,8 +1140,10 @@ class AffineCv2(meta.Augmenter):
     Augmenter to apply affine transformations to images using cv2 (i.e. opencv)
     backend.
 
-    NOTE: This augmenter will likely be removed in the future as Affine() already
-    offers a cv2 backend (use `backend="cv2"`).
+    .. warning ::
+
+        This augmenter might be removed in the future as ``Affine``
+        already offers a cv2 backend (use ``backend="cv2"``).
 
     Affine transformations
     involve:
@@ -1058,145 +1182,151 @@ class AffineCv2(meta.Augmenter):
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
-        Scaling factor to use,
-        where 1.0 represents no change and 0.5 is zoomed out to 50 percent of the original size.
+        Scaling factor to use, where ``1.0`` denotes \"no change\" and
+        ``0.5`` is zoomed out to ``50`` percent of the original size.
 
-            * If a single float, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled from the range
-              ``a <= x <= b`` per image. That value will be used identically for
-              both x- and y-axis.
-            * If a list, then a random value will eb sampled from that list
-              per image.
-            * If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            * If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`scale`). Using a dictionary allows to
-              set different values for the axis. If they are set to the same
-              ranges, different values may still be sampled per axis.
+            * If a single number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``. That value will be
+              used identically for both x- and y-axis.
+            * If a list, then a random value will be sampled from that list
+              per image (again, used for both x- and y-axis).
+            * If a ``StochasticParameter``, then from that parameter a value
+              will be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys ``x``
+              and/or ``y``. Each of these keys can have the same values as
+              described above. Using a dictionary allows to set different
+              values for the two axis and sampling will then happen
+              *independently* per axis, resulting in samples that differ
+              between the axes.
 
     translate_percent : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
-        Translation in percent relative to the image
-        height/width (x-translation, y-translation) to use,
-        where 0 represents no change and 0.5 is half of the image
-        height/width.
+        Translation as a fraction of the image height/width (x-translation,
+        y-translation), where ``0`` denotes "no change" and ``0.5`` denotes
+        "half of the axis size".
 
-            * If a single float, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled from the range
-              ``a <= x <= b`` per image. That percent value will be used identically
-              for both x- and y-axis.
-            * If a list, then a random value will eb sampled from that list
-              per image.
-            * If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            * If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`translate_percent`).
-              Using a dictionary allows to set different values for the axis.
-              If they are set to the same ranges, different values may still
-              be sampled per axis.
+            * If ``None`` then equivalent to ``0.0`` unless `translate_px` has
+              a value other than ``None``.
+            * If a single number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``. That sampled fraction
+              value will be used identically for both x- and y-axis.
+            * If a list, then a random value will be sampled from that list
+              per image (again, used for both x- and y-axis).
+            * If a ``StochasticParameter``, then from that parameter a value
+              will be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys ``x``
+              and/or ``y``. Each of these keys can have the same values as
+              described above. Using a dictionary allows to set different
+              values for the two axis and sampling will then happen
+              *independently* per axis, resulting in samples that differ
+              between the axes.
 
     translate_px : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
         Translation in pixels.
 
+            * If ``None`` then equivalent to ``0`` unless `translate_percent`
+              has a value other than ``None``.
             * If a single int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled from the discrete
-              range ``[a..b]`` per image. That number will be used identically
-              for both x- and y-axis.
-            * If a list, then a random value will eb sampled from that list
-              per image.
-            * If a StochasticParameter, then from that parameter a value will
-              be sampled per image (again, used for both x- and y-axis).
-            * If a dictionary, then it is expected to have the keys "x" and/or "y".
-              Each of these keys can have the same values as described before
-              for this whole parameter (`translate_px`).
-              Using a dictionary allows to set different values for the axis.
-              If they are set to the same ranges, different values may still
-              be sampled per axis.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the discrete interval ``[a..b]``. That number
+              will be used identically for both x- and y-axis.
+            * If a list, then a random value will be sampled from that list
+              per image (again, used for both x- and y-axis).
+            * If a ``StochasticParameter``, then from that parameter a value
+              will be sampled per image (again, used for both x- and y-axis).
+            * If a dictionary, then it is expected to have the keys ``x``
+              and/or ``y``. Each of these keys can have the same values as
+              described above. Using a dictionary allows to set different
+              values for the two axis and sampling will then happen
+              *independently* per axis, resulting in samples that differ
+              between the axes.
 
     rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Rotation in degrees (_NOT_ radians), i.e. expected value range is
-        0 to 360 for positive rotations (may also be negative). Rotation
-        happens around the _center_ of the image, not the top left corner
-        as in some other frameworks.
+        Rotation in degrees (**NOT** radians), i.e. expected value range is
+        around ``[-360, 360]``. Rotation happens around the *center* of the
+        image, not the top left corner as in some other frameworks.
 
-            * If a float/int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled per image from the
-              range ``a <= x <= b`` and be used as the rotation value.
-            * If a list, then a random value will eb sampled from that list
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]`` and used as the rotation
+              value.
+            * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then this parameter will be used to
+            * If a ``StochasticParameter``, then this parameter will be used to
               sample the rotation value per image.
 
     shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Shear in degrees (NOT radians), i.e. expected value range is
-        0 to 360 for positive shear (may also be negative).
+        Shear in degrees (**NOT** radians), i.e. expected value range is
+        around ``[-360, 360]``.
 
-            * If a float/int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be sampled per image from the
-              range ``a <= x <= b`` and be used as the rotation value.
-            * If a list, then a random value will eb sampled from that list
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]`` and be used as the
+              rotation value.
+            * If a list, then a random value will be sampled from that list
               per image.
-            * If a StochasticParameter, then this parameter will be used to
-              sample the shear value per image.
+            * If a ``StochasticParameter``, then this parameter will be used
+              to sample the shear value per image.
 
     order : int or list of int or str or list of str or imaug.ALL or imgaug.parameters.StochasticParameter, optional
         Interpolation order to use. Allowed are:
 
-            * ``cv2.INTER_NEAREST`` - a nearest-neighbor interpolation
-            * ``cv2.INTER_LINEAR`` - a bilinear interpolation (used by default)
-            * ``cv2.INTER_CUBIC`` - a bicubic interpolation over 4x4 pixel neighborhood
+            * ``cv2.INTER_NEAREST`` (nearest-neighbor interpolation)
+            * ``cv2.INTER_LINEAR`` (bilinear interpolation, used by default)
+            * ``cv2.INTER_CUBIC`` (bicubic interpolation over ``4x4`` pixel
+                neighborhood)
             * ``cv2.INTER_LANCZOS4``
-            * ``nearest``
-            * ``linear``
-            * ``cubic``
-            * ``lanczos4``
+            * string ``nearest`` (same as ``cv2.INTER_NEAREST``)
+            * string ``linear`` (same as ``cv2.INTER_LINEAR``)
+            * string ``cubic`` (same as ``cv2.INTER_CUBIC``)
+            * string ``lanczos4`` (same as ``cv2.INTER_LANCZOS``)
 
-        The first four are OpenCV constants, the other four are strings that
-        are automatically replaced by the OpenCV constants.
-        INTER_NEAREST (nearest neighbour interpolation) and INTER_NEAREST
-        (linear interpolation) are the fastest.
+        ``INTER_NEAREST`` (nearest neighbour interpolation) and
+        ``INTER_NEAREST`` (linear interpolation) are the fastest.
 
-            * If a single int, then that order will be used for all images.
-            * If a string, then it must be one of: ``nearest``, ``linear``, ``cubic``,
-              ``lanczos4``.
-            * If an iterable of int/string, then for each image a random value
-              will be sampled from that iterable (i.e. list of allowed order
-              values).
-            * If imgaug.ALL, then equivalant to list ``[cv2.INTER_NEAREST,
+            * If a single ``int``, then that order will be used for all images.
+            * If a string, then it must be one of: ``nearest``, ``linear``,
+              ``cubic``, ``lanczos4``.
+            * If an iterable of ``int``/``str``, then for each image a random
+              value will be sampled from that iterable (i.e. list of allowed
+              order values).
+            * If ``imgaug.ALL``, then equivalant to list ``[cv2.INTER_NEAREST,
               cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]``.
-            * If StochasticParameter, then that parameter is queried per image
-              to sample the order value to use.
+            * If ``StochasticParameter``, then that parameter is queried per
+              image to sample the order value to use.
 
     cval : number or tuple of number or list of number or imaug.ALL or imgaug.parameters.StochasticParameter, optional
-        The constant value used to fill up pixels in the result image that
-        didn't exist in the input image (e.g. when translating to the left,
-        some new pixels are created at the right). Such a fill-up with a
-        constant value only happens, when `mode` is "constant".
-        The expected value range is ``[0, 255]``. It may be a float value.
+        The constant value to use when filling in newly created pixels.
+        (E.g. translating by 1px to the right will create a new 1px-wide
+        column of pixels on the left of the image).  The value is only used
+        when `mode=constant`. The expected value range is ``[0, 255]`` for
+        ``uint8`` images. It may be a float value.
 
-            * If this is a single int or float, then that value will be used
+            * If this is a single number, then that value will be used
               (e.g. 0 results in black pixels).
-            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
-              is picked per image.
-            * If a list, then a random value will eb sampled from that list
+            * If a tuple ``(a, b)``, then three values (for three image
+              channels) will be uniformly sampled per image from the
+              interval ``[a, b]``.
+            * If a list, then a random value will be sampled from that list
               per image.
-            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
-              sampled per image.
-            * If a StochasticParameter, a new value will be sampled from the
-              parameter per image.
+            * If ``imgaug.ALL`` then equivalent to tuple ``(0, 255)`.
+            * If a ``StochasticParameter``, a new value will be sampled from
+              the parameter per image.
 
     mode : int or str or list of str or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter,
            optional
-        Parameter that defines the handling of newly created pixels.
+        Method to use when filling in newly created pixels.
         Same meaning as in OpenCV's border mode. Let ``abcdefgh`` be an image's
-        content and ``|`` be an image boundary, then:
+        content and ``|`` be an image boundary after which new pixels are
+        filled in, then the valid modes and their behaviour are the following:
 
             * ``cv2.BORDER_REPLICATE``: ``aaaaaa|abcdefgh|hhhhhhh``
             * ``cv2.BORDER_REFLECT``: ``fedcba|abcdefgh|hgfedcb``
             * ``cv2.BORDER_REFLECT_101``: ``gfedcb|abcdefgh|gfedcba``
             * ``cv2.BORDER_WRAP``: ``cdefgh|abcdefgh|abcdefg``
-            * ``cv2.BORDER_CONSTANT``: ``iiiiii|abcdefgh|iiiiiii``, where ``i`` is the defined cval.
+            * ``cv2.BORDER_CONSTANT``: ``iiiiii|abcdefgh|iiiiiii``,
+               where ``i`` is the defined cval.
             * ``replicate``: Same as ``cv2.BORDER_REPLICATE``.
             * ``reflect``: Same as ``cv2.BORDER_REFLECT``.
             * ``reflect_101``: Same as ``cv2.BORDER_REFLECT_101``.
@@ -1205,16 +1335,17 @@ class AffineCv2(meta.Augmenter):
 
         The datatype of the parameter may be:
 
-            * If a single int, then it must be one of ``cv2.BORDER_*``.
+            * If a single ``int``, then it must be one of the ``cv2.BORDER_*``
+              constants.
             * If a single string, then it must be one of: ``replicate``,
               ``reflect``, ``reflect_101``, ``wrap``, ``constant``.
-            * If a list of ints/strings, then per image a random mode will be
-              picked from that list.
-            * If imgaug.ALL, then a random mode from all possible modes will be
-              picked.
-            * If StochasticParameter, then the mode will be sampled from that
-              parameter per image, i.e. it must return only the above mentioned
-              strings.
+            * If a list of ``int``/``str``, then per image a random mode will
+              be picked from that list.
+            * If ``imgaug.ALL``, then a random mode from all possible modes
+              will be picked.
+            * If ``StochasticParameter``, then the mode will be sampled from
+              that parameter per image, i.e. it must return only the above
+              mentioned strings.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1227,69 +1358,80 @@ class AffineCv2(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.AffineCv2(scale=2.0)
 
-    zooms all images by a factor of 2.
+    Zoom in on all images by a factor of ``2``.
 
     >>> aug = iaa.AffineCv2(translate_px=16)
 
-    translates all images on the x- and y-axis by 16 pixels (to the
-    right/top), fills up any new pixels with zero (black values).
+    Translate all images on the x- and y-axis by 16 pixels (towards the
+    bottom right) and fill up any new pixels with zero (black values).
 
     >>> aug = iaa.AffineCv2(translate_percent=0.1)
 
-    translates all images on the x- and y-axis by 10 percent of their
-    width/height (to the right/top), fills up any new pixels with zero
+    Translate all images on the x- and y-axis by ``10`` percent of their
+    width/height (towards the bottom right). The pixel values are computed
+    per axis based on that axis' size. Fill up any new pixels with zero
     (black values).
 
     >>> aug = iaa.AffineCv2(rotate=35)
 
-    rotates all images by 35 degrees, fills up any new pixels with zero
+    Rotate all images by ``35`` *degrees*. Fill up any new pixels with zero
     (black values).
 
     >>> aug = iaa.AffineCv2(shear=15)
 
-    rotates all images by 15 degrees, fills up any new pixels with zero
+    Shear all images by ``15`` *degrees*. Fill up any new pixels with zero
     (black values).
 
     >>> aug = iaa.AffineCv2(translate_px=(-16, 16))
 
-    translates all images on the x- and y-axis by a random value
-    between -16 and 16 pixels (to the right/top) (same for both axis, i.e.
-    sampled once per image), fills up any new pixels with zero (black values).
+    Translate all images on the x- and y-axis by a random value
+    between ``-16`` and ``16`` pixels (to the bottom right) and fill up any new
+    pixels with zero (black values). The translation value is sampled once
+    per image and is the same for both axis.
 
     >>> aug = iaa.AffineCv2(translate_px={"x": (-16, 16), "y": (-4, 4)})
 
-    translates all images on the x-axis by a random value
-    between -16 and 16 pixels (to the right) and on the y-axis by a
-    random value between -4 and 4 pixels to the top. Even if both ranges
-    were the same, both axis could use different samples.
-    Fills up any new pixels with zero (black values).
+    Translate all images on the x-axis by a random value
+    between ``-16`` and ``16`` pixels (to the right) and on the y-axis by a
+    random value between ``-4`` and ``4`` pixels to the bottom. The sampling
+    happens independently per axis, so even if both intervals were identical,
+    the sampled axis-wise values would likely be different.
+    This also fills up any new pixels with zero (black values).
 
     >>> aug = iaa.AffineCv2(scale=2.0, order=[0, 1])
 
-    same as previously, but uses (randomly) either nearest neighbour
-    interpolation or linear interpolation.
+    Same as in the above `scale` example, but uses (randomly) either
+    nearest neighbour interpolation or linear interpolation. If `order` is
+    not specified, ``order=1`` would be used by default.
 
     >>> aug = iaa.AffineCv2(translate_px=16, cval=(0, 255))
 
-    same as previously, but fills up any new pixels with a random
-    brightness (same for the whole image).
+    Same as in the `translate_px` example above, but newly created pixels
+    are now filled with a random color (sampled once per image and the
+    same for all newly created pixels within that image).
 
-    >>> aug = iaa.AffineCv2(translate_px=16, mode=["constant", "replicate"])
+    >>> aug = iaa.AffineCv2(translate_px=16, mode=["constant", "edge"])
 
-    same as previously, but fills up the new pixels in only 50 percent
-    of all images with black values. In the other 50 percent of all cases,
-    the value of the closest edge is used.
+    Similar to the previous example, but the newly created pixels are
+    filled with black pixels in half of all images (mode ``constant`` with
+    default `cval` being ``0``) and in the other half of all images using
+    ``edge`` mode, which repeats the color of the spatially closest pixel
+    of the corresponding image edge.
 
     """
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
-                 rotate=0.0, shear=0.0, order=cv2.INTER_LINEAR, cval=0, mode=cv2.BORDER_CONSTANT,
+                 rotate=0.0, shear=0.0, order=cv2.INTER_LINEAR, cval=0,
+                 mode=cv2.BORDER_CONSTANT,
                  name=None, deterministic=False, random_state=None):
-        super(AffineCv2, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(AffineCv2, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
-        available_orders = [cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
+        available_orders = [cv2.INTER_NEAREST, cv2.INTER_LINEAR,
+                            cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
         available_orders_str = ["nearest", "linear", "cubic", "lanczos4"]
 
         if order == ia.ALL:
@@ -1321,18 +1463,22 @@ class AffineCv2(meta.Augmenter):
         elif isinstance(order, iap.StochasticParameter):
             self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int, string, a list of int/string or "
-                            + "StochasticParameter, got %s." % (type(order),))
+            raise Exception(
+                "Expected order to be imgaug.ALL, int, string, a list of"
+                "int/string or StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
             self.cval = iap.DiscreteUniform(0, 255)
         else:
-            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
-                                                  list_to_choice=True, allow_floats=True)
+            self.cval = iap.handle_discrete_param(
+                cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
+                list_to_choice=True, allow_floats=True)
 
-        available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT, cv2.BORDER_REFLECT_101, cv2.BORDER_WRAP,
+        available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_REFLECT,
+                           cv2.BORDER_REFLECT_101, cv2.BORDER_WRAP,
                            cv2.BORDER_CONSTANT]
-        available_modes_str = ["replicate", "reflect", "reflect_101", "wrap", "constant"]
+        available_modes_str = ["replicate", "reflect", "reflect_101",
+                               "wrap", "constant"]
         if mode == ia.ALL:
             self.mode = iap.Choice(available_modes)
         elif ia.is_single_integer(mode):
@@ -1346,18 +1492,23 @@ class AffineCv2(meta.Augmenter):
                     str(available_modes_str), mode))
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
-            assert all([ia.is_single_integer(val) or ia.is_string(val) for val in mode]), (
-                "Expected mode list to only contain integers/strings, got types %s." % (
-                    str([type(val) for val in mode]),))
-            assert all([val in available_modes + available_modes_str for val in mode]), (
+            all_valid_types = all([
+                ia.is_single_integer(val) or ia.is_string(val) for val in mode])
+            assert all_valid_types, (
+                "Expected mode list to only contain integers/strings, "
+                "got types %s." % (str([type(val) for val in mode]),))
+            all_valid_modes = all([
+                val in available_modes + available_modes_str for val in mode])
+            assert all_valid_modes, (
                 "Expected all mode values to be in %s, got %s." % (
                     str(available_modes + available_modes_str), str(mode)))
             self.mode = iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
-            raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or "
-                            + "StochasticParameter, got %s." % (type(mode),))
+            raise Exception(
+                "Expected mode to be imgaug.ALL, an int, a string, a list of "
+                "int/strings or StochasticParameter, got %s." % (type(mode),))
 
         # scale
         if isinstance(scale, dict):
@@ -1367,14 +1518,17 @@ class AffineCv2(meta.Augmenter):
             x = scale.get("x", 1.0)
             y = scale.get("y", 1.0)
             self.scale = (
-                iap.handle_continuous_param(x, "scale['x']", value_range=(0+1e-4, None), tuple_to_uniform=True,
-                                            list_to_choice=True),
-                iap.handle_continuous_param(y, "scale['y']", value_range=(0+1e-4, None), tuple_to_uniform=True,
-                                            list_to_choice=True)
+                iap.handle_continuous_param(
+                    x, "scale['x']", value_range=(0+1e-4, None),
+                    tuple_to_uniform=True, list_to_choice=True),
+                iap.handle_continuous_param(
+                    y, "scale['y']", value_range=(0+1e-4, None),
+                    tuple_to_uniform=True, list_to_choice=True)
             )
         else:
-            self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0+1e-4, None), tuple_to_uniform=True,
-                                                     list_to_choice=True)
+            self.scale = iap.handle_continuous_param(
+                scale, "scale", value_range=(0+1e-4, None),
+                tuple_to_uniform=True, list_to_choice=True)
 
         # translate
         if translate_percent is None and translate_px is None:
@@ -1393,14 +1547,17 @@ class AffineCv2(meta.Augmenter):
                 x = translate_percent.get("x", 0)
                 y = translate_percent.get("y", 0)
                 self.translate = (
-                    iap.handle_continuous_param(x, "translate_percent['x']", value_range=None, tuple_to_uniform=True,
-                                                list_to_choice=True),
-                    iap.handle_continuous_param(y, "translate_percent['y']", value_range=None, tuple_to_uniform=True,
-                                                list_to_choice=True)
+                    iap.handle_continuous_param(
+                        x, "translate_percent['x']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True),
+                    iap.handle_continuous_param(
+                        y, "translate_percent['y']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True)
                 )
             else:
-                self.translate = iap.handle_continuous_param(translate_percent, "translate_percent", value_range=None,
-                                                             tuple_to_uniform=True, list_to_choice=True)
+                self.translate = iap.handle_continuous_param(
+                    translate_percent, "translate_percent", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True)
         else:
             # translate by pixels
             if isinstance(translate_px, dict):
@@ -1410,32 +1567,43 @@ class AffineCv2(meta.Augmenter):
                 x = translate_px.get("x", 0)
                 y = translate_px.get("y", 0)
                 self.translate = (
-                    iap.handle_discrete_param(x, "translate_px['x']", value_range=None, tuple_to_uniform=True,
-                                              list_to_choice=True, allow_floats=False),
-                    iap.handle_discrete_param(y, "translate_px['y']", value_range=None, tuple_to_uniform=True,
-                                              list_to_choice=True, allow_floats=False)
+                    iap.handle_discrete_param(
+                        x, "translate_px['x']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True,
+                        allow_floats=False),
+                    iap.handle_discrete_param(
+                        y, "translate_px['y']", value_range=None,
+                        tuple_to_uniform=True, list_to_choice=True,
+                        allow_floats=False)
                 )
             else:
-                self.translate = iap.handle_discrete_param(translate_px, "translate_px", value_range=None,
-                                                           tuple_to_uniform=True, list_to_choice=True,
-                                                           allow_floats=False)
+                self.translate = iap.handle_discrete_param(
+                    translate_px, "translate_px", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True,
+                    allow_floats=False)
 
-        self.rotate = iap.handle_continuous_param(rotate, "rotate", value_range=None, tuple_to_uniform=True,
-                                                  list_to_choice=True)
-        self.shear = iap.handle_continuous_param(shear, "shear", value_range=None, tuple_to_uniform=True,
-                                                 list_to_choice=True)
+        self.rotate = iap.handle_continuous_param(
+            rotate, "rotate", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        self.shear = iap.handle_continuous_param(
+            shear, "shear", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
-        scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, \
-            mode_samples, order_samples = self._draw_samples(nb_images, random_state)
-        result = self._augment_images_by_samples(images, scale_samples, translate_samples,  rotate_samples,
-                                                 shear_samples, cval_samples, mode_samples, order_samples)
+        scale_samples, translate_samples, rotate_samples, shear_samples, \
+            cval_samples,  mode_samples, order_samples = self._draw_samples(
+                nb_images, random_state)
+        result = self._augment_images_by_samples(
+            images, scale_samples, translate_samples,  rotate_samples,
+            shear_samples, cval_samples, mode_samples, order_samples)
         return result
 
     @classmethod
-    def _augment_images_by_samples(cls, images, scale_samples, translate_samples, rotate_samples, shear_samples,
-                                   cval_samples, mode_samples, order_samples):
+    def _augment_images_by_samples(cls, images, scale_samples,
+                                   translate_samples, rotate_samples,
+                                   shear_samples, cval_samples, mode_samples,
+                                   order_samples):
         # TODO change these to class attributes
         order_str_to_int = {
             "nearest": cv2.INTER_NEAREST,
@@ -1458,13 +1626,16 @@ class AffineCv2(meta.Augmenter):
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
-            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            translate_x = translate_samples[0][i]
+            translate_y = translate_samples[1][i]
             if ia.is_single_float(translate_y):
-                translate_y_px = int(np.round(translate_y * images[i].shape[0]))
+                translate_y_px = int(
+                    np.round(translate_y * images[i].shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(np.round(translate_x * images[i].shape[1]))
+                translate_x_px = int(
+                    np.round(translate_x * images[i].shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
@@ -1473,20 +1644,33 @@ class AffineCv2(meta.Augmenter):
             mode = mode_samples[i]
             order = order_samples[i]
 
-            mode = mode if ia.is_single_integer(mode) else mode_str_to_int[mode]
-            order = order if ia.is_single_integer(order) else order_str_to_int[order]
+            mode = (mode
+                    if ia.is_single_integer(mode)
+                    else mode_str_to_int[mode])
+            order = (order
+                     if ia.is_single_integer(order)
+                     else order_str_to_int[order])
 
-            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
-                    or shear != 0:
-                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+            any_change = (
+                scale_x != 1.0 or scale_y != 1.0
+                or translate_x_px != 0 or translate_y_px != 0
+                or rotate != 0 or shear != 0
+            )
+
+            if any_change:
+                matrix_to_topleft = tf.SimilarityTransform(
+                    translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
                     scale=(scale_x, scale_y),
                     translation=(translate_x_px, translate_y_px),
                     rotation=math.radians(rotate),
                     shear=math.radians(shear)
                 )
-                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
-                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+                matrix_to_center = tf.SimilarityTransform(
+                    translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft
+                          + matrix_transforms
+                          + matrix_to_center)
 
                 image_warped = cv2.warpAffine(
                     images[i],
@@ -1511,12 +1695,14 @@ class AffineCv2(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_images = len(heatmaps)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+            cval_samples, mode_samples, order_samples = self._draw_samples(
+                nb_images, random_state)
         cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
         mode_samples = ["constant"] * len(mode_samples)
         arrs = [heatmap_i.arr_0to1 for heatmap_i in heatmaps]
-        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,
-                                                   shear_samples, cval_samples, mode_samples, order_samples)
+        arrs_aug = self._augment_images_by_samples(
+            arrs, scale_samples, translate_samples, rotate_samples,
+            shear_samples, cval_samples, mode_samples, order_samples)
         for heatmap_i, arr_aug in zip(heatmaps, arrs_aug):
             heatmap_i.arr_0to1 = arr_aug
         return heatmaps
@@ -1524,22 +1710,26 @@ class AffineCv2(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         nb_images = len(segmaps)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            cval_samples, mode_samples, order_samples = self._draw_samples(nb_images, random_state)
+            cval_samples, mode_samples, order_samples = self._draw_samples(
+                nb_images, random_state)
         cval_samples = np.zeros((cval_samples.shape[0], 1), dtype=np.float32)
         mode_samples = ["constant"] * len(mode_samples)
         order_samples = [0] * len(order_samples)
         arrs = [segmaps_i.arr for segmaps_i in segmaps]
-        arrs_aug = self._augment_images_by_samples(arrs, scale_samples, translate_samples, rotate_samples,
-                                                   shear_samples, cval_samples, mode_samples, order_samples)
+        arrs_aug = self._augment_images_by_samples(
+            arrs, scale_samples, translate_samples, rotate_samples,
+            shear_samples, cval_samples, mode_samples, order_samples)
         for segmaps_i, arr_aug in zip(segmaps, arrs_aug):
             segmaps_i.arr = arr_aug
         return segmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            _cval_samples, _mode_samples, _order_samples = self._draw_samples(nb_images, random_state)
+            _cval_samples, _mode_samples, _order_samples = self._draw_samples(
+                nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             if not keypoints_on_image.keypoints:
@@ -1551,28 +1741,41 @@ class AffineCv2(meta.Augmenter):
             shift_x = width / 2.0 - 0.5
             shift_y = height / 2.0 - 0.5
             scale_x, scale_y = scale_samples[0][i], scale_samples[1][i]
-            translate_x, translate_y = translate_samples[0][i], translate_samples[1][i]
+            translate_x = translate_samples[0][i]
+            translate_y = translate_samples[1][i]
             if ia.is_single_float(translate_y):
-                translate_y_px = int(np.round(translate_y * keypoints_on_image.shape[0]))
+                translate_y_px = int(
+                    np.round(translate_y * keypoints_on_image.shape[0]))
             else:
                 translate_y_px = translate_y
             if ia.is_single_float(translate_x):
-                translate_x_px = int(np.round(translate_x * keypoints_on_image.shape[1]))
+                translate_x_px = int(
+                    np.round(translate_x * keypoints_on_image.shape[1]))
             else:
                 translate_x_px = translate_x
             rotate = rotate_samples[i]
             shear = shear_samples[i]
-            if scale_x != 1.0 or scale_y != 1.0 or translate_x_px != 0 or translate_y_px != 0 or rotate != 0 \
-                    or shear != 0:
-                matrix_to_topleft = tf.SimilarityTransform(translation=[-shift_x, -shift_y])
+
+            any_change = (
+                scale_x != 1.0 or scale_y != 1.0
+                or translate_x_px != 0 or translate_y_px != 0
+                or rotate != 0 or shear != 0
+            )
+
+            if any_change:
+                matrix_to_topleft = tf.SimilarityTransform(
+                    translation=[-shift_x, -shift_y])
                 matrix_transforms = tf.AffineTransform(
                     scale=(scale_x, scale_y),
                     translation=(translate_x_px, translate_y_px),
                     rotation=math.radians(rotate),
                     shear=math.radians(shear)
                 )
-                matrix_to_center = tf.SimilarityTransform(translation=[shift_x, shift_y])
-                matrix = (matrix_to_topleft + matrix_transforms + matrix_to_center)
+                matrix_to_center = tf.SimilarityTransform(
+                    translation=[shift_x, shift_y])
+                matrix = (matrix_to_topleft
+                          + matrix_transforms
+                          + matrix_to_center)
 
                 coords = keypoints_on_image.to_xy_array()
                 coords_aug = tf.matrix_transform(coords, matrix.params)
@@ -1593,45 +1796,60 @@ class AffineCv2(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
-        return [self.scale, self.translate, self.rotate, self.shear, self.order, self.cval, self.mode]
+        return [self.scale, self.translate, self.rotate, self.shear,
+                self.order, self.cval, self.mode]
 
     def _draw_samples(self, nb_samples, random_state):
         rngs = random_state.duplicate(11)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
-                self.scale[0].draw_samples((nb_samples,), random_state=rngs[0]),
-                self.scale[1].draw_samples((nb_samples,), random_state=rngs[1]),
+                self.scale[0].draw_samples((nb_samples,),
+                                           random_state=rngs[0]),
+                self.scale[1].draw_samples((nb_samples,),
+                                           random_state=rngs[1]),
             )
         else:
-            scale_samples = self.scale.draw_samples((nb_samples,), random_state=rngs[2])
+            scale_samples = self.scale.draw_samples((nb_samples,),
+                                                    random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
         if isinstance(self.translate, tuple):
             translate_samples = (
-                self.translate[0].draw_samples((nb_samples,), random_state=rngs[3]),
-                self.translate[1].draw_samples((nb_samples,), random_state=rngs[4]),
+                self.translate[0].draw_samples((nb_samples,),
+                                               random_state=rngs[3]),
+                self.translate[1].draw_samples((nb_samples,),
+                                               random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples((nb_samples,), random_state=rngs[5])
+            translate_samples = self.translate.draw_samples(
+                (nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
-        assert translate_samples[0].dtype in [np.int32, np.int64, np.float32, np.float64], (
-            "Expected translate_samples to have dtype int32, int64, float32 "
-            "or float64. Got %s." % (translate_samples.dtype.name,))
-        assert translate_samples[1].dtype in [np.int32, np.int64, np.float32, np.float64], (
-            "Expected translate_samples to have dtype int32, int64, float32 "
-            "or float64. Got %s." % (translate_samples.dtype.name,))
+        valid_dts = ["int32", "int64", "float32", "float64"]
+        assert translate_samples[0].dtype.name in valid_dts, (
+            "Expected translate_samples to have any dtype of %s. "
+            "Got %s." % (str(valid_dts), translate_samples.dtype.name,))
+        assert translate_samples[1].dtype.name in valid_dts, (
+            "Expected translate_samples to have any dtype of %s. "
+            "Got %s." % (str(valid_dts), translate_samples.dtype.name,))
 
-        rotate_samples = self.rotate.draw_samples((nb_samples,), random_state=rngs[6])
-        shear_samples = self.shear.draw_samples((nb_samples,), random_state=rngs[7])
+        rotate_samples = self.rotate.draw_samples((nb_samples,),
+                                                  random_state=rngs[6])
+        shear_samples = self.shear.draw_samples((nb_samples,),
+                                                random_state=rngs[7])
 
-        cval_samples = self.cval.draw_samples((nb_samples, 3), random_state=rngs[8])
-        mode_samples = self.mode.draw_samples((nb_samples,), random_state=rngs[9])
-        order_samples = self.order.draw_samples((nb_samples,), random_state=rngs[10])
+        cval_samples = self.cval.draw_samples((nb_samples, 3),
+                                              random_state=rngs[8])
+        mode_samples = self.mode.draw_samples((nb_samples,),
+                                              random_state=rngs[9])
+        order_samples = self.order.draw_samples((nb_samples,),
+                                                random_state=rngs[10])
 
-        return scale_samples, translate_samples, rotate_samples, shear_samples, cval_samples, mode_samples, \
-            order_samples
+        return (
+            scale_samples, translate_samples, rotate_samples, shear_samples,
+            cval_samples, mode_samples, order_samples
+        )
 
 
 class PiecewiseAffine(meta.Augmenter):
@@ -1674,11 +1892,12 @@ class PiecewiseAffine(meta.Augmenter):
         * ``float128``: no (3)
         * ``bool``: yes; tested (1) (4)
 
-        - (1) Only tested with `order` set to 0.
-        - (2) scikit-image converts internally to ``float64``, which might introduce inaccuracies.
-              Tests showed that these inaccuracies seemed to not be an issue.
-        - (3) results too inaccurate
-        - (4) mapped internally to ``float64``
+        - (1) Only tested with `order` set to ``0``.
+        - (2) scikit-image converts internally to ``float64``, which might
+              introduce inaccuracies. Tests showed that these inaccuracies
+              seemed to not be an issue.
+        - (3) Results too inaccurate.
+        - (4) Mapped internally to ``float64``.
 
     Parameters
     ----------
@@ -1689,35 +1908,35 @@ class PiecewiseAffine(meta.Augmenter):
         moved in which direction) is multiplied by the height/width of the
         image if ``absolute_scale=False`` (default), so this scale can be
         the same for different sized images.
-        Recommended values are in the range 0.01 to 0.05 (weak to strong
-        augmentations).
+        Recommended values are in the range ``0.01`` to ``0.05`` (weak to
+        strong augmentations).
 
-            * If a single float, then that value will always be used as the
-              scale.
-            * If a tuple ``(a, b)`` of floats, then a random value will be picked
-              from the interval ``(a, b)`` (per image).
-            * If a list, then a random value will be sampled from that list
+            * If a single ``float``, then that value will always be used as
+              the scale.
+            * If a tuple ``(a, b)`` of ``float`` s, then a random value will
+              be uniformly sampled per image from the interval ``[a, b]``.
+            * If a list, then a random value will be picked from that list
               per image.
-            * If a StochasticParameter, then that parameter will be queried to
-              draw one value per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
 
     nb_rows : int or tuple of int or imgaug.parameters.StochasticParameter, optional
         Number of rows of points that the regular grid should have.
-        Must be at least 2. For large images, you might want to pick a
-        higher value than 4. You might have to then adjust scale to lower
+        Must be at least ``2``. For large images, you might want to pick a
+        higher value than ``4``. You might have to then adjust scale to lower
         values.
 
-            * If a single int, then that value will always be used as the
+            * If a single ``int``, then that value will always be used as the
               number of rows.
-            * If a tuple ``(a, b)``, then a value from the discrete interval ``[a..b]``
-              will be sampled per image.
-            * If a list, then a random value will be sampled from that list
+            * If a tuple ``(a, b)``, then a value from the discrete interval
+              ``[a..b]`` will be uniformly sampled per image.
+            * If a list, then a random value will be picked from that list
               per image.
             * If a StochasticParameter, then that parameter will be queried to
               draw one value per image.
 
     nb_cols : int or tuple of int or imgaug.parameters.StochasticParameter, optional
-        Number of columns. See `nb_rows`.
+        Number of columns. Analogous to `nb_rows`.
 
     order : int or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.geometric.Affine.__init__`.
@@ -1731,15 +1950,15 @@ class PiecewiseAffine(meta.Augmenter):
     absolute_scale : bool, optional
         Take `scale` as an absolute value rather than a relative value.
 
-    polygon_recoverer : 'auto' or None or
-                        imgaug.imgaug._ConcavePolygonRecoverer, optional
+    polygon_recoverer : 'auto' or None or imgaug.augmentables.polygons._ConcavePolygonRecoverer, optional
         The class to use to repair invalid polygons.
-        If ``"auto"``, a new instance of ``imgaug._ConcavePolygonRecoverer``
+        If ``"auto"``, a new instance of
+        :class`imgaug.augmentables.polygons._ConcavePolygonRecoverer`
         will be created.
         If ``None``, no polygon recoverer will be used.
         If an object, then that object will be used and must provide a
         ``recover_from()`` method, similar to
-        ``imgaug.imgaug._ConcavePolygonRecoverer``.
+        :class:`imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1752,30 +1971,36 @@ class PiecewiseAffine(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05))
 
-    Puts a grid of points on each image and then randomly moves each point
-    around by 1 to 5 percent (with respect to the image height/width). Pixels
-    between these points will be moved accordingly.
+    Place a regular grid of points on each image and then randomly move each
+    point around by ``1`` to ``5`` percent (with respect to the image
+    height/width). Pixels between these points will be moved accordingly.
 
     >>> aug = iaa.PiecewiseAffine(scale=(0.01, 0.05), nb_rows=8, nb_cols=8)
 
-    Same as the previous example, but uses a denser grid of ``8x8`` points (default
-    is ``4x4``). This can be useful for large images.
+    Same as the previous example, but uses a denser grid of ``8x8`` points
+    (default is ``4x4``). This can be useful for large images.
 
     """
 
-    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0, mode="constant", absolute_scale=False,
-                 polygon_recoverer=None, name=None, deterministic=False, random_state=None):
-        super(PiecewiseAffine, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0,
+                 mode="constant", absolute_scale=False, polygon_recoverer=None,
+                 name=None, deterministic=False, random_state=None):
+        super(PiecewiseAffine, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
-        self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
-                                                 list_to_choice=True)
+        self.scale = iap.handle_continuous_param(
+            scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
         self.jitter = iap.Normal(loc=0, scale=self.scale)
-        self.nb_rows = iap.handle_discrete_param(nb_rows, "nb_rows", value_range=(2, None), tuple_to_uniform=True,
-                                                 list_to_choice=True, allow_floats=False)
-        self.nb_cols = iap.handle_discrete_param(nb_cols, "nb_cols", value_range=(2, None), tuple_to_uniform=True,
-                                                 list_to_choice=True, allow_floats=False)
+        self.nb_rows = iap.handle_discrete_param(
+            nb_rows, "nb_rows", value_range=(2, None), tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=False)
+        self.nb_cols = iap.handle_discrete_param(
+            nb_cols, "nb_cols", value_range=(2, None), tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=False)
 
         # --------------
         # order, mode, cval
@@ -1792,12 +2017,12 @@ class PiecewiseAffine(meta.Augmenter):
         # on smaller images (seems to grow more like exponentially with image
         # size)
         if order == ia.ALL:
-            # dont use order=2 (bi-quadratic) because that is apparently currently not recommended (and throws
-            # a warning)
+            # dont use order=2 (bi-quadratic) because that is apparently
+            # currently not recommended (and throws a warning)
             self.order = iap.Choice([0, 1, 3, 4, 5])
         elif ia.is_single_integer(order):
             assert 0 <= order <= 5, (
-                "Expected order's integer value to be in range 0 <= x <= 5, "
+                "Expected order's integer value to be in the interval [0, 5], "
                 "got %d." % (order,))
             self.order = iap.Deterministic(order)
         elif isinstance(order, list):
@@ -1811,18 +2036,22 @@ class PiecewiseAffine(meta.Augmenter):
         elif isinstance(order, iap.StochasticParameter):
             self.order = order
         else:
-            raise Exception("Expected order to be imgaug.ALL, int or StochasticParameter, got %s." % (type(order),))
+            raise Exception("Expected order to be imgaug.ALL, int or "
+                            "StochasticParameter, got %s." % (type(order),))
 
         if cval == ia.ALL:
-            # TODO change this so that it is dynamically created per image (or once per dtype)
+            # TODO change this so that it is dynamically created per image
+            #      (or once per dtype)
             self.cval = iap.Uniform(0, 255)
         else:
-            self.cval = iap.handle_continuous_param(cval, "cval", value_range=None, tuple_to_uniform=True,
-                                                    list_to_choice=True)
+            self.cval = iap.handle_continuous_param(
+                cval, "cval", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         if mode == ia.ALL:
-            self.mode = iap.Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
+            self.mode = iap.Choice(["constant", "edge", "symmetric",
+                                    "reflect", "wrap"])
         elif ia.is_string(mode):
             self.mode = iap.Deterministic(mode)
         elif isinstance(mode, list):
@@ -1833,8 +2062,9 @@ class PiecewiseAffine(meta.Augmenter):
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
-            raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, "
-                            + "got %s." % (type(mode),))
+            raise Exception(
+                "Expected mode to be imgaug.ALL, a string, a list of strings "
+                "or StochasticParameter, got %s." % (type(mode),))
 
         self.absolute_scale = absolute_scale
         self.polygon_recoverer = polygon_recoverer
@@ -1844,22 +2074,32 @@ class PiecewiseAffine(meta.Augmenter):
     def _draw_samples(self, nb_images, random_state):
         rss = random_state.duplicate(5)
 
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,), random_state=rss[-5])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,), random_state=rss[-4])
-        order_samples = self.order.draw_samples((nb_images,), random_state=rss[-3])
-        cval_samples = self.cval.draw_samples((nb_images,), random_state=rss[-2])
-        mode_samples = self.mode.draw_samples((nb_images,), random_state=rss[-1])
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
+                                                    random_state=rss[-5])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
+                                                    random_state=rss[-4])
+        order_samples = self.order.draw_samples((nb_images,),
+                                                random_state=rss[-3])
+        cval_samples = self.cval.draw_samples((nb_images,),
+                                              random_state=rss[-2])
+        mode_samples = self.mode.draw_samples((nb_images,),
+                                              random_state=rss[-1])
 
-        return nb_rows_samples, nb_cols_samples, order_samples, cval_samples, \
-            mode_samples
+        return (
+            nb_rows_samples, nb_cols_samples, order_samples, cval_samples,
+            mode_samples)
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "uint32", "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.gate_dtypes(
+            images,
+            allowed=["bool",
+                     "uint8", "uint16", "uint32",
+                     "int8", "int16", "int32",
+                     "float16", "float32", "float64"],
+            disallowed=["uint64", "uint128", "uint256",
+                        "int64", "int128", "int256",
+                        "float96", "float128", "float256"],
+            augmenter=self)
 
         result = images
         nb_images = len(images)
@@ -1873,14 +2113,16 @@ class PiecewiseAffine(meta.Augmenter):
             rs_image = rss[i]
             h, w = image.shape[0:2]
 
-            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+            transformer = self._get_transformer(
+                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
             if transformer is not None:
                 input_dtype = image.dtype
                 if image.dtype == np.bool_:
                     image = image.astype(np.float64)
 
-                min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
+                min_value, _center_value, max_value = \
+                    iadt.get_value_range_of_dtype(image.dtype)
                 cval = cval_samples[i]
                 cval = max(min(cval, max_value), min_value)
 
@@ -1897,9 +2139,10 @@ class PiecewiseAffine(meta.Augmenter):
                 if input_dtype == np.bool_:
                     image_warped = image_warped > 0.5
                 else:
-                    # warp seems to change everything to float64, including uint8,
-                    # making this necessary
-                    image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
+                    # warp seems to change everything to float64, including
+                    # uint8, making this necessary
+                    image_warped = iadt.restore_dtypes_(
+                        image_warped, input_dtype)
 
                 result[i] = image_warped
 
@@ -1920,7 +2163,8 @@ class PiecewiseAffine(meta.Augmenter):
 
             rs_image = rss[i]
             h, w = arr_0to1.shape[0:2]
-            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+            transformer = self._get_transformer(
+                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
             if transformer is not None:
                 arr_0to1_warped = tf.warp(
@@ -1936,11 +2180,14 @@ class PiecewiseAffine(meta.Augmenter):
                 # skimage converts to float64
                 arr_0to1_warped = arr_0to1_warped.astype(np.float32)
 
-                # TODO not entirely clear whether this breaks the value range -- Affine does
+                # TODO not entirely clear whether this breaks the value
+                #      range -- Affine does
                 # TODO add test for this
-                # order=3 matches cubic interpolation and can cause values to go outside of the range [0.0, 1.0]
-                # not clear whether 4+ also do that
-                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+                # order=3 matches cubic interpolation and can cause values
+                # to go outside of the range [0.0, 1.0] not clear whether
+                # 4+ also do that
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0,
+                                          out=arr_0to1_warped)
 
                 heatmaps_i.arr_0to1 = arr_0to1_warped
 
@@ -1981,7 +2228,8 @@ class PiecewiseAffine(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
 
@@ -1999,7 +2247,8 @@ class PiecewiseAffine(meta.Augmenter):
             rs_image = rss[i]
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
-            transformer = self._get_transformer(h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+            transformer = self._get_transformer(
+                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
 
             if transformer is None or len(kpsoi.keypoints) == 0:
                 result.append(kpsoi)
@@ -2021,17 +2270,20 @@ class PiecewiseAffine(meta.Augmenter):
                 )
                 """
 
-                # Image based augmentation routine. Draws the keypoints on the image plane using distance maps (more
-                # accurate than just marking the points),  then augments these images, then searches for the new
-                # (visual) location of the keypoints.
-                # Much slower than directly augmenting the coordinates, but here the only method that reliably works.
+                # Image based augmentation routine. Draws the keypoints on
+                # the image plane using distance maps (more accurate than
+                # just marking the points),  then augments these images, then
+                # searches for the new (visual) location of the keypoints.
+                # Much slower than directly augmenting the coordinates, but
+                # here the only method that reliably works.
                 dist_maps = kpsoi.to_distance_maps(inverted=True)
                 dist_maps_warped = tf.warp(
                     dist_maps,
                     transformer,
                     order=1,
                     preserve_range=True,
-                    output_shape=(kpsoi.shape[0], kpsoi.shape[1], len(kpsoi.keypoints))
+                    output_shape=(kpsoi.shape[0], kpsoi.shape[1],
+                                  len(kpsoi.keypoints))
                 )
 
                 kps_aug = ia.KeypointsOnImage.from_distance_maps(
@@ -2039,7 +2291,8 @@ class PiecewiseAffine(meta.Augmenter):
                     inverted=True,
                     threshold=0.01,
                     if_not_found_coords={"x": -1, "y": -1},
-                    nb_channels=None if len(kpsoi.shape) < 3 else kpsoi.shape[2]
+                    nb_channels=(
+                        None if len(kpsoi.shape) < 3 else kpsoi.shape[2])
                 )
 
                 # use deepcopy() to copy old instance states as much as
@@ -2054,7 +2307,8 @@ class PiecewiseAffine(meta.Augmenter):
                 # augmentation will be replaced with (-1, -1) by default (as
                 # they can't be drawn on the keypoint images). They are now
                 # replaced by their old coordinates values.
-                ooi = [not 0 <= kp.x < w or not 0 <= kp.y < h for kp in kpsoi.keypoints]
+                ooi = [not 0 <= kp.x < w or not 0 <= kp.y < h
+                       for kp in kpsoi.keypoints]
                 for kp_idx in sm.xrange(len(kps_aug_post.keypoints)):
                     if ooi[kp_idx]:
                         kp_unaug = kpsoi.keypoints[kp_idx]
@@ -2075,8 +2329,8 @@ class PiecewiseAffine(meta.Augmenter):
         # these coordinates are supposed to be at the centers of each cell
         # (otherwise the first coordinate would be at (0, 0) and could hardly
         # be moved around before leaving the image),
-        # so we use here (half cell height/width to H/W minus half height/width)
-        # instead of (0, H/W)
+        # so we use here (half cell height/width to H/W minus half
+        # height/width) instead of (0, H/W)
 
         nb_rows = max(nb_rows, 2)
         nb_cols = max(nb_cols, 2)
@@ -2084,10 +2338,14 @@ class PiecewiseAffine(meta.Augmenter):
         y = np.linspace(0, h, nb_rows)
         x = np.linspace(0, w, nb_cols)
 
-        xx_src, yy_src = np.meshgrid(x, y)  # (H, W) and (H, W) for H=rows, W=cols
-        points_src = np.dstack([yy_src.flat, xx_src.flat])[0]  # (1, HW, 2) => (HW, 2) for H=rows, W=cols
+        # (H, W) and (H, W) for H=rows, W=cols
+        xx_src, yy_src = np.meshgrid(x, y)
 
-        jitter_img = self.jitter.draw_samples(points_src.shape, random_state=random_state)
+        # (1, HW, 2) => (HW, 2) for H=rows, W=cols
+        points_src = np.dstack([yy_src.flat, xx_src.flat])[0]
+
+        jitter_img = self.jitter.draw_samples(points_src.shape,
+                                              random_state=random_state)
 
         nb_nonzero = len(jitter_img.flatten().nonzero()[0])
         if nb_nonzero == 0:
@@ -2113,7 +2371,9 @@ class PiecewiseAffine(meta.Augmenter):
             return matrix
 
     def get_parameters(self):
-        return [self.scale, self.nb_rows, self.nb_cols, self.order, self.cval, self.mode, self.absolute_scale]
+        return [
+            self.scale, self.nb_rows, self.nb_cols, self.order, self.cval,
+            self.mode, self.absolute_scale]
 
 
 # TODO add args for interpolation, borderMode, borderValue
@@ -2150,8 +2410,9 @@ class PerspectiveTransform(meta.Augmenter):
             * ``bool``: yes; tested (4)
 
             - (1) rejected by opencv
-            - (2) leads to opencv error: cv2.error: ``OpenCV(3.4.4) (...)imgwarp.cpp:1805: error:
-                  (-215:Assertion failed) ifunc != 0 in function 'remap'``.
+            - (2) leads to opencv error: cv2.error: ``OpenCV(3.4.4)
+                  (...)imgwarp.cpp:1805: error: (-215:Assertion failed)
+                  ifunc != 0 in function 'remap'``.
             - (3) mapped internally to ``int16``.
             - (4) mapped intenally to ``float32``.
 
@@ -2165,23 +2426,24 @@ class PerspectiveTransform(meta.Augmenter):
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Standard deviation of the normal distributions. These are used to sample
-        the random distances of the subimage's corners from the full image's
-        corners. The sampled values reflect percentage values (with respect
-        to image height/width). Recommended values are in the range 0.0 to 0.1.
+        Standard deviation of the normal distributions. These are used to
+        sample the random distances of the subimage's corners from the full
+        image's corners. The sampled values reflect percentage values (with
+        respect to image height/width). Recommended values are in the range
+        ``0.0`` to ``0.1``.
 
             * If a single number, then that value will always be used as the
               scale.
-            * If a tuple ``(a, b)`` of numbers, then a random value will be picked
-              from the interval ``(a, b)`` (per image).
-            * If a list of values, a random one of the values will be picked
-              per image.
-            * If a StochasticParameter, then that parameter will be queried to
-              draw one value per image.
+            * If a tuple ``(a, b)`` of numbers, then a random value will be
+              uniformly sampled per image from the interval ``(a, b)``.
+            * If a list of values, a random value will be picked from the
+              list per image.
+            * If a ``StochasticParameter``, then that parameter will be
+              queried to draw one value per image.
 
     keep_size : bool, optional
         Whether to resize image's back to their original size after applying
-        the perspective transform. If set to False, the resulting images
+        the perspective transform. If set to ``False``, the resulting images
         may end up having different shapes and will always be a list, never
         an array.
 
@@ -2189,52 +2451,53 @@ class PerspectiveTransform(meta.Augmenter):
         The constant value used to fill up pixels in the result image that
         didn't exist in the input image (e.g. when translating to the left,
         some new pixels are created at the right). Such a fill-up with a
-        constant value only happens, when `mode` is "constant".
-        The expected value range is ``[0, 255]``. It may be a float value.
+        constant value only happens, when `mode` is ``constant``.
+        The expected value range is ``[0, 255]`` for ``uint8`` images.
+        It may be a float value.
 
             * If this is a single int or float, then that value will be used
               (e.g. 0 results in black pixels).
-            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
-              is picked per image.
-            * If a list, then a random value will eb sampled from that list
+            * If a tuple ``(a, b)``, then a random value is uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a list, then a random value will be sampled from that list
               per image.
-            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
-              sampled per image.
-            * If a StochasticParameter, a new value will be sampled from the
-              parameter per image.
+            * If ``imgaug.ALL``, then equivalent to tuple ``(0, 255)``.
+            * If a ``StochasticParameter``, a new value will be sampled from
+              the parameter per image.
 
-    mode : int or str or list of str or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter,
-           optional
+    mode : int or str or list of str or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         Parameter that defines the handling of newly created pixels.
         Same meaning as in OpenCV's border mode. Let ``abcdefgh`` be an image's
         content and ``|`` be an image boundary, then:
 
             * ``cv2.BORDER_REPLICATE``: ``aaaaaa|abcdefgh|hhhhhhh``
-            * ``cv2.BORDER_CONSTANT``: ``iiiiii|abcdefgh|iiiiiii``, where ``i`` is the defined cval.
+            * ``cv2.BORDER_CONSTANT``: ``iiiiii|abcdefgh|iiiiiii``, where
+              ``i`` is the defined cval.
             * ``replicate``: Same as ``cv2.BORDER_REPLICATE``.
             * ``constant``: Same as ``cv2.BORDER_CONSTANT``.
 
         The datatype of the parameter may be:
 
-            * If a single int, then it must be one of ``cv2.BORDER_*``.
+            * If a single ``int``, then it must be one of ``cv2.BORDER_*``.
             * If a single string, then it must be one of: ``replicate``,
               ``reflect``, ``reflect_101``, ``wrap``, ``constant``.
             * If a list of ints/strings, then per image a random mode will be
               picked from that list.
-            * If imgaug.ALL, then a random mode from all possible modes will be
-              picked.
-            * If StochasticParameter, then the mode will be sampled from that
-              parameter per image, i.e. it must return only the above mentioned
-              strings.
+            * If ``imgaug.ALL``, then a random mode from all possible modes
+              will be picked per image.
+            * If ``StochasticParameter``, then the mode will be sampled from
+              that parameter per image, i.e. it must return only the above
+              mentioned strings.
 
-    polygon_recoverer : 'auto' or None or imgaug.augmentables.polys._ConcavePolygonRecoverer, optional
+    polygon_recoverer : 'auto' or None or imgaug.augmentables.polygons._ConcavePolygonRecoverer, optional
         The class to use to repair invalid polygons.
         If ``"auto"``, a new instance of
-        ``imgaug.augmentables.polys._ConcavePolygonRecoverer`` will be created.
+        :class`imgaug.augmentables.polygons._ConcavePolygonRecoverer`
+        will be created.
         If ``None``, no polygon recoverer will be used.
         If an object, then that object will be used and must provide a
         ``recover_from()`` method, similar to
-        ``imgaug.augmentables.polys._ConcavePolygonRecoverer``.
+        :class:`imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2267,10 +2530,12 @@ class PerspectiveTransform(meta.Augmenter):
     def __init__(self, scale=0, cval=0, mode='constant', keep_size=True,
                  polygon_recoverer="auto",
                  name=None, deterministic=False, random_state=None):
-        super(PerspectiveTransform, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(PerspectiveTransform, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
-        self.scale = iap.handle_continuous_param(scale, "scale", value_range=(0, None), tuple_to_uniform=True,
-                                                 list_to_choice=True)
+        self.scale = iap.handle_continuous_param(
+            scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
         self.jitter = iap.Normal(loc=0, scale=self.scale)
         self.keep_size = keep_size
 
@@ -2285,8 +2550,9 @@ class PerspectiveTransform(meta.Augmenter):
         if cval == ia.ALL:
             self.cval = iap.DiscreteUniform(0, 255)
         else:
-            self.cval = iap.handle_discrete_param(cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
-                                                  list_to_choice=True, allow_floats=True)
+            self.cval = iap.handle_discrete_param(
+                cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
+                list_to_choice=True, allow_floats=True)
 
         available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_CONSTANT]
         available_modes_str = ["replicate", "constant"]
@@ -2318,31 +2584,42 @@ class PerspectiveTransform(meta.Augmenter):
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
-            raise Exception("Expected mode to be imgaug.ALL, an int, a string, a list of int/strings or "
-                            + "StochasticParameter, got %s." % (type(mode),))
+            raise Exception(
+                "Expected mode to be imgaug.ALL, an int, a string, a list "
+                "of int/strings or StochasticParameter, got %s." % (
+                    type(mode),))
 
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "int8", "int16",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256", "int32", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.gate_dtypes(
+            images,
+            allowed=["bool",
+                     "uint8", "uint16",
+                     "int8", "int16",
+                     "float16", "float32", "float64"],
+            disallowed=["uint32", "uint64", "uint128", "uint256",
+                        "int32", "int64", "int128", "int256",
+                        "float96", "float128", "float256"],
+            augmenter=self)
 
         result = images
         if not self.keep_size:
             result = list(result)
 
-        matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
-            [image.shape for image in images],
-            random_state
+        matrices, max_heights, max_widths, cval_samples, mode_samples = \
+            self._create_matrices(
+                [image.shape for image in images],
+                random_state
+            )
+
+        gen = enumerate(
+            zip(matrices, max_heights, max_widths, cval_samples, mode_samples)
         )
 
-        for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
+        for i, (M, max_height, max_width, cval, mode) in gen:
             image = images[i]
 
             # cv2.warpPerspective only supports <=4 channels
@@ -2377,7 +2654,8 @@ class PerspectiveTransform(meta.Augmenter):
 
             if self.keep_size:
                 h, w = image.shape[0:2]
-                warped = ia.imresize_single_image(warped, (h, w), interpolation="cubic")
+                warped = ia.imresize_single_image(warped, (h, w),
+                                                  interpolation="cubic")
 
             if input_dtype == np.bool_:
                 warped = warped > 0.5
@@ -2392,23 +2670,29 @@ class PerspectiveTransform(meta.Augmenter):
         result = heatmaps
 
         # TODO would copy_unless_global_rng() here and below enough?
-        matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
-            [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
-            random_state.copy()
-        )
-
-        # estimate max_heights/max_widths for the underlying images
-        # this is only necessary if keep_size is False as then the underlying image sizes
-        # change and we need to update them here
-        if self.keep_size:
-            max_heights_imgs, max_widths_imgs = max_heights, max_widths
-        else:
-            _, max_heights_imgs, max_widths_imgs, cval_samples, mode_samples = self._create_matrices(
-                [heatmaps_i.shape for heatmaps_i in heatmaps],
+        matrices, max_heights, max_widths, cval_samples, mode_samples = \
+            self._create_matrices(
+                [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
                 random_state.copy()
             )
 
-        for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
+        # estimate max_heights/max_widths for the underlying images
+        # this is only necessary if keep_size is False as then the underlying
+        # image sizes change and we need to update them here
+        if self.keep_size:
+            max_heights_imgs, max_widths_imgs = max_heights, max_widths
+        else:
+            _, max_heights_imgs, max_widths_imgs, cval_samples, mode_samples = \
+                self._create_matrices(
+                    [heatmaps_i.shape for heatmaps_i in heatmaps],
+                    random_state.copy()
+                )
+
+        gen = enumerate(
+            zip(matrices, max_heights, max_widths, cval_samples, mode_samples)
+        )
+
+        for i, (M, max_height, max_width, cval, mode) in gen:
             heatmaps_i = heatmaps[i]
 
             arr = heatmaps_i.arr_0to1
@@ -2423,15 +2707,19 @@ class PerspectiveTransform(meta.Augmenter):
             warped = [warped_i[..., np.newaxis] for warped_i in warped]
             warped = np.dstack(warped)
 
-            heatmaps_i_aug = ia.HeatmapsOnImage.from_0to1(warped, shape=heatmaps_i.shape,
-                                                          min_value=heatmaps_i.min_value,
-                                                          max_value=heatmaps_i.max_value)
+            heatmaps_i_aug = ia.HeatmapsOnImage.from_0to1(
+                warped,
+                shape=heatmaps_i.shape,
+                min_value=heatmaps_i.min_value,
+                max_value=heatmaps_i.max_value)
 
             if self.keep_size:
                 h, w = arr.shape[0:2]
                 heatmaps_i_aug = heatmaps_i_aug.resize((h, w))
             else:
-                heatmaps_i_aug.shape = (max_heights_imgs[i], max_widths_imgs[i]) + heatmaps_i_aug.shape[2:]
+                new_shape = (max_heights_imgs[i], max_widths_imgs[i]) \
+                            + heatmaps_i_aug.shape[2:]
+                heatmaps_i_aug.shape = new_shape
 
             result[i] = heatmaps_i_aug
 
@@ -2447,8 +2735,8 @@ class PerspectiveTransform(meta.Augmenter):
         )
 
         # estimate max_heights/max_widths for the underlying images
-        # this is only necessary if keep_size is False as then the underlying image sizes
-        # change and we need to update them here
+        # this is only necessary if keep_size is False as then the underlying
+        # image sizes change and we need to update them here
         if self.keep_size:
             max_heights_imgs, max_widths_imgs = max_heights, max_widths
         else:
@@ -2457,7 +2745,8 @@ class PerspectiveTransform(meta.Augmenter):
                 random_state.copy()
             )
 
-        for i, (M, max_height, max_width) in enumerate(zip(matrices, max_heights, max_widths)):
+        gen = enumerate(zip(matrices, max_heights, max_widths))
+        for i, (M, max_height, max_width) in gen:
             segmaps_i = segmaps[i]
             arr = segmaps_i.arr
 
@@ -2480,25 +2769,33 @@ class PerspectiveTransform(meta.Augmenter):
                 h, w = arr.shape[0:2]
                 result[i] = result[i].resize((h, w))
             else:
-                result[i].shape = (max_heights_imgs[i], max_widths_imgs[i]) + result[i].shape[2:]
+                new_shape = (max_heights_imgs[i], max_widths_imgs[i]) \
+                            + result[i].shape[2:]
+                result[i].shape = new_shape
 
         return result
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         result = keypoints_on_images
-        matrices, max_heights, max_widths, cval_samples, mode_samples = self._create_matrices(
-            [kps.shape for kps in keypoints_on_images],
-            random_state
+        matrices, max_heights, max_widths, cval_samples, mode_samples = \
+            self._create_matrices(
+                [kps.shape for kps in keypoints_on_images],
+                random_state
+            )
+
+        gen = enumerate(
+            zip(matrices, max_heights, max_widths, cval_samples, mode_samples)
         )
 
-        for i, (M, max_height, max_width, cval, mode) in enumerate(zip(matrices, max_heights, max_widths, cval_samples, mode_samples)):
+        for i, (M, max_height, max_width, cval, mode) in gen:
             keypoints_on_image = keypoints_on_images[i]
             new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
             if not keypoints_on_image.keypoints:
                 warped_kps = keypoints_on_image.deepcopy(shape=new_shape)
             else:
                 kps_arr = keypoints_on_image.to_xy_array()
-                warped = cv2.perspectiveTransform(np.array([kps_arr], dtype=np.float32), M)
+                warped = cv2.perspectiveTransform(
+                    np.array([kps_arr], dtype=np.float32), M)
                 warped = warped[0]
                 warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
                               for kp, coords
@@ -2541,7 +2838,8 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i in sm.xrange(nb_images):
             mode = mode_samples[i]
-            mode_samples[i] = mode if ia.is_single_integer(mode) else mode_str_to_int[mode]
+            mode_samples[i] = (
+                mode if ia.is_single_integer(mode) else mode_str_to_int[mode])
 
             cval_samples_cv2.append([int(cval_i) for cval_i in cval_samples[i]])
 
@@ -2576,8 +2874,8 @@ class PerspectiveTransform(meta.Augmenter):
             # x-coordiates or the top-right and top-left x-coordinates
             min_width = None
             while min_width is None or min_width < self.min_width:
-                width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-                width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+                width_a = np.sqrt(((br[0]-bl[0])**2) + ((br[1]-bl[1])**2))
+                width_b = np.sqrt(((tr[0]-tl[0])**2) + ((tr[1]-tl[1])**2))
                 max_width = max(int(width_a), int(width_b))
                 min_width = min(int(width_a), int(width_b))
                 if min_width < self.min_width:
@@ -2591,8 +2889,8 @@ class PerspectiveTransform(meta.Augmenter):
             # y-coordinates or the top-left and bottom-left y-coordinates
             min_height = None
             while min_height is None or min_height < self.min_height:
-                height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-                height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+                height_a = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]- br[1])**2))
+                height_b = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]- bl[1])**2))
                 max_height = max(int(height_a), int(height_b))
                 min_height = min(int(height_a), int(height_b))
                 if min_height < self.min_height:
@@ -2620,7 +2918,8 @@ class PerspectiveTransform(meta.Augmenter):
             max_widths.append(max_width)
 
         mode_samples = mode_samples.astype(int)
-        return matrices, max_heights, max_widths, cval_samples_cv2, mode_samples
+        return (matrices, max_heights, max_widths, cval_samples_cv2,
+                mode_samples)
 
     @classmethod
     def _order_points(cls, pts):
@@ -2650,7 +2949,6 @@ class PerspectiveTransform(meta.Augmenter):
         return [self.jitter, self.keep_size, self.cval, self.mode]
 
 
-# code partially from https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 # TODO add independent sigmas for x/y
 # TODO add independent alphas for x/y
 # TODO add backend arg
@@ -2669,6 +2967,9 @@ class ElasticTransformation(meta.Augmenter):
     ``alpha=10`` and ``sigma=1`` or ``alpha=50``, ``sigma=5``. For ``128x128``
     a setting of ``alpha=(0, 70.0)``, ``sigma=(4.0, 6.0)`` may be a good
     choice and will lead to a water-like effect.
+
+    Code here was initially inspired by
+    https://gist.github.com/chsasank/4d8f68caf01f041a6453e67fb30f8f5a
 
     For a detailed explanation, see ::
 
@@ -2706,95 +3007,96 @@ class ElasticTransformation(meta.Augmenter):
         (3) Only supported for ``order != 0``. Will fail for ``order=0``.
         (4) Mapped internally to ``float64`` when ``order=1``.
         (5) Mapped internally to ``int16`` when ``order>=2``.
-        (6) Handled by ``cv2`` when ``order=0`` or ``order=1``, otherwise by ``scipy``.
+        (6) Handled by ``cv2`` when ``order=0`` or ``order=1``, otherwise by
+            ``scipy``.
         (7) Mapped internally to ``float32``.
 
     Parameters
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Strength of the distortion field. Higher values mean that pixels are moved further
-        with respect to the distortion field's direction. Set this to around 10 times the
-        value of `sigma` for visible effects.
+        Strength of the distortion field. Higher values mean that pixels are
+        moved further with respect to the distortion field's direction. Set
+        this to around 10 times the value of `sigma` for visible effects.
 
             * If number, then that value will be used for all images.
-            * If tuple ``(a, b)``, then a random value from range ``a <= x <= b`` will be
-              sampled per image.
+            * If tuple ``(a, b)``, then a random value will be uniformly
+              sampled per image from the interval ``[a, b]``.
             * If a list, then for each image a random value will be sampled
               from that list.
-            * If StochasticParameter, then that parameter will be used to sample
-              a value per image.
+            * If ``StochasticParameter``, then that parameter will be used to
+              sample a value per image.
 
     sigma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Standard deviation of the gaussian kernel used to smooth the distortion
-        fields. Higher values (for ``128x128`` images around 5.0) lead to more water-like effects,
-        while lower values (for ``128x128`` images around 1.0 and lower) lead to more noisy, pixelated
-        images. Set this to around 1/10th of `alpha` for visible effects.
+        fields. Higher values (for ``128x128`` images around 5.0) lead to more
+        water-like effects, while lower values (for ``128x128`` images
+        around ``1.0`` and lower) lead to more noisy, pixelated images. Set
+        this to around 1/10th of `alpha` for visible effects.
 
             * If number, then that value will be used for all images.
-            * If tuple ``(a, b)``, then a random value from range ``a <= x <= b`` will be
-              sampled per image.
+            * If tuple ``(a, b)``, then a random value will be uniformly
+              sampled per image from the interval ``[a, b]``.
             * If a list, then for each image a random value will be sampled
               from that list.
-            * If StochasticParameter, then that parameter will be used to sample
-              a value per image.
+            * If ``StochasticParameter``, then that parameter will be used to
+              sample a value per image.
 
     order : int or list of int or imaug.ALL or imgaug.parameters.StochasticParameter, optional
         Interpolation order to use. Same meaning as in
         :func:`scipy.ndimage.map_coordinates` and may take any integer value
-        in the range 0 to 5, where orders close to 0 are faster.
+        in the range ``0`` to ``5``, where orders close to ``0`` are faster.
 
             * If a single int, then that order will be used for all images.
-            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
-              is picked per image.
+            * If a tuple ``(a, b)``, then a random value will be uniformly
+              sampled per image from the interval ``[a, b]``.
             * If a list, then for each image a random value will be sampled
               from that list.
-            * If imgaug.ALL, then equivalant to list ``[0, 1, 2, 3, 4, 5]``.
-            * If StochasticParameter, then that parameter is queried per image
-              to sample the order value to use.
+            * If ``imgaug.ALL``, then equivalant to list
+              ``[0, 1, 2, 3, 4, 5]``.
+            * If ``StochasticParameter``, then that parameter is queried per
+              image to sample the order value to use.
 
     cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         The constant intensity value used to fill in new pixels.
-        This value is only used if `mode` is set to "constant".
-        For standard uint8 images (value range 0-255), this value may also
-        come from the range 0-255. It may be a float value, even for
-        integer image dtypes.
+        This value is only used if `mode` is set to ``constant``.
+        For standard ``uint8`` images (value range ``0`` to ``255``), this
+        value may also should also be in the range ``0`` to ``255``. It may
+        be a ``float`` value, even for images with integer dtypes.
 
-            * If this is a single int or float, then that value will be used
-              (e.g. 0 results in black pixels).
-            * If a tuple ``(a, b)``, then a random value from the range ``a <= x <= b``
-              is picked per image.
+            * If this is a single number, then that value will be used
+              (e.g. ``0`` results in black pixels).
+            * If a tuple ``(a, b)``, then a random value will be uniformly
+              sampled per image from the interval ``[a, b]``.
             * If a list, then a random value will be picked from that list per
               image.
-            * If imgaug.ALL, a value from the discrete range ``[0 .. 255]`` will be
-              sampled per image.
-            * If a StochasticParameter, a new value will be sampled from the
-              parameter per image.
+            * If ``imgaug.ALL``, a value from the discrete range ``[0..255]``
+              will be sampled per image.
+            * If a ``StochasticParameter``, a new value will be sampled from
+              the parameter per image.
 
     mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         Parameter that defines the handling of newly created pixels.
         May take the same values as in :func:`scipy.ndimage.map_coordinates`,
         i.e. ``constant``, ``nearest``, ``reflect`` or ``wrap``.
-        The datatype of the parameter may
-        be:
 
             * If a single string, then that mode will be used for all images.
             * If a list of strings, then per image a random mode will be picked
               from that list.
-            * If imgaug.ALL, then a random mode from all possible modes will be
-              picked.
-            * If StochasticParameter, then the mode will be sampled from that
-              parameter per image, i.e. it must return only the above mentioned
-              strings.
+            * If ``imgaug.ALL``, then a random mode from all possible modes
+              will be picked.
+            * If ``StochasticParameter``, then the mode will be sampled from
+              that parameter per image, i.e. it must return only the above
+              mentioned strings.
 
-    polygon_recoverer : 'auto' or None or
-                        imgaug.imgaug._ConcavePolygonRecoverer, optional
+    polygon_recoverer : 'auto' or None or imgaug.augmentables.polygons._ConcavePolygonRecoverer, optional
         The class to use to repair invalid polygons.
-        If ``"auto"``, a new instance of ``imgaug._ConcavePolygonRecoverer``
+        If ``"auto"``, a new instance of
+        :class`imgaug.augmentables.polygons._ConcavePolygonRecoverer`
         will be created.
         If ``None``, no polygon recoverer will be used.
         If an object, then that object will be used and must provide a
         ``recover_from()`` method, similar to
-        ``imgaug.imgaug._ConcavePolygonRecoverer``.
+        :class:`imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2807,25 +3109,25 @@ class ElasticTransformation(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.ElasticTransformation(alpha=50.0, sigma=5.0)
 
-    apply elastic transformations with a strength/alpha of 50.0 and
-    smoothness of 5.0 to all images.
-
+    Apply elastic transformations with a strength/alpha of ``50.0`` and
+    smoothness of ``5.0`` to all images.
 
     >>> aug = iaa.ElasticTransformation(alpha=(0.0, 70.0), sigma=5.0)
 
-    apply elastic transformations with a strength/alpha that comes
-    from the range ``0.0 <= x <= 70.0`` (randomly picked per image) and
-    with a smoothness of 5.0.
+    Apply elastic transformations with a strength/alpha that comes
+    from the interval ``[0.0, 70.0]`` (randomly picked per image) and
+    with a smoothness of ``5.0``.
 
     """
 
     NB_NEIGHBOURING_KEYPOINTS = 3
     NEIGHBOURING_KEYPOINTS_DISTANCE = 1.0
     KEYPOINT_AUG_ALPHA_THRESH = 0.05
-    # even at high alphas we don't augment keypoints if the sigma is too low, because then
-    # the pixel movements are mostly gaussian noise anyways
+    # even at high alphas we don't augment keypoints if the sigma is too low,
+    # because then the pixel movements are mostly gaussian noise anyways
     KEYPOINT_AUG_SIGMA_THRESH = 1.0
 
     _MAPPING_MODE_SCIPY_CV2 = {
@@ -2847,25 +3149,31 @@ class ElasticTransformation(meta.Augmenter):
     def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
                  polygon_recoverer="auto", name=None, deterministic=False,
                  random_state=None):
-        super(ElasticTransformation, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(ElasticTransformation, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
-        self.alpha = iap.handle_continuous_param(alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
-                                                 list_to_choice=True)
-        self.sigma = iap.handle_continuous_param(sigma, "sigma", value_range=(0, None), tuple_to_uniform=True,
-                                                 list_to_choice=True)
+        self.alpha = iap.handle_continuous_param(
+            alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
+        self.sigma = iap.handle_continuous_param(
+            sigma, "sigma", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
 
         if order == ia.ALL:
             self.order = iap.Choice([0, 1, 2, 3, 4, 5])
         else:
-            self.order = iap.handle_discrete_param(order, "order", value_range=(0, 5), tuple_to_uniform=True,
-                                                   list_to_choice=True, allow_floats=False)
+            self.order = iap.handle_discrete_param(
+                order, "order", value_range=(0, 5), tuple_to_uniform=True,
+                list_to_choice=True, allow_floats=False)
 
         if cval == ia.ALL:
-            # TODO change this so that it is dynamically created per image (or once per dtype)
+            # TODO change this so that it is dynamically created per image (or
+            #      once per dtype)
             self.cval = iap.DiscreteUniform(0, 255)
         else:
-            self.cval = iap.handle_discrete_param(cval, "cval", value_range=None, tuple_to_uniform=True,
-                                                  list_to_choice=True, allow_floats=True)
+            self.cval = iap.handle_discrete_param(
+                cval, "cval", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True, allow_floats=True)
 
         if mode == ia.ALL:
             self.mode = iap.Choice(["constant", "nearest", "reflect", "wrap"])
@@ -2880,8 +3188,9 @@ class ElasticTransformation(meta.Augmenter):
         elif isinstance(mode, iap.StochasticParameter):
             self.mode = mode
         else:
-            raise Exception("Expected mode to be imgaug.ALL, a string, a list of strings or StochasticParameter, "
-                            + "got %s." % (type(mode),))
+            raise Exception(
+                "Expected mode to be imgaug.ALL, a string, a list of strings "
+                "or StochasticParameter, got %s." % (type(mode),))
 
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
@@ -2897,19 +3206,26 @@ class ElasticTransformation(meta.Augmenter):
         return rss[0:-5], alphas, sigmas, orders, cvals, modes
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(images,
-                         allowed=["bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint128", "uint256", "int128", "int256", "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.gate_dtypes(
+            images,
+            allowed=["bool",
+                     "uint8", "uint16", "uint32", "uint64",
+                     "int8", "int16", "int32", "int64",
+                     "float16", "float32", "float64"],
+            disallowed=["uint128", "uint256",
+                        "int128", "int256",
+                        "float96", "float128", "float256"],
+            augmenter=self)
 
         result = images
         nb_images = len(images)
-        rss, alphas, sigmas, orders, cvals, modes = self._draw_samples(nb_images, random_state)
+        rss, alphas, sigmas, orders, cvals, modes = self._draw_samples(
+            nb_images, random_state)
 
         for i, image in enumerate(images):
             image = images[i]
-            min_value, _center_value, max_value = iadt.get_value_range_of_dtype(image.dtype)
+            min_value, _center_value, max_value = \
+                iadt.get_value_range_of_dtype(image.dtype)
             cval = cvals[i]
             cval = max(min(cval, max_value), min_value)
 
@@ -2940,7 +3256,8 @@ class ElasticTransformation(meta.Augmenter):
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_heatmaps = len(heatmaps)
-        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_heatmaps, random_state)
+        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(
+            nb_heatmaps, random_state)
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
             if heatmaps_i.arr_0to1.shape[0:2] == heatmaps_i.shape[0:2]:
@@ -2960,16 +3277,18 @@ class ElasticTransformation(meta.Augmenter):
                     mode="constant"
                 )
 
-                # interpolation in map_coordinates() can cause some values to be below/above 1.0,
-                # so we clip here
-                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+                # interpolation in map_coordinates() can cause some values to
+                # be below/above 1.0, so we clip here
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0,
+                                          out=arr_0to1_warped)
 
                 heatmaps_i.arr_0to1 = arr_0to1_warped
             else:
                 # Heatmaps do not have the same size as augmented images.
                 # This may result in indices of moved pixels being different.
-                # To prevent this, we use the same image size as for the base images, but that
-                # requires resizing the heatmaps temporarily to the image sizes.
+                # To prevent this, we use the same image size as for the base
+                # images, but that requires resizing the heatmaps temporarily
+                # to the image sizes.
                 height_orig, width_orig = heatmaps_i.arr_0to1.shape[0:2]
                 heatmaps_i = heatmaps_i.resize(heatmaps_i.shape[0:2])
                 arr_0to1 = heatmaps_i.arr_0to1
@@ -2980,10 +3299,12 @@ class ElasticTransformation(meta.Augmenter):
                     random_state=rss[i]
                 )
 
-                # TODO will it produce similar results to first downscale the shift maps and then remap?
-                #      That would make the remap step take less operations and would also mean that the heatmaps
-                #      wouldnt have to be scaled up anymore. It would also simplify the code as this branch could
-                #      be merged with the one above.
+                # TODO will it produce similar results to first downscale the
+                #      shift maps and then remap? That would make the remap
+                #      step take less operations and would also mean that the
+                #      heatmaps wouldnt have to be scaled up anymore. It would
+                #      also simplify the code as this branch could be merged
+                #      with the one above.
                 arr_0to1_warped = self.map_coordinates(
                     arr_0to1,
                     dx,
@@ -2993,21 +3314,26 @@ class ElasticTransformation(meta.Augmenter):
                     mode="constant"
                 )
 
-                # interpolation in map_coordinates() can cause some values to be below/above 1.0,
-                # so we clip here
-                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0, out=arr_0to1_warped)
+                # interpolation in map_coordinates() can cause some values to
+                # be below/above 1.0, so we clip here
+                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0,
+                                          out=arr_0to1_warped)
 
-                heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(arr_0to1_warped, shape=heatmaps_i.shape,
-                                                                 min_value=heatmaps_i.min_value,
-                                                                 max_value=heatmaps_i.max_value)
-                heatmaps_i_warped = heatmaps_i_warped.resize((height_orig, width_orig))
+                heatmaps_i_warped = ia.HeatmapsOnImage.from_0to1(
+                    arr_0to1_warped,
+                    shape=heatmaps_i.shape,
+                    min_value=heatmaps_i.min_value,
+                    max_value=heatmaps_i.max_value)
+                heatmaps_i_warped = heatmaps_i_warped.resize(
+                    (height_orig, width_orig))
                 heatmaps[i] = heatmaps_i_warped
 
         return heatmaps
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         nb_segmaps = len(segmaps)
-        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_segmaps, random_state)
+        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(
+            nb_segmaps, random_state)
         for i in sm.xrange(nb_segmaps):
             segmaps_i = segmaps[i]
             if segmaps_i.arr.shape[0:2] == segmaps_i.shape[0:2]:
@@ -3031,8 +3357,9 @@ class ElasticTransformation(meta.Augmenter):
             else:
                 # Segmaps do not have the same size as augmented images.
                 # This may result in indices of moved pixels being different.
-                # To prevent this, we use the same image size as for the base images, but that
-                # requires resizing the segmaps temporarily to the image sizes.
+                # To prevent this, we use the same image size as for the base
+                # images, but that requires resizing the segmaps temporarily
+                # to the image sizes.
                 height_orig, width_orig = segmaps_i.arr.shape[0:2]
                 segmaps_i = segmaps_i.resize(segmaps_i.shape[0:2])
                 arr = segmaps_i.arr
@@ -3043,9 +3370,11 @@ class ElasticTransformation(meta.Augmenter):
                     random_state=rss[i]
                 )
 
-                # TODO will it produce similar results to first downscale the shift maps and then remap?
-                #      That would make the remap step take less operations and would also mean that the segmaps
-                #      wouldnt have to be scaled up anymore. It would also simplify the code as this branch could
+                # TODO will it produce similar results to first downscale the
+                #      shift maps and then remap? That would make the remap
+                #      step take less operations and would also mean that the
+                #      segmaps wouldnt have to be scaled up anymore. It would
+                #      also simplify the code as this branch could
                 #      be merged with the one above.
                 arr_warped = self.map_coordinates(
                     arr,
@@ -3060,10 +3389,12 @@ class ElasticTransformation(meta.Augmenter):
                 segmaps[i] = segmaps[i].resize((height_orig, width_orig))
         return segmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = keypoints_on_images
         nb_images = len(keypoints_on_images)
-        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(nb_images, random_state)
+        rss, alphas, sigmas, _orders, _cvals, _modes = self._draw_samples(
+            nb_images, random_state)
         for i in sm.xrange(nb_images):
             kpsoi = keypoints_on_images[i]
             if not kpsoi.keypoints:
@@ -3080,10 +3411,11 @@ class ElasticTransformation(meta.Augmenter):
 
             kps_aug = []
             for kp in kpsoi.keypoints:
-                # dont augment keypoints if alpha/sigma are too low or if the keypoint is outside
-                # of the image plane
-                params_above_thresh = (alphas[i] > self.KEYPOINT_AUG_ALPHA_THRESH
-                                       and sigmas[i] > self.KEYPOINT_AUG_SIGMA_THRESH)
+                # dont augment keypoints if alpha/sigma are too low or if the
+                # keypoint is outside of the image plane
+                params_above_thresh = (
+                        alphas[i] > self.KEYPOINT_AUG_ALPHA_THRESH
+                        and sigmas[i] > self.KEYPOINT_AUG_SIGMA_THRESH)
                 within_image_plane = (0 <= kp.x < w and 0 <= kp.y < h)
                 if not params_above_thresh or not within_image_plane:
                     kps_aug.append(kp)
@@ -3094,11 +3426,12 @@ class ElasticTransformation(meta.Augmenter):
                         return_array=True
                     )
 
-                    # We can clip here, because we made sure above that the keypoint is inside the
-                    # image plane. Keypoints at the bottom row or right columns might be rounded
-                    # outside the image plane, which we prevent here.
-                    # We reduce neighbours to only those within the image plane as only for such
-                    # points we know where to move them.
+                    # We can clip here, because we made sure above that the
+                    # keypoint is inside the image plane. Keypoints at the
+                    # bottom row or right columns might be rounded outside
+                    # the image plane, which we prevent here. We reduce
+                    # neighbours to only those within the image plane as only
+                    # for such points we know where to move them.
                     xx = np.round(kp_neighborhood[:, 0]).astype(np.int32)
                     yy = np.round(kp_neighborhood[:, 1]).astype(np.int32)
                     inside_image_mask = np.logical_and(
@@ -3108,14 +3441,17 @@ class ElasticTransformation(meta.Augmenter):
                     xx = xx[inside_image_mask]
                     yy = yy[inside_image_mask]
 
-                    xxyy = np.concatenate([xx[:, np.newaxis], yy[:, np.newaxis]], axis=1)
+                    xxyy = np.concatenate(
+                        [xx[:, np.newaxis], yy[:, np.newaxis]],
+                        axis=1)
 
                     xxyy_aug = np.copy(xxyy).astype(np.float32)
                     xxyy_aug[:, 0] += dx[yy, xx]
                     xxyy_aug[:, 1] += dy[yy, xx]
 
                     med = ia.compute_geometric_median(xxyy_aug)
-                    # med = np.average(xxyy_aug, 0)  # uncomment to use average instead of median
+                    # uncomment to use average instead of median
+                    # med = np.average(xxyy_aug, 0)
                     kps_aug.append(kp.deepcopy(x=med[0], y=med[1]))
 
             result[i] = kpsoi.deepcopy(keypoints=kps_aug)
@@ -3135,7 +3471,8 @@ class ElasticTransformation(meta.Augmenter):
     def generate_shift_maps(cls, shape, alpha, sigma, random_state):
         assert len(shape) == 2, ("Expected 2d shape, got %s." % (shape,))
 
-        # kernel size used for cv2 based blurring, should be copied from gaussian_blur_()
+        # kernel size used for cv2 based blurring, should be copied from
+        # gaussian_blur_()
         # TODO make dry
         if sigma < 3.0:
             ksize = 3.3 * sigma  # 99% of weight
@@ -3152,14 +3489,16 @@ class ElasticTransformation(meta.Augmenter):
         h_pad = h + 2*padding
         w_pad = w + 2*padding
 
-        # The step of random number generation could be batched, so that random numbers are sampled once for the whole
-        # batch. Would get rid of creating many random_states.
+        # The step of random number generation could be batched, so that
+        # random numbers are sampled once for the whole batch. Would get rid
+        # of creating many random_states.
         dxdy_unsmoothed = random_state.random((2 * h_pad, w_pad)) * 2 - 1
 
         dx_unsmoothed = dxdy_unsmoothed[0:h_pad, :]
         dy_unsmoothed = dxdy_unsmoothed[h_pad:, :]
 
-        # TODO could this also work with an average blur? would probably be faster
+        # TODO could this also work with an average blur? would probably be
+        #      faster
         dx = blur_lib.blur_gaussian_(dx_unsmoothed, sigma) * alpha
         dy = blur_lib.blur_gaussian_(dy_unsmoothed, sigma) * alpha
 
@@ -3169,6 +3508,7 @@ class ElasticTransformation(meta.Augmenter):
 
         return dx, dy
 
+    # TODO cleanup the dtypes stuff here
     @classmethod
     def map_coordinates(cls, image, dx, dy, order=1, cval=0, mode="constant"):
         """
@@ -3183,7 +3523,8 @@ class ElasticTransformation(meta.Augmenter):
                 * int8: yes
                 * int16: yes
                 * int32: yes
-                * int64: no (produces array filled with <min_value> when testing with <max_value>)
+                * int64: no (produces array filled with <min_value> when
+                  testing with <max_value>)
                 * float16: yes
                 * float32: yes
                 * float64: yes
@@ -3191,8 +3532,10 @@ class ElasticTransformation(meta.Augmenter):
                 * bool: yes
 
             order=1 to 5
-                * uint*, int*: yes (rather loose test, to avoid having to re-compute the interpolation)
-                * float16 - float64: yes (rather loose test, to avoid having to re-compute the interpolation)
+                * uint*, int*: yes (rather loose test, to avoid having to
+                  re-compute the interpolation)
+                * float16 - float64: yes (rather loose test, to avoid having
+                  to re-compute the interpolation)
                 * float128: no (causes: 'data type no supported')
                 * bool: yes
 
@@ -3217,16 +3560,21 @@ class ElasticTransformation(meta.Augmenter):
                 * uint8: yes
                 * uint16: yes
                 * uint32: no (causes: src data type = 6 is not supported)
-                * uint64: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805: error: (-215:Assertion failed) ifunc != 0
-                  in function 'remap')
-                * int8: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805: error: (-215:Assertion failed) ifunc != 0
-                  in function 'remap')
-                * int16: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805: error: (-215:Assertion failed) ifunc != 0
-                  in function 'remap')
-                * int32: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805: error: (-215:Assertion failed) ifunc != 0
-                  in function 'remap')
-                * int64: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805: error: (-215:Assertion failed) ifunc != 0
-                  in function 'remap')
+                * uint64: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap')
+                * int8: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap')
+                * int16: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap')
+                * int32: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap')
+                * int64: no (causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap')
                 * float16: yes
                 * float32: yes
                 * float64: yes
@@ -3238,8 +3586,10 @@ class ElasticTransformation(meta.Augmenter):
 
         """
         if order == 0 and image.dtype.name in ["uint64", "int64"]:
-            raise Exception(("dtypes uint64 and int64 are only supported in ElasticTransformation for order=0, "
-                             + "got order=%d with dtype=%s.") % (order, image.dtype.name))
+            raise Exception(
+                "dtypes uint64 and int64 are only supported in "
+                "ElasticTransformation for order=0, got order=%d with "
+                "dtype=%s." % (order, image.dtype.name))
 
         input_dtype = image.dtype
         if image.dtype.name == "bool":
@@ -3254,12 +3604,29 @@ class ElasticTransformation(meta.Augmenter):
         shrt_max = 32767
         backend = "cv2"
         if order == 0:
-            bad_dtype_cv2 = (image.dtype.name in ["uint32", "uint64", "int64", "float128", "bool"])
+            bad_dtype_cv2 = (
+                image.dtype.name in [
+                    "uint32", "uint64",
+                    "int64",
+                    "float128",
+                    "bool"]
+            )
         elif order == 1:
-            bad_dtype_cv2 = (image.dtype.name in ["uint32", "uint64", "int8", "int16", "int32", "int64", "float128",
-                                                  "bool"])
+            bad_dtype_cv2 = (
+                image.dtype.name in [
+                    "uint32", "uint64",
+                    "int8", "int16", "int32", "int64",
+                    "float128",
+                    "bool"]
+            )
         else:
-            bad_dtype_cv2 = (image.dtype.name in ["uint32", "uint64", "int8", "int32", "int64", "float128", "bool"])
+            bad_dtype_cv2 = (
+                image.dtype.name in [
+                    "uint32", "uint64",
+                    "int8", "int32", "int64",
+                    "float128",
+                    "bool"]
+            )
 
         bad_dx_shape_cv2 = (dx.shape[0] >= shrt_max or dx.shape[1] >= shrt_max)
         bad_dy_shape_cv2 = (dy.shape[0] >= shrt_max or dy.shape[1] >= shrt_max)
@@ -3272,7 +3639,10 @@ class ElasticTransformation(meta.Augmenter):
         height, width = image.shape[0:2]
         if backend == "scipy":
             h, w = image.shape[0:2]
-            y, x = np.meshgrid(np.arange(h).astype(np.float32), np.arange(w).astype(np.float32), indexing='ij')
+            y, x = np.meshgrid(
+                np.arange(h).astype(np.float32),
+                np.arange(w).astype(np.float32),
+                indexing='ij')
             x_shifted = x + (-1) * dx
             y_shifted = y + (-1) * dy
 
@@ -3289,7 +3659,10 @@ class ElasticTransformation(meta.Augmenter):
         else:
             h, w, nb_channels = image.shape
 
-            y, x = np.meshgrid(np.arange(h).astype(np.float32), np.arange(w).astype(np.float32), indexing='ij')
+            y, x = np.meshgrid(
+                np.arange(h).astype(np.float32),
+                np.arange(w).astype(np.float32),
+                indexing='ij')
             x_shifted = x + (-1) * dx
             y_shifted = y + (-1) * dy
 
@@ -3301,10 +3674,14 @@ class ElasticTransformation(meta.Augmenter):
             interpolation = cls._MAPPING_ORDER_SCIPY_CV2[order]
 
             is_nearest_neighbour = (interpolation == cv2.INTER_NEAREST)
-            map1, map2 = cv2.convertMaps(x_shifted, y_shifted, cv2.CV_16SC2, nninterpolation=is_nearest_neighbour)
+            map1, map2 = cv2.convertMaps(
+                x_shifted, y_shifted, cv2.CV_16SC2,
+                nninterpolation=is_nearest_neighbour)
             # remap only supports up to 4 channels
             if nb_channels <= 4:
-                result = cv2.remap(image, map1, map2, interpolation=interpolation, borderMode=border_mode, borderValue=cval)
+                result = cv2.remap(
+                    image, map1, map2, interpolation=interpolation,
+                    borderMode=border_mode, borderValue=cval)
                 if image.ndim == 3 and result.ndim == 2:
                     result = result[..., np.newaxis]
             else:
@@ -3312,8 +3689,9 @@ class ElasticTransformation(meta.Augmenter):
                 result = []
                 while current_chan_idx < nb_channels:
                     channels = image[..., current_chan_idx:current_chan_idx+4]
-                    result_c =  cv2.remap(channels, map1, map2, interpolation=interpolation, borderMode=border_mode,
-                                          borderValue=cval)
+                    result_c =  cv2.remap(
+                        channels, map1, map2, interpolation=interpolation,
+                        borderMode=border_mode, borderValue=cval)
                     if result_c.ndim == 2:
                         result_c = result_c[..., np.newaxis]
                     result.append(result_c)
@@ -3363,21 +3741,21 @@ class Rot90(meta.Augmenter):
     k : int or list of int or tuple of int or imaug.ALL or imgaug.parameters.StochasticParameter, optional
         How often to rotate clockwise by 90 degrees.
 
-            * If a single int, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a random value from the discrete
-              range ``a <= x <= b`` is picked per image.
+            * If a single ``int``, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a random value will be uniformly
+              sampled per image from the discrete interval ``[a..b]``.
             * If a list, then for each image a random value will be sampled
               from that list.
-            * If imgaug.ALL, then equivalant to list ``[0, 1, 2, 3]``.
-            * If StochasticParameter, then that parameter is queried per image
-              to sample the value to use.
+            * If ``imgaug.ALL``, then equivalant to list ``[0, 1, 2, 3]``.
+            * If ``StochasticParameter``, then that parameter is queried per
+              image to sample the value to use.
 
     keep_size : bool, optional
         After rotation by an odd-valued `k` (e.g. 1 or 3), the resulting image
         may have a different height/width than the original image.
-        If this parameter is set to True, then the rotated
-        image will be resized to the input image's size. Note that this might also
-        cause the augmented image to look distorted.
+        If this parameter is set to ``True``, then the rotated
+        image will be resized to the input image's size. Note that this might
+        also cause the augmented image to look distorted.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3421,10 +3799,13 @@ class Rot90(meta.Augmenter):
 
     """
 
-    def __init__(self, k, keep_size=True, name=None, deterministic=False, random_state=None):
-        super(Rot90, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
-        self.k = iap.handle_discrete_param(k, "k", value_range=None, tuple_to_uniform=True, list_to_choice=True,
-                                           allow_floats=False)
+    def __init__(self, k, keep_size=True, name=None, deterministic=False,
+                 random_state=None):
+        super(Rot90, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.k = iap.handle_discrete_param(
+            k, "k", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=False)
         self.keep_size = keep_size
 
     def _draw_samples(self, nb_images, random_state):
@@ -3432,7 +3813,8 @@ class Rot90(meta.Augmenter):
 
     def _augment_arrays(self, arrs, random_state, resize_func):
         ks = self._draw_samples(len(arrs), random_state)
-        return self._augment_arrays_by_samples(arrs, ks, self.keep_size, resize_func), ks
+        return self._augment_arrays_by_samples(
+            arrs, ks, self.keep_size, resize_func), ks
 
     @classmethod
     def _augment_arrays_by_samples(cls, arrs, ks, keep_size, resize_func):
@@ -3440,8 +3822,14 @@ class Rot90(meta.Augmenter):
         input_dtype = arrs.dtype if input_was_array else None
         arrs_aug = []
         for arr, k_i in zip(arrs, ks):
-            arr_aug = np.rot90(arr, k_i, axes=(1, 0))  # adding axes here rotates clock-wise instead of ccw
-            if keep_size and arr.shape != arr_aug.shape and resize_func is not None:
+            # adding axes here rotates clock-wise instead of ccw
+            arr_aug = np.rot90(arr, k_i, axes=(1, 0))
+
+            do_resize = (
+                keep_size
+                and arr.shape != arr_aug.shape
+                and resize_func is not None)
+            if do_resize:
                 arr_aug = resize_func(arr_aug, arr.shape[0:2])
             arrs_aug.append(arr_aug)
         if keep_size and input_was_array:
@@ -3468,7 +3856,8 @@ class Rot90(meta.Augmenter):
                 h, w = heatmaps_i.shape[0:2]
                 heatmaps_i.shape = tuple([w, h] + list(heatmaps_i.shape[2:]))
             else:
-                # keep_size was False, but rotated by a multiple of 2, hence height and width do not change
+                # keep_size was False, but rotated by a multiple of 2,
+                # hence height and width do not change
                 pass
             heatmaps_aug.append(heatmaps_i)
         return heatmaps_aug
@@ -3486,12 +3875,14 @@ class Rot90(meta.Augmenter):
                 h, w = segmaps_i.shape[0:2]
                 segmaps_i.shape = tuple([w, h] + list(segmaps_i.shape[2:]))
             else:
-                # keep_size was False, but rotated by a multiple of 2, hence height and width do not change
+                # keep_size was False, but rotated by a multiple of 2,
+                # hence height and width do not change
                 pass
             segmaps_aug.append(segmaps_i)
         return segmaps_aug
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         nb_images = len(keypoints_on_images)
         ks = self._draw_samples(nb_images, random_state)
         result = []
@@ -3518,7 +3909,8 @@ class Rot90(meta.Augmenter):
                     kps_aug.append(kp.deepcopy(x=xr, y=yr))
 
                 shape_aug = tuple([h_aug, w_aug] + list(kpsoi_i.shape[2:]))
-                kpsoi_i_aug = kpsoi_i.deepcopy(keypoints=kps_aug, shape=shape_aug)
+                kpsoi_i_aug = kpsoi_i.deepcopy(keypoints=kps_aug,
+                                               shape=shape_aug)
                 if self.keep_size and (h, w) != (h_aug, w_aug):
                     kpsoi_i_aug = kpsoi_i_aug.on(kpsoi_i.shape)
                     kpsoi_i_aug.shape = kpsoi_i.shape
