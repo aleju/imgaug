@@ -600,10 +600,10 @@ class KeypointsOnImage(object):
             number of keypoints.
 
         """
-        ia.do_assert(len(self.keypoints) > 0)
         height, width = self.shape[0:2]
         image = np.zeros((height, width, len(self.keypoints)), dtype=np.uint8)
-        ia.do_assert(size % 2 != 0)
+        assert size % 2 != 0, (
+            "Expected 'size' to have an odd value, got %d instead." % (size,))
         sizeh = max(0, (size-1)//2)
         for i, keypoint in enumerate(self.keypoints):
             # TODO for float values spread activation over several cells
@@ -657,7 +657,9 @@ class KeypointsOnImage(object):
             The extracted keypoints.
 
         """
-        ia.do_assert(len(image.shape) == 3)
+        assert image.ndim == 3, (
+            "Expected 'image' to have three dimensions, "
+            "got %d with shape %s instead." % (image.ndim, image.shape))
         height, width, nb_keypoints = image.shape
 
         drop_if_not_found = False
@@ -666,7 +668,9 @@ class KeypointsOnImage(object):
             if_not_found_x = -1
             if_not_found_y = -1
         elif isinstance(if_not_found_coords, (tuple, list)):
-            ia.do_assert(len(if_not_found_coords) == 2)
+            assert len(if_not_found_coords) == 2, (
+                "Expected tuple 'if_not_found_coords' to contain exactly two "
+                "values, got %d values." % (len(if_not_found_coords),))
             if_not_found_x = if_not_found_coords[0]
             if_not_found_y = if_not_found_coords[1]
         elif isinstance(if_not_found_coords, dict):
@@ -719,7 +723,6 @@ class KeypointsOnImage(object):
             of the array match the height and width in ``KeypointsOnImage.shape``.
 
         """
-        ia.do_assert(len(self.keypoints) > 0)
         height, width = self.shape[0:2]
         distance_maps = np.zeros((height, width, len(self.keypoints)), dtype=np.float32)
 
@@ -776,7 +779,9 @@ class KeypointsOnImage(object):
             The extracted keypoints.
 
         """
-        ia.do_assert(len(distance_maps.shape) == 3)
+        assert distance_maps.ndim == 3, (
+            "Expected three-dimensional input, got %d dimensions and "
+            "shape %s." % (distance_maps.ndim, distance_maps.shape))
         height, width, nb_keypoints = distance_maps.shape
 
         drop_if_not_found = False
@@ -785,7 +790,9 @@ class KeypointsOnImage(object):
             if_not_found_x = -1
             if_not_found_y = -1
         elif isinstance(if_not_found_coords, (tuple, list)):
-            ia.do_assert(len(if_not_found_coords) == 2)
+            assert len(if_not_found_coords) == 2, (
+                "Expected tuple/list 'if_not_found_coords' to contain "
+                "exactly two entries, got %d." % (len(if_not_found_coords),))
             if_not_found_x = if_not_found_coords[0]
             if_not_found_y = if_not_found_coords[1]
         elif isinstance(if_not_found_coords, dict):

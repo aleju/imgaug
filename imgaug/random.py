@@ -341,7 +341,10 @@ class RNG(object):
             have equal internal states. ``False`` otherwise.
 
         """
-        assert isinstance(other, RNG)
+        assert isinstance(other, RNG), (
+            "Expected 'other' to be an RNG, got type %s. "
+            "Use imgaug.random.is_generator_equal_to() to compare "
+            "numpy generators or RandomStates." % (type(other),))
         return is_generator_equal_to(self.generator, other.generator)
 
     def advance_(self):
@@ -626,7 +629,6 @@ class RNG(object):
                 "Expected out array to have the same dtype as "
                 "standard_exponential()'s result array. Got %s (out) and "
                 "%s (result) instead." % (out.dtype.name, result.dtype.name))
-            assert out.dtype.name == result.dtype.name
             out[...] = result
         return result
 
@@ -649,7 +651,6 @@ class RNG(object):
                 "Expected out array to have the same dtype as "
                 "standard_gamma()'s result array. Got %s (out) and "
                 "%s (result) instead." % (out.dtype.name, result.dtype.name))
-            assert out.dtype.name == result.dtype.name
             out[...] = result
         return result
 
@@ -671,7 +672,6 @@ class RNG(object):
                 "Expected out array to have the same dtype as "
                 "standard_normal()'s result array. Got %s (out) and "
                 "%s (result) instead." % (out.dtype.name, result.dtype.name))
-            assert out.dtype.name == result.dtype.name
             out[...] = result
         return result
 
@@ -1289,8 +1289,12 @@ def _is_generator_equal_to_np117(generator, other_generator):
 
     state1 = get_generator_state(generator)
     state2 = get_generator_state(other_generator)
-    assert state1["bit_generator"] == "SFC64"
-    assert state2["bit_generator"] == "SFC64"
+    assert state1["bit_generator"] == "SFC64", (
+        "Can currently only compare the states of numpy.random.SFC64 bit "
+        "generators, got %s." % (state1["bit_generator"],))
+    assert state2["bit_generator"] == "SFC64", (
+        "Can currently only compare the states of numpy.random.SFC64 bit "
+        "generators, got %s." % (state2["bit_generator"],))
 
     if state1["has_uint32"] != state2["has_uint32"]:
         return False

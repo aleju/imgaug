@@ -43,17 +43,14 @@ def _handle_pad_mode_param(pad_mode):
     if pad_mode == ia.ALL:
         return iap.Choice(list(pad_modes_available))
     elif ia.is_string(pad_mode):
-        ia.do_assert(
-            pad_mode in pad_modes_available,
-            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (pad_mode, ", ".join(pad_modes_available))
-        )
+        assert pad_mode in pad_modes_available, (
+            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (
+                pad_mode, ", ".join(pad_modes_available)))
         return iap.Deterministic(pad_mode)
     elif isinstance(pad_mode, list):
-        ia.do_assert(
-            all([v in pad_modes_available for v in pad_mode]),
-            "At least one in list %s is not a valid pad mode. Valid pad modes are: %s." % (
-                str(pad_mode), ", ".join(pad_modes_available))
-        )
+        assert all([v in pad_modes_available for v in pad_mode]), (
+            "At least one in list %s is not a valid pad mode. Valid pad "
+            "modes are: %s." % (str(pad_mode), ", ".join(pad_modes_available)))
         return iap.Choice(pad_mode)
     elif isinstance(pad_mode, iap.StochasticParameter):
         return pad_mode
@@ -80,8 +77,18 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, cr
             regain_bottom = crop_bottom
             regain_top += diff
 
-        ia.do_assert(regain_top <= crop_top)
-        ia.do_assert(regain_bottom <= crop_bottom)
+        assert regain_top <= crop_top, (
+            "Failed to get regain_top<=crop_top for height %d, width %d, "
+            "crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
+            "regain_top %d." % (
+                height, width, crop_top, crop_right, crop_bottom, crop_left,
+                regain_top))
+        assert regain_bottom <= crop_bottom, (
+            "Failed to get regain_bottom<=crop_bottom for height %d, width "
+            "%d, crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
+            "regain_bottom %d." % (
+                height, width, crop_top, crop_right, crop_bottom, crop_left,
+                regain_bottom))
 
         crop_top = crop_top - regain_top
         crop_bottom = crop_bottom - regain_bottom
@@ -102,8 +109,18 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, cr
             regain_left = crop_left
             regain_right += diff
 
-        ia.do_assert(regain_right <= crop_right)
-        ia.do_assert(regain_left <= crop_left)
+        assert regain_right <= crop_right, (
+            "Failed to get regain_right<=crop_right for height %d, width %d, "
+            "crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
+            "regain_right %d." % (
+                height, width, crop_top, crop_right, crop_bottom, crop_left,
+                regain_right))
+        assert regain_left <= crop_left, (
+            "Failed to get regain_left<=crop_left for height %d, width %d, "
+            "crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
+            "regain_left %d." % (
+                height, width, crop_top, crop_right, crop_bottom, crop_left,
+                regain_left))
 
         crop_right = crop_right - regain_right
         crop_left = crop_left - regain_left
@@ -130,11 +147,10 @@ def _handle_position_parameter(position):
     elif isinstance(position, iap.StochasticParameter):
         return position
     elif isinstance(position, tuple):
-        ia.do_assert(
-            len(position) == 2,
-            "Expected tuple with two entries as position parameter. Got %d entries with types %s.." % (
-                len(position), str([type(el) for el in position])
-            ))
+        assert len(position) == 2, (
+            "Expected tuple with two entries as position parameter. "
+            "Got %d entries with types %s.." % (
+                len(position), str([type(el) for el in position])))
         for el in position:
             if ia.is_single_number(el) and (el < 0 or el > 1.0):
                 raise Exception(
@@ -143,12 +159,13 @@ def _handle_position_parameter(position):
                 )
         position = [iap.Deterministic(el) if ia.is_single_number(el) else el for el in position]
 
-        ia.do_assert(
-            all([isinstance(el, iap.StochasticParameter) for el in position]),
-            "Expected tuple with two entries that are both either StochasticParameter or float/int. Got types %s." % (
+        only_sparams = all([isinstance(el, iap.StochasticParameter)
+                            for el in position])
+        assert only_sparams, (
+            "Expected tuple with two entries that are both either "
+            "StochasticParameter or float/int. Got types %s." % (
                 str([type(el) for el in position])
-            )
-        )
+            ))
         return tuple(position)
     else:
         raise Exception(
@@ -298,18 +315,22 @@ class Resize(meta.Augmenter):
             if val == "keep":
                 return iap.Deterministic("keep")
             elif ia.is_single_integer(val):
-                ia.do_assert(val > 0)
+                assert val > 0, "Expected only values > 0, got %d" % (val,)
                 return iap.Deterministic(val)
             elif ia.is_single_float(val):
-                ia.do_assert(val > 0)
+                assert val > 0, "Expected only values > 0, got %.4f" % (val,)
                 return iap.Deterministic(val)
             elif allow_dict and isinstance(val, dict):
                 if len(val.keys()) == 0:
                     return iap.Deterministic("keep")
                 elif any([key in ["height", "width"] for key in val.keys()]):
-                    ia.do_assert(all([key in ["height", "width"] for key in val.keys()]))
+                    assert all([key in ["height", "width"] for key in val.keys()]), (
+                        "Expected dict to contain height and width keys, found "
+                        "neither of them.")
                     if "height" in val and "width" in val:
-                        ia.do_assert(val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio")
+                        assert val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio", (
+                            "Expected height and width to not be both set "
+                            "to \"keep-aspect-ratio\".")
 
                     size_tuple = []
                     for k in ["height", "width"]:
@@ -323,9 +344,13 @@ class Resize(meta.Augmenter):
                         size_tuple.append(entry)
                     return tuple(size_tuple)
                 elif any([key in ["shorter-side", "longer-side"] for key in val.keys()]):
-                    ia.do_assert(all([key in ["shorter-side", "longer-side"] for key in val.keys()]))
+                    assert all([key in ["shorter-side", "longer-side"] for key in val.keys()]), (
+                        "Expected dict to contain shorter-side and longer-side keys, found "
+                        "neither of them.")
                     if "shorter-side" in val and "longer-side" in val:
-                        ia.do_assert(val["shorter-side"] != "keep-aspect-ratio" or val["longer-side"] != "keep-aspect-ratio")
+                        assert val["shorter-side"] != "keep-aspect-ratio" or val["longer-side"] != "keep-aspect-ratio", (
+                            "Expected shorter-side and longer-side to not be "
+                            "both set to \"keep-aspect-ratio\".")
 
                     size_tuple = []
                     for k in ["shorter-side", "longer-side"]:
@@ -340,8 +365,12 @@ class Resize(meta.Augmenter):
                     return tuple(size_tuple)
 
             elif isinstance(val, tuple):
-                ia.do_assert(len(val) == 2)
-                ia.do_assert(val[0] > 0 and val[1] > 0)
+                assert len(val) == 2, (
+                    "Expected size tuple to contain exactly 2 values, "
+                    "got %d." % (len(val),))
+                assert val[0] > 0 and val[1] > 0, (
+                    "Expected size tuple to only contain values >0, "
+                    "got %d and %d." % (val[0], val[1]))
                 if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
                     return iap.Uniform(val[0], val[1])
                 else:
@@ -352,8 +381,10 @@ class Resize(meta.Augmenter):
                 else:
                     all_int = all([ia.is_single_integer(v) for v in val])
                     all_float = all([ia.is_single_float(v) for v in val])
-                    ia.do_assert(all_int or all_float)
-                    ia.do_assert(all([v > 0 for v in val]))
+                    assert all_int or all_float, (
+                        "Expected to get only integers or floats.")
+                    assert all([v > 0 for v in val]), (
+                        "Expected all values to be >0.")
                     return iap.Choice(val)
             elif isinstance(val, iap.StochasticParameter):
                 return val
@@ -488,13 +519,13 @@ class Resize(meta.Augmenter):
             h, w = sample_a, sample_b
 
         if ia.is_single_float(h):
-            ia.do_assert(0 < h)
+            assert h > 0, "Expected 'h' to be >0, got %.4f" % (h,)
             h = int(np.round(imh * h))
             h = h if h > 0 else 1
         elif h == "keep":
             h = imh
         if ia.is_single_float(w):
-            ia.do_assert(0 < w)
+            assert w > 0, "Expected 'w' to be >0, got %.4f" % (w,)
             w = int(np.round(imw * w))
             w = w if w > 0 else 1
         elif w == "keep":
@@ -749,19 +780,29 @@ class CropAndPad(meta.Augmenter):
             if ia.is_single_integer(px):
                 self.all_sides = iap.Deterministic(px)
             elif isinstance(px, tuple):
-                ia.do_assert(len(px) in [2, 4])
+                assert len(px) in [2, 4], (
+                    "Expected 'px' given as a tuple to contain 2 or 4 "
+                    "entries, got %d." % (len(px),))
 
                 def handle_param(p):
                     if ia.is_single_integer(p):
                         return iap.Deterministic(p)
                     elif isinstance(p, tuple):
-                        ia.do_assert(len(p) == 2)
-                        ia.do_assert(ia.is_single_integer(p[0]))
-                        ia.do_assert(ia.is_single_integer(p[1]))
+                        assert len(p) == 2, (
+                            "Expected tuple of 2 values, got %d." % (len(p)))
+                        only_ints = (
+                            ia.is_single_integer(p[0])
+                            and ia.is_single_integer(p[1]))
+                        assert only_ints, (
+                            "Expected tuple of integers, got %s and %s." % (
+                                type(p[0]), type(p[1])))
                         return iap.DiscreteUniform(p[0], p[1])
                     elif isinstance(p, list):
-                        ia.do_assert(len(p) > 0)
-                        ia.do_assert(all([ia.is_single_integer(val) for val in p]))
+                        assert len(p) > 0, (
+                            "Expected non-empty list, but got empty one.")
+                        assert all([ia.is_single_integer(val) for val in p]), (
+                            "Expected list of ints, got types %s." % (
+                                ", ".join([str(type(v)) for v in p])))
                         return iap.Choice(p)
                     elif isinstance(p, iap.StochasticParameter):
                         return p
@@ -784,25 +825,39 @@ class CropAndPad(meta.Augmenter):
         else:  # = elif percent is not None:
             self.mode = "percent"
             if ia.is_single_number(percent):
-                ia.do_assert(-1.0 < percent)
+                assert percent > -1.0, (
+                    "Expected 'percent' to be >-1.0, got %.4f." % (percent,))
                 self.all_sides = iap.Deterministic(percent)
             elif isinstance(percent, tuple):
-                ia.do_assert(len(percent) in [2, 4])
+                assert len(percent) in [2, 4], (
+                    "Expected 'percent' given as a tuple to contain 2 or 4 "
+                    "entries, got %d." % (len(px),))
 
                 def handle_param(p):
                     if ia.is_single_number(p):
                         return iap.Deterministic(p)
                     elif isinstance(p, tuple):
-                        ia.do_assert(len(p) == 2)
-                        ia.do_assert(ia.is_single_number(p[0]))
-                        ia.do_assert(ia.is_single_number(p[1]))
-                        ia.do_assert(-1.0 < p[0])
-                        ia.do_assert(-1.0 < p[1])
+                        assert len(p) == 2, (
+                            "Expected tuple of 2 values, got %d." % (len(p)))
+                        only_numbers = (
+                            ia.is_single_number(p[0])
+                            and ia.is_single_number(p[1]))
+                        assert only_numbers, (
+                            "Expected tuple of numbers, got %s and %s." % (
+                                type(p[0]), type(p[1])))
+                        assert p[0] > -1.0 and p[1] > -1.0, (
+                            "Expected tuple of values >-1.0, got %.4f and "
+                            "%.4f." % (p[0], p[1]))
                         return iap.Uniform(p[0], p[1])
                     elif isinstance(p, list):
-                        ia.do_assert(len(p) > 0)
-                        ia.do_assert(all([ia.is_single_number(val) for val in p]))
-                        ia.do_assert(all([-1.0 < val for val in p]))
+                        assert len(p) > 0, (
+                            "Expected non-empty list, but got empty one.")
+                        assert all([ia.is_single_number(val) for val in p]), (
+                            "Expected list of numbers, got types %s." % (
+                                ", ".join([str(type(v)) for v in p])))
+                        assert all([val > -1.0 for val in p]), (
+                            "Expected list of values >-1.0, got values %s." % (
+                                ", ".join(["%.4f" % (v,) for v in p])))
                         return iap.Choice(p)
                     elif isinstance(p, iap.StochasticParameter):
                         return p
@@ -1062,9 +1117,22 @@ class CropAndPad(meta.Augmenter):
 
         crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left)
 
-        ia.do_assert(crop_top >= 0 and crop_right >= 0 and crop_bottom >= 0 and crop_left >= 0)
-        ia.do_assert(crop_top + crop_bottom < height)
-        ia.do_assert(crop_right + crop_left < width)
+        assert (
+            crop_top >= 0
+            and crop_right >= 0
+            and crop_bottom >= 0
+            and crop_left >= 0), (
+            "Expected to generate only crop amounts >=0, "
+            "got %d, %d, %d, %d (top, right, botto, left)." % (
+                crop_top, crop_right, crop_bottom, crop_left))
+        assert crop_top + crop_bottom < height, (
+            "Expected generated crop amounts at top/bottom to not exceed "
+            "image height, got %d and %d vs. image height %d." % (
+                crop_top, crop_bottom, height))
+        assert crop_right + crop_left < width, (
+            "Expected generated crop amounts at left/right to not exceed "
+            "image width, got %d and %d vs. image width %d." % (
+                crop_left, crop_right, width))
 
         return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
 
@@ -1241,7 +1309,7 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         if v is None:
             return v
         elif ia.is_single_number(v):
-            ia.do_assert(v >= 0)
+            assert v >= 0, "Expected value >0, got %.4f" % (v,)
             return v
         elif isinstance(v, iap.StochasticParameter):
             return v
@@ -1390,7 +1458,7 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
         if v is None:
             return v
         elif ia.is_single_number(v):
-            ia.do_assert(v >= 0)
+            assert v >= 0, "Expected value >0, got %.4f." % (v,)
             return -v
         elif isinstance(v, iap.StochasticParameter):
             return iap.Multiply(v, -1)
@@ -2094,15 +2162,16 @@ class KeepSizeByResize(meta.Augmenter):
             elif val in ia.IMRESIZE_VALID_INTERPOLATIONS + [KeepSizeByResize.NO_RESIZE]:
                 return iap.Deterministic(val)
             elif isinstance(val, list):
-                ia.do_assert(len(val) > 0,
-                             "Expected a list of at least one interpolation method. Got an empty list.")
+                assert len(val) > 0, (
+                    "Expected a list of at least one interpolation method. "
+                    "Got an empty list.")
                 valid_ips = ia.IMRESIZE_VALID_INTERPOLATIONS + [KeepSizeByResize.NO_RESIZE]
                 if allow_same_as_images:
                     valid_ips = valid_ips + [KeepSizeByResize.SAME_AS_IMAGES]
-                ia.do_assert(all([ip in valid_ips for ip in val]),
-                             "Expected each interpolations to be one of '%s', got '%s'." % (
-                                 str(valid_ips), str(val)
-                             ))
+                only_valid_ips = all([ip in valid_ips for ip in val])
+                assert only_valid_ips, (
+                    "Expected each interpolations to be one of '%s', got "
+                    "'%s'." % (str(valid_ips), str(val)))
                 return iap.Choice(val)
             elif isinstance(val, iap.StochasticParameter):
                 return val

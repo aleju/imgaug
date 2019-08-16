@@ -1323,10 +1323,16 @@ def Dropout(p=0, per_channel=False,
     if ia.is_single_number(p):
         p2 = iap.Binomial(1 - p)
     elif ia.is_iterable(p):
-        ia.do_assert(len(p) == 2)
-        ia.do_assert(p[0] < p[1])
-        ia.do_assert(0 <= p[0] <= 1.0)
-        ia.do_assert(0 <= p[1] <= 1.0)
+        assert len(p) == 2, (
+            "Expected 'p' given as an iterable to contain exactly 2 values, "
+            "got %d." % (len(p),))
+        assert p[0] < p[1], (
+            "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
+            "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
+        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+            "Expected 'p' given as iterable to only contain values in the "
+            "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
+
         p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
     elif isinstance(p, iap.StochasticParameter):
         p2 = p
@@ -1494,10 +1500,16 @@ def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False,
     if ia.is_single_number(p):
         p2 = iap.Binomial(1 - p)
     elif ia.is_iterable(p):
-        ia.do_assert(len(p) == 2)
-        ia.do_assert(p[0] < p[1])
-        ia.do_assert(0 <= p[0] <= 1.0)
-        ia.do_assert(0 <= p[1] <= 1.0)
+        assert len(p) == 2, (
+            "Expected 'p' given as an iterable to contain exactly 2 values, "
+            "got %d." % (len(p),))
+        assert p[0] < p[1], (
+            "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
+            "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
+        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+            "Expected 'p' given as iterable to only contain values in the "
+            "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
+
         p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
     elif isinstance(p, iap.StochasticParameter):
         p2 = p
@@ -2634,8 +2646,7 @@ class Invert(meta.Augmenter):
             )
 
             if min_value != min_value_dt or max_value != max_value_dt:
-                ia.do_assert(
-                    image.dtype.type in self.ALLOW_DTYPES_CUSTOM_MINMAX,
+                assert image.dtype.type in self.ALLOW_DTYPES_CUSTOM_MINMAX, (
                     "Can use custom min/max values only with the following "
                     "dtypes: %s. Got: %s." % (
                         ", ".join([
@@ -2658,10 +2669,9 @@ class Invert(meta.Augmenter):
 
     @classmethod
     def _invert_bool(cls, arr, min_value, max_value):
-        ia.do_assert(min_value == 0, "Cannot modify min/max value for bool "
-                                     "arrays in Invert.")
-        ia.do_assert(max_value == 1, "Cannot modify min/max value for bool "
-                                     "arrays in Invert.")
+        assert min_value == 0 and max_value == 1, (
+            "min_value and max_value must be 0 and 1 for bool arrays. "
+            "Got %.4f and %.4f." % (min_value, max_value))
         return ~arr
 
     @classmethod
@@ -2926,14 +2936,16 @@ class JpegCompression(meta.Augmenter):
                                                 random_state=random_state)
 
         for i, (image, sample) in enumerate(zip(images, samples)):
-            ia.do_assert(image.dtype.name == "uint8", (
-                "Can apply jpeg compression only to uint8 images."))
+            assert image.dtype.name == "uint8", (
+                "Can apply jpeg compression only to uint8 images.")
             nb_channels = image.shape[-1]
             is_single_channel = (nb_channels == 1)
             if is_single_channel:
                 image = image[..., 0]
             sample = int(sample)
-            ia.do_assert(100 >= sample >= 0)
+            assert 100 >= sample >= 0, (
+                "Expected compression to be in the interval [0, 100], "
+                "got %.4f." % (sample,))
             image_pil = PIL_Image.fromarray(image)
             with tempfile.NamedTemporaryFile(mode="wb+", suffix=".jpg") as f:
                 # Map from compression to quality used by PIL

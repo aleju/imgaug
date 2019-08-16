@@ -30,7 +30,7 @@ def normalize_dtype(dtype):
 
 def change_dtype_(arr, dtype, clip=True, round=True):
     assert ia.is_np_array(arr), (
-            "Expected array as input, got type %s." % (type(arr),))
+        "Expected array as input, got type %s." % (type(arr),))
     dtype = normalize_dtype(dtype)
 
     if arr.dtype.name == dtype.name:
@@ -76,11 +76,16 @@ def change_dtypes_(images, dtypes, clip=True, round=True):
             if not isinstance(dtypes, list)
             else normalize_dtypes(dtypes)
         )
-        assert len(dtypes) == len(images)
+        assert len(images) == len(dtypes), (
+            "Expected the provided images and dtypes to match, but got "
+            "iterables of size %d (images) %d (dtypes)." % (
+                len(images), len(dtypes)))
 
         result = images
         for i, (image, dtype) in enumerate(zip(images, dtypes)):
-            assert ia.is_np_array(image)
+            assert ia.is_np_array(image), (
+                "Expected each image to be an ndarray, got type %s "
+                "instead." % (type(image),))
             result[i] = change_dtype_(image, dtype, clip=clip, round=round)
     else:
         raise Exception("Expected numpy array or iterable of numpy arrays, "
@@ -106,7 +111,8 @@ def increase_itemsize_of_dtype(dtype, factor):
     dtype = normalize_dtype(dtype)
 
     assert ia.is_single_integer(factor), (
-        "The itemsize increase factor must be an integer.")
+        "Expected 'factor' to be an integer, got type %s instead." % (
+            type(factor),))
     # int8 -> int64 = factor 8
     # uint8 -> uint64 = factor 8
     # float16 -> float128 = factor 8
@@ -249,8 +255,12 @@ def clip_to_dtype_value_range_(array, dtype, validate=True,
     if validate:
         array_val = array
         if ia.is_single_integer(validate):
-            assert validate >= 1
-            assert validate_values is None
+            assert validate >= 1, (
+                "If 'validate' is an integer, it must have a value >=1, "
+                "got %d instead." % (validate,))
+            assert validate_values is None, (
+                "If 'validate' is an integer, 'validate_values' must be "
+                "None. Got type %s instead." % (type(validate_values),))
             array_val = array.flat[0:validate]
         if validate_values is not None:
             min_value_found, max_value_found = validate_values
@@ -269,12 +279,18 @@ def clip_to_dtype_value_range_(array, dtype, validate=True,
 
 def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
     # assume that at least one allowed dtype string is given
-    assert len(allowed) > 0
-    assert ia.is_string(allowed[0])  # check only first dtype for performance
+    assert len(allowed) > 0, (
+        "Expected at least one dtype to be allowed, but got an empty list.")
+    # check only first dtype for performance
+    assert ia.is_string(allowed[0]), (
+        "Expected only strings as dtypes, but got type %s." % (
+            type(allowed[0]),))
 
     if len(disallowed) > 0:
         # check only first disallowed dtype for performance
-        assert ia.is_string(disallowed[0])
+        assert ia.is_string(disallowed[0]), (
+            "Expected only strings as dtypes, but got type %s." % (
+                type(disallowed[0]),))
 
     # verify that "allowed" and "disallowed" do not contain overlapping
     # dtypes

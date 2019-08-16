@@ -529,13 +529,11 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
         assert mul_hue is None, (
             "`mul_hue` may not be set if `mul` is set. "
             "It is set to: %s (type: %s)." % (
-                str(mul_hue), type(mul_hue))
-        )
+                str(mul_hue), type(mul_hue)))
         assert mul_saturation is None, (
             "`mul_saturation` may not be set if `mul` is set. "
             "It is set to: %s (type: %s)." % (
-                str(mul_saturation), type(mul_saturation))
-        )
+                str(mul_saturation), type(mul_saturation)))
         mul = iap.handle_continuous_param(
             mul, "mul", value_range=(-10.0, 10.0), tuple_to_uniform=True,
             list_to_choice=True)
@@ -942,10 +940,10 @@ class AddToHueAndSaturation(meta.Augmenter):
 
             samples = self.value.draw_samples(
                 (nb_images, 2), random_state=rss[1]).astype(np.int32)
-            assert (-255 <= samples[0, 0] <= 255), (
-                "Expected values sampled from `value` in AddToHueAndSaturation "
-                "to be in range [-255, 255], but got %.8f." % (samples[0, 0])
-            )
+            assert -255 <= samples[0, 0] <= 255, (
+                "Expected values sampled from `value` in "
+                "AddToHueAndSaturation to be in range [-255, 255], "
+                "but got %.8f." % (samples[0, 0]))
 
             samples_hue = samples[:, 0]
             samples_saturation = np.copy(samples[:, 0])
@@ -1007,8 +1005,6 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         gen = enumerate(zip(images_hsv, hues, saturations))
         for i, (image_hsv, hue_i, saturation_i) in gen:
-            assert image_hsv.dtype.name == "uint8"
-
             if self.backend == "cv2":
                 image_hsv = self._transform_image_cv2(
                     image_hsv, hue_i, saturation_i)
@@ -1080,13 +1076,11 @@ class AddToHueAndSaturation(meta.Augmenter):
             assert value_hue is None, (
                 "`value_hue` may not be set if `value` is set. "
                 "It is set to: %s (type: %s)." % (
-                    str(value_hue), type(value_hue))
-            )
+                    str(value_hue), type(value_hue)))
             assert value_saturation is None, (
                 "`value_saturation` may not be set if `value` is set. "
                 "It is set to: %s (type: %s)." % (
-                    str(value_saturation), type(value_saturation))
-            )
+                    str(value_saturation), type(value_saturation)))
             return iap.handle_discrete_param(
                 value, "value", value_range=(-255, 255), tuple_to_uniform=True,
                 list_to_choice=True, allow_floats=False)
@@ -1404,13 +1398,24 @@ class ChangeColorspace(meta.Augmenter):
             list_to_choice=True)
 
         if ia.is_string(to_colorspace):
-            ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
+            assert to_colorspace in ChangeColorspace.COLORSPACES, (
+                "Expected 'to_colorspace' to be one of %s. Got %s." % (
+                    ChangeColorspace.COLORSPACES, to_colorspace))
             self.to_colorspace = iap.Deterministic(to_colorspace)
         elif ia.is_iterable(to_colorspace):
-            ia.do_assert(all([ia.is_string(colorspace)
-                              for colorspace in to_colorspace]))
-            ia.do_assert(all([(colorspace in ChangeColorspace.COLORSPACES)
-                              for colorspace in to_colorspace]))
+            all_strings = all(
+                [ia.is_string(colorspace) for colorspace in to_colorspace])
+            assert all_strings, (
+                "Expected list of 'to_colorspace' to only contain strings. "
+                "Got types %s." % (
+                    ", ".join([str(type(v)) for v in to_colorspace])))
+            all_valid = all(
+                [(colorspace in ChangeColorspace.COLORSPACES)
+                 for colorspace in to_colorspace])
+            assert all_valid, (
+                "Expected list of 'to_colorspace' to only contain strings "
+                "that are in %s. Got strings %s." % (
+                    ChangeColorspace.COLORSPACES, to_colorspace))
             self.to_colorspace = iap.Choice(to_colorspace)
         elif isinstance(to_colorspace, iap.StochasticParameter):
             self.to_colorspace = to_colorspace
@@ -1449,8 +1454,9 @@ class ChangeColorspace(meta.Augmenter):
             to_colorspace = to_colorspaces[i]
             image = images[i]
 
-            ia.do_assert(0.0 <= alpha <= 1.0)
-            ia.do_assert(to_colorspace in ChangeColorspace.COLORSPACES)
+            assert to_colorspace in ChangeColorspace.COLORSPACES, (
+                "Expected 'to_colorspace' to be one of %s. Got %s." % (
+                    ChangeColorspace.COLORSPACES, to_colorspace))
 
             if alpha == 0 or self.from_colorspace == to_colorspace:
                 pass  # no change necessary
@@ -1670,8 +1676,7 @@ class _AbstractColorQuantization(meta.Augmenter):
     def _augment_single_image(self, image, n_colors, random_state):
         assert image.shape[-1] in [1, 3, 4], (
             "Expected image with 1, 3 or 4 channels, "
-            "got %d (shape: %s)." % (image.shape[-1], image.shape)
-        )
+            "got %d (shape: %s)." % (image.shape[-1], image.shape))
 
         orig_shape = image.shape
         image = self._ensure_max_size(

@@ -135,12 +135,15 @@ class UnnormalizedBatch(object):
             The batch, with ``*_unaug`` attributes being normalized.
 
         """
-        assert all([
-            attr is None for attr_name, attr in self.__dict__.items()
-            if attr_name.endswith("_aug")]), \
-            "Expected UnnormalizedBatch to not contain any augmented data " \
-            "before normalization, but at least one '*_aug' attribute was " \
-            "already set."
+        contains_no_augmented_data_yet = all([
+            attr is None
+            for attr_name, attr
+            in self.__dict__.items()
+            if attr_name.endswith("_aug")])
+        assert contains_no_augmented_data_yet, (
+            "Expected UnnormalizedBatch to not contain any augmented data "
+            "before normalization, but at least one '*_aug' attribute was "
+            "already set.")
 
         images_unaug = nlib.normalize_images(self.images_unaug)
         shapes = None

@@ -585,7 +585,9 @@ class Voronoi(meta.Augmenter):
         super(Voronoi, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        assert isinstance(points_sampler, PointsSamplerIf)
+        assert isinstance(points_sampler, PointsSamplerIf), (
+            "Expected 'points_sampler' to be an instance of PointsSamplerIf, "
+            "got %s." % (type(points_sampler),))
         self.points_sampler = points_sampler
 
         self.p_replace = iap.handle_probability_param(
@@ -1413,10 +1415,17 @@ class DropoutPointsSampler(PointsSamplerIf):
         if ia.is_single_number(p_drop):
             p_drop = iap.Binomial(1 - p_drop)
         elif ia.is_iterable(p_drop):
-            assert len(p_drop) == 2
-            assert p_drop[0] < p_drop[1]
-            assert 0 <= p_drop[0] <= 1.0
-            assert 0 <= p_drop[1] <= 1.0
+            assert len(p_drop) == 2, (
+                "Expected 'p_drop' given as an iterable to contain exactly "
+                "2 values, got %d." % (len(p_drop),))
+            assert p_drop[0] < p_drop[1], (
+                "Expected 'p_drop' given as iterable to contain exactly 2 "
+                "values (a, b) with a < b. Got %.4f and %.4f." % (
+                    p_drop[0], p_drop[1]))
+            assert 0 <= p_drop[0] <= 1.0 and 0 <= p_drop[1] <= 1.0, (
+                "Expected 'p_drop' given as iterable to only contain values "
+                "in the interval [0.0, 1.0], got %.4f and %.4f." % (
+                    p_drop[0], p_drop[1]))
             p_drop = iap.Binomial(iap.Uniform(1 - p_drop[1], 1 - p_drop[0]))
         elif isinstance(p_drop, iap.StochasticParameter):
             pass

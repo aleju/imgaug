@@ -60,7 +60,12 @@ def project_coords(coords, from_shape, to_shape):
 
     from_height, from_width = from_shape[0:2]
     to_height, to_width = to_shape[0:2]
-    assert all([v > 0 for v in [from_height, from_width, to_height, to_width]])
+
+    no_zeros_in_shapes = (
+        all([v > 0 for v in [from_height, from_width, to_height, to_width]]))
+    assert no_zeros_in_shapes, (
+        "Expected from_shape and to_shape to not contain zeros. Got shapes "
+        "%s (from_shape) and %s (to_shape)." % (from_shape, to_shape))
 
     # make sure to not just call np.float32(coords) here as the following lines
     # perform in-place changes and np.float32(.) only copies if the input
@@ -96,7 +101,9 @@ def interpolate_points(points, nb_steps, closed=True):
 
 
 def interpolate_points_by_max_distance(points, max_distance, closed=True):
-    ia.do_assert(max_distance > 0, "max_distance must have value greater than 0, got %.8f" % (max_distance,))
+    assert max_distance > 0, (
+        "Expected max_distance to have a value >0, got %.8f." % (
+            max_distance,))
     if len(points) <= 1:
         return points
     if closed:

@@ -92,11 +92,19 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         Blend of foreground and background image.
 
     """
-    assert image_fg.shape == image_bg.shape
-    assert image_fg.dtype.kind == image_bg.dtype.kind
+    assert image_fg.shape == image_bg.shape, (
+        "Expected oreground and background images to have the same shape. "
+        "Got %s and %s." % (image_fg.shape, image_bg.shape))
+    assert image_fg.dtype.kind == image_bg.dtype.kind, (
+        "Expected oreground and background images to have the same dtype kind. "
+        "Got %s and %s." % (image_fg.dtype.kind, image_bg.dtype.kind))
     # TODO switch to gate_dtypes()
-    assert image_fg.dtype.name not in ["float128"]
-    assert image_bg.dtype.name not in ["float128"]
+    assert image_fg.dtype.name not in ["float128"], (
+        "Foreground image was float128, but blend_alpha() cannot handle that "
+        "dtype.")
+    assert image_bg.dtype.name not in ["float128"], (
+        "Background image was float128, but blend_alpha() cannot handle that "
+        "dtype.")
 
     # TODO add test for this
     input_was_2d = (len(image_fg.shape) == 2)
@@ -116,10 +124,20 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         pass
     else:
         if alpha.ndim == 2:
-            assert alpha.shape == image_fg.shape[0:2]
+            assert alpha.shape == image_fg.shape[0:2], (
+                "'alpha' given as an array must match the height and width "
+                "of the foreground and background image. Got shape %s vs "
+                "foreground/background shape %s." % (
+                    alpha.shape, image_fg.shape))
             alpha = alpha.reshape((alpha.shape[0], alpha.shape[1], 1))
         elif alpha.ndim == 3:
-            assert alpha.shape == image_fg.shape or alpha.shape == image_fg.shape[0:2] + (1,)
+            assert (
+                alpha.shape == image_fg.shape
+                or alpha.shape == image_fg.shape[0:2] + (1,)), (
+                "'alpha' given as an array must match the height and width "
+                "of the foreground and background image. Got shape %s vs "
+                "foreground/background shape %s." % (
+                    alpha.shape, image_fg.shape))
         else:
             alpha = alpha.reshape((1, 1, -1))
         if alpha.shape[2] != image_fg.shape[2]:
@@ -132,7 +150,9 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
             return np.copy(image_bg)
 
     # for efficiency reaons, only test one value of alpha here, even if alpha is much larger
-    assert 0 <= alpha.item(0) <= 1.0
+    assert 0 <= alpha.item(0) <= 1.0, (
+        "Expected 'alpha' value(s) to be in the interval [0.0, 1.0]. "
+        "Got min %.4f and max %.4f." % (np.min(alpha), np.max(alpha)))
 
     dt_images = iadt.get_minimal_dtype([image_fg, image_bg])
 
@@ -297,9 +317,9 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
         self.factor = iap.handle_continuous_param(factor, "factor", value_range=(0, 1.0), tuple_to_uniform=True,
                                                   list_to_choice=True)
 
-        ia.do_assert(first is not None or second is not None,
-                     "Expected 'first' and/or 'second' to not be None (i.e. at least one Augmenter), "
-                     + "but got two None values.")
+        assert first is not None or second is not None, (
+            "Expected 'first' and/or 'second' to not be None (i.e. at least "
+            "one Augmenter), but got two None values.")
         self.first = meta.handle_children_list(first, self.name, "first", default=None)
         self.second = meta.handle_children_list(second, self.name, "second", default=None)
 
@@ -389,7 +409,9 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 alpha = np.average(alphas[i, 0:nb_channels_i])
             else:
                 alpha = alphas[i, 0]
-            ia.do_assert(0 <= alpha <= 1.0)
+            assert 0 <= alpha <= 1.0, (
+                "Expected 'alpha' to be in the interval [0.0, 1.0]. "
+                "Got %.4f." % (alpha,))
 
             if alpha >= 0.5:
                 result[i].arr_0to1 = heatmaps_first_i.arr_0to1
@@ -444,7 +466,9 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 alpha = np.average(alphas[i, 0:nb_channels_i])
             else:
                 alpha = alphas[i, 0]
-            ia.do_assert(0 <= alpha <= 1.0)
+            assert 0 <= alpha <= 1.0, (
+                "Expected 'alpha' to be in the interval [0.0, 1.0]. "
+                "Got %.4f." % (alpha,))
 
             # We cant choose "just a bit" of one segmentation map augmentation
             # result without messing up the positions (interpolation doesn't
@@ -517,7 +541,9 @@ class Alpha(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variabl
                 alpha = np.average(alphas[i, 0:nb_channels_i])
             else:
                 alpha = alphas[i, 0]
-            ia.do_assert(0 <= alpha <= 1.0)
+            assert 0 <= alpha <= 1.0, (
+                "Expected 'alpha' to be in the interval [0.0, 1.0]. "
+                "Got %.4f." % (alpha,))
 
             # We cant choose "just a bit" of one keypoint augmentation result
             # without messing up the positions (interpolation doesn't make much
@@ -731,19 +757,33 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                 alphas = []
                 for _ in sm.xrange(nb_channels):
                     samples_c = self.factor.draw_samples((h, w), random_state=rngs[i])
-                    ia.do_assert(0 <= samples_c.item(0) <= 1.0) # validate only first value
+
+                    # validate only first value
+                    assert 0 <= samples_c.item(0) <= 1.0, (
+                        "Expected 'factor' samples to be in the interval"
+                        "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                            np.min(samples_c), np.max(samples_c),))
+
                     alphas.append(samples_c)
                 alphas = np.float64(alphas).transpose((1, 2, 0))
             else:
                 alphas = self.factor.draw_samples((h, w), random_state=rngs[i])
-                ia.do_assert(0.0 <= alphas.item(0) <= 1.0)
+                assert 0.0 <= alphas.item(0) <= 1.0, (
+                    "Expected alpha samples to be in the interval"
+                    "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                        np.min(alphas), np.max(alphas),))
             result[i] = blend_alpha(image_first, image_second, alphas, eps=self.epsilon)
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps, rng):
             samples_c = self.factor.draw_samples((h_images, w_images), random_state=rng)
-            ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
+
+            # validate only first value
+            assert 0 <= samples_c.item(0) <= 1.0, (
+                "Expected 'factor' samples to be in the interval"
+                "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                    np.min(samples_c), np.max(samples_c),))
 
             if (h_images, w_images) != (h_heatmaps, w_heatmaps):
                 samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
@@ -813,7 +853,12 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         def _sample_factor_mask(h_images, w_images, h_segmaps, w_segmaps, rng):
             samples_c = self.factor.draw_samples((h_images, w_images), random_state=rng)
-            ia.do_assert(0 <= samples_c.item(0) <= 1.0)  # validate only first value
+
+            # validate only first value
+            assert 0 <= samples_c.item(0) <= 1.0, (
+                "Expected 'factor' samples to be in the interval"
+                "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                    np.min(samples_c), np.max(samples_c),))
 
             if (h_images, w_images) != (h_segmaps, w_segmaps):
                 samples_c = np.clip(samples_c * 255, 0, 255).astype(np.uint8)
@@ -927,12 +972,12 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
         for i in sm.xrange(nb_images):
             kps_oi_first = outputs_first[i]
             kps_oi_second = outputs_second[i]
-            ia.do_assert(
-                len(kps_oi_first.shape) == 3,
-                ("Keypoint augmentation in AlphaElementwise requires KeypointsOnImage.shape to have channel "
-                 + "information (i.e. tuple with 3 entries), which you did not provide (input shape: %s). The "
-                 + "channels must match the corresponding image channels.") % (kps_oi_first.shape,)
-            )
+            assert len(kps_oi_first.shape) == 3, (
+                "Keypoint augmentation in AlphaElementwise requires "
+                "KeypointsOnImage.shape to have channel information (i.e. "
+                "tuple with 3 entries), which you did not provide (input "
+                "shape: %s). The channels must match the corresponding image "
+                "channels." % (kps_oi_first.shape,))
             h, w, nb_channels = kps_oi_first.shape[0:3]
 
             # coordinate augmentation also works channel-wise, even though
@@ -946,7 +991,10 @@ class AlphaElementwise(Alpha):  # pylint: disable=locally-disabled, unused-varia
                     samples[:, :, c] = samples_c
             else:
                 samples = self.factor.draw_samples((h, w), random_state=rngs[i])
-            ia.do_assert(0.0 <= samples.item(0) <= 1.0)
+            assert 0.0 <= samples.item(0) <= 1.0, (
+                "Expected 'factor' samples to be in the interval"
+                "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                    np.min(samples), np.max(samples),))
             sample = np.average(samples)
 
             # We cant choose "just a bit" of one keypoint augmentation result
