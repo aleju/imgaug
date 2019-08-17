@@ -1413,12 +1413,12 @@ class AffineCv2(meta.Augmenter):
     are now filled with a random color (sampled once per image and the
     same for all newly created pixels within that image).
 
-    >>> aug = iaa.AffineCv2(translate_px=16, mode=["constant", "edge"])
+    >>> aug = iaa.AffineCv2(translate_px=16, mode=["constant", "replicate"])
 
     Similar to the previous example, but the newly created pixels are
     filled with black pixels in half of all images (mode ``constant`` with
     default `cval` being ``0``) and in the other half of all images using
-    ``edge`` mode, which repeats the color of the spatially closest pixel
+    ``replicate`` mode, which repeats the color of the spatially closest pixel
     of the corresponding image edge.
 
     """

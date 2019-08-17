@@ -36,6 +36,10 @@ import imgaug as ia
 from .. import parameters as iap
 
 
+def _int_r(value):
+    return int(np.round(value))
+
+
 # TODO somehow integrate this with ia.pad()
 def _handle_pad_mode_param(pad_mode):
     pad_modes_available = {
@@ -1008,9 +1012,6 @@ class CropAndPad(meta.Augmenter):
 
         return result
 
-    def _int_r(self, value):
-        return int(np.round(value))
-
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = []
         nb_heatmaps = len(heatmaps)
@@ -1024,20 +1025,20 @@ class CropAndPad(meta.Augmenter):
                 pad_img_r, pad_img_b, pad_img_l, _pad_mode, _pad_cval = vals
 
             if (height_img, width_img) != (height_hms, width_hms):
-                crop_top = self._int_r(height_hms * (crop_img_t/height_img))
-                crop_right = self._int_r(width_hms * (crop_img_r/width_img))
-                crop_bottom = self._int_r(height_hms * (crop_img_b/height_img))
-                crop_left = self._int_r(width_hms * (crop_img_l/width_img))
+                crop_top = _int_r(height_hms * (crop_img_t/height_img))
+                crop_right = _int_r(width_hms * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_hms * (crop_img_b/height_img))
+                crop_left = _int_r(width_hms * (crop_img_l/width_img))
 
                 crop_top, crop_right, crop_bottom, crop_left = \
                     _crop_prevent_zero_size(
                         height_hms, width_hms,
                         crop_top, crop_right, crop_bottom, crop_left)
 
-                pad_top = self._int_r(height_hms * (pad_img_t/height_img))
-                pad_right = self._int_r(width_hms * (pad_img_r/width_img))
-                pad_bottom = self._int_r(height_hms * (pad_img_b/height_img))
-                pad_left = self._int_r(width_hms * (pad_img_l/width_img))
+                pad_top = _int_r(height_hms * (pad_img_t/height_img))
+                pad_right = _int_r(width_hms * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_hms * (pad_img_b/height_img))
+                pad_left = _int_r(width_hms * (pad_img_l/width_img))
             else:
                 crop_top = crop_img_t
                 crop_right = crop_img_r
@@ -1101,20 +1102,20 @@ class CropAndPad(meta.Augmenter):
                 pad_img_r, pad_img_b, pad_img_l, _pad_mode, _pad_cval = vals
 
             if (height_img, width_img) != (height_seg, width_seg):
-                crop_top = self._int_r(height_seg * (crop_img_t/height_img))
-                crop_right = self._int_r(width_seg * (crop_img_r/width_img))
-                crop_bottom = self._int_r(height_seg * (crop_img_b/height_img))
-                crop_left = self._int_r(width_seg * (crop_img_l/width_img))
+                crop_top = _int_r(height_seg * (crop_img_t/height_img))
+                crop_right = _int_r(width_seg * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_seg * (crop_img_b/height_img))
+                crop_left = _int_r(width_seg * (crop_img_l/width_img))
 
                 crop_top, crop_right, crop_bottom, crop_left = \
                     _crop_prevent_zero_size(
                         height_seg, width_seg, crop_top, crop_right,
                         crop_bottom, crop_left)
 
-                pad_top = self._int_r(height_seg * (pad_img_t/height_img))
-                pad_right = self._int_r(width_seg * (pad_img_r/width_img))
-                pad_bottom = self._int_r(height_seg * (pad_img_b/height_img))
-                pad_left = self._int_r(width_seg * (pad_img_l/width_img))
+                pad_top = _int_r(height_seg * (pad_img_t/height_img))
+                pad_right = _int_r(width_seg * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_seg * (pad_img_b/height_img))
+                pad_left = _int_r(width_seg * (pad_img_l/width_img))
             else:
                 crop_top = crop_img_t
                 crop_right = crop_img_r
@@ -1851,10 +1852,6 @@ class PadToFixedSize(meta.Augmenter):
 
         return result
 
-    @classmethod
-    def _int_r(cls, value):
-        return int(np.round(value))
-
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_images = len(heatmaps)
         w, h = self.size
@@ -1873,10 +1870,10 @@ class PadToFixedSize(meta.Augmenter):
             #      be 16x16. Error is due to each side getting projected 0.5
             #      padding which is rounded to 1. This doesn't seem right.
             if (height_img, width_img) != (height_hm, width_hm):
-                pad_top = self._int_r(height_hm * (pad_img_t/height_img))
-                pad_right = self._int_r(width_hm * (pad_img_r/width_img))
-                pad_bottom = self._int_r(height_hm * (pad_img_b/height_img))
-                pad_left = self._int_r(width_hm * (pad_img_l/width_img))
+                pad_top = _int_r(height_hm * (pad_img_t/height_img))
+                pad_right = _int_r(width_hm * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_hm * (pad_img_b/height_img))
+                pad_left = _int_r(width_hm * (pad_img_l/width_img))
             else:
                 pad_top = pad_img_t
                 pad_right = pad_img_r
@@ -1915,10 +1912,10 @@ class PadToFixedSize(meta.Augmenter):
             #      be 16x16. Error is due to each side getting projected 0.5
             #      padding which is rounded to 1. This doesn't seem right.
             if (height_img, width_img) != (height_sm, width_sm):
-                pad_top = self._int_r(height_sm * (pad_img_t/height_img))
-                pad_right = self._int_r(width_sm * (pad_img_r/width_img))
-                pad_bottom = self._int_r(height_sm * (pad_img_b/height_img))
-                pad_left = self._int_r(width_sm * (pad_img_l/width_img))
+                pad_top = _int_r(height_sm * (pad_img_t/height_img))
+                pad_right = _int_r(width_sm * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_sm * (pad_img_b/height_img))
+                pad_left = _int_r(width_sm * (pad_img_l/width_img))
             else:
                 pad_top = pad_img_t
                 pad_right = pad_img_r
@@ -2181,10 +2178,6 @@ class CropToFixedSize(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
-    @classmethod
-    def _int_r(cls, value):
-        return int(np.round(value))
-
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_images = len(heatmaps)
         w, h = self.size
@@ -2205,10 +2198,10 @@ class CropToFixedSize(meta.Augmenter):
                 crop_img_r = width_img - w - crop_img_l
 
             if (height_img, width_img) != (height_hm, width_hm):
-                crop_top = self._int_r(height_hm * (crop_img_t/height_img))
-                crop_right = self._int_r(width_hm * (crop_img_r/width_img))
-                crop_bottom = self._int_r(height_hm * (crop_img_b/height_img))
-                crop_left = self._int_r(width_hm * (crop_img_l/width_img))
+                crop_top = _int_r(height_hm * (crop_img_t/height_img))
+                crop_right = _int_r(width_hm * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_hm * (crop_img_b/height_img))
+                crop_left = _int_r(width_hm * (crop_img_l/width_img))
 
                 # TODO add test for zero-size prevention
                 crop_top, crop_right, crop_bottom, crop_left = \
@@ -2253,10 +2246,10 @@ class CropToFixedSize(meta.Augmenter):
                 crop_img_r = width_img - w - crop_img_l
 
             if (height_img, width_img) != (height_sm, width_sm):
-                crop_top = self._int_r(height_sm * (crop_img_t/height_img))
-                crop_right = self._int_r(width_sm * (crop_img_r/width_img))
-                crop_bottom = self._int_r(height_sm * (crop_img_b/height_img))
-                crop_left = self._int_r(width_sm * (crop_img_l/width_img))
+                crop_top = _int_r(height_sm * (crop_img_t/height_img))
+                crop_right = _int_r(width_sm * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_sm * (crop_img_b/height_img))
+                crop_left = _int_r(width_sm * (crop_img_l/width_img))
 
                 # TODO add test for zero-size prevention
                 crop_top, crop_right, crop_bottom, crop_left = \

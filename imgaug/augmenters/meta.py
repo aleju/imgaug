@@ -2939,7 +2939,9 @@ class Sequential(Augmenter, list):
         own, e.g the following defines an augmenter for horizontal flips and
         then augments a single image:
 
+        >>> import numpy as np
         >>> import imgaug.augmenters as iaa
+        >>> image = np.zeros((32, 32, 3), dtype=np.uint8)
         >>> aug = iaa.Fliplr(0.5)
         >>> image_aug = aug.augment_image(image)
 
