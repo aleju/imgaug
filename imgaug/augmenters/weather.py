@@ -32,8 +32,7 @@ from .. import dtypes as iadt
 
 
 class FastSnowyLandscape(meta.Augmenter):
-    """
-    Convert non-snowy landscapes to snowy ones.
+    """Convert non-snowy landscapes to snowy ones.
 
     This augmenter expects to get an image that roughly shows a landscape.
 
@@ -65,11 +64,11 @@ class FastSnowyLandscape(meta.Augmenter):
         All pixels with lightness in HLS colorspace that is below this value
         will have their lightness increased by `lightness_multiplier`.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the discrete interval ``[a..b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the discrete interval ``[a..b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -77,11 +76,11 @@ class FastSnowyLandscape(meta.Augmenter):
         Multiplier for pixel's lightness value in HLS colorspace.
         Affects all pixels selected via `lightness_threshold`.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the discrete interval ``[a..b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the discrete interval ``[a..b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -201,8 +200,9 @@ def Clouds(name=None, deterministic=False, random_state=None):
     """
     Add clouds to images.
 
-    This is a wrapper around ``CloudLayer``. It executes 1 to 2 layers per
-    image, leading to varying densities and frequency patterns of clouds.
+    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
+    It executes 1 to 2 layers per image, leading to varying densities and
+    frequency patterns of clouds.
 
     This augmenter seems to be fairly robust w.r.t. the image size. Tested
     with ``96x128``, ``192x256`` and ``960x1280``.
@@ -286,12 +286,11 @@ def Clouds(name=None, deterministic=False, random_state=None):
 # TODO add vertical gradient alpha to have fog only at skylevel/groundlevel
 # TODO add configurable parameters
 def Fog(name=None, deterministic=False, random_state=None):
-    """
-    Add fog to images.
+    """Add fog to images.
 
-    This is a wrapper around ``CloudLayer``. It executes a single layer per
-    image with a configuration leading to fairly dense clouds with
-    low-frequency patterns.
+    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
+    It executes a single layer per image with a configuration leading to
+    fairly dense clouds with low-frequency patterns.
 
     This augmenter seems to be fairly robust w.r.t. the image size. Tested
     with ``96x128``, ``192x256`` and ``960x1280``.
@@ -356,11 +355,11 @@ def Fog(name=None, deterministic=False, random_state=None):
 
 
 # TODO add examples and add these to the overview docs
-# TODO add perspective transform to each cloud layer to make them look more distant?
+# TODO add perspective transform to each cloud layer to make them look more
+#      distant?
 # TODO alpha_mean and density overlap - remove one of them
 class CloudLayer(meta.Augmenter):
-    """
-    Add a single layer of clouds to an image.
+    """Add a single layer of clouds to an image.
 
     dtype support::
 
@@ -391,11 +390,11 @@ class CloudLayer(meta.Augmenter):
         Mean intensity of the clouds (i.e. mean color).
         Recommended to be in the interval ``[190, 255]``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly
+              sampled per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -411,11 +410,11 @@ class CloudLayer(meta.Augmenter):
         space, i.e. affects final intensity on a coarse level.
         Recommended to be in the interval ``(0, 10]``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -425,11 +424,11 @@ class CloudLayer(meta.Augmenter):
         Recommended to usually be at around ``0.0`` for clouds and ``>0`` for
         fog.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -440,11 +439,11 @@ class CloudLayer(meta.Augmenter):
         Note that this parameter currently overlaps with `density_multiplier`,
         which is applied a bit later to the alpha mask.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -469,11 +468,11 @@ class CloudLayer(meta.Augmenter):
         get weird patterns with sudden fall-offs to zero that look very
         unnatural.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -482,11 +481,11 @@ class CloudLayer(meta.Augmenter):
         Set this higher to get "denser" clouds wherever they are visible.
         Recommended to be around ``[0.5, 1.5]``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -500,6 +499,7 @@ class CloudLayer(meta.Augmenter):
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
+
     def __init__(self, intensity_mean, intensity_freq_exponent,
                  intensity_coarse_scale, alpha_min, alpha_multiplier,
                  alpha_size_px_max, alpha_freq_exponent, sparsity,
@@ -655,11 +655,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
                flake_size=(0.2, 0.7), flake_size_uniformity=(0.4, 0.8),
                angle=(-30, 30), speed=(0.007, 0.03),
                name=None, deterministic=False, random_state=None):
-    """
-    Add falling snowflakes to images.
+    """Add falling snowflakes to images.
 
-    This is a wrapper around ``SnowflakesLayer``. It executes 1 to 3 layers
-    per image.
+    This is a wrapper around
+    :class:`imgaug.augmenters.weather.SnowflakesLayer`. It executes 1 to 3
+    layers per image.
 
     dtype support::
 
@@ -690,11 +690,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
         Valid values are in the interval ``[0.0, 1.0]``.
         Recommended to be in the interval ``[0.01, 0.075]``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -704,11 +704,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
         Valid values are in the interval ``[0.0, 1.0]``.
         Recommended to be around ``0.5``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -727,11 +727,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
 
         Datatype behaviour:
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -741,11 +741,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
         Valid values are in the interval ``[0.0, 1.0]``.
         Recommended to be around ``0.5``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -755,11 +755,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
         Recommended to be in the interval ``[-30, 30]``.
         See also :func:`imgaug.augmenters.blur.MotionBlur.__init__`.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -779,11 +779,11 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
 
         Datatype behaviour:
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -839,8 +839,7 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
 # TODO snowflakes are all almost 100% white, add some grayish tones and
 #      maybe color to them
 class SnowflakesLayer(meta.Augmenter):
-    """
-    Add a single layer of falling snowflakes to images.
+    """Add a single layer of falling snowflakes to images.
 
     dtype support::
 
@@ -868,11 +867,11 @@ class SnowflakesLayer(meta.Augmenter):
         Valid values are in the interval ``[0.0, 1.0]``.
         Recommended to be in the interval ``[0.01, 0.075]``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -882,11 +881,11 @@ class SnowflakesLayer(meta.Augmenter):
         Valid values are in the interval ``[0.0, 1.0]``.
         Recommended to be around ``0.5``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -905,11 +904,11 @@ class SnowflakesLayer(meta.Augmenter):
 
         Datatype behaviour:
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -919,11 +918,11 @@ class SnowflakesLayer(meta.Augmenter):
         Valid values are in the interval ``[0.0, 1.0]``.
         Recommended to be around ``0.5``.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -933,11 +932,11 @@ class SnowflakesLayer(meta.Augmenter):
         Recommended to be in the interval ``[-30, 30]``.
         See also :func:`imgaug.augmenters.blur.MotionBlur.__init__`.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -957,11 +956,11 @@ class SnowflakesLayer(meta.Augmenter):
 
         Datatype behaviour:
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
@@ -972,11 +971,11 @@ class SnowflakesLayer(meta.Augmenter):
         Recommended to be in the interval ``[0.0001, 0.001]``. May still
         require tinkering based on image size.
 
-            * If a number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
+              per image from the interval ``[a, b]``.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
