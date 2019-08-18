@@ -12,6 +12,7 @@ import six.moves as sm
 
 import imgaug as ia
 import imgaug.random as iarandom
+from imgaug.augmentables.kps import KeypointsOnImage
 
 
 def create_random_images(size):
@@ -48,6 +49,11 @@ def array_equal_lists(list1, list2):
 
 
 def keypoints_equal(kps1, kps2, eps=0.001):
+    if isinstance(kps1, KeypointsOnImage):
+        assert isinstance(kps2, KeypointsOnImage)
+        kps1 = [kps1]
+        kps2 = [kps2]
+
     if len(kps1) != len(kps2):
         return False
 

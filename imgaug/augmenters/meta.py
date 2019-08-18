@@ -360,7 +360,7 @@ class Augmenter(object):
                     "Received an input in augment_batches() that was not an "
                     "instance of imgaug.augmentables.batches.Batch "
                     "or imgaug.augmentables.batches.UnnormalizedBatch, but "
-                    "instead %s. This is outdated. Use augment() for such "
+                    "instead %s. This is deprecated. Use augment() for such "
                     "data or wrap it in a Batch instance." % (
                         batch_orig_dt,))
             return batch_normalized, batch_orig_dt
