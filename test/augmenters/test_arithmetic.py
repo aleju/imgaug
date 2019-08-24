@@ -3180,12 +3180,10 @@ class TestInvert(unittest.TestCase):
 
 
 class TestContrastNormalization(unittest.TestCase):
+    @unittest.skipIf(sys.version_info[0] <= 2,
+                     "Warning is not generated in 2.7 on travis, but locally "
+                     "in 2.7 it is?!")
     def test_deprecation_warning(self):
-        # Somehow the deprecation warning is lost in 2.7 on travis,
-        # but not in 2.7 locally. Maybe executing the docstring example
-        # already raises a warning.
-        warnings.resetwarnings()
-
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")
             aug = arithmetic_lib.ContrastNormalization((0.9, 1.1))
