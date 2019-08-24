@@ -1,10 +1,11 @@
 six
-# The test for imgaug.augmenters.blend.blend_alpha() fails for numpy<1.15. All other tests seemed to work as of 2019/01/04.
+# The test for imgaug.augmenters.blend.blend_alpha() fails for numpy<1.15.
+# All other tests seemed to work as of 2019/01/04.
 numpy>=1.15
 scipy
 Pillow
 matplotlib
-scikit-image
+scikit-image>=0.14.2
 opencv-python-headless
 imageio
 Shapely
