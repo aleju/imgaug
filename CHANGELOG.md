@@ -485,6 +485,13 @@ Changes:
 * Fixed `Affine` heatmap augmentation crashing for arrays with more than
   four channels and `order!=0`. #381
 * Fixed an outdated error message in `Affine`. #381
+* Fixed `Polygon.clip_out_of_image()` crashing if the intersection between
+  polygon and image plane was an edge or point. #382
+* Fixed `Polygon.clip_out_of_image()` potentially failing for polygons
+  containing two or fewer points. #382
+* Fixed `Polygon.is_out_of_image()` returning wrong values if the image plane
+  was fully contained inside the polygon with no intersection between the
+  image plane and the polygon edge. #382
 
 
 # 0.2.9

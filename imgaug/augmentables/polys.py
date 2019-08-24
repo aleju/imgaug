@@ -332,8 +332,29 @@ class Polygon(object):
         #      value in these cases
         if len(self.exterior) == 0:
             raise Exception("Cannot determine whether the polygon is inside the image, because it contains no points.")
+
+        # The line string is identical to the edge of the polygon.
+        # If the edge is fully inside the image, we know that the polygon must
+        # be fully inside the image.
+        # If the edge is partially outside of the image, we know that the
+        # polygon is partially outside of the image.
+        # Only if the edge is fully outside of the image we cannot be sure if
+        # the polygon's inner area overlaps with the image (e.g. if the
+        # polygon contains the whole image in it).
         ls = self.to_line_string()
-        return ls.is_out_of_image(image, fully=fully, partly=partly)
+        if ls.is_fully_within_image(image):
+            return False
+        if ls.is_out_of_image(image, fully=False, partly=True):
+            return partly
+
+        # LS is fully outside of the image. Estimate whether there is any
+        # intersection with the image plane. If so, we know that there is
+        # partial overlap (full overlap would mean that the LS was fully inside
+        # the image).
+        polys = self.clip_out_of_image(image)
+        if len(polys) > 0:
+            return partly
+        return fully
 
     @ia.deprecated(alt_func="Polygon.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "
@@ -374,20 +395,50 @@ class Polygon(object):
         # load shapely lazily, which makes the dependency more optional
         import shapely.geometry
 
-        # if fully out of image, clip everything away, nothing remaining
-        if self.is_out_of_image(image, fully=True, partly=False):
+        # Shapely polygon conversion requires at least 3 coordinates
+        if len(self.exterior) == 0:
             return []
+        elif len(self.exterior) in [1, 2]:
+            ls = self.to_line_string(closed=False)
+            ls_clipped = ls.clip_out_of_image(image)
+            assert len(ls_clipped) <= 1
+            if len(ls_clipped) == 0:
+                return []
+            return [self.deepcopy(exterior=ls_clipped[0].coords)]
 
         h, w = image.shape[0:2] if ia.is_np_array(image) else image[0:2]
         poly_shapely = self.to_shapely_polygon()
         poly_image = shapely.geometry.Polygon([(0, 0), (w, 0), (w, h), (0, h)])
         multipoly_inter_shapely = poly_shapely.intersection(poly_image)
-        if not isinstance(multipoly_inter_shapely, shapely.geometry.MultiPolygon):
-            assert isinstance(
-                multipoly_inter_shapely, shapely.geometry.Polygon), (
-                "Expected to get a MultiPolygon or Polygon from Shapely, "
-                "got %s." % (type(multipoly_inter_shapely),))
-            multipoly_inter_shapely = shapely.geometry.MultiPolygon([multipoly_inter_shapely])
+        ignore_types = (shapely.geometry.LineString,
+                        shapely.geometry.MultiLineString,
+                        shapely.geometry.point.Point,
+                        shapely.geometry.MultiPoint)
+        if isinstance(multipoly_inter_shapely, shapely.geometry.Polygon):
+            multipoly_inter_shapely = shapely.geometry.MultiPolygon(
+                [multipoly_inter_shapely])
+        elif isinstance(multipoly_inter_shapely, shapely.geometry.MultiPolygon):
+            # we got a multipolygon from shapely, no need to change anything
+            # anymore
+            pass
+        elif isinstance(multipoly_inter_shapely, ignore_types):
+            # polygons that become (one or more) lines/points after clipping
+            # are here ignored
+            multipoly_inter_shapely = shapely.geometry.MultiPolygon([])
+        elif isinstance(multipoly_inter_shapely,
+                        shapely.geometry.GeometryCollection):
+            # Shapely returns GEOMETRYCOLLECTION EMPTY if there is nothing
+            # remaining after the clip.
+            assert multipoly_inter_shapely.is_empty
+            return []
+        else:
+            print(multipoly_inter_shapely, image, self.exterior)
+            raise Exception(
+                "Got an unexpected result of type %s from Shapely for "
+                "image (%d, %d) and polygon %s. This is an internal error. "
+                "Please report." % (
+                    type(multipoly_inter_shapely), h, w, self.exterior)
+            )
 
         polygons = []
         for poly_inter_shapely in multipoly_inter_shapely.geoms:
