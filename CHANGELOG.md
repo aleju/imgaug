@@ -273,6 +273,53 @@
   * `imgaug.augmenters.meta.clip_augmented_images`
 * Refactored all calls of `warnings.warn()` to use `imgaug.imgaug.warn()
   instead. #401
+* [rarely breaking] Refactored most of the augmenters from functions to
+  classes. Previously, some augmenters were functions that returned an
+  instance of another augmenter (with adjusted hyperparameters) when being
+  called. Aside from a few corner cases, these have been switched to classes
+  inheriting from the augmenters that were previously returned. This should
+  make some outputs less confusing (ass `print(A())` does not lead to class
+  `B` being printed). All arguments stayed the same and this is not expected
+  to affect any user code negatively. The modified augmenters are:
+    * `imgaug.augmenters.arithmetic.AdditiveGaussianNoise`
+    * `imgaug.augmenters.arithmetic.AdditiveLaplaceNoise`
+    * `imgaug.augmenters.arithmetic.AdditivePoissonNoise`
+    * `imgaug.augmenters.arithmetic.Dropout`
+    * `imgaug.augmenters.arithmetic.CoarseDropout`
+    * `imgaug.augmenters.arithmetic.ImpulseNoise`
+    * `imgaug.augmenters.arithmetic.SaltAndPepper`
+    * `imgaug.augmenters.arithmetic.CoarseSaltAndPepper`
+    * `imgaug.augmenters.arithmetic.Salt`
+    * `imgaug.augmenters.arithmetic.CoarseSalt`
+    * `imgaug.augmenters.arithmetic.Pepper`
+    * `imgaug.augmenters.arithmetic.CoarsePepper`
+    * `imgaug.augmenters.blend.SimplexNoiseAlpha`
+    * `imgaug.augmenters.blend.FrequencyNoiseAlpha`
+    * `imgaug.augmenters.blur.MotionBlur`
+    * `imgaug.augmenters.contrast.MultiplyHueAndSaturation`
+    * `imgaug.augmenters.contrast.MultiplyHue`
+    * `imgaug.augmenters.contrast.MultiplySaturation`
+    * `imgaug.augmenters.contrast.AddToHue`
+    * `imgaug.augmenters.contrast.AddToSaturation`
+    * `imgaug.augmenters.contrast.Grayscale`
+    * `imgaug.augmenters.contrast.GammaContrast`
+    * `imgaug.augmenters.contrast.SigmoidContrast`
+    * `imgaug.augmenters.contrast.LogContrast`
+    * `imgaug.augmenters.contrast.LinearContrast`
+    * `imgaug.augmenters.convolutional.Sharpen`
+    * `imgaug.augmenters.convolutional.Emboss`
+    * `imgaug.augmenters.convolutional.EdgeDetect`
+    * `imgaug.augmenters.convolutional.DirectedEdgeDetect`
+    * `imgaug.augmenters.meta.OneOf`
+    * `imgaug.augmenters.meta.AssertLambda`
+    * `imgaug.augmenters.meta.AssertShape`
+    * `imgaug.augmenters.size.Pad`
+    * `imgaug.augmenters.size.Crop`
+    * `imgaug.augmenters.weather.Clouds`
+    * `imgaug.augmenters.weather.Fog`
+    * `imgaug.augmenters.weather.Snowflakes`
+* Marked `imgaug.augmenters.arithmetic.ContrastNormalization` as deprecated.
+  Use `imgaug.augmenters.contrast.LinearContrast` instead.
 
 ## Improved Segmentation Map Augmentation #302
 
