@@ -727,18 +727,16 @@ class Affine(meta.Augmenter):
                 else:
                     cv2_bad_dtype = (
                         image.dtype.name
-                        not in self.VALID_DTYPES_CV2_ORDER_NOT_0)
-                cv2_bad_shape = image.shape[2] > 4
-                cv2_impossible = (cv2_bad_order or cv2_bad_dtype
-                                  or cv2_bad_shape)
-
+                        not in self.VALID_DTYPES_CV2_ORDER_NOT_0
+                    )
+                cv2_impossible = cv2_bad_order or cv2_bad_dtype
                 use_skimage = (
                     self.backend == "skimage"
-                    or (self.backend == "auto" and cv2_impossible))
-
+                    or (self.backend == "auto" and cv2_impossible)
+                )
                 if use_skimage:
-                    # cval contains 3 values as cv2 can handle 3, but skimage
-                    # only 1
+                    # cval contains 3 values as cv2 can handle 3, but
+                    # skimage only 1
                     cval = cval[0]
                     # skimage does not clip automatically
                     cval = max(min(cval, max_value), min_value)
@@ -754,8 +752,11 @@ class Affine(meta.Augmenter):
                     )
                 else:
                     assert not cv2_bad_dtype, (
-                        "cv2 backend can only handle images of dtype uint8, "
-                        "float32 and float64, got %s." % (image.dtype,))
+                        not cv2_bad_dtype,
+                        "cv2 backend in Affine got a dtype %s, which it "
+                        "cannot handle. Try using a different dtype or set "
+                        "order=0." % (
+                            image.dtype,))
                     image_warped = self._warp_cv2(
                         image,
                         scale_x, scale_y,
@@ -1110,16 +1111,37 @@ class Affine(meta.Augmenter):
                 int(np.round(output_shape[0]))
             )
 
-        # TODO this uses always a tuple of 3 values for cval, even
-        #      if #chans != 3, works with 1d but what in other cases?
-        image_warped = cv2.warpAffine(
-            image,
-            matrix.params[:2],
-            dsize=dsize,
-            flags=order,
-            borderMode=mode,
-            borderValue=cval
-        )
+        # TODO this uses always a tuple of 3 values for cval, even if
+        #      #chans != 3, works with 1d but what in other cases?
+        nb_channels = image.shape[-1]
+        if nb_channels <= 3:
+            # TODO this block can also be when order==0 for any nb_channels,
+            #      but was deactivated for now, because cval would always
+            #      contain 3 values and not nb_channels values
+            image_warped = cv2.warpAffine(
+                image,
+                matrix.params[:2],
+                dsize=dsize,
+                flags=order,
+                borderMode=mode,
+                borderValue=cval
+            )
+            image_warped = np.atleast_3d(image_warped)
+        else:
+            # warp each channel on its own, re-add channel axis, then stack
+            # the result from a list of [H, W, 1] to (H, W, C).
+            image_warped = [
+                cv2.warpAffine(
+                    image[:, :, c],
+                    matrix.params[:2],
+                    dsize=dsize,
+                    flags=order,
+                    borderMode=mode,
+                    borderValue=tuple([cval[0]])
+                )
+                for c in sm.xrange(nb_channels)]
+            image_warped = np.dstack([
+                warped_i[..., np.newaxis] for warped_i in image_warped])
 
         # cv2 warp drops last axis if shape is (H, W, 1)
         if image_warped.ndim == 2:
@@ -2640,6 +2662,9 @@ class PerspectiveTransform(meta.Augmenter):
                 if warped.ndim == 2 and images[i].ndim == 3:
                     warped = np.expand_dims(warped, 2)
             else:
+                # FIXME usage of cval here seems incorrect, is always the same
+                #       group
+
                 # warp each channel on its own, re-add channel axis, then stack
                 # the result from a list of [H, W, 1] to (H, W, C).
                 warped = [cv2.warpPerspective(
