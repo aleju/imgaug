@@ -16,9 +16,12 @@ cache:
 
 python:
   - "2.7"
-  # - "3.4"  temporarily removed until scikit-image can handle numpy 1.16 again (causes Cython issues for py3.4 now, maybe due to hotfixing in progress?)
+  # - "3.2"  # downloads np 1.17 on travis (?!), which doesn't support 3.2
+  # - "3.3"  # downloads np 1.17 on travis (?!), which doesn't support 3.3
+  - "3.4"
   - "3.5"
   - "3.6"
+  # - "3.7"  # python version cannot be installed on travis
 
 before_install:
   - sudo apt-get update -qq
