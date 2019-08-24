@@ -1717,59 +1717,7 @@ class ReplaceElementwise(meta.Augmenter):
         return [self.mask, self.replacement, self.per_channel]
 
 
-def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
-    """
-    Add impulse noise to images.
-
-    This is identical to ``SaltAndPepper``, except that `per_channel` is
-    always set to ``True``.
-
-    dtype support::
-
-        See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
-
-    Parameters
-    ----------
-    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
-        Probability of replacing a pixel to impulse noise.
-
-            * If a float, then that value will always be used as the
-              probability.
-            * If a tuple ``(a, b)``, then a probability will be sampled
-              uniformly per image from the interval ``[a, b]``.
-            * If a list, then a random value will be sampled from that list
-              per image.
-            * If a ``StochasticParameter``, then a image-sized mask will be
-              sampled from that parameter per image. Any value ``>0.5`` in
-              that mask will be replaced with impulse noise noise.
-
-    name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    Examples
-    --------
-    >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.ImpulseNoise(0.1)
-
-    Replace ``10%`` of all pixels with impulse noise.
-
-    """
-    return SaltAndPepper(
-        p=p,
-        per_channel=True,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
-
-
-def SaltAndPepper(p=0, per_channel=False,
-                  name=None, deterministic=False, random_state=None):
+class SaltAndPepper(ReplaceElementwise):
     """
     Replace pixels in images with salt/pepper noise (white/black-ish colors).
 
@@ -1826,17 +1774,68 @@ def SaltAndPepper(p=0, per_channel=False,
     noise.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+    def __init__(self, p=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        super(SaltAndPepper, self).__init__(
+            mask=p,
+            replacement=iap.Beta(0.5, 0.5) * 255,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
-    return ReplaceElementwise(
-        mask=p,
-        replacement=iap.Beta(0.5, 0.5) * 255,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+
+class ImpulseNoise(SaltAndPepper):
+    """
+    Add impulse noise to images.
+
+    This is identical to ``SaltAndPepper``, except that `per_channel` is
+    always set to ``True``.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
+
+    Parameters
+    ----------
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of replacing a pixel to impulse noise.
+
+            * If a float, then that value will always be used as the
+              probability.
+            * If a tuple ``(a, b)``, then a probability will be sampled
+              uniformly per image from the interval ``[a, b]``.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a image-sized mask will be
+              sampled from that parameter per image. Any value ``>0.5`` in
+              that mask will be replaced with impulse noise noise.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ImpulseNoise(0.1)
+
+    Replace ``10%`` of all pixels with impulse noise.
+
+    """
+    def __init__(self, p=0, name=None, deterministic=False, random_state=None):
+        super(ImpulseNoise, self).__init__(
+            p=p,
+            per_channel=True,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
