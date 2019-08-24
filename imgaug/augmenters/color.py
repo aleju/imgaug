@@ -1184,8 +1184,7 @@ class AddToHue(AddToHueAndSaturation):
             random_state=random_state)
 
 
-def AddToSaturation(value=(-75, 75), from_colorspace="RGB", name=None,
-                    deterministic=False, random_state=None):
+class AddToSaturation(AddToHueAndSaturation):
     """
     Add random values to the saturation of images.
 
@@ -1239,15 +1238,15 @@ def AddToSaturation(value=(-75, 75), from_colorspace="RGB", name=None,
     colorspace.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
 
-    return AddToHueAndSaturation(
-        value_saturation=value,
-        from_colorspace=from_colorspace,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+    def __init__(self, value=(-75, 75), from_colorspace="RGB", name=None,
+                 deterministic=False, random_state=None):
+        super(AddToSaturation, self).__init__(
+            value_saturation=value,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 # TODO tests
