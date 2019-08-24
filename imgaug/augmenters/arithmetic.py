@@ -662,8 +662,7 @@ class AdditiveLaplaceNoise(AddElementwise):
 
 
 # TODO rename to AddPoissonNoise?
-def AdditivePoissonNoise(lam=0, per_channel=False,
-                         name=None, deterministic=False, random_state=None):
+class AdditivePoissonNoise(AddElementwise):
     """
     Add noise sampled from poisson distributions elementwise to images.
 
@@ -750,19 +749,20 @@ def AdditivePoissonNoise(lam=0, per_channel=False,
     active for 50 percent of all images.
 
     """
-    lam2 = iap.handle_continuous_param(
-        lam, "lam",
-        value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    def __init__(self, lam=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        lam2 = iap.handle_continuous_param(
+            lam, "lam",
+            value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        value = iap.RandomSign(iap.Poisson(lam=lam2))
 
-    return AddElementwise(
-        iap.RandomSign(iap.Poisson(lam=lam2)),
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(AdditivePoissonNoise, self).__init__(
+            value,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 class Multiply(meta.Augmenter):
