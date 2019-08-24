@@ -28,6 +28,7 @@ from . import meta
 from .. import parameters as iap
 
 
+# pylint:disable=pointless-string-statement
 """
 Speed comparison by datatype and flip method.
 
@@ -680,6 +681,7 @@ flip method followed by AverageBlur
        fort cv2_ get 1.93064ms
 fort cv2_ get contig 1.95215ms
 """
+# pylint:enable=pointless-string-statement
 
 _FLIPLR_DTYPES_CV2 = {"uint8", "uint16", "int8", "int16"}
 
