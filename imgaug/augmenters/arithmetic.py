@@ -2698,7 +2698,8 @@ class Invert(meta.Augmenter):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
 
-# TODO remove from examples and mark as deprecated
+# TODO remove from examples
+@ia.deprecated("imgaug.contrast.LinearContrast")
 def ContrastNormalization(alpha=1.0, per_channel=False,
                           name=None, deterministic=False, random_state=None):
     """
