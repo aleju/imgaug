@@ -3544,7 +3544,7 @@ class SomeOf(Augmenter, list):
             str(self.random_order), augs_str, self.deterministic)
 
 
-def OneOf(children, name=None, deterministic=False, random_state=None):
+class OneOf(SomeOf):
     """Augmenter that always executes exactly one of its children.
 
     dtype support::
@@ -3593,8 +3593,16 @@ def OneOf(children, name=None, deterministic=False, random_state=None):
     nothing.
 
     """
-    return SomeOf(n=1, children=children, random_order=False, name=name,
-                  deterministic=deterministic, random_state=random_state)
+
+    def __init__(self, children, name=None, deterministic=False,
+                 random_state=None):
+        super(OneOf, self).__init__(
+            n=1,
+            children=children,
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 class Sometimes(Augmenter):
