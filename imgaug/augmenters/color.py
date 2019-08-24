@@ -673,8 +673,7 @@ class MultiplyHue(MultiplyHueAndSaturation):
             random_state=random_state)
 
 
-def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
-                       deterministic=False, random_state=None):
+class MultiplySaturation(MultiplyHueAndSaturation):
     """
     Multiply the saturation of images by random values.
 
@@ -724,13 +723,15 @@ def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
     ``0.5`` and ``1.5``.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-    return MultiplyHueAndSaturation(mul_saturation=mul,
-                                    from_colorspace=from_colorspace,
-                                    name=name,
-                                    deterministic=deterministic,
-                                    random_state=random_state)
+
+    def __init__(self, mul=(0.0, 3.0), from_colorspace="RGB", name=None,
+                 deterministic=False, random_state=None):
+        super(MultiplySaturation, self).__init__(
+            mul_saturation=mul,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 # TODO removed deterministic and random_state here as parameters, because this
