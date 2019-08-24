@@ -486,8 +486,7 @@ class GammaContrast(_ContrastFuncWrapper):
         )
 
 
-def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
-                    name=None, deterministic=False, random_state=None):
+class SigmoidContrast(_ContrastFuncWrapper):
     """
     Adjust image contrast to ``255*1/(1+exp(gain*(cutoff-I_ij/255)))``.
 
@@ -540,11 +539,6 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform sigmoid contrast adjustment.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -563,26 +557,29 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
     sampled once per image *and* channel.
 
     """
-    # TODO add inv parameter?
-    params1d = [
-        iap.handle_continuous_param(
-            gain, "gain", value_range=(0, None), tuple_to_uniform=True,
-            list_to_choice=True),
-        iap.handle_continuous_param(
-            cutoff, "cutoff", value_range=(0, 1.0), tuple_to_uniform=True,
-            list_to_choice=True)
-    ]
-    func = adjust_contrast_sigmoid
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
-                        "int8", "int16", "int32", "int64",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    def __init__(self, gain=10, cutoff=0.5, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        # TODO add inv parameter?
+        params1d = [
+            iap.handle_continuous_param(
+                gain, "gain", value_range=(0, None), tuple_to_uniform=True,
+                list_to_choice=True),
+            iap.handle_continuous_param(
+                cutoff, "cutoff", value_range=(0, 1.0), tuple_to_uniform=True,
+                list_to_choice=True)
+        ]
+        func = adjust_contrast_sigmoid
+
+        super(SigmoidContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
+                            "int8", "int16", "int32", "int64",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["float96", "float128", "float256", "bool"],
+            name=name if name is not None else ia.caller_name(),
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 def LogContrast(gain=1, per_channel=False,
