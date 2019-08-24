@@ -657,7 +657,7 @@ class LogContrast(_ContrastFuncWrapper):
         )
 
 
-def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, random_state=None):
+class LinearContrast(_ContrastFuncWrapper):
     """Adjust contrast by scaling each pixel to ``127 + alpha*(v-127)``.
 
     dtype support::
@@ -694,11 +694,6 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform contrast adjustment by linearly scaling the distance to 128.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -714,23 +709,26 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     *and* channel.
 
     """
-    params1d = [
-        iap.handle_continuous_param(
-            alpha, "alpha", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
-    ]
-    func = adjust_contrast_linear
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32",
-                        "int8", "int16", "int32",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["uint64", "int64", "float96", "float128",
-                           "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    def __init__(self, alpha=1, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        params1d = [
+            iap.handle_continuous_param(
+                alpha, "alpha", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True)
+        ]
+        func = adjust_contrast_linear
+
+        super(LinearContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32",
+                            "int8", "int16", "int32",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["uint64", "int64", "float96", "float128",
+                               "float256", "bool"],
+            name=name if name is not None else ia.caller_name(),
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar
