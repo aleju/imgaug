@@ -609,8 +609,7 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
         )
 
 
-def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
-                deterministic=False, random_state=None):
+class MultiplyHue(MultiplyHueAndSaturation):
     """
     Multiply the hue of images by random values.
 
@@ -663,13 +662,15 @@ def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
     and ``1.5``.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-    return MultiplyHueAndSaturation(mul_hue=mul,
-                                    from_colorspace=from_colorspace,
-                                    name=name,
-                                    deterministic=deterministic,
-                                    random_state=random_state)
+
+    def __init__(self, mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
+                 deterministic=False, random_state=None):
+        super(MultiplyHue, self).__init__(
+            mul_hue=mul,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 def MultiplySaturation(mul=(0.0, 3.0), from_colorspace="RGB", name=None,
