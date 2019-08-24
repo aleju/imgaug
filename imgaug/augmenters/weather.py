@@ -185,166 +185,6 @@ class FastSnowyLandscape(meta.Augmenter):
         return [self.lightness_threshold, self.lightness_multiplier]
 
 
-# TODO add vertical gradient alpha to have clouds only at skylevel/groundlevel
-# TODO add configurable parameters
-class Clouds(meta.SomeOf):
-    """
-    Add clouds to images.
-
-    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
-    It executes 1 to 2 layers per image, leading to varying densities and
-    frequency patterns of clouds.
-
-    This augmenter seems to be fairly robust w.r.t. the image size. Tested
-    with ``96x128``, ``192x256`` and ``960x1280``.
-
-    dtype support::
-
-        * ``uint8``: yes; tested
-        * ``uint16``: no (1)
-        * ``uint32``: no (1)
-        * ``uint64``: no (1)
-        * ``int8``: no (1)
-        * ``int16``: no (1)
-        * ``int32``: no (1)
-        * ``int64``: no (1)
-        * ``float16``: no (1)
-        * ``float32``: no (1)
-        * ``float64``: no (1)
-        * ``float128``: no (1)
-        * ``bool``: no (1)
-
-        - (1) Parameters of this augmenter are optimized for the value range
-              of ``uint8``. While other dtypes may be accepted, they will lead
-              to images augmented in ways inappropriate for the respective
-              dtype.
-
-    Parameters
-    ----------
-    name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    Examples
-    --------
-    >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.Clouds()
-
-    Create an augmenter that adds clouds to images.
-
-    """
-
-    def __init__(self, name=None, deterministic=False, random_state=None):
-        layers = [
-            CloudLayer(
-                intensity_mean=(196, 255),
-                intensity_freq_exponent=(-2.5, -2.0),
-                intensity_coarse_scale=10,
-                alpha_min=0,
-                alpha_multiplier=(0.25, 0.75),
-                alpha_size_px_max=(2, 8),
-                alpha_freq_exponent=(-2.5, -2.0),
-                sparsity=(0.8, 1.0),
-                density_multiplier=(0.5, 1.0)
-            ),
-            CloudLayer(
-                intensity_mean=(196, 255),
-                intensity_freq_exponent=(-2.0, -1.0),
-                intensity_coarse_scale=10,
-                alpha_min=0,
-                alpha_multiplier=(0.5, 1.0),
-                alpha_size_px_max=(64, 128),
-                alpha_freq_exponent=(-2.0, -1.0),
-                sparsity=(1.0, 1.4),
-                density_multiplier=(0.8, 1.5)
-            )
-        ]
-
-        super(Clouds, self).__init__(
-            (1, 2),
-            children=layers,
-            random_order=False,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state)
-
-
-# TODO add vertical gradient alpha to have fog only at skylevel/groundlevel
-# TODO add configurable parameters
-def Fog(name=None, deterministic=False, random_state=None):
-    """Add fog to images.
-
-    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
-    It executes a single layer per image with a configuration leading to
-    fairly dense clouds with low-frequency patterns.
-
-    This augmenter seems to be fairly robust w.r.t. the image size. Tested
-    with ``96x128``, ``192x256`` and ``960x1280``.
-
-    dtype support::
-
-        * ``uint8``: yes; tested
-        * ``uint16``: no (1)
-        * ``uint32``: no (1)
-        * ``uint64``: no (1)
-        * ``int8``: no (1)
-        * ``int16``: no (1)
-        * ``int32``: no (1)
-        * ``int64``: no (1)
-        * ``float16``: no (1)
-        * ``float32``: no (1)
-        * ``float64``: no (1)
-        * ``float128``: no (1)
-        * ``bool``: no (1)
-
-        - (1) Parameters of this augmenter are optimized for the value range
-              of ``uint8``. While other dtypes may be accepted, they will lead
-              to images augmented in ways inappropriate for the respective
-              dtype.
-
-    Parameters
-    ----------
-    name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    Examples
-    --------
-    >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.Fog()
-
-    Create an augmenter that adds fog to images.
-
-    """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return CloudLayer(
-        intensity_mean=(220, 255),
-        intensity_freq_exponent=(-2.0, -1.5),
-        intensity_coarse_scale=2,
-        alpha_min=(0.7, 0.9),
-        alpha_multiplier=0.3,
-        alpha_size_px_max=(2, 8),
-        alpha_freq_exponent=(-4.0, -2.0),
-        sparsity=0.9,
-        density_multiplier=(0.4, 0.9),
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
-
-
 # TODO add examples and add these to the overview docs
 # TODO add perspective transform to each cloud layer to make them look more
 #      distant?
@@ -631,6 +471,165 @@ class CloudLayer(meta.Augmenter):
         alpha = np.clip(alpha, 0.0, 1.0)
 
         return alpha
+
+
+# TODO add vertical gradient alpha to have clouds only at skylevel/groundlevel
+# TODO add configurable parameters
+class Clouds(meta.SomeOf):
+    """
+    Add clouds to images.
+
+    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
+    It executes 1 to 2 layers per image, leading to varying densities and
+    frequency patterns of clouds.
+
+    This augmenter seems to be fairly robust w.r.t. the image size. Tested
+    with ``96x128``, ``192x256`` and ``960x1280``.
+
+    dtype support::
+
+        * ``uint8``: yes; tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) Parameters of this augmenter are optimized for the value range
+              of ``uint8``. While other dtypes may be accepted, they will lead
+              to images augmented in ways inappropriate for the respective
+              dtype.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Clouds()
+
+    Create an augmenter that adds clouds to images.
+
+    """
+
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        layers = [
+            CloudLayer(
+                intensity_mean=(196, 255),
+                intensity_freq_exponent=(-2.5, -2.0),
+                intensity_coarse_scale=10,
+                alpha_min=0,
+                alpha_multiplier=(0.25, 0.75),
+                alpha_size_px_max=(2, 8),
+                alpha_freq_exponent=(-2.5, -2.0),
+                sparsity=(0.8, 1.0),
+                density_multiplier=(0.5, 1.0)
+            ),
+            CloudLayer(
+                intensity_mean=(196, 255),
+                intensity_freq_exponent=(-2.0, -1.0),
+                intensity_coarse_scale=10,
+                alpha_min=0,
+                alpha_multiplier=(0.5, 1.0),
+                alpha_size_px_max=(64, 128),
+                alpha_freq_exponent=(-2.0, -1.0),
+                sparsity=(1.0, 1.4),
+                density_multiplier=(0.8, 1.5)
+            )
+        ]
+
+        super(Clouds, self).__init__(
+            (1, 2),
+            children=layers,
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
+
+
+# TODO add vertical gradient alpha to have fog only at skylevel/groundlevel
+# TODO add configurable parameters
+class Fog(CloudLayer):
+    """Add fog to images.
+
+    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
+    It executes a single layer per image with a configuration leading to
+    fairly dense clouds with low-frequency patterns.
+
+    This augmenter seems to be fairly robust w.r.t. the image size. Tested
+    with ``96x128``, ``192x256`` and ``960x1280``.
+
+    dtype support::
+
+        * ``uint8``: yes; tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) Parameters of this augmenter are optimized for the value range
+              of ``uint8``. While other dtypes may be accepted, they will lead
+              to images augmented in ways inappropriate for the respective
+              dtype.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Fog()
+
+    Create an augmenter that adds fog to images.
+
+    """
+
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(Fog, self).__init__(
+            intensity_mean=(220, 255),
+            intensity_freq_exponent=(-2.0, -1.5),
+            intensity_coarse_scale=2,
+            alpha_min=(0.7, 0.9),
+            alpha_multiplier=0.3,
+            alpha_size_px_max=(2, 8),
+            alpha_freq_exponent=(-4.0, -2.0),
+            sparsity=0.9,
+            density_multiplier=(0.4, 0.9),
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
