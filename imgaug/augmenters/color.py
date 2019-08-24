@@ -1117,8 +1117,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         return table
 
 
-def AddToHue(value=(-255, 255), from_colorspace="RGB", name=None,
-             deterministic=False, random_state=None):
+class AddToHue(AddToHueAndSaturation):
     """
     Add random values to the hue of images.
 
@@ -1174,15 +1173,15 @@ def AddToHue(value=(-255, 255), from_colorspace="RGB", name=None,
     to the ``H`` channel in ``HSV`` colorspace.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
 
-    return AddToHueAndSaturation(
-        value_hue=value,
-        from_colorspace=from_colorspace,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+    def __init__(self, value=(-255, 255), from_colorspace="RGB", name=None,
+                 deterministic=False, random_state=None):
+        super(AddToHue, self).__init__(
+            value_hue=value,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 def AddToSaturation(value=(-75, 75), from_colorspace="RGB", name=None,
