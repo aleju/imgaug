@@ -187,7 +187,7 @@ class FastSnowyLandscape(meta.Augmenter):
 
 # TODO add vertical gradient alpha to have clouds only at skylevel/groundlevel
 # TODO add configurable parameters
-def Clouds(name=None, deterministic=False, random_state=None):
+class Clouds(meta.SomeOf):
     """
     Add clouds to images.
 
@@ -238,40 +238,40 @@ def Clouds(name=None, deterministic=False, random_state=None):
     Create an augmenter that adds clouds to images.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
 
-    layers = [
-        CloudLayer(
-            intensity_mean=(196, 255),
-            intensity_freq_exponent=(-2.5, -2.0),
-            intensity_coarse_scale=10,
-            alpha_min=0,
-            alpha_multiplier=(0.25, 0.75),
-            alpha_size_px_max=(2, 8),
-            alpha_freq_exponent=(-2.5, -2.0),
-            sparsity=(0.8, 1.0),
-            density_multiplier=(0.5, 1.0)
-        ),
-        CloudLayer(
-            intensity_mean=(196, 255),
-            intensity_freq_exponent=(-2.0, -1.0),
-            intensity_coarse_scale=10,
-            alpha_min=0,
-            alpha_multiplier=(0.5, 1.0),
-            alpha_size_px_max=(64, 128),
-            alpha_freq_exponent=(-2.0, -1.0),
-            sparsity=(1.0, 1.4),
-            density_multiplier=(0.8, 1.5)
-        )
-    ]
-    return meta.SomeOf(
-        (1, 2),
-        children=layers,
-        random_order=False,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        layers = [
+            CloudLayer(
+                intensity_mean=(196, 255),
+                intensity_freq_exponent=(-2.5, -2.0),
+                intensity_coarse_scale=10,
+                alpha_min=0,
+                alpha_multiplier=(0.25, 0.75),
+                alpha_size_px_max=(2, 8),
+                alpha_freq_exponent=(-2.5, -2.0),
+                sparsity=(0.8, 1.0),
+                density_multiplier=(0.5, 1.0)
+            ),
+            CloudLayer(
+                intensity_mean=(196, 255),
+                intensity_freq_exponent=(-2.0, -1.0),
+                intensity_coarse_scale=10,
+                alpha_min=0,
+                alpha_multiplier=(0.5, 1.0),
+                alpha_size_px_max=(64, 128),
+                alpha_freq_exponent=(-2.0, -1.0),
+                sparsity=(1.0, 1.4),
+                density_multiplier=(0.8, 1.5)
+            )
+        ]
+
+        super(Clouds, self).__init__(
+            (1, 2),
+            children=layers,
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 # TODO add vertical gradient alpha to have fog only at skylevel/groundlevel
