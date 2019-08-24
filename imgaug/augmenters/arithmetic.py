@@ -1209,8 +1209,7 @@ class MultiplyElementwise(meta.Augmenter):
 
 # TODO verify that (a, b) still leads to a p being sampled per image and not
 #      per batch
-def Dropout(p=0, per_channel=False,
-            name=None, deterministic=False, random_state=None):
+class Dropout(MultiplyElementwise):
     """
     Set a fraction of pixels in images to zero.
 
@@ -1280,37 +1279,36 @@ def Dropout(p=0, per_channel=False,
     active for ``50`` percent of all images.
 
     """
-    # TODO add list as an option
-    if ia.is_single_number(p):
-        p2 = iap.Binomial(1 - p)
-    elif ia.is_iterable(p):
-        assert len(p) == 2, (
-            "Expected 'p' given as an iterable to contain exactly 2 values, "
-            "got %d." % (len(p),))
-        assert p[0] < p[1], (
-            "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
-            "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
-        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
-            "Expected 'p' given as iterable to only contain values in the "
-            "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
+    def __init__(self, p=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        # TODO add list as an option
+        if ia.is_single_number(p):
+            p2 = iap.Binomial(1 - p)
+        elif ia.is_iterable(p):
+            assert len(p) == 2, (
+                "Expected 'p' given as an iterable to contain exactly 2 values, "
+                "got %d." % (len(p),))
+            assert p[0] < p[1], (
+                "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
+                "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
+            assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+                "Expected 'p' given as iterable to only contain values in the "
+                "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
 
-        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
-    elif isinstance(p, iap.StochasticParameter):
-        p2 = p
-    else:
-        raise Exception(
-            "Expected p to be float or int or StochasticParameter, got %s." % (
-                type(p),))
+            p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+        elif isinstance(p, iap.StochasticParameter):
+            p2 = p
+        else:
+            raise Exception(
+                "Expected p to be float or int or StochasticParameter, got %s." % (
+                    type(p),))
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return MultiplyElementwise(
-        p2,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(Dropout, self).__init__(
+            p2,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 # TODO add similar cutout augmenter
