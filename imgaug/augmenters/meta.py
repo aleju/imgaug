@@ -615,7 +615,7 @@ class Augmenter(object):
             images_copy = np.copy(images)
 
             if images_copy.ndim == 3 and images_copy.shape[-1] in [1, 3]:
-                warnings.warn(
+                ia.warn(
                     "You provided a numpy array of shape %s as input to "
                     "augment_images(), which was interpreted as (N, H, W). "
                     "The last dimension however has value 1 or 3, which "
@@ -2539,7 +2539,7 @@ class Augmenter(object):
                 len(source_augs_dict) < len(source_augs)
                 or len(target_augs_dict) < len(target_augs))
             if different_lengths:
-                warnings.warn(
+                ia.warn(
                     "Matching mode 'name' with recursive=True was chosen in "
                     "copy_random_state_, but either the source or target "
                     "augmentation sequence contains multiple augmenters with "

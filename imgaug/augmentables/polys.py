@@ -1597,7 +1597,7 @@ class _ConcavePolygonRecoverer(object):
         too_large_values = (
                 largest_value > self.limit_coords_values_for_inter_search)
         if too_large_values:
-            warnings.warn(
+            ia.warn(
                 "Encountered during polygon repair a polygon with extremely "
                 "large coordinate values beyond %d. Will skip intersection "
                 "point computation for that polygon. This avoids exceptions "
@@ -1650,7 +1650,7 @@ class _ConcavePolygonRecoverer(object):
             # coordinate values are already caught at the start of this
             # function. For the case that there are more errors, this block
             # will prevent a full crash.
-            warnings.warn(
+            ia.warn(
                 "Encountered exception %s during polygon repair in segment "
                 "intersection computation. Will skip that step." % (
                     str(exc),))
@@ -1684,7 +1684,7 @@ class _ConcavePolygonRecoverer(object):
                     idx = int(np.argmin(diffs))
                     segments_add_points[idx].append((point, dists[idx]))
                 else:
-                    warnings.warn(
+                    ia.warn(
                         "Couldn't find fitting segment in "
                         "_generate_intersection_points(). Ignoring intersection "
                         "point.")

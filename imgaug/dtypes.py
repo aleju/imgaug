@@ -328,7 +328,7 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
                     ))
         else:
             if augmenter is None:
-                warnings.warn(
+                ia.warn(
                         "Got dtype '%s', which was neither explicitly allowed "
                         "(%s), nor explicitly disallowed (%s). Generated "
                         "outputs may contain errors." % (
@@ -337,7 +337,7 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
                             ", ".join(disallowed)
                         ))
             else:
-                warnings.warn(
+                ia.warn(
                     "Got dtype '%s' in augmenter '%s' (class '%s'), which was "
                     "neither explicitly allowed (%s), nor explicitly "
                     "disallowed (%s). Generated outputs may contain "
