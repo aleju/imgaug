@@ -1314,9 +1314,7 @@ class Dropout(MultiplyElementwise):
 # TODO add similar cutout augmenter
 # TODO invert size_p and size_percent so that larger values denote larger
 #      areas being dropped instead of the opposite way around
-def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False,
-                  min_size=4,
-                  name=None, deterministic=False, random_state=None):
+class CoarseDropout(MultiplyElementwise):
     """
     Set rectangular areas within images to zero.
 
@@ -1456,44 +1454,44 @@ def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False,
     for ``50`` percent of all images.
 
     """
-    if ia.is_single_number(p):
-        p2 = iap.Binomial(1 - p)
-    elif ia.is_iterable(p):
-        assert len(p) == 2, (
-            "Expected 'p' given as an iterable to contain exactly 2 values, "
-            "got %d." % (len(p),))
-        assert p[0] < p[1], (
-            "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
-            "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
-        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
-            "Expected 'p' given as iterable to only contain values in the "
-            "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
+    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
+                 min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        if ia.is_single_number(p):
+            p2 = iap.Binomial(1 - p)
+        elif ia.is_iterable(p):
+            assert len(p) == 2, (
+                "Expected 'p' given as an iterable to contain exactly 2 values, "
+                "got %d." % (len(p),))
+            assert p[0] < p[1], (
+                "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
+                "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
+            assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+                "Expected 'p' given as iterable to only contain values in the "
+                "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
 
-        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
-    elif isinstance(p, iap.StochasticParameter):
-        p2 = p
-    else:
-        raise Exception("Expected p to be float or int or StochasticParameter, "
-                        "got %s." % (type(p),))
+            p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+        elif isinstance(p, iap.StochasticParameter):
+            p2 = p
+        else:
+            raise Exception("Expected p to be float or int or StochasticParameter, "
+                            "got %s." % (type(p),))
 
-    if size_px is not None:
-        p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px,
-                                     min_size=min_size)
-    elif size_percent is not None:
-        p3 = iap.FromLowerResolution(other_param=p2, size_percent=size_percent,
-                                     min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+        if size_px is not None:
+            p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px,
+                                         min_size=min_size)
+        elif size_percent is not None:
+            p3 = iap.FromLowerResolution(other_param=p2, size_percent=size_percent,
+                                         min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return MultiplyElementwise(
-        p3,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(CoarseDropout, self).__init__(
+            p3,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 class ReplaceElementwise(meta.Augmenter):
