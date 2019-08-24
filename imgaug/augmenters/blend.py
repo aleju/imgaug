@@ -1101,11 +1101,7 @@ class AlphaElementwise(Alpha):
         return result
 
 
-def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
-                      size_px_max=(2, 16), upscale_method=None,
-                      iterations=(1, 3), aggregation_method="max",
-                      sigmoid=True, sigmoid_thresh=None,
-                      name=None, deterministic=False, random_state=None):
+class SimplexNoiseAlpha(AlphaElementwise):
     """Alpha-blend two image sources using simplex noise alpha masks.
 
     The alpha masks are sampled using a simplex noise method, roughly creating
@@ -1272,35 +1268,46 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
     (parameter/branch `first`).
 
     """
-    upscale_method_default = iap.Choice(["nearest", "linear", "cubic"], p=[0.05, 0.6, 0.35])
-    sigmoid_thresh_default = iap.Normal(0.0, 5.0)
 
-    noise = iap.SimplexNoise(
-        size_px_max=size_px_max,
-        upscale_method=upscale_method if upscale_method is not None else upscale_method_default
-    )
+    def __init__(self, first=None, second=None, per_channel=False,
+                 size_px_max=(2, 16), upscale_method=None,
+                 iterations=(1, 3), aggregation_method="max",
+                 sigmoid=True, sigmoid_thresh=None,
+                 name=None, deterministic=False, random_state=None):
+        upscale_method_default = iap.Choice(["nearest", "linear", "cubic"],
+                                            p=[0.05, 0.6, 0.35])
+        sigmoid_thresh_default = iap.Normal(0.0, 5.0)
 
-    if iterations != 1:
-        noise = iap.IterativeNoiseAggregator(
-            noise,
-            iterations=iterations,
-            aggregation_method=aggregation_method
+        noise = iap.SimplexNoise(
+            size_px_max=size_px_max,
+            upscale_method=(upscale_method
+                            if upscale_method is not None
+                            else upscale_method_default)
         )
 
-    if sigmoid is True or (ia.is_single_number(sigmoid) and sigmoid >= 0.01):
-        noise = iap.Sigmoid.create_for_noise(
-            noise,
-            threshold=sigmoid_thresh if sigmoid_thresh is not None else sigmoid_thresh_default,
-            activated=sigmoid
+        if iterations != 1:
+            noise = iap.IterativeNoiseAggregator(
+                noise,
+                iterations=iterations,
+                aggregation_method=aggregation_method
+            )
+
+        use_sigmoid = (
+            sigmoid is True
+            or (ia.is_single_number(sigmoid) and sigmoid >= 0.01))
+        if use_sigmoid:
+            noise = iap.Sigmoid.create_for_noise(
+                noise,
+                threshold=(sigmoid_thresh
+                           if sigmoid_thresh is not None
+                           else sigmoid_thresh_default),
+                activated=sigmoid
+            )
+
+        super(SimplexNoiseAlpha, self).__init__(
+            factor=noise, first=first, second=second, per_channel=per_channel,
+            name=name, deterministic=deterministic, random_state=random_state
         )
-
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return AlphaElementwise(
-        factor=noise, first=first, second=second, per_channel=per_channel,
-        name=name, deterministic=deterministic, random_state=random_state
-    )
 
 
 def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None, per_channel=False,
