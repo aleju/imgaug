@@ -256,6 +256,10 @@
 * Removed image-channel check for cv2-based warp in `Affine`. Images with any
   channel number can now be warped using the cv2 backend (previously: only
   `<=4`, others would be warped via skimage). #381
+* Improved performance of `augmenters.flip.Fliplr`. #385
+* Improved performance of `augmenters.flip.Flipud`. #385
+* Added function `augmenters.flip.fliplr()`. #385
+* Added function `augmenters.flip.flipud()`. #385
 
 ## Improved Segmentation Map Augmentation #302
 
@@ -492,6 +496,9 @@ Changes:
 * Fixed `Polygon.is_out_of_image()` returning wrong values if the image plane
   was fully contained inside the polygon with no intersection between the
   image plane and the polygon edge. #382
+* Fixed  `Fliplr` and `Flipud` using for coordinate-based inputs and image-like
+  inputs slightly different conditions for when to actually apply
+  augmentations. #385
 
 
 # 0.2.9
