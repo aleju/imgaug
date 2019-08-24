@@ -480,7 +480,7 @@ class GammaContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            name=name if name is not None else ia.caller_name(),
+            name=name,
             deterministic=deterministic,
             random_state=random_state
         )
@@ -576,7 +576,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            name=name if name is not None else ia.caller_name(),
+            name=name,
             deterministic=deterministic,
             random_state=random_state
         )
@@ -651,7 +651,7 @@ class LogContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            name=name if name is not None else ia.caller_name(),
+            name=name,
             deterministic=deterministic,
             random_state=random_state
         )
@@ -725,7 +725,7 @@ class LinearContrast(_ContrastFuncWrapper):
                             "float16", "float32", "float64"],
             dtypes_disallowed=["uint64", "int64", "float96", "float128",
                                "float256", "bool"],
-            name=name if name is not None else ia.caller_name(),
+            name=name,
             deterministic=deterministic,
             random_state=random_state
         )

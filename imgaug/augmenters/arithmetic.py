@@ -2051,9 +2051,6 @@ class Salt(ReplaceElementwise):
         # FIXME max replacement seems to essentially never exceed 254
         replacement = replacement01 * 255
 
-        if name is None:
-            name = "Unnamed%s" % (ia.caller_name(),)
-
         super(Salt, self).__init__(
             mask=p,
             replacement=replacement,

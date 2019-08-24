@@ -549,9 +549,6 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
                     mul_saturation, "mul_saturation", value_range=(0.0, 10.0),
                     tuple_to_uniform=True, list_to_choice=True)
 
-        if name is None:
-            name = "Unnamed%s" % (ia.caller_name(),)
-
         if random_state is None:
             rss = [None] * 5
         else:
