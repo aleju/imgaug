@@ -249,13 +249,30 @@ def test_is_callable():
         def __call__(self):
             pass
 
-    values_true = [_dummy_func, _dummy_func2, _Dummy2()]
-    values_false = ["A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2, 1e-4, True, False,
-                    (1.0, 2.0), [1.0, 2.0], _Dummy1(), np.zeros((1, 2), dtype=np.uint8)]
+    class _Dummy3(object):
+        def foo(self):
+            pass
+
+    class _Dummy4(object):
+        @classmethod
+        def foo(cls):
+            pass
+
+    class _Dummy5(object):
+        @classmethod
+        def foo(cls):
+            pass
+
+    values_true = [_dummy_func, _dummy_func2, _Dummy2(), _Dummy3().foo,
+                   _Dummy4.foo, _Dummy5.foo]
+    values_false = [
+        "A", "BC", "1", "", -100, 1, 0, 1, 100, -1.2, -0.001, 0.0, 0.001, 1.2,
+        1e-4, True, False, (1.0, 2.0), [1.0, 2.0], _Dummy1(),
+        np.zeros((1, 2), dtype=np.uint8)]
     for value in values_true:
-        assert ia.is_callable(value) == True
+        assert ia.is_callable(value) is True
     for value in values_false:
-        assert ia.is_callable(value) == False
+        assert ia.is_callable(value) is False
 
 
 @mock.patch("imgaug.random.seed")
