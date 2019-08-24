@@ -1057,15 +1057,6 @@ class AddToHueAndSaturation(meta.Augmenter):
             image_hsv[..., 1] + saturation, 0, 255)
         return image_hsv
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.value, self.value_hue, self.value_saturation,
                 self.per_channel]
@@ -1524,15 +1515,6 @@ class ChangeColorspace(meta.Augmenter):
 
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.to_colorspace, self.alpha]
 
@@ -1730,15 +1712,6 @@ class _AbstractColorQuantization(meta.Augmenter):
     @abstractmethod
     def _quantize(self, image, n_colors):
         """Apply the augmenter-specific quantization function to an image."""
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.n_colors,

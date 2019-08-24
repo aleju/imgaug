@@ -310,15 +310,6 @@ class Superpixels(meta.Augmenter):
 
         return image_sp
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.p_replace, self.n_segments, self.max_size,
                 self.interpolation]
@@ -636,15 +627,6 @@ class Voronoi(meta.Augmenter):
                 interpolation=self.interpolation)
 
         return image_aug
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.points_sampler, self.p_replace, self.max_size,

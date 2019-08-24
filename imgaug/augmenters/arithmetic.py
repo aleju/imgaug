@@ -255,15 +255,6 @@ class Add(meta.Augmenter):
 
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.value, self.per_channel]
 
@@ -445,15 +436,6 @@ class AddElementwise(meta.Augmenter):
                 images[i] = image
 
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.value, self.per_channel]
@@ -1009,15 +991,6 @@ class Multiply(meta.Augmenter):
 
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.mul, self.per_channel]
 
@@ -1232,15 +1205,6 @@ class MultiplyElementwise(meta.Augmenter):
                 images[i] = image
 
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.mul, self.per_channel]
@@ -1755,15 +1719,6 @@ class ReplaceElementwise(meta.Augmenter):
             image[mask_thresh] = replacement_samples
 
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.mask, self.replacement, self.per_channel]
@@ -2752,15 +2707,6 @@ class Invert(meta.Augmenter):
                 arr_modify, arr.dtype, clip=False)
         return arr_modify
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
@@ -2980,15 +2926,6 @@ class JpegCompression(meta.Augmenter):
                 image = image[..., np.newaxis]
             result[i] = image
         return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.compression]

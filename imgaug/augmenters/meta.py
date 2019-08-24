@@ -837,7 +837,6 @@ class Augmenter(object):
             return heatmaps_result[0]
         return heatmaps_result
 
-    @abstractmethod
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         """Augment a batch of heatmaps in-place.
 
@@ -866,7 +865,7 @@ class Augmenter(object):
             The augmented heatmaps.
 
         """
-        raise NotImplementedError()
+        return heatmaps
 
     def _augment_heatmaps_as_images(self, heatmaps, parents, hooks):
         # TODO documentation
@@ -1118,7 +1117,6 @@ class Augmenter(object):
             return keypoints_on_images_result[0]
         return keypoints_on_images_result
 
-    @abstractmethod
     def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
         """Augment a batch of keypoints in-place.
 
@@ -1150,7 +1148,7 @@ class Augmenter(object):
             The augmented keypoints.
 
         """
-        raise NotImplementedError()
+        return keypoints_on_images
 
     def augment_bounding_boxes(self, bounding_boxes_on_images, hooks=None):
         """Augment a batch of bounding boxes.
@@ -4100,13 +4098,6 @@ class Noop(Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return keypoints_on_images
-
     def get_parameters(self):
         return []
 
@@ -4790,12 +4781,6 @@ class ChannelShuffle(Augmenter):
             if p_samples[i] >= 1-1e-4:
                 images[i] = shuffle_channels(images[i], rss[i], self.channels)
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.p, self.channels]

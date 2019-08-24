@@ -181,15 +181,6 @@ class FastSnowyLandscape(meta.Augmenter):
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
-
     def get_parameters(self):
         return [self.lightness_threshold, self.lightness_multiplier]
 
@@ -526,15 +517,6 @@ class CloudLayer(meta.Augmenter):
         for i, (image, rs) in enumerate(zip(images, rss)):
             result[i] = self.draw_on_image(image, rs)
         return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.intensity_mean,
@@ -1028,15 +1010,6 @@ class SnowflakesLayer(meta.Augmenter):
         for i, (image, rs) in enumerate(zip(images, rss)):
             result[i] = self.draw_on_image(image, rs)
         return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # pylint: disable=no-self-use
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        # pylint: disable=no-self-use
-        return keypoints_on_images
 
     def get_parameters(self):
         return [self.density,

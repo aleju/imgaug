@@ -260,6 +260,10 @@
 * Improved performance of `augmenters.flip.Flipud`. #385
 * Added function `augmenters.flip.fliplr()`. #385
 * Added function `augmenters.flip.flipud()`. #385
+* Removed the requirement to implement `_augment_keypoints()` and
+  `_augment_heatmaps()` in augmenters. The methods now default to doing
+  nothing. Also removed all such noop-implementations of these methods from
+  all augmenters. #380
 
 ## Improved Segmentation Map Augmentation #302
 

@@ -1557,25 +1557,13 @@ class _DummyAugmenter(iaa.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return keypoints_on_images
-
     def get_parameters(self):
         return []
 
 
-# TODO remove _augment_heatmaps() here once it is no longer an abstract method
-#      and defaults to noop
 class _DummyAugmenterBBs(iaa.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return heatmaps
 
     def _augment_keypoints(self, keypoints_on_images, random_state,
                            parents, hooks):
@@ -1593,16 +1581,6 @@ class _DummyAugmenterCallsParent(iaa.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return super(_DummyAugmenterCallsParent, self)\
             ._augment_images(images, random_state, parents, hooks)
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return super(_DummyAugmenterCallsParent, self)\
-            ._augment_heatmaps(heatmaps, random_state, parents, hooks)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return super(_DummyAugmenterCallsParent, self)\
-            ._augment_keypoints(keypoints_on_images, random_state, parents,
-                                hooks)
 
     def get_parameters(self):
         return super(_DummyAugmenterCallsParent, self)\
