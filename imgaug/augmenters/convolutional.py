@@ -501,8 +501,7 @@ class EdgeDetect(Convolve):
 # TODO rename arg "direction" to "angle"
 # TODO change direction/angle value range to (0, 360)
 # TODO move this to edges.py?
-def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0),
-                       name=None, deterministic=False, random_state=None):
+class DirectedEdgeDetect(Convolve):
     """
     Detect edges from specified angles and alpha-blend with the input image.
 
@@ -580,62 +579,61 @@ def DirectedEdgeDetect(alpha=0, direction=(0.0, 1.0),
     and ``30%``.
 
     """
-    alpha_param = iap.handle_continuous_param(
-        alpha, "alpha",
-        value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
-    direction_param = iap.handle_continuous_param(
-        direction, "direction",
-        value_range=None, tuple_to_uniform=True, list_to_choice=True)
+    def __init__(self, alpha=0, direction=(0.0, 1.0),
+                 name=None, deterministic=False, random_state=None):
+        alpha_param = iap.handle_continuous_param(
+            alpha, "alpha",
+            value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+        direction_param = iap.handle_continuous_param(
+            direction, "direction",
+            value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
-    def create_matrices(_image, nb_channels, random_state_func):
-        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        assert 0 <= alpha_sample <= 1.0, (
-            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f." % (
-                alpha_sample))
-        direction_sample = direction_param.draw_sample(
-            random_state=random_state_func)
+        def _create_matrices(_image, nb_channels, random_state_func):
+            alpha_sample = alpha_param.draw_sample(
+                random_state=random_state_func)
+            assert 0 <= alpha_sample <= 1.0, (
+                "Expected 'alpha' to be in the interval [0.0, 1.0], "
+                "got %.4f." % (alpha_sample,))
+            direction_sample = direction_param.draw_sample(
+                random_state=random_state_func)
 
-        deg = int(direction_sample * 360) % 360
-        rad = np.deg2rad(deg)
-        x = np.cos(rad - 0.5*np.pi)
-        y = np.sin(rad - 0.5*np.pi)
-        direction_vector = np.array([x, y])
+            deg = int(direction_sample * 360) % 360
+            rad = np.deg2rad(deg)
+            x = np.cos(rad - 0.5*np.pi)
+            y = np.sin(rad - 0.5*np.pi)
+            direction_vector = np.array([x, y])
 
-        matrix_effect = np.array([
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0]
-        ], dtype=np.float32)
-        for x, y in itertools.product([-1, 0, 1], [-1, 0, 1]):
-            if (x, y) != (0, 0):
-                cell_vector = np.array([x, y])
-                distance_deg = np.rad2deg(
-                    ia.angle_between_vectors(cell_vector, direction_vector))
-                distance = distance_deg / 180
-                similarity = (1 - distance)**4
-                matrix_effect[y+1, x+1] = similarity
-        matrix_effect = matrix_effect / np.sum(matrix_effect)
-        matrix_effect = matrix_effect * (-1)
-        matrix_effect[1, 1] = 1
+            matrix_effect = np.array([
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
+            ], dtype=np.float32)
+            for x, y in itertools.product([-1, 0, 1], [-1, 0, 1]):
+                if (x, y) != (0, 0):
+                    cell_vector = np.array([x, y])
+                    distance_deg = np.rad2deg(
+                        ia.angle_between_vectors(cell_vector,
+                                                 direction_vector))
+                    distance = distance_deg / 180
+                    similarity = (1 - distance)**4
+                    matrix_effect[y+1, x+1] = similarity
+            matrix_effect = matrix_effect / np.sum(matrix_effect)
+            matrix_effect = matrix_effect * (-1)
+            matrix_effect[1, 1] = 1
 
-        matrix_nochange = np.array([
-            [0, 0, 0],
-            [0, 1, 0],
-            [0, 0, 0]
-        ], dtype=np.float32)
+            matrix_nochange = np.array([
+                [0, 0, 0],
+                [0, 1, 0],
+                [0, 0, 0]
+            ], dtype=np.float32)
 
-        matrix = (
-            (1-alpha_sample) * matrix_nochange
-            + alpha_sample * matrix_effect
-        )
+            matrix = (
+                (1-alpha_sample) * matrix_nochange
+                + alpha_sample * matrix_effect
+            )
 
-        return [matrix] * nb_channels
+            return [matrix] * nb_channels
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return Convolve(
-        create_matrices,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(DirectedEdgeDetect, self).__init__(
+            matrix=_create_matrices, name=name, deterministic=deterministic,
+            random_state=random_state)
