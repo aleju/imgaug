@@ -414,8 +414,7 @@ def adjust_contrast_linear(arr, alpha):
         return image_aug
 
 
-def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False,
-                  random_state=None):
+class GammaContrast(_ContrastFuncWrapper):
     """
     Adjust image contrast by scaling pixel values to ``255*((v/255)**gamma)``.
 
@@ -453,11 +452,6 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False,
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform gamma contrast adjustment.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -473,20 +467,23 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False,
     *and* channel.
 
     """
-    params1d = [iap.handle_continuous_param(
-        gamma, "gamma", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)]
-    func = adjust_contrast_gamma
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
-                        "int8", "int16", "int32", "int64",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+
+    def __init__(self, gamma=1, per_channel=False, name=None, deterministic=False,
+                 random_state=None):
+        params1d = [iap.handle_continuous_param(
+            gamma, "gamma", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)]
+        func = adjust_contrast_gamma
+        super(GammaContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
+                            "int8", "int16", "int32", "int64",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["float96", "float128", "float256", "bool"],
+            name=name if name is not None else ia.caller_name(),
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
