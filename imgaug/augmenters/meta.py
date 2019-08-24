@@ -4343,10 +4343,7 @@ class Lambda(Augmenter):
         return []
 
 
-def AssertLambda(func_images=None, func_heatmaps=None,
-                 func_segmentation_maps=None, func_keypoints=None,
-                 func_polygons=None, name=None, deterministic=False,
-                 random_state=None):
+class AssertLambda(Lambda):
     """Assert conditions based on lambda-function to be the case for input data.
 
     This augmenter applies a lambda function to each image or other input.
@@ -4434,47 +4431,56 @@ def AssertLambda(func_images=None, func_heatmaps=None,
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
-    def func_images_assert(images, random_state, parents, hooks):
-        assert func_images(images, random_state, parents, hooks), (
-            "Input images did not fulfill user-defined assertion in "
-            "AssertLambda.")
-        return images
 
-    def func_heatmaps_assert(heatmaps, random_state, parents, hooks):
-        assert func_heatmaps(heatmaps, random_state, parents, hooks), (
-            "Input heatmaps did not fulfill user-defined assertion in "
-            "AssertLambda.")
-        return heatmaps
+    def __init__(self, func_images=None, func_heatmaps=None,
+                 func_segmentation_maps=None, func_keypoints=None,
+                 func_polygons=None, name=None, deterministic=False,
+                 random_state=None):
+        def func_images_assert(images, random_state, parents, hooks):
+            assert func_images(images, random_state, parents, hooks), (
+                "Input images did not fulfill user-defined assertion in "
+                "AssertLambda.")
+            return images
 
-    def func_segmentation_maps_assert(segmaps, random_state, parents, hooks):
-        assert func_segmentation_maps(segmaps, random_state, parents, hooks), (
-            "Input segmentation maps did not fulfill user-defined assertion "
-            "in AssertLambda.")
-        return segmaps
+        def func_heatmaps_assert(heatmaps, random_state, parents, hooks):
+            assert func_heatmaps(heatmaps, random_state, parents, hooks), (
+                "Input heatmaps did not fulfill user-defined assertion in "
+                "AssertLambda.")
+            return heatmaps
 
-    def func_keypoints_assert(keypoints_on_images, random_state, parents, hooks):
-        assert func_keypoints(keypoints_on_images, random_state, parents, hooks), (
-            "Input keypoints did not fulfill user-defined assertion in"
-            "AssertLambda.")
-        return keypoints_on_images
+        def func_segmentation_maps_assert(segmaps, random_state, parents,
+                                          hooks):
+            assert func_segmentation_maps(segmaps, random_state, parents,
+                                          hooks), (
+                "Input segmentation maps did not fulfill user-defined assertion "
+                "in AssertLambda.")
+            return segmaps
 
-    def func_polygons_assert(polygons_on_images, random_state, parents, hooks):
-        assert func_polygons(polygons_on_images, random_state, parents, hooks), (
-            "Input polygons did not fulfill user-defined assertion in"
-            "AssertLambda.")
-        return polygons_on_images
+        def func_keypoints_assert(keypoints_on_images, random_state, parents,
+                                  hooks):
+            assert func_keypoints(keypoints_on_images, random_state, parents,
+                                  hooks), (
+                "Input keypoints did not fulfill user-defined assertion in"
+                "AssertLambda.")
+            return keypoints_on_images
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        def func_polygons_assert(polygons_on_images, random_state, parents,
+                                 hooks):
+            assert func_polygons(polygons_on_images, random_state, parents,
+                                 hooks), (
+                "Input polygons did not fulfill user-defined assertion in"
+                "AssertLambda.")
+            return polygons_on_images
 
-    func_sm_assert = func_segmentation_maps_assert
-    return Lambda(
-        func_images_assert if func_images is not None else None,
-        func_heatmaps_assert if func_heatmaps is not None else None,
-        func_sm_assert if func_segmentation_maps is not None else None,
-        func_keypoints_assert if func_keypoints is not None else None,
-        func_polygons_assert if func_polygons is not None else None,
-        name=name, deterministic=deterministic, random_state=random_state)
+        func_sm_assert = func_segmentation_maps_assert
+
+        super(AssertLambda, self).__init__(
+            func_images_assert if func_images is not None else None,
+            func_heatmaps_assert if func_heatmaps is not None else None,
+            func_sm_assert if func_segmentation_maps is not None else None,
+            func_keypoints_assert if func_keypoints is not None else None,
+            func_polygons_assert if func_polygons is not None else None,
+            name=name, deterministic=deterministic, random_state=random_state)
 
 
 # TODO add tests for segmaps
