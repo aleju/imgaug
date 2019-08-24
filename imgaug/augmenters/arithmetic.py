@@ -1986,8 +1986,7 @@ class CoarseSaltAndPepper(ReplaceElementwise):
         )
 
 
-def Salt(p=0, per_channel=False,
-         name=None, deterministic=False, random_state=None):
+class Salt(ReplaceElementwise):
     """
     Replace pixels in images with salt noise, i.e. white-ish pixels.
 
@@ -2042,24 +2041,26 @@ def Salt(p=0, per_channel=False,
 
     """
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=True,
-        mode="invert"
-    ) + 0.5
-    # FIXME max replacement seems to essentially never exceed 254
-    replacement = replacement01 * 255
+    def __init__(self, p=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=True,
+            mode="invert"
+        ) + 0.5
+        # FIXME max replacement seems to essentially never exceed 254
+        replacement = replacement01 * 255
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        if name is None:
+            name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ReplaceElementwise(
-        mask=p,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(Salt, self).__init__(
+            mask=p,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
