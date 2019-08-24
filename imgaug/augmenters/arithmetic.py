@@ -1838,9 +1838,7 @@ class ImpulseNoise(SaltAndPepper):
             random_state=random_state)
 
 
-def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
-                        per_channel=False, min_size=4,
-                        name=None, deterministic=False, random_state=None):
+class CoarseSaltAndPepper(ReplaceElementwise):
     """
     Replace rectangular areas in images with white/black-ish pixel noise.
 
@@ -1961,31 +1959,31 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     independently per image channel.
 
     """
-    mask = iap.handle_probability_param(
-        p, "p", tuple_to_uniform=True, list_to_choice=True)
+    def __init__(self, p=0, size_px=None, size_percent=None,
+                 per_channel=False, min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        mask = iap.handle_probability_param(
+            p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    if size_px is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_px=size_px, min_size=min_size)
-    elif size_percent is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_percent=size_percent, min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+        if size_px is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=size_px, min_size=min_size)
+        elif size_percent is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_percent=size_percent, min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    replacement = iap.Beta(0.5, 0.5) * 255
+        replacement = iap.Beta(0.5, 0.5) * 255
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+        super(CoarseSaltAndPepper, self).__init__(
+            mask=mask_low,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 def Salt(p=0, per_channel=False,
