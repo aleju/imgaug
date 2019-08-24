@@ -280,7 +280,8 @@
   inheriting from the augmenters that were previously returned. This should
   make some outputs less confusing (ass `print(A())` does not lead to class
   `B` being printed). All arguments stayed the same and this is not expected
-  to affect any user code negatively. The modified augmenters are:
+  to affect any user code negatively. The augmenters listed below are
+  affected by this change. #396
     * `imgaug.augmenters.arithmetic.AdditiveGaussianNoise`
     * `imgaug.augmenters.arithmetic.AdditiveLaplaceNoise`
     * `imgaug.augmenters.arithmetic.AdditivePoissonNoise`
@@ -319,7 +320,7 @@
     * `imgaug.augmenters.weather.Fog`
     * `imgaug.augmenters.weather.Snowflakes`
 * Marked `imgaug.augmenters.arithmetic.ContrastNormalization` as deprecated.
-  Use `imgaug.augmenters.contrast.LinearContrast` instead.
+  Use `imgaug.augmenters.contrast.LinearContrast` instead. #396
 
 ## Improved Segmentation Map Augmentation #302
 
