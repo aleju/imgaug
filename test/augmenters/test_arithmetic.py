@@ -3183,7 +3183,8 @@ class TestContrastNormalization(unittest.TestCase):
     def test_deprecation_warning(self):
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")
-            _ = arithmetic_lib.ContrastNormalization((0.9, 1.1))
+            aug = arithmetic_lib.ContrastNormalization((0.9, 1.1))
+            assert isinstance(aug, contrast_lib._ContrastFuncWrapper)
 
         assert len(caught_warnings) == 1
         assert (
@@ -3191,10 +3192,6 @@ class TestContrastNormalization(unittest.TestCase):
             in str(caught_warnings[-1].message)
         )
 
-    def test_returns_correct_class(self):
-        with warnings.catch_warnings(record=True):
-            aug = arithmetic_lib.ContrastNormalization((0.9, 1.1))
-            assert isinstance(aug, contrast_lib._ContrastFuncWrapper)
 
 # TODO use this in test_contrast.py or remove it?
 """
