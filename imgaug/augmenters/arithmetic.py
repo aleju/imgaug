@@ -446,8 +446,7 @@ class AddElementwise(meta.Augmenter):
 #      the scale from the uniform dist. per image, but is that still the case?
 #      AddElementwise seems to now sample once for all images, which should
 #      lead to a single scale value.
-def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False,
-                          name=None, deterministic=False, random_state=None):
+class AdditiveGaussianNoise(AddElementwise):
     """
     Add noise sampled from gaussian distributions elementwise to images.
 
@@ -531,22 +530,20 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False,
     active for 50 percent of all images.
 
     """
-    loc2 = iap.handle_continuous_param(
-        loc, "loc", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)
-    scale2 = iap.handle_continuous_param(
-        scale, "scale", value_range=(0, None), tuple_to_uniform=True,
-        list_to_choice=True)
+    def __init__(self, loc=0, scale=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        loc2 = iap.handle_continuous_param(
+            loc, "loc", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        scale2 = iap.handle_continuous_param(
+            scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        value = iap.Normal(loc=loc2, scale=scale2)
 
-    return AddElementwise(
-        iap.Normal(loc=loc2, scale=scale2),
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(AdditiveGaussianNoise, self).__init__(
+            value, per_channel=per_channel, name=name,
+            deterministic=deterministic, random_state=random_state)
 
 
 # TODO rename to AddLaplaceNoise?
