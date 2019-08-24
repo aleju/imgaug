@@ -225,8 +225,7 @@ class Convolve(meta.Augmenter):
         return [self.matrix, self.matrix_type]
 
 
-def Sharpen(alpha=0, lightness=1,
-            name=None, deterministic=False, random_state=None):
+class Sharpen(Convolve):
     """
     Sharpen images and alpha-blend the result with the original input images.
 
@@ -287,44 +286,42 @@ def Sharpen(alpha=0, lightness=1,
     (as in the above example).
 
     """
-    alpha_param = iap.handle_continuous_param(
-        alpha, "alpha",
-        value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
-    lightness_param = iap.handle_continuous_param(
-        lightness, "lightness",
-        value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    def __init__(self, alpha=0, lightness=1,
+                 name=None, deterministic=False, random_state=None):
+        alpha_param = iap.handle_continuous_param(
+            alpha, "alpha",
+            value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
+        lightness_param = iap.handle_continuous_param(
+            lightness, "lightness",
+            value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
-    def create_matrices(image, nb_channels, random_state_func):
-        alpha_sample = alpha_param.draw_sample(random_state=random_state_func)
-        assert 0 <= alpha_sample <= 1.0, (
-            "Expected 'alpha' to be in the interval [0.0, 1.0], got %.4f." % (
-                alpha_sample))
-        lightness_sample = lightness_param.draw_sample(
-            random_state=random_state_func)
-        matrix_nochange = np.array([
-            [0, 0, 0],
-            [0, 1, 0],
-            [0, 0, 0]
-        ], dtype=np.float32)
-        matrix_effect = np.array([
-            [-1, -1, -1],
-            [-1, 8+lightness_sample, -1],
-            [-1, -1, -1]
-        ], dtype=np.float32)
-        matrix = (
-            (1-alpha_sample) * matrix_nochange
-            + alpha_sample * matrix_effect
-        )
-        return [matrix] * nb_channels
+        def _create_matrices(_image, nb_channels, random_state_func):
+            alpha_sample = alpha_param.draw_sample(
+                random_state=random_state_func)
+            assert 0 <= alpha_sample <= 1.0, (
+                "Expected 'alpha' to be in the interval [0.0, 1.0], "
+                "got %.4f." % (alpha_sample,))
+            lightness_sample = lightness_param.draw_sample(
+                random_state=random_state_func)
+            matrix_nochange = np.array([
+                [0, 0, 0],
+                [0, 1, 0],
+                [0, 0, 0]
+            ], dtype=np.float32)
+            matrix_effect = np.array([
+                [-1, -1, -1],
+                [-1, 8+lightness_sample, -1],
+                [-1, -1, -1]
+            ], dtype=np.float32)
+            matrix = (
+                (1-alpha_sample) * matrix_nochange
+                + alpha_sample * matrix_effect
+            )
+            return [matrix] * nb_channels
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return Convolve(
-        create_matrices,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(Sharpen, self).__init__(
+            matrix=_create_matrices, name=name, deterministic=deterministic,
+            random_state=random_state)
 
 
 def Emboss(alpha=0, strength=1,
