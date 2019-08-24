@@ -1369,6 +1369,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     height ``2*8=16`` and width ``2*16=32``.
 
     >>> images_resized = ia.imresize_many_images(images, (2.0, 4.0))
+    >>> images_resized.shape
     (2, 16, 64, 3)
 
     Convert two RGB images of height ``8`` and width ``16`` to images of
