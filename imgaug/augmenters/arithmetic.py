@@ -2063,9 +2063,7 @@ class Salt(ReplaceElementwise):
             random_state=random_state)
 
 
-def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
-               min_size=4,
-               name=None, deterministic=False, random_state=None):
+class CoarseSalt(ReplaceElementwise):
     """
     Replace rectangular areas in images with white-ish pixel noise.
 
@@ -2166,35 +2164,36 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
     replaced in the input image by salt noise.
 
     """
-    mask = iap.handle_probability_param(
-        p, "p", tuple_to_uniform=True, list_to_choice=True)
+    
+    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
+                 min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        mask = iap.handle_probability_param(
+            p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    if size_px is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_px=size_px, min_size=min_size)
-    elif size_percent is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_percent=size_percent, min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+        if size_px is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=size_px, min_size=min_size)
+        elif size_percent is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_percent=size_percent, min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=True,
-        mode="invert"
-    ) + 0.5
-    replacement = replacement01 * 255
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=True,
+            mode="invert"
+        ) + 0.5
+        replacement = replacement01 * 255
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(CoarseSalt, self).__init__(
+            mask=mask_low,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 def Pepper(p=0, per_channel=False,
