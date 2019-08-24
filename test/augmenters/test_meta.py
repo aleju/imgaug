@@ -1422,71 +1422,109 @@ class TestAssertShape(unittest.TestCase):
 
 
 def test_clip_augmented_image_():
-    image = np.zeros((1, 3), dtype=np.uint8)
-    image[0, 0] = 10
-    image[0, 1] = 20
-    image[0, 2] = 30
-    image_clipped = iaa.clip_augmented_image_(image, min_value=15, max_value=25)
-    assert image_clipped[0, 0] == 15
-    assert image_clipped[0, 1] == 20
-    assert image_clipped[0, 2] == 25
+    warnings.resetwarnings()
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
+        image = np.zeros((1, 3), dtype=np.uint8)
+        image[0, 0] = 10
+        image[0, 1] = 20
+        image[0, 2] = 30
+        image_clipped = iaa.clip_augmented_image_(image,
+                                                  min_value=15, max_value=25)
+        assert image_clipped[0, 0] == 15
+        assert image_clipped[0, 1] == 20
+        assert image_clipped[0, 2] == 25
+
+    assert len(caught_warnings) >= 1
+    assert "deprecated" in str(caught_warnings[-1].message)
 
 
 def test_clip_augmented_image():
-    image = np.zeros((1, 3), dtype=np.uint8)
-    image[0, 0] = 10
-    image[0, 1] = 20
-    image[0, 2] = 30
-    image_clipped = iaa.clip_augmented_image(image, min_value=15, max_value=25)
-    assert image_clipped[0, 0] == 15
-    assert image_clipped[0, 1] == 20
-    assert image_clipped[0, 2] == 25
+    warnings.resetwarnings()
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
+        image = np.zeros((1, 3), dtype=np.uint8)
+        image[0, 0] = 10
+        image[0, 1] = 20
+        image[0, 2] = 30
+        image_clipped = iaa.clip_augmented_image(image,
+                                                 min_value=15, max_value=25)
+        assert image_clipped[0, 0] == 15
+        assert image_clipped[0, 1] == 20
+        assert image_clipped[0, 2] == 25
+
+    assert len(caught_warnings) >= 1
+    assert "deprecated" in str(caught_warnings[-1].message)
 
 
 def test_clip_augmented_images_():
-    images = np.zeros((2, 1, 3), dtype=np.uint8)
-    images[:, 0, 0] = 10
-    images[:, 0, 1] = 20
-    images[:, 0, 2] = 30
-    imgs_clipped = iaa.clip_augmented_images_(images,
-                                              min_value=15, max_value=25)
-    assert np.all(imgs_clipped[:, 0, 0] == 15)
-    assert np.all(imgs_clipped[:, 0, 1] == 20)
-    assert np.all(imgs_clipped[:, 0, 2] == 25)
+    warnings.resetwarnings()
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
 
-    images = [np.zeros((1, 3), dtype=np.uint8) for _ in sm.xrange(2)]
-    for i in sm.xrange(len(images)):
-        images[i][0, 0] = 10
-        images[i][0, 1] = 20
-        images[i][0, 2] = 30
-    imgs_clipped = iaa.clip_augmented_images_(images,
-                                              min_value=15, max_value=25)
-    assert isinstance(imgs_clipped, list)
-    assert np.all([imgs_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
-    assert np.all([imgs_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
-    assert np.all([imgs_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
+        images = np.zeros((2, 1, 3), dtype=np.uint8)
+        images[:, 0, 0] = 10
+        images[:, 0, 1] = 20
+        images[:, 0, 2] = 30
+        imgs_clipped = iaa.clip_augmented_images_(images,
+                                                  min_value=15, max_value=25)
+        assert np.all(imgs_clipped[:, 0, 0] == 15)
+        assert np.all(imgs_clipped[:, 0, 1] == 20)
+        assert np.all(imgs_clipped[:, 0, 2] == 25)
+
+        images = [np.zeros((1, 3), dtype=np.uint8) for _ in sm.xrange(2)]
+        for i in sm.xrange(len(images)):
+            images[i][0, 0] = 10
+            images[i][0, 1] = 20
+            images[i][0, 2] = 30
+        imgs_clipped = iaa.clip_augmented_images_(images,
+                                                  min_value=15, max_value=25)
+        assert isinstance(imgs_clipped, list)
+        assert np.all([imgs_clipped[i][0, 0] == 15
+                       for i in sm.xrange(len(images))])
+        assert np.all([imgs_clipped[i][0, 1] == 20
+                       for i in sm.xrange(len(images))])
+        assert np.all([imgs_clipped[i][0, 2] == 25
+                       for i in sm.xrange(len(images))])
+
+    assert len(caught_warnings) >= 1
+    assert "deprecated" in str(caught_warnings[-1].message)
 
 
 def test_clip_augmented_images():
-    images = np.zeros((2, 1, 3), dtype=np.uint8)
-    images[:, 0, 0] = 10
-    images[:, 0, 1] = 20
-    images[:, 0, 2] = 30
-    imgs_clipped = iaa.clip_augmented_images(images, min_value=15, max_value=25)
-    assert np.all(imgs_clipped[:, 0, 0] == 15)
-    assert np.all(imgs_clipped[:, 0, 1] == 20)
-    assert np.all(imgs_clipped[:, 0, 2] == 25)
+    warnings.resetwarnings()
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
 
-    images = [np.zeros((1, 3), dtype=np.uint8) for _ in sm.xrange(2)]
-    for i in sm.xrange(len(images)):
-        images[i][0, 0] = 10
-        images[i][0, 1] = 20
-        images[i][0, 2] = 30
-    imgs_clipped = iaa.clip_augmented_images(images, min_value=15, max_value=25)
-    assert isinstance(imgs_clipped, list)
-    assert np.all([imgs_clipped[i][0, 0] == 15 for i in sm.xrange(len(images))])
-    assert np.all([imgs_clipped[i][0, 1] == 20 for i in sm.xrange(len(images))])
-    assert np.all([imgs_clipped[i][0, 2] == 25 for i in sm.xrange(len(images))])
+        images = np.zeros((2, 1, 3), dtype=np.uint8)
+        images[:, 0, 0] = 10
+        images[:, 0, 1] = 20
+        images[:, 0, 2] = 30
+        imgs_clipped = iaa.clip_augmented_images(images,
+                                                 min_value=15, max_value=25)
+        assert np.all(imgs_clipped[:, 0, 0] == 15)
+        assert np.all(imgs_clipped[:, 0, 1] == 20)
+        assert np.all(imgs_clipped[:, 0, 2] == 25)
+
+        images = [np.zeros((1, 3), dtype=np.uint8) for _ in sm.xrange(2)]
+        for i in sm.xrange(len(images)):
+            images[i][0, 0] = 10
+            images[i][0, 1] = 20
+            images[i][0, 2] = 30
+        imgs_clipped = iaa.clip_augmented_images(images,
+                                                 min_value=15, max_value=25)
+        assert isinstance(imgs_clipped, list)
+        assert np.all([imgs_clipped[i][0, 0] == 15
+                       for i in sm.xrange(len(images))])
+        assert np.all([imgs_clipped[i][0, 1] == 20
+                       for i in sm.xrange(len(images))])
+        assert np.all([imgs_clipped[i][0, 2] ==
+                       25 for i in sm.xrange(len(images))])
+
+    assert len(caught_warnings) >= 1
+    assert "deprecated" in str(caught_warnings[-1].message)
 
 
 def test_reduce_to_nonempty():
