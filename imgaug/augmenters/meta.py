@@ -1694,21 +1694,24 @@ class Augmenter(object):
         augmentables (but in augmented form) as input into the method. This
         behaviour is partly specific to the python version:
 
-          * In **python 3.6+** (if ``return_batch=False``):
+        * In **python 3.6+** (if ``return_batch=False``):
 
             * Any number of augmentables may be provided as input.
-            * The return order matches the order of the named arguments, e.g.
-              ``x_aug, y_aug, z_aug = augment(X=x, Y=y, Z=z)``.
             * None of the provided named arguments *has to be* `image` or
               `images` (but of coarse you *may* provide them).
+            * The return order matches the order of the named arguments, e.g.
+              ``x_aug, y_aug, z_aug = augment(X=x, Y=y, Z=z)``.
 
-          * In **python <3.6** (if ``return_batch=False``):
+        * In **python <3.6** (if ``return_batch=False``):
 
             * One or two augmentables may be used as input, not more than that.
-            * At least one of the augmentables has to be `image` or `images`.
-            * The augmented images are always returned first. (I.e. the output
-              can only be one of the following: batches, images,
-              images + something (like images + segmentation maps)).
+            * One of the input arguments has to be `image` or `images`.
+            * The augmented images are *always* returned first, independent
+              of the input argument order, e.g.
+              ``a_aug, b_aug = augment(b=b, images=a)``. This also means
+              that the output of the function can only be one of the
+              following three cases: a batch, list/array of images,
+              tuple of images and something (like images + segmentation maps).
 
         If `return_batch` was set to ``True``, an instance of
         :class:`imgaug.augmentables.batches.UnnormalizedBatch` will be
