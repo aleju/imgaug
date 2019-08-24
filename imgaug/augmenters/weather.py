@@ -954,10 +954,7 @@ class SnowflakesLayer(meta.Augmenter):
         return np.clip(image_f32, 0, 255).astype(np.uint8)
 
 
-def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
-               flake_size=(0.2, 0.7), flake_size_uniformity=(0.4, 0.8),
-               angle=(-30, 30), speed=(0.007, 0.03),
-               name=None, deterministic=False, random_state=None):
+class Snowflakes(meta.SomeOf):
     """Add falling snowflakes to images.
 
     This is a wrapper around
@@ -1115,24 +1112,26 @@ def Snowflakes(density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
     Add snowflakes to large images (around ``960x1280``).
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
 
-    layer = SnowflakesLayer(
-        density=density,
-        density_uniformity=density_uniformity,
-        flake_size=flake_size,
-        flake_size_uniformity=flake_size_uniformity,
-        angle=angle,
-        speed=speed,
-        blur_sigma_fraction=(0.0001, 0.001)
-    )
+    def __init__(self, density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
+                 flake_size=(0.2, 0.7), flake_size_uniformity=(0.4, 0.8),
+                 angle=(-30, 30), speed=(0.007, 0.03),
+                 name=None, deterministic=False, random_state=None):
+        layer = SnowflakesLayer(
+            density=density,
+            density_uniformity=density_uniformity,
+            flake_size=flake_size,
+            flake_size_uniformity=flake_size_uniformity,
+            angle=angle,
+            speed=speed,
+            blur_sigma_fraction=(0.0001, 0.001)
+        )
 
-    return meta.SomeOf(
-        (1, 3),
-        children=[layer.deepcopy() for _ in range(3)],
-        random_order=False,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+        super(Snowflakes, self).__init__(
+            (1, 3),
+            children=[layer.deepcopy() for _ in range(3)],
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
