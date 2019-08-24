@@ -2273,9 +2273,7 @@ class Pepper(ReplaceElementwise):
         )
 
 
-def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
-                 name=None, deterministic=False, random_state=None):
+class CoarsePepper(ReplaceElementwise):
     """
     Replace rectangular areas in images with black-ish pixel noise.
 
@@ -2374,36 +2372,37 @@ def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
     replaced in the input image by pepper noise.
 
     """
-    mask = iap.handle_probability_param(
-        p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    if size_px is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_px=size_px, min_size=min_size)
-    elif size_percent is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_percent=size_percent, min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
+                 min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        mask = iap.handle_probability_param(
+            p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=False,
-        mode="invert"
-    ) + 0.5
-    replacement = replacement01 * 255
+        if size_px is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=size_px, min_size=min_size)
+        elif size_percent is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_percent=size_percent, min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=False,
+            mode="invert"
+        ) + 0.5
+        replacement = replacement01 * 255
 
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+        super(CoarsePepper, self).__init__(
+            mask=mask_low,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 class Invert(meta.Augmenter):
