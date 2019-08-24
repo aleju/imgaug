@@ -414,10 +414,7 @@ class WithHueAndSaturation(meta.Augmenter):
         )
 
 
-def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
-                             per_channel=False, from_colorspace="RGB",
-                             name=None, deterministic=False,
-                             random_state=None):
+class MultiplyHueAndSaturation(WithHueAndSaturation):
     """
     Multipy hue and saturation by random values.
 
@@ -525,91 +522,91 @@ def MultiplyHueAndSaturation(mul=None, mul_hue=None, mul_saturation=None,
     Multiply only the saturation by random values between ``0.5`` and ``1.5``.
 
     """
-    if mul is not None:
-        assert mul_hue is None, (
-            "`mul_hue` may not be set if `mul` is set. "
-            "It is set to: %s (type: %s)." % (
-                str(mul_hue), type(mul_hue)))
-        assert mul_saturation is None, (
-            "`mul_saturation` may not be set if `mul` is set. "
-            "It is set to: %s (type: %s)." % (
-                str(mul_saturation), type(mul_saturation)))
-        mul = iap.handle_continuous_param(
-            mul, "mul", value_range=(-10.0, 10.0), tuple_to_uniform=True,
-            list_to_choice=True)
-    else:
-        if mul_hue is not None:
-            mul_hue = iap.handle_continuous_param(
-                mul_hue, "mul_hue", value_range=(-10.0, 10.0),
-                tuple_to_uniform=True, list_to_choice=True)
-        if mul_saturation is not None:
-            mul_saturation = iap.handle_continuous_param(
-                mul_saturation, "mul_saturation", value_range=(0.0, 10.0),
-                tuple_to_uniform=True, list_to_choice=True)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+    def __init__(self, mul=None, mul_hue=None, mul_saturation=None,
+                 per_channel=False, from_colorspace="RGB",
+                 name=None, deterministic=False,
+                 random_state=None):
+        if mul is not None:
+            assert mul_hue is None, (
+                "`mul_hue` may not be set if `mul` is set. "
+                "It is set to: %s (type: %s)." % (
+                    str(mul_hue), type(mul_hue)))
+            assert mul_saturation is None, (
+                "`mul_saturation` may not be set if `mul` is set. "
+                "It is set to: %s (type: %s)." % (
+                    str(mul_saturation), type(mul_saturation)))
+            mul = iap.handle_continuous_param(
+                mul, "mul", value_range=(-10.0, 10.0), tuple_to_uniform=True,
+                list_to_choice=True)
+        else:
+            if mul_hue is not None:
+                mul_hue = iap.handle_continuous_param(
+                    mul_hue, "mul_hue", value_range=(-10.0, 10.0),
+                    tuple_to_uniform=True, list_to_choice=True)
+            if mul_saturation is not None:
+                mul_saturation = iap.handle_continuous_param(
+                    mul_saturation, "mul_saturation", value_range=(0.0, 10.0),
+                    tuple_to_uniform=True, list_to_choice=True)
 
-    if random_state is None:
-        rss = [None] * 5
-    else:
-        rss = random_state.derive_rngs_(5)
+        if name is None:
+            name = "Unnamed%s" % (ia.caller_name(),)
 
-    children = []
-    if mul is not None:
-        children.append(
-            arithmetic.Multiply(
-                mul,
-                per_channel=per_channel,
-                name="%s-Multiply" % (name,),
-                random_state=rss[0],
-                deterministic=deterministic
-            )
-        )
-    else:
-        if mul_hue is not None:
+        if random_state is None:
+            rss = [None] * 5
+        else:
+            rss = random_state.derive_rngs_(5)
+
+        children = []
+        if mul is not None:
             children.append(
-                meta.WithChannels(
-                    0,
-                    arithmetic.Multiply(
-                        mul_hue,
-                        name="%s-MultiplyHue" % (name,),
-                        random_state=rss[0],
-                        deterministic=deterministic
-                    ),
-                    name="%s-WithChannelsHue" % (name,),
-                    random_state=rss[1],
+                arithmetic.Multiply(
+                    mul,
+                    per_channel=per_channel,
+                    name="%s-Multiply" % (name,),
+                    random_state=rss[0],
                     deterministic=deterministic
                 )
             )
-        if mul_saturation is not None:
-            children.append(
-                meta.WithChannels(
-                    1,
-                    arithmetic.Multiply(
-                        mul_saturation,
-                        name="%s-MultiplySaturation" % (name,),
-                        random_state=rss[2],
+        else:
+            if mul_hue is not None:
+                children.append(
+                    meta.WithChannels(
+                        0,
+                        arithmetic.Multiply(
+                            mul_hue,
+                            name="%s-MultiplyHue" % (name,),
+                            random_state=rss[0],
+                            deterministic=deterministic
+                        ),
+                        name="%s-WithChannelsHue" % (name,),
+                        random_state=rss[1],
                         deterministic=deterministic
-                    ),
-                    name="%s-WithChannelsSaturation" % (name,),
-                    random_state=rss[3],
-                    deterministic=deterministic
+                    )
                 )
-            )
+            if mul_saturation is not None:
+                children.append(
+                    meta.WithChannels(
+                        1,
+                        arithmetic.Multiply(
+                            mul_saturation,
+                            name="%s-MultiplySaturation" % (name,),
+                            random_state=rss[2],
+                            deterministic=deterministic
+                        ),
+                        name="%s-WithChannelsSaturation" % (name,),
+                        random_state=rss[3],
+                        deterministic=deterministic
+                    )
+                )
 
-    if children:
-        return WithHueAndSaturation(
+        super(MultiplyHueAndSaturation, self).__init__(
             children,
             from_colorspace=from_colorspace,
             name=name,
             random_state=rss[4],
             deterministic=deterministic
         )
-
-    # mul, mul_hue and mul_saturation were all None
-    return meta.Noop(name=name, random_state=rss[4],
-                     deterministic=deterministic)
 
 
 def MultiplyHue(mul=(-1.0, 1.0), from_colorspace="RGB", name=None,
