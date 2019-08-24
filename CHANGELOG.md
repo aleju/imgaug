@@ -239,7 +239,20 @@
   statements. This is a bit less secure, but should overall improve
   performance. #387
 * Added error messages to `assert` statements throughout the library. #387
-
+* Improved code style and documentation of (#389):
+    * `imgaug.augmentables.utils`.
+    * `imgaug.imgaug`.
+    * `imgaug.parameters`.
+    * `imgaug.augmenters.weather`.
+    * `imgaug.augmenters.size`.
+    * `imgaug.augmenters.segmentation`.
+    * `imgaug.augmenters.meta`.
+    * `imgaug.augmenters.geometric`.
+    * `imgaug.augmenters.flip`.
+    * `imgaug.augmenters.contrast`.
+    * `imgaug.augmenters.blur`.
+    * `imgaug.augmenters.blend`.
+    * `imgaug.augmenters.weather`.
 
 ## Improved Segmentation Map Augmentation #302
 
