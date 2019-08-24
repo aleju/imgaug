@@ -781,8 +781,7 @@ class BilateralBlur(meta.Augmenter):
 
 
 # TODO add k sizing via float/percentage
-def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1,
-               name=None, deterministic=False, random_state=None):
+class MotionBlur(iaa_convolutional.Convolve):
     """Blur images in a way that fakes camera or object movements.
 
     dtype support::
@@ -861,49 +860,52 @@ def MotionBlur(k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1,
     of either ``-45`` or ``45`` degrees (randomly picked per image).
 
     """
-    # TODO allow (1, None) and set to identity matrix if k == 1
-    k_param = iap.handle_discrete_param(
-        k, "k", value_range=(3, None), tuple_to_uniform=True,
-        list_to_choice=True, allow_floats=False)
-    angle_param = iap.handle_continuous_param(
-        angle, "angle", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)
-    direction_param = iap.handle_continuous_param(
-        direction, "direction", value_range=(-1.0-1e-6, 1.0+1e-6),
-        tuple_to_uniform=True, list_to_choice=True)
 
-    def create_matrices(image, nb_channels, random_state_func):
-        # avoid cyclic import between blur and geometric
-        from . import geometric as iaa_geometric
+    def __init__(self, k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1,
+                 name=None, deterministic=False, random_state=None):
+        # TODO allow (1, None) and set to identity matrix if k == 1
+        k_param = iap.handle_discrete_param(
+            k, "k", value_range=(3, None), tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=False)
+        angle_param = iap.handle_continuous_param(
+            angle, "angle", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        direction_param = iap.handle_continuous_param(
+            direction, "direction", value_range=(-1.0-1e-6, 1.0+1e-6),
+            tuple_to_uniform=True, list_to_choice=True)
 
-        # force discrete for k_sample via int() in case of stochastic parameter
-        k_sample = int(k_param.draw_sample(random_state=random_state_func))
-        angle_sample = angle_param.draw_sample(random_state=random_state_func)
-        direction_sample = direction_param.draw_sample(
-            random_state=random_state_func)
+        def _create_matrices(_image, nb_channels, random_state_func):
+            # avoid cyclic import between blur and geometric
+            from . import geometric as iaa_geometric
 
-        k_sample = k_sample if k_sample % 2 != 0 else k_sample + 1
-        direction_sample = np.clip(direction_sample, -1.0, 1.0)
-        direction_sample = (direction_sample + 1.0) / 2.0
+            # force discrete for k_sample via int() in case of stochastic
+            # parameter
+            k_sample = int(
+                k_param.draw_sample(random_state=random_state_func))
+            angle_sample = angle_param.draw_sample(
+                random_state=random_state_func)
+            direction_sample = direction_param.draw_sample(
+                random_state=random_state_func)
 
-        matrix = np.zeros((k_sample, k_sample), dtype=np.float32)
-        matrix[:, k_sample//2] = np.linspace(
-            float(direction_sample),
-            1.0 - float(direction_sample),
-            num=k_sample)
-        rot = iaa_geometric.Affine(rotate=angle_sample, order=order)
+            k_sample = k_sample if k_sample % 2 != 0 else k_sample + 1
+            direction_sample = np.clip(direction_sample, -1.0, 1.0)
+            direction_sample = (direction_sample + 1.0) / 2.0
 
-        # FIXME astype(float32) should be before /255.0 here?
-        matrix = (
-            rot.augment_image(
-                (matrix * 255).astype(np.uint8)
-            ) / 255.0).astype(np.float32)
+            matrix = np.zeros((k_sample, k_sample), dtype=np.float32)
+            matrix[:, k_sample//2] = np.linspace(
+                float(direction_sample),
+                1.0 - float(direction_sample),
+                num=k_sample)
+            rot = iaa_geometric.Affine(rotate=angle_sample, order=order)
 
-        return [matrix/np.sum(matrix)] * nb_channels
+            # FIXME astype(float32) should be before /255.0 here?
+            matrix = (
+                rot.augment_image(
+                    (matrix * 255).astype(np.uint8)
+                ) / 255.0).astype(np.float32)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+            return [matrix/np.sum(matrix)] * nb_channels
 
-    return iaa_convolutional.Convolve(
-        create_matrices, name=name, deterministic=deterministic,
-        random_state=random_state)
+        super(MotionBlur, self).__init__(
+            _create_matrices, name=name, deterministic=deterministic,
+            random_state=random_state)
