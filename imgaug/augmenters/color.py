@@ -1515,8 +1515,7 @@ class ChangeColorspace(meta.Augmenter):
 
 
 # TODO rename to Grayscale3D and add Grayscale that keeps the image at 1D?
-def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False,
-              random_state=None):
+class Grayscale(ChangeColorspace):
     """
     Augmenter to convert images to their grayscale versions.
 
@@ -1588,15 +1587,16 @@ def Grayscale(alpha=0, from_colorspace="RGB", name=None, deterministic=False,
     percent of the grayscale image (i.e. 50 percent of color removed).
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
 
-    return ChangeColorspace(to_colorspace=ChangeColorspace.GRAY,
-                            alpha=alpha,
-                            from_colorspace=from_colorspace,
-                            name=name,
-                            deterministic=deterministic,
-                            random_state=random_state)
+    def __init__(self, alpha=0, from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        super(Grayscale, self).__init__(
+            to_colorspace=ChangeColorspace.GRAY,
+            alpha=alpha,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 @six.add_metaclass(ABCMeta)
